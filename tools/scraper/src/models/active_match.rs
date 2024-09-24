@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct ActiveMatch {
     pub start_time: u32,
     pub winning_team: u8,
-    pub match_id: u32,
+    pub match_id: u64,
     pub players: Vec<ActiveMatchPlayer>,
     pub lobby_id: u64,
     pub net_worth_team_0: u32,
@@ -34,7 +34,7 @@ pub struct ActiveMatchPlayer {
 pub struct ClickHouseActiveMatch {
     pub start_time: u32,
     pub winning_team: u8,
-    pub match_id: u32,
+    pub match_id: u64,
     #[serde(rename = "players.account_id")]
     pub players_account_id: Vec<u64>,
     #[serde(rename = "players.team")]
