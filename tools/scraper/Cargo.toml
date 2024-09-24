@@ -14,6 +14,3 @@ reqwest = { version = "0.12.7", features = ["json"] }
 arl = "0.2.0"
 delay_map = "0.4.0"
 openssl-sys = { version = "0.9.103" }
-csv = "1.3.0"
-tokio-postgres = { version = "0.7.12", features = ["with-time-0_3"] }
-kdam = "0.5.2"
