@@ -5,6 +5,8 @@ on:
   push:
     branches:
     - 'master'
+    paths:
+    - 'api/**'
 
 permissions:
   contents: read
@@ -36,9 +38,3 @@ jobs:
         push: true
         tags: ghcr.io/${{ github.repository }}:api
         context: api
-    - name: Build and Push Compose
-      uses: docker/build-push-action@v6
-      with:
-        push: true
-        tags: ghcr.io/${{ github.repository }}:scraper
-        context: scraper
