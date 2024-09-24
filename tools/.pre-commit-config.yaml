@@ -1,0 +1,60 @@
+repos:
+  # Hooks that modify code
+- repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
+  rev: 0.2.3
+  hooks:
+  - id: yamlfmt
+    args: [--mapping, '2', --sequence, '2', --offset, '0', --width, '92', --implicit_start, --preserve-quotes]
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: fix-byte-order-marker
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+  - id: mixed-line-ending
+  - id: pretty-format-json
+    args: [--autofix]
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.17.0
+  hooks:
+  - id: pyupgrade
+    args: [--py311-plus]
+- repo: https://github.com/PyCQA/autoflake
+  rev: v2.3.1
+  hooks:
+  - id: autoflake
+- repo: https://github.com/PyCQA/isort
+  rev: 5.13.2
+  hooks:
+  - id: isort
+    args: [--profile, black, --filter-files]
+- repo: https://github.com/ambv/black
+  rev: 24.8.0
+  hooks:
+  - id: black
+
+        # Hooks for validation
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: check-merge-conflict
+  - id: check-case-conflict
+  - id: check-json
+  - id: check-toml
+  - id: check-yaml
+  - id: check-ast
+  - id: debug-statements
+- repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+  rev: 3.0.3
+  hooks:
+  - id: editorconfig-checker
+    alias: ec
+- repo: local
+  hooks:
+  - id: hadolint-docker
+    name: Lint Dockerfiles
+    description: Runs hadolint Docker image to lint Dockerfiles
+    language: docker_image
+    types: ["dockerfile"]
+    files: '(^Dockerfile$)|(\.Dockerfile$)'
+    entry: ghcr.io/hadolint/hadolint hadolint --ignore DL3006 --ignore DL3008 --ignore DL3013

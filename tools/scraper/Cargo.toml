@@ -17,11 +17,3 @@ openssl-sys = { version = "0.9.103" }
 csv = "1.3.0"
 tokio-postgres = { version = "0.7.12", features = ["with-time-0_3"] }
 kdam = "0.5.2"
-
-[[bin]]
-name = "scraper"
-path = "src/main.rs"
-
-[[bin]]
-name = "migrate"
-path = "src/migrate.rs"
