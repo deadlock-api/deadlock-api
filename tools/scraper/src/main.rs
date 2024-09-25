@@ -34,6 +34,7 @@ async fn main() {
     let limiter = RateLimiter::new(1, Duration::from_secs(5));
     loop {
         limiter.wait().await;
+        let start = std::time::Instant::now();
         let active_matches: Vec<ActiveMatch> = match reqwest::get(ACTIVE_MATCHES_URL.clone()).await
         {
             Ok(response) => match response.json().await {
@@ -71,7 +72,7 @@ async fn main() {
         if ch_active_matches.is_empty() {
             continue;
         }
-        println!("Inserting {} active matches", ch_active_matches.len());
+        let matches = ch_active_matches.len();
         let mut insert = match client.insert("active_matches") {
             Ok(insert) => insert,
             Err(e) => {
@@ -89,5 +90,10 @@ async fn main() {
             Ok(_) => (),
             Err(e) => eprintln!("Failed to commit insert: {}", e),
         }
+        println!(
+            "Inserted {} active matches in {:?}",
+            matches,
+            start.elapsed()
+        );
     }
 }
