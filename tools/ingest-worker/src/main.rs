@@ -4,7 +4,8 @@ use arl::RateLimiter;
 use clickhouse::{Client, Compression};
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
-use std::sync::LazyLock;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 mod models;
@@ -27,7 +28,7 @@ static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
 
-const MAX_OBJECTS_PER_RUN: usize = 200;
+const MAX_OBJECTS_PER_RUN: usize = 1000;
 
 #[tokio::main]
 async fn main() {
@@ -56,9 +57,16 @@ async fn main() {
     )
     .unwrap();
 
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
+
     let limiter = RateLimiter::new(1, Duration::from_secs(10 * 60));
     limiter.wait().await;
-    loop {
+    while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
         limiter.wait().await;
         let start = std::time::Instant::now();

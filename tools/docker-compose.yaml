@@ -32,6 +32,7 @@ services:
     depends_on:
     - clickhouse
     env_file: .env
+    stop_grace_period: 1m
 
   api:
     build:
