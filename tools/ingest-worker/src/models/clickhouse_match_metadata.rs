@@ -97,9 +97,9 @@ pub struct ClickhouseMatchPlayer {
     pub account_id: u64,
     pub player_slot: u8,
     pub team: u8,
-    pub kills: u8,
-    pub deaths: u8,
-    pub assists: u8,
+    pub kills: u16,
+    pub deaths: u16,
+    pub assists: u16,
     pub net_worth: u32,
     pub hero_id: u8,
     pub last_hits: u16,
@@ -159,11 +159,11 @@ pub struct ClickhouseMatchPlayer {
     #[serde(rename = "stats.gold_neutral_creep")]
     pub stats_gold_neutral_creep: Vec<u32>,
     #[serde(rename = "stats.kills")]
-    pub stats_kills: Vec<u8>,
+    pub stats_kills: Vec<u16>,
     #[serde(rename = "stats.deaths")]
-    pub stats_deaths: Vec<u8>,
+    pub stats_deaths: Vec<u16>,
     #[serde(rename = "stats.assists")]
-    pub stats_assists: Vec<u8>,
+    pub stats_assists: Vec<u16>,
     #[serde(rename = "stats.creep_kills")]
     pub stats_creep_kills: Vec<u16>,
     #[serde(rename = "stats.neutral_kills")]
