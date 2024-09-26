@@ -1,4 +1,4 @@
-name: docker-image-api
+name: docker-image-ingest-worker
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
     - 'master'
     paths:
-    - 'api/**'
+    - 'ingest-worker/**'
 
 permissions:
   contents: read
@@ -36,5 +36,5 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         push: true
-        tags: ghcr.io/${{ github.repository }}:api
-        context: api
+        tags: ghcr.io/${{ github.repository }}:ingest-worker
+        context: ingest-worker

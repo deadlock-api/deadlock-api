@@ -22,11 +22,3 @@ CREATE TABLE IF NOT EXISTS active_matches
     scraped_at            DateTime64 DEFAULT now()
 ) ENGINE = MergeTree() ORDER BY match_id
       PRIMARY KEY match_id;
-
-SELECT table,
-       formatReadableSize(sum(bytes)) as size,
-       min(min_date)                  as min_date,
-       max(max_date)                  as max_date
-FROM system.parts
-WHERE active
-GROUP BY table

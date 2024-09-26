@@ -25,6 +25,14 @@ services:
     - clickhouse
     env_file: .env
 
+  ingest-worker:
+    build:
+      context: ingest-worker
+    restart: always
+    depends_on:
+    - clickhouse
+    env_file: .env
+
   api:
     build:
       context: api
