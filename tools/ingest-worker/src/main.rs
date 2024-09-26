@@ -66,6 +66,7 @@ async fn main() {
 
     let limiter = RateLimiter::new(1, Duration::from_secs(10 * 60));
     limiter.wait().await;
+    let s3limiter = RateLimiter::new(2, Duration::from_secs(1));
     while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
         limiter.wait().await;
@@ -85,6 +86,7 @@ async fn main() {
         let mut json_files = vec![];
         for obj in objects.iter() {
             println!("Fetching file: {}", obj.key);
+            s3limiter.wait().await;
             let file = bucket.get_object(&obj.key).await.unwrap();
             let metadata: MatchMetadata = serde_json::from_slice(file.bytes()).unwrap();
             json_files.push(metadata);
@@ -102,6 +104,7 @@ async fn main() {
                 .unwrap()
                 .to_str()
                 .unwrap();
+            s3limiter.wait().await;
             bucket
                 .copy_object_internal(&obj.key, &format!("processed/metadata/{}", filename))
                 .await
