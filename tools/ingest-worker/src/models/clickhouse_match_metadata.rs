@@ -201,7 +201,7 @@ pub struct ClickhouseMatchPlayer {
     #[serde(rename = "stats.damage_absorbed")]
     pub stats_damage_absorbed: Vec<u32>,
     #[serde(rename = "stats.absorption_provided")]
-    pub stats_absorption_provided: Vec<u16>,
+    pub stats_absorption_provided: Vec<u32>,
     #[serde(rename = "stats.hero_bullets_hit")]
     pub stats_hero_bullets_hit: Vec<u16>,
     #[serde(rename = "stats.hero_bullets_hit_crit")]

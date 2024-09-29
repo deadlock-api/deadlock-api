@@ -101,7 +101,7 @@ pub struct Stat {
     pub shots_hit: u16,
     pub shots_missed: u16,
     pub damage_absorbed: u32,
-    pub absorption_provided: u16,
+    pub absorption_provided: u32,
     pub hero_bullets_hit: u16,
     pub hero_bullets_hit_crit: u16,
     pub heal_prevented: u16,

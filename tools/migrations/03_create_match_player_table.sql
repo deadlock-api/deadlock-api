@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS match_player
                              shots_hit UInt16,
                              shots_missed UInt16,
                              damage_absorbed UInt32,
-                             absorption_provided UInt16,
+                             absorption_provided UInt32,
                              hero_bullets_hit UInt16,
                              hero_bullets_hit_crit UInt16,
                              heal_prevented UInt16,
