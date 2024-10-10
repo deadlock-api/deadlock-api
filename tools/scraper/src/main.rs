@@ -18,7 +18,7 @@ static CLICKHOUSE_DB: LazyLock<String> = LazyLock::new(|| std::env::var("CLICKHO
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")
-        .unwrap_or("http://app:8080/active-matches".to_string())
+        .unwrap_or("https://data.deadlock-api.com/v1/active-matches".to_string())
 });
 
 #[tokio::main]
@@ -31,7 +31,7 @@ async fn main() {
 
     let mut delay_set = HashSetDelay::new(Duration::from_secs(2 * 60));
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(5));
+    let limiter = RateLimiter::new(1, Duration::from_secs(21));
     loop {
         limiter.wait().await;
         let start = std::time::Instant::now();
