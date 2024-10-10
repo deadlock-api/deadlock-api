@@ -18,7 +18,7 @@ static CLICKHOUSE_DB: LazyLock<String> = LazyLock::new(|| std::env::var("CLICKHO
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")
-        .unwrap_or("http://127.0.0.1:8080/active-matches".to_string())
+        .unwrap_or("http://app:8080/active-matches".to_string())
 });
 
 #[tokio::main]
