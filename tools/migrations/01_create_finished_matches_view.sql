@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS finished_matches;
 CREATE MATERIALIZED VIEW finished_matches
 REFRESH EVERY 10 MINUTES
     ENGINE = MergeTree() ORDER BY match_id
@@ -19,7 +20,7 @@ SELECT DISTINCT
                       END
                       AS winner
 FROM active_matches am
-WHERE winner IS NOT NULL
+WHERE winner IS NOT NULL AND date_add(minute, 60, start_time) < now()
 ORDER BY match_id, scraped_at DESC
     SETTINGS
     asterisk_include_alias_columns = 1, allow_experimental_refreshable_materialized_view = 1;
