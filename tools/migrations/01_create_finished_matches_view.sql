@@ -15,12 +15,12 @@ SELECT DISTINCT
                       WHEN am.team1_titan_shield_generator_1 AND am.team1_titan_shield_generator_2 AND (
                           NOT am.team0_titan_shield_generator_1 OR NOT am.team0_titan_shield_generator_2)
                           THEN 1
-                      WHEN am.net_worth_team_0 > am.net_worth_team_1 THEN 0
-                      WHEN am.net_worth_team_1 > am.net_worth_team_0 THEN 1
+                      WHEN am.net_worth_team_0 > am.net_worth_team_1 AND date_add(minute, 60, start_time) < now() THEN 0
+                      WHEN am.net_worth_team_1 > am.net_worth_team_0 AND date_add(minute, 60, start_time) < now() THEN 1
                       END
                       AS winner
 FROM active_matches am
-WHERE winner IS NOT NULL AND date_add(minute, 60, start_time) < now()
+WHERE winner IS NOT NULL
 ORDER BY match_id, scraped_at DESC
     SETTINGS
     asterisk_include_alias_columns = 1, allow_experimental_refreshable_materialized_view = 1;
