@@ -21,19 +21,26 @@ CH_POOL = ChPool(
 class Match(BaseModel):
     match_id: int
     player_ids: list[int]
+    match_mode: int
     match_score: int
 
 
 def get_matches_starting_from(client, start_id: int = 0) -> list[Match]:
     query = f"""
-    SELECT DISTINCT match_id, `players.account_id`, match_score
+    SELECT DISTINCT match_id, `players.account_id`, match_score, match_mode
     FROM active_matches
     WHERE match_id > {start_id} AND start_time > '2024-10-11 06:00:00'
     ORDER BY match_id;
     """
     result = client.execute(query)
     return [
-        Match(match_id=row[0], player_ids=row[1], match_score=row[2]) for row in result
+        Match(
+            match_id=row[0],
+            player_ids=row[1],
+            match_score=row[2],
+            match_mode=1 if row[3] == "Unranked" else 4,
+        )
+        for row in result
     ]
 
 
@@ -56,9 +63,11 @@ def get_all_player_mmrs(client) -> dict[int, float]:
     return {row[0]: row[1] for row in result}
 
 
-def set_player_mmr(client, player_mmr: dict[int, float], match_id: int):
+def set_player_mmr(
+    client, player_mmr: dict[int, float], match_id: int, match_mode: int
+):
     query = """
-    INSERT INTO mmr_history (account_id, match_id, player_score)
+    INSERT INTO mmr_history (account_id, match_id, match_mode, player_score)
     VALUES
     """
 
@@ -68,6 +77,7 @@ def set_player_mmr(client, player_mmr: dict[int, float], match_id: int):
             {
                 "account_id": account_id,
                 "match_id": match_id,
+                "match_mode": match_mode,
                 "player_score": mmr,
             }
             for account_id, mmr in player_mmr.items()
@@ -98,7 +108,9 @@ if __name__ == "__main__":
                 for match in tqdm(matches, desc="Processing matches"):
                     updated_mmrs = run_regression(match, all_player_mmrs)
                     all_player_mmrs.update(updated_mmrs)
-                    set_player_mmr(client, updated_mmrs, match.match_id)
+                    set_player_mmr(
+                        client, updated_mmrs, match.match_id, match.match_mode
+                    )
         end = time.time()
         duration = end - start
         print(f"Processed {len(matches)} matches in {duration:.2f} seconds")
