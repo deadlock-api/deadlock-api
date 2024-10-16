@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 arl = "0.2.0"
-async-compression = { version = "0.4.15", features = ["tokio", "bzip2", "zstd"] }
 clickhouse = { version = "0.13.0", features = ["time", "test-util"] }
 clickhouse-pool = "0.0.1"
 reqwest = "0.12.8"

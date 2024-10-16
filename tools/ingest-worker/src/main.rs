@@ -4,7 +4,7 @@ use prost::Message;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use arl::RateLimiter;
-use async_compression::tokio::bufread::ZstdDecoder;
+use async_compression::tokio::bufread::BzDecoder;
 use clickhouse::{Client, Compression};
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
@@ -100,7 +100,7 @@ async fn main() {
             let data: &[u8] = data.as_ref();
             let data = if obj.key.ends_with(".zst") {
                 let mut decompressed = vec![];
-                ZstdDecoder::new(data)
+                BzDecoder::new(data)
                     .read_to_end(&mut decompressed)
                     .await
                     .unwrap();

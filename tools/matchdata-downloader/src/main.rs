@@ -1,13 +1,10 @@
 use arl::RateLimiter;
-use async_compression::tokio::bufread::BzDecoder;
-use async_compression::tokio::write::ZstdEncoder;
 use clickhouse::{Client, Compression, Row};
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use serde::Deserialize;
 use std::sync::LazyLock;
 use std::time::Duration;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
@@ -92,17 +89,8 @@ async fn main() {
                     .await
                     .unwrap();
 
-                let mut decompressed = vec![];
-                BzDecoder::new(match_metadata.as_ref())
-                    .read_to_end(&mut decompressed)
-                    .await
-                    .unwrap();
-                let mut encoder = ZstdEncoder::new(Vec::new());
-                encoder.write_all(decompressed.as_ref()).await.unwrap();
-                encoder.shutdown().await.unwrap();
-
                 bucket
-                    .put_object(&key, &encoder.into_inner())
+                    .put_object(&key, match_metadata.as_ref())
                     .await
                     .unwrap();
                 println!("Uploaded metadata for match {}", row.match_id);
@@ -129,17 +117,8 @@ async fn main() {
                     .await
                     .unwrap();
 
-                let mut decompressed = vec![];
-                BzDecoder::new(match_replay.as_ref())
-                    .read_to_end(&mut decompressed)
-                    .await
-                    .unwrap();
-                let mut encoder = ZstdEncoder::new(Vec::new());
-                encoder.write_all(decompressed.as_ref()).await.unwrap();
-                encoder.shutdown().await.unwrap();
-
                 bucket
-                    .put_object(&key, &encoder.into_inner())
+                    .put_object(&key, match_replay.as_ref())
                     .await
                     .unwrap();
                 println!("Uploaded replay for match {}", row.match_id);
