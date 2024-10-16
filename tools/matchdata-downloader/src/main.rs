@@ -1,3 +1,5 @@
+use cached::proc_macro::cached;
+use cached::TimedCache;
 use clickhouse::{Client, Compression, Row};
 use futures::TryStreamExt;
 use s3::creds::Credentials;
@@ -80,12 +82,7 @@ async fn main() {
 async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
     println!("Downloading match {}", row.match_id);
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
-    if bucket
-        .head_object(&key)
-        .await
-        .map(|(_, s)| s == 200)
-        .unwrap_or(false)
-    {
+    if key_exists(&bucket, &key).await {
         println!("Metadata for match {} already exists", row.match_id);
         return;
     } else {
@@ -105,12 +102,7 @@ async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
     }
 
     let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
-    if bucket
-        .head_object(&key)
-        .await
-        .map(|(_, s)| s == 200)
-        .unwrap_or(false)
-    {
+    if key_exists(&bucket, &key).await {
         println!("Replay for match {} already exists", row.match_id);
     } else {
         let replay_url = format!(
@@ -127,4 +119,17 @@ async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
         bucket.put_object_stream(&mut reader, &key).await.unwrap();
         println!("Uploaded replay for match {}", row.match_id);
     }
+}
+
+#[cached(
+    ty = "TimedCache<String, bool>",
+    create = "{ TimedCache::with_lifespan(30 * 60) }",
+    convert = r#"{ format!("{}", file_path) }"#
+)]
+async fn key_exists(bucket: &Bucket, file_path: &str) -> bool {
+    bucket
+        .head_object(&file_path)
+        .await
+        .map(|(_, s)| s == 200)
+        .unwrap_or(false)
 }
