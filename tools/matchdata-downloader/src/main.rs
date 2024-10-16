@@ -60,65 +60,70 @@ async fn main() {
         s3credentials.clone(),
     )
     .unwrap();
-    let limiter = RateLimiter::new(1, Duration::from_secs(5 * 60));
+    let limiter = RateLimiter::new(1, Duration::from_secs(10));
 
     loop {
         limiter.wait().await;
-
-        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info)";
+        println!("Fetching match ids to download");
+        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) LIMIT 10";
         let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
 
+        let mut handles = vec![];
         while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
-            println!("Downloading match {}", row.match_id);
-            let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
-            if bucket
-                .head_object(&key)
-                .await
-                .map(|(_, s)| s == 200)
-                .unwrap_or(false)
-            {
-                println!("Metadata for match {} already exists", row.match_id);
-                continue;
-            } else {
-                let metadata_url = format!(
-                    "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-                    row.cluster_id, row.match_id, row.metadata_salt
-                );
-                let response = reqwest::get(&metadata_url).await.unwrap();
-                response.error_for_status_ref().unwrap();
-                let mut reader = StreamReader::new(
-                    response
-                        .bytes_stream()
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-                );
-                bucket.put_object_stream(&mut reader, &key).await.unwrap();
-                println!("Uploaded metadata for match {}", row.match_id);
-            }
-
-            let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
-            if bucket
-                .head_object(&key)
-                .await
-                .map(|(_, s)| s == 200)
-                .unwrap_or(false)
-            {
-                println!("Replay for match {} already exists", row.match_id);
-                continue;
-            } else {
-                let replay_url = format!(
-                    "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
-                    row.cluster_id, row.match_id, row.replay_salt
-                );
-                let response = reqwest::get(&replay_url).await.unwrap();
-                response.error_for_status_ref().unwrap();
-                let mut reader = StreamReader::new(
-                    response
-                        .bytes_stream()
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-                );
-                bucket.put_object_stream(&mut reader, &key).await.unwrap();
-                println!("Uploaded replay for match {}", row.match_id);
-            }
+            handles.push(tokio::spawn(download_match(row, bucket.clone())));
         }
+        futures::future::join_all(handles).await;
+    }
+}
+
+async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
+    println!("Downloading match {}", row.match_id);
+    let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
+    if bucket
+        .head_object(&key)
+        .await
+        .map(|(_, s)| s == 200)
+        .unwrap_or(false)
+    {
+        println!("Metadata for match {} already exists", row.match_id);
+        return;
+    } else {
+        let metadata_url = format!(
+            "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
+            row.cluster_id, row.match_id, row.metadata_salt
+        );
+        let response = reqwest::get(&metadata_url).await.unwrap();
+        response.error_for_status_ref().unwrap();
+        let mut reader = StreamReader::new(
+            response
+                .bytes_stream()
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+        );
+        bucket.put_object_stream(&mut reader, &key).await.unwrap();
+        println!("Uploaded metadata for match {}", row.match_id);
+    }
+
+    let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
+    if bucket
+        .head_object(&key)
+        .await
+        .map(|(_, s)| s == 200)
+        .unwrap_or(false)
+    {
+        println!("Replay for match {} already exists", row.match_id);
+    } else {
+        let replay_url = format!(
+            "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
+            row.cluster_id, row.match_id, row.replay_salt
+        );
+        let response = reqwest::get(&replay_url).await.unwrap();
+        response.error_for_status_ref().unwrap();
+        let mut reader = StreamReader::new(
+            response
+                .bytes_stream()
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+        );
+        bucket.put_object_stream(&mut reader, &key).await.unwrap();
+        println!("Uploaded replay for match {}", row.match_id);
     }
 }
