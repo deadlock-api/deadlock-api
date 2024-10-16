@@ -8,6 +8,7 @@ use serde::Deserialize;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::time::sleep;
+use tokio_task_pool::Pool;
 use tokio_util::io::StreamReader;
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
@@ -74,30 +75,25 @@ async fn main() {
     )
     .unwrap();
 
+    let pool = Pool::bounded(*PARALLEL_JOBS as usize);
+
     loop {
         println!("Fetching match ids to download");
         let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info)";
-        let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
+        let match_ids_to_fetch: Vec<MatchIdQueryResult> =
+            client.query(query).fetch_all().await.unwrap();
 
-        let mut handles = vec![];
-        let mut remaining = *PARALLEL_JOBS;
-        while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
-            let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
-            let key2 = format!("/ingest/demo/{}.dem.bz2", row.match_id);
-            if key_exists(&bucket, &key).await && key_exists(&bucket, &key2).await {
-                println!("Match {} already exists", row.match_id);
-                continue;
-            }
-            remaining -= 1;
-            if remaining == 0 {
-                break;
-            }
-            handles.push(tokio::spawn(download_match(row, bucket.clone())));
+        if match_ids_to_fetch.is_empty() {
+            println!("No matches to download, sleeping for 10 s");
+            sleep(Duration::from_secs(10)).await;
+            continue;
         }
-        if handles.is_empty() {
-            sleep(Duration::from_secs(60)).await;
+
+        for row in match_ids_to_fetch {
+            pool.spawn(download_match(row, bucket.clone()))
+                .await
+                .unwrap();
         }
-        futures::future::join_all(handles).await;
     }
 }
 

@@ -214,31 +214,6 @@ checksum = "93a719913643003b84bd13022b4b7e703c09342cd03b679c4641c7d2e50dc34d"
 
 [[package]]
 name = "clickhouse"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3093f817c4f81c8bd174ed8dd30eac785821a8a7eef27a7dcb7f8cd0d0f6548"
-dependencies = [
- "bstr",
- "bytes",
- "cityhash-rs",
- "clickhouse-derive",
- "futures",
- "futures-channel",
- "http-body-util",
- "hyper 1.5.0",
- "hyper-util",
- "lz4_flex",
- "replace_with",
- "sealed",
- "serde",
- "static_assertions",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "clickhouse"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbbda6a46e0d129d51a808b75e92c209d45313d506dc1734811ca51b4d671f9d"
@@ -273,16 +248,6 @@ dependencies = [
  "quote",
  "serde_derive_internals",
  "syn",
-]
-
-[[package]]
-name = "clickhouse-pool"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e6a879bed18be7c88115323b797ffe656334ee0f48b2cfc101e6004a68ba33"
-dependencies = [
- "clickhouse 0.12.2",
- "tokio",
 ]
 
 [[package]]
@@ -922,13 +887,13 @@ name = "matchdata-downloader"
 version = "0.1.0"
 dependencies = [
  "cached",
- "clickhouse 0.13.0",
- "clickhouse-pool",
+ "clickhouse",
  "futures",
  "reqwest",
  "rust-s3",
  "serde",
  "tokio",
+ "tokio-task-pool",
  "tokio-util",
 ]
 
@@ -1746,6 +1711,15 @@ checksum = "4f4e6ce100d0eb49a2734f8c0812bcd324cf357d21810932c5df6b96ef2b86f1"
 dependencies = [
  "futures-core",
  "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-task-pool"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75b979d664a052ebb638f0eb4d1134bed9552a5975b82c0c61bf55ff27ff8953"
+dependencies = [
  "tokio",
 ]
 
