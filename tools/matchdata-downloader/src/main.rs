@@ -65,11 +65,22 @@ async fn main() {
 
     loop {
         println!("Fetching match ids to download");
-        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) LIMIT 40";
+        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info)";
         let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
 
         let mut handles = vec![];
+        let mut remaining = 40;
         while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
+            let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
+            let key2 = format!("/ingest/demo/{}.dem.bz2", row.match_id);
+            if key_exists(&bucket, &key).await && key_exists(&bucket, &key2).await {
+                println!("Match {} already exists", row.match_id);
+                continue;
+            }
+            remaining -= 1;
+            if remaining == 0 {
+                break;
+            }
             handles.push(tokio::spawn(download_match(row, bucket.clone())));
         }
         if handles.is_empty() {
