@@ -68,7 +68,7 @@ async fn main() {
 
         while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
             println!("Downloading match {}", row.match_id);
-            let key = format!("/ingest/metadata/{}.meta.zst", row.match_id);
+            let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
             if bucket
                 .head_object(&key)
                 .await
@@ -96,7 +96,7 @@ async fn main() {
                 println!("Uploaded metadata for match {}", row.match_id);
             }
 
-            let key = format!("/ingest/demo/{}.dem.zst", row.match_id);
+            let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
             if bucket
                 .head_object(&key)
                 .await

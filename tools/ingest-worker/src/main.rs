@@ -87,7 +87,7 @@ async fn main() {
         let objects = objects
             .iter()
             .flat_map(|dir| dir.contents.clone())
-            .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.zst"))
+            .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.bz2"))
             .take(MAX_OBJECTS_PER_RUN)
             .collect::<Vec<_>>();
         println!("Fetched {} files", objects.len());
@@ -98,7 +98,7 @@ async fn main() {
             let file = bucket.get_object(&obj.key).await.unwrap();
             let data = file.bytes();
             let data: &[u8] = data.as_ref();
-            let data = if obj.key.ends_with(".zst") {
+            let data = if obj.key.ends_with(".bz2") {
                 let mut decompressed = vec![];
                 BzDecoder::new(data)
                     .read_to_end(&mut decompressed)
