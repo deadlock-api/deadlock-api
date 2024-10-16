@@ -28,6 +28,12 @@ static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
 
+static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
+    std::env::var("DO_NOT_PULL_DEMO_FILES")
+        .map(|s| s == "true")
+        .unwrap_or(false)
+});
+
 #[derive(Row, Deserialize)]
 struct MatchIdQueryResult {
     match_id: u64,
@@ -110,6 +116,10 @@ async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
         );
         bucket.put_object_stream(&mut reader, &key).await.unwrap();
         println!("Uploaded metadata for match {}", row.match_id);
+    }
+
+    if *DO_NOT_PULL_DEMO_FILES {
+        return;
     }
 
     let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
