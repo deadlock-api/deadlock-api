@@ -27,6 +27,11 @@ static S3_SECRET_ACCESS_KEY: LazyLock<String> =
 static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
+static PARALLEL_JOBS: LazyLock<u32> = LazyLock::new(|| {
+    std::env::var("PARALLEL_JOBS")
+        .map(|s| s.parse().unwrap())
+        .unwrap_or(40)
+});
 
 static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
     std::env::var("DO_NOT_PULL_DEMO_FILES")
@@ -75,7 +80,7 @@ async fn main() {
         let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
 
         let mut handles = vec![];
-        let mut remaining = 40;
+        let mut remaining = *PARALLEL_JOBS;
         while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
             let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
             let key2 = format!("/ingest/demo/{}.dem.bz2", row.match_id);
