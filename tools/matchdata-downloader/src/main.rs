@@ -65,7 +65,7 @@ async fn main() {
 
     loop {
         println!("Fetching match ids to download");
-        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) LIMIT 10";
+        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) LIMIT 40";
         let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
 
         let mut handles = vec![];
