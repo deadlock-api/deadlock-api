@@ -66,7 +66,7 @@ async fn main() {
     loop {
         limiter.wait().await;
 
-        let query = "SELECT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info)";
+        let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info)";
         let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
 
         while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
