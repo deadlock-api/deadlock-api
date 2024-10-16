@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-arl = "0.2.0"
 clickhouse = { version = "0.13.0", features = ["time", "test-util"] }
 clickhouse-pool = "0.0.1"
 futures = "0.3.31"

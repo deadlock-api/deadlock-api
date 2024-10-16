@@ -1,4 +1,3 @@
-use arl::RateLimiter;
 use clickhouse::{Client, Compression, Row};
 use futures::TryStreamExt;
 use s3::creds::Credentials;
@@ -6,6 +5,7 @@ use s3::{Bucket, Region};
 use serde::Deserialize;
 use std::sync::LazyLock;
 use std::time::Duration;
+use tokio::time::sleep;
 use tokio_util::io::StreamReader;
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
@@ -60,10 +60,8 @@ async fn main() {
         s3credentials.clone(),
     )
     .unwrap();
-    let limiter = RateLimiter::new(1, Duration::from_secs(10));
 
     loop {
-        limiter.wait().await;
         println!("Fetching match ids to download");
         let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) LIMIT 10";
         let mut match_ids_to_fetch = client.query(query).fetch::<MatchIdQueryResult>().unwrap();
@@ -71,6 +69,9 @@ async fn main() {
         let mut handles = vec![];
         while let Some(row) = match_ids_to_fetch.next().await.unwrap() {
             handles.push(tokio::spawn(download_match(row, bucket.clone())));
+        }
+        if handles.is_empty() {
+            sleep(Duration::from_secs(60)).await;
         }
         futures::future::join_all(handles).await;
     }
