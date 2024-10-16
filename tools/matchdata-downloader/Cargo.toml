@@ -7,7 +7,9 @@ edition = "2021"
 arl = "0.2.0"
 clickhouse = { version = "0.13.0", features = ["time", "test-util"] }
 clickhouse-pool = "0.0.1"
-reqwest = "0.12.8"
+futures = "0.3.31"
+reqwest = { version = "0.12.8", features = ["stream"] }
 rust-s3 = "0.35.1"
 serde = { version = "1.0.210", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
+tokio-util = { version = "0.7.12", features = ["io"] }

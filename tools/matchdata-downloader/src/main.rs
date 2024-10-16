@@ -1,10 +1,12 @@
 use arl::RateLimiter;
 use clickhouse::{Client, Compression, Row};
+use futures::TryStreamExt;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use serde::Deserialize;
 use std::sync::LazyLock;
 use std::time::Duration;
+use tokio_util::io::StreamReader;
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
@@ -82,17 +84,14 @@ async fn main() {
                     "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
                     row.cluster_id, row.match_id, row.metadata_salt
                 );
-                let match_metadata = reqwest::get(&metadata_url)
-                    .await
-                    .unwrap()
-                    .bytes()
-                    .await
-                    .unwrap();
-
-                bucket
-                    .put_object(&key, match_metadata.as_ref())
-                    .await
-                    .unwrap();
+                let response = reqwest::get(&metadata_url).await.unwrap();
+                response.error_for_status_ref().unwrap();
+                let mut reader = StreamReader::new(
+                    response
+                        .bytes_stream()
+                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+                );
+                bucket.put_object_stream(&mut reader, &key).await.unwrap();
                 println!("Uploaded metadata for match {}", row.match_id);
             }
 
@@ -110,17 +109,14 @@ async fn main() {
                     "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
                     row.cluster_id, row.match_id, row.replay_salt
                 );
-                let match_replay = reqwest::get(&replay_url)
-                    .await
-                    .unwrap()
-                    .bytes()
-                    .await
-                    .unwrap();
-
-                bucket
-                    .put_object(&key, match_replay.as_ref())
-                    .await
-                    .unwrap();
+                let response = reqwest::get(&replay_url).await.unwrap();
+                response.error_for_status_ref().unwrap();
+                let mut reader = StreamReader::new(
+                    response
+                        .bytes_stream()
+                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+                );
+                bucket.put_object_stream(&mut reader, &key).await.unwrap();
                 println!("Uploaded replay for match {}", row.match_id);
             }
         }
