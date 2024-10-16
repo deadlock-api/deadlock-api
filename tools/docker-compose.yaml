@@ -32,7 +32,16 @@ services:
     depends_on:
     - clickhouse
     env_file: .env
-    stop_grace_period: 1m
+    stop_grace_period: 30s
+
+  matchdata-downloader:
+    build:
+      context: matchdata-downloader
+    restart: always
+    depends_on:
+    - clickhouse
+    env_file: .env
+    stop_grace_period: 30s
 
   api:
     build:
