@@ -1,12 +1,19 @@
+extern crate core;
+
+use prost::Message;
+
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
-use crate::models::match_metadata::MatchMetadata;
 use arl::RateLimiter;
+use async_compression::tokio::bufread::ZstdDecoder;
 use clickhouse::{Client, Compression};
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
+use tokio::io::AsyncReadExt;
+use valveprotos::deadlock::c_msg_match_meta_data_contents::MatchInfo;
+use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
 mod models;
 
@@ -80,24 +87,52 @@ async fn main() {
         let objects = objects
             .iter()
             .flat_map(|dir| dir.contents.clone())
-            .filter(|obj| obj.key.ends_with(".json"))
+            .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.zst"))
             .take(MAX_OBJECTS_PER_RUN)
             .collect::<Vec<_>>();
-        let mut json_files = vec![];
+        println!("Fetched {} files", objects.len());
+        let mut match_infos = vec![];
         for obj in objects.iter() {
             println!("Fetching file: {}", obj.key);
             s3limiter.wait().await;
             let file = bucket.get_object(&obj.key).await.unwrap();
-            let metadata: MatchMetadata = serde_json::from_slice(file.bytes()).unwrap();
-            json_files.push(metadata);
+            let data = file.bytes();
+            let data: &[u8] = data.as_ref();
+            let data = if obj.key.ends_with(".zst") {
+                let mut decompressed = vec![];
+                ZstdDecoder::new(data)
+                    .read_to_end(&mut decompressed)
+                    .await
+                    .unwrap();
+                decompressed
+            } else {
+                data.to_vec()
+            };
+            let match_metadata = match CMsgMatchMetaData::decode(data.as_slice()) {
+                Ok(m) => m,
+                Err(e) => {
+                    println!("Error decoding match metadata: {:?}", e);
+                    continue;
+                }
+            };
+            let match_details = match_metadata.match_details();
+            let match_info =
+                match CMsgMatchMetaDataContents::decode(match_details).map(|d| d.match_info) {
+                    Ok(Some(m)) => m,
+                    _ => {
+                        println!("No match info in metadata");
+                        continue;
+                    }
+                };
+            match_infos.push(match_info);
         }
-        let num_files = json_files.len();
+        let num_files = match_infos.len();
         if num_files == 0 {
             println!("No files to parse");
             continue;
         }
         println!("Inserting {} files", num_files);
-        insert_matches(client.clone(), json_files).await.unwrap();
+        insert_matches(client.clone(), match_infos).await.unwrap();
         for obj in objects.iter() {
             let filename = std::path::Path::new(&obj.key)
                 .file_name()
@@ -120,20 +155,17 @@ async fn main() {
     }
 }
 
-async fn insert_matches(
-    client: Client,
-    matches: Vec<MatchMetadata>,
-) -> clickhouse::error::Result<()> {
+async fn insert_matches(client: Client, matches: Vec<MatchInfo>) -> clickhouse::error::Result<()> {
     let mut match_info_insert = client.insert("match_info")?;
     let mut match_player_insert = client.insert("match_player")?;
-    for match_info in matches.into_iter().map(|m| m.match_info) {
+    for match_info in matches {
         let ch_match_metadata: ClickhouseMatchInfo = match_info.clone().into();
         match_info_insert.write(&ch_match_metadata).await?;
 
         let ch_players = match_info
             .players
             .into_iter()
-            .map::<ClickhouseMatchPlayer, _>(|p| (match_info.match_id, p).into());
+            .map::<ClickhouseMatchPlayer, _>(|p| (match_info.match_id.unwrap(), p).into());
         for player in ch_players {
             match_player_insert.write(&player).await?;
         }

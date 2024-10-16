@@ -5,11 +5,13 @@ edition = "2021"
 
 [dependencies]
 arl = "0.2.0"
-clickhouse = { version = "0.12.2", features = ["test-util", "time"] }
+async-compression = { version = "0.4.15", features = ["tokio", "zstd"] }
+clickhouse = { version = "0.13.0", features = ["test-util", "time"] }
 ctrlc = "3.4.5"
+prost = "0.13.3"
 rust-s3 = "0.35.1"
 serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
 serde_repr = "0.1.19"
 time = { version = "0.3.36", features = ["serde"] }
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
+valveprotos = { git = "https://github.com/OpenSource-Deadlock-Tools/valveprotos-rs", rev = "71ab6d7de2cd43f567397f65821efd80f5aa0b71", features = ["protobuf-src", "deadlock"] }

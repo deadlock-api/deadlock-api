@@ -1,7 +1,7 @@
-FROM rust:slim
+FROM rust
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates gcc libssl-dev pkg-config
+    && apt-get install -y --no-install-recommends ca-certificates gcc libssl-dev pkg-config protobuf-compiler cmake build-essential
 
 WORKDIR /app
 
