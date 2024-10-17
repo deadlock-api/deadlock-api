@@ -41,7 +41,7 @@ static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
         .unwrap_or(false)
 });
 
-#[derive(Row, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
 struct MatchIdQueryResult {
     match_id: u64,
     cluster_id: u32,
@@ -97,6 +97,7 @@ async fn main() {
                 .await
                 .unwrap();
         }
+        sleep(Duration::from_secs(20)).await;
     }
 }
 
