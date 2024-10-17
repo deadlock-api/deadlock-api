@@ -5,6 +5,7 @@ use futures::TryStreamExt;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -40,7 +41,7 @@ static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
         .unwrap_or(false)
 });
 
-#[derive(Row, Deserialize)]
+#[derive(Row, Deserialize, PartialEq, Eq, Hash)]
 struct MatchIdQueryResult {
     match_id: u64,
     cluster_id: u32,
@@ -82,6 +83,8 @@ async fn main() {
         let query = "SELECT DISTINCT match_id,cluster_id,metadata_salt,replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info)";
         let match_ids_to_fetch: Vec<MatchIdQueryResult> =
             client.query(query).fetch_all().await.unwrap();
+        let match_ids_to_fetch: HashSet<MatchIdQueryResult> =
+            match_ids_to_fetch.into_iter().collect();
 
         if match_ids_to_fetch.is_empty() {
             println!("No matches to download, sleeping for 10 s");
