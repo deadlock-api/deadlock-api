@@ -97,7 +97,7 @@ async fn main() {
                 .await
                 .unwrap();
         }
-        sleep(Duration::from_secs(20)).await;
+        sleep(Duration::from_secs(30)).await;
     }
 }
 
