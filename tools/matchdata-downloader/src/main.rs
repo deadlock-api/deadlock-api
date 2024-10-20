@@ -6,7 +6,7 @@ use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use serde::Deserialize;
 use std::collections::HashSet;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 use tokio::time::sleep;
 use tokio_task_pool::Pool;
@@ -76,6 +76,8 @@ async fn main() {
     )
     .unwrap();
 
+    let failed = Arc::new(Mutex::new(vec![]));
+
     let pool = Pool::bounded(*PARALLEL_JOBS as usize);
 
     loop {
@@ -93,7 +95,10 @@ async fn main() {
         }
 
         for row in match_ids_to_fetch {
-            pool.spawn(download_match(row, bucket.clone()))
+            if failed.lock().unwrap().contains(&row.match_id) {
+                continue;
+            }
+            pool.spawn(download_match(row, bucket.clone(), failed.clone()))
                 .await
                 .unwrap();
         }
@@ -101,7 +106,7 @@ async fn main() {
     }
 }
 
-async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
+async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>, failed: Arc<Mutex<Vec<u64>>>) {
     println!("Downloading match {}", row.match_id);
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
@@ -113,7 +118,14 @@ async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>) {
             row.cluster_id, row.match_id, row.metadata_salt
         );
         let response = reqwest::get(&metadata_url).await.unwrap();
-        response.error_for_status_ref().unwrap();
+        match response.error_for_status_ref(){
+            Ok(_) => {},
+            Err(e) => {
+                println!("Failed to download metadata for match {}: {}", row.match_id, e);
+                failed.lock().unwrap().push(row.match_id);
+                return;
+            }
+        }
         let mut reader = StreamReader::new(
             response
                 .bytes_stream()
