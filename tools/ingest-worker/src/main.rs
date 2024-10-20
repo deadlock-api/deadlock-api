@@ -71,15 +71,16 @@ async fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(1 * 60));
+    let limiter = RateLimiter::new(1, Duration::from_secs(60));
     limiter.wait().await;
-    let s3limiter = RateLimiter::new(2, Duration::from_secs(1));
+    let s3limiter = RateLimiter::new(1, Duration::from_secs(1));
     while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
         limiter.wait().await;
         let start = std::time::Instant::now();
 
         println!("Fetching metadata files");
+        s3limiter.wait().await;
         let objects = bucket
             .list("ingest/metadata".parse().unwrap(), None)
             .await
