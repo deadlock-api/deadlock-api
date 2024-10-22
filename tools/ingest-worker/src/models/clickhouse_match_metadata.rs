@@ -142,6 +142,8 @@ pub struct ClickhouseMatchPlayer {
     pub assigned_lane: u32,
     pub player_level: u32,
     pub abandon_match_time_s: u32,
+    pub ranked_badge_level: u32,
+    pub ranked_badge_detail: u32,
     pub ability_stats: Vec<(i64, i64)>,
     pub stats_type_stat: Vec<f32>,
     #[serde(rename = "book_reward.book_id")]
@@ -388,6 +390,8 @@ impl From<(u64, Players)> for ClickhouseMatchPlayer {
             book_reward_xp_amount: value.book_rewards.iter().map(|v| v.xp_amount()).collect(),
             book_reward_book_id: value.book_rewards.iter().map(|v| v.book_id()).collect(),
             abandon_match_time_s: value.abandon_match_time_s(),
+            ranked_badge_level: value.ranked_badge_level(),
+            ranked_badge_detail: value.ranked_badge_detail(),
         }
     }
 }

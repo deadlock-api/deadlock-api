@@ -14,4 +14,4 @@ serde = { version = "1.0.210", features = ["derive"] }
 serde_repr = "0.1.19"
 time = { version = "0.3.36", features = ["serde"] }
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
-valveprotos = { git = "https://github.com/OpenSource-Deadlock-Tools/valveprotos-rs", rev = "71ab6d7de2cd43f567397f65821efd80f5aa0b71", features = ["protobuf-src", "deadlock"] }
+valveprotos = { git = "https://github.com/raimannma/valveprotos-rs", rev = "6f6c7581d8d8c37b322b1b444189fb93dc5836ce", features = ["protobuf-src", "deadlock"] }

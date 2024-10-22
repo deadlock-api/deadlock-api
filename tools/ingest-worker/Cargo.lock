@@ -1627,7 +1627,7 @@ dependencies = [
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/OpenSource-Deadlock-Tools/valveprotos-rs?rev=71ab6d7de2cd43f567397f65821efd80f5aa0b71#71ab6d7de2cd43f567397f65821efd80f5aa0b71"
+source = "git+https://github.com/raimannma/valveprotos-rs?rev=6f6c7581d8d8c37b322b1b444189fb93dc5836ce#6f6c7581d8d8c37b322b1b444189fb93dc5836ce"
 dependencies = [
  "heck 0.5.0",
  "prost",
