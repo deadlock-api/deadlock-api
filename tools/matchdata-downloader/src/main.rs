@@ -106,7 +106,11 @@ async fn main() {
     }
 }
 
-async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>, failed: Arc<Mutex<Vec<u64>>>) {
+async fn download_match(
+    row: MatchIdQueryResult,
+    bucket: Box<Bucket>,
+    failed: Arc<Mutex<Vec<u64>>>,
+) {
     println!("Downloading match {}", row.match_id);
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
@@ -118,10 +122,13 @@ async fn download_match(row: MatchIdQueryResult, bucket: Box<Bucket>, failed: Ar
             row.cluster_id, row.match_id, row.metadata_salt
         );
         let response = reqwest::get(&metadata_url).await.unwrap();
-        match response.error_for_status_ref(){
-            Ok(_) => {},
+        match response.error_for_status_ref() {
+            Ok(_) => {}
             Err(e) => {
-                println!("Failed to download metadata for match {}: {}", row.match_id, e);
+                println!(
+                    "Failed to download metadata for match {}: {}",
+                    row.match_id, e
+                );
                 failed.lock().unwrap().push(row.match_id);
                 return;
             }
