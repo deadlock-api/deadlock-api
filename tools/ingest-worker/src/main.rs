@@ -1,5 +1,3 @@
-extern crate core;
-
 use prost::Message;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
@@ -110,26 +108,21 @@ async fn main() {
                 data.to_vec()
             };
             let match_metadata = match CMsgMatchMetaData::decode(data.as_slice()) {
-                Ok(m) => CMsgMatchMetaDataContents::decode(m.match_details()),
-                Err(_) => match CMsgMatchMetaDataContents::decode(data.as_slice()) {
-                    Ok(m) => Ok(m),
+                Ok(m) => m.match_details.unwrap_or(data.clone()),
+                Err(_) => data.clone(),
+            };
+            let match_info = match CMsgMatchMetaDataContents::decode(match_metadata.as_slice())
+                .ok()
+                .and_then(|m| m.match_info)
+            {
+                Some(m) => m,
+                None => match MatchInfo::decode(match_metadata.as_slice()) {
+                    Ok(m) => m,
                     Err(e) => {
-                        println!("Error decoding match metadata: {:?}", e);
-                        continue;
+                        println!("Error decoding match info: {:?}", e);
+                        return;
                     }
                 },
-            };
-            let match_info = match match_metadata.map(|d| d.match_info) {
-                Ok(Some(m)) => m,
-                _ => {
-                    match MatchInfo::decode(data.as_slice()) {
-                        Ok(m) => m,
-                        Err(e) => {
-                            println!("Error decoding match info: {:?}", e);
-                            continue;
-                        }
-                    }
-                }
             };
             match_infos.push(match_info);
         }
