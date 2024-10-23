@@ -122,8 +122,13 @@ async fn main() {
             let match_info = match match_metadata.map(|d| d.match_info) {
                 Ok(Some(m)) => m,
                 _ => {
-                    println!("No match info in metadata");
-                    continue;
+                    match MatchInfo::decode(data.as_slice()) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            println!("Error decoding match info: {:?}", e);
+                            continue;
+                        }
+                    }
                 }
             };
             match_infos.push(match_info);
