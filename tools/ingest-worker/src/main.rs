@@ -110,21 +110,22 @@ async fn main() {
                 data.to_vec()
             };
             let match_metadata = match CMsgMatchMetaData::decode(data.as_slice()) {
-                Ok(m) => m,
-                Err(e) => {
-                    println!("Error decoding match metadata: {:?}", e);
+                Ok(m) => CMsgMatchMetaDataContents::decode(m.match_details()),
+                Err(_) => match CMsgMatchMetaDataContents::decode(data.as_slice()) {
+                    Ok(m) => Ok(m),
+                    Err(e) => {
+                        println!("Error decoding match metadata: {:?}", e);
+                        continue;
+                    }
+                },
+            };
+            let match_info = match match_metadata.map(|d| d.match_info) {
+                Ok(Some(m)) => m,
+                _ => {
+                    println!("No match info in metadata");
                     continue;
                 }
             };
-            let match_details = match_metadata.match_details();
-            let match_info =
-                match CMsgMatchMetaDataContents::decode(match_details).map(|d| d.match_info) {
-                    Ok(Some(m)) => m,
-                    _ => {
-                        println!("No match info in metadata");
-                        continue;
-                    }
-                };
             match_infos.push(match_info);
         }
         let num_files = match_infos.len();
