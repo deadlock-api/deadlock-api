@@ -35,7 +35,7 @@ static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
 
-const MAX_OBJECTS_PER_RUN: usize = 1000;
+const MAX_OBJECTS_PER_RUN: usize = 100;
 
 #[tokio::main]
 async fn main() {
