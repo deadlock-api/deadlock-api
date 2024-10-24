@@ -69,12 +69,11 @@ async fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(30));
+    let limiter = RateLimiter::new(1, Duration::from_secs(60));
     limiter.wait().await;
     let s3limiter = RateLimiter::new(1, Duration::from_millis(50));
     while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
-        limiter.wait().await;
         let start = std::time::Instant::now();
 
         println!("Fetching metadata files");
@@ -90,6 +89,11 @@ async fn main() {
             .rev()
             .take(MAX_OBJECTS_PER_RUN)
             .collect::<Vec<_>>();
+        if objects.is_empty() {
+            println!("No files to fetch");
+            limiter.wait().await;
+            continue;
+        }
         println!("Fetched {} files", objects.len());
         let mut match_infos = vec![];
         s3limiter.wait().await;
