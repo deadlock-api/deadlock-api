@@ -92,10 +92,19 @@ async fn main() {
             .collect::<Vec<_>>();
         println!("Fetched {} files", objects.len());
         let mut match_infos = vec![];
-        for obj in objects.iter() {
+        s3limiter.wait().await;
+        let data = futures::future::join_all(
+            objects
+                .iter()
+                .map(|obj| bucket.get_object(&obj.key))
+                .collect::<Vec<_>>(),
+        )
+        .await
+        .into_iter()
+        .filter_map(|m| m.ok())
+        .collect::<Vec<_>>();
+        for (obj, file) in objects.iter().zip(data.iter()) {
             println!("Fetching file: {}", obj.key);
-            s3limiter.wait().await;
-            let file = bucket.get_object(&obj.key).await.unwrap();
             let data = file.bytes();
             let data: &[u8] = data.as_ref();
             let data = if obj.key.ends_with(".bz2") {
