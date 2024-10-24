@@ -1,4 +1,5 @@
 use prost::Message;
+use std::path::Path;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use arl::RateLimiter;
@@ -147,19 +148,26 @@ async fn main() {
         }
         println!("Inserting {} files", num_files);
         insert_matches(client.clone(), match_infos).await.unwrap();
+        let mut handles = vec![];
         for obj in objects.iter() {
-            let filename = std::path::Path::new(&obj.key)
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap();
-            s3limiter.wait().await;
-            bucket
-                .copy_object_internal(&obj.key, &format!("processed/metadata/{}", filename))
-                .await
-                .unwrap();
-            bucket.delete_object(&obj.key).await.unwrap();
+            let bucket = bucket.clone();
+            let obj = obj.clone();
+            let handle = tokio::spawn(async move {
+                bucket
+                    .copy_object_internal(
+                        &obj.key,
+                        &format!(
+                            "processed/metadata/{}",
+                            Path::new(&obj.key).file_name().unwrap().to_str().unwrap()
+                        ),
+                    )
+                    .await
+                    .unwrap();
+                bucket.delete_object(&obj.key).await.unwrap();
+            });
+            handles.push(handle);
         }
+        futures::future::join_all(handles).await;
         println!("Inserted {} files", num_files);
         println!("Elapsed: {:?}", start.elapsed());
         println!(
