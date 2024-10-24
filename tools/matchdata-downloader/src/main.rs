@@ -114,33 +114,31 @@ async fn download_match(
     println!("Downloading match {}", row.match_id);
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
-        println!("Metadata for match {} already exists", row.match_id);
         return;
-    } else {
-        let metadata_url = format!(
-            "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-            row.cluster_id, row.match_id, row.metadata_salt
-        );
-        let response = reqwest::get(&metadata_url).await.unwrap();
-        match response.error_for_status_ref() {
-            Ok(_) => {}
-            Err(e) => {
-                println!(
-                    "Failed to download metadata for match {}: {}",
-                    row.match_id, e
-                );
-                failed.lock().unwrap().push(row.match_id);
-                return;
-            }
-        }
-        let mut reader = StreamReader::new(
-            response
-                .bytes_stream()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-        );
-        bucket.put_object_stream(&mut reader, &key).await.unwrap();
-        println!("Uploaded metadata for match {}", row.match_id);
     }
+    let metadata_url = format!(
+        "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
+        row.cluster_id, row.match_id, row.metadata_salt
+    );
+    let response = reqwest::get(&metadata_url).await.unwrap();
+    match response.error_for_status_ref() {
+        Ok(_) => {}
+        Err(e) => {
+            println!(
+                "Failed to download metadata for match {}: {}",
+                row.match_id, e
+            );
+            failed.lock().unwrap().push(row.match_id);
+            return;
+        }
+    }
+    let mut reader = StreamReader::new(
+        response
+            .bytes_stream()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+    );
+    bucket.put_object_stream(&mut reader, &key).await.unwrap();
+    println!("Uploaded metadata for match {}", row.match_id);
 
     if *DO_NOT_PULL_DEMO_FILES {
         return;
@@ -148,22 +146,21 @@ async fn download_match(
 
     let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
-        println!("Replay for match {} already exists", row.match_id);
-    } else {
-        let replay_url = format!(
-            "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
-            row.cluster_id, row.match_id, row.replay_salt
-        );
-        let response = reqwest::get(&replay_url).await.unwrap();
-        response.error_for_status_ref().unwrap();
-        let mut reader = StreamReader::new(
-            response
-                .bytes_stream()
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-        );
-        bucket.put_object_stream(&mut reader, &key).await.unwrap();
-        println!("Uploaded replay for match {}", row.match_id);
+        return;
     }
+    let replay_url = format!(
+        "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
+        row.cluster_id, row.match_id, row.replay_salt
+    );
+    let response = reqwest::get(&replay_url).await.unwrap();
+    response.error_for_status_ref().unwrap();
+    let mut reader = StreamReader::new(
+        response
+            .bytes_stream()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
+    );
+    bucket.put_object_stream(&mut reader, &key).await.unwrap();
+    println!("Uploaded replay for match {}", row.match_id);
 }
 
 #[cached(
@@ -172,6 +169,7 @@ async fn download_match(
     convert = r#"{ format!("{}", file_path) }"#
 )]
 async fn key_exists(bucket: &Bucket, file_path: &str) -> bool {
+    println!("Checking if key exists: {}", file_path);
     bucket
         .head_object(&file_path)
         .await
