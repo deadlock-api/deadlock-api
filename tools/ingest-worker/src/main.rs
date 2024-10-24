@@ -87,6 +87,7 @@ async fn main() {
             .iter()
             .flat_map(|dir| dir.contents.clone())
             .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.bz2"))
+            .rev()
             .take(MAX_OBJECTS_PER_RUN)
             .collect::<Vec<_>>();
         println!("Fetched {} files", objects.len());
