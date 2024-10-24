@@ -71,7 +71,7 @@ async fn main() {
 
     let limiter = RateLimiter::new(1, Duration::from_secs(60));
     limiter.wait().await;
-    let s3limiter = RateLimiter::new(1, Duration::from_secs(1));
+    let s3limiter = RateLimiter::new(1, Duration::from_millis(250));
     while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
         limiter.wait().await;
