@@ -20,6 +20,8 @@ pub struct ActiveMatch {
     pub game_mode: GameMode,
     pub match_score: u16,
     pub region_mode: RegionMode,
+    pub compat_version: Option<u32>,
+    pub ranked_badge_level: Option<u32>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -55,6 +57,8 @@ pub struct ClickHouseActiveMatch {
     pub game_mode: GameMode,
     pub match_score: u16,
     pub region_mode: RegionMode,
+    pub compat_version: Option<u32>,
+    pub ranked_badge_level: Option<u32>,
 }
 
 impl From<ActiveMatch> for ClickHouseActiveMatch {
@@ -79,6 +83,8 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
             game_mode: am.game_mode,
             match_score: am.match_score,
             region_mode: am.region_mode,
+            compat_version: am.compat_version,
+            ranked_badge_level: am.ranked_badge_level,
         }
     }
 }
