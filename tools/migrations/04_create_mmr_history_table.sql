@@ -11,5 +11,6 @@ CREATE TABLE IF NOT EXISTS mmr_history
         'ServerTest' = 5,
         'Tutorial' = 6
     ),
-    player_score Float64
+    player_score Float64,
+    ranked_badge_level Nullable (UInt32)
 ) ENGINE = ReplacingMergeTree ORDER BY (account_id, match_id);

@@ -23,11 +23,12 @@ class Match(BaseModel):
     player_ids: list[int]
     match_mode: int
     match_score: int
+    ranked_badge_level: int | None
 
 
 def get_matches_starting_from(client, start_id: int = 0) -> list[Match]:
     query = f"""
-    SELECT DISTINCT match_id, `players.account_id`, match_score, match_mode
+    SELECT DISTINCT match_id, `players.account_id`, match_score, match_mode, ranked_badge_level
     FROM active_matches
     WHERE match_id > {start_id} AND start_time > '2024-10-11 06:00:00'
     ORDER BY match_id;
@@ -39,6 +40,7 @@ def get_matches_starting_from(client, start_id: int = 0) -> list[Match]:
             player_ids=row[1],
             match_score=row[2],
             match_mode=1 if row[3] == "Unranked" else 4,
+            ranked_badge_level=row[4],
         )
         for row in result
     ]
@@ -64,10 +66,14 @@ def get_all_player_mmrs(client) -> dict[int, float]:
 
 
 def set_player_mmr(
-    client, player_mmr: dict[int, float], match_id: int, match_mode: int
+    client,
+    player_mmr: dict[int, float],
+    match_id: int,
+    match_mode: int,
+    ranked_badge_level: int | None,
 ):
     query = """
-    INSERT INTO mmr_history (account_id, match_id, match_mode, player_score)
+    INSERT INTO mmr_history (account_id, match_id, match_mode, player_score, ranked_badge_level)
     VALUES
     """
 
@@ -79,6 +85,7 @@ def set_player_mmr(
                 "match_id": match_id,
                 "match_mode": match_mode,
                 "player_score": mmr,
+                "ranked_badge_level": ranked_badge_level,
             }
             for account_id, mmr in player_mmr.items()
         ],
@@ -109,7 +116,11 @@ if __name__ == "__main__":
                     updated_mmrs = run_regression(match, all_player_mmrs)
                     all_player_mmrs.update(updated_mmrs)
                     set_player_mmr(
-                        client, updated_mmrs, match.match_id, match.match_mode
+                        client,
+                        updated_mmrs,
+                        match.match_id,
+                        match.match_mode,
+                        match.ranked_badge_level,
                     )
         end = time.time()
         duration = end - start
