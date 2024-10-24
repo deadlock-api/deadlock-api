@@ -111,7 +111,6 @@ async fn download_match(
     bucket: Box<Bucket>,
     failed: Arc<Mutex<Vec<u64>>>,
 ) {
-    println!("Downloading match {}", row.match_id);
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
         return;
