@@ -1,5 +1,5 @@
 use cached::proc_macro::cached;
-use cached::TimedCache;
+use cached::UnboundCache;
 use clickhouse::{Client, Compression, Row};
 use futures::TryStreamExt;
 use s3::creds::Credentials;
@@ -163,8 +163,8 @@ async fn download_match(
 }
 
 #[cached(
-    ty = "TimedCache<String, bool>",
-    create = "{ TimedCache::with_lifespan(30 * 60) }",
+    ty = "UnboundCache<String, bool>",
+    create = "{ UnboundCache::new() }",
     convert = r#"{ format!("{}", file_path) }"#
 )]
 async fn key_exists(bucket: &Bucket, file_path: &str) -> bool {
