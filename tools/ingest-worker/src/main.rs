@@ -69,7 +69,7 @@ async fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(60));
+    let limiter = RateLimiter::new(1, Duration::from_secs(30));
     limiter.wait().await;
     let s3limiter = RateLimiter::new(1, Duration::from_millis(50));
     while running.load(Ordering::SeqCst) {
