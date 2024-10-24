@@ -108,20 +108,28 @@ async fn main() {
         .into_iter()
         .filter_map(|m| m.ok())
         .collect::<Vec<_>>();
-        for (obj, file) in objects.iter().zip(data.iter()) {
+        let data = futures::future::join_all(
+            data.iter()
+                .zip(objects.iter())
+                .map(|(file, obj)| async move {
+                    let data = file.bytes();
+                    let data: &[u8] = data.as_ref();
+                    if obj.key.ends_with(".bz2") {
+                        let mut decompressed = vec![];
+                        BzDecoder::new(data)
+                            .read_to_end(&mut decompressed)
+                            .await
+                            .unwrap();
+                        decompressed
+                    } else {
+                        data.to_vec()
+                    }
+                })
+                .collect::<Vec<_>>(),
+        )
+        .await;
+        for (obj, data) in objects.iter().zip(data.iter()) {
             println!("Fetching file: {}", obj.key);
-            let data = file.bytes();
-            let data: &[u8] = data.as_ref();
-            let data = if obj.key.ends_with(".bz2") {
-                let mut decompressed = vec![];
-                BzDecoder::new(data)
-                    .read_to_end(&mut decompressed)
-                    .await
-                    .unwrap();
-                decompressed
-            } else {
-                data.to_vec()
-            };
             let match_metadata = match CMsgMatchMetaData::decode(data.as_slice()) {
                 Ok(m) => m.match_details.unwrap_or(data.clone()),
                 Err(_) => data.clone(),
