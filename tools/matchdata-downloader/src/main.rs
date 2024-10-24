@@ -77,6 +77,7 @@ async fn main() {
     .unwrap();
 
     let failed = Arc::new(Mutex::new(vec![]));
+    let uploaded = Arc::new(Mutex::new(vec![]));
 
     let pool = Pool::bounded(*PARALLEL_JOBS as usize);
 
@@ -98,7 +99,10 @@ async fn main() {
             if failed.lock().unwrap().contains(&row.match_id) {
                 continue;
             }
-            pool.spawn(download_match(row, bucket.clone(), failed.clone()))
+            if uploaded.lock().unwrap().contains(&row.match_id) {
+                continue;
+            }
+            pool.spawn(download_match(row, bucket.clone(), failed.clone(), uploaded.clone()))
                 .await
                 .unwrap();
         }
@@ -110,6 +114,7 @@ async fn download_match(
     row: MatchIdQueryResult,
     bucket: Box<Bucket>,
     failed: Arc<Mutex<Vec<u64>>>,
+    uploaded: Arc<Mutex<Vec<u64>>>,
 ) {
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
@@ -138,6 +143,7 @@ async fn download_match(
     );
     bucket.put_object_stream(&mut reader, &key).await.unwrap();
     println!("Uploaded metadata for match {}", row.match_id);
+    uploaded.lock().unwrap().push(row.match_id);
 
     if *DO_NOT_PULL_DEMO_FILES {
         return;
