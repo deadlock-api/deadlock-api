@@ -758,6 +758,7 @@ dependencies = [
  "clickhouse",
  "ctrlc",
  "futures",
+ "itertools",
  "prost",
  "rust-s3",
  "serde",

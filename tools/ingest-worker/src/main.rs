@@ -5,6 +5,7 @@ use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMa
 use arl::RateLimiter;
 use async_compression::tokio::bufread::BzDecoder;
 use clickhouse::{Client, Compression};
+use itertools::Itertools;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -87,6 +88,7 @@ async fn main() {
             .iter()
             .flat_map(|dir| dir.contents.clone())
             .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.bz2"))
+            .sorted_by_key(|obj| obj.key.clone())
             .rev()
             .take(MAX_OBJECTS_PER_RUN)
             .collect::<Vec<_>>();
