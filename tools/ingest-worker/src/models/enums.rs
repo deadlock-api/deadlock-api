@@ -46,7 +46,7 @@ pub enum MatchMode {
     Ranked = 4,
     ServerTest = 5,
     Tutorial = 6,
-    HeroLabs = 6,
+    HeroLabs = 7,
 }
 
 impl From<ECitadelMatchMode> for MatchMode {
@@ -59,6 +59,7 @@ impl From<ECitadelMatchMode> for MatchMode {
             ECitadelMatchMode::KECitadelMatchModeRanked => Self::Ranked,
             ECitadelMatchMode::KECitadelMatchModeServerTest => Self::ServerTest,
             ECitadelMatchMode::KECitadelMatchModeTutorial => Self::Tutorial,
+            ECitadelMatchMode::KECitadelMatchModeHeroLabs => Self::HeroLabs,
         }
     }
 }

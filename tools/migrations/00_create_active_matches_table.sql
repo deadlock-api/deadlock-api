@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS active_matches
         'CoopBot' = 3,
         'Ranked' = 4,
         'ServerTest' = 5,
-        'Tutorial' = 6
+        'Tutorial' = 6,
+        'HeroLabs' = 7
     ),
     game_mode Enum8 (
         'Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3

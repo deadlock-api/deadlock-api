@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS mmr_history
         'CoopBot' = 3,
         'Ranked' = 4,
         'ServerTest' = 5,
-        'Tutorial' = 6
+        'Tutorial' = 6,
+        'HeroLabs' = 7
     ),
     player_score Float64,
     ranked_badge_level Nullable (UInt32)
