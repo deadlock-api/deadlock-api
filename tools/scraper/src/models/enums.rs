@@ -10,6 +10,7 @@ pub enum MatchMode {
     Ranked = 4,
     ServerTest = 5,
     Tutorial = 6,
+    HeroLabs = 7,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
@@ -42,6 +43,7 @@ impl From<u8> for MatchMode {
             4 => MatchMode::Ranked,
             5 => MatchMode::ServerTest,
             6 => MatchMode::Tutorial,
+            7 => MatchMode::HeroLabs,
             _ => MatchMode::Invalid,
         }
     }
