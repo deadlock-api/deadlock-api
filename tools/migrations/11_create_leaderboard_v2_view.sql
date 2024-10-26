@@ -4,7 +4,7 @@ CREATE MATERIALIZED VIEW leaderboard_v2
  POPULATE AS
 SELECT pc.account_id                                        as account_id,
        anyLast(region_mode)                                 as region_mode,
-       dense_rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
+       rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
        anyLast(pc.ranked_badge_level)                       as ranked_badge_level
 FROM player_card pc
       INNER JOIN player_region ON player_region.account_id = pc.account_id
@@ -17,7 +17,7 @@ CREATE MATERIALIZED VIEW leaderboard_account_v2
  POPULATE AS
 SELECT pc.account_id                                        as account_id,
        anyLast(region_mode)                                 as region_mode,
-       dense_rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
+       rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
        anyLast(pc.ranked_badge_level)                       as ranked_badge_level
 FROM player_card pc
       INNER JOIN player_region ON player_region.account_id = pc.account_id
