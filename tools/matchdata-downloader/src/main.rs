@@ -44,9 +44,9 @@ static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
 #[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
 struct MatchIdQueryResult {
     match_id: u64,
-    cluster_id: u32,
-    metadata_salt: u32,
-    replay_salt: u32,
+    cluster_id: Option<u32>,
+    metadata_salt: Option<u32>,
+    replay_salt: Option<u32>,
 }
 
 #[tokio::main]
@@ -102,9 +102,14 @@ async fn main() {
             if uploaded.lock().unwrap().contains(&row.match_id) {
                 continue;
             }
-            pool.spawn(download_match(row, bucket.clone(), failed.clone(), uploaded.clone()))
-                .await
-                .unwrap();
+            pool.spawn(download_match(
+                row,
+                bucket.clone(),
+                failed.clone(),
+                uploaded.clone(),
+            ))
+            .await
+            .unwrap();
         }
         sleep(Duration::from_secs(30)).await;
     }
@@ -120,9 +125,19 @@ async fn download_match(
     if key_exists(&bucket, &key).await {
         return;
     }
+    if row.cluster_id.is_none() || row.metadata_salt.is_none() {
+        println!(
+            "Missing cluster_id or metadata_salt for match {}",
+            row.match_id
+        );
+        failed.lock().unwrap().push(row.match_id);
+        return;
+    }
     let metadata_url = format!(
         "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-        row.cluster_id, row.match_id, row.metadata_salt
+        row.cluster_id.unwrap(),
+        row.match_id,
+        row.metadata_salt.unwrap()
     );
     let response = reqwest::get(&metadata_url).await.unwrap();
     match response.error_for_status_ref() {
@@ -155,7 +170,9 @@ async fn download_match(
     }
     let replay_url = format!(
         "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
-        row.cluster_id, row.match_id, row.replay_salt
+        row.cluster_id.unwrap(),
+        row.match_id,
+        row.replay_salt.unwrap()
     );
     let response = reqwest::get(&replay_url).await.unwrap();
     response.error_for_status_ref().unwrap();
