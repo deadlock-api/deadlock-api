@@ -6,6 +6,7 @@ POPULATE AS
 SELECT account_id,
        hero_id,
        COUNT(*)                    as matches,
+       max(ranked_badge_level)     as highest_ranked_badge_level,
        SUM(team = mi.winning_team) as wins,
        SUM(kills)                  as kills,
        SUM(deaths)                 as deaths,
