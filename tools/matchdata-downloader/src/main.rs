@@ -139,18 +139,18 @@ async fn download_match(
         row.match_id,
         row.metadata_salt.unwrap()
     );
-    let response = reqwest::get(&metadata_url).await.unwrap();
-    match response.error_for_status_ref() {
-        Ok(_) => {}
-        Err(e) => {
-            println!(
-                "Failed to download metadata for match {}: {}",
-                row.match_id, e
-            );
-            failed.lock().unwrap().push(row.match_id);
-            return;
-        }
+    let response = reqwest::get(&metadata_url)
+        .await
+        .and_then(|r| r.error_for_status());
+    if let Err(e) = response {
+        println!(
+            "Failed to download metadata for match {}: {}",
+            row.match_id, e
+        );
+        failed.lock().unwrap().push(row.match_id);
+        return;
     }
+    let response = response.unwrap();
     let mut reader = StreamReader::new(
         response
             .bytes_stream()
