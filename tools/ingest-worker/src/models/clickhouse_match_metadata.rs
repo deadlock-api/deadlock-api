@@ -18,6 +18,9 @@ pub struct ClickhouseMatchInfo {
     pub source_name: Vec<String>,
     pub objectives_mask_team0: u16,
     pub objectives_mask_team1: u16,
+    pub is_high_skill_range_parties: Option<bool>,
+    pub low_pri_pool: Option<bool>,
+    pub new_player_pool: Option<bool>,
     #[serde(rename = "objectives.destroyed_time_s")]
     pub objectives_destroyed_time_s: Vec<u32>,
     #[serde(rename = "objectives.creep_damage")]
@@ -52,6 +55,9 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             start_time: value.start_time(),
             game_mode: GameMode::from(value.game_mode()),
             match_mode: MatchMode::from(value.match_mode()),
+            is_high_skill_range_parties: value.is_high_skill_range_parties,
+            low_pri_pool: value.low_pri_pool,
+            new_player_pool: value.new_player_pool,
             objectives_destroyed_time_s: value
                 .objectives
                 .iter()

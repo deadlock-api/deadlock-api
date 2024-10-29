@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS match_info
     source_name Array (String),
     objectives_mask_team0 UInt16,
     objectives_mask_team1 UInt16,
+    is_high_skill_range_parties Nullable (Bool),
+    low_pri_pool Nullable (Bool),
+    new_player_pool Nullable (Bool),
     objectives Nested (
         destroyed_time_s UInt32,
         creep_damage UInt32,

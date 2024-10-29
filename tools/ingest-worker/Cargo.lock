@@ -1622,7 +1622,7 @@ dependencies = [
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/raimannma/valveprotos-rs?rev=6bb79b35df86f51cb5d14d153d8f299c630f9b0e#6bb79b35df86f51cb5d14d153d8f299c630f9b0e"
+source = "git+https://github.com/raimannma/valveprotos-rs?rev=003d723c003d3af84ce3981adda09a40df20cf60#003d723c003d3af84ce3981adda09a40df20cf60"
 dependencies = [
  "heck",
  "prost",
