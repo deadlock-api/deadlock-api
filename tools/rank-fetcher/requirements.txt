@@ -1,0 +1,7 @@
+clickhouse_pool
+tqdm
+pydantic
+clickhouse_driver
+protobuf
+requests
+valveprotos_py @ git+https://github.com/deadlock-api/valveprotos-py

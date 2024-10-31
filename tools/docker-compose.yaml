@@ -60,3 +60,11 @@ services:
     depends_on:
     - clickhouse
     env_file: .env
+
+  rank-fetcher:
+    build:
+      context: rank-fetcher
+    restart: always
+    depends_on:
+    - clickhouse
+    env_file: .env
