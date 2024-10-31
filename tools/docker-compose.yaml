@@ -52,3 +52,11 @@ services:
     depends_on:
     - clickhouse
     env_file: salt-scraper/.env
+
+  mmr-calc:
+    build:
+      context: mmr-calc
+    restart: always
+    depends_on:
+    - clickhouse
+    env_file: .env
