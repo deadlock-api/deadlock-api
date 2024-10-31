@@ -36,5 +36,5 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         push: true
-        tags: ghcr.io/${{ github.repository }}:ingest-worker
+        tags: ghcr.io/${{ github.repository }}/ingest-worker:latest
         context: ingest-worker

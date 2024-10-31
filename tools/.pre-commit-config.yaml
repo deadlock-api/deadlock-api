@@ -6,7 +6,7 @@ repos:
   - id: yamlfmt
     args: [--mapping, '2', --sequence, '2', --offset, '0', --width, '92', --implicit_start, --preserve-quotes]
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v5.0.0
   hooks:
   - id: fix-byte-order-marker
   - id: end-of-file-fixer
@@ -15,7 +15,7 @@ repos:
   - id: pretty-format-json
     args: [--autofix]
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.17.0
+  rev: v3.19.0
   hooks:
   - id: pyupgrade
     args: [--py311-plus]
@@ -29,13 +29,13 @@ repos:
   - id: isort
     args: [--profile, black, --filter-files]
 - repo: https://github.com/ambv/black
-  rev: 24.8.0
+  rev: 24.10.0
   hooks:
   - id: black
 
         # Hooks for validation
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v5.0.0
   hooks:
   - id: check-merge-conflict
   - id: check-case-conflict
