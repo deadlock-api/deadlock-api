@@ -45,15 +45,10 @@ services:
 
   salt-scraper:
     build:
-      context: api
-    command: python3 -m deadlock_analytics_api.salt_scraper
+      context: salt-scraper
     restart: always
+    environment:
+      RUST_LOG: debug
     depends_on:
     - clickhouse
-    env_file: .env
-    networks:
-    - database
-
-networks:
-  database:
-    external: true
+    env_file: salt-scraper/.env
