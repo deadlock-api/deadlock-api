@@ -37,4 +37,4 @@ jobs:
       with:
         push: true
         tags: ghcr.io/${{ github.repository }}/salt-scraper:latest
-        context: ingest-worker
+        context: salt-scraper
