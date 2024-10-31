@@ -43,18 +43,6 @@ services:
     env_file: .env
     stop_grace_period: 30s
 
-  api:
-    build:
-      context: api
-    restart: always
-    ports:
-    - "8080:8080"
-    depends_on:
-    - clickhouse
-    env_file: .env
-    networks:
-    - database
-
   salt-scraper:
     build:
       context: api
