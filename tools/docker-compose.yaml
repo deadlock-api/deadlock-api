@@ -84,3 +84,9 @@ services:
     depends_on:
     - clickhouse
     env_file: .env
+    networks:
+    - database
+
+networks:
+  database:
+    external: true
