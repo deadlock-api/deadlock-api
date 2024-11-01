@@ -18,10 +18,11 @@ SELECT account_id,
        60 * avg(denies / duration_s) as denies_per_min,
        60 * avg(arrayMax(stats.player_damage) / duration_s) as damage_mitigated_per_min,
        60 * avg(arrayMax(stats.player_damage_taken) / duration_s) as damage_taken_per_min,
-       60 * avg(arrayMax(stats.creep_kills) / duration_s) as creeps_per_min,
-       60 * avg(arrayMax(stats.neutral_damage) / duration_s) as obj_damage_per_min,
-       avg(arrayMax(stats.shots_hit) / (arrayMax(stats.shots_hit) + arrayMax(stats.shots_missed))) as accuracy,
-       avg(arrayMax(stats.hero_bullets_hit_crit) / (arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit))) as crit_shot_rate
+       60 * avg(arrayMax(stats.creep_kills) / duration_s)                                          as creeps_per_min,
+       60 * avg(arrayMax(stats.neutral_damage) / duration_s)                                       as obj_damage_per_min,
+       avg(arrayMax(stats.shots_hit) / greatest(1,arrayMax(stats.shots_hit) + arrayMax(stats.shots_missed))) as accuracy,
+       avg(arrayMax(stats.hero_bullets_hit_crit) /
+           greatest(1,arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit)))             as crit_shot_rate
 FROM match_player
       INNER JOIN match_info mi USING (match_id)
 GROUP by account_id, hero_id
