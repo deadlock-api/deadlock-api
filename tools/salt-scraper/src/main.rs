@@ -71,15 +71,16 @@ async fn main() {
         Duration::from_secs(60 * 60 / *CALLS_PER_ACCOUNT_PER_HOUR as u64),
     );
     loop {
-        let query = r"
-        WITH matches AS (
-            SELECT DISTINCT match_id, toUnixTimestamp(start_time) AS start_time FROM finished_matches
-            UNION DISTINCT
-            SELECT DISTINCT match_id, start_time FROM player_match_history
-            WHERE match_id IN (SELECT match_id FROM finished_matches)
-        )
-        SELECT match_id FROM matches ORDER BY start_time DESC LIMIT 1000
-        ";
+        let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '4 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
+        // let query = r"
+        // WITH matches AS (
+        //     SELECT DISTINCT match_id, toUnixTimestamp(start_time) AS start_time FROM finished_matches
+        //     UNION DISTINCT
+        //     SELECT DISTINCT match_id, start_time FROM player_match_history
+        //     WHERE match_id IN (SELECT match_id FROM finished_matches)
+        // )
+        // SELECT match_id FROM matches ORDER BY start_time DESC LIMIT 1000
+        // ";
         let recent_matches: Vec<MatchIdQueryResult> =
             clickhouse_client.query(query).fetch_all().await.unwrap();
         let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
