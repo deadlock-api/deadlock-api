@@ -73,6 +73,14 @@ services:
     build:
       context: history-fetcher
     restart: always
-#    depends_on:
-#    - clickhouse
+    depends_on:
+    - clickhouse
+    env_file: .env
+
+  builds-fetcher:
+    build:
+      context: builds-fetcher
+    restart: always
+    depends_on:
+    - clickhouse
     env_file: .env
