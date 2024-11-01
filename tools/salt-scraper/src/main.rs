@@ -67,8 +67,8 @@ async fn main() {
         .build()
         .unwrap();
     let limiter = RateLimiter::new(
-        *NUM_ACCOUNTS * *CALLS_PER_ACCOUNT_PER_HOUR / 60 / 2,
-        Duration::from_secs(30),
+        *NUM_ACCOUNTS,
+        Duration::from_secs(60 * 60 / *CALLS_PER_ACCOUNT_PER_HOUR as u64),
     );
     loop {
         let query = r"
