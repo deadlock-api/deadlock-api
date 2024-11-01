@@ -81,6 +81,7 @@ async fn main() {
         )
         SELECT match_id
         FROM matches
+        WHERE start_time < now() - INTERVAL '4 hours'
         ORDER BY match_id DESC
         LIMIT 1000
         ";
