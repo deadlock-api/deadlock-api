@@ -7,7 +7,7 @@ SELECT pc.account_id                                        as account_id,
        rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
        anyLast(pc.ranked_badge_level)                       as ranked_badge_level
 FROM player_card pc
-      INNER JOIN player_region ON player_region.account_id = pc.account_id
+      INNER JOIN player ON player.account_id = pc.account_id
 GROUP BY pc.account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;
 
@@ -20,6 +20,6 @@ SELECT pc.account_id                                        as account_id,
        rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
        anyLast(pc.ranked_badge_level)                       as ranked_badge_level
 FROM player_card pc
-      INNER JOIN player_region ON player_region.account_id = pc.account_id
+      INNER JOIN player ON player.account_id = pc.account_id
 GROUP BY pc.account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;

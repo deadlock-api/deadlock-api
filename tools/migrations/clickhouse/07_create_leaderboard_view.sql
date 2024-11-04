@@ -9,7 +9,7 @@ SELECT mh.account_id as account_id,
        COUNT()               AS matches_played,
        ROUND(anyLast(player_score)) AS player_score
 FROM mmr_history mh
-      INNER JOIN player_region ON player_region.account_id = mh.account_id
+      INNER JOIN player ON player.account_id = mh.account_id
       LEFT JOIN player_card pc ON pc.account_id = mh.account_id
 GROUP BY mh.account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;
@@ -25,7 +25,7 @@ SELECT mh.account_id as account_id,
        COUNT()               AS matches_played,
        ROUND(anyLast(player_score)) AS player_score
 FROM mmr_history mh
-      INNER JOIN player_region ON player_region.account_id = mh.account_id
+      INNER JOIN player ON player.account_id = mh.account_id
       LEFT JOIN player_card pc ON pc.account_id = mh.account_id
 GROUP BY mh.account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;
