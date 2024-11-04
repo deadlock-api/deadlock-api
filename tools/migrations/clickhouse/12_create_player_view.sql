@@ -7,7 +7,7 @@ SELECT DISTINCT account_id
 FROM match_player
 UNION DISTINCT
 SELECT DISTINCT players.account_id
-FROM finished_matches
-      ARRAY JOIN players
+FROM active_matches
+   ARRAY JOIN players
  ORDER BY `players.account_id`
  SETTINGS allow_experimental_refreshable_materialized_view = 1;
