@@ -52,7 +52,7 @@ def upsert_builds(results: list[CMsgClientToGCFindHeroBuildsResponse.HeroBuildRe
                     result.num_favorites,
                     result.num_ignores,
                     result.num_reports,
-                    datetime.now(),
+                    datetime.fromtimestamp(result.hero_build.last_updated_timestamp),
                     MessageToJson(result, preserving_proto_field_name=True),
                 )
                 for result in results
