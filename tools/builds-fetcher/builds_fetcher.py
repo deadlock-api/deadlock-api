@@ -70,6 +70,9 @@ def update_hero(hero: int):
     msg = call_steam_proxy(
         k_EMsgClientToGCFindHeroBuilds, msg, CMsgClientToGCFindHeroBuildsResponse
     )
+    if msg.response != CMsgClientToGCFindHeroBuildsResponse.k_eSuccess:
+        print(f"Failed to fetch hero {hero} builds")
+        return
 
     upsert_builds(msg.results)
 
