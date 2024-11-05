@@ -73,7 +73,7 @@ async fn main() {
 
     let limiter = RateLimiter::new(1, Duration::from_secs(60));
     limiter.wait().await;
-    let s3limiter = RateLimiter::new(1, Duration::from_millis(50));
+    let s3limiter = RateLimiter::new(1, Duration::from_millis(100));
     while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
         let start = std::time::Instant::now();
