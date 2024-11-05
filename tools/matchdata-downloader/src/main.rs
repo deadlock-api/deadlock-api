@@ -151,7 +151,11 @@ async fn download_match(
             .bytes_stream()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
     );
-    bucket.put_object_stream(&mut reader, &key).await.unwrap();
+    if let Err(e) = bucket.put_object_stream(&mut reader, &key).await {
+        println!("Failed to upload metadata for match {}: {}", row.match_id, e);
+        sleep(Duration::from_secs(10)).await;
+        return;
+    }
     println!("Uploaded metadata for match {}", row.match_id);
     uploaded.lock().unwrap().push(row.match_id);
 
@@ -173,6 +177,10 @@ async fn download_match(
             .bytes_stream()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
     );
-    bucket.put_object_stream(&mut reader, &key).await.unwrap();
+    if let Err(e) = bucket.put_object_stream(&mut reader, &key).await {
+        println!("Failed to upload metadata for match {}: {}", row.match_id, e);
+        sleep(Duration::from_secs(10)).await;
+        return;
+    }
     println!("Uploaded replay for match {}", row.match_id);
 }
