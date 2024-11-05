@@ -68,13 +68,13 @@ def main():
     with CH_POOL.get_client() as client:
         account_ids = get_accounts(client)
 
-    with ThreadPoolExecutor(max_workers=20) as pool:
+    with ThreadPoolExecutor(max_workers=40) as pool:
         futures = [pool.submit(update_account, a) for a in account_ids]
         with CH_POOL.get_client() as client:
             try:
                 player_cards = [
                     p.result()
-                    for p in tqdm(as_completed(futures, timeout=60), total=len(futures))
+                    for p in tqdm(as_completed(futures, timeout=10), total=len(futures))
                 ]
             except TimeoutError:
                 print("TimeoutError")
