@@ -24,11 +24,12 @@ CH_POOL = ChPool(
 )
 
 
-def get_accounts(client: Client) -> list[int]:
+def get_accounts(client: Client, empty_cards: set) -> list[int]:
     query = f"""
     SELECT DISTINCT account_id
     FROM player
     WHERE account_id NOT IN (SELECT account_id FROM player_card)
+    AND account_id NOT IN ({','.join(str(a) for a in empty_cards)})
     LIMIT 500;
     """
     accounts = [r[0] for r in client.execute(query)]
@@ -63,10 +64,10 @@ def update_account(account_id: int) -> (int, PlayerCard):
         return account_id, None
 
 
-def main():
+def main(empty_cards: set[int]):
     start = time.time()
     with CH_POOL.get_client() as client:
-        account_ids = get_accounts(client)
+        account_ids = get_accounts(client, empty_cards)
 
     with ThreadPoolExecutor(max_workers=40) as pool:
         futures = [pool.submit(update_account, a) for a in account_ids]
@@ -79,6 +80,9 @@ def main():
             except TimeoutError:
                 print("TimeoutError")
                 return
+            for account_id, card in player_cards:
+                if card is None:
+                    empty_cards.add(account_id)
             client.execute(
                 f"INSERT INTO player_card (* EXCEPT(created_at)) VALUES",
                 [
@@ -104,5 +108,10 @@ def main():
 
 
 if __name__ == "__main__":
+    empty_cards = {0}
+    i = 0
     while True:
-        main()
+        i += 1
+        if i % 1000 == 0:
+            empty_cards = {0}
+        main(empty_cards)
