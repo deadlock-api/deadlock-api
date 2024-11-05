@@ -25,6 +25,7 @@ SELECT account_id,
            greatest(1,arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit)))             as crit_shot_rate
 FROM match_player
       INNER JOIN match_info mi USING (match_id)
+WHERE match_mode IN ('Ranked', 'Unranked')
 GROUP by account_id, hero_id
 ORDER BY account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;
