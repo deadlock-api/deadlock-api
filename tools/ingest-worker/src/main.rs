@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
+use tokio::time::sleep;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::MatchInfo;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
@@ -80,10 +81,16 @@ async fn main() {
 
         println!("Fetching metadata files");
         s3limiter.wait().await;
-        let objects = bucket
+        let objects = match bucket
             .list("ingest/metadata".parse().unwrap(), None)
-            .await
-            .unwrap();
+            .await{
+            Ok(objects) => objects,
+            Err(e) => {
+                println!("Error fetching objects: {:?}", e);
+                sleep(Duration::from_secs(10)).await;
+                continue;
+            }
+        };
         let objects = objects
             .iter()
             .flat_map(|dir| dir.contents.clone())
