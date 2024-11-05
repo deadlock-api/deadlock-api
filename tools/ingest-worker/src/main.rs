@@ -36,7 +36,7 @@ static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
 
-const MAX_OBJECTS_PER_RUN: usize = 50;
+const MAX_OBJECTS_PER_RUN: usize = 10;
 
 #[tokio::main]
 async fn main() {
@@ -72,7 +72,7 @@ async fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(30));
+    let limiter = RateLimiter::new(1, Duration::from_secs(10));
     limiter.wait().await;
     let s3limiter = RateLimiter::new(1, Duration::from_millis(100));
     while running.load(Ordering::SeqCst) {
