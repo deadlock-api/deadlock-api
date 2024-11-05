@@ -35,8 +35,12 @@ static S3_SECRET_ACCESS_KEY: LazyLock<String> =
 static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
-
-const MAX_OBJECTS_PER_RUN: usize = 10;
+static MAX_OBJECTS_PER_RUN: LazyLock<usize> = LazyLock::new(|| {
+    std::env::var("MAX_OBJECTS_PER_RUN")
+        .unwrap_or("20".to_string())
+        .parse()
+        .unwrap_or(20)
+});
 
 #[tokio::main]
 async fn main() {
@@ -81,9 +85,7 @@ async fn main() {
 
         println!("Fetching metadata files");
         s3limiter.wait().await;
-        let objects = match bucket
-            .list("ingest/metadata".parse().unwrap(), None)
-            .await{
+        let objects = match bucket.list("ingest/metadata".parse().unwrap(), None).await {
             Ok(objects) => objects,
             Err(e) => {
                 println!("Error fetching objects: {:?}", e);
@@ -97,7 +99,7 @@ async fn main() {
             .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.bz2"))
             .sorted_by_key(|obj| obj.key.clone())
             .rev()
-            .take(MAX_OBJECTS_PER_RUN)
+            .take(*MAX_OBJECTS_PER_RUN)
             .collect::<Vec<_>>();
         if objects.is_empty() {
             println!("No files to fetch");
