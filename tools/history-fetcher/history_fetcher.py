@@ -24,11 +24,12 @@ CH_POOL = ChPool(
 )
 
 
-def get_accounts(client: Client) -> list[int]:
+def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     query = f"""
     SELECT DISTINCT account_id
     FROM player
     WHERE account_id NOT IN (SELECT account_id FROM player_match_history)
+    AND account_id NOT IN ({','.join(str(a) for a in empty_match_histories)})
     LIMIT 500;
     """
     accounts = [r[0] for r in client.execute(query)]
@@ -66,10 +67,10 @@ def update_account(account_id: int) -> (int, list[PlayerMatchHistoryEntry]):
         return account_id, None
 
 
-def main():
+def main(empty_histories: set[int]):
     start = time.time()
     with CH_POOL.get_client() as client:
-        account_ids = get_accounts(client)
+        account_ids = get_accounts(client, empty_histories)
 
     if not account_ids:
         print("No accounts to update")
@@ -87,6 +88,9 @@ def main():
             except TimeoutError:
                 print("TimeoutError")
                 return
+            for account_id, match_history in match_histories:
+                if match_history is None or not match_history:
+                    empty_histories.add(account_id)
             client.execute(
                 f"INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
                 [
@@ -124,5 +128,10 @@ def main():
 
 
 if __name__ == "__main__":
+    empty_histories = {0}
+    i = 0
     while True:
-        main()
+        i += 1
+        if i % 1000 == 0:
+            empty_histories = {0}
+        main(empty_histories)
