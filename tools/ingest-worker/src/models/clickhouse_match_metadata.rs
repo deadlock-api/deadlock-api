@@ -100,7 +100,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             stat_type: value
                 .damage_matrix
                 .as_ref()
-                .map(|v| v.clone().source_details.unwrap().stat_type)
+                .and_then(|v| v.clone().source_details.map(|s| s.stat_type))
                 .unwrap_or_default(),
             source_name: value
                 .damage_matrix
