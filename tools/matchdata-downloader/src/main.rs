@@ -111,7 +111,7 @@ async fn main() {
             .await
             .unwrap();
         }
-        sleep(Duration::from_secs(30)).await;
+        sleep(Duration::from_secs(60)).await;
     }
 }
 
