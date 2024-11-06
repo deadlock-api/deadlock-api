@@ -1,3 +1,5 @@
+use cached::proc_macro::cached;
+use cached::UnboundCache;
 use clickhouse::{Client, Compression, Row};
 use futures::TryStreamExt;
 use s3::creds::Credentials;
@@ -109,7 +111,7 @@ async fn main() {
             .await
             .unwrap();
         }
-        sleep(Duration::from_secs(60)).await;
+        sleep(Duration::from_secs(30)).await;
     }
 }
 
@@ -120,6 +122,9 @@ async fn download_match(
     uploaded: Arc<Mutex<Vec<u64>>>,
 ) {
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
+    if key_exists(&bucket, &key).await {
+        return;
+    }
     if row.cluster_id.is_none() || row.metadata_salt.is_none() {
         println!(
             "Missing cluster_id or metadata_salt for match {}",
@@ -164,6 +169,9 @@ async fn download_match(
     }
 
     let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
+    if key_exists(&bucket, &key).await {
+        return;
+    }
     let replay_url = format!(
         "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
         row.cluster_id.unwrap(),
@@ -183,4 +191,18 @@ async fn download_match(
         return;
     }
     println!("Uploaded replay for match {}", row.match_id);
+}
+
+#[cached(
+    ty = "UnboundCache<String, bool>",
+    create = "{ UnboundCache::new() }",
+    convert = r#"{ format!("{}", file_path) }"#
+)]
+async fn key_exists(bucket: &Bucket, file_path: &str) -> bool {
+    println!("Checking if key exists: {}", file_path);
+    bucket
+        .head_object(&file_path)
+        .await
+        .map(|(_, s)| s == 200)
+        .unwrap_or(false)
 }
