@@ -105,7 +105,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             source_name: value
                 .damage_matrix
                 .as_ref()
-                .map(|v| v.clone().source_details.unwrap().source_name)
+                .and_then(|v| v.clone().source_details.map(|s| s.source_name))
                 .unwrap_or_default(),
             objectives_mask_team0: value.objectives_mask_team0() as u16,
             objectives_mask_team1: value.objectives_mask_team1() as u16,
