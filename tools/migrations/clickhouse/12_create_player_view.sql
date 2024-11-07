@@ -1,6 +1,6 @@
 DROP VIEW IF EXISTS player;
 CREATE MATERIALIZED VIEW player
-REFRESH EVERY 10 MINUTES
+REFRESH EVERY 60 MINUTES
 ENGINE = ReplacingMergeTree() ORDER BY account_id
 POPULATE AS
  SELECT players.account_id as account_id, region_mode
