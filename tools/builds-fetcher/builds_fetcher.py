@@ -37,11 +37,11 @@ def upsert_builds(results: list[CMsgClientToGCFindHeroBuildsResponse.HeroBuildRe
         execute_values(
             cursor,
             """
-            INSERT INTO hero_builds(hero, build_id, version, author_id, favorites, ignores, reports, updated_at, data)
+            INSERT INTO hero_builds(hero, build_id, version, author_id, favorites, ignores, reports, language, updated_at, data)
             VALUES %s
             ON CONFLICT(hero, build_id, version)
             DO UPDATE
-            SET author_id = EXCLUDED.author_id, favorites = EXCLUDED.favorites, ignores = EXCLUDED.ignores, reports = EXCLUDED.reports, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
+            SET author_id = EXCLUDED.author_id, favorites = EXCLUDED.favorites, ignores = EXCLUDED.ignores, reports = EXCLUDED.reports, language = EXCLUDED.language, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
             """,
             [
                 (
@@ -52,6 +52,7 @@ def upsert_builds(results: list[CMsgClientToGCFindHeroBuildsResponse.HeroBuildRe
                     result.num_favorites,
                     result.num_ignores,
                     result.num_reports,
+                    result.hero_build.language,
                     datetime.fromtimestamp(result.hero_build.last_updated_timestamp),
                     MessageToJson(result, preserving_proto_field_name=True),
                 )

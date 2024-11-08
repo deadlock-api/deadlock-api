@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS hero_builds
     ignores INTEGER,
     reports INTEGER,
     updated_at TIMESTAMP,
+    language INTEGER,
     data JSONB,
 
     PRIMARY KEY (hero, build_id, version)
