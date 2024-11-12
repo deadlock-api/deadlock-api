@@ -131,7 +131,7 @@ async fn fetch_match(
     message.encode(&mut data).unwrap();
     let data_b64 = BASE64_STANDARD.encode(data);
     let body = json!({
-        "message_kind": msg_type,
+        "message_kind": message_type,
         "job_cooldown_millis": 10_000,
         "data": data_b64,
     });
