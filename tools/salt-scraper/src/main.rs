@@ -34,6 +34,14 @@ static CALLS_PER_ACCOUNT_PER_HOUR: LazyLock<usize> = LazyLock::new(|| {
         .parse()
         .expect("CALLS_PER_ACCOUNT_PER_HOUR must be a number")
 });
+static CALLS_BURST: LazyLock<usize> = LazyLock::new(|| {
+    std::env::var("CALLS_BURST")
+        .map(|x| {
+            x.parse()
+                .expect("CALLS_PER_ACCOUNT_PER_HOUR must be a number")
+        })
+        .unwrap_or(10)
+});
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
 });
@@ -66,10 +74,10 @@ async fn main() {
         .timeout(Duration::from_secs(10))
         .build()
         .unwrap();
-    let limiter = RateLimiter::new(
-        *NUM_ACCOUNTS,
-        Duration::from_secs(60 * 60 / *CALLS_PER_ACCOUNT_PER_HOUR as u64),
-    );
+
+    let optimal_interval = 60.0 * 60.0 / *CALLS_PER_ACCOUNT_PER_HOUR as f64 / *NUM_ACCOUNTS as f64
+        * *CALLS_BURST as f64;
+    let limiter = RateLimiter::new(*CALLS_BURST, Duration::from_secs_f64(optimal_interval));
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '4 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
