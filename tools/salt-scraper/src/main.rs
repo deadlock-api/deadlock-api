@@ -36,11 +36,8 @@ static CALLS_PER_ACCOUNT_PER_HOUR: LazyLock<usize> = LazyLock::new(|| {
 });
 static CALLS_BURST: LazyLock<usize> = LazyLock::new(|| {
     std::env::var("CALLS_BURST")
-        .map(|x| {
-            x.parse()
-                .expect("CALLS_PER_ACCOUNT_PER_HOUR must be a number")
-        })
-        .unwrap_or(10)
+        .map(|x| x.parse().expect("CALLS_BURST must be a number"))
+        .unwrap_or(1)
 });
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
