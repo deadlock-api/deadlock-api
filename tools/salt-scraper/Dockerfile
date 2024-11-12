@@ -1,23 +1,38 @@
-FROM rust as builder
+FROM rust:1.82.0-slim-bookworm AS chef
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates gcc libssl-dev pkg-config protobuf-compiler cmake build-essential
+    && apt-get install -y --no-install-recommends protobuf-compiler sccache ca-certificates gcc libssl-dev pkg-config protobuf-compiler cmake build-essential
+
+RUN cargo install --locked cargo-chef
+ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
 
 WORKDIR /app
 
-COPY ./src  ./src/
-COPY Cargo.toml Cargo.lock ./
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-RUN cargo build --release
+FROM chef AS builder
+WORKDIR /app
+COPY --from=planner /app/recipe.json recipe.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
+    cargo chef cook --release --recipe-path recipe.json
+COPY . .
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
+    cargo build --release --bin salt-scraper
 
-FROM ubuntu
+# We do not need the Rust toolchain to run the binary!
+FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+COPY --from=builder /app/target/release/salt-scraper /usr/local/bin
 
-COPY --from=builder /app/target/release/salt-scraper .
-
-CMD ["./salt-scraper"]
+ENTRYPOINT ["/usr/local/bin/salt-scraper"]
