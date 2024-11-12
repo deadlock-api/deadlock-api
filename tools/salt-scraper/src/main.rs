@@ -132,7 +132,7 @@ async fn fetch_match(
     let data_b64 = BASE64_STANDARD.encode(data);
     let body = json!({
         "message_kind": message_type,
-        "job_cooldown_millis": 10_000,
+        "job_cooldown_millis": 36_000,
         "data": data_b64,
     });
     let req = client
