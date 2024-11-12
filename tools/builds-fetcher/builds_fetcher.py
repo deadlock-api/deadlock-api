@@ -16,11 +16,17 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
 
 UPDATE_INTERVAL = 30
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
+POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASS = os.environ.get("POSTGRES_PASS")
 
-POSTGRES_CONN = psycopg2.connect(
-    host=POSTGRES_HOST, port=5432, user="postgres", password=POSTGRES_PASS
-)
+
+def create_pg_conn():
+    return psycopg2.connect(
+        host=POSTGRES_HOST, port=5432, user=POSTGRES_USER, password=POSTGRES_PASS
+    )
+
+
+POSTGRES_CONN = create_pg_conn()
 
 
 def fetch_all_hero_ids() -> list[int]:
@@ -91,6 +97,4 @@ if __name__ == "__main__":
                 update_hero(hero)
         except Exception as e:
             print(e)
-            POSTGRES_CONN = psycopg2.connect(
-                host=POSTGRES_HOST, port=5432, user="postgres", password=POSTGRES_PASS
-            )
+            POSTGRES_CONN = create_pg_conn()
