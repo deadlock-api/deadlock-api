@@ -173,10 +173,10 @@ async fn fetch_match(
             };
             return Some(response);
         }
-        StatusCode::NOT_FOUND => match report_match_id_not_found(client, match_id).await {
-            Ok(_) => info!("Reported match id not found: {}", match_id),
-            Err(e) => warn!("Failed to report match id not found: {:?}", e),
-        },
+        // StatusCode::NOT_FOUND => match report_match_id_not_found(client, match_id).await {
+        //     Ok(_) => info!("Reported match id not found: {}", match_id),
+        //     Err(e) => warn!("Failed to report match id not found: {:?}", e),
+        // },
         StatusCode::TOO_MANY_REQUESTS => {
             warn!("Rate limited: {:?}", res);
         }
