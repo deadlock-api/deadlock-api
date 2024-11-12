@@ -131,12 +131,8 @@ async fn fetch_match(
     message.encode(&mut data).unwrap();
     let data_b64 = BASE64_STANDARD.encode(data);
     let body = json!({
-        "messageType": message_type,
-        "timeoutMillis": 10_000,
-        "rateLimit": {
-            "messagePeriodMillis": 10_000,
-        },
-        "limitBufferingBehavior": "too_many_requests",
+        "message_kind": msg_type,
+        "job_cooldown_millis": 10_000,
         "data": data_b64,
     });
     let req = client
