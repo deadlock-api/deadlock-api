@@ -37,6 +37,6 @@ jobs:
       with:
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ghcr.io/${{ github.repository }}:latest
+        tags: ghcr.io/${{ github.repository }}/salt-scraper:latest
         project: k7kl7zsmcs
         context: salt-scraper
