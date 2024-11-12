@@ -184,6 +184,7 @@ async fn fetch_match(
         // },
         StatusCode::TOO_MANY_REQUESTS => {
             warn!("Rate limited: {:?}", res);
+            limiter.wait().await;
         }
         _ => {
             warn!("Failed to send request for match {}: {:?}", match_id, res);
