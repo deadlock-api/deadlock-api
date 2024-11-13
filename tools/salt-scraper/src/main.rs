@@ -76,7 +76,7 @@ async fn main() {
         * *CALLS_BURST as f64;
     let limiter = RateLimiter::new(*CALLS_BURST, Duration::from_secs_f64(optimal_interval));
     loop {
-        // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '4 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
+        // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
         WITH matches AS (
             SELECT DISTINCT match_id, toUnixTimestamp(start_time) AS start_time FROM finished_matches
@@ -86,7 +86,7 @@ async fn main() {
         )
         SELECT DISTINCT match_id
         FROM matches
-        WHERE start_time < now() - INTERVAL '4 hours'
+        WHERE start_time < now() - INTERVAL '3 hours'
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
         ORDER BY match_id DESC
         LIMIT 10000
@@ -97,7 +97,7 @@ async fn main() {
         if recent_matches.len() < 10000 {
             info!("No recent matches found, Filling the gaps");
             let query = r"
-                WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '4 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
+                WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
                 SELECT number + match_range.min_match_id as match_id
                 FROM numbers(match_range.max_match_id - match_range.min_match_id + 1)
                 WHERE (number + match_range.min_match_id) NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
