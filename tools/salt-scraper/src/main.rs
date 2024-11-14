@@ -88,7 +88,7 @@ async fn main() {
         FROM matches
         WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
-        ORDER BY match_id DESC
+        ORDER BY match_id
         LIMIT 10000
         ";
         let recent_matches: Vec<MatchIdQueryResult> =
