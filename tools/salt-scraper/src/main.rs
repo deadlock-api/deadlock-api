@@ -54,6 +54,11 @@ static PROXY_URL: LazyLock<String> = LazyLock::new(|| {
 });
 static PROXY_API_TOKEN: LazyLock<String> =
     LazyLock::new(|| std::env::var("PROXY_API_TOKEN").expect("PROXY_API_TOKEN must be set"));
+static SALTS_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
+    std::env::var("SALTS_COOLDOWN_MILLIS")
+        .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
+        .unwrap_or(36_000)
+});
 
 #[tokio::main]
 async fn main() {
@@ -137,7 +142,7 @@ async fn fetch_match(
     let data_b64 = BASE64_STANDARD.encode(data);
     let body = json!({
         "message_kind": message_type,
-        "job_cooldown_millis": 36_000,
+        "job_cooldown_millis": *SALTS_COOLDOWN_MILLIS,
         "data": data_b64,
     });
     let req = client
