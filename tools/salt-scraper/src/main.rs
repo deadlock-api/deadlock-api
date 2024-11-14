@@ -86,7 +86,7 @@ async fn main() {
         )
         SELECT DISTINCT match_id
         FROM matches
-        WHERE start_time < now() - INTERVAL '3 hours'
+        WHERE start_time < now() - INTERVAL '3 hours' AND start_time > '2024-11-01'
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
         ORDER BY match_id DESC
         LIMIT 10000
