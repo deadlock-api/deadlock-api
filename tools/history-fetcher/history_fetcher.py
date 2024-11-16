@@ -52,6 +52,7 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
 
 
 def update_account(account_id: int) -> (int, list[PlayerMatchHistoryEntry]):
+    print(f"Updating account {account_id}")
     try:
         msg = CMsgClientToGCGetMatchHistory()
         msg.account_id = account_id
