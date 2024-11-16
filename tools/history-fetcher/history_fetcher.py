@@ -5,6 +5,7 @@ from time import sleep
 
 from clickhouse_driver import Client
 from clickhouse_pool import ChPool
+from ratemate import RateLimit
 from tqdm import tqdm
 from utils import PlayerMatchHistoryEntry, call_steam_proxy
 from valveprotos_py.citadel_gcmessages_client_pb2 import (
@@ -12,8 +13,6 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
     CMsgClientToGCGetMatchHistoryResponse,
     k_EMsgClientToGCGetMatchHistory,
 )
-
-UPDATE_INTERVAL = 10
 
 CH_POOL = ChPool(
     host=os.getenv("CLICKHOUSE_HOST", "localhost"),
@@ -67,7 +66,7 @@ def update_account(account_id: int) -> (int, list[PlayerMatchHistoryEntry]):
         return account_id, None
 
 
-def main(empty_histories: set[int]):
+def main(rate_limit: RateLimit, empty_histories: set[int]):
     start = time.time()
     with CH_POOL.get_client() as client:
         account_ids = get_accounts(client, empty_histories)
@@ -78,6 +77,7 @@ def main(empty_histories: set[int]):
         return
 
     with ThreadPoolExecutor(max_workers=20) as pool:
+        rate_limit.wait()
         futures = [pool.submit(update_account, a) for a in account_ids]
         with CH_POOL.get_client() as client:
             try:
@@ -123,15 +123,17 @@ def main(empty_histories: set[int]):
     end = time.time()
     duration = end - start
     print(f"Processed {len(account_ids)} accounts in {duration:.2f} seconds")
-    if duration < UPDATE_INTERVAL:
-        sleep(UPDATE_INTERVAL - (end - start))
 
 
 if __name__ == "__main__":
+    rate_limit = RateLimit(
+        max_count=int(os.environ.get("NUM_ACCOUNTS", 10)),
+        per=60 / os.environ.get("HISTORY_REQ_PER_MIN_PER_ACCOUNT", 60),
+    )
     empty_histories = {0}
     i = 0
     while True:
         i += 1
         if i % 1000 == 0:
             empty_histories = {0}
-        main(empty_histories)
+        main(rate_limit, empty_histories)
