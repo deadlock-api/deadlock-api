@@ -178,8 +178,14 @@ async fn fetch_match(
             };
             // Unwrap is safe, as we checked for None above
             match ingest_salts(client, &[(response, match_id)]).await {
-                Ok(_) => info!("Ingested salts for match {}", match_id),
-                Err(e) => warn!("Failed to ingest salts for match {}: {:?}", match_id, e),
+                Ok(_) => info!(
+                    "Ingested salts for match {} with username: {:?}",
+                    match_id, body.username
+                ),
+                Err(e) => warn!(
+                    "Failed to ingest salts for match {} with username {:?}: {:?}",
+                    match_id, body.username, e
+                ),
             };
             return Some(response);
         }

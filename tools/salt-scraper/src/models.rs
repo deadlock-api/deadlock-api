@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InvokeResponse200 {
     pub(crate) data: String,
+    pub(crate) username: Option<String>,
 }
 
 #[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
