@@ -79,7 +79,9 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
         sleep(5 * 60)
         return
 
-    with ThreadPoolExecutor(max_workers=20) as pool:
+    with ThreadPoolExecutor(
+        max_workers=int(os.environ.get("HISTORY_WORKERS", 10))
+    ) as pool:
         futures = []
         for a in account_ids:
             waited_secs = rate_limit.wait()
