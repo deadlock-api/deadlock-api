@@ -80,7 +80,8 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
         return
 
     with ThreadPoolExecutor(max_workers=20) as pool:
-        sleep(rate_limit.wait())
+        waited_secs = rate_limit.wait()
+        print(f"Waited {waited_secs:.2f} seconds")
         futures = [pool.submit(update_account, a) for a in account_ids]
         with CH_POOL.get_client() as client:
             try:
