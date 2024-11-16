@@ -58,6 +58,8 @@ def update_account(account_id: int) -> (int, list[PlayerMatchHistoryEntry]):
         msg = call_steam_proxy(
             k_EMsgClientToGCGetMatchHistory, msg, CMsgClientToGCGetMatchHistoryResponse
         )
+        if msg.result != msg.k_eResult_Success:
+            raise Exception(f"Failed to get match history: {msg.result}")
         return account_id, [
             PlayerMatchHistoryEntry.from_msg(match) for match in msg.matches
         ]
