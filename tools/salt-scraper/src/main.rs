@@ -166,7 +166,10 @@ async fn fetch_match(
             let response = CMsgClientToGcGetMatchMetaDataResponse::decode(buf.as_slice()).unwrap();
             if let Some(r) = response.result {
                 if r == KEResultRateLimited as i32 {
-                    warn!("Got a rate limited response: {:?}", response);
+                    warn!(
+                        "Got a rate limited response with username {:?}: {:?}",
+                        body.username, response
+                    );
                     return None;
                 } else if r == KEResultInvalidMatch as i32 {
                     match report_match_id_not_found(client, match_id).await {
