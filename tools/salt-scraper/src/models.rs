@@ -18,4 +18,5 @@ pub struct MatchSalt {
     pub(crate) match_id: u64,
     pub(crate) metadata_salt: u32,
     pub(crate) replay_salt: u32,
+    pub(crate) username: Option<String>,
 }

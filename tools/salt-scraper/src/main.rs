@@ -180,7 +180,7 @@ async fn fetch_match(
                 }
             };
             // Unwrap is safe, as we checked for None above
-            match ingest_salts(client, &[(response, match_id)]).await {
+            match ingest_salts(client, &[(response, match_id, body.username.clone())]).await {
                 Ok(_) => info!(
                     "Ingested salts for match {} with username: {:?}",
                     match_id, body.username
@@ -226,12 +226,12 @@ async fn report_match_id_not_found(client: &Client, match_id: u64) -> reqwest::R
 
 async fn ingest_salts(
     client: &Client,
-    salts: &[(CMsgClientToGcGetMatchMetaDataResponse, u64)],
+    salts: &[(CMsgClientToGcGetMatchMetaDataResponse, u64, Option<String>)],
 ) -> reqwest::Result<()> {
     debug!("Ingesting salts: {:?}", salts);
     let salts: Vec<_> = salts
         .iter()
-        .map(|(r, m)| {
+        .map(|(r, m, u)| {
             let cluster_id = r.cluster_id.unwrap_or(0);
             let metadata_salt = r.metadata_salt.unwrap_or(0);
             let replay_salt = r.replay_salt.unwrap_or(0);
@@ -240,6 +240,7 @@ async fn ingest_salts(
                 match_id: *m,
                 metadata_salt,
                 replay_salt,
+                username: u.clone(),
             }
         })
         .collect();
