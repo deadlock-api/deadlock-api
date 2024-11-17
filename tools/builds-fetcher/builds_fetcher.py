@@ -75,7 +75,11 @@ def update_hero(hero: int):
     msg = CMsgClientToGCFindHeroBuilds()
     msg.hero_id = hero
     msg = call_steam_proxy(
-        k_EMsgClientToGCFindHeroBuilds, msg, CMsgClientToGCFindHeroBuildsResponse
+        k_EMsgClientToGCFindHeroBuilds,
+        msg,
+        CMsgClientToGCFindHeroBuildsResponse,
+        cooldown_time=10,
+        groups=["LowRateLimitApis"],
     )
     if msg.response != CMsgClientToGCFindHeroBuildsResponse.k_eSuccess:
         print(f"Failed to fetch hero {hero} builds")

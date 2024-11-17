@@ -143,6 +143,7 @@ async fn fetch_match(
     let body = json!({
         "message_kind": message_type,
         "job_cooldown_millis": *SALTS_COOLDOWN_MILLIS,
+        "bot_in_all_groups": ["GetMatchMetaData"],
         "data": data_b64,
     });
     let req = client

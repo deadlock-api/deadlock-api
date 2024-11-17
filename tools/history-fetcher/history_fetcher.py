@@ -34,7 +34,7 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     accounts = [r[0] for r in client.execute(query)]
     print(f"Found {len(accounts)} new accounts")
     if len(accounts) < 500:
-        query = f"""
+        query = """
         WITH last_cards AS (SELECT *
                             FROM player_match_history
                             ORDER BY account_id, created_at DESC
@@ -51,13 +51,17 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     return accounts
 
 
-def update_account(account_id: int) -> (int, list[PlayerMatchHistoryEntry]):
+def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryEntry]]:
     print(f"Updating account {account_id}")
     try:
         msg = CMsgClientToGCGetMatchHistory()
         msg.account_id = account_id
         msg = call_steam_proxy(
-            k_EMsgClientToGCGetMatchHistory, msg, CMsgClientToGCGetMatchHistoryResponse
+            k_EMsgClientToGCGetMatchHistory,
+            msg,
+            CMsgClientToGCGetMatchHistoryResponse,
+            cooldown_time=10,
+            groups=["GetMatchHistory"],
         )
         if msg.result != msg.k_eResult_Success:
             raise Exception(f"Failed to get match history: {msg.result}")
@@ -66,7 +70,7 @@ def update_account(account_id: int) -> (int, list[PlayerMatchHistoryEntry]):
         ]
     except Exception as e:
         print(f"Failed to update account {account_id}: {e}")
-        return account_id, None
+        return account_id, []
 
 
 def main(rate_limit: RateLimit, empty_histories: set[int]):
@@ -100,7 +104,7 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
                 if match_history is None or not match_history:
                     empty_histories.add(account_id)
             client.execute(
-                f"INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
+                "INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
                 [
                     {
                         "account_id": account_id,

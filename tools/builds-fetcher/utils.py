@@ -13,16 +13,38 @@ PROXY_API_TOKEN = os.environ.get("PROXY_API_TOKEN")
 R = TypeVar("R", bound=Message)
 
 
-def call_steam_proxy(msg_type: int, msg: Message, response_type: type[R]) -> R:
-    data = call_steam_proxy_raw(msg_type, msg)
-    return response_type.FromString(data)
+def call_steam_proxy(
+    msg_type: int,
+    msg: Message,
+    response_type: type[R],
+    cooldown_time: int,
+    groups: list[str],
+) -> R:
+    MAX_RETRIES = 3
+    for i in range(MAX_RETRIES):
+        try:
+            data = call_steam_proxy_raw(msg_type, msg, cooldown_time, groups)
+            return response_type.FromString(data)
+        except Exception as e:
+            print(f"[Warning] Failed to call steam proxy: {e}")
+            if i == MAX_RETRIES - 1:
+                raise
+    raise RuntimeError(
+        "steam proxy retry raise invariant broken: - should never hit this point"
+    )
 
 
-def call_steam_proxy_raw(msg_type, msg):
+def call_steam_proxy_raw(
+    msg_type: int, msg: Message, cooldown_time: int, groups: list[str]
+) -> bytes:
+    assert PROXY_URL, "PROXY_URL must be defined"
+    assert PROXY_API_TOKEN, "PROXY_API_TOKEN must be defined"
+
     msg_data = b64encode(msg.SerializeToString()).decode("utf-8")
     body = {
         "message_kind": msg_type,
-        "job_cooldown_millis": 10,
+        "job_cooldown_millis": cooldown_time,
+        "bot_in_all_groups": groups,
         "data": msg_data,
     }
     response = requests.post(

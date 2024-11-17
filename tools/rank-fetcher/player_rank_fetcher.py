@@ -35,7 +35,7 @@ def get_accounts(client: Client, empty_cards: set) -> list[int]:
     accounts = [r[0] for r in client.execute(query)]
     print(f"Found {len(accounts)} new accounts")
     if len(accounts) < 500:
-        query = f"""
+        query = """
         WITH last_cards AS (SELECT *
                             FROM player_card
                             ORDER BY account_id, created_at DESC
@@ -56,7 +56,11 @@ def update_account(account_id: int) -> (int, PlayerCard):
         msg = CMsgClientToGCGetProfileCard()
         msg.account_id = account_id
         msg = call_steam_proxy(
-            k_EMsgClientToGCGetProfileCard, msg, CMsgCitadelProfileCard
+            k_EMsgClientToGCGetProfileCard,
+            msg,
+            CMsgCitadelProfileCard,
+            cooldown_time=10,
+            groups=["LowRateLimitApis"],
         )
         return account_id, PlayerCard.from_msg(msg)
     except Exception as e:
@@ -84,7 +88,7 @@ def main(empty_cards: set[int]):
                 if card is None:
                     empty_cards.add(account_id)
             client.execute(
-                f"INSERT INTO player_card (* EXCEPT(created_at)) VALUES",
+                "INSERT INTO player_card (* EXCEPT(created_at)) VALUES",
                 [
                     {
                         "account_id": account_id,
