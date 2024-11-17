@@ -17,3 +17,12 @@ create table api_key_limits
     primary key (key, path),
     foreign key (key) references api_keys (key)
 );
+
+create table api_key_account_groups
+(
+    key uuid not null,
+    account_group_name varchar(255) not null,
+    created_at timestamp default current_timestamp,
+    primary key (key, account_group_name),
+    foreign key (key) references api_keys (key)
+);
