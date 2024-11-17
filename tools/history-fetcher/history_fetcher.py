@@ -146,7 +146,7 @@ if __name__ == "__main__":
     rate_limit = RateLimit(
         max_count=int(os.environ.get("NUM_ACCOUNTS", 10)),
         per=60 / float(os.environ.get("HISTORY_REQ_PER_MIN_PER_ACCOUNT", 60)),
-        greedy=True,
+        greedy=False,
     )
     empty_histories = {0}
     i = 0
