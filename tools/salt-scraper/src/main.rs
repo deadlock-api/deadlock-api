@@ -171,6 +171,7 @@ async fn fetch_match(
                         "Got a rate limited response with username {:?}: {:?}",
                         body.username, response
                     );
+                    limiter.wait().await;
                     return None;
                 } else if r == KEResultInvalidMatch as i32 {
                     match report_match_id_not_found(client, match_id).await {
