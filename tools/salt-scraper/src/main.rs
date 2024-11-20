@@ -2,6 +2,7 @@ use arl::RateLimiter;
 use base64::prelude::*;
 use base64::Engine;
 use clickhouse::Compression;
+use futures::StreamExt;
 use log::{debug, info, warn};
 use models::{InvokeResponse200, MatchIdQueryResult, MatchSalt};
 use prost::Message as _;
@@ -77,8 +78,8 @@ async fn main() {
         .build()
         .unwrap();
 
-    let optimal_interval = 60.0 * 60.0 / *CALLS_PER_ACCOUNT_PER_HOUR / *NUM_ACCOUNTS as f64
-        * *CALLS_BURST as f64;
+    let optimal_interval =
+        60.0 * 60.0 / *CALLS_PER_ACCOUNT_PER_HOUR / *NUM_ACCOUNTS as f64 * *CALLS_BURST as f64;
     let limiter = RateLimiter::new(*CALLS_BURST, Duration::from_secs_f64(optimal_interval));
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
@@ -117,12 +118,11 @@ async fn main() {
                 .unwrap();
             recent_matches.extend(gaps.into_iter().map(|m| m.match_id));
         }
-        futures::future::join_all(
-            recent_matches
-                .iter()
-                .map(|match_id| fetch_match(&client, message_type, *match_id, &limiter)),
-        )
-        .await;
+        futures::stream::iter(recent_matches)
+            .map(|match_id| fetch_match(&client, message_type, match_id, &limiter))
+            .buffer_unordered(*CALLS_BURST)
+            .collect::<Vec<_>>()
+            .await;
     }
 }
 
