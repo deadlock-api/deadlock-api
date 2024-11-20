@@ -21,11 +21,6 @@ CH_POOL = ChPool(
     password=os.getenv("CLICKHOUSE_PASSWORD", ""),
     database=os.getenv("CLICKHOUSE_DB", "default"),
 )
-COOLDOWN_TIME = (
-    int(60 / float(os.environ.get("HISTORY_REQ_PER_MIN_PER_ACCOUNT", 60))) * 1000
-)
-
-print(f"Cooldown: {COOLDOWN_TIME}")
 
 
 def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
@@ -65,7 +60,7 @@ def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryEntry]]
             k_EMsgClientToGCGetMatchHistory,
             msg,
             CMsgClientToGCGetMatchHistoryResponse,
-            cooldown_time=COOLDOWN_TIME,
+            cooldown_time=10000,
             groups=["GetMatchHistory"],
         )
         if msg.result != msg.k_eResult_Success:
