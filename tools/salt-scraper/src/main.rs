@@ -28,7 +28,7 @@ static NUM_ACCOUNTS: LazyLock<usize> = LazyLock::new(|| {
         .parse()
         .expect("NUM_ACCOUNTS must be a number")
 });
-static CALLS_PER_ACCOUNT_PER_HOUR: LazyLock<usize> = LazyLock::new(|| {
+static CALLS_PER_ACCOUNT_PER_HOUR: LazyLock<f64> = LazyLock::new(|| {
     std::env::var("CALLS_PER_ACCOUNT_PER_HOUR")
         .expect("CALLS_PER_ACCOUNT_PER_HOUR must be set")
         .parse()
@@ -77,7 +77,7 @@ async fn main() {
         .build()
         .unwrap();
 
-    let optimal_interval = 60.0 * 60.0 / *CALLS_PER_ACCOUNT_PER_HOUR as f64 / *NUM_ACCOUNTS as f64
+    let optimal_interval = 60.0 * 60.0 / *CALLS_PER_ACCOUNT_PER_HOUR / *NUM_ACCOUNTS as f64
         * *CALLS_BURST as f64;
     let limiter = RateLimiter::new(*CALLS_BURST, Duration::from_secs_f64(optimal_interval));
     loop {
