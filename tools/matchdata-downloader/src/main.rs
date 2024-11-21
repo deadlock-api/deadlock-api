@@ -29,6 +29,16 @@ static S3_SECRET_ACCESS_KEY: LazyLock<String> =
 static S3_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
 static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
+static S3_CACHE_BUCKET_NAME: LazyLock<String> =
+    LazyLock::new(|| std::env::var("S3_CACHE_BUCKET_NAME").unwrap());
+static S3_CACHE_ACCESS_KEY_ID: LazyLock<String> =
+    LazyLock::new(|| std::env::var("S3_CACHE_ACCESS_KEY_ID").unwrap());
+static S3_CACHE_SECRET_ACCESS_KEY: LazyLock<String> =
+    LazyLock::new(|| std::env::var("S3_CACHE_SECRET_ACCESS_KEY").unwrap());
+static S3_CACHE_ENDPOINT_URL: LazyLock<String> =
+    LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
+static S3_CACHE_REGION: LazyLock<String> =
+    LazyLock::new(|| std::env::var("S3_CACHE_REGION").unwrap());
 static PARALLEL_JOBS: LazyLock<u32> = LazyLock::new(|| {
     std::env::var("PARALLEL_JOBS")
         .map(|s| s.parse().unwrap())
@@ -65,6 +75,14 @@ async fn main() {
         None,
     )
     .unwrap();
+    let s3_cache_credentials = Credentials::new(
+        Some(&S3_CACHE_ACCESS_KEY_ID),
+        Some(&S3_CACHE_SECRET_ACCESS_KEY),
+        None,
+        None,
+        None,
+    )
+    .unwrap();
 
     let bucket = Bucket::new(
         &S3_BUCKET_NAME,
@@ -73,6 +91,16 @@ async fn main() {
             endpoint: S3_ENDPOINT_URL.clone(),
         },
         s3credentials.clone(),
+    )
+    .unwrap();
+
+    let cache_bucket = Bucket::new(
+        &S3_CACHE_BUCKET_NAME,
+        Region::Custom {
+            region: S3_CACHE_REGION.clone(),
+            endpoint: S3_CACHE_ENDPOINT_URL.clone(),
+        },
+        s3_cache_credentials.clone(),
     )
     .unwrap();
 
@@ -105,6 +133,7 @@ async fn main() {
             pool.spawn(download_match(
                 row,
                 bucket.clone(),
+                cache_bucket.clone(),
                 failed.clone(),
                 uploaded.clone(),
             ))
@@ -118,6 +147,7 @@ async fn main() {
 async fn download_match(
     row: MatchIdQueryResult,
     bucket: Box<Bucket>,
+    cache_bucket: Box<Bucket>,
     failed: Arc<Mutex<Vec<u64>>>,
     uploaded: Arc<Mutex<Vec<u64>>>,
 ) {
@@ -150,16 +180,23 @@ async fn download_match(
         failed.lock().unwrap().push(row.match_id);
         return;
     }
-    let response = response.unwrap();
-    let mut reader = StreamReader::new(
-        response
-            .bytes_stream()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-    );
-    if let Err(e) = bucket.put_object_stream(&mut reader, &key).await {
-        println!("Failed to upload metadata for match {}: {}", row.match_id, e);
+    let bytes = response.unwrap().bytes().await.unwrap();
+    if let Err(e) = bucket.put_object(&key, &bytes).await {
+        println!(
+            "Failed to upload metadata for match {}: {}",
+            row.match_id, e
+        );
         sleep(Duration::from_secs(10)).await;
         return;
+    }
+    if let Err(e) = cache_bucket
+        .put_object(&format!("{}.meta.bz2", row.match_id), &bytes)
+        .await
+    {
+        println!(
+            "Failed to upload metadata to cache for match {}: {}",
+            row.match_id, e
+        );
     }
     println!("Uploaded metadata for match {}", row.match_id);
     uploaded.lock().unwrap().push(row.match_id);
@@ -186,7 +223,10 @@ async fn download_match(
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
     );
     if let Err(e) = bucket.put_object_stream(&mut reader, &key).await {
-        println!("Failed to upload metadata for match {}: {}", row.match_id, e);
+        println!(
+            "Failed to upload metadata for match {}: {}",
+            row.match_id, e
+        );
         sleep(Duration::from_secs(10)).await;
         return;
     }
