@@ -36,7 +36,7 @@ static S3_CACHE_ACCESS_KEY_ID: LazyLock<String> =
 static S3_CACHE_SECRET_ACCESS_KEY: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_CACHE_SECRET_ACCESS_KEY").unwrap());
 static S3_CACHE_ENDPOINT_URL: LazyLock<String> =
-    LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
+    LazyLock::new(|| std::env::var("S3_CACHE_ENDPOINT_URL").unwrap());
 static S3_CACHE_REGION: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_CACHE_REGION").unwrap());
 static PARALLEL_JOBS: LazyLock<u32> = LazyLock::new(|| {
