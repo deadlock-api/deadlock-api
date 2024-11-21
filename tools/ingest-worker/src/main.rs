@@ -206,7 +206,7 @@ async fn insert_matches(client: Client, matches: Vec<MatchInfo>) -> clickhouse::
         let ch_players = match_info
             .players
             .into_iter()
-            .map::<ClickhouseMatchPlayer, _>(|p| (match_info.match_id.unwrap(), p).into());
+            .map::<ClickhouseMatchPlayer, _>(|p| (match_info.match_id.unwrap(), match_info.winning_team.and_then(|t| p.team.map(|pt| pt == t)), p).into());
         for player in ch_players {
             match_player_insert.write(&player).await?;
         }
