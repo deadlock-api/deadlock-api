@@ -102,7 +102,8 @@ async fn main() {
         },
         s3_cache_credentials.clone(),
     )
-    .unwrap();
+    .unwrap()
+    .with_path_style();
 
     let failed = Arc::new(Mutex::new(vec![]));
     let uploaded = Arc::new(Mutex::new(vec![]));
