@@ -6,11 +6,11 @@ edition = "2021"
 [dependencies]
 base64 = "0.22.1"
 reqwest = { version = "0.12.9", features = ["json"] }
-serde = { version = "1.0.214", features = ["derive"] }
-serde_json = "1.0.132"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
 valveprotos = { git = "https://github.com/raimannma/valveprotos-rs", rev = "4838d435d4305c385b2eaf7a2258038177a828fd", features = ["protobuf-src", "deadlock"] }
 prost = "0.13.3"
-tokio = { version = "1.41.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.41.1", features = ["rt-multi-thread", "macros"] }
 log = "0.4.22"
 env_logger = "0.11.5"
 arl = "0.2.0"
