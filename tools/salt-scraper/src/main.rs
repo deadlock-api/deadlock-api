@@ -171,7 +171,6 @@ async fn fetch_match(
                         "Got a rate limited response with username {:?}: {:?}",
                         body.username, response
                     );
-                    limiter.wait().await;
                     return None;
                 } else if r == KEResultInvalidMatch as i32 {
                     match report_match_id_not_found(client, match_id).await {
@@ -200,7 +199,6 @@ async fn fetch_match(
         // },
         StatusCode::TOO_MANY_REQUESTS => {
             warn!("Rate limited: {:?}", res);
-            limiter.wait().await;
         }
         _ => {
             warn!("Failed to send request for match {}: {:?}", match_id, res);
