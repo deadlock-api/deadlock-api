@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS match_info
         'Team1' = 1,
         'Spectator' = 16,
     ),
-    destroyed_time_s UInt32)
+    destroyed_time_s UInt32),
+    average_badge_team0 Nullable (UInt32),
+    average_badge_team1 Nullable (UInt32)
 ) ENGINE = ReplacingMergeTree ORDER BY match_id
 PRIMARY KEY match_id;
