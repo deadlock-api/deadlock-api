@@ -4,7 +4,8 @@ CREATE MATERIALIZED VIEW match_player_item
  REFRESH EVERY 30 MINUTES
  ENGINE = MergeTree()
 ORDER BY (match_id, account_id, item_id)
-POPULATE
+ PARTITION BY hero_id
+ POPULATE
 AS
 SELECT
     match_id,
