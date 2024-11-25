@@ -61,8 +61,8 @@ static SALTS_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
         .unwrap_or(36_000)
 });
 static SALTS_RATE_LIMIT_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
-    std::env::var("SALTS_COOLDOWN_MILLIS")
-        .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
+    std::env::var("SALTS_RATE_LIMIT_COOLDOWN_MILLIS")
+        .map(|x| x.parse().expect("SALTS_RATE_LIMIT_COOLDOWN_MILLIS must be a number"))
         .unwrap_or(*SALTS_COOLDOWN_MILLIS)
 });
 
