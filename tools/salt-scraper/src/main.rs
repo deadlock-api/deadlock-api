@@ -60,6 +60,11 @@ static SALTS_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
         .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
         .unwrap_or(36_000)
 });
+static SALTS_RATE_LIMIT_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
+    std::env::var("SALTS_COOLDOWN_MILLIS")
+        .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
+        .unwrap_or(*SALTS_COOLDOWN_MILLIS)
+});
 
 #[tokio::main]
 async fn main() {
@@ -143,6 +148,7 @@ async fn fetch_match(
     let body = json!({
         "message_kind": message_type,
         "job_cooldown_millis": *SALTS_COOLDOWN_MILLIS,
+        "rate_limit_cooldown_millis": *SALTS_RATE_LIMIT_COOLDOWN_MILLIS,
         "bot_in_all_groups": ["GetMatchMetaData"],
         "data": data_b64,
     });
