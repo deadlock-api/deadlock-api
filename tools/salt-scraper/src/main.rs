@@ -62,7 +62,10 @@ static SALTS_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
 });
 static SALTS_RATE_LIMIT_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
     std::env::var("SALTS_RATE_LIMIT_COOLDOWN_MILLIS")
-        .map(|x| x.parse().expect("SALTS_RATE_LIMIT_COOLDOWN_MILLIS must be a number"))
+        .map(|x| {
+            x.parse()
+                .expect("SALTS_RATE_LIMIT_COOLDOWN_MILLIS must be a number")
+        })
         .unwrap_or(*SALTS_COOLDOWN_MILLIS)
 });
 
@@ -90,16 +93,16 @@ async fn main() {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
         WITH matches AS (
-            SELECT DISTINCT match_id, toUnixTimestamp(start_time) AS start_time FROM finished_matches
+            SELECT DISTINCT match_id, toUnixTimestamp(start_time) AS start_time, match_score FROM finished_matches
             UNION DISTINCT
-            SELECT DISTINCT match_id, start_time FROM player_match_history
+            SELECT DISTINCT match_id, start_time, 0 AS match_score FROM player_match_history
             WHERE match_mode IN ('Ranked', 'Unranked')
         )
         SELECT DISTINCT match_id
         FROM matches
         WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
-        ORDER BY match_id DESC
+        ORDER BY intDivOrZero(match_id, 10000) DESC, match_score DESC, match_id DESC -- Within batches of 10_000, prioritize higher ranked matches
         LIMIT 10000
         ";
         let recent_matches: Vec<MatchIdQueryResult> =
