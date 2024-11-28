@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS match_info
     ),
     destroyed_time_s UInt32),
     average_badge_team0 Nullable (UInt32),
-    average_badge_team1 Nullable (UInt32)
+    average_badge_team1 Nullable (UInt32),
+    created_at timestamp DEFAULT current_timestamp()
 ) ENGINE = ReplacingMergeTree ORDER BY match_id
 PRIMARY KEY match_id;
