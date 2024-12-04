@@ -45,10 +45,13 @@ pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let store = Arc::new(aws_store);
 
     loop {
-        let Ok(matches_res) = spec_client.get(base_url.join("/matches").unwrap()).send() else {
-            error!("Failed to get matches to check against");
-            sleep(Duration::from_secs(5));
-            continue;
+        let matches_res = match spec_client.get(base_url.join("matches").unwrap()).send() {
+            Ok(matches_res) => matches_res,
+            Err(e) => {
+                error!("Failed to get matches to check against: {:#?}", e);
+                sleep(Duration::from_secs(5));
+                continue;
+            }
         };
         let matches = matches_res.json::<Vec<SpectatedMatchInfo>>()?;
 
@@ -114,7 +117,7 @@ fn download_with_thread(
 
         let c = reqwest::blocking::Client::new();
         if let Err(e) = c
-            .post(base_url.join("/match-ended").unwrap())
+            .post(base_url.join("match-ended").unwrap())
             .json(&json!({"match_id": match_id}))
             .send()
         {
