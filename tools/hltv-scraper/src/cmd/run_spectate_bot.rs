@@ -123,6 +123,14 @@ impl SpectatorBot {
         let exists: Option<String> = self.redis.hget(key, match_id.to_string()).await?;
         Ok(exists.is_some())
     }
+    async fn update_spectated(&self, key: &str, match_id: u64, expiry_seconds: i64) -> Result<()> {
+        let _: () = self
+            .redis
+            .hexpire(key, expiry_seconds, None, &[match_id])
+            .await?;
+
+        Ok(())
+    }
 
     async fn mark_spectated(&self, key: &str, smi: &SpectatedMatchInfo) -> Result<()> {
         let payload = serde_json::to_string(&smi).unwrap();
@@ -472,6 +480,7 @@ async fn run_server(bot: Arc<SpectatorBot>) -> Result<()> {
         .route("/matches", get(fetch_matches))
         .route("/matches-past-hour", get(count_extra_matches))
         .route("/match-ended", post(record_match_end))
+        .route("/match-still-alive", post(record_match_still_alive))
         .with_state(shared_state);
 
     // run our app with hyper, listening globally on port 3000
@@ -512,6 +521,19 @@ async fn record_match_end(
     let match_id = req.match_id;
 
     bot.mark_ended(&[match_id])
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+async fn record_match_still_alive(
+    State(bot): State<Arc<SpectatorBot>>,
+    Json(req): Json<MatchEndReq>,
+) -> Result<(), String> {
+    let match_id = req.match_id;
+
+    bot.update_spectated(REDIS_SPEC_KEY, match_id, REDIS_EXPIRY)
         .await
         .map_err(|e| e.to_string())?;
 

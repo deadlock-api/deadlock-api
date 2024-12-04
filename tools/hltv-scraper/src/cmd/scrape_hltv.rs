@@ -66,7 +66,7 @@ pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
                 if let Some(started) = x.started_at {
                     return started < Timestamp::now().saturating_sub(15.minutes());
                 }
-                x.updated_at > Timestamp::now().saturating_sub(2.minutes())
+                x.updated_at < Timestamp::now().saturating_sub(1.minutes())
             })
             .min_by_key(|x| x.match_id);
 
