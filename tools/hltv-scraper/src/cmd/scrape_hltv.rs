@@ -1,4 +1,4 @@
-use std::{env, fs, io::Write as _, thread};
+use std::{collections::HashSet, env, fs, io::Write as _, thread};
 use std::{num::NonZeroUsize, sync::Arc};
 use std::{path::PathBuf, thread::sleep, time::Duration};
 
@@ -54,6 +54,7 @@ pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
             }
         };
         let matches = matches_res.json::<Vec<SpectatedMatchInfo>>()?;
+        let spectated_match_ids: HashSet<u64> = matches.iter().map(|x| x.match_id).collect();
 
         let current_count = currently_downloading.len();
 
@@ -70,8 +71,14 @@ pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
             })
             .min_by_key(|x| x.match_id);
 
+        let scraping_not_spectated = currently_downloading
+            .iter()
+            .filter(|x| !spectated_match_ids.contains(x.key()))
+            .count();
+
         gauge!("hltv.matches_with_spectators").set(total_available_matches as f64);
         gauge!("hltv.scraping_concurrently").set(current_count as f64);
+        gauge!("hltv.scraping_not_marked_spectated").set(scraping_not_spectated as f64);
 
         let Some(smi) = chosen_match else {
             info!("no current match to watch... {current_count} in progress ({total_available_matches} total possible to spectate)");
