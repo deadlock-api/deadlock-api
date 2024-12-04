@@ -96,7 +96,11 @@ async fn main() {
         let objects = objects
             .iter()
             .flat_map(|dir| dir.contents.clone())
-            .filter(|obj| obj.key.ends_with(".meta") || obj.key.ends_with(".meta.bz2"))
+            .filter(|obj| {
+                obj.key.ends_with(".meta")
+                    || obj.key.ends_with(".meta.bz2")
+                    || obj.key.ends_with(".meta_hltv.bz2")
+            })
             .sorted_by_key(|obj| obj.key.clone())
             .rev()
             .take(*MAX_OBJECTS_PER_RUN)
