@@ -87,6 +87,22 @@ services:
     networks:
     - database
 
+  hltv-spectator:
+    build:
+      context: hltv-scraper
+    restart: always
+    env_file: .env
+    networks:
+    - database
+
+  hltv-scraper:
+    build:
+      context: hltv-scraper
+    restart: always
+    env_file: .env
+    networks:
+    - database
+
 networks:
   database:
     external: true
