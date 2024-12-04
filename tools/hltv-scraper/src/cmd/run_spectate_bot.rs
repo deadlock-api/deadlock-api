@@ -360,7 +360,8 @@ impl SpectatorBot {
                         )
                     })
                     .collect_vec();
-                self.mark_spectated_many(REDIS_SPEC_KEY, &ms, 120).await?;
+                self.mark_spectated_many(REDIS_SPEC_KEY, &ms, REDIS_EXPIRY)
+                    .await?;
             }
             prev_life_matches = live_matches.clone();
 
