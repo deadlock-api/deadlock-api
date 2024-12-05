@@ -1,9 +1,9 @@
-use std::{collections::HashSet, env, fs, io::Write as _, thread};
+use std::{collections::HashSet, env, fs};
 use std::{num::NonZeroUsize, sync::Arc};
 use std::{path::PathBuf, thread::sleep, time::Duration};
 
 use anyhow::Context;
-use bzip2::{write::BzEncoder, Compression};
+use async_compression::tokio::write::BzEncoder;
 use dashmap::DashMap;
 use jiff::{Timestamp, ToSpan};
 use lru::LruCache;
@@ -12,7 +12,7 @@ use object_store::{aws::AmazonS3Builder, ObjectStore};
 use prost::Message;
 use reqwest::Url;
 use serde_json::json;
-use tokio::runtime::Runtime;
+use tokio::io::AsyncWriteExt as _;
 use tracing::{error, info};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
@@ -21,7 +21,7 @@ use crate::cmd::{
     run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType},
 };
 
-pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
+pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let spec_client = reqwest::blocking::Client::new();
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
@@ -92,7 +92,7 @@ pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
         let match_id = smi.match_id;
 
         info!("[{label} {match_id}] Starting to download match");
-        download_with_thread(
+        download_task(
             base_url.clone(),
             store.clone(),
             currently_downloading.clone(),
@@ -103,17 +103,18 @@ pub fn run(spectate_server_url: String) -> anyhow::Result<()> {
     }
 }
 
-fn download_with_thread(
+fn download_task(
     base_url: Url,
     store: Arc<impl ObjectStore>,
     currently_downloading: Arc<DashMap<u64, bool>>,
     smi: SpectatedMatchInfo,
 ) {
     currently_downloading.insert(smi.match_id, true);
-    thread::spawn(move || {
+    tokio::task::spawn(async move {
         let label = smi.match_type.label();
         let match_id = smi.match_id;
-        let match_metadata = match download_single_hltv_meta(smi.match_type.clone(), match_id) {
+        let match_metadata = match download_single_hltv_meta(smi.match_type.clone(), match_id).await
+        {
             Ok(x) => x,
             Err(e) => {
                 error!("[{label} {match_id}] Got error: {:?}", e);
@@ -136,7 +137,7 @@ fn download_with_thread(
         if did_finish_match {
             let match_metadata = match_metadata.unwrap();
             if let Err(e) =
-                push_meta_to_object_store(store, &match_metadata, smi.match_type, match_id)
+                push_meta_to_object_store(store, &match_metadata, smi.match_type, match_id).await
             {
                 error!("[{label} {match_id}] Got error writing meta: {:?}", e);
             };
@@ -144,7 +145,7 @@ fn download_with_thread(
     });
 }
 
-fn push_meta_to_object_store(
+async fn push_meta_to_object_store(
     store: Arc<impl ObjectStore>,
     match_metadata: &CMsgMatchMetaData,
     match_type: SpectatedMatchType,
@@ -156,21 +157,21 @@ fn push_meta_to_object_store(
     match_metadata.encode(&mut buf_meta)?;
 
     let mut output = Vec::new();
-    let mut compressor = BzEncoder::new(&mut output, Compression::best());
+    let mut compressor = BzEncoder::with_quality(&mut output, async_compression::Level::Best);
 
     compressor
         .write_all(&buf_meta)
+        .await
         .context("Error writing buf write")?;
-    compressor.finish().context("Error finishing buf write")?;
+
+    compressor
+        .flush()
+        .await
+        .context("Error finishing buf write")?;
+
     let p_str = format!("/ingest/metadata/{match_id}.meta_hltv.bz2");
-    let rt = Runtime::new().unwrap();
-    rt.block_on({
-        let p_str = p_str.clone();
-        async move {
-            let p = object_store::path::Path::from(p_str);
-            store.put(&p, output.into()).await.unwrap();
-        }
-    });
+    let p = object_store::path::Path::from(p_str.clone());
+    store.put(&p, output.into()).await?;
 
     info!("[{label} {match_id}] Wrote meta to {p_str}!");
     Ok(())

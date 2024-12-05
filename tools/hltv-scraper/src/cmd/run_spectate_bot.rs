@@ -551,10 +551,3 @@ pub async fn run_bot(proxy_url: String, proxy_api_token: String) -> Result<()> {
         }
     }
 }
-
-pub fn run_sync(proxy_url: String, proxy_api_token: String) -> Result<()> {
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()?
-        .block_on(run_bot(proxy_url, proxy_api_token))
-}

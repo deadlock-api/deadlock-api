@@ -14,7 +14,8 @@ mod cmd;
 mod easy_poll;
 mod hltv;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let pb_style = ProgressStyle::with_template(
         "{spinner:.green} {span_name:.green}{span_fields} - [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} ({percent}%) {per_sec} (ETA {eta}) {msg}",
     )
@@ -39,5 +40,5 @@ fn main() {
 
     // cli
 
-    run_cli();
+    run_cli().await;
 }

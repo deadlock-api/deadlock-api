@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{io::Cursor, sync::Arc};
 
 use anyhow::bail;
 use haste::broadcast::BroadcastFile;
@@ -19,7 +19,13 @@ fn process_post_match(details_buf: &[u8]) -> anyhow::Result<Vec<u8>> {
     Ok(meta_content)
 }
 
-pub fn extract_meta_from_fragment(fragment_buf: &[u8]) -> anyhow::Result<Option<Vec<u8>>> {
+pub async fn extract_meta_from_fragment(
+    fragment_buf: Arc<[u8]>,
+) -> anyhow::Result<Option<Vec<u8>>> {
+    tokio::task::spawn_blocking(move || extract_meta_from_fragment_sync(fragment_buf)).await?
+}
+
+fn extract_meta_from_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<Option<Vec<u8>>> {
     let cursor = Cursor::new(fragment_buf);
     let mut demo_file = BroadcastFile::start_reading(cursor);
 

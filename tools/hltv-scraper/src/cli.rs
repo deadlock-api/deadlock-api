@@ -2,6 +2,7 @@ use std::net::SocketAddrV4;
 
 use clap::{Parser, Subcommand};
 use metrics_exporter_prometheus::PrometheusBuilder;
+use tracing::error;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -28,7 +29,7 @@ pub enum Commands {
     },
 }
 
-pub fn run_cli() {
+pub async fn run_cli() {
     let cli = Cli::parse();
 
     match cli.command {
@@ -40,16 +41,17 @@ pub fn run_cli() {
             builder
                 .install()
                 .expect("failed to install recorder/exporter");
-            if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url) {
-                eprintln!("{:?}", e);
+            if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url).await {
+                error!("Command failed: {:#?}", e);
             }
         }
         Commands::RunSpectateBot {
             proxy_url,
             proxy_api_token,
         } => {
-            if let Err(e) = crate::cmd::run_spectate_bot::run_sync(proxy_url, proxy_api_token) {
-                eprintln!("{:?}", e);
+            if let Err(e) = crate::cmd::run_spectate_bot::run_bot(proxy_url, proxy_api_token).await
+            {
+                error!("Command failed: {:#?}", e);
             }
         }
     }

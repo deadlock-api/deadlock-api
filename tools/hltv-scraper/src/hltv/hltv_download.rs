@@ -1,15 +1,13 @@
 use haste::broadcast::BroadcastFile;
 use haste::demostream::DemoStream;
 use metrics::counter;
-use reqwest::{blocking::Client, StatusCode};
+use reqwest::{Client, StatusCode};
 use serde::Deserialize;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-use std::{
-    io::Cursor,
-    sync::mpsc::{sync_channel, Receiver, SyncSender},
-};
+use std::{io::Cursor, sync::Arc};
 use thiserror::Error;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{error, trace};
 use valveprotos::common::EDemoCommands;
 
@@ -20,7 +18,7 @@ use crate::hltv::{hltv_extract_meta::extract_meta_from_fragment, FragmentType};
 pub struct HltvFragment {
     pub match_id: u64,
     pub fragment_n: u64,
-    pub fragment_contents: Vec<u8>,
+    pub fragment_contents: Arc<[u8]>,
     pub fragment_type: FragmentType,
     pub is_confirmed_last_fragment: bool,
     pub has_match_meta: bool,
@@ -92,16 +90,16 @@ struct SyncResponse {
 /// https://dist1-ord1.steamcontent.com/tv/17915135/48/delta
 /// https://dist1-ord1.steamcontent.com/tv/17915135/49/delta
 /// ...
-pub fn download_match_mpsc(
+pub async fn download_match_mpsc(
     client: Client,
     prefix_url: String,
     match_id: u64,
 ) -> Result<Receiver<HltvFragment>, DownloadError> {
-    let (sender, receiver) = sync_channel::<HltvFragment>(100);
+    let (sender, receiver) = channel::<HltvFragment>(100);
 
     let sync_url = format!("{}/{}/sync", prefix_url, match_id);
 
-    let sync_response: SyncResponse = get_initial_sync(&client, &sync_url)?;
+    let sync_response: SyncResponse = get_initial_sync(&client, &sync_url).await?;
 
     let fragment_start = sync_response.fragment;
 
@@ -109,8 +107,7 @@ pub fn download_match_mpsc(
     let sync_url_clone = sync_url.clone();
     let sender_clone = sender.clone();
 
-    // Spawn a new thread to fetch fragments
-    std::thread::spawn(move || {
+    tokio::spawn(async move {
         if let Err(e) = fragment_fetching_loop(
             &client,
             prefix_url_clone,
@@ -118,7 +115,9 @@ pub fn download_match_mpsc(
             fragment_start,
             sender_clone,
             sync_url_clone,
-        ) {
+        )
+        .await
+        {
             error!("Error in fragment fetching loop: {:?}", e);
         }
     });
@@ -127,15 +126,15 @@ pub fn download_match_mpsc(
 }
 
 /// Helper function to get the initial `/sync` with a 30s leniency period.
-fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncResponse, DownloadError> {
+async fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncResponse, DownloadError> {
     let start_time = Instant::now();
 
     loop {
-        match client.get(sync_url).send() {
+        match client.get(sync_url).send().await {
             Ok(resp) => {
                 if resp.status().is_success() {
                     counter!("hltv.initial_sync.http.2xx").increment(1);
-                    let sync_response = resp.json::<SyncResponse>()?;
+                    let sync_response = resp.json::<SyncResponse>().await?;
                     trace!("Got successful /sync response {sync_url}");
                     return Ok(sync_response);
                 } else if resp.status() == reqwest::StatusCode::NOT_FOUND
@@ -166,12 +165,12 @@ fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncResponse, Dow
 }
 
 /// Main loop to fetch fragments and send them via the channel.
-fn fragment_fetching_loop(
+async fn fragment_fetching_loop(
     client: &Client,
     prefix_url: String,
     match_id: u64,
     first_fragment_n: u64,
-    sender: SyncSender<HltvFragment>,
+    sender: Sender<HltvFragment>,
     sync_url: String,
 ) -> Result<(), DownloadError> {
     let mut sync_available = true;
@@ -181,13 +180,13 @@ fn fragment_fetching_loop(
     let mut hard_retry = false;
     while sync_available {
         if hard_retry {
-            let sync_response: SyncResponse = get_initial_sync(client, &sync_url)?;
+            let sync_response: SyncResponse = get_initial_sync(client, &sync_url).await?;
             if sync_response.fragment > fragment_n {
                 fragment_n = sync_response.fragment;
             }
         } else {
             // Check if /sync is still available
-            sync_available = check_sync_availability(client, &sync_url);
+            sync_available = check_sync_availability(client, &sync_url).await;
             if !sync_available {
                 break;
             }
@@ -209,21 +208,25 @@ fn fragment_fetching_loop(
                     match_id,
                     fragment_n,
                     fragment_type,
-                ) {
+                )
+                .await
+                {
                     Ok(fragment_contents) => {
+                        let contents: Arc<[u8]> = fragment_contents.into();
                         counter!("hltv.fragment.success").increment(1);
                         retry_count = 0;
                         let is_confirmed_last_fragment =
-                            check_fragment_has_end_command(fragment_contents.clone());
+                            check_fragment_has_end_command(contents.clone()).await;
 
-                        let has_meta = extract_meta_from_fragment(&fragment_contents)
+                        let has_meta = extract_meta_from_fragment(contents.clone())
+                            .await
                             .map(|x| x.is_some())
                             .unwrap_or(false);
 
                         let hltv_fragment = HltvFragment {
                             match_id,
                             fragment_n,
-                            fragment_contents,
+                            fragment_contents: contents,
                             fragment_type,
                             is_confirmed_last_fragment,
                             has_match_meta: has_meta,
@@ -231,6 +234,7 @@ fn fragment_fetching_loop(
 
                         sender
                             .send(hltv_fragment)
+                            .await
                             .map_err(|_| DownloadError::ReceiverDropped)?;
 
                         if is_confirmed_last_fragment || has_meta {
@@ -251,7 +255,7 @@ fn fragment_fetching_loop(
                             if retry_count > 1 {
                                 trace!("Retry #{retry_count} - checking sync availability...");
                                 // Check if /sync is still available
-                                sync_available = check_sync_availability(client, &sync_url);
+                                sync_available = check_sync_availability(client, &sync_url).await;
                                 if !sync_available {
                                     break;
                                 } else if retry_count > 5 {
@@ -289,11 +293,11 @@ fn fragment_fetching_loop(
 }
 
 /// Checks if `/sync` is still available with a 5s retry period.
-fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
+async fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
     let start_time = Instant::now();
 
     loop {
-        match client.get(sync_url).send() {
+        match client.get(sync_url).send().await {
             Ok(resp) => {
                 if resp.status().is_success() {
                     return true;
@@ -329,7 +333,7 @@ fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
 /// Download a specific fragment from a match
 ///
 /// Returns an error in case of a 404.
-pub fn download_match_fragment(
+pub async fn download_match_fragment(
     prefix_url: String,
     match_id: u64,
     fragment_n: u64,
@@ -345,11 +349,11 @@ pub fn download_match_fragment(
     );
 
     trace!("Downloading match fragment: {fragment_url}");
-    let resp = client.get(&fragment_url).send()?;
+    let resp = client.get(&fragment_url).send().await?;
 
     if resp.status().is_success() {
         counter!("hltv.fragment.http.2xx").increment(1);
-        let bytes = resp.bytes()?;
+        let bytes = resp.bytes().await?;
         Ok(bytes.to_vec())
     } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
         counter!("hltv.fragment.http.404").increment(1);
@@ -362,7 +366,12 @@ pub fn download_match_fragment(
     }
 }
 
-pub fn check_fragment_has_end_command(fragment_contents: Vec<u8>) -> bool {
+pub async fn check_fragment_has_end_command(fragment_contents: Arc<[u8]>) -> bool {
+    tokio::task::spawn_blocking(move || check_fragment_has_end_command_sync(fragment_contents))
+        .await
+        .expect("Should not fail")
+}
+fn check_fragment_has_end_command_sync(fragment_contents: Arc<[u8]>) -> bool {
     let cursor = Cursor::new(&fragment_contents[..]);
 
     let mut demo_file = BroadcastFile::start_reading(cursor);

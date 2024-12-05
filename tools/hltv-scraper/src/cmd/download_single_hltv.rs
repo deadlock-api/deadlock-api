@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use metrics::{counter, histogram};
-use reqwest::blocking::Client;
+use reqwest::Client;
 use tracing::{debug, info, warn};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
@@ -11,7 +11,7 @@ use crate::{
     hltv::{hltv_download, hltv_extract_meta::extract_meta_from_fragment},
 };
 
-pub fn download_single_hltv_meta(
+pub async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
     match_id: u64,
 ) -> anyhow::Result<Option<CMsgMatchMetaData>> {
@@ -19,11 +19,12 @@ pub fn download_single_hltv_meta(
     let label = match_type.label();
 
     let client = Client::new();
-    let recv = hltv_download::download_match_mpsc(
+    let mut recv = hltv_download::download_match_mpsc(
         client,
         "https://dist1-ord1.steamcontent.com/tv".to_string(),
         match_id,
     )
+    .await
     .context("Error downloading match initialization")?;
 
     let mut fragment_count = 0;
@@ -34,7 +35,7 @@ pub fn download_single_hltv_meta(
     let mut seen_first_fragment = false;
 
     let mut match_meta: Option<CMsgMatchMetaData> = None;
-    for fragment in recv {
+    while let Some(fragment) = recv.recv().await {
         let byte_size = fragment.fragment_contents.len();
 
         if fragment.fragment_n % 10 == 0 {
@@ -61,7 +62,8 @@ pub fn download_single_hltv_meta(
             counter!("hltv.fragment.persisted_meta").increment(1);
             histogram!("hltv.fragment.meta_fragment_n").record(fragment.fragment_n as f64);
 
-            let match_meta_buf = extract_meta_from_fragment(&fragment.fragment_contents)
+            let match_meta_buf = extract_meta_from_fragment(fragment.fragment_contents)
+                .await
                 .ok()
                 .flatten();
             if let Some(match_meta_buf) = match_meta_buf {
