@@ -75,13 +75,14 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
 }
 
 #[cached(result = true, time = 15, result_fallback = true)]
-pub fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
-    let client = reqwest::blocking::Client::new();
+pub async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
+    let client = reqwest::Client::new();
     let res = client
         .get("https://data.deadlock-api.com/v1/active-matches")
-        .send()?;
+        .send()
+        .await?;
 
-    let active_matches: Vec<ActiveMatch> = res.json()?;
+    let active_matches: Vec<ActiveMatch> = res.json().await?;
     info!("Fetched new active matches, size: {}", active_matches.len());
 
     Ok(active_matches)

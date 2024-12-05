@@ -1,7 +1,11 @@
+use reqwest::Client;
 use serde::de::DeserializeOwned;
-use std::sync::{Arc, RwLock};
-use std::thread;
-use std::time::Duration;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tokio::{
+    task::AbortHandle,
+    time::{interval, Duration},
+};
 
 /// Starts polling a given URL at a specified interval, updating the shared state with the latest decoded JSON response.
 ///
@@ -12,13 +16,15 @@ use std::time::Duration;
 ///
 /// # Returns
 ///
-/// * `Arc<RwLock<T>>` - An atomic reference-counted pointer to the JSON response data wrapped in a read-write lock.
-#[allow(unused)]
-pub fn start_polling_json<T>(url: String, interval: Duration) -> Arc<RwLock<T>>
+/// * `Arc<RwLock<T>>` - An atomic reference-counted pointer to the JSON response data wrapped in a tokio read-write lock.
+pub async fn start_polling_json<T>(url: String, interval: Duration) -> (AbortHandle, Arc<RwLock<T>>)
 where
     T: DeserializeOwned + Send + Sync + 'static,
 {
-    start_polling_core(url, interval, |response| response.json::<T>().ok())
+    start_polling_core(url, interval, |response| async move {
+        response.json::<T>().await.ok()
+    })
+    .await
 }
 
 /// Starts polling a given URL at a specified interval, updating the shared state with the latest plaintext response.
@@ -30,9 +36,15 @@ where
 ///
 /// # Returns
 ///
-/// * `Arc<RwLock<String>>` - An atomic reference-counted pointer to the plaintext response data wrapped in a read-write lock.
-pub fn start_polling_text(url: String, interval: Duration) -> Arc<RwLock<String>> {
-    start_polling_core(url, interval, |response| response.text().ok())
+/// * `Arc<RwLock<String>>` - An atomic reference-counted pointer to the plaintext response data wrapped in a tokio read-write lock.
+pub async fn start_polling_text(
+    url: String,
+    interval: Duration,
+) -> (AbortHandle, Arc<RwLock<String>>) {
+    start_polling_core(url, interval, |response| async move {
+        response.text().await.ok()
+    })
+    .await
 }
 
 /// Core polling logic shared between JSON and plaintext polling functions.
@@ -41,40 +53,58 @@ pub fn start_polling_text(url: String, interval: Duration) -> Arc<RwLock<String>
 ///
 /// * `url` - The URL to poll.
 /// * `interval` - The interval duration to wait between polls.
-/// * `parse_fn` - A closure to parse the `reqwest::blocking::Response` into the desired type `T`.
+/// * `parse_fn` - An async closure to parse the `reqwest::Response` into the desired type `T`.
 ///
 /// # Returns
 ///
-/// * `Arc<RwLock<T>>` - An atomic reference-counted pointer to the parsed response data wrapped in a read-write lock.
-fn start_polling_core<T, F>(url: String, interval: Duration, parse_fn: F) -> Arc<RwLock<T>>
+/// * `Arc<RwLock<T>>` - An atomic reference-counted pointer to the parsed response data wrapped in a tokio read-write lock.
+async fn start_polling_core<T, F, Fut>(
+    url: String,
+    interval_duration: Duration,
+    parse_fn: F,
+) -> (AbortHandle, Arc<RwLock<T>>)
 where
     T: Send + Sync + 'static,
-    F: Fn(reqwest::blocking::Response) -> Option<T> + Send + Sync + 'static,
+    F: Fn(reqwest::Response) -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = Option<T>> + Send,
 {
-    // Perform an upfront request to get the initial value
-    let client = reqwest::blocking::Client::new();
-    let initial_data = match client.get(&url).send() {
-        Ok(response) => parse_fn(response).expect("Failed to parse the initial response"),
-        Err(e) => panic!("Error making the initial request: {}", e),
-    };
+    let client = Client::new();
 
-    let data = Arc::new(RwLock::new(initial_data));
+    // Perform an upfront request to get the initial value
+    let initial_data = client
+        .get(&url)
+        .send()
+        .await
+        .expect("Failed to make initial request")
+        .error_for_status()
+        .expect("Initial request failed");
+
+    let initial_parsed = parse_fn(initial_data)
+        .await
+        .expect("Failed to parse the initial response");
+
+    let data = Arc::new(RwLock::new(initial_parsed));
     let data_clone = Arc::clone(&data);
 
-    thread::spawn(move || loop {
-        match client.get(&url).send() {
-            Ok(response) => {
-                if let Some(parsed) = parse_fn(response) {
-                    if let Ok(mut data) = data_clone.write() {
-                        *data = parsed;
+    let join_handle = tokio::spawn(async move {
+        let mut interval = interval(interval_duration);
+
+        loop {
+            interval.tick().await;
+
+            match client.get(&url).send().await {
+                Ok(response) => {
+                    if let Ok(response) = response.error_for_status() {
+                        if let Some(parsed) = parse_fn(response).await {
+                            let mut data = data_clone.write().await;
+                            *data = parsed;
+                        }
                     }
                 }
+                Err(e) => eprintln!("Error polling URL: {}", e),
             }
-            Err(e) => eprintln!("Error polling URL: {}", e),
         }
-
-        thread::sleep(interval);
     });
 
-    data
+    (join_handle.abort_handle(), data)
 }

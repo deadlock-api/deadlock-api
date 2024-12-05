@@ -345,16 +345,16 @@ impl SpectatorBot {
     async fn run(&self) -> Result<()> {
         let start_time = Instant::now();
 
-        let steam_inf = start_polling_text(
+        let (abort_handle, steam_inf) = start_polling_text(
             "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_string(),
             Duration::from_secs(60 * 5),
-        );
+        ).await;
 
         let mut prev_life_matches = Vec::new();
         while (Instant::now() - start_time) < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
-            let s = steam_inf.read().unwrap().clone();
+            let s = steam_inf.read().await.clone();
             self.update_patch_version(&s).await?;
-            let live_matches = crate::active_matches::fetch_active_matches_cached()?;
+            let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
             if live_matches != prev_life_matches {
                 let ms = live_matches
                     .iter()
@@ -468,6 +468,7 @@ impl SpectatorBot {
             }
         }
 
+        abort_handle.abort();
         info!("Bot runtime exceeded, restarting in 30s...");
         sleep(Duration::from_secs(30)).await;
         Ok(())

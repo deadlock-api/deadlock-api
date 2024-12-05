@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.89"
 axum = "0.7.9"
 base64 = "0.22.1"
-cached = "0.54"
+cached = { version = "0.54", features = ["async", "async_tokio_rt_multi_thread"] }
 clap = { version = "4.5.18", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = "9.4.0"

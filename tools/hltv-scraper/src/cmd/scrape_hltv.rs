@@ -22,7 +22,7 @@ use crate::cmd::{
 };
 
 pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
-    let spec_client = reqwest::blocking::Client::new();
+    let spec_client = reqwest::Client::new();
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
 
@@ -45,7 +45,11 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let store = Arc::new(aws_store);
 
     loop {
-        let matches_res = match spec_client.get(base_url.join("matches").unwrap()).send() {
+        let matches_res = match spec_client
+            .get(base_url.join("matches").unwrap())
+            .send()
+            .await
+        {
             Ok(matches_res) => matches_res,
             Err(e) => {
                 error!("Failed to get matches to check against: {:#?}", e);
@@ -53,7 +57,7 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
                 continue;
             }
         };
-        let matches = matches_res.json::<Vec<SpectatedMatchInfo>>()?;
+        let matches = matches_res.json::<Vec<SpectatedMatchInfo>>().await?;
         let spectated_match_ids: HashSet<u64> = matches.iter().map(|x| x.match_id).collect();
 
         let current_count = currently_downloading.len();
@@ -123,11 +127,12 @@ fn download_task(
         };
         let did_finish_match = match_metadata.is_some();
 
-        let c = reqwest::blocking::Client::new();
+        let c = reqwest::Client::new();
         if let Err(e) = c
             .post(base_url.join("match-ended").unwrap())
             .json(&json!({"match_id": match_id}))
             .send()
+            .await
         {
             error!("[{label} {match_id}] Error marking match ended: {:?}", e)
         }
