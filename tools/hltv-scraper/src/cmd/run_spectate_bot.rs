@@ -224,6 +224,21 @@ impl SpectatorBot {
             }
         }
 
+        if gaps.len() < MAX_GAP_SIZE as usize {
+            for potential_id in (*min_id..*max_id).step_by(1) {
+                if !match_set.contains(&potential_id)
+                    && !recently_spectated.contains_key(&potential_id)
+                    && !failed_spectating.contains_key(&potential_id)
+                {
+                    gaps.push(potential_id);
+                }
+
+                if gaps.len() >= MAX_GAP_SIZE as usize {
+                    break;
+                }
+            }
+        }
+
         // gaps.reverse();
 
         gaps
@@ -421,20 +436,20 @@ impl SpectatorBot {
                     }
                 }
                 None => {
-                    let twenty_min_ago = jiff::Timestamp::now()
-                        .checked_sub(20.minutes())
+                    let fifteen_min_ago = jiff::Timestamp::now()
+                        .checked_sub(15.minutes())
                         .unwrap()
                         .as_second();
-                    let fourty_min_ago = jiff::Timestamp::now()
-                        .checked_sub(40.minutes())
+                    let fifty_min_ago = jiff::Timestamp::now()
+                        .checked_sub(50.minutes())
                         .unwrap()
                         .as_second();
 
                     let match_ids: Vec<u64> = live_matches
                         .iter()
                         .filter(|x| {
-                            x.start_time <= twenty_min_ago as u64
-                                && x.start_time > fourty_min_ago as u64
+                            x.start_time <= fifteen_min_ago as u64
+                                && x.start_time > fifty_min_ago as u64
                         })
                         .map(|m| m.match_id)
                         .sorted()
