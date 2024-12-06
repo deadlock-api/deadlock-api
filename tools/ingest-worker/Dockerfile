@@ -35,6 +35,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:bookworm-slim AS runtime
 ARG EXE_NAME
 
+ENV exe_name=$EXE_NAME
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 \
     && rm -rf /var/lib/apt/lists/*
@@ -42,4 +44,4 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /app/target/release/${EXE_NAME} /usr/local/bin
 
-ENTRYPOINT ["/usr/local/bin/${EXE_NAME}"]
+ENTRYPOINT ["/usr/local/bin/${exe_name}"]
