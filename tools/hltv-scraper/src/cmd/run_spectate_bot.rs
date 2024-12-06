@@ -35,7 +35,7 @@ use valveprotos::{
 
 use crate::easy_poll::start_polling_text;
 
-const MAX_SPECTATED_MATCHES: usize = 325;
+const MAX_SPECTATED_MATCHES: usize = 230;
 const BOT_RUNTIME_HOURS: u64 = 6;
 const SPECTATE_COOLDOWN: Duration = Duration::from_millis(10);
 const ERROR_COOLDOWN: Duration = Duration::from_secs(5);
