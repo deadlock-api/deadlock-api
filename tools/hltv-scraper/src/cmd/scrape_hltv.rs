@@ -171,7 +171,7 @@ async fn push_meta_to_object_store(
         .context("Error writing buf write")?;
 
     compressor
-        .flush()
+        .shutdown()
         .await
         .context("Error finishing buf write")?;
 
