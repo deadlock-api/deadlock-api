@@ -249,15 +249,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmake"
-version = "0.1.51"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb1e43aa7fd152b1f968787f7dbcdeb306d1867ff373c69955211876c053f91a"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "const-random"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1229,15 +1220,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf-src"
-version = "2.1.0+27.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7edafa3bcc668fa93efafcbdf58d7821bbda0f4b458ac7fae3d57ec0fec8167"
-dependencies = [
- "cmake",
-]
-
-[[package]]
 name = "quick-xml"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1777,13 +1759,12 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/raimannma/valveprotos-rs?rev=dd212cf957b14dc41f9238f5dd7fb427c79879c0#dd212cf957b14dc41f9238f5dd7fb427c79879c0"
+source = "git+https://github.com/johnpyp/valveprotos-rs.git?rev=e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2#e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2"
 dependencies = [
  "heck",
  "prost",
  "prost-build",
  "prost-types",
- "protobuf-src",
 ]
 
 [[package]]

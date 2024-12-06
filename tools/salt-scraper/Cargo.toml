@@ -8,7 +8,7 @@ base64 = "0.22.1"
 reqwest = { version = "0.12.9", features = ["json"] }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
-valveprotos = { git = "https://github.com/raimannma/valveprotos-rs", rev = "dd212cf957b14dc41f9238f5dd7fb427c79879c0", features = ["protobuf-src", "deadlock"] }
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2", features = ["deadlock"] }
 prost = "0.13.3"
 tokio = { version = "1.41.1", features = ["rt-multi-thread", "macros"] }
 log = "0.4.22"
