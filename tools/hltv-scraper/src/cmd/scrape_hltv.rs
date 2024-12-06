@@ -1,6 +1,7 @@
 use std::{collections::HashSet, env, fs};
 use std::{num::NonZeroUsize, sync::Arc};
-use std::{path::PathBuf, thread::sleep, time::Duration};
+use std::{path::PathBuf, time::Duration};
+use tokio::time::sleep;
 
 use anyhow::Context;
 use async_compression::tokio::write::BzEncoder;
@@ -53,7 +54,7 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
             Ok(matches_res) => matches_res,
             Err(e) => {
                 error!("Failed to get matches to check against: {:#?}", e);
-                sleep(Duration::from_secs(5));
+                sleep(Duration::from_secs(5)).await;
                 continue;
             }
         };
@@ -86,7 +87,7 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 
         let Some(smi) = chosen_match else {
             info!("no current match to watch... {current_count} in progress ({total_available_matches} total possible to spectate)");
-            sleep(Duration::from_millis(10000));
+            sleep(Duration::from_millis(10000)).await;
             continue;
         };
 
@@ -103,7 +104,7 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
             smi,
         );
 
-        sleep(Duration::from_millis(200));
+        sleep(Duration::from_millis(200)).await;
     }
 }
 

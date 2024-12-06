@@ -3,11 +3,11 @@ use haste::demostream::DemoStream;
 use metrics::counter;
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
-use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::{io::Cursor, sync::Arc};
 use thiserror::Error;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::time::sleep;
 use tracing::{error, trace};
 use valveprotos::common::EDemoCommands;
 
@@ -147,7 +147,7 @@ async fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncRespons
                             resp.error_for_status().err(),
                         ));
                     }
-                    sleep(Duration::from_secs(10));
+                    sleep(Duration::from_secs(10)).await;
                     continue;
                 } else {
                     return Err(DownloadError::UnexpectedStatusCode(resp.status()));
@@ -157,7 +157,7 @@ async fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncRespons
                 if Instant::now() - start_time >= Duration::from_secs(30) {
                     return Err(DownloadError::SyncNotAvailable(None));
                 }
-                sleep(Duration::from_secs(1));
+                sleep(Duration::from_secs(1)).await;
                 continue;
             }
         }
@@ -250,7 +250,7 @@ async fn fragment_fetching_loop(
                             retry_count += 1;
 
                             // minimum 4 sec wait time
-                            sleep(Duration::from_secs((2 * retry_count).max(4)));
+                            sleep(Duration::from_secs((2 * retry_count).max(4))).await;
 
                             if retry_count > 1 {
                                 trace!("Retry #{retry_count} - checking sync availability...");
@@ -271,7 +271,7 @@ async fn fragment_fetching_loop(
                         DownloadError::NetworkError(e) => {
                             counter!("hltv.fragment.error.network_error").increment(1);
                             error!("[{match_id} {fragment_n}] Network error: {e:?}");
-                            sleep(Duration::from_secs(1));
+                            sleep(Duration::from_secs(1)).await;
                             continue;
                         }
                         _ => {
@@ -306,14 +306,14 @@ async fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
                     if Instant::now() - start_time >= Duration::from_secs(20) {
                         return false;
                     }
-                    sleep(Duration::from_secs(2));
+                    sleep(Duration::from_secs(2)).await;
                     continue;
                 } else if resp.status() == reqwest::StatusCode::METHOD_NOT_ALLOWED {
                     counter!("hltv.sync.http.405").increment(1);
                     if Instant::now() - start_time >= Duration::from_secs(45) {
                         return false;
                     }
-                    sleep(Duration::from_secs(20));
+                    sleep(Duration::from_secs(20)).await;
                     continue;
                 } else {
                     return false;
@@ -323,7 +323,7 @@ async fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
                 if Instant::now() - start_time >= Duration::from_secs(5) {
                     return false;
                 }
-                sleep(Duration::from_secs(2));
+                sleep(Duration::from_secs(2)).await;
                 continue;
             }
         }
