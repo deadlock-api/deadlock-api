@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from datetime import datetime
@@ -14,6 +15,9 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
     k_EMsgClientToGCFindHeroBuilds,
 )
 
+logging.basicConfig(level=logging.INFO)
+
+LOGGER = logging.getLogger(__name__)
 UPDATE_INTERVAL = 30
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
@@ -99,7 +103,7 @@ def upsert_builds(results: list[CMsgClientToGCFindHeroBuildsResponse.HeroBuildRe
 
 
 def update_hero_lang(hero: int, lang: int):
-    print(f"Updating hero {hero} in lang {lang}")
+    LOGGER.debug(f"Updating hero {hero} in lang {lang}")
     start = time.time()
 
     msg = CMsgClientToGCFindHeroBuilds()
@@ -113,25 +117,28 @@ def update_hero_lang(hero: int, lang: int):
         groups=["LowRateLimitApis"],
     )
     if msg.response != CMsgClientToGCFindHeroBuildsResponse.k_eSuccess:
-        print(f"Failed to fetch hero {hero} builds")
+        LOGGER.error(f"Failed to fetch hero {hero} builds")
         return
 
-    print(f"Found {len(msg.results)} builds for hero {hero} in lang {lang}")
+    LOGGER.info(f"Found {len(msg.results)} builds for hero {hero} in lang {lang}")
     upsert_builds(msg.results)
 
     end = time.time()
     duration = end - start
     if duration < UPDATE_INTERVAL:
+        LOGGER.debug(f"Sleeping for {UPDATE_INTERVAL - duration} seconds")
         sleep(UPDATE_INTERVAL - (end - start))
 
 
 if __name__ == "__main__":
+    LOGGER.info("Starting hero builds fetcher")
     while True:
+        LOGGER.info("Updating hero builds")
         try:
             heroes = fetch_all_hero_ids()
             for hero in heroes:
                 for lang in ALL_LANGS:
                     update_hero_lang(hero, lang)
         except Exception as e:
-            print(e)
+            LOGGER.exception(e)
             POSTGRES_CONN = create_pg_conn()
