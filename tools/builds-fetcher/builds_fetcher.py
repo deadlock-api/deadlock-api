@@ -19,6 +19,36 @@ POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASS = os.environ.get("POSTGRES_PASS")
 
+ALL_LANGS = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    21,
+    22,
+    24,
+    25,
+    26,
+    27,
+    255,
+]
+
 
 def create_pg_conn():
     return psycopg2.connect(
@@ -68,12 +98,13 @@ def upsert_builds(results: list[CMsgClientToGCFindHeroBuildsResponse.HeroBuildRe
     POSTGRES_CONN.commit()
 
 
-def update_hero(hero: int):
-    print(f"Updating hero {hero}")
+def update_hero_lang(hero: int, lang: int):
+    print(f"Updating hero {hero} in lang {lang}")
     start = time.time()
 
     msg = CMsgClientToGCFindHeroBuilds()
     msg.hero_id = hero
+    msg.language.append(lang)
     msg = call_steam_proxy(
         k_EMsgClientToGCFindHeroBuilds,
         msg,
@@ -85,6 +116,7 @@ def update_hero(hero: int):
         print(f"Failed to fetch hero {hero} builds")
         return
 
+    print(f"Found {len(msg.results)} builds for hero {hero} in lang {lang}")
     upsert_builds(msg.results)
 
     end = time.time()
@@ -98,7 +130,8 @@ if __name__ == "__main__":
         try:
             heroes = fetch_all_hero_ids()
             for hero in heroes:
-                update_hero(hero)
+                for lang in ALL_LANGS:
+                    update_hero_lang(hero, lang)
         except Exception as e:
             print(e)
             POSTGRES_CONN = create_pg_conn()
