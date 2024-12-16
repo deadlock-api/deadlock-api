@@ -105,7 +105,7 @@ async fn main() {
         )
         SELECT match_id
         FROM matches
-        WHERE start_time < now() - INTERVAL '4 hours' AND start_time > toDateTime('2024-11-01')
+        WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
         ORDER BY toStartOfDay(fromUnixTimestamp(start_time)) DESC, intDivOrZero(match_score, 250) DESC, match_id DESC -- Within batches of a day, prioritize higher ranked matches
         LIMIT 10000
@@ -116,7 +116,7 @@ async fn main() {
         if recent_matches.len() < 10000 {
             info!("Only got {} matches, filling in the gaps", recent_matches.len());
             let query = r"
-                WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '4 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
+                WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
                 SELECT number + match_range.min_match_id as match_id
                 FROM numbers(match_range.max_match_id - match_range.min_match_id + 1)
                 WHERE (number + match_range.min_match_id) NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
