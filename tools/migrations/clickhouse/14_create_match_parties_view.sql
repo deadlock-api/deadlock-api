@@ -7,8 +7,9 @@ POPULATE
 AS
 SELECT
     match_id,
-    party,
     team,
+    party,
+    any(won) as won,
     groupArray(account_id) AS account_ids
 FROM match_player
-GROUP BY match_id, party, team;
+GROUP BY match_id, team, party;
