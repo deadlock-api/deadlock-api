@@ -1,0 +1,15 @@
+[package]
+name = "deadlock-api-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { version = "0.12.9", features = ["json"] }
+tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
+tracing-subscriber = "0.3.19"
+log = "0.4.22"
+redis = { version = "0.27.6", features = ["aio", "tokio", "tokio-comp"] }
+clap = { version = "4.5.23", features = ["env", "derive"] }
+clickhouse = "0.13.1"
+sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio"] }
+salvo = { version = "0.74.3", features = ["affix-state"] }
