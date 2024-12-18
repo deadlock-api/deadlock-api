@@ -1,16 +1,22 @@
+use crate::state::AppState;
+use axum::extract::State;
 use log::warn;
 use redis::AsyncCommands;
-use salvo::{handler, Depot, Router};
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 mod v1;
 mod v2;
 
-#[handler]
-async fn health_check(depot: &mut Depot) -> Result<&'static str, &'static str> {
-    let Ok(state) = depot.obtain_mut::<crate::state::AppState>() else {
-        return Err("State not found");
-    };
-
+#[utoipa::path(
+    method(get, head),
+    path = "/health",
+    responses(
+        (status = OK, body = String),
+        (status = INTERNAL_SERVER_ERROR, body = String)
+    )
+)]
+async fn health_check(State(mut state): State<AppState>) -> Result<&'static str, &'static str> {
     // Check Clickhouse connection
     if state
         .clickhouse_client
@@ -40,13 +46,9 @@ async fn health_check(depot: &mut Depot) -> Result<&'static str, &'static str> {
     Ok("OK")
 }
 
-pub fn router() -> Router {
-    Router::new()
-        .push(
-            Router::with_path("/health")
-                .get(health_check)
-                .head(health_check),
-        )
-        .push(Router::with_path("/v2").push(v2::router()))
-        .push(Router::with_path("/v1").push(v1::router()))
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(health_check))
+        .nest("/v2", v2::router())
+        .nest("/v1", v1::router())
 }

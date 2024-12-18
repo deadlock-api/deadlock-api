@@ -5,7 +5,7 @@ use std::fmt::Display;
 
 const POSTGRES_POOL_SIZE: u32 = 10;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 pub struct Config {
     #[clap(
         long,
@@ -30,10 +30,18 @@ pub struct Config {
     pub postgres_password: String,
     #[clap(long, env, default_value = "postgres")]
     pub postgres_dbname: String,
+    #[clap(
+        long,
+        env,
+        default_value = "false",
+        help = "If set to true, only requests with an API key are allowed"
+    )]
+    pub emergency_mode: bool,
 }
 
 #[derive(Clone)]
 pub struct AppState {
+    pub config: Config,
     pub http_client: reqwest::Client,
     pub redis_client: redis::aio::MultiplexedConnection,
     pub clickhouse_client: clickhouse::Client,
@@ -48,16 +56,16 @@ impl AppState {
         let http_client = reqwest::Client::new();
 
         // Create a Redis connection pool
-        let redis_client = redis::Client::open(config.redis_url)?
+        let redis_client = redis::Client::open(config.redis_url.clone())?
             .get_multiplexed_async_connection()
             .await?;
 
         // Create a Clickhouse connection pool
         let clickhouse_client = clickhouse::Client::default()
-            .with_url(config.clickhouse_url)
-            .with_user(config.clickhouse_username)
-            .with_password(config.clickhouse_password)
-            .with_database(config.clickhouse_database);
+            .with_url(&config.clickhouse_url)
+            .with_user(&config.clickhouse_username)
+            .with_password(&config.clickhouse_password)
+            .with_database(&config.clickhouse_database);
 
         // Create a Postgres connection pool
         let pg_options = PgConnectOptions::new_without_pgpass()
@@ -71,6 +79,7 @@ impl AppState {
             .await?;
 
         Ok(Self {
+            config,
             http_client,
             redis_client,
             clickhouse_client,
