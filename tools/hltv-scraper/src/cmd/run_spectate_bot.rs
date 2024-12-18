@@ -24,7 +24,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, field, info, warn, Span};
 use valveprotos::{
     deadlock::{
         c_msg_client_to_gc_spectate_user_response::EResponse, CMsgClientToGcSpectateLobby,
@@ -46,8 +46,15 @@ const REDIS_EXTRA_KEY: &str = "extra_spectated_matches";
 const REDIS_EXPIRY: i64 = 900; // 15 minutes in seconds
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+struct PoolLimitInfo {
+    ready_bots: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct InvokeResponse {
     data: String,
+    username: String,
+    pool_limit_info: PoolLimitInfo,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -261,6 +268,7 @@ impl SpectatorBot {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), fields(account = field::Empty, ready_bots = field::Empty))]
     async fn spectate_match(&self, match_type: SpectatedMatchType, match_id: u64) -> Result<bool> {
         let label = match_type.label();
         if self.is_recently_spectated(REDIS_SPEC_KEY, match_id).await? {
@@ -313,6 +321,9 @@ impl SpectatorBot {
                 let result = res.result();
                 let smi =
                     SpectatedMatchInfo::new(match_type, match_id, jiff::Timestamp::now(), None);
+                Span::current().record("account", &body.username);
+                Span::current().record("ready_bots", body.pool_limit_info.ready_bots);
+
                 let did_succeed = match result {
                     EResponse::KESuccess => {
                         info!(
