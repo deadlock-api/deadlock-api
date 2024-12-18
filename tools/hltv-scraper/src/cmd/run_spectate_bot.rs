@@ -291,8 +291,8 @@ impl SpectatorBot {
             .json(&serde_json::json!({
                 "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby as u32,
                 "bot_in_all_groups": [],
-                "rate_limit_cooldown_millis": 2_000,
-                "job_cooldown_millis": 2_000,
+                "rate_limit_cooldown_millis": 60_000,
+                "job_cooldown_millis": 5 * 60 * 1000,
                 "data": BASE64_STANDARD.encode(data),
             }))
             .send()
@@ -342,6 +342,13 @@ impl SpectatorBot {
 
                 sleep(SPECTATE_COOLDOWN).await;
                 Ok(did_succeed)
+            }
+
+            StatusCode::TOO_MANY_REQUESTS => {
+                warn!("Got proxy rate limit, waiting 10s before continuing");
+                sleep(Duration::from_secs(10)).await;
+
+                Ok(false)
             }
             _ => {
                 warn!(
@@ -462,7 +469,7 @@ impl SpectatorBot {
                             "No eligible matches found. Attempting to spectate {} gaps",
                             gaps.len()
                         );
-                        for gap_id in gaps.into_iter().take(5) {
+                        for gap_id in gaps.into_iter().take(3) {
                             match self
                                 .spectate_match(SpectatedMatchType::GapMatch, gap_id)
                                 .await
