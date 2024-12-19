@@ -299,7 +299,7 @@ impl SpectatorBot {
             .json(&serde_json::json!({
                 "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby as u32,
                 "bot_in_all_groups": ["SpectateLobby"],
-                "rate_limit_cooldown_millis": 30 * 60 * 1000,
+                "rate_limit_cooldown_millis": 10 * 60 * 1000,
                 "job_cooldown_millis": 5 * 60 * 1000,
                 "data": BASE64_STANDARD.encode(data),
             }))
@@ -480,7 +480,7 @@ impl SpectatorBot {
                             "No eligible matches found. Attempting to spectate {} gaps",
                             gaps.len()
                         );
-                        for gap_id in gaps.into_iter().take(3) {
+                        for gap_id in gaps.into_iter().take(5) {
                             match self
                                 .spectate_match(SpectatedMatchType::GapMatch, gap_id)
                                 .await
