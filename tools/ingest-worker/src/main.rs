@@ -204,6 +204,23 @@ async fn insert_matches(client: Client, matches: Vec<MatchInfo>) -> clickhouse::
     let mut match_info_insert = client.insert("match_info")?;
     let mut match_player_insert = client.insert("match_player")?;
     for match_info in matches {
+        if let Some(match_id) = match_info.match_id {
+            let http_client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(5))
+                .build();
+            if let Ok(http_client) = http_client {
+                let res = http_client
+                    .post(format!(
+                        "https://data.deadlock-api.com/v1/matches/{}/ingest",
+                        match_id
+                    ))
+                    .send()
+                    .await;
+                if let Err(e) = res {
+                    println!("Error sending match ingest event: {:?}", e);
+                }
+            }
+        }
         let ch_match_metadata: ClickhouseMatchInfo = match_info.clone().into();
         match_info_insert.write(&ch_match_metadata).await?;
 
