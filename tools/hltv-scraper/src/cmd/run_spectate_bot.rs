@@ -343,8 +343,8 @@ impl SpectatorBot {
                         false
                     }
                     EResponse::KERateLimited => {
-                        warn!("[{label} {match_id}] Rate limited: {:?}, waiting 30s", &result);
-                        sleep(Duration::from_secs(30)).await;
+                        warn!("[{label} {match_id}] Rate limited: {:?}, waiting 5m", &result);
+                        sleep(Duration::from_secs(5 * 60)).await;
                         false
                     }
                     _ => {
