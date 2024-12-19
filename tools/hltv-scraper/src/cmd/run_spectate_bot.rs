@@ -299,8 +299,8 @@ impl SpectatorBot {
             .json(&serde_json::json!({
                 "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby as u32,
                 "bot_in_all_groups": ["SpectateLobby"],
-                "rate_limit_cooldown_millis": 10 * 60 * 1000,
-                "job_cooldown_millis": 5 * 60 * 1000,
+                "rate_limit_cooldown_millis": 20 * 60 * 1000,
+                "job_cooldown_millis": 10 * 60 * 1000,
                 "data": BASE64_STANDARD.encode(data),
             }))
             .send()
