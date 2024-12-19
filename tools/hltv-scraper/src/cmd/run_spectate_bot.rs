@@ -342,6 +342,11 @@ impl SpectatorBot {
                         self.mark_spectated(REDIS_FAILED_KEY, &smi).await?;
                         false
                     }
+                    EResponse::KERateLimited => {
+                        warn!("[{label} {match_id}] Rate limited: {:?}, waiting 30s", &result);
+                        sleep(Duration::from_secs(30)).await;
+                        false
+                    }
                     _ => {
                         warn!(
                             "[{label} {match_id}] Other failure in spectate: {:?}",
