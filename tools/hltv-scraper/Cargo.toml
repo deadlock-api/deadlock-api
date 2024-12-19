@@ -11,7 +11,7 @@ cached = { version = "0.54", features = ["async", "async_tokio_rt_multi_thread"]
 clap = { version = "4.5.18", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = "9.4.0"
-haste = { git = "https://github.com/johnpyp/haste.git", rev = "cf26e2d300c3829c128ab4b4ec053224844a00c5", features = ["deadlock", "broadcast"] }
+haste = { git = "https://github.com/johnpyp/haste.git", rev = "f7b08cf3838ed0b84658831859007045540f9b7b", features = ["deadlock", "broadcast"] }
 indicatif = "0.17.8"
 itertools = "0.13.0"
 jiff = { version = "0.1.13", features = ["serde"] }
@@ -31,7 +31,7 @@ tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-indicatif = "0.3.6"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2", features = ["deadlock"] }
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ec49f32a7a5bbc9bc0f10e94b8bfee4d96f95f27", features = ["deadlock"] }
 rusqlite = { version = "0.32.1", features = ["serde_json", "bundled", "blob"] }
 thiserror = "2.0.4"
 async-compression = { version = "0.4.18", features = ["tokio", "bzip2", "zstd"] }

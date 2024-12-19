@@ -1077,7 +1077,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=cf26e2d300c3829c128ab4b4ec053224844a00c5#cf26e2d300c3829c128ab4b4ec053224844a00c5"
+source = "git+https://github.com/johnpyp/haste.git?rev=f7b08cf3838ed0b84658831859007045540f9b7b#f7b08cf3838ed0b84658831859007045540f9b7b"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1086,7 +1086,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=cf26e2d300c3829c128ab4b4ec053224844a00c5#cf26e2d300c3829c128ab4b4ec053224844a00c5"
+source = "git+https://github.com/johnpyp/haste.git?rev=f7b08cf3838ed0b84658831859007045540f9b7b#f7b08cf3838ed0b84658831859007045540f9b7b"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1106,7 +1106,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=cf26e2d300c3829c128ab4b4ec053224844a00c5#cf26e2d300c3829c128ab4b4ec053224844a00c5"
+source = "git+https://github.com/johnpyp/haste.git?rev=f7b08cf3838ed0b84658831859007045540f9b7b#f7b08cf3838ed0b84658831859007045540f9b7b"
 dependencies = [
  "anyhow",
  "dungers",
@@ -1124,7 +1124,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=cf26e2d300c3829c128ab4b4ec053224844a00c5#cf26e2d300c3829c128ab4b4ec053224844a00c5"
+source = "git+https://github.com/johnpyp/haste.git?rev=f7b08cf3838ed0b84658831859007045540f9b7b#f7b08cf3838ed0b84658831859007045540f9b7b"
 dependencies = [
  "dungers",
  "thiserror 1.0.69",
@@ -3052,7 +3052,7 @@ checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/valveprotos-rs.git?rev=e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2#e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2"
+source = "git+https://github.com/johnpyp/valveprotos-rs.git?rev=ec49f32a7a5bbc9bc0f10e94b8bfee4d96f95f27#ec49f32a7a5bbc9bc0f10e94b8bfee4d96f95f27"
 dependencies = [
  "heck",
  "prost",
