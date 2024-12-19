@@ -14,6 +14,8 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
     k_EMsgClientToGCGetMatchHistory,
 )
 
+ACCOUNTS_PER_RUN = 100
+
 CH_POOL = ChPool(
     host=os.getenv("CLICKHOUSE_HOST", "localhost"),
     port=int(os.getenv("CLICKHOUSE_PORT", 9000)),
@@ -29,11 +31,11 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     FROM player
     WHERE account_id NOT IN (SELECT account_id FROM player_match_history)
     AND account_id NOT IN ({','.join(str(a) for a in empty_match_histories)})
-    LIMIT 500;
+    LIMIT %(limit)s;
     """
-    accounts = [r[0] for r in client.execute(query)]
+    accounts = [r[0] for r in client.execute(query, {"limit": ACCOUNTS_PER_RUN})]
     print(f"Found {len(accounts)} new accounts")
-    if len(accounts) < 500:
+    if len(accounts) < ACCOUNTS_PER_RUN:
         query = """
         WITH last_cards AS (SELECT *
                             FROM player_match_history
@@ -46,7 +48,8 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
         LIMIT %(limit)s;
         """
         accounts += [
-            r[0] for r in client.execute(query, {"limit": 500 - len(accounts)})
+            r[0]
+            for r in client.execute(query, {"limit": ACCOUNTS_PER_RUN - len(accounts)})
         ]
     return accounts
 
