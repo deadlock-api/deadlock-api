@@ -214,7 +214,6 @@ async fn fragment_fetching_loop(
                     Ok(fragment_contents) => {
                         let contents: Arc<[u8]> = fragment_contents.into();
                         counter!("hltv.fragment.success").increment(1);
-                        retry_count = 0;
                         let is_confirmed_last_fragment =
                             check_fragment_has_end_command(contents.clone()).await;
 
