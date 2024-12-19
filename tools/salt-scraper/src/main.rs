@@ -108,12 +108,12 @@ async fn main() {
         WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
         ORDER BY toStartOfDay(fromUnixTimestamp(start_time)) DESC, intDivOrZero(match_score, 250) DESC, match_id DESC -- Within batches of a day, prioritize higher ranked matches
-        LIMIT 10000
+        LIMIT 100
         ";
         let recent_matches: Vec<MatchIdQueryResult> =
             clickhouse_client.query(query).fetch_all().await.unwrap();
         let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
-        if recent_matches.len() < 10000 {
+        if recent_matches.len() < 100 {
             info!("Only got {} matches, filling in the gaps", recent_matches.len());
             let query = r"
                 WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
@@ -125,7 +125,7 @@ async fn main() {
                 ";
             let gaps: Vec<MatchIdQueryResult> = clickhouse_client
                 .query(query)
-                .bind(10000 - recent_matches.len())
+                .bind(100 - recent_matches.len())
                 .fetch_all()
                 .await
                 .unwrap();
