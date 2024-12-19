@@ -88,8 +88,7 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
     ) as pool:
         futures = []
         for a in account_ids:
-            waited_secs = rate_limit.wait()
-            print(f"Waited {waited_secs:.2f} seconds")
+            rate_limit.wait()
             futures.append(pool.submit(update_account, a))
         with CH_POOL.get_client() as client:
             try:
