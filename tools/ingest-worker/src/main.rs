@@ -214,6 +214,7 @@ async fn insert_matches(client: Client, matches: Vec<MatchInfo>) -> clickhouse::
                         "https://data.deadlock-api.com/v1/matches/{}/ingest",
                         match_id
                     ))
+                    .header("X-Api-Key", std::env::var("INTERNAL_DEADLOCK_API_KEY").unwrap())
                     .send()
                     .await;
                 if let Err(e) = res {
