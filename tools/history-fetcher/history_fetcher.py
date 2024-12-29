@@ -14,7 +14,7 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
     k_EMsgClientToGCGetMatchHistory,
 )
 
-ACCOUNTS_PER_RUN = 100
+ACCOUNTS_PER_RUN = int(os.environ.get("ACCOUNTS_PER_RUN", 1000))
 
 CH_POOL = ChPool(
     host=os.getenv("CLICKHOUSE_HOST", "localhost"),
