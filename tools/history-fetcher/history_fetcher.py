@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -13,6 +14,10 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
     CMsgClientToGCGetMatchHistoryResponse,
     k_EMsgClientToGCGetMatchHistory,
 )
+
+logging.basicConfig(level=logging.DEBUG)
+
+LOGGER = logging.getLogger(__name__)
 
 ACCOUNTS_PER_RUN = int(os.environ.get("ACCOUNTS_PER_RUN", 1000))
 
@@ -34,7 +39,7 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     LIMIT %(limit)s;
     """
     accounts = [r[0] for r in client.execute(query, {"limit": ACCOUNTS_PER_RUN})]
-    print(f"Found {len(accounts)} new accounts")
+    LOGGER.info(f"Found {len(accounts)} new accounts")
     if len(accounts) < ACCOUNTS_PER_RUN:
         query = """
         WITH accounts AS (
@@ -62,7 +67,7 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
 
 
 def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryEntry]]:
-    print(f"Updating account {account_id}")
+    LOGGER.debug(f"Updating account {account_id}")
     try:
         msg = CMsgClientToGCGetMatchHistory()
         msg.account_id = account_id
@@ -79,7 +84,7 @@ def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryEntry]]
             PlayerMatchHistoryEntry.from_msg(match) for match in msg.matches
         ]
     except Exception as e:
-        print(f"Failed to update account {account_id}: {e}")
+        LOGGER.warning(f"Failed to update account {account_id}: {e}")
         return account_id, []
 
 
@@ -89,7 +94,7 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
         account_ids = get_accounts(client, empty_histories)
 
     if not account_ids:
-        print("No accounts to update")
+        LOGGER.info("No accounts to update")
         sleep(5 * 60)
         return
 
@@ -107,7 +112,7 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
                     for p in tqdm(as_completed(futures, timeout=60), total=len(futures))
                 ]
             except TimeoutError:
-                print("TimeoutError")
+                LOGGER.warning("TimeoutError")
                 return
             for account_id, match_history in match_histories:
                 if match_history is None or not match_history:
@@ -143,7 +148,7 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
             )
     end = time.time()
     duration = end - start
-    print(f"Processed {len(account_ids)} accounts in {duration:.2f} seconds")
+    LOGGER.info(f"Processed {len(account_ids)} accounts in {duration:.2f} seconds")
 
 
 if __name__ == "__main__":
