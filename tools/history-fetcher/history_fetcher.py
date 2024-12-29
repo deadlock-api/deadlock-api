@@ -37,13 +37,20 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     print(f"Found {len(accounts)} new accounts")
     if len(accounts) < ACCOUNTS_PER_RUN:
         query = """
-        WITH last_cards AS (SELECT *
-                            FROM player_match_history
-                            ORDER BY account_id, created_at DESC
-                            LIMIT 1 BY account_id)
+        WITH accounts AS (
+                SELECT DISTINCT account_id
+                FROM match_player
+                INNER JOIN match_info USING (match_id)
+                WHERE start_time > now() - INTERVAL 2 WEEK),
+            last_cards AS (
+                SELECT account_id, created_at
+                FROM player_match_history
+                WHERE account_id IN accounts
+                AND created_at < now() - INTERVAL 1 DAY
+                ORDER BY account_id, created_at DESC
+                LIMIT 1 BY account_id)
         SELECT account_id
         FROM last_cards
-        WHERE created_at < now() - INTERVAL 1 DAY
         ORDER BY created_at
         LIMIT %(limit)s;
         """
