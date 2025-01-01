@@ -19,8 +19,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 LOGGER = logging.getLogger(__name__)
 
-ACCOUNTS_PER_RUN = int(os.environ.get("ACCOUNTS_PER_RUN", 1000))
-
 CH_POOL = ChPool(
     host=os.getenv("CLICKHOUSE_HOST", "localhost"),
     port=int(os.getenv("CLICKHOUSE_PORT", 9000)),
@@ -36,35 +34,18 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
     FROM player
     WHERE account_id NOT IN (SELECT account_id FROM player_match_history)
     AND account_id NOT IN ({','.join(str(a) for a in empty_match_histories)})
-    LIMIT %(limit)s;
+
+    UNION DISTINCT
+
+    SELECT DISTINCT account_id
+    FROM match_player
+    INNER JOIN match_info mi USING (match_id)
+    WHERE mi.start_time > now() - INTERVAL 1 WEEK
     """
-    accounts = [r[0] for r in client.execute(query, {"limit": ACCOUNTS_PER_RUN})]
-    LOGGER.info(f"Found {len(accounts)} new accounts")
-    if len(accounts) < ACCOUNTS_PER_RUN:
-        query = """
-        WITH accounts AS (
-                SELECT DISTINCT account_id
-                FROM match_player
-                INNER JOIN match_info USING (match_id)
-                WHERE start_time > now() - INTERVAL 2 WEEK
-            ),
-            last_cards AS (
-                SELECT account_id, created_at
-                FROM player_match_history
-                WHERE account_id IN accounts
-                AND created_at < now() - INTERVAL 1 DAY
-                ORDER BY account_id, created_at DESC
-                LIMIT 1 BY account_id
-            )
-        SELECT account_id
-        FROM last_cards
-        ORDER BY created_at
-        LIMIT %(limit)s;
-        """
-        accounts += [
-            r[0]
-            for r in client.execute(query, {"limit": ACCOUNTS_PER_RUN - len(accounts)})
-        ]
+    accounts = [r[0] for r in client.execute(query)]
+    LOGGER.info(
+        f"Found {len(accounts)} accounts with missing match history or recent matches"
+    )
     return accounts
 
 
