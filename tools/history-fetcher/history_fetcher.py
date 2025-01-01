@@ -46,14 +46,16 @@ def get_accounts(client: Client, empty_match_histories: set) -> list[int]:
                 SELECT DISTINCT account_id
                 FROM match_player
                 INNER JOIN match_info USING (match_id)
-                WHERE start_time > now() - INTERVAL 2 WEEK),
+                WHERE start_time > now() - INTERVAL 2 WEEK
+            ),
             last_cards AS (
                 SELECT account_id, created_at
                 FROM player_match_history
                 WHERE account_id IN accounts
                 AND created_at < now() - INTERVAL 1 DAY
                 ORDER BY account_id, created_at DESC
-                LIMIT 1 BY account_id)
+                LIMIT 1 BY account_id
+            )
         SELECT account_id
         FROM last_cards
         ORDER BY created_at
@@ -117,6 +119,9 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
             for account_id, match_history in match_histories:
                 if match_history is None or not match_history:
                     empty_histories.add(account_id)
+            LOGGER.info(
+                f"Insert {sum(len(m) for m in match_histories)} match history entries"
+            )
             client.execute(
                 "INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
                 [
