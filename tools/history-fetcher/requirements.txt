@@ -6,3 +6,4 @@ protobuf
 requests
 valveprotos_py @ git+https://github.com/deadlock-api/valveprotos-py
 ratemate
+more-itertools
