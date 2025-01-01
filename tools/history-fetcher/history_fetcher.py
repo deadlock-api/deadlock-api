@@ -4,6 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from time import sleep
 
+import more_itertools
 from clickhouse_driver import Client
 from clickhouse_pool import ChPool
 from ratemate import RateLimit
@@ -85,53 +86,57 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
         max_workers=int(os.environ.get("HISTORY_WORKERS", 10))
     ) as pool:
         futures = []
-        for a in account_ids:
-            rate_limit.wait()
-            futures.append(pool.submit(update_account, a))
-        with CH_POOL.get_client() as client:
-            try:
-                match_histories = [
-                    p.result()
-                    for p in tqdm(as_completed(futures, timeout=60), total=len(futures))
-                ]
-            except TimeoutError:
-                LOGGER.warning("TimeoutError")
-                return
-            for account_id, match_history in match_histories:
-                if match_history is None or not match_history:
-                    empty_histories.add(account_id)
-            LOGGER.info(
-                f"Insert {sum(len(m) for m in match_histories)} match history entries"
-            )
-            client.execute(
-                "INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
-                [
-                    {
-                        "account_id": account_id,
-                        "match_id": e.match_id,
-                        "hero_id": e.hero_id,
-                        "hero_level": e.hero_level,
-                        "start_time": e.start_time,
-                        "game_mode": e.game_mode,
-                        "match_mode": e.match_mode,
-                        "player_team": e.player_team,
-                        "player_kills": e.player_kills,
-                        "player_deaths": e.player_deaths,
-                        "player_assists": e.player_assists,
-                        "denies": e.denies,
-                        "net_worth": e.net_worth,
-                        "last_hits": e.last_hits,
-                        "team_abandoned": e.team_abandoned,
-                        "abandoned_time_s": e.abandoned_time_s,
-                        "match_duration_s": e.match_duration_s,
-                        "match_result": e.match_result,
-                        "objectives_mask_team0": e.objectives_mask_team0,
-                        "objectives_mask_team1": e.objectives_mask_team1,
-                    }
-                    for account_id, match_history in match_histories
-                    for e in match_history or []
-                ],
-            )
+        chunks = more_itertools.chunked(account_ids, 1000)
+        for chunk in chunks:
+            for a in chunk:
+                rate_limit.wait()
+                futures.append(pool.submit(update_account, a))
+            with CH_POOL.get_client() as client:
+                try:
+                    match_histories = [
+                        p.result()
+                        for p in tqdm(
+                            as_completed(futures, timeout=60), total=len(futures)
+                        )
+                    ]
+                except TimeoutError:
+                    LOGGER.warning("TimeoutError")
+                    return
+                for account_id, match_history in match_histories:
+                    if match_history is None or not match_history:
+                        empty_histories.add(account_id)
+                LOGGER.info(
+                    f"Insert {sum(len(m) for m in match_histories)} match history entries"
+                )
+                client.execute(
+                    "INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
+                    [
+                        {
+                            "account_id": account_id,
+                            "match_id": e.match_id,
+                            "hero_id": e.hero_id,
+                            "hero_level": e.hero_level,
+                            "start_time": e.start_time,
+                            "game_mode": e.game_mode,
+                            "match_mode": e.match_mode,
+                            "player_team": e.player_team,
+                            "player_kills": e.player_kills,
+                            "player_deaths": e.player_deaths,
+                            "player_assists": e.player_assists,
+                            "denies": e.denies,
+                            "net_worth": e.net_worth,
+                            "last_hits": e.last_hits,
+                            "team_abandoned": e.team_abandoned,
+                            "abandoned_time_s": e.abandoned_time_s,
+                            "match_duration_s": e.match_duration_s,
+                            "match_result": e.match_result,
+                            "objectives_mask_team0": e.objectives_mask_team0,
+                            "objectives_mask_team1": e.objectives_mask_team1,
+                        }
+                        for account_id, match_history in match_histories
+                        for e in match_history or []
+                    ],
+                )
     end = time.time()
     duration = end - start
     LOGGER.info(f"Processed {len(account_ids)} accounts in {duration:.2f} seconds")
