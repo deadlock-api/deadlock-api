@@ -85,9 +85,9 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
     with ThreadPoolExecutor(
         max_workers=int(os.environ.get("HISTORY_WORKERS", 10))
     ) as pool:
-        futures = []
         chunks = more_itertools.chunked(account_ids, 1000)
         for chunk in chunks:
+            futures = []
             for a in chunk:
                 rate_limit.wait()
                 futures.append(pool.submit(update_account, a))
@@ -106,7 +106,7 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
                     if match_history is None or not match_history:
                         empty_histories.add(account_id)
                 LOGGER.info(
-                    f"Insert {sum(len(m) for m in match_histories)} match history entries"
+                    f"Insert {sum(len(m) for _, m in match_histories)} match history entries"
                 )
                 client.execute(
                     "INSERT INTO player_match_history (* EXCEPT(created_at)) VALUES",
