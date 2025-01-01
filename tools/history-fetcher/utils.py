@@ -12,6 +12,8 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
 PROXY_URL = os.environ.get("PROXY_URL")
 PROXY_API_TOKEN = os.environ.get("PROXY_API_TOKEN")
 
+http_client = requests.Session()
+
 R = TypeVar("R", bound=Message)
 
 
@@ -49,7 +51,7 @@ def call_steam_proxy_raw(
         "bot_in_all_groups": groups,
         "data": msg_data,
     }
-    response = requests.post(
+    response = http_client.post(
         PROXY_URL,
         json=body,
         headers={"Authorization": f"Bearer {PROXY_API_TOKEN}"},
