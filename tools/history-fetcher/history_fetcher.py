@@ -143,8 +143,10 @@ def main(rate_limit: RateLimit, empty_histories: set[int]):
 
 
 if __name__ == "__main__":
+    # save 10% of accounts for on demand requests
+    accounts = int(os.environ.get("NUM_ACCOUNTS", 50)) * 0.9
     rate_limit = RateLimit(
-        max_count=int(os.environ.get("NUM_ACCOUNTS", 10)),
+        max_count=accounts,
         per=60 / float(os.environ.get("HISTORY_REQ_PER_MIN_PER_ACCOUNT", 60)),
         greedy=False,
     )
