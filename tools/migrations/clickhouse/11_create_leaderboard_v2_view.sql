@@ -16,8 +16,9 @@ SELECT pmh.account_id                                 as account_id,
        SUM(pmh.player_kills)                          AS kills,
        SUM(pmh.player_deaths)                         AS deaths,
        SUM(pmh.player_assists)                        AS assists
-FROM player_match_history pmh
+FROM player_match_history pmh FINAL
       INNER JOIN player ON player.account_id = pmh.account_id
       INNER JOIN last_player_cards pc ON pmh.account_id = pc.account_id
+WHERE pmh.match_mode IN ('Ranked', 'Unranked')
 GROUP BY pmh.account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;

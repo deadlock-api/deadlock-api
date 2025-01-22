@@ -18,7 +18,7 @@ UNION DISTINCT
    ORDER BY COUNT(*) DESC
    LIMIT 1 by account_id
  )
- SELECT mp.account_id, apr.region_mode
+ SELECT DISTINCT ON(mp.account_id) mp.account_id, apr.region_mode
  FROM match_player mp
        LEFT JOIN match_player mates ON mp.match_id = mates.match_id
        LEFT JOIN active_player_region apr ON apr.account_id = mates.account_id
