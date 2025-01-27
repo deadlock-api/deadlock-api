@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{collections::HashSet, env, fs};
 use std::{num::NonZeroUsize, sync::Arc};
 use std::{path::PathBuf, time::Duration};
@@ -118,14 +119,12 @@ fn download_task(
     tokio::task::spawn(async move {
         let label = smi.match_type.label();
         let match_id = smi.match_id;
-        let match_metadata = match download_single_hltv_meta(smi.match_type.clone(), match_id).await
-        {
-            Ok(x) => x,
-            Err(e) => {
+        let match_metadata = download_single_hltv_meta(smi.match_type.clone(), match_id)
+            .await
+            .unwrap_or_else(|e| {
                 error!("[{label} {match_id}] Got error: {:?}", e);
                 None
-            }
-        };
+            });
         let did_finish_match = match_metadata.is_some();
 
         let c = reqwest::Client::new();
@@ -143,9 +142,24 @@ fn download_task(
         if did_finish_match {
             let match_metadata = match_metadata.unwrap();
             if let Err(e) =
-                push_meta_to_object_store(store, &match_metadata, smi.match_type, match_id).await
+                push_meta_to_object_store(store, &match_metadata, &smi.match_type, match_id).await
             {
-                error!("[{label} {match_id}] Got error writing meta: {:?}", e);
+                error!("[{label} {match_id}] Got error writing meta to object store: {:?}", e);
+                let root_path = PathBuf::from("/matches");
+                match store_meta_to_local_store(
+                    &root_path,
+                    &match_metadata,
+                    &smi.match_type,
+                    match_id,
+                )
+                .await
+                {
+                    Ok(_) => info!("[{label} {match_id}] Wrote meta to local store instead"),
+                    Err(e) => error!(
+                        "[{label} {match_id}] Got error writing meta to local store: {:?}",
+                        e
+                    ),
+                }
             };
         }
     });
@@ -154,7 +168,7 @@ fn download_task(
 async fn push_meta_to_object_store(
     store: Arc<impl ObjectStore>,
     match_metadata: &CMsgMatchMetaData,
-    match_type: SpectatedMatchType,
+    match_type: &SpectatedMatchType,
     match_id: u64,
 ) -> anyhow::Result<()> {
     let label = match_type.label();
@@ -178,6 +192,42 @@ async fn push_meta_to_object_store(
     let p_str = format!("/ingest/metadata/{match_id}.meta_hltv.bz2");
     let p = object_store::path::Path::from(p_str.clone());
     store.put(&p, output.into()).await?;
+
+    info!("[{label} {match_id}] Wrote meta to {p_str}!");
+    Ok(())
+}
+
+async fn store_meta_to_local_store(
+    root_path: &Path,
+    match_metadata: &CMsgMatchMetaData,
+    match_type: &SpectatedMatchType,
+    match_id: u64,
+) -> anyhow::Result<()> {
+    let label = match_type.label();
+    let mut buf_meta = Vec::new();
+
+    match_metadata.encode(&mut buf_meta)?;
+
+    let mut output = Vec::new();
+    let mut compressor = BzEncoder::with_quality(&mut output, async_compression::Level::Best);
+
+    compressor
+        .write_all(&buf_meta)
+        .await
+        .context("Error writing buf write")?;
+
+    compressor
+        .shutdown()
+        .await
+        .context("Error finishing buf write")?;
+
+    let p_str = format!(
+        "{}/metadata/{}.meta_hltv.bz2",
+        root_path.to_string_lossy(),
+        match_id
+    );
+    let p = PathBuf::from(p_str.clone());
+    fs::write(&p, output)?;
 
     info!("[{label} {match_id}] Wrote meta to {p_str}!");
     Ok(())
