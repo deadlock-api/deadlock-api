@@ -3,7 +3,6 @@ tqdm
 pydantic
 clickhouse_driver
 protobuf
-requests
+httpx[http2]
 valveprotos_py @ git+https://github.com/deadlock-api/valveprotos-py
-ratemate
 more-itertools

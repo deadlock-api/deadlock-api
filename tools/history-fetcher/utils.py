@@ -2,7 +2,7 @@ import os
 from base64 import b64decode, b64encode
 from typing import TypeVar
 
-import requests
+import httpx
 from google.protobuf.message import Message
 from pydantic import BaseModel, ConfigDict
 from valveprotos_py.citadel_gcmessages_client_pb2 import (
@@ -12,12 +12,12 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
 PROXY_URL = os.environ.get("PROXY_URL")
 PROXY_API_TOKEN = os.environ.get("PROXY_API_TOKEN")
 
-http_client = requests.Session()
+http_client = httpx.AsyncClient(http2=True)
 
 R = TypeVar("R", bound=Message)
 
 
-def call_steam_proxy(
+async def call_steam_proxy(
     msg_type: int,
     msg: Message,
     response_type: type[R],
@@ -27,7 +27,7 @@ def call_steam_proxy(
     MAX_RETRIES = 3
     for i in range(MAX_RETRIES):
         try:
-            data = call_steam_proxy_raw(msg_type, msg, cooldown_time, groups)
+            data = await call_steam_proxy_raw(msg_type, msg, cooldown_time, groups)
             return response_type.FromString(data)
         except Exception as e:
             print(f"[Warning] Failed to call steam proxy: {e}")
@@ -38,7 +38,7 @@ def call_steam_proxy(
     )
 
 
-def call_steam_proxy_raw(
+async def call_steam_proxy_raw(
     msg_type: int, msg: Message, cooldown_time: int, groups: list[str]
 ) -> bytes:
     assert PROXY_URL, "PROXY_URL must be defined"
@@ -51,10 +51,11 @@ def call_steam_proxy_raw(
         "bot_in_all_groups": groups,
         "data": msg_data,
     }
-    response = http_client.post(
+    response = await http_client.post(
         PROXY_URL,
         json=body,
         headers={"Authorization": f"Bearer {PROXY_API_TOKEN}"},
+        timeout=10,
     )
     response.raise_for_status()
     data = response.json()["data"]
