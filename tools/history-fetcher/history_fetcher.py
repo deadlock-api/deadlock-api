@@ -113,7 +113,7 @@ async def main(account_ids: list[int]):
 
 
 async def loop():
-    chunk_size = 100
+    chunk_size = int(os.environ.get("CHUNK_SIZE", "100"))
     num_accounts = int(os.environ.get("NUM_ACCOUNTS", "100")) * 0.9  # 90% of accounts
     while True:
         with CH_POOL.get_client() as client:
