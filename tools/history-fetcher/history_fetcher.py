@@ -110,7 +110,8 @@ async def main(account_ids: list[int]):
 
 
 async def loop():
-    chunk_size = 20
+    chunk_size = 100
+    num_accounts = int(os.environ.get("NUM_ACCOUNTS", "100"))
     while True:
         with CH_POOL.get_client() as client:
             account_ids = get_accounts(client)
@@ -128,12 +129,14 @@ async def loop():
             start = time.time()
             await main(chunk)
             end = time.time()
+            duration = end - start
 
-            sleep_time = max(0, round(chunk_size - (end - start)))
+            # 1 request per minute per account
+            sleep_time = round(60 * chunk_size / num_accounts - duration)
             LOGGER.info(
-                f"Processed batch in {end - start:.2f} seconds, sleeping for {sleep_time} seconds"
+                f"Processed batch in {duration :.2f} seconds, sleeping for {sleep_time} seconds"
             )
-            await asyncio.sleep(sleep_time)
+            await asyncio.sleep(max(0, sleep_time))
 
 
 if __name__ == "__main__":
