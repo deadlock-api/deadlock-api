@@ -33,6 +33,7 @@ def get_accounts(client: Client) -> list[int]:
     SELECT DISTINCT account_id
     FROM player
     WHERE account_id NOT IN (SELECT account_id FROM player_match_history)
+    ORDER BY rand()
 
     UNION DISTINCT
 
@@ -40,6 +41,7 @@ def get_accounts(client: Client) -> list[int]:
     FROM match_player
     INNER JOIN match_info mi USING (match_id)
     WHERE mi.start_time > now() - INTERVAL 1 WEEK
+    ORDER BY rand()
     """
     accounts = [r[0] for r in client.execute(query)]
     LOGGER.info(
