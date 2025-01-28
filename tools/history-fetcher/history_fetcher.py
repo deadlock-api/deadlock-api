@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import math
 import os
 import time
 
@@ -135,11 +134,12 @@ async def loop():
             duration = end - start
 
             # 1 request per minute per account
-            sleep_time = math.ceil(60 * chunk_size / num_accounts - duration)
+            sleep_time = 60 * chunk_size / num_accounts - duration
             LOGGER.info(
                 f"Processed batch in {duration :.2f} seconds, sleeping for {sleep_time} seconds"
             )
-            await asyncio.sleep(max(0, sleep_time))
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
 
 
 if __name__ == "__main__":
