@@ -176,17 +176,28 @@ async fn main() {
             let bucket = bucket.clone();
             let obj = obj.clone();
             let handle = tokio::spawn(async move {
-                bucket
-                    .copy_object_internal(
-                        &obj.key,
-                        &format!(
-                            "processed/metadata/{}",
-                            Path::new(&obj.key).file_name().unwrap().to_str().unwrap()
-                        ),
-                    )
-                    .await
-                    .unwrap();
-                bucket.delete_object(&obj.key).await.unwrap();
+                loop {
+                    let copy_object = bucket
+                        .copy_object_internal(
+                            &obj.key,
+                            &format!(
+                                "processed/metadata/{}",
+                                Path::new(&obj.key).file_name().unwrap().to_str().unwrap()
+                            ),
+                        )
+                        .await;
+                    if let Err(e) = copy_object {
+                        println!("Error copying object: {:?}. Retrying in 10 seconds", e);
+                        sleep(Duration::from_secs(10)).await;
+                        continue;
+                    }
+                    if let Err(e) = bucket.delete_object(&obj.key).await {
+                        println!("Error deleting object: {:?}. Retrying in 10 seconds", e);
+                        sleep(Duration::from_secs(10)).await;
+                        continue;
+                    }
+                    break;
+                }
             });
             handles.push(handle);
         }
