@@ -188,7 +188,7 @@ async fn main() {
                         )
                         .await;
                     if let Err(e) = copy_object {
-                        println!("Error copying object: {:?}. Retrying in a second", e);
+                        println!("Error copying object: {} -> {:?}. Retrying in a second", &obj.key, e);
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
                         if retries > 10 {
@@ -198,7 +198,7 @@ async fn main() {
                         continue;
                     }
                     if let Err(e) = bucket.delete_object(&obj.key).await {
-                        println!("Error deleting object: {:?}. Retrying in a second", e);
+                        println!("Error deleting object: {} -> {:?}. Retrying in a second", &obj.key, e);
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
                         if retries > 10 {
