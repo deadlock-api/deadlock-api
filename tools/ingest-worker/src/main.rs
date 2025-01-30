@@ -176,6 +176,7 @@ async fn main() {
             let bucket = bucket.clone();
             let obj = obj.clone();
             let handle = tokio::spawn(async move {
+                let mut retries = 0;
                 loop {
                     let copy_object = bucket
                         .copy_object_internal(
@@ -187,13 +188,23 @@ async fn main() {
                         )
                         .await;
                     if let Err(e) = copy_object {
-                        println!("Error copying object: {:?}. Retrying in 10 seconds", e);
-                        sleep(Duration::from_secs(10)).await;
+                        println!("Error copying object: {:?}. Retrying in a second", e);
+                        sleep(Duration::from_secs(1)).await;
+                        retries += 1;
+                        if retries > 10 {
+                            println!("Too many retries. Skipping file");
+                            break;
+                        }
                         continue;
                     }
                     if let Err(e) = bucket.delete_object(&obj.key).await {
-                        println!("Error deleting object: {:?}. Retrying in 10 seconds", e);
-                        sleep(Duration::from_secs(10)).await;
+                        println!("Error deleting object: {:?}. Retrying in a second", e);
+                        sleep(Duration::from_secs(1)).await;
+                        retries += 1;
+                        if retries > 10 {
+                            println!("Too many retries. Skipping file");
+                            break;
+                        }
                         continue;
                     }
                     break;
