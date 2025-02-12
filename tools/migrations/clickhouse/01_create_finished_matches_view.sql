@@ -84,73 +84,89 @@ DROP VIEW IF EXISTS finished_matches_mv;
 CREATE MATERIALIZED VIEW finished_matches_mv TO finished_matches
 AS
 SELECT
-    start_time,
-    winning_team,
-    match_id,
+    active_matches.start_time,
+    active_matches.winning_team,
+    active_matches.match_id,
     players.hero_id AS `players.hero_id`,
     players.account_id AS `players.account_id`,
     players.team AS `players.team`,
-    `players.abandoned` AS `players.abandoned`,
-    lobby_id,
-    net_worth_team_0,
-    net_worth_team_1,
-    duration_s,
-    spectators,
-    open_spectator_slots,
-    objectives_mask_team0,
-    objectives_mask_team1,
-    match_mode,
-    game_mode,
-    match_score,
-    region_mode,
-    scraped_at,
-    team0_core,
-    team0_tier1_lane1,
-    team0_tier2_lane1,
-    team0_tier1_lane2,
-    team0_tier2_lane2,
-    team0_tier1_lane3,
-    team0_tier2_lane3,
-    team0_tier1_lane4,
-    team0_tier2_lane4,
-    team0_titan,
-    team0_titan_shield_generator_1,
-    team0_titan_shield_generator_2,
-    team0_barrack_boss_lane1,
-    team0_barrack_boss_lane2,
-    team0_barrack_boss_lane3,
-    team0_barrack_boss_lane4,
-    team1_core,
-    team1_tier1_lane1,
-    team1_tier2_lane1,
-    team1_tier1_lane2,
-    team1_tier2_lane2,
-    team1_tier1_lane3,
-    team1_tier2_lane3,
-    team1_tier1_lane4,
-    team1_tier2_lane4,
-    team1_titan,
-    team1_titan_shield_generator_1,
-    team1_titan_shield_generator_2,
-    team1_barrack_boss_lane1,
-    team1_barrack_boss_lane2,
-    team1_barrack_boss_lane3,
-    team1_barrack_boss_lane4,
+    `players.abandoned`,
+    active_matches.lobby_id,
+    active_matches.net_worth_team_0,
+    active_matches.net_worth_team_1,
+    active_matches.duration_s,
+    active_matches.spectators,
+    active_matches.open_spectator_slots,
+    active_matches.objectives_mask_team0,
+    active_matches.objectives_mask_team1,
+    active_matches.match_mode,
+    active_matches.game_mode,
+    active_matches.match_score,
+    active_matches.region_mode,
+    active_matches.scraped_at,
+    active_matches.team0_core,
+    active_matches.team0_tier1_lane1,
+    active_matches.team0_tier2_lane1,
+    active_matches.team0_tier1_lane2,
+    active_matches.team0_tier2_lane2,
+    active_matches.team0_tier1_lane3,
+    active_matches.team0_tier2_lane3,
+    active_matches.team0_tier1_lane4,
+    active_matches.team0_tier2_lane4,
+    active_matches.team0_titan,
+    active_matches.team0_titan_shield_generator_1,
+    active_matches.team0_titan_shield_generator_2,
+    active_matches.team0_barrack_boss_lane1,
+    active_matches.team0_barrack_boss_lane2,
+    active_matches.team0_barrack_boss_lane3,
+    active_matches.team0_barrack_boss_lane4,
+    active_matches.team1_core,
+    active_matches.team1_tier1_lane1,
+    active_matches.team1_tier2_lane1,
+    active_matches.team1_tier1_lane2,
+    active_matches.team1_tier2_lane2,
+    active_matches.team1_tier1_lane3,
+    active_matches.team1_tier2_lane3,
+    active_matches.team1_tier1_lane4,
+    active_matches.team1_tier2_lane4,
+    active_matches.team1_titan,
+    active_matches.team1_titan_shield_generator_1,
+    active_matches.team1_titan_shield_generator_2,
+    active_matches.team1_barrack_boss_lane1,
+    active_matches.team1_barrack_boss_lane2,
+    active_matches.team1_barrack_boss_lane3,
+    active_matches.team1_barrack_boss_lane4,
     1 AS sign,
     CASE
-        WHEN team0_core AND NOT team1_core THEN 0
-        WHEN team1_core AND NOT team0_core THEN 1
-        WHEN team0_titan AND NOT team1_titan THEN 0
-        WHEN team1_titan AND NOT team0_titan THEN 1
+        WHEN active_matches.team0_core AND NOT active_matches.team1_core THEN 0
+        WHEN active_matches.team1_core AND NOT active_matches.team0_core THEN 1
         WHEN
-            team0_titan_shield_generator_1 + team0_titan_shield_generator_2
-            > team1_titan_shield_generator_1 + team1_titan_shield_generator_2 + 1 THEN 0
-        WHEN
-            team1_titan_shield_generator_1 + team1_titan_shield_generator_2
-            > team0_titan_shield_generator_1 + team0_titan_shield_generator_2 + 1 THEN 1
-        WHEN net_worth_team_0 > net_worth_team_1 + 15000
+            active_matches.team0_titan AND NOT active_matches.team1_titan
             THEN 0
-        WHEN net_worth_team_1 > net_worth_team_0 + 15000
+        WHEN
+            active_matches.team1_titan AND NOT active_matches.team0_titan
+            THEN 1
+        WHEN
+            active_matches.team0_titan_shield_generator_1
+            + active_matches.team0_titan_shield_generator_2
+            > active_matches.team1_titan_shield_generator_1
+            + active_matches.team1_titan_shield_generator_2
+            + 1
+            THEN 0
+        WHEN
+            active_matches.team1_titan_shield_generator_1
+            + active_matches.team1_titan_shield_generator_2
+            > active_matches.team0_titan_shield_generator_1
+            + active_matches.team0_titan_shield_generator_2
+            + 1
+            THEN 1
+        WHEN
+            active_matches.net_worth_team_0
+            > active_matches.net_worth_team_1 + 15000
+            THEN 0
+        WHEN
+            active_matches.net_worth_team_1
+            > active_matches.net_worth_team_0 + 15000
             THEN 1
     END AS winner
 FROM active_matches

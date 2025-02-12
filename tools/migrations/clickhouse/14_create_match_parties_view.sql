@@ -9,7 +9,7 @@ SELECT
     match_id,
     team,
     party,
-    any(won) as won,
+    any(won) AS won,
     groupArray(account_id) AS account_ids
 FROM match_player
 GROUP BY match_id, team, party;
