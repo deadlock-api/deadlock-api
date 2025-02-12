@@ -1,6 +1,6 @@
 DROP VIEW IF EXISTS leaderboard_v2;
 CREATE MATERIALIZED VIEW leaderboard_v2
- REFRESH EVERY 10 MINUTES ENGINE=MergeTree() ORDER BY(rank)
+ REFRESH EVERY 60 MINUTES ENGINE=MergeTree() ORDER BY(rank)
  POPULATE AS
 WITH last_player_cards AS (SELECT account_id, ranked_badge_level
                            FROM player_card

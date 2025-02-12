@@ -1,6 +1,6 @@
 DROP VIEW IF EXISTS leaderboard;
 CREATE MATERIALIZED VIEW leaderboard
- REFRESH EVERY 10 MINUTES ENGINE=MergeTree() ORDER BY(rank)
+ REFRESH EVERY 60 MINUTES ENGINE=MergeTree() ORDER BY(rank)
  POPULATE AS
 SELECT mh.account_id as account_id,
        anyLast(region_mode)  as region_mode,
