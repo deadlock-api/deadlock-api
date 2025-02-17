@@ -92,12 +92,22 @@ async fn main() {
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
-        SELECT DISTINCT match_id
-        FROM player_match_history
-        WHERE match_mode IN ('Ranked', 'Unranked')
-            AND start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-06-01')
-            AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
-        ORDER BY match_id DESC
+        WITH matches_raw AS (
+            SELECT DISTINCT match_id, toUnixTimestamp(start_time) AS start_time, match_score FROM finished_matches
+            UNION DISTINCT
+            SELECT DISTINCT match_id, start_time, 0 AS match_score FROM player_match_history
+            WHERE match_mode IN ('Ranked', 'Unranked')
+        ),
+        matches AS (
+            SELECT match_id, start_time, max(match_score) AS match_score
+            FROM matches_raw
+            GROUP BY match_id, start_time
+        )
+        SELECT match_id
+        FROM matches
+        WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
+        AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
+        ORDER BY toStartOfDay(fromUnixTimestamp(start_time)) DESC, intDivOrZero(match_score, 250) DESC, match_id DESC -- Within batches of a day, prioritize higher ranked matches
         LIMIT 100
         ";
         let recent_matches: Vec<MatchIdQueryResult> =
