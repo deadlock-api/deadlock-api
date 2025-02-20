@@ -1,11 +1,11 @@
 use prost::Message;
+use std::collections::HashSet;
 use std::path::Path;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use arl::RateLimiter;
 use async_compression::tokio::bufread::BzDecoder;
 use clickhouse::{Client, Compression};
-use itertools::Itertools;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -79,44 +79,54 @@ async fn main() {
     let limiter = RateLimiter::new(1, Duration::from_secs(60));
     limiter.wait().await;
     let s3limiter = RateLimiter::new(1, Duration::from_millis(100));
+    let mut missing_objects = HashSet::new();
     while running.load(Ordering::SeqCst) {
         println!("Waiting for rate limiter");
         let start = std::time::Instant::now();
 
-        println!("Fetching metadata files");
-        s3limiter.wait().await;
-        let objects = match bucket.list("ingest/metadata".parse().unwrap(), None).await {
-            Ok(objects) => objects,
-            Err(e) => {
-                println!("Error fetching objects: {:?}", e);
-                sleep(Duration::from_secs(10)).await;
-                continue;
-            }
+        let object_keys = if missing_objects.len() < *MAX_OBJECTS_PER_RUN {
+            println!("Listing objects");
+            s3limiter.wait().await;
+            let objects = match bucket.list("ingest/metadata".parse().unwrap(), None).await {
+                Ok(objects) => objects,
+                Err(e) => {
+                    println!("Error fetching objects: {:?}", e);
+                    sleep(Duration::from_secs(10)).await;
+                    continue;
+                }
+            };
+            objects
+                .iter()
+                .flat_map(|dir| dir.contents.clone())
+                .filter(|obj| {
+                    obj.key.ends_with(".meta")
+                        || obj.key.ends_with(".meta.bz2")
+                        || obj.key.ends_with(".meta_hltv.bz2")
+                })
+                .map(|o| o.key.clone())
+                .collect::<HashSet<_>>()
+        } else {
+            missing_objects.clone()
         };
-        let objects = objects
+        missing_objects.extend(object_keys.clone());
+        let object_keys = missing_objects
             .iter()
-            .flat_map(|dir| dir.contents.clone())
-            .filter(|obj| {
-                obj.key.ends_with(".meta")
-                    || obj.key.ends_with(".meta.bz2")
-                    || obj.key.ends_with(".meta_hltv.bz2")
-            })
-            .sorted_by_key(|obj| obj.key.clone())
-            .rev()
             .take(*MAX_OBJECTS_PER_RUN)
-            .collect::<Vec<_>>();
-        if objects.is_empty() {
+            .cloned()
+            .collect::<HashSet<_>>();
+        missing_objects.retain(|o| !object_keys.contains(o));
+        if object_keys.is_empty() {
             println!("No files to fetch");
             limiter.wait().await;
             continue;
         }
-        println!("Fetched {} files", objects.len());
+        println!("Fetched {} files", object_keys.len());
         let mut match_infos = vec![];
         s3limiter.wait().await;
         let data = futures::future::join_all(
-            objects
+            object_keys
                 .iter()
-                .map(|obj| bucket.get_object(&obj.key))
+                .map(|obj| bucket.get_object(obj.clone()))
                 .collect::<Vec<_>>(),
         )
         .await
@@ -125,11 +135,11 @@ async fn main() {
         .collect::<Vec<_>>();
         let data = futures::future::join_all(
             data.iter()
-                .zip(objects.iter())
+                .zip(object_keys.iter())
                 .map(|(file, obj)| async move {
                     let data = file.bytes();
                     let data: &[u8] = data.as_ref();
-                    if obj.key.ends_with(".bz2") {
+                    if obj.ends_with(".bz2") {
                         let mut decompressed = vec![];
                         BzDecoder::new(data)
                             .read_to_end(&mut decompressed)
@@ -143,8 +153,8 @@ async fn main() {
                 .collect::<Vec<_>>(),
         )
         .await;
-        for (obj, data) in objects.iter().zip(data.iter()) {
-            println!("Fetching file: {}", obj.key);
+        for (obj, data) in object_keys.iter().zip(data.iter()) {
+            println!("Fetching file: {}", obj);
             let match_metadata = match CMsgMatchMetaData::decode(data.as_slice()) {
                 Ok(m) => m.match_details.unwrap_or(data.clone()),
                 Err(_) => data.clone(),
@@ -172,7 +182,7 @@ async fn main() {
         println!("Inserting {} files", num_files);
         insert_matches(client.clone(), match_infos).await.unwrap();
         let mut handles = vec![];
-        for obj in objects.iter() {
+        for obj in object_keys.iter() {
             let bucket = bucket.clone();
             let obj = obj.clone();
             let handle = tokio::spawn(async move {
@@ -180,15 +190,18 @@ async fn main() {
                 loop {
                     let copy_object = bucket
                         .copy_object_internal(
-                            &obj.key,
+                            &obj,
                             &format!(
                                 "processed/metadata/{}",
-                                Path::new(&obj.key).file_name().unwrap().to_str().unwrap()
+                                Path::new(&obj).file_name().unwrap().to_str().unwrap()
                             ),
                         )
                         .await;
                     if let Err(e) = copy_object {
-                        println!("Error copying object: {} -> {:?}. Retrying in a second", &obj.key, e);
+                        println!(
+                            "Error copying object: {} -> {:?}. Retrying in a second",
+                            &obj, e
+                        );
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
                         if retries > 10 {
@@ -197,8 +210,11 @@ async fn main() {
                         }
                         continue;
                     }
-                    if let Err(e) = bucket.delete_object(&obj.key).await {
-                        println!("Error deleting object: {} -> {:?}. Retrying in a second", &obj.key, e);
+                    if let Err(e) = bucket.delete_object(&obj).await {
+                        println!(
+                            "Error deleting object: {} -> {:?}. Retrying in a second",
+                            &obj, e
+                        );
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
                         if retries > 10 {
