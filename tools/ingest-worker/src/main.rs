@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
-use tokio::time::sleep;
+use tokio::time::{sleep, timeout};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::MatchInfo;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
@@ -43,9 +43,9 @@ static MAX_OBJECTS_PER_RUN: LazyLock<usize> = LazyLock::new(|| {
 });
 static REQUEST_TIMEOUT_S: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("REQUEST_TIMEOUT_S")
-        .unwrap_or("20".to_string())
+        .unwrap_or("10".to_string())
         .parse()
-        .unwrap_or(20)
+        .unwrap_or(10)
 });
 
 #[tokio::main]
@@ -73,8 +73,6 @@ async fn main() {
         },
         s3credentials.clone(),
     )
-    .unwrap()
-    .with_request_timeout(Duration::from_secs(*REQUEST_TIMEOUT_S))
     .unwrap();
 
     let running = Arc::new(AtomicBool::new(true));
@@ -196,14 +194,14 @@ async fn main() {
             let handle = tokio::spawn(async move {
                 let mut retries = 0;
                 loop {
-                    let copy_object = bucket
+                    let copy_object = timeout(Duration::from_secs(*REQUEST_TIMEOUT_S), bucket
                         .copy_object_internal(
                             &obj,
                             &format!(
                                 "processed/metadata/{}",
                                 Path::new(&obj).file_name().unwrap().to_str().unwrap()
                             ),
-                        )
+                        ))
                         .await;
                     if let Err(e) = copy_object {
                         println!(
@@ -218,7 +216,7 @@ async fn main() {
                         }
                         continue;
                     }
-                    if let Err(e) = bucket.delete_object(&obj).await {
+                    if let Err(e) = timeout(Duration::from_secs(*REQUEST_TIMEOUT_S), bucket.delete_object(&obj)).await {
                         println!(
                             "Error deleting object: {} -> {:?}. Retrying in a second",
                             &obj, e
