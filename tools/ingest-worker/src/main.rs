@@ -194,20 +194,19 @@ async fn main() {
             let handle = tokio::spawn(async move {
                 let mut retries = 0;
                 loop {
-                    let copy_object = timeout(Duration::from_secs(*REQUEST_TIMEOUT_S), bucket
-                        .copy_object_internal(
+                    let copy_object = timeout(
+                        Duration::from_secs(*REQUEST_TIMEOUT_S),
+                        bucket.copy_object_internal(
                             &obj,
                             &format!(
                                 "processed/metadata/{}",
                                 Path::new(&obj).file_name().unwrap().to_str().unwrap()
                             ),
-                        ))
-                        .await;
-                    if let Err(e) = copy_object {
-                        println!(
-                            "Error copying object: {} -> {:?}. Retrying in a second",
-                            &obj, e
-                        );
+                        ),
+                    )
+                    .await;
+                    if let Err(_) | Ok(Err(_)) = copy_object {
+                        println!("Error copying object: {}. Retrying in a second", &obj);
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
                         if retries > 3 {
@@ -216,11 +215,13 @@ async fn main() {
                         }
                         continue;
                     }
-                    if let Err(e) = timeout(Duration::from_secs(*REQUEST_TIMEOUT_S), bucket.delete_object(&obj)).await {
-                        println!(
-                            "Error deleting object: {} -> {:?}. Retrying in a second",
-                            &obj, e
-                        );
+                    if let Err(_) | Ok(Err(_)) = timeout(
+                        Duration::from_secs(*REQUEST_TIMEOUT_S),
+                        bucket.delete_object(&obj),
+                    )
+                    .await
+                    {
+                        println!("Error deleting object: {}. Retrying in a second", &obj);
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
                         if retries > 3 {
