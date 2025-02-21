@@ -212,7 +212,7 @@ async fn main() {
                         );
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
-                        if retries > 10 {
+                        if retries > 3 {
                             println!("Too many retries. Skipping file");
                             break;
                         }
@@ -225,7 +225,7 @@ async fn main() {
                         );
                         sleep(Duration::from_secs(1)).await;
                         retries += 1;
-                        if retries > 10 {
+                        if retries > 3 {
                             println!("Too many retries. Skipping file");
                             break;
                         }
