@@ -67,6 +67,8 @@ async fn main() {
         },
         s3credentials.clone(),
     )
+    .unwrap()
+    .with_request_timeout(Duration::from_secs(20))
     .unwrap();
 
     let running = Arc::new(AtomicBool::new(true));
