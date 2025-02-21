@@ -41,6 +41,12 @@ static MAX_OBJECTS_PER_RUN: LazyLock<usize> = LazyLock::new(|| {
         .parse()
         .unwrap_or(20)
 });
+static REQUEST_TIMEOUT_S: LazyLock<u64> = LazyLock::new(|| {
+    std::env::var("REQUEST_TIMEOUT_S")
+        .unwrap_or("20".to_string())
+        .parse()
+        .unwrap_or(20)
+});
 
 #[tokio::main]
 async fn main() {
@@ -68,7 +74,7 @@ async fn main() {
         s3credentials.clone(),
     )
     .unwrap()
-    .with_request_timeout(Duration::from_secs(20))
+    .with_request_timeout(Duration::from_secs(*REQUEST_TIMEOUT_S))
     .unwrap();
 
     let running = Arc::new(AtomicBool::new(true));
