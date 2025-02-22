@@ -1,0 +1,45 @@
+name: Build, Lint, and Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --verbose
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: build  # This job depends on the 'build' job
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy  # Install clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy check
+        run: cargo clippy --all-targets --all-features
+      - uses: giraffate/clippy-action@v1
+        with:
+          reporter: 'github-pr-review'
+
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build  # This job also depends on the 'build' job
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test --verbose
