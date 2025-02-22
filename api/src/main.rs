@@ -7,21 +7,28 @@
 use crate::api_doc::ApiDoc;
 use axum::response::Redirect;
 use axum::routing::get;
-use error::ApplicationError;
 use log::{debug, info};
 use std::net::{Ipv4Addr, SocketAddr};
+use std::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
-mod api;
 mod api_doc;
+mod config;
 mod error;
-mod limiter;
+mod middleware;
+mod routes;
 mod state;
+mod utils;
+
+use crate::middleware::cache::CacheControlMiddleware;
+use error::*;
+
+const DEFAULT_CACHE_TIME: u64 = 60;
 
 #[tokio::main]
-async fn main() -> Result<(), ApplicationError> {
+async fn main() -> ApplicationResult<()> {
     tracing_subscriber::fmt::init();
 
     debug!("Loading application state");
@@ -30,7 +37,10 @@ async fn main() -> Result<(), ApplicationError> {
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(|| async { Redirect::to("/docs") }))
-        .merge(api::router())
+        .merge(routes::router())
+        .layer(CacheControlMiddleware::new(Duration::from_secs(
+            DEFAULT_CACHE_TIME,
+        )))
         .split_for_parts();
 
     let router = router

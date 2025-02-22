@@ -2,11 +2,6 @@ use crate::state::AppState;
 use axum::extract::State;
 use log::warn;
 use redis::AsyncCommands;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
-
-mod v1;
-mod v2;
 
 #[utoipa::path(
     method(get, head),
@@ -16,7 +11,7 @@ mod v2;
         (status = INTERNAL_SERVER_ERROR, body = String)
     )
 )]
-async fn health_check(State(mut state): State<AppState>) -> Result<&'static str, &'static str> {
+pub async fn health_check(State(mut state): State<AppState>) -> Result<&'static str, &'static str> {
     // Check Clickhouse connection
     if state
         .clickhouse_client
@@ -44,11 +39,4 @@ async fn health_check(State(mut state): State<AppState>) -> Result<&'static str,
     }
 
     Ok("OK")
-}
-
-pub fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new()
-        .routes(routes!(health_check))
-        .nest("/v2", v2::router())
-        .nest("/v1", v1::router())
 }

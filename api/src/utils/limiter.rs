@@ -60,7 +60,9 @@ impl RateLimitStatus {
 
     pub fn raise_if_exceeded(&self) -> Result<(), APIError> {
         if self.is_exceeded() {
-            return Err(APIError::RateLimitExceeded(self.clone()));
+            return Err(APIError::RateLimitExceeded {
+                status: self.clone(),
+            });
         }
         Ok(())
     }
@@ -68,7 +70,7 @@ impl RateLimitStatus {
 
 pub async fn apply_limits(
     req: &Request,
-    state: AppState,
+    state: &AppState,
     key: &str,
     quotas: &[RateLimitQuota],
 ) -> Result<Option<RateLimitStatus>, APIError> {
@@ -81,7 +83,7 @@ pub async fn apply_limits(
 
     // Validate the API key if it is present
     let api_key = match api_key {
-        Some(key) => is_api_key_valid(state.postgres_client.clone(), key)
+        Some(key) => is_api_key_valid(&state.postgres_client, key)
             .await
             .then_some(key),
         None => None,
@@ -89,22 +91,24 @@ pub async fn apply_limits(
 
     // If the service is in emergency mode, only requests with an API key are allowed
     if state.config.emergency_mode && api_key.is_none() {
-        return Err(APIError::StatusMsg((
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Service is in emergency mode".to_string(),
-        )));
+        return Err(APIError::StatusMsg {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            message: "Service is in emergency mode".to_string(),
+        });
     }
 
     let prefix = api_key.map(|k| k.to_string()).unwrap_or(ip.to_string());
     increment_key(state.redis_client.clone(), &prefix, key)
         .await
-        .map_err(|e| APIError::InternalError(e.to_string()))?;
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to increment key: {}", e),
+        })?;
 
     // Check for custom quotas
     let quotas = match api_key {
         None => quotas.to_vec(),
         Some(api_key) => {
-            let custom_quotas = get_custom_quotas(&state, api_key, key).await;
+            let custom_quotas = get_custom_quotas(state, api_key, key).await;
             if custom_quotas.is_empty() {
                 quotas.to_vec()
             } else {
@@ -181,9 +185,9 @@ async fn increment_key(
     create = "{ TimedCache::with_lifespan(10 * 60) }",
     convert = r#"{ format!("{}", api_key) }"#
 )]
-pub async fn is_api_key_valid(state: Pool<Postgres>, api_key: Uuid) -> bool {
+pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
     sqlx::query!("SELECT COUNT(*) FROM api_keys WHERE key = $1", api_key)
-        .fetch_one(&state)
+        .fetch_one(state)
         .await
         .ok()
         .and_then(|row| row.count.map(|c| c > 0))
