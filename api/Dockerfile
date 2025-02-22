@@ -38,7 +38,7 @@ ARG EXE_NAME
 ENV exe_name=$EXE_NAME
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 \
+    && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
