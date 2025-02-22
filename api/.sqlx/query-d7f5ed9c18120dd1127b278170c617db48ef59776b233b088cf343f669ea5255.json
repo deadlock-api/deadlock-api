@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rate_limit",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "rate_period",
+        "type_info": "Interval"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d7f5ed9c18120dd1127b278170c617db48ef59776b233b088cf343f669ea5255"
+}
