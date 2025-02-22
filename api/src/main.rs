@@ -10,6 +10,11 @@ use axum::routing::get;
 use log::{debug, info};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
+use tower_http::compression::{CompressionLayer, DefaultPredicate};
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+use tower_http::trace;
+use tower_http::trace::TraceLayer;
+use tracing::Level;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
@@ -41,6 +46,18 @@ async fn main() -> ApplicationResult<()> {
         .layer(CacheControlMiddleware::new(Duration::from_secs(
             DEFAULT_CACHE_TIME,
         )))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
+        )
+        .layer(
+            CorsLayer::default()
+                .allow_headers(AllowHeaders::any())
+                .allow_origin(AllowOrigin::any())
+                .allow_methods(AllowMethods::any()),
+        )
+        .layer(CompressionLayer::<DefaultPredicate>::default())
         .split_for_parts();
 
     let router = router
