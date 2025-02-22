@@ -47,11 +47,6 @@ async fn main() -> ApplicationResult<()> {
             DEFAULT_CACHE_TIME,
         )))
         .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
-                .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
-        )
-        .layer(
             CorsLayer::default()
                 .allow_headers(AllowHeaders::any())
                 .allow_origin(AllowOrigin::any())
