@@ -1,0 +1,7 @@
+services:
+  deadlock-api-rust:
+    image: ghcr.io/deadlock-api/deadlock-api-rust:latest
+    build: .
+    env_file: .env
+    ports:
+      - "3000:3000"
