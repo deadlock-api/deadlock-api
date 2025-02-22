@@ -7,11 +7,9 @@ use utoipa_axum::routes;
 
 mod health;
 mod v1;
-mod v2;
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        .nest("/v2", v2::router())
         .nest("/v1", v1::router())
         .layer(
             TraceLayer::new_for_http()
