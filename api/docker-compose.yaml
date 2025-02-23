@@ -1,6 +1,6 @@
 services:
   deadlock-api-rust:
-    image: ghcr.io/deadlock-api/deadlock-api-rust:latest
+    image: ghcr.io/deadlock-api/deadlock-api-rust/deadlock-api-rust:latest
     build: .
     env_file: .env
     ports:
