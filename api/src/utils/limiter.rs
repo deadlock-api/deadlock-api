@@ -223,20 +223,24 @@ pub async fn get_custom_quotas(state: &AppState, api_key: Uuid, path: &str) -> V
 fn extract_ip(req: &Request) -> &str {
     req.headers()
         .get("CF-Connecting-IP")
+        .or(req.headers().get("X-Real-IP"))
         .and_then(|v| v.to_str().ok())
         .unwrap_or("0.0.0.0")
 }
 
 fn extract_api_key(req: &Request) -> Option<Uuid> {
-    req.headers()
+    let query_api_key = req.uri().query().and_then(|q| {
+        url::form_urlencoded::parse(q.as_bytes())
+            .find(|(k, _)| k == "api_key")
+            .map(|(_, v)| v.to_string())
+    });
+    let header_api_key = req
+        .headers()
         .get("X-API-Key")
         .and_then(|v| v.to_str().ok())
-        .map(String::from)
-        .or(req.uri().query().and_then(|q| {
-            url::form_urlencoded::parse(q.as_bytes())
-                .find(|(k, _)| k == "api_key")
-                .map(|(_, v)| v.to_string())
-        }))
+        .map(String::from);
+    header_api_key
+        .or(query_api_key)
         .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(&s)).ok())
 }
 
