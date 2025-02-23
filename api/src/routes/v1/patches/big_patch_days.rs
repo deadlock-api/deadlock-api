@@ -15,9 +15,9 @@ const BIG_PATCH_DAYS: &[&str] = &[
 
 #[utoipa::path(
     get,
-    path = "/big-patch-days",
+    path = "/big-days",
     responses((status = OK, body = [String])),
-    tags = ["V1"],
+    tags = ["Patches"],
 )]
 pub async fn big_patch_days() -> APIResult<impl IntoResponse> {
     Ok(Json(BIG_PATCH_DAYS))

@@ -9,7 +9,8 @@ use redis::AsyncCommands;
     responses(
         (status = OK, body = String),
         (status = INTERNAL_SERVER_ERROR, body = String)
-    )
+    ),
+    tags = ["Info"],
 )]
 pub async fn health_check(State(mut state): State<AppState>) -> Result<&'static str, &'static str> {
     // Check Clickhouse connection

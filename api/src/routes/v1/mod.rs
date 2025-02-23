@@ -1,14 +1,11 @@
-mod big_patch_days;
-
 use crate::state::AppState;
-use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
 
-#[derive(OpenApi)]
-#[openapi(tags((name = "V1")))]
-pub struct ApiDoc;
+mod info;
+mod patches;
 
 pub fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(big_patch_days::big_patch_days))
+    OpenApiRouter::new()
+        .nest("/info", info::router())
+        .nest("/patches", patches::router())
 }
