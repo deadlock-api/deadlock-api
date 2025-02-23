@@ -5,7 +5,7 @@
 #![deny(clippy::redundant_clone)]
 
 use crate::api_doc::ApiDoc;
-use axum::response::Redirect;
+use axum::response::{Html, Redirect};
 use axum::routing::get;
 use log::{debug, info};
 use std::net::{Ipv4Addr, SocketAddr};
@@ -14,7 +14,7 @@ use tower_http::compression::{CompressionLayer, DefaultPredicate};
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_scalar::Scalar;
 
 mod api_doc;
 mod config;
@@ -52,9 +52,11 @@ async fn main() -> ApplicationResult<()> {
         .layer(CompressionLayer::<DefaultPredicate>::default())
         .split_for_parts();
 
+    let docs = Scalar::new(api).to_html();
+
     let router = router
         .with_state(state)
-        .merge(SwaggerUi::new("/docs").url("/openapi.json", api));
+        .route("/docs", get(async move || Html(docs.clone())));
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
     let listener = tokio::net::TcpListener::bind(&address).await?;
