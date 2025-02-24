@@ -6,6 +6,6 @@ mod patches;
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        .nest("/info", info::router())
         .nest("/patches", patches::router())
+        .nest("/info", info::router())
 }
