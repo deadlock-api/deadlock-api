@@ -89,7 +89,11 @@ async fn fetch_patch_notes(http_client: reqwest::Client) -> APIResult<Vec<Patch>
     responses((status = OK, body = [String])),
     tags = ["Patches"],
     summary = "Patch Notes",
-    description = "Lists all patch notes from the official forums."
+    description = r#"
+Returns the parsed result of the RSS Feed from the official Forum.
+
+RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
+    "#
 )]
 pub async fn feed(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     fetch_patch_notes(state.http_client).await.map(Json)

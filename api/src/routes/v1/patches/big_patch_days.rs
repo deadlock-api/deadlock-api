@@ -19,7 +19,12 @@ const BIG_PATCH_DAYS: &[&str] = &[
     responses((status = OK, body = [String])),
     tags = ["Patches"],
     summary = "Big Patch Days",
-    description = "Lists big patch days in ISO 8601 format.",
+    description = r#"
+Returns a list of dates where Deadlock's "big" patch days were, usually bi-weekly.
+The exact date is the time when the announcement forum post was published.
+
+This list is manually maintained, and so new patch dates may be delayed by a few hours.
+    "#,
 )]
 pub async fn big_patch_days() -> APIResult<impl IntoResponse> {
     Ok(Json(BIG_PATCH_DAYS))
