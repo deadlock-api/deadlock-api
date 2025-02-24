@@ -18,6 +18,8 @@ const BIG_PATCH_DAYS: &[&str] = &[
     path = "/big-days",
     responses((status = OK, body = [String])),
     tags = ["Patches"],
+    summary = "Big Patch Days",
+    description = "Lists big patch days in ISO 8601 format.",
 )]
 pub async fn big_patch_days() -> APIResult<impl IntoResponse> {
     Ok(Json(BIG_PATCH_DAYS))
