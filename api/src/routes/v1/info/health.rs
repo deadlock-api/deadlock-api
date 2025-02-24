@@ -4,7 +4,7 @@ use log::warn;
 use redis::AsyncCommands;
 
 #[utoipa::path(
-    method(get, head),
+    get,
     path = "/health",
     responses(
         (status = OK, body = String),
