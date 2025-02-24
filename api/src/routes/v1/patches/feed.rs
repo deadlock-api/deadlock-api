@@ -8,6 +8,7 @@ use cached::proc_macro::cached;
 use cached::TimedCache;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
 
@@ -22,7 +23,7 @@ struct Channel {
     patch_notes: Vec<Patch>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct Patch {
     title: String,
@@ -40,7 +41,7 @@ struct Patch {
     slash_comments: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct PatchGuid {
     is_perma_link: bool,
@@ -48,7 +49,7 @@ struct PatchGuid {
     text: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 struct PatchCategory {
     domain: String,
@@ -86,7 +87,10 @@ async fn fetch_patch_notes(http_client: reqwest::Client) -> APIResult<Vec<Patch>
 #[utoipa::path(
     get,
     path = "/",
-    responses((status = OK, body = [String])),
+    responses(
+        (status = OK, body = [Patch]),
+        (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing the RSS-Feed failed")
+    ),
     tags = ["Patches"],
     summary = "Patch Notes",
     description = r#"
