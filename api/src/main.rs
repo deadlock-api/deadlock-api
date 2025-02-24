@@ -5,13 +5,17 @@
 #![deny(clippy::redundant_clone)]
 
 use crate::api_doc::ApiDoc;
+use axum::extract::Request;
 use axum::response::Redirect;
 use axum::routing::get;
+use axum::ServiceExt;
 use log::{debug, info};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tower_http::compression::{CompressionLayer, DefaultPredicate};
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+use tower_http::normalize_path::NormalizePathLayer;
+use tower_layer::Layer;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
@@ -55,9 +59,10 @@ async fn main() -> ApplicationResult<()> {
     let router = router
         .with_state(state)
         .merge(Scalar::with_url("/docs", api));
+    let router = NormalizePathLayer::trim_trailing_slash().layer(router);
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
     let listener = tokio::net::TcpListener::bind(&address).await?;
     info!("Listening on http://{}", address);
-    Ok(axum::serve(listener, router.into_make_service()).await?)
+    Ok(axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?)
 }
