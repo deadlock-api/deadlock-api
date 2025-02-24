@@ -44,7 +44,7 @@ struct Patch {
 #[serde(rename_all(deserialize = "camelCase"))]
 struct PatchGuid {
     is_perma_link: bool,
-    #[serde(rename = "$value")]
+    #[serde(rename(deserialize = "$value"))]
     text: String,
 }
 
@@ -52,7 +52,7 @@ struct PatchGuid {
 #[serde(rename_all(deserialize = "camelCase"))]
 struct PatchCategory {
     domain: String,
-    #[serde(rename = "$value")]
+    #[serde(rename(deserialize = "$value"))]
     text: String,
 }
 
