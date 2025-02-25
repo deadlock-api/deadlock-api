@@ -114,7 +114,10 @@ async fn main() {
             clickhouse_client.query(query).fetch_all().await.unwrap();
         let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
         if recent_matches.len() < 100 {
-            info!("Only got {} matches, filling in the gaps", recent_matches.len());
+            info!(
+                "Only got {} matches, filling in the gaps",
+                recent_matches.len()
+            );
             let query = r"
                 WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
                 SELECT number + match_range.min_match_id as match_id
@@ -248,7 +251,7 @@ async fn ingest_salts(
     let salts: Vec<_> = salts
         .iter()
         .map(|(r, m, u)| {
-            let cluster_id = r.cluster_id.unwrap_or(0);
+            let cluster_id = r.replay_group_id.unwrap_or(0);
             let metadata_salt = r.metadata_salt.unwrap_or(0);
             let replay_salt = r.replay_salt.unwrap_or(0);
             MatchSalt {
