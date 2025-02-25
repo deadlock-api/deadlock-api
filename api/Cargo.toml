@@ -32,3 +32,4 @@ utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 serde-xml-rs = "0.6.0"
 axum-prometheus = "0.8.0"
 itertools = "0.14.0"
+futures = "0.3.31"

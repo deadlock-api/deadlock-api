@@ -677,6 +677,7 @@ dependencies = [
  "clap",
  "clickhouse",
  "derive_more",
+ "futures",
  "itertools 0.14.0",
  "log",
  "object_store",
