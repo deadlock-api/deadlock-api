@@ -6,8 +6,9 @@ use axum::Json;
 use redis::AsyncCommands;
 use serde::Serialize;
 use serde_json::json;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, ToSchema)]
 pub struct StatusServices {
     pub clickhouse: bool,
     pub postgres: bool,
@@ -20,7 +21,7 @@ impl StatusServices {
     }
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, ToSchema)]
 pub struct Status {
     pub services: StatusServices,
 }
@@ -29,7 +30,7 @@ pub struct Status {
     get,
     path = "/health",
     responses(
-        (status = OK, body = String),
+        (status = OK, body = Status),
         (status = INTERNAL_SERVER_ERROR, body = String)
     ),
     tags = ["Info"],
