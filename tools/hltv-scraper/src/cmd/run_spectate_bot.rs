@@ -264,7 +264,10 @@ impl SpectatorBot {
             .context("Failed to parse client version")?;
 
         let mut v = self.current_patch.write().unwrap();
-        *v = Some(version);
+        *v = env::var("CLIENT_VERSION")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .or(Some(version));
         Ok(())
     }
 
