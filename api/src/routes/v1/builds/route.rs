@@ -17,6 +17,7 @@ use sqlx::Row;
     params(BuildsSearchQuery),
     responses(
         (status = OK, body = [Build]),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Internal server error")
     ),
     tags = ["Builds"],
