@@ -10,6 +10,7 @@ use axum::middleware::from_fn;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::ServiceExt;
+use axum_prometheus::PrometheusMetricLayer;
 use log::{debug, info};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
@@ -43,9 +44,14 @@ async fn main() -> ApplicationResult<()> {
     let state = state::AppState::from_env().await?;
     debug!("Application state loaded");
 
+    let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
+    prometheus_layer.enable_response_body_size();
+
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(|| async { Redirect::to("/docs") }))
         .merge(routes::router())
+        .route("/metrics", get(|| async move { metric_handle.render() }))
+        .layer(prometheus_layer)
         .layer(from_fn(write_api_key_to_header))
         .layer(CacheControlMiddleware::new(Duration::from_secs(
             DEFAULT_CACHE_TIME,
