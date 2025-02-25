@@ -23,6 +23,7 @@ pub struct ClickhouseMatchInfo {
     pub new_player_pool: Option<bool>,
     pub average_badge_team0: Option<u32>,
     pub average_badge_team1: Option<u32>,
+    pub game_mode_version: Option<u32>,
     #[serde(rename = "objectives.destroyed_time_s")]
     pub objectives_destroyed_time_s: Vec<u32>,
     #[serde(rename = "objectives.creep_damage")]
@@ -62,6 +63,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             new_player_pool: value.new_player_pool,
             average_badge_team0: value.average_badge_team0,
             average_badge_team1: value.average_badge_team1,
+            game_mode_version: value.game_mode_version,
             objectives_destroyed_time_s: value
                 .objectives
                 .iter()

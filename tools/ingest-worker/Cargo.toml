@@ -9,11 +9,10 @@ async-compression = { version = "0.4.18", features = ["tokio", "bzip2"] }
 clickhouse = { version = "0.13.1", features = ["test-util", "time"] }
 ctrlc = "3.4.5"
 futures = "0.3.31"
-itertools = "0.13.0"
-prost = "0.13.4"
-reqwest = "0.12.9"
+prost = "0.13.5"
+reqwest = "0.12.12"
 rust-s3 = "0.35.1"
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.218", features = ["derive"] }
 serde_repr = "0.1.19"
-tokio = { version = "1.42.0", features = ["rt-multi-thread", "macros"] }
-valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "e5eb2bd0d428be7c66c7db44bcbdd3e642ec7ee2", features = ["deadlock"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
