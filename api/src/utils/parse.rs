@@ -31,9 +31,9 @@ pub fn parse_steam_id_option<'de, D>(deserializer: D) -> Result<Option<u32>, D::
 where
     D: Deserializer<'de>,
 {
-    Ok(Option::<u64>::deserialize(deserializer)
-        .ok()
-        .and_then(|steam_id| match steam_id {
+    Option::<u64>::deserialize(deserializer)
+        .map_err(serde::de::Error::custom)
+        .map(|steam_id| match steam_id {
             Some(steam_id) => {
                 if steam_id >= STEAM_ID_64_IDENT {
                     Some((steam_id - STEAM_ID_64_IDENT) as u32)
@@ -42,5 +42,5 @@ where
                 }
             }
             None => None,
-        }))
+        })
 }
