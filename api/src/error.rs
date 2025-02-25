@@ -30,10 +30,23 @@ impl Display for ApplicationError {
 
 #[derive(Debug, From)]
 pub enum APIError {
-    Status { status: StatusCode },
-    StatusMsg { status: StatusCode, message: String },
-    RateLimitExceeded { status: RateLimitStatus },
-    InternalError { message: String },
+    Status {
+        status: StatusCode,
+    },
+    StatusMsg {
+        status: StatusCode,
+        message: String,
+    },
+    StatusMsgJson {
+        status: StatusCode,
+        message: serde_json::Value,
+    },
+    RateLimitExceeded {
+        status: RateLimitStatus,
+    },
+    InternalError {
+        message: String,
+    },
 }
 
 impl IntoResponse for APIError {
@@ -44,6 +57,17 @@ impl IntoResponse for APIError {
                 .body(Body::empty())
                 .unwrap_or("Internal server error".to_string().into_response()),
             Self::StatusMsg { status, message } => Response::builder()
+                .status(status)
+                .body(
+                    serde_json::to_string(&json!({
+                        "status": status.as_u16(),
+                        "error": message,
+                    }))
+                    .unwrap_or("Internal server error".to_string())
+                    .into(),
+                )
+                .unwrap_or("Internal server error".to_string().into_response()),
+            Self::StatusMsgJson { status, message } => Response::builder()
                 .status(status)
                 .body(
                     serde_json::to_string(&json!({
