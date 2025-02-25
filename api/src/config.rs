@@ -24,14 +24,6 @@ pub struct Config {
     )]
     pub redis_url: String,
 
-    // let aws_store = AmazonS3Builder::new()
-    //     .with_region(env::var("HLTV_S3_AWS_REGION")?)
-    //     .with_bucket_name(env::var("HLTV_S3_AWS_BUCKET")?)
-    //     .with_access_key_id(env::var("HLTV_S3_AWS_ACCESS_KEY_ID")?)
-    //     .with_secret_access_key(env::var("HLTV_S3_AWS_SECRET_ACCESS_KEY")?)
-    //     .with_endpoint(env::var("HLTV_S3_AWS_ENDPOINT")?)
-    //     .with_allow_http(true)
-    //     .build()?;
     #[clap(long, env)]
     pub s3_region: String,
     #[clap(long, env)]
@@ -42,6 +34,17 @@ pub struct Config {
     pub s3_secret_access_key: String,
     #[clap(long, env)]
     pub s3_endpoint: String,
+
+    #[clap(long, env)]
+    pub s3_cache_region: String,
+    #[clap(long, env)]
+    pub s3_cache_bucket: String,
+    #[clap(long, env)]
+    pub s3_cache_access_key_id: String,
+    #[clap(long, env)]
+    pub s3_cache_secret_access_key: String,
+    #[clap(long, env)]
+    pub s3_cache_endpoint: String,
 
     #[clap(long, env, default_value = "localhost")]
     pub clickhouse_host: String,

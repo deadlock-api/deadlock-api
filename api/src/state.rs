@@ -30,6 +30,7 @@ pub struct AppState {
     pub config: Config,
     pub http_client: reqwest::Client,
     pub s3_client: object_store::aws::AmazonS3,
+    pub s3_cache_client: object_store::aws::AmazonS3,
     pub redis_client: redis::aio::MultiplexedConnection,
     pub clickhouse_client: clickhouse::Client,
     pub postgres_client: Pool<Postgres>,
@@ -51,6 +52,17 @@ impl AppState {
             .with_access_key_id(&config.s3_access_key_id)
             .with_secret_access_key(&config.s3_secret_access_key)
             .with_endpoint(&config.s3_endpoint)
+            .with_allow_http(true)
+            .build()?;
+
+        // Create an S3 cache client
+        debug!("Creating S3 cache client");
+        let s3_cache_client = AmazonS3Builder::new()
+            .with_region(&config.s3_cache_region)
+            .with_bucket_name(&config.s3_cache_bucket)
+            .with_access_key_id(&config.s3_cache_access_key_id)
+            .with_secret_access_key(&config.s3_cache_secret_access_key)
+            .with_endpoint(&config.s3_cache_endpoint)
             .with_allow_http(true)
             .build()?;
 
@@ -90,6 +102,7 @@ impl AppState {
             config,
             http_client,
             s3_client,
+            s3_cache_client,
             redis_client,
             clickhouse_client,
             postgres_client,
