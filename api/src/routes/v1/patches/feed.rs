@@ -59,7 +59,7 @@ struct PatchCategory {
 
 #[cached(
     ty = "TimedCache<String, Vec<Patch>>",
-    create = "{ TimedCache::with_lifespan(30) }",
+    create = "{ TimedCache::with_lifespan(30 * 60) }",
     result = true,
     convert = r#"{ format!("") }"#
 )]
