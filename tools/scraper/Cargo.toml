@@ -5,12 +5,12 @@ edition = "2021"
 
 [dependencies]
 clickhouse = { version = "0.12.2", features = ["time"] }
-serde = { version = "1.0.210", features = ["derive"] }
-time = { version = "0.3.36", features = ["serde"] }
+serde = { version = "1.0.218", features = ["derive"] }
+time = { version = "0.3.37", features = ["serde"] }
 serde_repr = "0.1.19"
-tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
-once_cell = "1.19.0"
-reqwest = { version = "0.12.7", features = ["json"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
+once_cell = "1.20.3"
+reqwest = { version = "0.12.12", features = ["json"] }
 arl = "0.2.0"
 delay_map = "0.4.0"
-openssl-sys = { version = "0.9.103" }
+openssl-sys = { version = "0.9.106" }

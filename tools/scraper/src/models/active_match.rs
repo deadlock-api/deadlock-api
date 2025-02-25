@@ -11,6 +11,7 @@ pub struct ActiveMatch {
     pub lobby_id: u64,
     pub net_worth_team_0: u32,
     pub net_worth_team_1: u32,
+    pub game_mode_version: Option<u32>,
     pub duration_s: u32, // Currently always 0
     pub spectators: u16,
     pub open_spectator_slots: u16,
@@ -48,6 +49,7 @@ pub struct ClickHouseActiveMatch {
     pub lobby_id: String, // This is a big integer, but encoding as String to avoid overflow
     pub net_worth_team_0: u32,
     pub net_worth_team_1: u32,
+    pub game_mode_version: Option<u32>,
     pub duration_s: u32, // Currently always 0
     pub spectators: u16,
     pub open_spectator_slots: u16,
@@ -74,6 +76,7 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
             lobby_id: am.lobby_id.to_string(),
             net_worth_team_0: am.net_worth_team_0,
             net_worth_team_1: am.net_worth_team_1,
+            game_mode_version: am.game_mode_version,
             duration_s: am.duration_s,
             spectators: am.spectators,
             open_spectator_slots: am.open_spectator_slots,
