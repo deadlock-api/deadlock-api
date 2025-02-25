@@ -58,20 +58,15 @@ pub struct BuildsSearchQuery {
     pub author_id: Option<u32>,
 }
 
-pub fn sql_query(params: BuildsSearchQuery) -> String {
+pub fn sql_query(params: &BuildsSearchQuery) -> String {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
     query_builder.push(" SELECT data as builds FROM hero_builds WHERE TRUE");
-    if params.only_latest.unwrap_or(false) {
-        query_builder.push(
-            " AND version = (SELECT MAX(version) FROM hero_builds t WHERE t.build_id = hero_builds.build_id)",
-        );
-    }
-    if let Some(search_name) = params.search_name {
+    if let Some(search_name) = &params.search_name {
         query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE '%");
         query_builder.push(search_name.to_lowercase());
         query_builder.push("%'");
     }
-    if let Some(search_description) = params.search_description {
+    if let Some(search_description) = &params.search_description {
         query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE '%");
         query_builder.push(search_description.to_lowercase());
         query_builder.push("%'");

@@ -8,6 +8,7 @@ use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use axum::Json;
+use itertools::Itertools;
 use sqlx::Row;
 
 #[utoipa::path(
@@ -27,7 +28,7 @@ pub async fn search_builds(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     apply_limits(&headers, &state, "builds", &[100.into()]).await?;
-    let query = query::sql_query(params);
+    let query = query::sql_query(&params);
     let builds = sqlx::query(&query)
         .fetch_all(&state.postgres_client)
         .await
@@ -38,5 +39,15 @@ pub async fn search_builds(
         .iter()
         .map(|row| row.get::<sqlx::types::Json<Build>, &str>("builds"))
         .collect::<Vec<_>>();
+    let builds = if params.only_latest.unwrap_or(false) {
+        builds
+            .into_iter()
+            .sorted_by_key(|a| a.hero_build.version)
+            .rev()
+            .unique_by(|a| a.hero_build.hero_build_id)
+            .collect()
+    } else {
+        builds
+    };
     Ok(Json(builds))
 }
