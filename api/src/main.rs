@@ -6,6 +6,7 @@
 
 use crate::api_doc::ApiDoc;
 use axum::extract::Request;
+use axum::middleware::from_fn;
 use axum::response::Redirect;
 use axum::routing::get;
 use axum::ServiceExt;
@@ -28,6 +29,7 @@ mod routes;
 mod state;
 mod utils;
 
+use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use error::*;
 
@@ -44,6 +46,7 @@ async fn main() -> ApplicationResult<()> {
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(|| async { Redirect::to("/docs") }))
         .merge(routes::router())
+        .layer(from_fn(write_api_key_to_header))
         .layer(CacheControlMiddleware::new(Duration::from_secs(
             DEFAULT_CACHE_TIME,
         )))
