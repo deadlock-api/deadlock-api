@@ -1,3 +1,4 @@
+use crate::utils::parse_steam_id_option;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, QueryBuilder};
@@ -55,6 +56,7 @@ pub struct BuildsSearchQuery {
     pub version: Option<u32>,
     pub hero_id: Option<u32>,
     /// The author's SteamID3
+    #[serde(deserialize_with = "parse_steam_id_option")]
     pub author_id: Option<u32>,
 }
 
