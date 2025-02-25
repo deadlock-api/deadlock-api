@@ -1,6 +1,5 @@
 use crate::error::APIError;
 use crate::state::AppState;
-use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use cached::proc_macro::cached;
 use cached::TimedCache;
@@ -17,6 +16,26 @@ pub struct RateLimitQuota {
     pub limit: u32,
     pub period: Duration,
     pub is_global: bool,
+}
+
+impl From<u32> for RateLimitQuota {
+    fn from(limit: u32) -> Self {
+        Self::from((limit, Duration::seconds(1)))
+    }
+}
+impl From<(u32, Duration)> for RateLimitQuota {
+    fn from((limit, period): (u32, Duration)) -> Self {
+        Self::from((limit, period, false))
+    }
+}
+impl From<(u32, Duration, bool)> for RateLimitQuota {
+    fn from((limit, period, is_global): (u32, Duration, bool)) -> Self {
+        Self {
+            limit,
+            period,
+            is_global,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -69,7 +88,7 @@ impl RateLimitStatus {
 }
 
 pub async fn apply_limits(
-    req: &Request,
+    headers: &HeaderMap,
     state: &AppState,
     key: &str,
     quotas: &[RateLimitQuota],
@@ -78,8 +97,8 @@ pub async fn apply_limits(
         return Ok(None);
     }
 
-    let ip = extract_ip(req);
-    let api_key = extract_api_key(req);
+    let ip = extract_ip(headers);
+    let api_key = extract_api_key(headers);
 
     // Validate the API key if it is present
     let api_key = match api_key {
@@ -167,7 +186,7 @@ async fn increment_key(
     key: &str,
 ) -> RedisResult<()> {
     //! Increments the rate limit key in Redis.
-    let current_time = chrono::Utc::now().timestamp() as isize;
+    let current_time = Utc::now().timestamp() as isize;
     let prefixed_key = format!("{}:{}", prefix, key);
     redis::pipe()
         .zrembyscore(&prefixed_key, 0, current_time - MAX_TTL_SECONDS) // Remove old entries
@@ -220,63 +239,46 @@ pub async fn get_custom_quotas(state: &AppState, api_key: Uuid, path: &str) -> V
     .unwrap_or_default()
 }
 
-fn extract_ip(req: &Request) -> &str {
-    req.headers()
+fn extract_ip(headers: &HeaderMap) -> &str {
+    headers
         .get("CF-Connecting-IP")
-        .or(req.headers().get("X-Real-IP"))
+        .or(headers.get("X-Real-IP"))
         .and_then(|v| v.to_str().ok())
         .unwrap_or("0.0.0.0")
 }
 
-fn extract_api_key(req: &Request) -> Option<Uuid> {
-    let query_api_key = req.uri().query().and_then(|q| {
-        url::form_urlencoded::parse(q.as_bytes())
-            .find(|(k, _)| k == "api_key")
-            .map(|(_, v)| v.to_string())
-    });
-    let header_api_key = req
-        .headers()
+fn extract_api_key(headers: &HeaderMap) -> Option<Uuid> {
+    headers
         .get("X-API-Key")
         .and_then(|v| v.to_str().ok())
-        .map(String::from);
-    header_api_key
-        .or(query_api_key)
+        .map(String::from)
         .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(&s)).ok())
 }
 
 #[cfg(test)]
 mod test {
-    #![allow(clippy::unwrap_used)]
+    use axum::http::{HeaderMap, HeaderName, HeaderValue};
+    use std::str::FromStr;
 
     #[test]
     fn test_extract_ip() {
-        let req = axum::extract::Request::builder()
-            .header("CF-Connecting-IP", "144.155.166.177")
-            .uri("http://example.com")
-            .body(vec![].into())
-            .unwrap();
-        assert_eq!(super::extract_ip(&req), "144.155.166.177");
+        let mut headers: HeaderMap = HeaderMap::default();
+        headers.append::<HeaderName>(
+            HeaderName::from_str("CF-Connecting-IP").unwrap(),
+            HeaderValue::from_str("144.155.166.177").unwrap(),
+        );
+        assert_eq!(super::extract_ip(&headers), "144.155.166.177");
     }
 
     #[test]
     fn test_extract_api_key() {
-        let req = axum::extract::Request::builder()
-            .header("X-API-Key", "HEXE-f1da7396-03aa-4ac0-975d-39c222b25088")
-            .uri("http://example.com")
-            .body(vec![].into())
-            .unwrap();
-        assert_eq!(
-            super::extract_api_key(&req).unwrap().to_string(),
-            "f1da7396-03aa-4ac0-975d-39c222b25088"
+        let mut headers: HeaderMap = HeaderMap::default();
+        headers.append::<HeaderName>(
+            HeaderName::from_str("X-API-Key").unwrap(),
+            HeaderValue::from_str("HEXE-f1da7396-03aa-4ac0-975d-39c222b25088").unwrap(),
         );
-
-        let req2 = axum::extract::Request::builder()
-            .header("X-API-Key", "f1da7396-03aa-4ac0-975d-39c222b25088")
-            .uri("http://example.com")
-            .body(vec![].into())
-            .unwrap();
         assert_eq!(
-            super::extract_api_key(&req2).unwrap().to_string(),
+            super::extract_api_key(&headers).unwrap().to_string(),
             "f1da7396-03aa-4ac0-975d-39c222b25088"
         );
     }
