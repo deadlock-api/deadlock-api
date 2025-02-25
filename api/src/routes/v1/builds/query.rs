@@ -52,6 +52,7 @@ pub struct BuildsSearchQuery {
     pub only_latest: Option<bool>,
     pub language: Option<u32>,
     pub build_id: Option<u32>,
+    pub version: Option<u32>,
     pub hero_id: Option<u32>,
     /// The author's SteamID3
     pub author_id: Option<u32>,
@@ -82,6 +83,10 @@ pub fn sql_query(params: BuildsSearchQuery) -> String {
     if let Some(build_id) = params.build_id {
         query_builder.push(" AND build_id = ");
         query_builder.push(build_id.to_string());
+    }
+    if let Some(version) = params.version {
+        query_builder.push(" AND version = ");
+        query_builder.push(version.to_string());
     }
     if let Some(hero_id) = params.hero_id {
         query_builder.push(" AND hero = ");
