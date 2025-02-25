@@ -1,0 +1,42 @@
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::builds::query;
+use crate::routes::v1::builds::query::BuildsSearchQuery;
+use crate::routes::v1::builds::structs::Build;
+use crate::state::AppState;
+use crate::utils::limiter::apply_limits;
+use axum::extract::{Query, State};
+use axum::http::HeaderMap;
+use axum::response::IntoResponse;
+use axum::Json;
+use sqlx::Row;
+
+#[utoipa::path(
+    get,
+    path = "/",
+    params(BuildsSearchQuery),
+    responses(
+        (status = OK, body = [Build]),
+        (status = INTERNAL_SERVER_ERROR, description = "Internal server error")
+    ),
+    tags = ["Builds"],
+    summary = "Search for builds",
+)]
+pub async fn search_builds(
+    Query(params): Query<BuildsSearchQuery>,
+    headers: HeaderMap,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    apply_limits(&headers, &state, "builds", &[100.into()]).await?;
+    let query = query::sql_query(params);
+    let builds = sqlx::query(&query)
+        .fetch_all(&state.postgres_client)
+        .await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch builds: {}", e),
+        })?;
+    let builds = builds
+        .iter()
+        .map(|row| row.get::<sqlx::types::Json<Build>, &str>("builds"))
+        .collect::<Vec<_>>();
+    Ok(Json(builds))
+}

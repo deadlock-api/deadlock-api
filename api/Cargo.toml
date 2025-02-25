@@ -21,7 +21,7 @@ serde = { version = "1.0.218", features = ["derive"] }
 chrono = { version = "0.4.39", features = ["serde"] }
 serde_json = "1.0.139"
 url = "2.5.4"
-derive_more = { version = "2.0.1", features = ["from"] }
+derive_more = { version = "2.0.1", features = ["display", "from"] }
 object_store = { version = "0.11.2", features = ["aws"] }
 tower = "0.5.2"
 tower-layer = "0.3.3"
