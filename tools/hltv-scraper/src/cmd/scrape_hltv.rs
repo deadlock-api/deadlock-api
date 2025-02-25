@@ -71,9 +71,9 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
             .filter(|x| !currently_downloading.contains_key(&x.match_id))
             .filter(|x| {
                 if let Some(started) = x.started_at {
-                    return started < Timestamp::now().saturating_sub(15.minutes());
+                    return started < Timestamp::now().saturating_sub(15.minutes()).unwrap();
                 }
-                x.updated_at < Timestamp::now().saturating_sub(1.minutes())
+                x.updated_at < Timestamp::now().saturating_sub(1.minutes()).unwrap()
             })
             .min_by_key(|x| x.match_id);
 
@@ -144,7 +144,10 @@ fn download_task(
             if let Err(e) =
                 push_meta_to_object_store(store, &match_metadata, &smi.match_type, match_id).await
             {
-                error!("[{label} {match_id}] Got error writing meta to object store: {:?}", e);
+                error!(
+                    "[{label} {match_id}] Got error writing meta to object store: {:?}",
+                    e
+                );
                 let root_path = PathBuf::from("/matches");
                 match store_meta_to_local_store(
                     &root_path,

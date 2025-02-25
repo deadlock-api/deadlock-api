@@ -4,34 +4,30 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.89"
-axum = "0.7.9"
+anyhow = "1.0.96"
+axum = "0.8.1"
 base64 = "0.22.1"
 cached = { version = "0.54", features = ["async", "async_tokio_rt_multi_thread"] }
-clap = { version = "4.5.18", features = ["derive", "env"] }
+clap = { version = "4.5.31", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = "9.4.0"
-haste = { git = "https://github.com/johnpyp/haste.git", rev = "f7b08cf3838ed0b84658831859007045540f9b7b", features = ["deadlock", "broadcast"] }
-indicatif = "0.17.8"
-itertools = "0.13.0"
-jiff = { version = "0.1.13", features = ["serde"] }
+haste = { git = "https://github.com/johnpyp/haste.git", rev = "d7fae1be70afbad95bb5c6a62100d9fbe4610723", features = ["deadlock", "broadcast"] }
+indicatif = "0.17.11"
+itertools = "0.14.0"
+jiff = { version = "0.2.1", features = ["serde"] }
 lazy_static = "1.5.0"
-lru = "0.12.4"
+lru = "0.13.0"
 metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
-object_store = { version = "0.11.1", features = ["aws"] }
-prost = "0.13.3"
-prost-types = "0.13.3"
-rayon = "1.10.0"
-reqwest = { version = "0.12.7", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
-tempfile = "3.12.0"
-tokio = { version = "1.40.0", features = ["full"] }
-tracing = "0.1.40"
-tracing-indicatif = "0.3.6"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ec49f32a7a5bbc9bc0f10e94b8bfee4d96f95f27", features = ["deadlock"] }
-rusqlite = { version = "0.32.1", features = ["serde_json", "bundled", "blob"] }
-thiserror = "2.0.4"
+object_store = { version = "0.11.2", features = ["aws"] }
+prost = "0.13.5"
+reqwest = { version = "0.12.12", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+tokio = { version = "1.43.0", features = ["full"] }
+tracing = "0.1.41"
+tracing-indicatif = "0.3.9"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
+thiserror = "2.0.11"
 async-compression = { version = "0.4.18", features = ["tokio", "bzip2", "zstd"] }
