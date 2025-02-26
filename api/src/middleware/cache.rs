@@ -39,12 +39,14 @@ impl CacheControlMiddleware {
 
     fn header_value(&self) -> HeaderValue {
         let mut header_value = String::new();
-        write!(&mut header_value, "max-age={}", self.max_age.as_secs()).unwrap();
+        write!(&mut header_value, "max-age={}", self.max_age.as_secs()).ok();
         if self.must_revalidate {
-            write!(&mut header_value, ", must-revalidate").unwrap();
+            write!(&mut header_value, ", must-revalidate").ok();
         }
         if self.private {
-            write!(&mut header_value, ", private").unwrap();
+            write!(&mut header_value, ", private").ok();
+        } else {
+            write!(&mut header_value, ", public").ok();
         }
         #[allow(clippy::unwrap_used)]
         HeaderValue::from_str(&header_value).unwrap()
@@ -128,7 +130,7 @@ mod tests {
                 .headers()
                 .get(axum::http::header::CACHE_CONTROL)
                 .unwrap(),
-            "max-age=60"
+            "max-age=60, public"
         );
     }
 
@@ -148,7 +150,7 @@ mod tests {
                 .headers()
                 .get(axum::http::header::CACHE_CONTROL)
                 .unwrap(),
-            "max-age=60, must-revalidate"
+            "max-age=60, must-revalidate, public"
         );
     }
     #[tokio::test]
