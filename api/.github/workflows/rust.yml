@@ -29,6 +29,8 @@ jobs:
         with:
           components: clippy  # Install clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Clippy check
         run: cargo clippy --all-targets --all-features
       - uses: giraffate/clippy-action@v1
@@ -43,5 +45,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Run tests
         run: cargo test --verbose
