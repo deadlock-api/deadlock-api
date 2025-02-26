@@ -104,7 +104,8 @@ impl From<i32> for ActiveMatchRegionMode {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 pub struct ActiveMatchPlayer {
     pub account_id: Option<u32>,
-    pub team: Option<ActiveMatchTeam>,
+    pub team: Option<i32>,
+    pub team_parsed: Option<ActiveMatchTeam>,
     pub abandoned: Option<bool>,
     pub hero_id: Option<u32>,
 }
@@ -113,7 +114,8 @@ impl From<MatchPlayer> for ActiveMatchPlayer {
     fn from(value: MatchPlayer) -> Self {
         Self {
             account_id: value.account_id,
-            team: value.team.map(|m| m.into()),
+            team: value.team,
+            team_parsed: value.team.map(|m| m.into()),
             abandoned: value.abandoned,
             hero_id: value.hero_id,
         }
@@ -124,7 +126,8 @@ impl From<MatchPlayer> for ActiveMatchPlayer {
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct ActiveMatch {
     pub start_time: Option<u32>,
-    pub winning_team: Option<ActiveMatchTeam>,
+    pub winning_team: Option<i32>,
+    pub winning_team_parsed: Option<ActiveMatchTeam>,
     pub match_id: Option<u64>,
     pub players: Vec<ActiveMatchPlayer>,
     pub lobby_id: Option<u64>,
@@ -136,10 +139,12 @@ pub struct ActiveMatch {
     pub open_spectator_slots: Option<u32>,
     pub objectives_mask_team0: Option<u64>,
     pub objectives_mask_team1: Option<u64>,
-    pub match_mode: Option<ActiveMatchMode>,
+    pub match_mode: Option<i32>,
+    pub match_mode_parsed: Option<ActiveMatchMode>,
     pub game_mode: Option<i32>,
     pub match_score: Option<u32>,
-    pub region_mode: Option<ActiveMatchRegionMode>,
+    pub region_mode: Option<i32>,
+    pub region_mode_parsed: Option<ActiveMatchRegionMode>,
     pub compat_version: Option<u32>,
 }
 
@@ -147,7 +152,8 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
     fn from(value: CMsgDevMatchInfo) -> Self {
         Self {
             start_time: value.start_time,
-            winning_team: value.winning_team.map(|m| m.into()),
+            winning_team: value.winning_team,
+            winning_team_parsed: value.winning_team.map(|m| m.into()),
             match_id: value.match_id,
             players: value.players.into_iter().map_into().collect(),
             lobby_id: value.lobby_id,
@@ -159,10 +165,12 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
             open_spectator_slots: value.open_spectator_slots,
             objectives_mask_team0: value.objectives_mask_team0,
             objectives_mask_team1: value.objectives_mask_team1,
-            match_mode: value.match_mode.map(|m| m.into()),
+            match_mode: value.match_mode,
+            match_mode_parsed: value.match_mode.map(|m| m.into()),
             game_mode: value.game_mode,
             match_score: value.match_score,
-            region_mode: value.region_mode.map(|m| m.into()),
+            region_mode: value.region_mode,
+            region_mode_parsed: value.region_mode.map(|m| m.into()),
             compat_version: value.compat_version,
         }
     }
