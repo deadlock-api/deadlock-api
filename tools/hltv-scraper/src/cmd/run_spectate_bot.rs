@@ -402,13 +402,14 @@ impl SpectatorBot {
             if live_matches != prev_life_matches {
                 let ms = live_matches
                     .iter()
-                    .filter(|x| x.spectators > 0)
+                    .filter(|x| x.spectators.unwrap_or_default() > 0)
                     .map(|x| {
                         SpectatedMatchInfo::new(
                             SpectatedMatchType::ActiveMatch,
                             x.match_id,
                             Timestamp::now(),
-                            Some(Timestamp::from_second(x.start_time as i64).unwrap()),
+                            x.start_time
+                                .and_then(|x| Timestamp::from_second(x as i64).ok()),
                         )
                     })
                     .collect_vec();
@@ -431,14 +432,14 @@ impl SpectatorBot {
             let next_match = live_matches
                 .iter()
                 .filter(|x| {
-                    x.spectators == 0
+                    x.spectators.unwrap_or_default() == 0
                         && !recently_spectated.contains_key(&x.match_id)
                         && !failed_spectates.contains_key(&x.match_id)
                 })
                 .filter(|x| x.is_titan_exposed())
                 .sorted_by_key(|x| {
                     (
-                        std::cmp::Reverse(x.match_score / 100),
+                        std::cmp::Reverse(x.match_score.unwrap_or_default() / 100),
                         if x.is_titan_exposed() {
                             0
                         } else if x.is_shrine_exposed() {
@@ -454,7 +455,7 @@ impl SpectatorBot {
             match next_match {
                 Some(m) => {
                     info!(
-                        "Spectating active match {} (score: {})",
+                        "Spectating active match {:?} (score: {:?})",
                         m.lobby_id, m.match_score
                     );
                     if let Err(e) = self
@@ -477,8 +478,9 @@ impl SpectatorBot {
                     let match_ids: Vec<u64> = live_matches
                         .iter()
                         .filter(|x| {
-                            x.start_time <= fifteen_min_ago as u64
-                                && x.start_time > fifty_min_ago as u64
+                            x.start_time.is_some_and(|x| {
+                                x <= fifteen_min_ago as u64 && x > fifty_min_ago as u64
+                            })
                         })
                         .map(|m| m.match_id)
                         .sorted()

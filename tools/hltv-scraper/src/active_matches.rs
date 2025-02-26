@@ -12,30 +12,13 @@ pub struct ScrapePriority {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct ActiveMatch {
-    pub start_time: u64,
-    pub winning_team: u8,
+    pub start_time: Option<u64>,
     pub match_id: u64,
-    pub players: Vec<ActivePlayer>,
-    pub lobby_id: u64,
-    pub net_worth_team_0: u32,
-    pub net_worth_team_1: u32,
-    pub duration_s: u32,
-    pub spectators: u32,
-    pub open_spectator_slots: u8,
+    pub lobby_id: Option<u64>,
+    pub spectators: Option<u32>,
     pub objectives_mask_team0: u32,
     pub objectives_mask_team1: u32,
-    pub match_mode: u8,
-    pub game_mode: u8,
-    pub match_score: u32,
-    pub region_mode: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
-pub struct ActivePlayer {
-    pub account_id: u64,
-    pub team: u8,
-    pub abandoned: bool,
-    pub hero_id: u16,
+    pub match_score: Option<u32>,
 }
 
 #[allow(unused)]
@@ -78,7 +61,7 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
 pub async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
     let client = reqwest::Client::new();
     let res = client
-        .get("https://data.deadlock-api.com/v1/active-matches")
+        .get("https://api.deadlock-api.com/v1/matches/active")
         .send()
         .await?;
 
