@@ -18,7 +18,7 @@ static CLICKHOUSE_DB: LazyLock<String> = LazyLock::new(|| std::env::var("CLICKHO
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")
-        .unwrap_or("https://data.deadlock-api.com/v1/active-matches?api_key=HEXE-af8507d1-8f49-4f2b-81fd-b257cd23c58a".to_string())
+        .unwrap_or("https://api.deadlock-api.com/v1/matches/active".to_string())
 });
 
 #[tokio::main]
