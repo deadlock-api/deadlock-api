@@ -31,7 +31,8 @@ pub struct ActiveMatchesQuery {
     ty = "TimedCache<String, Vec<u8>>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
-    convert = r#"{ format!("") }"#
+    convert = r#"{ format!("") }"#,
+    sync_writes = true
 )]
 async fn fetch_active_matches_raw(
     config: &Config,

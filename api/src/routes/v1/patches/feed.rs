@@ -61,7 +61,8 @@ struct PatchCategory {
     ty = "TimedCache<String, Vec<Patch>>",
     create = "{ TimedCache::with_lifespan(30 * 60) }",
     result = true,
-    convert = r#"{ format!("") }"#
+    convert = r#"{ format!("") }"#,
+    sync_writes = true
 )]
 async fn fetch_patch_notes(http_client: reqwest::Client) -> APIResult<Vec<Patch>> {
     let response = http_client
