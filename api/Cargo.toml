@@ -1,7 +1,7 @@
 [package]
 name = "deadlock-api-rust"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 reqwest = { version = "0.12.12", features = ["json"] }
@@ -12,13 +12,13 @@ redis = { version = "0.29.0", features = ["tokio-comp"] }
 clap = { version = "4.5.31", features = ["env", "derive"] }
 clickhouse = "0.13.1"
 sqlx = { version = "0.8.3", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
-uuid = "1.14.0"
+uuid = "1.15.0"
 cached = { version = "0.54.0", features = ["async", "serde", "tokio"] }
 axum = { version = "0.8.1", features = ["http2"] }
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.3.1", features = ["axum_extras", "chrono"] }
 serde = { version = "1.0.218", features = ["derive"] }
-chrono = { version = "0.4.39", features = ["serde"] }
+chrono = { version = "0.4.40", features = ["serde"] }
 serde_json = "1.0.139"
 url = "2.5.4"
 derive_more = { version = "2.0.1", features = ["display", "from"] }

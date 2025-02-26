@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
-use axum::extract::State;
 use axum::Json;
+use axum::extract::State;
 use clickhouse::Row;
 use futures::future::join;
 use itertools::Itertools;

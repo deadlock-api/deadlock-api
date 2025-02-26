@@ -5,11 +5,11 @@
 #![deny(clippy::redundant_clone)]
 
 use crate::api_doc::ApiDoc;
+use axum::ServiceExt;
 use axum::extract::Request;
 use axum::middleware::from_fn;
 use axum::response::Redirect;
 use axum::routing::get;
-use axum::ServiceExt;
 use axum_prometheus::PrometheusMetricLayer;
 use log::{debug, info};
 use std::net::{Ipv4Addr, SocketAddr};
