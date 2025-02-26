@@ -3,10 +3,8 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
 use crate::state::AppState;
 use crate::utils;
-use crate::utils::limiter::apply_limits;
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -77,7 +75,6 @@ async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>
     path = "/active/raw",
     responses(
         (status = OK, body = [u8]),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching active matches failed")
     ),
     tags = ["Matches"],
@@ -88,11 +85,7 @@ Returns active matches that are currently being played, serialized as protobuf m
 Fetched from the watch tab in game.
     "#
 )]
-pub async fn active_matches_raw(
-    headers: HeaderMap,
-    State(state): State<AppState>,
-) -> APIResult<impl IntoResponse> {
-    apply_limits(&headers, &state, "active_matches", &[100.into()]).await?;
+pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     fetch_active_matches_raw(&state.config, &state.http_client).await
 }
 
@@ -102,7 +95,6 @@ pub async fn active_matches_raw(
     params(ActiveMatchesQuery),
     responses(
         (status = OK, body = [ActiveMatch]),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing active matches failed")
     ),
     tags = ["Matches"],
@@ -115,10 +107,8 @@ Fetched from the watch tab in game.
 )]
 pub async fn active_matches(
     Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
-    headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(&headers, &state, "active_matches", &[100.into()]).await?;
     let raw_data = fetch_active_matches_raw(&state.config, &state.http_client).await?;
     let mut active_matches = parse_active_matches_raw(&raw_data).await?;
 
