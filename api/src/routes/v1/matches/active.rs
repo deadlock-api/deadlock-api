@@ -5,7 +5,7 @@ use crate::state::AppState;
 use crate::utils;
 use crate::utils::limiter::apply_limits;
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use base64::Engine;
@@ -14,10 +14,18 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use itertools::Itertools;
 use prost::Message;
+use serde::Deserialize;
+use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetActiveMatches, CMsgClientToGcGetActiveMatchesResponse,
     EgcCitadelClientMessages,
 };
+
+#[derive(Deserialize, IntoParams)]
+pub struct ActiveMatchesQuery {
+    #[serde(default)]
+    pub account_id: Option<u32>,
+}
 
 #[cached(
     ty = "TimedCache<String, Vec<u8>>",
@@ -90,6 +98,7 @@ pub async fn active_matches_raw(
 #[utoipa::path(
     get,
     path = "/active",
+    params(ActiveMatchesQuery),
     responses(
         (status = OK, body = [ActiveMatch]),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
@@ -104,10 +113,22 @@ Fetched from the watch tab in game.
     "#
 )]
 pub async fn active_matches(
+    Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     apply_limits(&headers, &state, "active_matches", &[100.into()]).await?;
     let raw_data = fetch_active_matches_raw(&state.config, &state.http_client).await?;
-    parse_active_matches_raw(&raw_data).await.map(Json)
+    let mut active_matches = parse_active_matches_raw(&raw_data).await?;
+
+    // Filter by account id if provided
+    if let Some(account_id) = account_id {
+        active_matches.retain(|m| {
+            m.players
+                .iter()
+                .any(|p| p.account_id.is_some_and(|a| a == account_id))
+        });
+    };
+
+    Ok(Json(active_matches))
 }
