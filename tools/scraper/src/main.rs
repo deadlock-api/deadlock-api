@@ -31,7 +31,7 @@ async fn main() {
 
     let mut delay_set = HashSetDelay::new(Duration::from_secs(2 * 60));
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(21));
+    let limiter = RateLimiter::new(1, Duration::from_secs(61));
     loop {
         limiter.wait().await;
         let start = std::time::Instant::now();

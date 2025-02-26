@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clickhouse = { version = "0.12.2", features = ["time"] }
+clickhouse = { version = "0.13.1", features = ["time"] }
 serde = { version = "1.0.218", features = ["derive"] }
 time = { version = "0.3.37", features = ["serde"] }
 serde_repr = "0.1.19"
