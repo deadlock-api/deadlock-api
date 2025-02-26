@@ -33,3 +33,7 @@ serde-xml-rs = "0.6.0"
 axum-prometheus = "0.8.0"
 itertools = "0.14.0"
 futures = "0.3.31"
+snap = "1.1.1"
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs", version = "0.0.0", features = ["deadlock"] }
+prost = "0.13.5"
+base64 = "0.22.1"

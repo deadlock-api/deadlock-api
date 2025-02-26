@@ -1,0 +1,17 @@
+mod active;
+mod types;
+
+use crate::state::AppState;
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
+
+#[derive(OpenApi)]
+#[openapi(tags((name = "Matches")))]
+pub struct ApiDoc;
+
+pub fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(active::active_matches))
+        .routes(routes!(active::active_matches_raw))
+}

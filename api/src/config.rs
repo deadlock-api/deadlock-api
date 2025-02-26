@@ -13,6 +13,16 @@ pub struct Config {
     )]
     pub emergency_mode: bool,
 
+    #[clap(long, env, help = "The Steam Proxy URL to use for Steam API requests")]
+    pub steam_proxy_url: String,
+
+    #[clap(
+        long,
+        env,
+        help = "The Steam Proxy API key to use for Steam API requests"
+    )]
+    pub steam_proxy_api_key: String,
+
     // ========================================
     // ===== Database Connection Settings =====
     // ========================================
