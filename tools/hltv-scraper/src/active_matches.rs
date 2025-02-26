@@ -57,7 +57,7 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
     mask & (1 << (objective as u32)) != 0
 }
 
-#[cached(result = true, time = 15, result_fallback = true)]
+#[cached(result = true, time = 60, result_fallback = true)]
 pub async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
     let client = reqwest::Client::new();
     let res = client
