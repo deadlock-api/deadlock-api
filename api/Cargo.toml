@@ -37,3 +37,4 @@ snap = "1.1.1"
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs", version = "0.0.0", features = ["deadlock"] }
 prost = "0.13.5"
 base64 = "0.22.1"
+tryhard = "0.5.1"

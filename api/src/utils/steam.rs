@@ -17,14 +17,16 @@ pub async fn call_steam_proxy(
     http_client: &reqwest::Client,
     msg_type: EgcCitadelClientMessages,
     msg: impl Message,
-    cooldown_time: std::time::Duration,
     groups: &[&str],
+    cooldown_time: std::time::Duration,
+    request_timeout: std::time::Duration,
 ) -> reqwest::Result<SteamProxyResponse> {
     let serialized_message = msg.encode_to_vec();
     let encoded_message = BASE64_STANDARD.encode(&serialized_message);
     http_client
         .post(&config.steam_proxy_url)
         .bearer_auth(&config.steam_proxy_api_key)
+        .timeout(request_timeout)
         .json(&json!({
             "message_kind": msg_type as i32,
             "job_cooldown_millis": cooldown_time.as_millis(),

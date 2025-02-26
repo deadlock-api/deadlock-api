@@ -13,6 +13,7 @@ use cached::proc_macro::cached;
 use itertools::Itertools;
 use prost::Message;
 use serde::Deserialize;
+use std::time::Duration;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetActiveMatches, CMsgClientToGcGetActiveMatchesResponse,
@@ -41,8 +42,9 @@ async fn fetch_active_matches_raw(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
         CMsgClientToGcGetActiveMatches::default(),
-        std::time::Duration::from_secs(60),
         &["LowRateLimitApis"],
+        Duration::from_secs(60),
+        Duration::from_secs(2),
     )
     .await
     .map_err(|e| APIError::InternalError {
@@ -86,7 +88,10 @@ Fetched from the watch tab in game.
     "#
 )]
 pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
-    fetch_active_matches_raw(&state.config, &state.http_client).await
+    tryhard::retry_fn(|| fetch_active_matches_raw(&state.config, &state.http_client))
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(10))
+        .await
 }
 
 #[utoipa::path(
@@ -109,7 +114,11 @@ pub async fn active_matches(
     Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let raw_data = fetch_active_matches_raw(&state.config, &state.http_client).await?;
+    let raw_data =
+        tryhard::retry_fn(|| fetch_active_matches_raw(&state.config, &state.http_client))
+            .retries(3)
+            .fixed_backoff(Duration::from_millis(10))
+            .await?;
     let mut active_matches = parse_active_matches_raw(&raw_data).await?;
 
     // Filter by account id if provided
