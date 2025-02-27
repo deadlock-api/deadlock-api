@@ -3,37 +3,49 @@ use crate::state::AppState;
 use axum::http::{HeaderMap, StatusCode};
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
+use std::time::Duration;
 use uuid::Uuid;
 
 const MAX_TTL_SECONDS: isize = 3600;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum RateLimitQuotaType {
+    IP,
+    Key,
+    Global,
+}
 
 #[derive(Debug, Clone)]
 pub struct RateLimitQuota {
     pub limit: u32,
     pub period: Duration,
-    pub is_global: bool,
+    rate_limit_quota_type: RateLimitQuotaType,
 }
 
-impl From<u32> for RateLimitQuota {
-    fn from(limit: u32) -> Self {
-        Self::from((limit, Duration::seconds(1)))
-    }
-}
-impl From<(u32, Duration)> for RateLimitQuota {
-    fn from((limit, period): (u32, Duration)) -> Self {
-        Self::from((limit, period, false))
-    }
-}
-impl From<(u32, Duration, bool)> for RateLimitQuota {
-    fn from((limit, period, is_global): (u32, Duration, bool)) -> Self {
+impl RateLimitQuota {
+    pub fn ip_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
             period,
-            is_global,
+            rate_limit_quota_type: RateLimitQuotaType::IP,
+        }
+    }
+    pub fn key_limit(limit: u32, period: Duration) -> Self {
+        Self {
+            limit,
+            period,
+            rate_limit_quota_type: RateLimitQuotaType::Key,
+        }
+    }
+    pub fn global_limit(limit: u32, period: Duration) -> Self {
+        Self {
+            limit,
+            period,
+            rate_limit_quota_type: RateLimitQuotaType::Global,
         }
     }
 }
@@ -57,23 +69,22 @@ impl RateLimitStatus {
     pub fn next_request_in(&self) -> Duration {
         // If the quota is not exceeded then there is no need to wait
         if !self.is_exceeded() {
-            return Duration::zero();
+            return Duration::from_millis(0);
         }
 
         // How long it takes until oldest request is outside the quota period?
-        self.oldest_request + self.quota.period - Utc::now()
+        (self.oldest_request + self.quota.period - Utc::now())
+            .to_std()
+            .unwrap_or_default()
     }
 
     pub fn response_headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.append("RateLimit-Limit", self.quota.limit.into());
-        headers.append("RateLimit-Period", self.quota.period.num_seconds().into());
+        headers.append("RateLimit-Period", self.quota.period.as_secs().into());
         headers.append("RateLimit-Remaining", self.remaining().into());
-        headers.append(
-            "RateLimit-Reset",
-            self.next_request_in().num_seconds().into(),
-        );
-        headers.append("Retry-After", self.next_request_in().num_seconds().into());
+        headers.append("RateLimit-Reset", self.next_request_in().as_secs().into());
+        headers.append("Retry-After", self.next_request_in().as_secs().into());
         headers
     }
 
@@ -129,7 +140,17 @@ pub async fn apply_limits(
         Some(api_key) => {
             let custom_quotas = get_custom_quotas(state, api_key, key).await;
             if custom_quotas.is_empty() {
-                quotas.to_vec()
+                let has_api_key_limits = quotas
+                    .iter()
+                    .any(|q| q.rate_limit_quota_type == RateLimitQuotaType::Key);
+                // Remove IP quotas if there are key quotas and api_key is present
+                quotas
+                    .iter()
+                    .filter(|q| {
+                        !has_api_key_limits || q.rate_limit_quota_type != RateLimitQuotaType::IP
+                    })
+                    .cloned()
+                    .collect()
             } else {
                 custom_quotas
             }
@@ -137,7 +158,7 @@ pub async fn apply_limits(
     };
     let mut all_statuses = Vec::new();
     for quota in quotas {
-        let prefixed_key = if quota.is_global {
+        let prefixed_key = if quota.rate_limit_quota_type == RateLimitQuotaType::Global {
             key
         } else {
             &format!("{prefix}:{key}")
@@ -166,17 +187,13 @@ async fn check_requests(
 ) -> RedisResult<(u32, DateTime<Utc>)> {
     let current_time = Utc::now().timestamp() as isize;
     let result: Vec<isize> = redis_conn
-        .zrangebyscore(
-            key,
-            current_time - period.num_seconds() as isize,
-            current_time,
-        )
+        .zrangebyscore(key, current_time - period.as_secs() as isize, current_time)
         .await?;
     let oldest_request = result
         .iter()
         .min()
         .and_then(|t| DateTime::from_timestamp(*t as i64, 0))
-        .unwrap_or_else(|| Utc::now() - Duration::seconds(MAX_TTL_SECONDS as i64));
+        .unwrap_or_else(|| Utc::now() - Duration::from_secs(MAX_TTL_SECONDS as u64));
     Ok((result.len() as u32, oldest_request))
 }
 
@@ -231,8 +248,8 @@ pub async fn get_custom_quotas(state: &AppState, api_key: Uuid, path: &str) -> V
         rows.iter()
             .map(|row| RateLimitQuota {
                 limit: row.rate_limit as u32,
-                period: Duration::microseconds(row.rate_period.microseconds),
-                is_global: false,
+                period: Duration::from_micros(row.rate_period.microseconds as u64),
+                rate_limit_quota_type: RateLimitQuotaType::Key,
             })
             .collect()
     })

@@ -92,7 +92,7 @@ impl IntoResponse for APIError {
                             "error": {
                                 "quota": {
                                     "limit": status.quota.limit,
-                                    "period": status.quota.period.num_seconds(),
+                                    "period": status.quota.period.as_secs(),
                                 },
                                 "requests": status.requests,
                                 "remaining": status.remaining(),

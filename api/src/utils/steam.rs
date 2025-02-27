@@ -4,6 +4,7 @@ use base64::prelude::BASE64_STANDARD;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::time::Duration;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,8 +19,8 @@ pub async fn call_steam_proxy(
     msg_type: EgcCitadelClientMessages,
     msg: impl Message,
     groups: &[&str],
-    cooldown_time: std::time::Duration,
-    request_timeout: std::time::Duration,
+    cooldown_time: Duration,
+    request_timeout: Duration,
 ) -> reqwest::Result<SteamProxyResponse> {
     let serialized_message = msg.encode_to_vec();
     let encoded_message = BASE64_STANDARD.encode(&serialized_message);

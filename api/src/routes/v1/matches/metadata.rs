@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils;
-use crate::utils::limiter::apply_limits;
+use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -121,7 +121,7 @@ async fn fetch_metadata_salts(
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         msg,
         &["GetMatchMetaData"],
-        Duration::from_secs(1800),
+        Duration::from_secs(30 * 60),
         Duration::from_secs(2),
     )
     .await;
@@ -280,7 +280,13 @@ pub async fn metadata_raw(
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(&headers, &state, "match_metadata", &[100.into()]).await?;
+    apply_limits(
+        &headers,
+        &state,
+        "match_metadata",
+        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
+    )
+    .await?;
     tryhard::retry_fn(|| {
         fetch_match_metadata_raw(
             &state.config,
@@ -292,7 +298,7 @@ pub async fn metadata_raw(
         )
     })
     .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
+    .fixed_backoff(std::time::Duration::from_millis(10))
     .await
 }
 
@@ -329,7 +335,7 @@ pub async fn metadata(
         )
     })
     .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
+    .fixed_backoff(std::time::Duration::from_millis(10))
     .await?;
     parse_match_metadata_raw(&raw_data).await.map(Json)
 }
