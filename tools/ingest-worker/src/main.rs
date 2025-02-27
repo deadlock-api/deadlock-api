@@ -186,7 +186,7 @@ async fn main() {
             continue;
         }
         println!("Inserting {} files", num_files);
-        insert_matches(client.clone(), match_infos).await.unwrap();
+        insert_matches(client.clone(), &match_infos).await.unwrap();
         let mut handles = vec![];
         for obj in object_keys.iter() {
             let bucket = bucket.clone();
@@ -236,6 +236,13 @@ async fn main() {
             handles.push(handle);
         }
         futures::future::join_all(handles).await;
+        send_events(
+            match_infos
+                .iter()
+                .filter_map(|m| m.match_id)
+                .collect::<Vec<_>>(),
+        )
+        .await;
         println!("Inserted {} files", num_files);
         println!("Elapsed: {:?}", start.elapsed());
         println!(
@@ -245,7 +252,7 @@ async fn main() {
     }
 }
 
-async fn insert_matches(client: Client, matches: Vec<MatchInfo>) -> clickhouse::error::Result<()> {
+async fn insert_matches(client: Client, matches: &[MatchInfo]) -> clickhouse::error::Result<()> {
     let mut match_info_insert = client.insert("match_info")?;
     let mut match_player_insert = client.insert("match_player")?;
     for match_info in matches.iter() {
@@ -272,28 +279,29 @@ async fn insert_matches(client: Client, matches: Vec<MatchInfo>) -> clickhouse::
     }
     match_info_insert.end().await?;
     match_player_insert.end().await?;
-    for match_info in matches {
-        if let Some(match_id) = match_info.match_id {
-            let http_client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(5))
-                .build();
-            if let Ok(http_client) = http_client {
-                let res = http_client
-                    .post(format!(
-                        "https://data.deadlock-api.com/v1/matches/{}/ingest",
-                        match_id
-                    ))
-                    .header(
-                        "X-Api-Key",
-                        std::env::var("INTERNAL_DEADLOCK_API_KEY").unwrap(),
-                    )
-                    .send()
-                    .await;
-                if let Err(e) = res {
-                    println!("Error sending match ingest event: {:?}", e);
-                }
+    Ok(())
+}
+
+async fn send_events(match_ids: Vec<u64>) {
+    for match_id in match_ids {
+        let http_client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(5))
+            .build();
+        if let Ok(http_client) = http_client {
+            let res = http_client
+                .post(format!(
+                    "https://data.deadlock-api.com/v1/matches/{}/ingest",
+                    match_id
+                ))
+                .header(
+                    "X-Api-Key",
+                    std::env::var("INTERNAL_DEADLOCK_API_KEY").unwrap(),
+                )
+                .send()
+                .await;
+            if let Err(e) = res {
+                println!("Error sending match ingest event: {:?}", e);
             }
         }
     }
-    Ok(())
 }
