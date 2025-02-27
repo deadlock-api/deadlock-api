@@ -19,7 +19,7 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
-use tracing::warn;
+use tracing::{debug, warn};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse, CMsgMatchMetaData,
@@ -104,6 +104,7 @@ async fn fetch_metadata_salts(
         .await;
     if let Ok(salts) = salts {
         if salts.has_metadata_salt() {
+            debug!("Match metadata salts found in Clickhouse");
             return Ok(salts.into());
         }
     }
@@ -114,7 +115,7 @@ async fn fetch_metadata_salts(
         metadata_salt: None,
         target_account_id: None,
     };
-    let salts = utils::steam::call_steam_proxy(
+    let response = utils::steam::call_steam_proxy(
         config,
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
@@ -123,17 +124,40 @@ async fn fetch_metadata_salts(
         Duration::from_secs(1800),
         Duration::from_secs(2),
     )
-    .await
-    .ok()
-    .and_then(|r| BASE64_STANDARD.decode(&r.data).ok())
-    .and_then(|r| CMsgClientToGcGetMatchMetaDataResponse::decode(r.as_slice()).ok());
-    if let Some(salts) = salts {
-        if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
-            // Insert into Clickhouse
-            if let Err(e) = insert_salts_to_clickhouse(ch_client, match_id, &salts).await {
-                warn!("Failed to insert match metadata salts into Clickhouse: {e}");
+    .await;
+    match response {
+        Err(e) => {
+            warn!("Failed to fetch match metadata salts from Steam: {e}");
+        }
+        Ok(r) => {
+            match BASE64_STANDARD.decode(&r.data) {
+                Err(e) => {
+                    warn!("Failed to decode match metadata salts from Steam: {e}");
+                }
+                Ok(data) => {
+                    match CMsgClientToGcGetMatchMetaDataResponse::decode(data.as_slice()) {
+                        Err(e) => {
+                            warn!("Failed to parse match metadata salts from Steam: {e}");
+                        }
+                        Ok(salts) => {
+                            if salts.replay_group_id.is_some()
+                                && salts.metadata_salt.unwrap_or_default() != 0
+                            {
+                                // Insert into Clickhouse
+                                if let Err(e) =
+                                    insert_salts_to_clickhouse(ch_client, match_id, &salts).await
+                                {
+                                    warn!(
+                                        "Failed to insert match metadata salts into Clickhouse: {e}"
+                                    );
+                                }
+                                debug!("Match metadata salts fetched from Steam");
+                                return Ok(salts);
+                            }
+                        }
+                    }
+                }
             }
-            return Ok(salts);
         }
     }
     Err(APIError::StatusMsg {
@@ -164,9 +188,11 @@ async fn fetch_match_metadata_raw(
     )
     .await;
     if let Ok(data) = results.0 {
+        debug!("Match metadata found in cache");
         return Ok(data);
     }
     if let Ok(data) = results.1 {
+        debug!("Match metadata found in cache, hltv");
         return Ok(data);
     }
 
@@ -177,9 +203,11 @@ async fn fetch_match_metadata_raw(
     )
     .await;
     if let Ok(data) = results.0 {
+        debug!("Match metadata found on s3");
         return Ok(data);
     }
     if let Ok(data) = results.1 {
+        debug!("Match metadata found on s3, hltv");
         return Ok(data);
     }
 
