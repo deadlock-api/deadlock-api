@@ -1,10 +1,12 @@
 use crate::config::Config;
 use clap::Parser;
 use derive_more::From;
+use object_store::ClientOptions;
 use object_store::aws::AmazonS3Builder;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use std::fmt::Display;
+use std::time::Duration;
 use tracing::debug;
 
 #[derive(Debug, From)]
@@ -53,6 +55,11 @@ impl AppState {
             .with_secret_access_key(&config.s3_secret_access_key)
             .with_endpoint(&config.s3_endpoint)
             .with_allow_http(true)
+            .with_client_options(
+                ClientOptions::default()
+                    .with_allow_http2()
+                    .with_timeout(Duration::from_secs(5)),
+            )
             .build()?;
 
         // Create an S3 cache client
@@ -64,6 +71,11 @@ impl AppState {
             .with_secret_access_key(&config.s3_cache_secret_access_key)
             .with_endpoint(&config.s3_cache_endpoint)
             .with_allow_http(true)
+            .with_client_options(
+                ClientOptions::default()
+                    .with_allow_http2()
+                    .with_timeout(Duration::from_secs(5)),
+            )
             .build()?;
 
         // Create a Redis connection pool
