@@ -8,7 +8,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Builds")))]
+#[openapi(tags((name = "Builds", description = "Builds related endpoints")))]
 pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {
