@@ -1,11 +1,11 @@
 use crate::config::Config;
 use clap::Parser;
 use derive_more::From;
-use log::debug;
 use object_store::aws::AmazonS3Builder;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use std::fmt::Display;
+use tracing::debug;
 
 #[derive(Debug, From)]
 pub enum LoadAppStateError {
