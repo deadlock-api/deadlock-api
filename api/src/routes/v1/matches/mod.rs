@@ -1,4 +1,5 @@
 mod active;
+mod metadata;
 mod types;
 
 use crate::state::AppState;
@@ -14,4 +15,6 @@ pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(active::active_matches))
         .routes(routes!(active::active_matches_raw))
+        .routes(routes!(metadata::metadata))
+        .routes(routes!(metadata::metadata_raw))
 }
