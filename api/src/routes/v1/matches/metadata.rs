@@ -29,7 +29,7 @@ async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Resul
 
 #[cached(
     ty = "TimedCache<String, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(5 * 60) }",
     result = true,
     convert = r#"{ format!("{match_id}") }"#,
     sync_writes = true
