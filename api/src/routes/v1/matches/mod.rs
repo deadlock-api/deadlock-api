@@ -1,5 +1,6 @@
 mod active;
 mod metadata;
+mod salts;
 mod types;
 
 use crate::state::AppState;
@@ -17,4 +18,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(active::active_matches_raw))
         .routes(routes!(metadata::metadata))
         .routes(routes!(metadata::metadata_raw))
+        .routes(routes!(salts::salts))
 }

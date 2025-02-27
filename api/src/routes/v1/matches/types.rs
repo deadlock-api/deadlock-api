@@ -1,8 +1,9 @@
+use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use valveprotos::deadlock::CMsgDevMatchInfo;
+use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
+use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
 #[repr(i32)]
@@ -172,6 +173,41 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
             region_mode: value.region_mode,
             region_mode_parsed: value.region_mode.map(|m| m.into()),
             compat_version: value.compat_version,
+        }
+    }
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct MatchIdQuery {
+    pub match_id: u64,
+}
+
+#[derive(Row, Serialize, Deserialize)]
+pub struct ClickhouseSalts {
+    pub match_id: u64,
+    pub metadata_salt: Option<u32>,
+    pub replay_salt: Option<u32>,
+    pub cluster_id: Option<u32>,
+}
+
+impl ClickhouseSalts {
+    pub fn has_metadata_salt(&self) -> bool {
+        self.cluster_id.is_some() && self.metadata_salt.unwrap_or_default() != 0
+    }
+    pub fn has_replay_salt(&self) -> bool {
+        self.cluster_id.is_some() && self.replay_salt.unwrap_or_default() != 0
+    }
+}
+
+impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {
+    fn from(value: ClickhouseSalts) -> Self {
+        Self {
+            result: None,
+            metadata_salt: value.metadata_salt,
+            replay_salt: value.replay_salt,
+            replay_group_id: value.cluster_id,
+            replay_valid_through: None,
+            replay_processing_through: None,
         }
     }
 }
