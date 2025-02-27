@@ -14,7 +14,6 @@ deadlock-api.com is not endorsed by Valve and does not reflect the views or opin
         contact(name = "Deadlock API  - Discord", url = "https://discord.gg/XMF9Xrgfqu"),
     ),
     modifiers(&SecurityAddon),
-    servers((url="https://api.deadlock-api.com", description="Main server")),
 )]
 pub struct ApiDoc;
 

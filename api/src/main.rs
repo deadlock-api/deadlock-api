@@ -47,7 +47,7 @@ async fn main() -> ApplicationResult<()> {
     let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
     prometheus_layer.enable_response_body_size();
 
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .route("/", get(|| async { Redirect::to("/docs") }))
         .merge(routes::router())
         .route("/metrics", get(|| async move { metric_handle.render() }))
@@ -64,6 +64,12 @@ async fn main() -> ApplicationResult<()> {
         )
         .layer(CompressionLayer::<DefaultPredicate>::default())
         .split_for_parts();
+
+    let server_url = match cfg!(debug_assertions) {
+        true => "http://localhost:3000",
+        false => "https://api.deadlock-api.com",
+    };
+    api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
 
     let router = router
         .with_state(state)
