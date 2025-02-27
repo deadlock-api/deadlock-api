@@ -48,13 +48,13 @@ async fn fetch_active_matches_raw(
     )
     .await
     .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch active matches: {}", e),
+        message: format!("Failed to fetch active matches: {e}"),
     })
     .and_then(|r| {
         BASE64_STANDARD
             .decode(&r.data)
             .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode active matches: {}", e),
+                message: format!("Failed to decode active matches: {e}"),
             })
     })
 }
@@ -63,12 +63,12 @@ async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>
     let decompressed_data = snap::raw::Decoder::new()
         .decompress_vec(&raw_data[7..])
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to decompress active matches: {}", e),
+            message: format!("Failed to decompress active matches: {e}"),
         })?;
     CMsgClientToGcGetActiveMatchesResponse::decode(decompressed_data.as_ref())
         .map(|msg| msg.active_matches.into_iter().map_into().collect())
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse active matches: {}", e),
+            message: format!("Failed to parse active matches: {e}"),
         })
 }
 

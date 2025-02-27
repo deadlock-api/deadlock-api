@@ -21,9 +21,9 @@ pub enum ApplicationError {
 impl Display for ApplicationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Server(e) => write!(f, "Server error: {}", e),
-            Self::IO(e) => write!(f, "IO error: {}", e),
-            Self::LoadAppState(e) => write!(f, "Load app state error: {}", e),
+            Self::Server(e) => write!(f, "Server error: {e}"),
+            Self::IO(e) => write!(f, "IO error: {e}"),
+            Self::LoadAppState(e) => write!(f, "Load app state error: {e}"),
         }
     }
 }
@@ -108,7 +108,7 @@ impl IntoResponse for APIError {
                 .body(
                     serde_json::to_string(&json!({
                         "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-                        "error": format!("Internal server error: {}", message),
+                        "error": format!("Internal server error: {message}"),
                     }))
                     .unwrap_or("Internal server error".to_string())
                     .into(),

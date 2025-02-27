@@ -80,6 +80,6 @@ async fn main() -> ApplicationResult<()> {
 
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
     let listener = tokio::net::TcpListener::bind(&address).await?;
-    info!("Listening on http://{}", address);
+    info!("Listening on http://{address}");
     Ok(axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?)
 }

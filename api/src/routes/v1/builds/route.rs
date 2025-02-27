@@ -34,7 +34,7 @@ pub async fn search_builds(
         .fetch_all(&state.postgres_client)
         .await
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch builds: {}", e),
+            message: format!("Failed to fetch builds: {e}"),
         })?;
     let builds = builds
         .iter()

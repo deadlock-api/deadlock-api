@@ -61,13 +61,13 @@ async fn fetch_leaderboard_raw(
     )
     .await
     .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch active matches: {}", e),
+        message: format!("Failed to fetch active matches: {e}"),
     })
     .and_then(|r| {
         BASE64_STANDARD
             .decode(&r.data)
             .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode active matches: {}", e),
+                message: format!("Failed to decode active matches: {e}"),
             })
     })
 }
@@ -76,7 +76,7 @@ async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
     CMsgClientToGcGetLeaderboardResponse::decode(raw_data)
         .map(|r| r.into())
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse active matches: {}", e),
+            message: format!("Failed to parse active matches: {e}"),
         })
 }
 

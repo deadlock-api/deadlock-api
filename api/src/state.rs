@@ -17,10 +17,10 @@ pub enum LoadAppStateError {
 impl Display for LoadAppStateError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Redis(e) => write!(f, "Redis error: {}", e),
-            Self::ObjectStore(e) => write!(f, "Object store error: {}", e),
-            Self::Clickhouse(e) => write!(f, "Clickhouse error: {}", e),
-            Self::PostgreSQL(e) => write!(f, "PostgreSQL error: {}", e),
+            Self::Redis(e) => write!(f, "Redis error: {e}"),
+            Self::ObjectStore(e) => write!(f, "Object store error: {e}"),
+            Self::Clickhouse(e) => write!(f, "Clickhouse error: {e}"),
+            Self::PostgreSQL(e) => write!(f, "PostgreSQL error: {e}"),
         }
     }
 }

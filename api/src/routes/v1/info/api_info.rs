@@ -98,7 +98,7 @@ pub async fn info(State(state): State<AppState>) -> APIResult<Json<APIInfo>> {
 
     let table_sizes = table_sizes
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch table sizes: {}", e),
+            message: format!("Failed to fetch table sizes: {e}"),
         })?
         .into_iter()
         .map(|row| (row.table.clone(), row.into()))
@@ -106,7 +106,7 @@ pub async fn info(State(state): State<AppState>) -> APIResult<Json<APIInfo>> {
         .collect();
 
     let fetched_matches_per_day = fetched_matches_per_day.map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch fetched matches: {}", e),
+        message: format!("Failed to fetch fetched matches: {e}"),
     })?;
 
     Ok(Json(APIInfo {

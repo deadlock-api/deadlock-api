@@ -120,7 +120,7 @@ pub async fn apply_limits(
     increment_key(state.redis_client.clone(), &prefix, key)
         .await
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to increment key: {}", e),
+            message: format!("Failed to increment key: {e}"),
         })?;
 
     // Check for custom quotas
@@ -140,7 +140,7 @@ pub async fn apply_limits(
         let prefixed_key = if quota.is_global {
             key
         } else {
-            &format!("{}:{}", prefix, key)
+            &format!("{prefix}:{key}")
         };
         let Ok((requests, oldest_request)) =
             check_requests(&mut state.redis_client.clone(), &prefixed_key, quota.period).await
@@ -187,7 +187,7 @@ async fn increment_key(
 ) -> RedisResult<()> {
     //! Increments the rate limit key in Redis.
     let current_time = Utc::now().timestamp() as isize;
-    let prefixed_key = format!("{}:{}", prefix, key);
+    let prefixed_key = format!("{prefix}:{key}");
     redis::pipe()
         .zrembyscore(&prefixed_key, 0, current_time - MAX_TTL_SECONDS) // Remove old entries
         .zadd(&prefixed_key, current_time, current_time) // Add current timestamp
@@ -202,7 +202,7 @@ async fn increment_key(
 #[cached(
     ty = "TimedCache<String, bool>",
     create = "{ TimedCache::with_lifespan(10 * 60) }",
-    convert = r#"{ format!("{}", api_key) }"#
+    convert = r#"{ format!("{api_key}") }"#
 )]
 pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
     sqlx::query!("SELECT COUNT(*) FROM api_keys WHERE key = $1", api_key)
@@ -216,7 +216,7 @@ pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
 #[cached(
     ty = "TimedCache<String, Vec<RateLimitQuota>>",
     create = "{ TimedCache::with_lifespan(10 * 60) }",
-    convert = r#"{ format!("{}-{}", api_key, path) }"#
+    convert = r#"{ format!("{api_key}-{path}") }"#
 )]
 pub async fn get_custom_quotas(state: &AppState, api_key: Uuid, path: &str) -> Vec<RateLimitQuota> {
     sqlx::query!(
