@@ -237,7 +237,15 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     ),
     tags = ["Matches"],
     summary = "Match Metadata as Protobuf",
-    description = "Returns match metadata, serialized as protobuf message and compressed with bzip2."
+    description = r#"
+This endpoints returns the raw .meta.bz2 file for the given `match_id`.
+
+You have to decompress it and decode the protobuf message.
+
+Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
+
+Relevant Protobuf Messages: CMsgMatchMetaData, CMsgMatchMetaDataContents
+    "#
 )]
 pub async fn metadata_raw(
     Path(MatchMetadataQuery { match_id }): Path<MatchMetadataQuery>,
@@ -270,7 +278,13 @@ pub async fn metadata_raw(
     ),
     tags = ["Matches"],
     summary = "Matches Metadata",
-    description = "Returns match metadata."
+    description = r#"
+This endpoint returns the match metadata for the given `match_id` parsed into JSON.
+
+Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
+
+Relevant Protobuf Messages: CMsgMatchMetaData, CMsgMatchMetaDataContents
+    "#
 )]
 pub async fn metadata(
     Path(MatchMetadataQuery { match_id }): Path<MatchMetadataQuery>,
