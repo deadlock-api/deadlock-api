@@ -33,6 +33,7 @@ mod utils;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use error::*;
+use middleware::fallback;
 
 const DEFAULT_CACHE_TIME: u64 = 60;
 
@@ -63,6 +64,7 @@ async fn main() -> ApplicationResult<()> {
                 .allow_methods(AllowMethods::any()),
         )
         .layer(CompressionLayer::<DefaultPredicate>::default())
+        .fallback(fallback::fallback)
         .split_for_parts();
 
     let server_url = match cfg!(debug_assertions) {
