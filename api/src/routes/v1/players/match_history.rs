@@ -36,7 +36,7 @@ pub async fn insert_match_history_to_clickhouse(
 
 #[cached(
     ty = "TimedCache<String, PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }", // High cache lifespan is ok, as the match history gets enhanced by Steam API
+    create = "{ TimedCache::with_lifespan(60 * 60) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
     result = true,
     convert = r#"{ format!("{account_id}") }"#,
     sync_writes = true
@@ -52,7 +52,7 @@ pub async fn fetch_match_history_from_clickhouse(
         .fetch_all()
         .await
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch match history from ClickHouse: {e}"),
+            message: format!("Failed to fetch player match history from ClickHouse: {e}"),
         })
 }
 
@@ -84,13 +84,13 @@ async fn fetch_match_history_raw(
     )
     .await
     .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch match history: {e}"),
+        message: format!("Failed to fetch player match history: {e}"),
     })
     .and_then(|r| {
         BASE64_STANDARD
             .decode(&r.data)
             .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode match history: {e}"),
+                message: format!("Failed to decode player match history: {e}"),
             })
     })
 }
@@ -107,7 +107,7 @@ async fn parse_match_history_raw(
                     |e| match PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
                         Some(entry) => Some(entry),
                         None => {
-                            warn!("Failed to parse match history entry: {:?}", e);
+                            warn!("Failed to parse player match history entry: {:?}", e);
                             None
                         }
                     },
@@ -132,7 +132,7 @@ async fn fetch_steam_match_history(
     parse_match_history_raw(account_id, &raw_data)
         .await
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse match history: {e:?}"),
+            message: format!("Failed to parse player match history: {e:?}"),
         })
 }
 
@@ -143,7 +143,7 @@ async fn fetch_steam_match_history(
     responses(
         (status = OK, body = [PlayerMatchHistoryEntry]),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
-        (status = INTERNAL_SERVER_ERROR, description = "Fetching match history failed")
+        (status = INTERNAL_SERVER_ERROR, description = "Fetching player match history failed")
     ),
     tags = ["Players"],
     summary = "Match History",
@@ -173,7 +173,7 @@ pub async fn match_history(
     .await?;
     let ch_client = &state.clickhouse_client;
 
-    // Fetch match history from Steam and ClickHouse
+    // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
         fetch_steam_match_history(account_id, &state),
         fetch_match_history_from_clickhouse(ch_client, account_id),
@@ -191,10 +191,10 @@ pub async fn match_history(
         .collect_vec();
     let insert_to_ch = insert_match_history_to_clickhouse(ch_client, &ch_missing_entries).await;
     if let Err(e) = insert_to_ch {
-        warn!("Failed to insert match history to ClickHouse: {e:?}")
+        warn!("Failed to insert player match history to ClickHouse: {e:?}")
     };
 
-    // Combine and return match history
+    // Combine and return player match history
     let combined_match_history = chain!(ch_match_history, steam_match_history)
         .sorted_by_key(|e| e.match_id)
         .rev()
