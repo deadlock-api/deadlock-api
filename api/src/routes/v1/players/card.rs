@@ -41,12 +41,14 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
 pub struct PlayerCardSlotHero {
     pub hero_id: Option<u32>,
     pub hero_kills: Option<u32>,
+    pub hero_wins: Option<u32>,
 }
 
 impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
     fn from(value: c_msg_citadel_profile_card::slot::Hero) -> Self {
         Self {
             hero_id: value.hero_id,
+            hero_wins: value.hero_wins,
             hero_kills: value.hero_kills,
         }
     }
