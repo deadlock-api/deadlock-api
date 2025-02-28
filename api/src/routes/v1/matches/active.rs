@@ -42,7 +42,7 @@ async fn fetch_active_matches_raw(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
         CMsgClientToGcGetActiveMatches::default(),
-        &[],
+        &["LowRateLimitApis"],
         Duration::from_secs(60),
         Duration::from_secs(2),
     )
