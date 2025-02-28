@@ -290,7 +290,7 @@ async fn send_events(match_ids: Vec<u64>) {
         if let Ok(http_client) = http_client {
             let res = http_client
                 .post(format!(
-                    "https://data.deadlock-api.com/v1/matches/{}/ingest",
+                    "https://api.deadlock-api.com/v1/matches/{}/ingest",
                     match_id
                 ))
                 .header(
