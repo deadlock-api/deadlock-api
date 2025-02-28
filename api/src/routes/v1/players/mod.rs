@@ -1,3 +1,4 @@
+mod card;
 mod match_history;
 mod types;
 
@@ -11,5 +12,8 @@ use utoipa_axum::routes;
 pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(match_history::match_history))
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(match_history::match_history))
+        .routes(routes!(card::card_raw))
+        .routes(routes!(card::card))
 }
