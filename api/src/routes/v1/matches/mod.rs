@@ -1,4 +1,5 @@
 mod active;
+mod ingest;
 mod metadata;
 mod salts;
 mod types;
@@ -19,4 +20,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(metadata::metadata))
         .routes(routes!(metadata::metadata_raw))
         .routes(routes!(salts::salts))
+        .routes(routes!(ingest::ingest))
 }
