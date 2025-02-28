@@ -142,14 +142,15 @@ async fn fetch_steam_match_history(
     params(AccountIdQuery),
     responses(
         (status = OK, body = [PlayerMatchHistoryEntry]),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match history failed")
     ),
     tags = ["Players"],
     summary = "Match History",
     description = r#"
-This endpoint returns the match history for the given `account_id`.
+This endpoint returns the player match history for the given `account_id`.
 
-The match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.
+The player match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 

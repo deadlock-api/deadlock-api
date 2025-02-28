@@ -122,6 +122,7 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     params(MatchIdQuery),
     responses(
         (status = OK, body = [u8]),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match metadata failed")
     ),
     tags = ["Matches"],
