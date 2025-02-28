@@ -23,6 +23,8 @@ pub struct LeaderboardEntry {
     #[serde(default)]
     pub top_hero_ids: Vec<u32>,
     pub badge_level: Option<u32>,
+    pub ranked_rank: Option<u32>,
+    pub ranked_subrank: Option<u32>,
 }
 
 impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for LeaderboardEntry {
@@ -32,6 +34,8 @@ impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for Lea
             rank: value.rank,
             top_hero_ids: value.top_hero_ids,
             badge_level: value.badge_level,
+            ranked_rank: value.badge_level.map(|b| b / 10),
+            ranked_subrank: value.badge_level.map(|b| b % 10),
         }
     }
 }
