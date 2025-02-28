@@ -37,4 +37,4 @@ valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs", version = "0.
 prost = "0.13.5"
 base64 = "0.22.1"
 tryhard = "0.5.1"
-async-compression = { version = "0.4.19", features = ["bzip2", "tokio"] }
+async-compression = { version = "0.4.20", features = ["bzip2", "tokio"] }
