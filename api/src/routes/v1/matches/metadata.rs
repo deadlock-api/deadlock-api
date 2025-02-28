@@ -133,7 +133,9 @@ You have to decompress it and decode the protobuf message.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
-Relevant Protobuf Messages: CMsgMatchMetaData, CMsgMatchMetaDataContents
+Relevant Protobuf Messages:
+- CMsgMatchMetaData
+- CMsgMatchMetaDataContents
     "#
 )]
 pub async fn metadata_raw(
@@ -159,7 +161,7 @@ pub async fn metadata_raw(
         )
     })
     .retries(3)
-    .fixed_backoff(std::time::Duration::from_millis(10))
+    .fixed_backoff(Duration::from_millis(10))
     .await
 }
 
@@ -178,7 +180,9 @@ This endpoint returns the match metadata for the given `match_id` parsed into JS
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
-Relevant Protobuf Messages: CMsgMatchMetaData, CMsgMatchMetaDataContents
+Relevant Protobuf Messages:
+- CMsgMatchMetaData
+- CMsgMatchMetaDataContents
     "#
 )]
 pub async fn metadata(
@@ -196,7 +200,7 @@ pub async fn metadata(
         )
     })
     .retries(3)
-    .fixed_backoff(std::time::Duration::from_millis(10))
+    .fixed_backoff(Duration::from_millis(10))
     .await?;
     parse_match_metadata_raw(&raw_data).await.map(Json)
 }
