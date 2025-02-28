@@ -31,7 +31,7 @@ impl MatchCreatedWebhookPayload {
 }
 
 #[utoipa::path(
-    get,
+    post,
     path = "/{match_id}/ingest",
     responses(
         (status = OK),
