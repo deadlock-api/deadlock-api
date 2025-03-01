@@ -123,6 +123,7 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     responses(
         (status = OK, body = [u8]),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = NOT_FOUND, description = "Match metadata not found"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match metadata failed")
     ),
     tags = ["Matches"],
@@ -172,6 +173,8 @@ pub async fn metadata_raw(
     params(MatchIdQuery),
     responses(
         (status = OK, description = "Match metadata, see protobuf type: CMsgMatchMetaDataContents"),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = NOT_FOUND, description = "Match metadata not found"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing match metadata failed")
     ),
     tags = ["Matches"],
@@ -188,8 +191,16 @@ Relevant Protobuf Messages:
 )]
 pub async fn metadata(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
+    headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    apply_limits(
+        &headers,
+        &state,
+        "match_metadata",
+        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
+    )
+    .await?;
     let raw_data = tryhard::retry_fn(|| {
         fetch_match_metadata_raw(
             &state.config,
