@@ -1,6 +1,7 @@
 mod active;
 mod ingest;
 mod metadata;
+mod recently_fetched;
 mod salts;
 mod types;
 
@@ -21,4 +22,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(metadata::metadata_raw))
         .routes(routes!(salts::salts))
         .routes(routes!(ingest::ingest))
+        .routes(routes!(recently_fetched::recently_fetched))
 }
