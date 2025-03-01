@@ -15,6 +15,8 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 
+// TODO: Improve Error Handling
+
 #[derive(Debug, Clone)]
 pub enum VariableResolveError {
     FailedToFetchData(&'static str),
