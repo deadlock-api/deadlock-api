@@ -168,7 +168,7 @@ impl Variable {
                     None,
                 )
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -192,7 +192,7 @@ impl Variable {
                     None,
                 )
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -246,7 +246,7 @@ impl Variable {
                     Some(hero_id),
                 )
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardPlace => {
@@ -258,7 +258,7 @@ impl Variable {
                     None,
                 )
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardRankBadgeLevel => Self::get_leaderboard_entry(
@@ -269,12 +269,10 @@ impl Variable {
                 None,
             )
             .await
-            .map_err(|_| VariableResolveError::FailedToFetchSteamName)
+            .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)
             .map(|e| e.badge_level.unwrap_or_default().to_string()),
             Self::SteamAccountName => {
-                Self::get_steam_account_name(&state.config, &state.http_client, steam_id)
-                    .await
-                    .map_err(|_| VariableResolveError::FailedToFetchSteamName)
+                Self::get_steam_account_name(&state.config, &state.http_client, steam_id).await
             }
             Self::HighestDeathCount => {
                 let matches =
@@ -682,7 +680,7 @@ impl Variable {
         .await;
         let leaderboard =
             leaderboard.map_err(|_| VariableResolveError::FailedToFetchData("leaderboard"))?;
-        let steam_name = steam_name.map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+        let steam_name = steam_name?;
         leaderboard
             .entries
             .into_iter()
