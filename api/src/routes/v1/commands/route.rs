@@ -105,6 +105,9 @@ pub async fn command_resolve(
     State(state): State<AppState>,
     Query(query): Query<CommandResolveQuery>,
 ) -> String {
+    if query.account_id == 0 {
+        return "Invalid account ID".to_string();
+    }
     let mut extra_args = HashMap::new();
     if let Some(hero_name) = query.hero_name {
         extra_args.insert("hero_name".to_string(), hero_name);
@@ -159,7 +162,7 @@ pub async fn variables_resolve(
     State(state): State<AppState>,
     Query(query): Query<VariablesResolveQuery>,
 ) -> Json<HashMap<String, String>> {
-    if query.variables.is_empty() {
+    if query.account_id == 0 || query.variables.is_empty() {
         return Json(HashMap::new());
     }
     let mut extra_args = HashMap::new();
