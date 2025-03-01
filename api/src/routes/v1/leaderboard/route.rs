@@ -80,6 +80,20 @@ async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
         })
 }
 
+pub async fn fetch_parse_leaderboard(
+    config: &Config,
+    http_client: &reqwest::Client,
+    region: LeaderboardRegion,
+    hero_id: Option<u32>,
+) -> APIResult<Leaderboard> {
+    let raw_data =
+        tryhard::retry_fn(|| fetch_leaderboard_raw(config, http_client, region, hero_id))
+            .retries(3)
+            .fixed_backoff(Duration::from_millis(10))
+            .await?;
+    parse_leaderboard_raw(&raw_data).await
+}
+
 #[utoipa::path(
     get,
     path = "/{region}/raw",
@@ -142,13 +156,9 @@ pub async fn leaderboard(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let raw_data = tryhard::retry_fn(|| {
-        fetch_leaderboard_raw(&state.config, &state.http_client, region, None)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
-    parse_leaderboard_raw(&raw_data).await.map(Json)
+    fetch_parse_leaderboard(&state.config, &state.http_client, region, None)
+        .await
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -167,11 +177,7 @@ pub async fn leaderboard_hero(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let raw_data = tryhard::retry_fn(|| {
-        fetch_leaderboard_raw(&state.config, &state.http_client, region, Some(hero_id))
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
-    parse_leaderboard_raw(&raw_data).await.map(Json)
+    fetch_parse_leaderboard(&state.config, &state.http_client, region, Some(hero_id))
+        .await
+        .map(Json)
 }

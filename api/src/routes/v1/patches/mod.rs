@@ -1,5 +1,5 @@
 mod big_patch_days;
-mod feed;
+pub mod feed;
 
 use crate::state::AppState;
 use utoipa::OpenApi;

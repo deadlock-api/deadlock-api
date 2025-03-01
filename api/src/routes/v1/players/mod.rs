@@ -1,6 +1,6 @@
 mod card;
-mod match_history;
-mod types;
+pub mod match_history;
+pub mod types;
 
 use crate::state::AppState;
 use utoipa::OpenApi;

@@ -13,48 +13,48 @@ use utoipa::ToSchema;
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
 
 #[derive(Debug, Deserialize)]
-struct Rss {
-    channel: Channel,
+pub struct Rss {
+    pub channel: Channel,
 }
 
 #[derive(Debug, Deserialize)]
-struct Channel {
+pub struct Channel {
     #[serde(rename = "item")]
-    patch_notes: Vec<Patch>,
+    pub patch_notes: Vec<Patch>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
-struct Patch {
-    title: String,
+pub struct Patch {
+    pub title: String,
     #[serde(deserialize_with = "parse_rfc2822_datetime")]
-    pub_date: DateTime<FixedOffset>,
-    link: String,
-    guid: PatchGuid,
-    author: String,
-    category: PatchCategory,
+    pub pub_date: DateTime<FixedOffset>,
+    pub link: String,
+    pub guid: PatchGuid,
+    pub author: String,
+    pub category: PatchCategory,
     #[serde(rename(deserialize = "creator"))]
-    dc_creator: String,
+    pub dc_creator: String,
     #[serde(rename(deserialize = "encoded"))]
-    content_encoded: String,
+    pub content_encoded: String,
     #[serde(rename(deserialize = "comments"))]
-    slash_comments: String,
+    pub slash_comments: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
-struct PatchGuid {
-    is_perma_link: bool,
+pub struct PatchGuid {
+    pub is_perma_link: bool,
     #[serde(rename(deserialize = "$value"))]
-    text: String,
+    pub text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
-struct PatchCategory {
-    domain: String,
+pub struct PatchCategory {
+    pub domain: String,
     #[serde(rename(deserialize = "$value"))]
-    text: String,
+    pub text: String,
 }
 
 #[cached(
@@ -64,7 +64,7 @@ struct PatchCategory {
     convert = r#"{ format!("") }"#,
     sync_writes = true
 )]
-async fn fetch_patch_notes(http_client: reqwest::Client) -> APIResult<Vec<Patch>> {
+pub async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
     let response = http_client
         .get(RSS_ENDPOINT)
         .send()
@@ -101,7 +101,7 @@ RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
     "#
 )]
 pub async fn feed(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
-    fetch_patch_notes(state.http_client).await.map(Json)
+    fetch_patch_notes(&state.http_client).await.map(Json)
 }
 
 #[cfg(test)]
@@ -110,7 +110,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_patches() {
-        let patches = fetch_patch_notes(reqwest::Client::new())
+        let patches = fetch_patch_notes(&reqwest::Client::new())
             .await
             .expect("Failed to fetch patch notes");
         println!("{:#?}", patches);

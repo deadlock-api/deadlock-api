@@ -1,5 +1,5 @@
-mod route;
-mod types;
+pub mod route;
+pub mod types;
 
 use crate::state::AppState;
 use utoipa::OpenApi;

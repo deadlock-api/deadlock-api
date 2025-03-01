@@ -13,6 +13,9 @@ pub struct Config {
     )]
     pub emergency_mode: bool,
 
+    #[clap(long, env, help = "Steam API Key")]
+    pub steam_api_key: String,
+
     #[clap(long, env, help = "Deadlock API Internal API Key")]
     pub internal_api_key: String,
 
