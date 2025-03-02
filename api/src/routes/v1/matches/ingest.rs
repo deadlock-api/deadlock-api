@@ -5,13 +5,9 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use serde::Serialize;
 use serde_json::json;
-use sqlx::{Pool, Postgres};
-use std::time::Duration;
-use tracing::warn;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MatchCreatedWebhookPayload {
@@ -34,23 +30,6 @@ impl MatchCreatedWebhookPayload {
     }
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<String>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("") }"#,
-    sync_writes = true
-)]
-async fn get_webhook_urls(postgres_client: &Pool<Postgres>) -> Result<Vec<String>, APIError> {
-    sqlx::query!("SELECT webhook_url FROM webhooks")
-        .fetch_all(postgres_client)
-        .await
-        .map(|rows| rows.into_iter().map(|row| row.webhook_url).collect())
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch webhook URLs: {e}"),
-        })
-}
-
 #[utoipa::path(
     post,
     path = "/{match_id}/ingest",
@@ -61,7 +40,7 @@ async fn get_webhook_urls(postgres_client: &Pool<Postgres>) -> Result<Vec<String
     ),
     tags = ["Internal"],
     summary = "Match Ingest Event",
-    description = r"This endpoint is used internally to send a match ingest event to webhook subcribers."
+    description = r"This endpoint is used internally to send a match ingest event to Hook0."
 )]
 pub async fn ingest(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
@@ -78,19 +57,30 @@ pub async fn ingest(
         })?;
 
     let payload = MatchCreatedWebhookPayload::new(match_id);
-    let webhook_urls: Vec<String> = get_webhook_urls(&state.postgres_client).await?;
-    for webhook_url in webhook_urls {
-        if let Err(e) = state
-            .http_client
-            .post(&webhook_url)
-            .json(&payload)
-            .timeout(Duration::from_secs(5))
-            .send()
-            .await
-            .and_then(|m| m.error_for_status())
-        {
-            warn!("Failed to send webhook to {webhook_url}: {e}");
-        }
-    }
-    Ok(Json(json!({ "status": "success" })))
+    let payload = serde_json::to_string(&payload).map_err(|e| APIError::InternalError {
+        message: format!("Failed to serialize payload: {e}"),
+    })?;
+    let event_id = Uuid::new_v4().to_string();
+    let iso_datetime = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
+    state
+        .http_client
+        .post(format!("{}/event", state.config.hook0_api_url))
+        .bearer_auth(state.config.hook0_api_key)
+        .json(&json!({
+            "application_id": state.config.hook0_application_id,
+            "event_id": event_id,
+            "event_type": "match.metadata.created",
+            "labels": {"all": "yes"},
+            "occurred_at": iso_datetime,
+            "payload_content_type": "application/json",
+            "payload": payload,
+        }))
+        .send()
+        .await
+        .and_then(|r| r.error_for_status())
+        .map(|_| json!({"status": "success"}))
+        .map(Json)
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to send event: {e}"),
+        })
 }

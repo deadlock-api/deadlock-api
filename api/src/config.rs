@@ -19,6 +19,13 @@ pub struct Config {
     #[clap(long, env, help = "Deadlock API Internal API Key")]
     pub internal_api_key: String,
 
+    #[clap(long, env, help = "The Hook0 Application ID")]
+    pub hook0_application_id: String,
+    #[clap(long, env, help = "The Hook0 API Key")]
+    pub hook0_api_key: String,
+    #[clap(long, env, help = "The Hook0 API Url")]
+    pub hook0_api_url: String,
+
     #[clap(long, env, help = "The Steam Proxy URL to use for Steam API requests")]
     pub steam_proxy_url: String,
 
