@@ -113,21 +113,32 @@ pub async fn command_resolve(
         extra_args.insert("hero_name".to_string(), hero_name);
     }
     let mut resolved_template = query.template.clone();
-    for variable in Variable::VARIANTS.iter() {
-        let template_str = format!("{{{}}}", variable.get_name());
-        if !query.template.contains(&template_str) {
-            continue;
-        }
-        let resolved_variable = match variable
-            .resolve(&state, query.account_id, query.region, &extra_args)
-            .await
-        {
-            Ok(resolved) => resolved,
-            Err(e) => {
-                return format!("Failed to resolve variable: {}, {e}", variable.get_name());
+    let results = futures::future::join_all(
+        Variable::VARIANTS
+            .iter()
+            .filter(|v| query.template.contains(&format!("{{{}}}", v.get_name())))
+            .map(|v| {
+                let template_str = format!("{{{}}}", v.get_name());
+                async {
+                    match v
+                        .resolve(&state, query.account_id, query.region, &extra_args)
+                        .await
+                    {
+                        Ok(resolved) => Ok((template_str, resolved)),
+                        Err(e) => Err(format!("Failed to resolve variable: {}, {e}", v.get_name())),
+                    }
+                }
+            }),
+    )
+    .await;
+
+    for result in results {
+        match result {
+            Ok((template_str, resolved_variable)) => {
+                resolved_template = resolved_template.replace(&template_str, &resolved_variable);
             }
-        };
-        resolved_template = resolved_template.replace(&template_str, &resolved_variable);
+            Err(e) => return e,
+        }
     }
     resolved_template
 }
@@ -170,22 +181,27 @@ pub async fn variables_resolve(
         extra_args.insert("hero_name".to_string(), hero_name);
     }
     let variables_to_resolve = query.variables.split(',').map(|v| v.trim()).collect_vec();
-    let mut results = HashMap::new();
-    for variable in Variable::VARIANTS.iter() {
-        if !variables_to_resolve.contains(&variable.get_name()) {
-            continue;
-        }
-        let resolved_variable = match variable
-            .resolve(&state, query.account_id, query.region, &extra_args)
-            .await
-        {
-            Ok(resolved) => resolved,
-            Err(e) => {
-                warn!("Failed to resolve variable: {}, {e}", variable.get_name());
-                continue;
-            }
-        };
-        results.insert(variable.get_name().to_string(), resolved_variable);
-    }
+    let results = futures::future::join_all(
+        Variable::VARIANTS
+            .iter()
+            .filter(|v| variables_to_resolve.contains(&v.get_name()))
+            .map(|v| async {
+                match v
+                    .resolve(&state, query.account_id, query.region, &extra_args)
+                    .await
+                {
+                    Ok(resolved) => Some((v.get_name().to_string(), resolved)),
+                    Err(e) => {
+                        warn!("Failed to resolve variable: {}, {e}", v.get_name());
+                        None
+                    }
+                }
+            }),
+    )
+    .await
+    .into_iter()
+    .flatten()
+    .collect::<HashMap<_, _>>();
+
     Json(results)
 }
