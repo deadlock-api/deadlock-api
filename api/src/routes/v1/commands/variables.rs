@@ -2,14 +2,16 @@ use crate::config::Config;
 use crate::routes::v1::leaderboard::route::fetch_parse_leaderboard;
 use crate::routes::v1::leaderboard::types::{LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::patches::feed::fetch_patch_notes;
-use crate::routes::v1::players::match_history::fetch_match_history_from_clickhouse;
+use crate::routes::v1::players::match_history::{
+    fetch_match_history_from_clickhouse, fetch_steam_match_history,
+};
 use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::state::AppState;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;
 use futures::future::join;
-use itertools::Itertools;
+use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -208,9 +210,14 @@ impl Variable {
                 Ok(format!("{rank_name} {subrank}"))
             }
             Self::HeroesPlayedToday => {
-                let todays_matches = Self::get_todays_matches(&state.clickhouse_client, steam_id)
-                    .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let todays_matches = Self::get_todays_matches(
+                    &state.clickhouse_client,
+                    &state.config,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await
+                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
                 let heroes_played = todays_matches.iter().fold(HashMap::new(), |mut acc, m| {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
@@ -343,9 +350,14 @@ impl Variable {
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::WinrateToday => {
-                let matches = Self::get_todays_matches(&state.clickhouse_client, steam_id)
-                    .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let matches = Self::get_todays_matches(
+                    &state.clickhouse_client,
+                    &state.config,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await
+                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -356,9 +368,14 @@ impl Variable {
                 ))
             }
             Self::WinsLossesToday => {
-                let matches = Self::get_todays_matches(&state.clickhouse_client, steam_id)
-                    .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let matches = Self::get_todays_matches(
+                    &state.clickhouse_client,
+                    &state.config,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await
+                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
@@ -368,22 +385,37 @@ impl Variable {
                 });
                 Ok(format!("{wins}-{losses}"))
             }
-            Self::MatchesToday => Ok(Self::get_todays_matches(&state.clickhouse_client, steam_id)
-                .await?
-                .len()
-                .to_string()),
-            Self::WinsToday => Ok(Self::get_todays_matches(&state.clickhouse_client, steam_id)
-                .await?
-                .iter()
-                .filter(|m| m.match_result as i8 == m.player_team)
-                .count()
-                .to_string()),
-            Self::LossesToday => Ok(Self::get_todays_matches(&state.clickhouse_client, steam_id)
-                .await?
-                .iter()
-                .filter(|m| m.match_result as i8 != m.player_team)
-                .count()
-                .to_string()),
+            Self::MatchesToday => Ok(Self::get_todays_matches(
+                &state.clickhouse_client,
+                &state.config,
+                &state.http_client,
+                steam_id,
+            )
+            .await?
+            .len()
+            .to_string()),
+            Self::WinsToday => Ok(Self::get_todays_matches(
+                &state.clickhouse_client,
+                &state.config,
+                &state.http_client,
+                steam_id,
+            )
+            .await?
+            .iter()
+            .filter(|m| m.match_result as i8 == m.player_team)
+            .count()
+            .to_string()),
+            Self::LossesToday => Ok(Self::get_todays_matches(
+                &state.clickhouse_client,
+                &state.config,
+                &state.http_client,
+                steam_id,
+            )
+            .await?
+            .iter()
+            .filter(|m| m.match_result as i8 != m.player_team)
+            .count()
+            .to_string()),
             Self::MostPlayedHero => {
                 let matches =
                     fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
@@ -610,11 +642,24 @@ impl Variable {
 
     async fn get_todays_matches(
         ch_client: &clickhouse::Client,
+        config: &Config,
+        http_client: &reqwest::Client,
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let matches = fetch_match_history_from_clickhouse(ch_client, steam_id)
-            .await
-            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+        let (steam_match_history, ch_match_history) = join(
+            fetch_steam_match_history(steam_id, config, http_client),
+            fetch_match_history_from_clickhouse(ch_client, steam_id),
+        )
+        .await;
+        let (steam_match_history, ch_match_history) = (
+            steam_match_history.unwrap_or_default(),
+            ch_match_history.map_err(|_| VariableResolveError::FailedToFetchData("matches"))?,
+        );
+        let matches = chain!(ch_match_history, steam_match_history)
+            .sorted_by_key(|e| e.match_id)
+            .rev()
+            .unique_by(|e| e.match_id)
+            .collect_vec();
         let first_match = matches
             .first()
             .ok_or(VariableResolveError::FailedToFetchData("matches"))?;

@@ -121,16 +121,15 @@ async fn parse_match_history_raw(
         })
 }
 
-async fn fetch_steam_match_history(
+pub async fn fetch_steam_match_history(
     account_id: u32,
-    state: &AppState,
+    config: &Config,
+    http_client: &reqwest::Client,
 ) -> APIResult<PlayerMatchHistory> {
-    let raw_data = tryhard::retry_fn(|| {
-        fetch_match_history_raw(&state.config, &state.http_client, account_id)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
+    let raw_data = tryhard::retry_fn(|| fetch_match_history_raw(config, http_client, account_id))
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(10))
+        .await?;
     parse_match_history_raw(account_id, &raw_data)
         .await
         .map_err(|e| APIError::InternalError {
@@ -178,7 +177,7 @@ pub async fn match_history(
 
     // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
-        fetch_steam_match_history(account_id, &state),
+        fetch_steam_match_history(account_id, &state.config, &state.http_client),
         fetch_match_history_from_clickhouse(ch_client, account_id),
     )
     .await;
