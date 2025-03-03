@@ -31,7 +31,7 @@ pub struct Status {
 
 #[cached(
     ty = "TimedCache<String, Status>",
-    create = "{ TimedCache::with_lifespan(1 * 60) }",
+    create = "{ TimedCache::with_lifespan(60) }",
     result = true,
     convert = r#"{ format!("") }"#,
     sync_writes = "by_key",
