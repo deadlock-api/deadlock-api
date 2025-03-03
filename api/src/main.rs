@@ -91,3 +91,54 @@ async fn main() -> ApplicationResult<()> {
     info!("Listening on http://{address}");
     Ok(axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::get_router;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_router() {
+        let router = get_router().await.expect("Router");
+
+        {
+            // Test docs redirect from root
+            let response = router
+                .clone()
+                .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::SEE_OTHER)
+        }
+
+        {
+            // Test docs route
+            let response = router
+                .clone()
+                .oneshot(Request::builder().uri("/docs").body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::OK)
+        }
+
+        {
+            // Test metrics route
+            let response = router
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri("/metrics")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::OK)
+        }
+    }
+}
