@@ -38,7 +38,8 @@ pub struct LeaderboardHeroQuery {
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
     convert = r#"{ format!("{:?}-{:?}", region, hero_id) }"#,
-    sync_writes = true
+    sync_writes = "by_key",
+    key = "String"
 )]
 async fn fetch_leaderboard_raw(
     config: &Config,

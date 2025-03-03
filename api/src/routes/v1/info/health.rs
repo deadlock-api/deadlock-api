@@ -34,7 +34,8 @@ pub struct Status {
     create = "{ TimedCache::with_lifespan(1 * 60) }",
     result = true,
     convert = r#"{ format!("") }"#,
-    sync_writes = true
+    sync_writes = "by_key",
+    key = "String"
 )]
 async fn check_health(
     clickhouse_client: clickhouse::Client,

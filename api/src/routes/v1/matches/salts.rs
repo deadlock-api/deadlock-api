@@ -88,7 +88,8 @@ pub async fn insert_salts_to_clickhouse(
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
     convert = r#"{ format!("{match_id}-{needs_demo}") }"#,
-    sync_writes = true
+    sync_writes = "by_key",
+    key = "String"
 )]
 pub async fn fetch_match_salts(
     config: &Config,

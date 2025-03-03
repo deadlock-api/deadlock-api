@@ -47,7 +47,7 @@ impl MatchCreatedWebhookPayload {
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
     convert = r#"{ format!("") }"#,
-    sync_writes = true
+    sync_writes = "default"
 )]
 async fn get_webhook_urls(
     postgres_client: &Pool<Postgres>,

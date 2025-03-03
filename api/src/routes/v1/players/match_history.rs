@@ -35,11 +35,12 @@ pub async fn insert_match_history_to_clickhouse(
 }
 
 #[cached(
-    ty = "TimedCache<String, PlayerMatchHistory>",
+    ty = "TimedCache<u32, PlayerMatchHistory>",
     create = "{ TimedCache::with_lifespan(60 * 60) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
     result = true,
-    convert = r#"{ format!("{account_id}") }"#,
-    sync_writes = true
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
 )]
 pub async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
@@ -57,11 +58,12 @@ pub async fn fetch_match_history_from_clickhouse(
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<u8>>",
+    ty = "TimedCache<u32, Vec<u8>>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
-    convert = r#"{ format!("{account_id}") }"#,
-    sync_writes = true
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
 )]
 async fn fetch_match_history_raw(
     config: &Config,

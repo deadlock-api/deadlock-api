@@ -27,7 +27,7 @@ pub struct ClickhouseMatchInfo {
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
     convert = r#"{ format!("") }"#,
-    sync_writes = true
+    sync_writes = "default"
 )]
 async fn get_recently_fetched_match_ids(
     ch_client: &clickhouse::Client,

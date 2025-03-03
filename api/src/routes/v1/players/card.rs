@@ -93,11 +93,12 @@ impl From<CMsgCitadelProfileCard> for PlayerCard {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<u8>>",
+    ty = "TimedCache<u32, Vec<u8>>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
-    convert = r#"{ format!("{account_id}") }"#,
-    sync_writes = true
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
 )]
 async fn fetch_player_card_raw(
     config: &Config,
