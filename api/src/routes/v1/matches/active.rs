@@ -101,6 +101,7 @@ pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl
     params(ActiveMatchesQuery),
     responses(
         (status = OK, body = [ActiveMatch]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing active matches failed")
     ),
     tags = ["Matches"],

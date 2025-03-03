@@ -35,6 +35,7 @@ impl From<Variable> for VariableDescription {
     path = "/variables/available",
     responses(
         (status = OK, body = [VariableDescription]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
     ),
     tags = ["Commands"],
     summary = "Available Variables",
@@ -54,6 +55,7 @@ pub async fn available_variables() -> APIResult<impl IntoResponse> {
     path = "/widgets/versions",
     responses(
         (status = OK, body = HashMap<String, i32>),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
     ),
     tags = ["Commands"],
     summary = "Widget Versions",
@@ -95,7 +97,9 @@ pub struct CommandResolveQuery {
     params(CommandResolveQuery),
     path = "/resolve",
     responses(
-        (status = OK, body = String)
+        (status = OK, body = String),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
     ),
     tags = ["Commands"],
     summary = "Resolve Command",
@@ -163,7 +167,8 @@ pub struct VariablesResolveQuery {
     params(VariablesResolveQuery),
     path = "/variables/resolve",
     responses(
-        (status = OK, body = HashMap<String, String>)
+        (status = OK, body = HashMap<String, String>),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
     ),
     tags = ["Commands"],
     summary = "Resolve Variables",

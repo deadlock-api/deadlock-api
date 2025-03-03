@@ -172,6 +172,7 @@ pub async fn fetch_match_salts(
     params(MatchIdQuery, SaltsQuery),
     responses(
         (status = OK, body = MatchSaltsResponse),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match salts failed")
     ),

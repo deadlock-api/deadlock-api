@@ -123,6 +123,7 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     params(MatchIdQuery),
     responses(
         (status = OK, body = [u8]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = NOT_FOUND, description = "Match metadata not found"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match metadata failed")
@@ -174,6 +175,7 @@ pub async fn metadata_raw(
     params(MatchIdQuery),
     responses(
         (status = OK, description = "Match metadata, see protobuf type: CMsgMatchMetaDataContents"),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = NOT_FOUND, description = "Match metadata not found"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing match metadata failed")

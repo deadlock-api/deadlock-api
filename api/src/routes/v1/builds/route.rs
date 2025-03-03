@@ -18,6 +18,7 @@ use std::time::Duration;
     params(BuildsSearchQuery),
     responses(
         (status = OK, body = [Build]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Internal server error")
     ),

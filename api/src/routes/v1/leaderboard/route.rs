@@ -101,6 +101,7 @@ pub async fn fetch_parse_leaderboard(
     params(LeaderboardQuery),
     responses(
         (status = OK, body = [u8]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching the leaderboard failed")
     ),
     tags = ["Leaderboard"],
@@ -123,6 +124,7 @@ pub async fn leaderboard_raw(
     params(LeaderboardHeroQuery),
     responses(
         (status = OK, body = [u8]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching the hero leaderboard failed")
     ),
     tags = ["Leaderboard"],
@@ -147,6 +149,7 @@ pub async fn leaderboard_hero_raw(
     params(LeaderboardQuery),
     responses(
         (status = OK, body = Leaderboard),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing the leaderboard failed")
     ),
     tags = ["Leaderboard"],
@@ -168,6 +171,7 @@ pub async fn leaderboard(
     params(LeaderboardHeroQuery),
     responses(
         (status = OK, body = Leaderboard),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing the hero leaderboard failed")
     ),
     tags = ["Leaderboard"],

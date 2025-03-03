@@ -117,6 +117,7 @@ impl Signature {
     path = "/{match_id}/ingest",
     responses(
         (status = OK),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = UNAUTHORIZED, description = "Unauthorized"),
         (status = INTERNAL_SERVER_ERROR, description = "Sending event failed")
     ),

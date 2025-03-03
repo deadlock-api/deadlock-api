@@ -146,6 +146,7 @@ async fn parse_player_card_raw(raw_data: &[u8]) -> APIResult<PlayerCard> {
     params(AccountIdQuery),
     responses(
         (status = OK, body = [u8]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching player card failed")
     ),
@@ -185,6 +186,7 @@ pub async fn card_raw(
     params(AccountIdQuery),
     responses(
         (status = OK, body = [PlayerCard]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match history failed")
     ),

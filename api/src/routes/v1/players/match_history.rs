@@ -144,6 +144,7 @@ async fn fetch_steam_match_history(
     params(AccountIdQuery),
     responses(
         (status = OK, body = [PlayerMatchHistoryEntry]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching player match history failed")
     ),
