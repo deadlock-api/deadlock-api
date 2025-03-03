@@ -751,7 +751,7 @@ async fn fetch_hero_name_from_id(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use std::str::FromStr;
 

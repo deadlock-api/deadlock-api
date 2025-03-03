@@ -273,7 +273,7 @@ fn extract_api_key(headers: &HeaderMap) -> Option<Uuid> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use axum::http::{HeaderMap, HeaderName, HeaderValue};
     use std::str::FromStr;
 
