@@ -84,7 +84,7 @@ async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>
     description = r#"
 Returns active matches that are currently being played, serialized as protobuf message.
 
-Fetched from the watch tab in game.
+Fetched from the watch tab in game, which is limited to the **top 200 matches**.
     "#
 )]
 pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
@@ -107,7 +107,7 @@ pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl
     description = r#"
 Returns active matches that are currently being played.
 
-Fetched from the watch tab in game.
+Fetched from the watch tab in game, which is limited to the **top 200 matches**.
     "#
 )]
 pub async fn active_matches(
