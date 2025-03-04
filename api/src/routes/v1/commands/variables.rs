@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
-
+use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
 // TODO: Improve Error Handling
 
 #[derive(Debug, Clone)]
@@ -643,6 +643,11 @@ impl Variable {
             ch_match_history.map_err(|_| VariableResolveError::FailedToFetchData("matches"))?,
         );
         Ok(chain!(ch_match_history, steam_match_history)
+            .filter(|e| {
+                e.match_mode == ECitadelMatchMode::KECitadelMatchModeUnranked as i8
+                    || e.match_mode == ECitadelMatchMode::KECitadelMatchModeRanked as i8
+            })
+            .filter(|e| e.game_mode == ECitadelGameMode::KECitadelGameModeNormal as i8)
             .sorted_by_key(|e| e.match_id)
             .rev()
             .unique_by(|e| e.match_id)
