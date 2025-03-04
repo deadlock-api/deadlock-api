@@ -667,11 +667,25 @@ impl Variable {
                     .count()
                     .to_string())
             }
-            Self::MaxBombStacks => {
-                state.clickhouse_client.query("SELECT max(ability_stats[2521902222]) as max_bomb_stacks FROM match_player WHERE account_id=?").bind(steam_id).fetch_one::<u64>().await
-                    .map(|b| b.to_string())
-                    .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks"))
-            }
+            Self::MaxBombStacks => state
+                .clickhouse_client
+                .query(
+                    r#"
+                SELECT max(ability_stats[2521902222]) as max_bomb_stacks
+                FROM match_player
+                    JOIN match_info USING match_id
+                WHERE
+                    game_mode = 'Normal'
+                    AND match_outcome = 'TeamWin'
+                    AND match_mode IN ('Ranked', 'Unranked')
+                    AND account_id=?
+                "#,
+                )
+                .bind(steam_id)
+                .fetch_one::<u64>()
+                .await
+                .map(|b| b.to_string())
+                .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks")),
         }
     }
 
