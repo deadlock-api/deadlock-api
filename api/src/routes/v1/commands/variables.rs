@@ -17,7 +17,6 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
-// TODO: Improve Error Handling
 
 #[derive(Debug, Clone)]
 pub enum VariableResolveError {
