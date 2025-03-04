@@ -281,10 +281,13 @@ impl Variable {
                 Self::get_steam_account_name(&state.config, &state.http_client, steam_id).await
             }
             Self::HighestDeathCount => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 matches
                     .iter()
                     .map(|m| m.player_deaths)
@@ -293,10 +296,13 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player deaths"))
             }
             Self::HighestDenies => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 matches
                     .iter()
                     .map(|m| m.denies)
@@ -305,10 +311,13 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player denies"))
             }
             Self::HighestKillCount => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 matches
                     .iter()
                     .map(|m| m.player_kills)
@@ -317,10 +326,13 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player kills"))
             }
             Self::HighestLastHits => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 matches
                     .iter()
                     .map(|m| m.last_hits)
@@ -329,10 +341,13 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player last hits"))
             }
             Self::HighestNetWorth => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 matches
                     .iter()
                     .map(|m| m.net_worth)
@@ -341,10 +356,13 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player net worth"))
             }
             Self::HoursPlayed => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 let seconds_playtime: u32 = matches.iter().map(|m| m.match_duration_s).sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
@@ -416,10 +434,13 @@ impl Variable {
             .count()
             .to_string()),
             Self::MostPlayedHero => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 let most_played_hero = matches
                     .iter()
                     .fold(HashMap::new(), |mut acc, m| {
@@ -437,10 +458,13 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("hero name"))
             }
             Self::MostPlayedHeroCount => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 let most_played_hero_count = matches
                     .iter()
                     .fold(HashMap::new(), |mut acc, m| {
@@ -452,20 +476,26 @@ impl Variable {
                 Ok(most_played_hero_count.unwrap_or(0).to_string())
             }
             Self::TotalKd => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 let (kills, deaths) = matches.iter().fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
                 Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
             }
             Self::TotalKills => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 Ok(matches
                     .iter()
                     .map(|m| m.player_kills)
@@ -473,10 +503,13 @@ impl Variable {
                     .to_string())
             }
             Self::TotalLosses => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 Ok(matches
                     .iter()
                     .filter(|m| m.match_result as i8 != m.player_team)
@@ -484,17 +517,23 @@ impl Variable {
                     .to_string())
             }
             Self::TotalMatches => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 Ok(matches.len().to_string())
             }
             Self::TotalWinrate => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -505,10 +544,13 @@ impl Variable {
                 ))
             }
             Self::TotalWins => {
-                let matches =
-                    fetch_match_history_from_clickhouse(&state.clickhouse_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("match history"))?;
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
                 Ok(matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
