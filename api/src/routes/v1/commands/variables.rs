@@ -52,6 +52,7 @@ impl Display for VariableResolveError {
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum Variable {
+    MaxBombStacks,
     HeroHoursPlayed,
     HeroKd,
     HeroKills,
@@ -135,6 +136,7 @@ impl Variable {
             Self::WinrateToday => "Get the winrate today",
             Self::WinsLossesToday => "Get the number of wins and losses today",
             Self::WinsToday => "Get the number of wins today",
+            Self::MaxBombStacks => "Get the max bomb stacks on bebop sticky bomb",
         }
     }
 
@@ -664,6 +666,11 @@ impl Variable {
                     .filter(|m| m.match_result as i8 == m.player_team)
                     .count()
                     .to_string())
+            }
+            Self::MaxBombStacks => {
+                state.clickhouse_client.query("SELECT max(ability_stats[2521902222]) as max_bomb_stacks FROM match_player WHERE account_id=?").bind(steam_id).fetch_one::<u64>().await
+                    .map(|b| b.to_string())
+                    .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks"))
             }
         }
     }
