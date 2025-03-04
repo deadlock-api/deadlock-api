@@ -211,8 +211,8 @@ impl Variable {
             }
             Self::HeroesPlayedToday => {
                 let todays_matches = Self::get_todays_matches(
-                    &state.clickhouse_client,
                     &state.config,
+                    &state.clickhouse_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -351,8 +351,8 @@ impl Variable {
             }
             Self::WinrateToday => {
                 let matches = Self::get_todays_matches(
-                    &state.clickhouse_client,
                     &state.config,
+                    &state.clickhouse_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -369,8 +369,8 @@ impl Variable {
             }
             Self::WinsLossesToday => {
                 let matches = Self::get_todays_matches(
-                    &state.clickhouse_client,
                     &state.config,
+                    &state.clickhouse_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -386,8 +386,8 @@ impl Variable {
                 Ok(format!("{wins}-{losses}"))
             }
             Self::MatchesToday => Ok(Self::get_todays_matches(
-                &state.clickhouse_client,
                 &state.config,
+                &state.clickhouse_client,
                 &state.http_client,
                 steam_id,
             )
@@ -395,8 +395,8 @@ impl Variable {
             .len()
             .to_string()),
             Self::WinsToday => Ok(Self::get_todays_matches(
-                &state.clickhouse_client,
                 &state.config,
+                &state.clickhouse_client,
                 &state.http_client,
                 steam_id,
             )
@@ -406,8 +406,8 @@ impl Variable {
             .count()
             .to_string()),
             Self::LossesToday => Ok(Self::get_todays_matches(
-                &state.clickhouse_client,
                 &state.config,
+                &state.clickhouse_client,
                 &state.http_client,
                 steam_id,
             )
@@ -530,8 +530,9 @@ impl Variable {
                 .ok_or(VariableResolveError::FailedToFetchData("patch notes")),
             Self::HeroHoursPlayed => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.http_client,
+                    &state.config,
                     &state.clickhouse_client,
+                    &state.http_client,
                     steam_id,
                     extra_args,
                 )
@@ -541,8 +542,9 @@ impl Variable {
             }
             Self::HeroKd => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.http_client,
+                    &state.config,
                     &state.clickhouse_client,
+                    &state.http_client,
                     steam_id,
                     extra_args,
                 )
@@ -554,8 +556,9 @@ impl Variable {
             }
             Self::HeroKills => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.http_client,
+                    &state.config,
                     &state.clickhouse_client,
+                    &state.http_client,
                     steam_id,
                     extra_args,
                 )
@@ -567,8 +570,9 @@ impl Variable {
                     .to_string())
             }
             Self::HeroMatches => Self::get_hero_matches(
-                &state.http_client,
+                &state.config,
                 &state.clickhouse_client,
+                &state.http_client,
                 steam_id,
                 extra_args,
             )
@@ -576,8 +580,9 @@ impl Variable {
             .map(|m| m.len().to_string()),
             Self::HeroLosses => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.http_client,
+                    &state.config,
                     &state.clickhouse_client,
+                    &state.http_client,
                     steam_id,
                     extra_args,
                 )
@@ -590,8 +595,9 @@ impl Variable {
             }
             Self::HeroWinrate => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.http_client,
+                    &state.config,
                     &state.clickhouse_client,
+                    &state.http_client,
                     steam_id,
                     extra_args,
                 )
@@ -605,8 +611,9 @@ impl Variable {
             }
             Self::HeroWins => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.http_client,
+                    &state.config,
                     &state.clickhouse_client,
+                    &state.http_client,
                     steam_id,
                     extra_args,
                 )
@@ -620,29 +627,9 @@ impl Variable {
         }
     }
 
-    async fn get_hero_matches(
-        http_client: &reqwest::Client,
-        ch_client: &clickhouse::Client,
-        steam_id: u32,
-        extra_args: &HashMap<String, String>,
-    ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let hero_name = extra_args
-            .get("hero_name")
-            .ok_or(VariableResolveError::MissingArgument("hero name"))?;
-        let hero_id = fetch_hero_id_from_name(http_client, hero_name)
-            .await
-            .ok()
-            .flatten()
-            .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
-        fetch_match_history_from_clickhouse(ch_client, steam_id)
-            .await
-            .map(|m| m.into_iter().filter(|m| m.hero_id == hero_id).collect())
-            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))
-    }
-
-    async fn get_todays_matches(
-        ch_client: &clickhouse::Client,
+    async fn get_all_matches(
         config: &Config,
+        ch_client: &clickhouse::Client,
         http_client: &reqwest::Client,
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
@@ -655,11 +642,41 @@ impl Variable {
             steam_match_history.unwrap_or_default(),
             ch_match_history.map_err(|_| VariableResolveError::FailedToFetchData("matches"))?,
         );
-        let matches = chain!(ch_match_history, steam_match_history)
+        Ok(chain!(ch_match_history, steam_match_history)
             .sorted_by_key(|e| e.match_id)
             .rev()
             .unique_by(|e| e.match_id)
-            .collect_vec();
+            .collect_vec())
+    }
+
+    async fn get_hero_matches(
+        config: &Config,
+        ch_client: &clickhouse::Client,
+        http_client: &reqwest::Client,
+        steam_id: u32,
+        extra_args: &HashMap<String, String>,
+    ) -> Result<PlayerMatchHistory, VariableResolveError> {
+        let hero_name = extra_args
+            .get("hero_name")
+            .ok_or(VariableResolveError::MissingArgument("hero name"))?;
+        let hero_id = fetch_hero_id_from_name(http_client, hero_name)
+            .await
+            .ok()
+            .flatten()
+            .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
+        Self::get_all_matches(config, ch_client, http_client, steam_id)
+            .await
+            .map(|m| m.into_iter().filter(|m| m.hero_id == hero_id).collect())
+            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))
+    }
+
+    async fn get_todays_matches(
+        config: &Config,
+        ch_client: &clickhouse::Client,
+        http_client: &reqwest::Client,
+        steam_id: u32,
+    ) -> Result<PlayerMatchHistory, VariableResolveError> {
+        let matches = Self::get_all_matches(config, ch_client, http_client, steam_id).await?;
         let first_match = matches
             .first()
             .ok_or(VariableResolveError::FailedToFetchData("matches"))?;
