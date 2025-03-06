@@ -57,9 +57,7 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
             }),
             demo_url: salts.replay_group_id.and_then(|cluster_id| {
                 salts.replay_salt.map(|salt| {
-                    format!(
-                        "http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.meta.bz2"
-                    )
+                    format!("http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.dem.bz2")
                 })
             }),
         }
