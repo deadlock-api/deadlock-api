@@ -115,24 +115,24 @@ async fn main() {
         let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
         if recent_matches.len() < 100 {
             info!(
-                "Only got {} matches, filling in the gaps",
+                "Only got {} matches, fetching salts fot hltv matches.",
                 recent_matches.len()
             );
             let query = r"
-                WITH (SELECT MIN(match_id) as min_match_id, MAX(match_id) as max_match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND start_time > now() - INTERVAL '14 days') AS match_range
-                SELECT number + match_range.min_match_id as match_id
-                FROM numbers(match_range.max_match_id - match_range.min_match_id + 1)
-                WHERE (number + match_range.min_match_id) NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
-                ORDER BY match_id DESC
+                SELECT DISTINCT match_id
+                FROM match_info
+                WHERE match_id NOT IN (SELECT match_id FROM match_salts)
+                    AND start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
+                ORDER BY match_id
                 LIMIT ?
                 ";
-            let gaps: Vec<MatchIdQueryResult> = clickhouse_client
+            let additional_matches: Vec<MatchIdQueryResult> = clickhouse_client
                 .query(query)
                 .bind(100 - recent_matches.len())
                 .fetch_all()
                 .await
                 .unwrap();
-            recent_matches.extend(gaps.into_iter().map(|m| m.match_id));
+            recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
         }
         futures::stream::iter(recent_matches)
             .map(|match_id| fetch_match(&client, message_type, match_id, &limiter))
