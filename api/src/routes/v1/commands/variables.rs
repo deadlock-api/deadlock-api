@@ -81,10 +81,11 @@ pub enum Variable {
     SteamAccountName,
     TotalKd,
     TotalKills,
-    TotalLosses,
     TotalMatches,
     TotalWinrate,
     TotalWins,
+    TotalLosses,
+    TotalWinsLosses,
     WinrateToday,
     WinsLossesToday,
     WinsToday,
@@ -129,10 +130,11 @@ impl Variable {
             Self::SteamAccountName => "Get the steam account name",
             Self::TotalKd => "Get the KD ratio",
             Self::TotalKills => "Get the total kills in all matches",
-            Self::TotalLosses => "Get the total number of losses",
             Self::TotalMatches => "Get the total number of matches played",
             Self::TotalWinrate => "Get the total winrate",
             Self::TotalWins => "Get the total number of wins",
+            Self::TotalLosses => "Get the total number of losses",
+            Self::TotalWinsLosses => "Get the total number of wins and losses",
             Self::WinrateToday => "Get the winrate today",
             Self::WinsLossesToday => "Get the number of wins and losses today",
             Self::WinsToday => "Get the number of wins today",
@@ -504,20 +506,6 @@ impl Variable {
                     .sum::<u32>()
                     .to_string())
             }
-            Self::TotalLosses => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.clickhouse_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
-                Ok(matches
-                    .iter()
-                    .filter(|m| m.match_result as i8 != m.player_team)
-                    .count()
-                    .to_string())
-            }
             Self::TotalMatches => {
                 let matches = Self::get_all_matches(
                     &state.config,
@@ -558,6 +546,37 @@ impl Variable {
                     .filter(|m| m.match_result as i8 == m.player_team)
                     .count()
                     .to_string())
+            }
+            Self::TotalLosses => {
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
+                Ok(matches
+                    .iter()
+                    .filter(|m| m.match_result as i8 != m.player_team)
+                    .count()
+                    .to_string())
+            }
+            Self::TotalWinsLosses => {
+                let matches = Self::get_all_matches(
+                    &state.config,
+                    &state.clickhouse_client,
+                    &state.http_client,
+                    steam_id,
+                )
+                .await?;
+                let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
+                    if m.match_result as i8 == m.player_team {
+                        (wins + 1, losses)
+                    } else {
+                        (wins, losses + 1)
+                    }
+                });
+                Ok(format!("{wins}-{losses}"))
             }
             Self::LatestPatchnotesTitle => fetch_patch_notes(&state.http_client)
                 .await
