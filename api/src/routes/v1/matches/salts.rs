@@ -99,8 +99,8 @@ pub async fn fetch_match_salts(
     // 30742540 is he first match from december, block older requests to avoid spamming
     if match_id < 30742540 {
         return Err(APIError::StatusMsg {
-            status: reqwest::StatusCode::BAD_REQUEST,
-            message: "Salts fetching only for matches after 30742540 enabled".to_string(),
+            status: reqwest::StatusCode::NOT_FOUND,
+            message: format!("Match salts for match {match_id} cannot be fetched"),
         });
     }
 
