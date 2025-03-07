@@ -96,6 +96,14 @@ pub async fn fetch_match_salts(
     match_id: u64,
     needs_demo: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
+    // 30742540 is he first match from december, block older requests to avoid spamming
+    if match_id < 30742540 {
+        return Err(APIError::StatusMsg {
+            status: reqwest::StatusCode::BAD_REQUEST,
+            message: "Salts fetching only for matches after 30742540 enabled".to_string(),
+        });
+    }
+
     // Try fetch from Clickhouse DB
     let salts = ch_client
         .query("SELECT ?fields FROM match_salts WHERE match_id = ?")
