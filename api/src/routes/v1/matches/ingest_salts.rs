@@ -9,9 +9,10 @@ use reqwest::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::time::Duration;
+use tracing::info;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Serialize, Deserialize, IntoParams, ToSchema, Row)]
+#[derive(Debug, Clone, Serialize, Deserialize, IntoParams, ToSchema, Row)]
 pub struct MatchSaltsPost {
     pub match_id: u64,
     pub cluster_id: u32,
@@ -37,6 +38,7 @@ async fn store_salts(
     ch_client: &clickhouse::Client,
     salts: &[MatchSaltsPost],
 ) -> clickhouse::error::Result<()> {
+    info!("storing salts: {:?}", salts);
     let mut insert = ch_client.insert("match_salts")?;
     for salt in salts {
         insert.write(salt).await?;
