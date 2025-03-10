@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
 use crate::state::AppState;
 use crate::utils;
@@ -62,23 +63,6 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
             }),
         }
     }
-}
-
-pub async fn insert_salts_to_clickhouse(
-    ch_client: &clickhouse::Client,
-    match_id: u64,
-    salts: &CMsgClientToGcGetMatchMetaDataResponse,
-) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client.insert("match_salts")?;
-    inserter
-        .write(&ClickhouseSalts {
-            match_id,
-            metadata_salt: salts.metadata_salt,
-            replay_salt: salts.replay_salt,
-            cluster_id: salts.replay_group_id,
-        })
-        .await?;
-    inserter.end().await
 }
 
 #[cached(
@@ -152,8 +136,11 @@ pub async fn fetch_match_salts(
                                 && salts.metadata_salt.unwrap_or_default() != 0
                             {
                                 // Insert into Clickhouse
-                                if let Err(e) =
-                                    insert_salts_to_clickhouse(ch_client, match_id, &salts).await
+                                if let Err(e) = ingest_salts::insert_salts_to_clickhouse(
+                                    ch_client,
+                                    vec![(match_id, salts, Some("api".to_string()))],
+                                )
+                                .await
                                 {
                                     warn!("Failed to insert match salts into Clickhouse: {e}");
                                 }

@@ -182,12 +182,13 @@ pub struct MatchIdQuery {
     pub match_id: u64,
 }
 
-#[derive(Row, Serialize, Deserialize)]
+#[derive(Debug, Clone, IntoParams, ToSchema, Row, Serialize, Deserialize)]
 pub struct ClickhouseSalts {
     pub match_id: u64,
     pub metadata_salt: Option<u32>,
     pub replay_salt: Option<u32>,
     pub cluster_id: Option<u32>,
+    pub username: Option<String>,
 }
 
 impl ClickhouseSalts {
@@ -208,6 +209,20 @@ impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {
             replay_group_id: value.cluster_id,
             replay_valid_through: None,
             replay_processing_through: None,
+        }
+    }
+}
+
+impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse, Option<String>)> for ClickhouseSalts {
+    fn from(
+        (match_id, salts, username): (u64, CMsgClientToGcGetMatchMetaDataResponse, Option<String>),
+    ) -> Self {
+        Self {
+            match_id,
+            metadata_salt: salts.metadata_salt,
+            replay_salt: salts.replay_salt,
+            cluster_id: salts.replay_group_id,
+            username,
         }
     }
 }

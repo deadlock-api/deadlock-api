@@ -1,27 +1,14 @@
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
-use clickhouse::Row;
-use reqwest::Error;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::time::Duration;
-use tracing::info;
-use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams, ToSchema, Row)]
-pub struct MatchSaltsPost {
-    pub match_id: u64,
-    pub cluster_id: Option<u32>,
-    pub metadata_salt: Option<u32>,
-    pub replay_salt: Option<u32>,
-    pub username: Option<String>,
-}
-
-async fn check_salt(http_client: &reqwest::Client, salts: &MatchSaltsPost) -> bool {
+async fn check_salt(http_client: &reqwest::Client, salts: &ClickhouseSalts) -> bool {
     let Some(cluster_id) = salts.cluster_id else {
         return false;
     };
@@ -40,22 +27,22 @@ async fn check_salt(http_client: &reqwest::Client, salts: &MatchSaltsPost) -> bo
         .is_ok()
 }
 
-async fn store_salts(
+pub async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,
-    salts: &[MatchSaltsPost],
+    salts: Vec<impl Into<ClickhouseSalts>>,
 ) -> clickhouse::error::Result<()> {
-    info!("storing salts: {:?}", salts);
-    let mut insert = ch_client.insert("match_salts")?;
+    let mut inserter = ch_client.insert("match_salts")?;
     for salt in salts {
-        insert.write(salt).await?;
+        let clickhouse_salt: ClickhouseSalts = salt.into();
+        inserter.write(&clickhouse_salt).await?;
     }
-    insert.end().await
+    inserter.end().await
 }
 
 #[utoipa::path(
     post,
     path = "/salts",
-    request_body = Vec<MatchSaltsPost>,
+    request_body = Vec<ClickhouseSalts>,
     responses(
         (status = OK),
         (status = BAD_REQUEST, description = "Provided parameters are invalid or the salt check failed."),
@@ -78,7 +65,7 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 pub async fn ingest_salts(
     headers: HeaderMap,
     State(state): State<AppState>,
-    Json(match_salts): Json<Vec<MatchSaltsPost>>,
+    Json(match_salts): Json<Vec<ClickhouseSalts>>,
 ) -> APIResult<impl IntoResponse> {
     let bypass_check = headers
         .get("X-API-Key")
@@ -86,7 +73,7 @@ pub async fn ingest_salts(
         .is_some_and(|key| key == state.config.internal_api_key);
 
     // Check if the salts are valid if not sent by the internal tools
-    let match_salts: Vec<MatchSaltsPost> = if !bypass_check {
+    let match_salts: Vec<ClickhouseSalts> = if !bypass_check {
         let mut valid_salts = Vec::new();
         for salt in match_salts.iter() {
             if check_salt(&state.http_client, salt).await {
@@ -98,7 +85,7 @@ pub async fn ingest_salts(
         match_salts
     };
 
-    store_salts(&state.clickhouse_client, &match_salts)
+    insert_salts_to_clickhouse(&state.clickhouse_client, match_salts)
         .await
         .map_err(|e| APIError::InternalError {
             message: format!("Ingest failed: {e}"),
