@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from collections.abc import Sequence
 from datetime import datetime
 from time import sleep
 
@@ -72,7 +73,9 @@ def fetch_all_hero_ids() -> list[int]:
     ]
 
 
-def upsert_builds(results: list[CMsgClientToGCFindHeroBuildsResponse.HeroBuildResult]):
+def upsert_builds(
+    results: Sequence[CMsgClientToGCFindHeroBuildsResponse.HeroBuildResult],
+):
     with POSTGRES_CONN.cursor() as cursor:
         execute_values(
             cursor,
