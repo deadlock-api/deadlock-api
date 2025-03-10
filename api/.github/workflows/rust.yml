@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -21,7 +21,7 @@ jobs:
       - run: cargo build --verbose
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: build  # This job depends on the 'build' job
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
 
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: build  # This job also depends on the 'build' job
     steps:
       - uses: actions/checkout@v4
