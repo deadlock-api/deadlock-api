@@ -10,9 +10,7 @@ use reqwest::{Client, StatusCode};
 use serde_json::json;
 use std::sync::LazyLock;
 use std::time::Duration;
-use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::{
-    KEResultInvalidMatch, KEResultRateLimited,
-};
+use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
     EgcCitadelClientMessages,
@@ -190,12 +188,6 @@ async fn fetch_match(
                     );
                     limiter.wait().await;
                     return None;
-                } else if r == KEResultInvalidMatch as i32 {
-                    match report_match_id_not_found(client, match_id).await {
-                        Ok(_) => info!("Reported match id not found: {}", match_id),
-                        Err(e) => warn!("Failed to report match id not found: {:?}", e),
-                    }
-                    return None;
                 }
             };
             // Unwrap is safe, as we checked for None above
@@ -224,23 +216,6 @@ async fn fetch_match(
         }
     }
     None
-}
-
-async fn report_match_id_not_found(client: &Client, match_id: u64) -> reqwest::Result<()> {
-    let body = json!([{
-        "match_id": match_id,
-        "failed": true,
-    }]);
-    client
-        .post(format!(
-            "https://analytics.deadlock-api.com/v1/match-salts?api_key={}",
-            *INTERNAL_DEADLOCK_API_KEY
-        ))
-        .json(&body)
-        .send()
-        .await
-        .and_then(|r| r.error_for_status())
-        .map(|_| ())
 }
 
 async fn ingest_salts(
