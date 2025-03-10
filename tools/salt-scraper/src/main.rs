@@ -240,10 +240,8 @@ async fn ingest_salts(
         .collect();
     debug!("Ingesting salts: {:?}", salts);
     client
-        .post(format!(
-            "https://analytics.deadlock-api.com/v1/match-salts?api_key={}",
-            *INTERNAL_DEADLOCK_API_KEY
-        ))
+        .post("https://analytics.deadlock-api.com/v1/match-salts")
+        .header("X-API-Key", INTERNAL_DEADLOCK_API_KEY.clone())
         .json(&salts)
         .send()
         .await
