@@ -15,23 +15,29 @@ use utoipa::{IntoParams, ToSchema};
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams, ToSchema, Row)]
 pub struct MatchSaltsPost {
     pub match_id: u64,
-    pub cluster_id: u32,
-    pub metadata_salt: u32,
+    pub cluster_id: Option<u32>,
+    pub metadata_salt: Option<u32>,
     pub replay_salt: Option<u32>,
     pub username: Option<String>,
 }
 
-async fn check_salt(http_client: &reqwest::Client, salts: &MatchSaltsPost) -> Result<(), Error> {
+async fn check_salt(http_client: &reqwest::Client, salts: &MatchSaltsPost) -> bool {
+    let Some(cluster_id) = salts.cluster_id else {
+        return false;
+    };
+    let Some(metadata_salt) = salts.metadata_salt else {
+        return false;
+    };
     http_client
         .head(format!(
             "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-            salts.cluster_id, salts.match_id, salts.metadata_salt
+            cluster_id, salts.match_id, metadata_salt
         ))
         .timeout(Duration::from_secs(5))
         .send()
         .await
         .and_then(|r| r.error_for_status())
-        .map(|_| ())
+        .is_ok()
 }
 
 async fn store_salts(
@@ -80,20 +86,17 @@ pub async fn ingest_salts(
         .is_some_and(|key| key == state.config.internal_api_key);
 
     // Check if the salts are valid if not sent by the internal tools
-    if !bypass_check {
-        futures::future::join_all(
-            match_salts
-                .iter()
-                .map(|s| check_salt(&state.http_client, s)),
-        )
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| APIError::StatusMsg {
-            status: reqwest::StatusCode::BAD_REQUEST,
-            message: format!("Salt Check failed: {e}"),
-        })?;
-    }
+    let match_salts: Vec<MatchSaltsPost> = if !bypass_check {
+        let mut valid_salts = Vec::new();
+        for salt in match_salts.iter() {
+            if check_salt(&state.http_client, salt).await {
+                valid_salts.push(salt.clone());
+            }
+        }
+        valid_salts
+    } else {
+        match_salts
+    };
 
     store_salts(&state.clickhouse_client, &match_salts)
         .await
