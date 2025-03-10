@@ -38,5 +38,6 @@ jobs:
       - name: Build and Push Compose
         uses: docker/build-push-action@v6
         with:
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ghcr.io/${{ github.repository }}/deadlock-api-rust:latest
