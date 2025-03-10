@@ -112,7 +112,7 @@ async fn main() {
 
     loop {
         println!("Fetching match ids to download");
-        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND NOT failed AND created_at > now() - INTERVAL 2 MONTH";
+        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 2 MONTH";
         let match_ids_to_fetch: Vec<MatchIdQueryResult> =
             client.query(query).fetch_all().await.unwrap();
         let match_ids_to_fetch: HashSet<MatchIdQueryResult> =
