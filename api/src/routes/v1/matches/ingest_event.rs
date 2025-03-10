@@ -125,7 +125,7 @@ impl Signature {
     summary = "Match Ingest Event",
     description = r"This endpoint is used internally to send a match ingest event to webhook subcribers."
 )]
-pub async fn ingest(
+pub async fn ingest_event(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
