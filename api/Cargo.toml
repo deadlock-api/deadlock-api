@@ -8,7 +8,7 @@ codegen-units = 1
 
 [dependencies]
 reqwest = { version = "0.12.12", features = ["json"] }
-tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.44.0", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = "0.3.19"
 redis = { version = "0.29.1", features = ["tokio-comp"] }
 clap = { version = "4.5.31", features = ["env", "derive"] }
@@ -19,12 +19,12 @@ cached = { version = "0.55.1", features = ["async", "serde", "tokio"] }
 axum = { version = "0.8.1", features = ["http2"] }
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.3.1", features = ["axum_extras", "chrono"] }
-serde = { version = "1.0.218", features = ["derive"] }
+serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.40", features = ["serde"] }
 serde_json = "1.0.140"
 url = "2.5.4"
 derive_more = { version = "2.0.1", features = ["display", "from"] }
-object_store = { version = "0.11.2", features = ["aws"] }
+object_store = { version = "0.12.0", features = ["aws"] }
 tower = "0.5.2"
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
