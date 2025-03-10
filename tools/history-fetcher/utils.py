@@ -1,3 +1,4 @@
+import logging
 import os
 from base64 import b64decode, b64encode
 from typing import TypeVar
@@ -8,6 +9,8 @@ from pydantic import BaseModel, ConfigDict
 from valveprotos_py.citadel_gcmessages_client_pb2 import (
     CMsgClientToGCGetMatchHistoryResponse,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 PROXY_URL = os.environ.get("PROXY_URL")
 PROXY_API_TOKEN = os.environ.get("PROXY_API_TOKEN")
@@ -30,7 +33,7 @@ async def call_steam_proxy(
             data = await call_steam_proxy_raw(msg_type, msg, cooldown_time, groups)
             return response_type.FromString(data)
         except Exception as e:
-            print(f"[Warning] Failed to call steam proxy: {e}")
+            LOGGER.warning(f"Failed to call steam proxy: {e}")
             if i == MAX_RETRIES - 1:
                 raise
     raise RuntimeError(
