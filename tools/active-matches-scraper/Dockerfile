@@ -1,4 +1,4 @@
-ARG EXE_NAME=scraper
+ARG EXE_NAME=active-matches-scraper
 
 FROM rust:1.83.0-slim-bookworm AS chef
 

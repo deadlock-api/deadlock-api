@@ -1,4 +1,4 @@
-name: docker-image-scraper
+name: docker-image-active-matches-scraper
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
     - 'master'
     paths:
-    - 'scraper/**'
+    - '../../active-matches-scraper/**'
 
 permissions:
   contents: read
@@ -37,6 +37,6 @@ jobs:
       with:
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ghcr.io/${{ github.repository }}/scraper:latest
+        tags: ghcr.io/${{ github.repository }}/active-matches-scraper:latest
         project: k7kl7zsmcs
-        context: scraper
+        context: active-matches-scraper

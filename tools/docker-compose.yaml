@@ -17,9 +17,9 @@ services:
     environment:
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
 
-  scraper:
+  active-matches-scraper:
     build:
-      context: scraper
+      context: active-matches-scraper
     restart: always
     depends_on:
     - clickhouse
