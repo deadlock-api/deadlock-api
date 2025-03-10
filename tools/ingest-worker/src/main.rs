@@ -87,7 +87,6 @@ async fn main() {
     let s3limiter = RateLimiter::new(1, Duration::from_millis(100));
     let mut missing_objects = HashSet::new();
     while running.load(Ordering::SeqCst) {
-        println!("Waiting for rate limiter");
         let start = std::time::Instant::now();
 
         let object_keys = if missing_objects.len() < *MAX_OBJECTS_PER_RUN {
@@ -122,7 +121,7 @@ async fn main() {
             .collect::<HashSet<_>>();
         missing_objects.retain(|o| !object_keys.contains(o));
         if object_keys.is_empty() {
-            println!("No files to fetch");
+            println!("No files to fetch, waiting ...");
             limiter.wait().await;
             continue;
         }
