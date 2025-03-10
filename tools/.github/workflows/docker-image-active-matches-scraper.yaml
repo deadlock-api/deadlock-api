@@ -6,7 +6,7 @@ on:
     branches:
     - 'master'
     paths:
-    - '../../active-matches-scraper/**'
+    - 'active-matches-scraper/**'
 
 permissions:
   contents: read
