@@ -37,11 +37,11 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     fs::create_dir_all(&root_path)?;
 
     let aws_store = AmazonS3Builder::new()
-        .with_region(env::var("HLTV_S3_AWS_REGION")?)
-        .with_bucket_name(env::var("HLTV_S3_AWS_BUCKET")?)
-        .with_access_key_id(env::var("HLTV_S3_AWS_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("HLTV_S3_AWS_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("HLTV_S3_AWS_ENDPOINT")?)
+        .with_region(env::var("S3_REGION")?)
+        .with_bucket_name(env::var("S3_BUCKET_NAME")?)
+        .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
+        .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
+        .with_endpoint(env::var("S3_ENDPOINT_URL")?)
         .with_allow_http(true)
         .build()?;
     let store = Arc::new(aws_store);
