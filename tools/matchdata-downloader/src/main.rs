@@ -116,7 +116,10 @@ async fn main() {
         let match_ids_to_fetch: Vec<MatchIdQueryResult> =
             client.query(query).fetch_all().await.unwrap();
         let match_ids_to_fetch: HashSet<MatchIdQueryResult> =
-            match_ids_to_fetch.into_iter().collect();
+            match_ids_to_fetch.into_iter()
+                .filter(|row| !failed.lock().unwrap().contains(&row.match_id))
+                .filter(|row| !uploaded.lock().unwrap().contains(&row.match_id))
+                .collect();
 
         if match_ids_to_fetch.is_empty() {
             println!("No matches to download, sleeping for 10 s");
@@ -125,12 +128,6 @@ async fn main() {
         }
 
         for row in match_ids_to_fetch {
-            if failed.lock().unwrap().contains(&row.match_id) {
-                continue;
-            }
-            if uploaded.lock().unwrap().contains(&row.match_id) {
-                continue;
-            }
             pool.spawn(download_match(
                 row,
                 bucket.clone(),
