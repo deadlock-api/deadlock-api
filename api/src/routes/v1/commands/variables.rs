@@ -897,7 +897,7 @@ async fn fetch_hero_name_from_id(
 ) -> reqwest::Result<Option<String>> {
     fetch_heroes(http_client)
         .await
-        .map(|h| h.iter().find(|h| h.id == hero_id).map(|h| h.name.clone()))
+        .map(|h| h.into_iter().find(|h| h.id == hero_id).map(|h| h.name))
 }
 
 #[cfg(test)]
