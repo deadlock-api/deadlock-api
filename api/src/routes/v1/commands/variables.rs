@@ -7,8 +7,7 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::state::AppState;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use crate::utils::assets;
 use chrono::Duration;
 use futures::future::join;
 use itertools::{Itertools, chain};
@@ -177,7 +176,7 @@ impl Variable {
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
-                let ranks = fetch_ranks(&state.http_client)
+                let ranks = assets::fetch_ranks(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
@@ -201,7 +200,7 @@ impl Variable {
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
-                let ranks = fetch_ranks(&state.http_client)
+                let ranks = assets::fetch_ranks(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
@@ -225,7 +224,7 @@ impl Variable {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
                 });
-                let heroes = fetch_heroes(&state.http_client)
+                let heroes = assets::fetch_heroes(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("heroes"))?;
                 let heroes = heroes
@@ -238,7 +237,7 @@ impl Variable {
                     .join(", "))
             }
             Self::HeroLeaderboardPlace => {
-                let hero_id = fetch_hero_id_from_name(
+                let hero_id = assets::fetch_hero_id_from_name(
                     &state.http_client,
                     extra_args
                         .get("hero_name")
@@ -455,7 +454,7 @@ impl Variable {
                     .max_by_key(|(_, count)| *count)
                     .map(|(hero_id, _)| hero_id)
                     .ok_or(VariableResolveError::FailedToFetchData("most played hero"))?;
-                fetch_hero_name_from_id(&state.http_client, most_played_hero)
+                assets::fetch_hero_name_from_id(&state.http_client, most_played_hero)
                     .await
                     .ok()
                     .flatten()
@@ -745,7 +744,7 @@ impl Variable {
         let hero_name = extra_args
             .get("hero_name")
             .ok_or(VariableResolveError::MissingArgument("hero name"))?;
-        let hero_id = fetch_hero_id_from_name(http_client, hero_name)
+        let hero_id = assets::fetch_hero_id_from_name(http_client, hero_name)
             .await
             .ok()
             .flatten()
@@ -834,95 +833,5 @@ impl Variable {
             .into_iter()
             .find(|entry| entry.account_name.clone().is_some_and(|n| n == steam_name))
             .ok_or(VariableResolveError::PlayerNotFoundInLeaderboard)
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct AssetsHero {
-    id: u32,
-    name: String,
-}
-
-#[cached(
-    ty = "TimedCache<String, Vec<AssetsHero>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("") }"#
-)]
-async fn fetch_heroes(http_client: &reqwest::Client) -> reqwest::Result<Vec<AssetsHero>> {
-    http_client
-        .get("https://assets.deadlock-api.com/v2/heroes")
-        .send()
-        .await?
-        .json()
-        .await
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct AssetsRanks {
-    tier: u32,
-    name: String,
-    images: HashMap<String, String>,
-}
-
-#[cached(
-    ty = "TimedCache<String, Vec<AssetsRanks>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("") }"#
-)]
-async fn fetch_ranks(http_client: &reqwest::Client) -> reqwest::Result<Vec<AssetsRanks>> {
-    http_client
-        .get("https://assets.deadlock-api.com/v2/ranks")
-        .send()
-        .await?
-        .json()
-        .await
-}
-
-async fn fetch_hero_id_from_name(
-    http_client: &reqwest::Client,
-    hero_name: &str,
-) -> reqwest::Result<Option<u32>> {
-    fetch_heroes(http_client).await.map(|h| {
-        h.iter()
-            .find(|h| h.name.to_lowercase() == hero_name.to_lowercase())
-            .map(|h| h.id)
-    })
-}
-
-async fn fetch_hero_name_from_id(
-    http_client: &reqwest::Client,
-    hero_id: u32,
-) -> reqwest::Result<Option<String>> {
-    fetch_heroes(http_client)
-        .await
-        .map(|h| h.into_iter().find(|h| h.id == hero_id).map(|h| h.name))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::str::FromStr;
-
-    #[test]
-    fn test_get_name() {
-        assert_eq!(Variable::HeroHoursPlayed.get_name(), "hero_hours_played");
-    }
-
-    #[test]
-    fn test_get_description() {
-        assert_eq!(
-            Variable::HeroHoursPlayed.get_description(),
-            "Get the total hours played in all matches for a specific hero"
-        );
-    }
-
-    #[test]
-    fn test_get_from_name() {
-        assert_eq!(
-            Variable::from_str("hero_hours_played").unwrap(),
-            Variable::HeroHoursPlayed
-        );
     }
 }
