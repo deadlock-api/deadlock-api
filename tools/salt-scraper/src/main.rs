@@ -142,11 +142,19 @@ async fn fetch_salt(client: &Client, match_id: u64) -> reqwest::Result<InvokeRes
 }
 
 async fn fetch_match(client: &Client, match_id: u64) {
-    let res = tryhard::retry_fn(|| fetch_salt(client, match_id))
-        .retries(10)
-        .exponential_backoff(Duration::from_secs(1))
-        .max_delay(Duration::from_secs(20))
-        .await;
+    let res = tryhard::retry_fn(|| async {
+        match fetch_salt(client, match_id).await {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                warn!("Failed to fetch match {}: {:?}", match_id, e);
+                Err(e)
+            }
+        }
+    })
+    .retries(10)
+    .exponential_backoff(Duration::from_secs(1))
+    .max_delay(Duration::from_secs(20))
+    .await;
     let res = match res {
         Ok(r) => r,
         Err(e) => {
