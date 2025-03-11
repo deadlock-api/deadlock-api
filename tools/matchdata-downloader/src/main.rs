@@ -111,6 +111,7 @@ async fn main() {
             .into_iter()
             .filter(|row| !failed.lock().unwrap().contains(&row.match_id))
             .filter(|row| !uploaded.lock().unwrap().contains(&row.match_id))
+            .filter(|row| row.cluster_id.is_some() && row.metadata_salt.is_some())
             .collect();
 
         if match_ids_to_fetch.is_empty() {
@@ -141,14 +142,6 @@ async fn download_match(
 ) {
     let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
     if key_exists(&bucket, &key).await {
-        return;
-    }
-    if row.cluster_id.is_none() || row.metadata_salt.is_none() {
-        println!(
-            "Missing cluster_id or metadata_salt for match {}",
-            row.match_id
-        );
-        failed.lock().unwrap().push(row.match_id);
         return;
     }
     let metadata_url = format!(
