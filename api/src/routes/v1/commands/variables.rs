@@ -884,9 +884,11 @@ async fn fetch_hero_id_from_name(
     http_client: &reqwest::Client,
     hero_name: &str,
 ) -> reqwest::Result<Option<u32>> {
-    fetch_heroes(http_client)
-        .await
-        .map(|h| h.iter().find(|h| h.name == hero_name).map(|h| h.id))
+    fetch_heroes(http_client).await.map(|h| {
+        h.iter()
+            .find(|h| h.name.to_lowercase() == hero_name.to_lowercase())
+            .map(|h| h.id)
+    })
 }
 
 async fn fetch_hero_name_from_id(
