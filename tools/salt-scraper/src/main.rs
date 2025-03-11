@@ -1,12 +1,10 @@
-use arl::RateLimiter;
 use base64::prelude::*;
 use base64::Engine;
 use clickhouse::Compression;
-use futures::StreamExt;
 use log::{debug, info, warn};
 use models::{InvokeResponse200, MatchIdQueryResult, MatchSalt};
 use prost::Message as _;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde_json::json;
 use std::sync::LazyLock;
 use std::time::Duration;
@@ -20,23 +18,6 @@ mod models;
 
 static INTERNAL_DEADLOCK_API_KEY: LazyLock<String> = LazyLock::new(|| {
     std::env::var("INTERNAL_DEADLOCK_API_KEY").expect("INTERNAL_DEADLOCK_API_KEY must be set")
-});
-static NUM_ACCOUNTS: LazyLock<usize> = LazyLock::new(|| {
-    std::env::var("NUM_ACCOUNTS")
-        .expect("NUM_ACCOUNTS must be set")
-        .parse()
-        .expect("NUM_ACCOUNTS must be a number")
-});
-static CALLS_PER_ACCOUNT_PER_HOUR: LazyLock<f64> = LazyLock::new(|| {
-    std::env::var("CALLS_PER_ACCOUNT_PER_HOUR")
-        .expect("CALLS_PER_ACCOUNT_PER_HOUR must be set")
-        .parse()
-        .expect("CALLS_PER_ACCOUNT_PER_HOUR must be a number")
-});
-static CALLS_BURST: LazyLock<usize> = LazyLock::new(|| {
-    std::env::var("CALLS_BURST")
-        .map(|x| x.parse().expect("CALLS_BURST must be a number"))
-        .unwrap_or(1)
 });
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
@@ -78,15 +59,11 @@ async fn main() {
         .with_database(CLICKHOUSE_DB.clone())
         .with_compression(Compression::None);
 
-    let message_type = EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData as u32;
     let client = Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .unwrap();
 
-    let optimal_interval =
-        60.0 * 60.0 / *CALLS_PER_ACCOUNT_PER_HOUR / *NUM_ACCOUNTS as f64 * *CALLS_BURST as f64;
-    let limiter = RateLimiter::new(*CALLS_BURST, Duration::from_secs_f64(optimal_interval));
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
@@ -132,21 +109,13 @@ async fn main() {
                 .unwrap();
             recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
         }
-        futures::stream::iter(recent_matches)
-            .map(|match_id| fetch_match(&client, message_type, match_id, &limiter))
-            .buffer_unordered(*CALLS_BURST)
-            .collect::<Vec<_>>()
-            .await;
+        for m in recent_matches {
+            fetch_match(&client, m).await;
+        }
     }
 }
 
-async fn fetch_match(
-    client: &Client,
-    message_type: u32,
-    match_id: u64,
-    limiter: &RateLimiter,
-) -> Option<CMsgClientToGcGetMatchMetaDataResponse> {
-    limiter.wait().await;
+async fn fetch_salt(client: &Client, match_id: u64) -> reqwest::Result<InvokeResponse200> {
     let message = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
         ..Default::default()
@@ -155,67 +124,59 @@ async fn fetch_match(
     message.encode(&mut data).unwrap();
     let data_b64 = BASE64_STANDARD.encode(data);
     let body = json!({
-        "message_kind": message_type,
+        "message_kind": EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData as u32,
         "job_cooldown_millis": *SALTS_COOLDOWN_MILLIS,
         "rate_limit_cooldown_millis": *SALTS_RATE_LIMIT_COOLDOWN_MILLIS,
         "bot_in_all_groups": ["GetMatchMetaData"],
         "data": data_b64,
     });
-    let req = client
+    client
         .post(PROXY_URL.clone())
         .header("Authorization", format!("Bearer {}", *PROXY_API_TOKEN))
-        .json(&body);
+        .json(&body)
+        .send()
+        .await
+        .and_then(|resp| resp.error_for_status())?
+        .json()
+        .await
+}
 
-    debug!("Sending Request (Body: {:?})", body);
-    let res = match req.send().await {
-        Ok(res) => res,
+async fn fetch_match(client: &Client, match_id: u64) {
+    let res = tryhard::retry_fn(|| fetch_salt(client, match_id))
+        .retries(10)
+        .exponential_backoff(Duration::from_secs(1))
+        .max_delay(Duration::from_secs(20))
+        .await;
+    let res = match res {
+        Ok(r) => r,
         Err(e) => {
-            warn!("Failed to send request: {:?}", e);
-            return None;
+            warn!("Failed to fetch match {}: {:?}", match_id, e);
+            return;
         }
     };
-    match res.status() {
-        StatusCode::OK => {
-            info!("Got a 200 response");
-            let body: InvokeResponse200 = res.json().await.unwrap();
-            let buf = BASE64_STANDARD.decode(body.data).unwrap();
-            let response = CMsgClientToGcGetMatchMetaDataResponse::decode(buf.as_slice()).unwrap();
-            if let Some(r) = response.result {
-                if r == KEResultRateLimited as i32 {
-                    warn!(
-                        "Got a rate limited response with username {:?}: {:?}",
-                        body.username, response
-                    );
-                    limiter.wait().await;
-                    return None;
-                }
-            };
-            // Unwrap is safe, as we checked for None above
-            match ingest_salts(client, &[(response, match_id, body.username.clone())]).await {
-                Ok(_) => info!(
-                    "Ingested salts for match {} with username: {:?}",
-                    match_id, body.username
-                ),
-                Err(e) => warn!(
-                    "Failed to ingest salts for match {} with username {:?}: {:?}",
-                    match_id, body.username, e
-                ),
-            };
-            return Some(response);
+
+    info!("Got a 200 response");
+    let buf = BASE64_STANDARD.decode(res.data).unwrap();
+    let response = CMsgClientToGcGetMatchMetaDataResponse::decode(buf.as_slice()).unwrap();
+    if let Some(r) = response.result {
+        if r == KEResultRateLimited as i32 {
+            warn!(
+                "Got a rate limited response with username {:?}: {:?}",
+                res.username, response
+            );
+            return;
         }
-        // StatusCode::NOT_FOUND => match report_match_id_not_found(client, match_id).await {
-        //     Ok(_) => info!("Reported match id not found: {}", match_id),
-        //     Err(e) => warn!("Failed to report match id not found: {:?}", e),
-        // },
-        StatusCode::TOO_MANY_REQUESTS => {
-            warn!("Rate limited: {:?}", res);
-            limiter.wait().await;
-        }
-        _ => {
-            warn!("Failed to send request for match {}: {:?}", match_id, res);
-        }
-    }
-    None
+    };
+    match ingest_salts(client, &[(response, match_id, res.username.clone())]).await {
+        Ok(_) => info!(
+            "Ingested salts for match {} with username: {:?}",
+            match_id, res.username
+        ),
+        Err(e) => warn!(
+            "Failed to ingest salts for match {} with username {:?}: {:?}",
+            match_id, res.username, e
+        ),
+    };
 }
 
 async fn ingest_salts(

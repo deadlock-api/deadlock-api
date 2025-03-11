@@ -12,7 +12,7 @@ valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed
 prost = "0.13.5"
 tokio = { version = "1.44.0", features = ["rt-multi-thread", "macros"] }
 log = "0.4.26"
-env_logger = "0.11.6"
-arl = "0.2.0"
+env_logger = "0.11.7"
 futures = "0.3.31"
 clickhouse = "0.13.1"
+tryhard = "0.5.1"
