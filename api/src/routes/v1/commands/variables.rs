@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
+use utoipa::ToSchema;
 use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,15 @@ impl Display for VariableResolveError {
             Self::MissingArgument(arg) => write!(f, "Missing argument: {}", arg),
         }
     }
+}
+
+#[derive(Debug, Serialize, Clone, Copy, ToSchema)]
+pub enum VariableCategory {
+    General,
+    Daily,
+    Hero,
+    Leaderboard,
+    Overall,
 }
 
 #[derive(
@@ -93,6 +103,52 @@ pub enum Variable {
 impl Variable {
     pub fn get_name(&self) -> &str {
         self.into()
+    }
+
+    pub fn get_category(&self) -> VariableCategory {
+        match self {
+            Variable::LatestPatchnotesLink
+            | Variable::LatestPatchnotesTitle
+            | Variable::SteamAccountName => VariableCategory::General,
+
+            Variable::LossesToday
+            | Variable::MatchesToday
+            | Variable::WinrateToday
+            | Variable::WinsLossesToday
+            | Variable::WinsToday => VariableCategory::Daily,
+
+            Variable::LeaderboardPlace
+            | Variable::LeaderboardRank
+            | Variable::LeaderboardRankBadgeLevel
+            | Variable::LeaderboardRankImg => VariableCategory::Leaderboard,
+
+            Variable::HighestDenies
+            | Variable::HighestKillCount
+            | Variable::HighestLastHits
+            | Variable::HighestNetWorth
+            | Variable::HoursPlayed
+            | Variable::TotalKd
+            | Variable::TotalKills
+            | Variable::TotalMatches
+            | Variable::TotalWinrate
+            | Variable::TotalWins
+            | Variable::TotalLosses
+            | Variable::TotalWinsLosses
+            | Variable::HighestDeathCount => VariableCategory::Overall,
+
+            Variable::HeroHoursPlayed
+            | Variable::HeroKd
+            | Variable::HeroKills
+            | Variable::HeroLeaderboardPlace
+            | Variable::HeroLosses
+            | Variable::HeroMatches
+            | Variable::HeroWinrate
+            | Variable::HeroWins
+            | Variable::HeroesPlayedToday
+            | Variable::MostPlayedHero
+            | Variable::MostPlayedHeroCount
+            | Variable::MaxBombStacks => VariableCategory::Hero,
+        }
     }
 
     pub fn get_description(&self) -> &str {

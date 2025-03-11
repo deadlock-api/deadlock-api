@@ -1,5 +1,5 @@
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::commands::variables::Variable;
+use crate::routes::v1::commands::variables::{Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
 use crate::state::AppState;
 use crate::utils::parse_steam_id;
@@ -18,6 +18,7 @@ pub struct VariableDescription {
     pub name: String,
     pub description: String,
     pub extra_args: Vec<String>,
+    pub category: VariableCategory,
 }
 
 impl From<Variable> for VariableDescription {
@@ -26,6 +27,7 @@ impl From<Variable> for VariableDescription {
             name: v.get_name().to_string(),
             description: v.get_description().to_string(),
             extra_args: v.extra_args(),
+            category: v.get_category(),
         }
     }
 }
