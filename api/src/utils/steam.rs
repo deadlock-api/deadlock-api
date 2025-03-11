@@ -13,12 +13,14 @@ pub struct SteamProxyResponse {
     pub username: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn call_steam_proxy(
     config: &Config,
     http_client: &reqwest::Client,
     msg_type: EgcCitadelClientMessages,
     msg: impl Message,
-    groups: &[&str],
+    in_all_groups: Option<&[&str]>,
+    in_any_groups: Option<&[&str]>,
     cooldown_time: Duration,
     request_timeout: Duration,
 ) -> reqwest::Result<SteamProxyResponse> {
@@ -31,7 +33,8 @@ pub async fn call_steam_proxy(
         .json(&json!({
             "message_kind": msg_type as i32,
             "job_cooldown_millis": cooldown_time.as_millis(),
-            "bot_in_all_groups": groups,
+            "bot_in_all_groups": in_all_groups,
+            "bot_in_any_groups": in_any_groups,
             "data": encoded_message,
         }))
         .send()

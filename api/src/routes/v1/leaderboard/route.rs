@@ -58,7 +58,8 @@ async fn fetch_leaderboard_raw(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
         msg,
-        &["LowRateLimitApis"],
+        Some(&["LowRateLimitApis"]),
+        None,
         Duration::from_secs(60),
         Duration::from_secs(2),
     )

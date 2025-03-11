@@ -115,7 +115,8 @@ async fn fetch_player_card_raw(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetProfileCard,
         msg,
-        &["LowRateLimitApis"],
+        Some(&["LowRateLimitApis"]),
+        None,
         Duration::from_secs(10),
         Duration::from_secs(2),
     )
