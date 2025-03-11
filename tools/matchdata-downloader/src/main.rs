@@ -104,7 +104,7 @@ async fn main() {
 
     loop {
         println!("Fetching match ids to download");
-        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 2 MONTH";
+        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 2 MONTH LIMIT 100";
         let match_ids_to_fetch: Vec<MatchIdQueryResult> =
             client.query(query).fetch_all().await.unwrap();
         let match_ids_to_fetch: HashSet<MatchIdQueryResult> = match_ids_to_fetch
@@ -115,7 +115,7 @@ async fn main() {
             .collect();
 
         if match_ids_to_fetch.is_empty() {
-            println!("No matches to download, sleeping for 10 s");
+            println!("No matches to download, sleeping for 10s");
             sleep(Duration::from_secs(10)).await;
             continue;
         }
