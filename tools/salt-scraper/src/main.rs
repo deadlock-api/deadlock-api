@@ -155,7 +155,6 @@ async fn fetch_match(client: &Client, match_id: u64) {
         }
     };
 
-    info!("Got a 200 response");
     let buf = BASE64_STANDARD.decode(res.data).unwrap();
     let response = CMsgClientToGcGetMatchMetaDataResponse::decode(buf.as_slice()).unwrap();
     if let Some(r) = response.result {
