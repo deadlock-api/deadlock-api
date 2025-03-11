@@ -887,7 +887,6 @@ dependencies = [
  "rust-s3",
  "serde",
  "tokio",
- "tokio-task-pool",
  "tokio-util",
 ]
 
@@ -1449,15 +1448,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
-name = "signal-hook-registry"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1658,7 +1648,6 @@ dependencies = [
  "mio",
  "parking_lot",
  "pin-project-lite",
- "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.52.0",
@@ -1704,15 +1693,6 @@ checksum = "4f4e6ce100d0eb49a2734f8c0812bcd324cf357d21810932c5df6b96ef2b86f1"
 dependencies = [
  "futures-core",
  "pin-project-lite",
- "tokio",
-]
-
-[[package]]
-name = "tokio-task-pool"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75b979d664a052ebb638f0eb4d1134bed9552a5975b82c0c61bf55ff27ff8953"
-dependencies = [
  "tokio",
 ]
 

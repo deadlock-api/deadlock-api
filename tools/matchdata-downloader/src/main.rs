@@ -9,7 +9,6 @@ use std::collections::HashSet;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
 use tokio::time::sleep;
-use tokio_task_pool::Pool;
 use tokio_util::io::StreamReader;
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
@@ -39,11 +38,6 @@ static S3_CACHE_ENDPOINT_URL: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_CACHE_ENDPOINT_URL").unwrap());
 static S3_CACHE_REGION: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_CACHE_REGION").unwrap());
-static PARALLEL_JOBS: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("PARALLEL_JOBS")
-        .map(|s| s.parse().unwrap())
-        .unwrap_or(40)
-});
 
 static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
     std::env::var("DO_NOT_PULL_DEMO_FILES")
@@ -108,18 +102,16 @@ async fn main() {
     let failed = Arc::new(Mutex::new(vec![]));
     let uploaded = Arc::new(Mutex::new(vec![]));
 
-    let pool = Pool::bounded(*PARALLEL_JOBS as usize);
-
     loop {
         println!("Fetching match ids to download");
         let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 2 MONTH";
         let match_ids_to_fetch: Vec<MatchIdQueryResult> =
             client.query(query).fetch_all().await.unwrap();
-        let match_ids_to_fetch: HashSet<MatchIdQueryResult> =
-            match_ids_to_fetch.into_iter()
-                .filter(|row| !failed.lock().unwrap().contains(&row.match_id))
-                .filter(|row| !uploaded.lock().unwrap().contains(&row.match_id))
-                .collect();
+        let match_ids_to_fetch: HashSet<MatchIdQueryResult> = match_ids_to_fetch
+            .into_iter()
+            .filter(|row| !failed.lock().unwrap().contains(&row.match_id))
+            .filter(|row| !uploaded.lock().unwrap().contains(&row.match_id))
+            .collect();
 
         if match_ids_to_fetch.is_empty() {
             println!("No matches to download, sleeping for 10 s");
@@ -127,17 +119,16 @@ async fn main() {
             continue;
         }
 
-        for row in match_ids_to_fetch {
-            pool.spawn(download_match(
+        futures::future::join_all(match_ids_to_fetch.into_iter().map(|row| {
+            download_match(
                 row,
                 bucket.clone(),
                 cache_bucket.clone(),
                 failed.clone(),
                 uploaded.clone(),
-            ))
-            .await
-            .unwrap();
-        }
+            )
+        }))
+        .await;
     }
 }
 
