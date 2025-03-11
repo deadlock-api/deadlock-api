@@ -62,6 +62,11 @@ async fn fetch_active_matches_raw(
 }
 
 async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
+    if raw_data.len() < 7 {
+        return Err(APIError::InternalError {
+            message: "Invalid active matches data".to_string(),
+        });
+    }
     let decompressed_data = snap::raw::Decoder::new()
         .decompress_vec(&raw_data[7..])
         .map_err(|e| APIError::InternalError {
