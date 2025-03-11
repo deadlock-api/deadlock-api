@@ -64,13 +64,13 @@ async fn fetch_leaderboard_raw(
     )
     .await
     .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch active matches: {e}"),
+        message: format!("Failed to fetch leaderboard: {e}"),
     })
     .and_then(|r| {
         BASE64_STANDARD
             .decode(&r.data)
             .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode active matches: {e}"),
+                message: format!("Failed to decode leaderboard: {e}"),
             })
     })
 }
@@ -79,7 +79,7 @@ async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
     CMsgClientToGcGetLeaderboardResponse::decode(raw_data)
         .map(|r| r.into())
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse active matches: {e}"),
+            message: format!("Failed to parse leaderboard: {e}"),
         })
 }
 
@@ -95,6 +95,20 @@ pub async fn fetch_parse_leaderboard(
             .fixed_backoff(Duration::from_millis(10))
             .await?;
     parse_leaderboard_raw(&raw_data).await
+}
+
+async fn validate_hero_id(state: &AppState, hero_id: u32) -> APIResult<()> {
+    let hero_ids = assets::fetch_heroes(&state.http_client)
+        .await
+        .unwrap_or_default();
+    let is_valid = hero_ids.iter().any(|h| h.id == hero_id);
+    if !is_valid {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Hero ID {} is invalid", hero_id),
+        });
+    }
+    Ok(())
 }
 
 #[utoipa::path(
@@ -189,18 +203,4 @@ pub async fn leaderboard_hero(
     fetch_parse_leaderboard(&state.config, &state.http_client, region, Some(hero_id))
         .await
         .map(Json)
-}
-
-async fn validate_hero_id(state: &AppState, hero_id: u32) -> APIResult<()> {
-    let hero_ids = assets::fetch_heroes(&state.http_client)
-        .await
-        .unwrap_or_default();
-    let is_valid = hero_ids.iter().any(|h| h.id == hero_id);
-    if !is_valid {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Hero ID {} is invalid", hero_id),
-        });
-    }
-    Ok(())
 }

@@ -117,7 +117,7 @@ async fn parse_match_history_raw(
                 .collect()
         })
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse active matches: {e}"),
+            message: format!("Failed to parse player match history: {e}"),
         })
 }
 

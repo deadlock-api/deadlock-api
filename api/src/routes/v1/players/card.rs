@@ -136,7 +136,7 @@ async fn parse_player_card_raw(raw_data: &[u8]) -> APIResult<PlayerCard> {
     CMsgCitadelProfileCard::decode(raw_data)
         .map(|r| r.into())
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse active matches: {e}"),
+            message: format!("Failed to parse player card: {e}"),
         })
 }
 
