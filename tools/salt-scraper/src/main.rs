@@ -183,7 +183,6 @@ async fn ingest_salts(
     client: &Client,
     salts: &[(CMsgClientToGcGetMatchMetaDataResponse, u64, Option<String>)],
 ) -> reqwest::Result<()> {
-    debug!("Ingesting salts: {:?}", salts);
     let salts: Vec<_> = salts
         .iter()
         .map(|(r, m, u)| {
