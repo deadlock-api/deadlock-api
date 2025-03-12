@@ -1,10 +1,13 @@
+import itertools
 import logging
 import os
+import random
 import time
 from collections.abc import Sequence
 from datetime import datetime
 from time import sleep
 
+import more_itertools
 import psycopg2
 import requests
 from google.protobuf.json_format import MessageToJson
@@ -19,7 +22,7 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
 logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger(__name__)
-UPDATE_INTERVAL = 30
+UPDATE_INTERVAL = 10
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASS = os.environ.get("POSTGRES_PASS")
@@ -105,13 +108,14 @@ def upsert_builds(
     POSTGRES_CONN.commit()
 
 
-def update_hero_lang(hero: int, lang: int):
-    LOGGER.debug(f"Updating hero {hero} in lang {lang}")
+def update_hero_langs(hero: int, langs: (int, int)):
+    LOGGER.debug(f"Updating hero {hero} in langs {langs}")
     start = time.time()
 
     msg = CMsgClientToGCFindHeroBuilds()
     msg.hero_id = hero
-    msg.language.append(lang)
+    for lang in langs:
+        msg.language.append(lang)
     msg = call_steam_proxy(
         k_EMsgClientToGCFindHeroBuilds,
         msg,
@@ -123,7 +127,7 @@ def update_hero_lang(hero: int, lang: int):
         LOGGER.error(f"Failed to fetch hero {hero} builds")
         return
 
-    LOGGER.info(f"Found {len(msg.results)} builds for hero {hero} in lang {lang}")
+    LOGGER.info(f"Found {len(msg.results)} builds for hero {hero} in langs {langs}")
     upsert_builds(msg.results)
 
     end = time.time()
@@ -139,9 +143,16 @@ if __name__ == "__main__":
         LOGGER.info("Updating hero builds")
         try:
             heroes = fetch_all_hero_ids()
-            for hero in heroes:
-                for lang in ALL_LANGS:
-                    update_hero_lang(hero, lang)
-        except Exception as e:
-            LOGGER.exception(e)
-            POSTGRES_CONN = create_pg_conn()
+            random.shuffle(heroes)
+        except requests.exceptions.HTTPError:
+            LOGGER.exception("Failed to fetch heroes")
+            sleep(10)
+            continue
+        for hero, langs in itertools.product(
+            heroes, more_itertools.chunked(ALL_LANGS, 2)
+        ):
+            try:
+                update_hero_langs(hero, langs)
+            except requests.exceptions.HTTPError:
+                LOGGER.exception(f"Failed to fetch hero {hero} in langs {langs} builds")
+                sleep(10)

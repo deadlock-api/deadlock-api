@@ -52,6 +52,7 @@ def call_steam_proxy_raw(
         PROXY_URL,
         json=body,
         headers={"Authorization": f"Bearer {PROXY_API_TOKEN}"},
+        timeout=5,
     )
     response.raise_for_status()
     data = response.json()["data"]

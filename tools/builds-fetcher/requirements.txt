@@ -2,5 +2,6 @@ tqdm
 pydantic
 protobuf
 requests
+more-itertools
 valveprotos_py @ git+https://github.com/deadlock-api/valveprotos-py
 psycopg2-binary
