@@ -16,6 +16,7 @@ use lru::LruCache;
 use prost::Message;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use std::{
     collections::{HashMap, HashSet},
     env,
@@ -44,6 +45,13 @@ const REDIS_SPEC_KEY: &str = "spectated_matches";
 const REDIS_FAILED_KEY: &str = "failed_spectated_matches";
 const REDIS_EXTRA_KEY: &str = "extra_spectated_matches";
 const REDIS_EXPIRY: i64 = 900; // 15 minutes in seconds
+
+static NO_ACTIVE_SPECTATE: LazyLock<bool> = LazyLock::new(|| {
+    env::var("NO_ACTIVE_SPECTATE")
+        .unwrap_or_default()
+        .parse()
+        .unwrap_or_default()
+});
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PoolLimitInfo {
@@ -417,6 +425,11 @@ impl SpectatorBot {
                     .await?;
             }
             prev_live_matches = live_matches.clone();
+
+            if *NO_ACTIVE_SPECTATE {
+                sleep(Duration::from_secs(30)).await;
+                continue;
+            }
 
             let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
             let n_spectated = recently_spectated.len();
