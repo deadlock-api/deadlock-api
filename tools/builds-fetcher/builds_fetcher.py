@@ -83,11 +83,11 @@ def upsert_builds(
         execute_values(
             cursor,
             """
-            INSERT INTO hero_builds(hero, build_id, version, author_id, favorites, ignores, reports, language, updated_at, data)
+            INSERT INTO hero_builds(hero, build_id, version, author_id, weekly_favorites, favorites, ignores, reports, rollup_category, language, updated_at, data)
             VALUES %s
             ON CONFLICT(hero, build_id, version)
             DO UPDATE
-            SET author_id = EXCLUDED.author_id, favorites = EXCLUDED.favorites, ignores = EXCLUDED.ignores, reports = EXCLUDED.reports, language = EXCLUDED.language, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
+            SET author_id = EXCLUDED.author_id, weekly_favorites = EXCLUDED.weekly_favorites, rollup_category = EXCLUDED.rollup_category, favorites = EXCLUDED.favorites, ignores = EXCLUDED.ignores, reports = EXCLUDED.reports, language = EXCLUDED.language, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
             """,
             [
                 (
@@ -95,9 +95,11 @@ def upsert_builds(
                     result.hero_build.hero_build_id,
                     result.hero_build.version,
                     result.hero_build.author_account_id,
+                    result.num_weekly_favorites,
                     result.num_favorites,
                     result.num_ignores,
                     result.num_reports,
+                    result.rollup_category,
                     result.hero_build.language,
                     datetime.fromtimestamp(result.hero_build.last_updated_timestamp),
                     MessageToJson(result, preserving_proto_field_name=True),
