@@ -394,12 +394,12 @@ impl SpectatorBot {
             Duration::from_secs(60 * 5),
         ).await;
 
-        let mut prev_life_matches = Vec::new();
+        let mut prev_live_matches = Vec::new();
         while (Instant::now() - start_time) < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             let s = steam_inf.read().await.clone();
             self.update_patch_version(&s).await?;
             let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
-            if live_matches != prev_life_matches {
+            if live_matches != prev_live_matches {
                 let ms = live_matches
                     .iter()
                     .filter(|x| x.spectators.unwrap_or_default() > 0)
@@ -416,7 +416,7 @@ impl SpectatorBot {
                 self.mark_spectated_many(REDIS_SPEC_KEY, &ms, REDIS_EXPIRY)
                     .await?;
             }
-            prev_life_matches = live_matches.clone();
+            prev_live_matches = live_matches.clone();
 
             let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
             let n_spectated = recently_spectated.len();
