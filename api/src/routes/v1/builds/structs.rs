@@ -57,14 +57,6 @@ pub struct BuildHero {
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct BuildPreference {
-    pub favorited: bool,
-    pub ignored: bool,
-    pub reported: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct Build {
     pub hero_build: BuildHero,
     #[serde(default)]
@@ -73,5 +65,7 @@ pub struct Build {
     pub num_ignores: u32,
     #[serde(default)]
     pub num_reports: u32,
-    pub preference: Option<BuildPreference>,
+    #[serde(default)]
+    pub num_weekly_favorites: u32,
+    pub rollup_category: Option<u32>,
 }

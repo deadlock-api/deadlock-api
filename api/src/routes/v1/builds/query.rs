@@ -12,6 +12,8 @@ fn default_limit() -> Option<u32> {
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortBy {
     #[default]
+    #[display("weekly_favorites")]
+    WeeklyFavorites,
     #[display("favorites")]
     Favorites,
     #[display("ignores")]
@@ -55,6 +57,7 @@ pub struct BuildsSearchQuery {
     pub build_id: Option<u32>,
     pub version: Option<u32>,
     pub hero_id: Option<u32>,
+    pub rollup_category: Option<u32>,
     /// The author's SteamID3
     #[serde(default)]
     #[serde(deserialize_with = "parse_steam_id_option")]
@@ -75,6 +78,7 @@ impl Default for BuildsSearchQuery {
             build_id: None,
             version: None,
             hero_id: None,
+            rollup_category: None,
             author_id: None,
         }
     }
@@ -112,6 +116,10 @@ pub fn sql_query(params: &BuildsSearchQuery) -> String {
     if let Some(author_id) = params.author_id {
         query_builder.push(" AND author_id = ");
         query_builder.push(author_id.to_string());
+    }
+    if let Some(rollup_category) = params.rollup_category {
+        query_builder.push(" AND rollup_category = ");
+        query_builder.push(rollup_category.to_string());
     }
     query_builder.push(" ORDER BY ");
     query_builder.push(params.sort_by.to_string().to_lowercase());
