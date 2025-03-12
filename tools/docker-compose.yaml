@@ -1,36 +1,14 @@
 services:
-  clickhouse:
-    image: clickhouse/clickhouse-server
-    restart: always
-    ports:
-    - "127.0.0.1:8123:8123"
-    - "127.0.0.1:9000:9000"
-    ulimits:
-      nofile:
-        soft: 262144
-        hard: 262144
-    privileged: true
-    volumes:
-    - ./volumes/clickhouse/data:/var/lib/clickhouse
-    - ./volumes/clickhouse/log:/var/log/clickhouse-server
-    env_file: .env
-    environment:
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
-
   active-matches-scraper:
     build:
       context: active-matches-scraper
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
 
   ingest-worker:
     build:
       context: ingest-worker
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
     stop_grace_period: 30s
 
@@ -38,8 +16,6 @@ services:
     build:
       context: matchdata-downloader
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
     stop_grace_period: 30s
 
@@ -49,51 +25,37 @@ services:
     restart: always
     environment:
       RUST_LOG: debug
-    depends_on:
-    - clickhouse
     env_file: salt-scraper/.env
 
   mmr-calc:
     build:
       context: mmr-calc
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
 
   rank-fetcher:
     build:
       context: rank-fetcher
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
 
   history-fetcher:
     build:
       context: history-fetcher
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
 
   builds-fetcher:
     build:
       context: builds-fetcher
     restart: always
-    depends_on:
-    - clickhouse
     env_file: .env
-    networks:
-    - database
 
   hltv-spectator:
     build:
       context: hltv-scraper
     restart: always
     env_file: .env
-    networks:
-    - database
 
   hltv-scraper:
     build:
@@ -102,9 +64,3 @@ services:
     env_file: .env
     volumes:
     - ./local-store:/matches
-    networks:
-    - database
-
-networks:
-  database:
-    external: true
