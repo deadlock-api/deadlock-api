@@ -93,7 +93,11 @@ impl AppState {
             ))
             .with_user(&config.clickhouse_username)
             .with_password(&config.clickhouse_password)
-            .with_database(&config.clickhouse_dbname);
+            .with_database(&config.clickhouse_dbname)
+            .with_option("output_format_json_quote_64bit_integers", "0")
+            .with_option("output_format_json_named_tuples_as_objects", "1")
+            .with_option("enable_json_type", "1")
+            .with_option("enable_named_columns_in_function_tuple", "1");
         if let Err(e) = clickhouse_client.query("SELECT 1").fetch_one::<u8>().await {
             return Err(LoadAppStateError::Clickhouse(e));
         }
