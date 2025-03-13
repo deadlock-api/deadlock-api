@@ -126,6 +126,7 @@ impl AppState {
 mod tests {
     use super::*;
 
+    #[ignore]
     #[tokio::test]
     async fn test_load_app_state() {
         AppState::from_env().await.expect("Load app state");

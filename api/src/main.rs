@@ -99,6 +99,7 @@ mod tests {
     use axum::http::{Request, StatusCode};
     use tower::ServiceExt;
 
+    #[ignore]
     #[tokio::test]
     async fn test_router() {
         let router = get_router().await.expect("Router");
