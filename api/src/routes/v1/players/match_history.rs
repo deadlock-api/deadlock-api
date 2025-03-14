@@ -36,7 +36,7 @@ pub async fn insert_match_history_to_clickhouse(
 
 #[cached(
     ty = "TimedCache<u32, PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
+    create = "{ TimedCache::with_lifespan(10 * 60) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
