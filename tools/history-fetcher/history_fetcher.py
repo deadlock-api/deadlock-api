@@ -58,7 +58,7 @@ async def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryE
             k_EMsgClientToGCGetMatchHistory,
             msg,
             CMsgClientToGCGetMatchHistoryResponse,
-            cooldown_time=10000,
+            cooldown_time=600000,
             groups=["GetMatchHistory"],
         )
         if msg.result != msg.k_eResult_Success:
@@ -133,8 +133,8 @@ async def loop():
             end = time.time()
             duration = end - start
 
-            # 1 request per minute per account
-            sleep_time = 60 * chunk_size / num_accounts - duration
+            # 1 request per 10 minutes per account
+            sleep_time = 10 * 60 * chunk_size / num_accounts - duration
             LOGGER.info(
                 f"Processed batch in {duration :.2f} seconds, sleeping for {sleep_time} seconds"
             )
