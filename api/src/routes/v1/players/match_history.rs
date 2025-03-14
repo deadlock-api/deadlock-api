@@ -82,8 +82,8 @@ async fn fetch_match_history_raw(
         msg,
         None,
         Some(&["GetMatchHistory", "GetMatchHistoryOnDemand"]),
-        Duration::from_secs(15),
-        Duration::from_secs(2),
+        Duration::from_secs(10 * 60),
+        Duration::from_secs(3),
     )
     .await
     .map_err(|e| APIError::InternalError {
