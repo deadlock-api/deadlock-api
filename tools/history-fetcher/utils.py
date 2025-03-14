@@ -26,12 +26,14 @@ async def call_steam_proxy(
     response_type: type[R],
     cooldown_time: int,
     groups: list[str],
-) -> R:
+) -> (R, str):
     MAX_RETRIES = 3
     for i in range(MAX_RETRIES):
         try:
-            data = await call_steam_proxy_raw(msg_type, msg, cooldown_time, groups)
-            return response_type.FromString(data)
+            data, username = await call_steam_proxy_raw(
+                msg_type, msg, cooldown_time, groups
+            )
+            return response_type.FromString(data), username
         except Exception as e:
             LOGGER.warning(f"Failed to call steam proxy: {e}")
             if i == MAX_RETRIES - 1:
@@ -43,7 +45,7 @@ async def call_steam_proxy(
 
 async def call_steam_proxy_raw(
     msg_type: int, msg: Message, cooldown_time: int, groups: list[str]
-) -> bytes:
+) -> (bytes, str):
     assert PROXY_URL, "PROXY_URL must be defined"
     assert PROXY_API_TOKEN, "PROXY_API_TOKEN must be defined"
 
@@ -61,8 +63,9 @@ async def call_steam_proxy_raw(
         timeout=10,
     )
     response.raise_for_status()
-    data = response.json()["data"]
-    return b64decode(data)
+    response = response.json()
+    data = response["data"]
+    return b64decode(data), response.get("username")
 
 
 class PlayerMatchHistoryEntry(BaseModel):

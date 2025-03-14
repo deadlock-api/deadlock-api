@@ -54,7 +54,7 @@ async def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryE
     try:
         msg = CMsgClientToGCGetMatchHistory()
         msg.account_id = account_id
-        msg = await call_steam_proxy(
+        msg, username = await call_steam_proxy(
             k_EMsgClientToGCGetMatchHistory,
             msg,
             CMsgClientToGCGetMatchHistoryResponse,
@@ -62,7 +62,9 @@ async def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryE
             groups=["GetMatchHistory"],
         )
         if msg.result != msg.k_eResult_Success:
-            raise Exception(f"Failed to get match history: {msg.result}")
+            raise Exception(
+                f"Failed to get match history: {msg.result}, with username: {username}"
+            )
         return account_id, [
             PlayerMatchHistoryEntry.from_msg(match) for match in msg.matches
         ]
