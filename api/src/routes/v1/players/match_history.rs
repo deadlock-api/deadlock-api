@@ -59,7 +59,7 @@ pub async fn fetch_match_history_from_clickhouse(
 
 #[cached(
     ty = "TimedCache<u32, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(60) }",
+    create = "{ TimedCache::with_lifespan(5 * 60) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
