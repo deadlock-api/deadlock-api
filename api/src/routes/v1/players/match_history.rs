@@ -18,7 +18,7 @@ use futures::future::join;
 use itertools::{Itertools, chain};
 use prost::Message;
 use std::time::Duration;
-use tracing::warn;
+use tracing::{debug, warn};
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
 };
@@ -90,6 +90,8 @@ async fn fetch_match_history_raw(
         message: format!("Failed to fetch player match history: {e}"),
     })
     .and_then(|r| {
+        debug!("Fetched player match history with: {}", r.username);
+
         BASE64_STANDARD
             .decode(&r.data)
             .map_err(|e| APIError::InternalError {
