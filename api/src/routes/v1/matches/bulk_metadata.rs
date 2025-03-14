@@ -3,7 +3,7 @@ use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use clickhouse::query::BytesCursor;
 use serde::{Deserialize, Serialize};
@@ -84,7 +84,7 @@ pub struct BulkMatchMetadataQuery {
     #[param(inline, default = "SortDirection::Desc")]
     order_direction: SortDirection,
     #[serde(default = "default_limit")]
-    #[param(minimum = 1, maximum = 100000, default = 100)]
+    #[param(minimum = 1, maximum = 100000, default = 1000)]
     limit: u32,
 }
 
@@ -117,7 +117,7 @@ pub async fn bulk_metadata(
     )
     .await?;
     println!("{:#?}", query);
-    let query = build_ch_query(query);
+    let query = build_ch_query(query)?;
     let lines = fetch_lines(&state.clickhouse_client, &query)
         .await
         .map_err(|_| APIError::InternalError {
@@ -131,7 +131,7 @@ pub async fn bulk_metadata(
     Ok(Json(parsed_result))
 }
 
-fn build_ch_query(settings: BulkMatchMetadataQuery) -> String {
+fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if settings.include_info {
         select_fields.extend(vec![
@@ -197,6 +197,13 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> String {
         select_fields.push(player_select_fields);
     }
 
+    if select_fields.is_empty() {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "No fields selected".to_string(),
+        });
+    }
+
     let mut where_clauses = vec![];
     if let Some(min_unix_timestamp) = settings.min_unix_timestamp {
         where_clauses.push(format!("start_time >= {}", min_unix_timestamp));
@@ -241,20 +248,27 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> String {
     // SELECT
     query.push_str("SELECT ");
     query.push_str(&select_fields.join(", "));
-    query.push_str(" FROM match_info FINAL INNER JOIN match_player USING (match_id)");
+    query.push_str(" FROM match_info FINAL INNER JOIN match_player USING (match_id) ");
     // WHERE
-    query.push_str(" WHERE ");
-    query.push_str(&where_clauses.join(" AND "));
-    query.push_str(" GROUP BY ALL ORDER BY ");
+    if !where_clauses.is_empty() {
+        query.push_str(" WHERE ");
+        query.push_str(&where_clauses.join(" AND "));
+        query.push(' ');
+    }
+    // GROUP By
+    query.push_str(" GROUP BY ALL ");
     // Order By
+    query.push_str(" ORDER BY ");
     query.push_str(settings.order_by.into());
     query.push(' ');
     query.push_str(settings.order_direction.into());
+    query.push(' ');
     // Limit
     query.push_str(" LIMIT ");
     query.push_str(&settings.limit.to_string());
+    query.push_str(" BY match_id");
     debug!(query = %query);
-    query
+    Ok(query)
 }
 
 async fn fetch_lines(
