@@ -72,11 +72,17 @@ async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to decompress active matches: {e}"),
         })?;
-    CMsgClientToGcGetActiveMatchesResponse::decode(decompressed_data.as_ref())
-        .map(|msg| msg.active_matches.into_iter().map_into().collect())
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse active matches: {e}"),
-        })
+    let decoded_message = CMsgClientToGcGetActiveMatchesResponse::decode(
+        decompressed_data.as_ref(),
+    )
+    .map_err(|e| APIError::InternalError {
+        message: format!("Failed to parse active matches: {e}"),
+    })?;
+    Ok(decoded_message
+        .active_matches
+        .into_iter()
+        .map_into()
+        .collect())
 }
 
 #[utoipa::path(
@@ -122,12 +128,13 @@ pub async fn active_matches(
     Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let raw_data =
-        tryhard::retry_fn(|| fetch_active_matches_raw(&state.config, &state.http_client))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
-    let mut active_matches = parse_active_matches_raw(&raw_data).await?;
+    let mut active_matches = tryhard::retry_fn(|| async {
+        let raw_data = fetch_active_matches_raw(&state.config, &state.http_client).await?;
+        parse_active_matches_raw(&raw_data).await
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await?;
 
     // Filter by account id if provided
     if let Some(account_id) = account_id {

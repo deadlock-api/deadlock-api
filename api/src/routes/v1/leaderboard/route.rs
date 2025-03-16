@@ -16,8 +16,10 @@ use prost::Message;
 use serde::Deserialize;
 use std::time::Duration;
 use utoipa::IntoParams;
+use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess;
 use valveprotos::deadlock::{
     CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse, EgcCitadelClientMessages,
+    c_msg_client_to_gc_get_leaderboard_response,
 };
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -77,11 +79,21 @@ async fn fetch_leaderboard_raw(
 }
 
 async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
-    CMsgClientToGcGetLeaderboardResponse::decode(raw_data)
-        .map(|r| r.into())
-        .map_err(|e| APIError::InternalError {
+    let decoded_message = CMsgClientToGcGetLeaderboardResponse::decode(raw_data).map_err(|e| {
+        APIError::InternalError {
             message: format!("Failed to parse leaderboard: {e}"),
-        })
+        }
+    })?;
+
+    if decoded_message
+        .result
+        .is_none_or(|r| r != c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32)
+    {
+        return Err(APIError::InternalError {
+            message: format!("Failed to fetch leaderbaord: {:?}", KEResultSuccess),
+        });
+    }
+    Ok(decoded_message.into())
 }
 
 pub async fn fetch_parse_leaderboard(
@@ -90,12 +102,13 @@ pub async fn fetch_parse_leaderboard(
     region: LeaderboardRegion,
     hero_id: Option<u32>,
 ) -> APIResult<Leaderboard> {
-    let raw_data =
-        tryhard::retry_fn(|| fetch_leaderboard_raw(config, http_client, region, hero_id))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
-    parse_leaderboard_raw(&raw_data).await
+    tryhard::retry_fn(|| async {
+        let raw_data = fetch_leaderboard_raw(config, http_client, region, hero_id).await?;
+        parse_leaderboard_raw(&raw_data).await
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await
 }
 
 async fn validate_hero_id(state: &AppState, hero_id: u32) -> APIResult<()> {

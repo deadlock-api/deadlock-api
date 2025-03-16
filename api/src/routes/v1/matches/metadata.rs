@@ -194,8 +194,8 @@ pub async fn metadata(
         &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
     )
     .await?;
-    let raw_data = tryhard::retry_fn(|| {
-        fetch_match_metadata_raw(
+    tryhard::retry_fn(|| async {
+        let raw_data = fetch_match_metadata_raw(
             &state.config,
             &state.http_client,
             &state.clickhouse_client,
@@ -203,9 +203,10 @@ pub async fn metadata(
             &state.s3_cache_client,
             match_id,
         )
+        .await?;
+        parse_match_metadata_raw(&raw_data).await.map(Json)
     })
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))
-    .await?;
-    parse_match_metadata_raw(&raw_data).await.map(Json)
+    .await
 }

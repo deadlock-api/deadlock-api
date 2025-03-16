@@ -134,11 +134,11 @@ async fn fetch_player_card_raw(
 }
 
 async fn parse_player_card_raw(raw_data: &[u8]) -> APIResult<PlayerCard> {
-    CMsgCitadelProfileCard::decode(raw_data)
-        .map(|r| r.into())
-        .map_err(|e| APIError::InternalError {
+    let decoded_message =
+        CMsgCitadelProfileCard::decode(raw_data).map_err(|e| APIError::InternalError {
             message: format!("Failed to parse player card: {e}"),
-        })
+        })?;
+    Ok(decoded_message.into())
 }
 
 #[utoipa::path(
@@ -215,10 +215,11 @@ pub async fn card(
         &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
     )
     .await?;
-    let raw_data =
-        tryhard::retry_fn(|| fetch_player_card_raw(&state.config, &state.http_client, account_id))
-            .retries(3)
-            .fixed_backoff(Duration::from_millis(10))
-            .await?;
-    parse_player_card_raw(&raw_data).await.map(Json)
+    tryhard::retry_fn(|| async {
+        let raw_data = fetch_player_card_raw(&state.config, &state.http_client, account_id).await?;
+        parse_player_card_raw(&raw_data).await.map(Json)
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await
 }

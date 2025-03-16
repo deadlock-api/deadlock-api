@@ -20,7 +20,7 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
-    EgcCitadelClientMessages,
+    EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
 };
 
 #[derive(Deserialize, IntoParams, Default)]
@@ -133,6 +133,12 @@ pub async fn fetch_match_salts(
                             warn!("Failed to parse match salts from Steam: {e}");
                         }
                         Ok(salts) => {
+                            if salts.result.is_none_or(|r| r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32){
+                                return Err(APIError::StatusMsg {
+                                    status: reqwest::StatusCode::NOT_FOUND,
+                                    message: format!("Failed to fetch match salts for match {match_id}"),
+                                });
+                            }
                             if salts.replay_group_id.is_some()
                                 && salts.metadata_salt.unwrap_or_default() != 0
                             {

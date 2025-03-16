@@ -21,6 +21,7 @@ use std::time::Duration;
 use tracing::{debug, warn};
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
+    c_msg_client_to_gc_get_match_history_response,
 };
 
 pub async fn insert_match_history_to_clickhouse(
@@ -46,15 +47,22 @@ pub async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
     account_id: u32,
 ) -> APIResult<PlayerMatchHistory> {
-    ch_client.query(
-        "SELECT ?fields FROM player_match_history FINAL WHERE account_id = ? ORDER BY start_time DESC"
-    )
-        .bind(account_id)
-        .fetch_all()
+    tryhard::retry_fn(||
+            async {
+                ch_client.query(
+                    "SELECT ?fields FROM player_match_history FINAL WHERE account_id = ? ORDER BY start_time DESC"
+                )
+                    .bind(account_id)
+                    .fetch_all()
+                    .await
+                    .map_err(|e| APIError::InternalError {
+                        message: format!("Failed to fetch player match history from ClickHouse: {e}"),
+                    })
+            }
+        )
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(10))
         .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch player match history from ClickHouse: {e}"),
-        })
 }
 
 #[cached(
@@ -104,24 +112,35 @@ async fn parse_match_history_raw(
     account_id: u32,
     raw_data: &[u8],
 ) -> APIResult<PlayerMatchHistory> {
-    CMsgClientToGcGetMatchHistoryResponse::decode(raw_data)
-        .map(|r| {
-            r.matches
-                .into_iter()
-                .flat_map(
-                    |e| match PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
-                        Some(entry) => Some(entry),
-                        None => {
-                            warn!("Failed to parse player match history entry: {:?}", e);
-                            None
-                        }
-                    },
-                )
-                .collect()
-        })
-        .map_err(|e| APIError::InternalError {
+    let decoded_message = CMsgClientToGcGetMatchHistoryResponse::decode(raw_data).map_err(|e| {
+        APIError::InternalError {
             message: format!("Failed to parse player match history: {e}"),
-        })
+        }
+    })?;
+    if decoded_message.result.is_none_or(|r| {
+        r != c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess as i32
+    }) {
+        println!("{:?}", decoded_message);
+        return Err(APIError::InternalError {
+            message: format!(
+                "Failed to fetch player match history: {:?}",
+                decoded_message
+            ),
+        });
+    }
+    Ok(decoded_message
+        .matches
+        .into_iter()
+        .flat_map(
+            |e| match PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
+                Some(entry) => Some(entry),
+                None => {
+                    warn!("Failed to parse player match history entry: {:?}", e);
+                    None
+                }
+            },
+        )
+        .collect())
 }
 
 pub async fn fetch_steam_match_history(
@@ -129,15 +148,13 @@ pub async fn fetch_steam_match_history(
     config: &Config,
     http_client: &reqwest::Client,
 ) -> APIResult<PlayerMatchHistory> {
-    let raw_data = tryhard::retry_fn(|| fetch_match_history_raw(config, http_client, account_id))
-        .retries(3)
-        .fixed_backoff(Duration::from_millis(10))
-        .await?;
-    parse_match_history_raw(account_id, &raw_data)
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse player match history: {e:?}"),
-        })
+    tryhard::retry_fn(|| async {
+        let raw_data = fetch_match_history_raw(config, http_client, account_id).await?;
+        parse_match_history_raw(account_id, &raw_data).await
+    })
+    .retries(10)
+    .fixed_backoff(Duration::from_millis(10))
+    .await
 }
 
 #[utoipa::path(
@@ -184,8 +201,14 @@ pub async fn match_history(
         fetch_match_history_from_clickhouse(ch_client, account_id),
     )
     .await;
-    let (steam_match_history, ch_match_history) =
-        (steam_match_history.unwrap_or_default(), ch_match_history?);
+    let steam_match_history = match steam_match_history {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to fetch player match history from Steam: {e:?}");
+            vec![]
+        }
+    };
+    let ch_match_history = ch_match_history?;
 
     // Insert missing entries to ClickHouse
     let ch_match_ids = ch_match_history.iter().map(|e| e.match_id).collect_vec();
