@@ -113,7 +113,7 @@ pub async fn bulk_metadata(
         &headers,
         &state,
         "match_metadata_bulk",
-        &[RateLimitQuota::ip_limit(10, Duration::from_secs(1))],
+        &[RateLimitQuota::ip_limit(1, Duration::from_secs(1))],
     )
     .await?;
     println!("{:#?}", query);
@@ -136,35 +136,36 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
     if settings.include_info {
         select_fields.extend(vec![
             "match_id".to_owned(),
-            "start_time".to_owned(),
-            "winning_team".to_owned(),
-            "duration_s".to_owned(),
-            "match_outcome".to_owned(),
-            "match_mode".to_owned(),
-            "game_mode".to_owned(),
-            "is_high_skill_range_parties".to_owned(),
-            "low_pri_pool".to_owned(),
-            "new_player_pool".to_owned(),
-            "average_badge_team0".to_owned(),
-            "average_badge_team1".to_owned(),
-            "game_mode_version".to_owned(),
+            "any(start_time) as start_time".to_owned(),
+            "any(winning_team) as winning_team".to_owned(),
+            "any(duration_s) as duration_s".to_owned(),
+            "any(match_outcome) as match_outcome".to_owned(),
+            "any(match_mode) as match_mode".to_owned(),
+            "any(game_mode) as game_mode".to_owned(),
+            "any(is_high_skill_range_parties) as is_high_skill_range_parties".to_owned(),
+            "any(low_pri_pool) as low_pri_pool".to_owned(),
+            "any(new_player_pool) as new_player_pool".to_owned(),
+            "any(average_badge_team0) as average_badge_team0".to_owned(),
+            "any(average_badge_team1) as average_badge_team1".to_owned(),
+            "any(game_mode_version) as game_mode_version".to_owned(),
         ]);
     }
     if settings.include_damage_matrix {
         select_fields
-            .push("(sample_time_s, stat_type, source_name)::JSON as damage_matrix".to_owned());
+            .push("(any(sample_time_s) as sample_time_s, any(stat_type) as stat_type, any(source_name) as source_name)::JSON as damage_matrix".to_owned());
     }
     if settings.include_mid_boss {
-        select_fields.push("mid_boss".to_owned());
+        select_fields.push("any(mid_boss) as mid_boss".to_owned());
     }
     if settings.include_objectives {
-        select_fields.push("objectives".to_owned());
+        select_fields.push("any(objectives) as objectives".to_owned());
     }
     // Player Select Fields
-    if settings.include_player_info
+    let has_player_fields = settings.include_player_info
         || settings.include_player_items
         || settings.include_player_stats
-    {
+        || settings.include_player_death_details;
+    if has_player_fields {
         let mut player_select_fields = vec!["account_id", "hero_id", "player_slot", "team"];
         if settings.include_player_info {
             player_select_fields.extend(vec![
@@ -252,25 +253,31 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
     let order_by: &str = settings.order_by.into();
     let order_direction: &str = settings.order_direction.into();
     let order = format!(" ORDER BY {} {} ", order_by, order_direction);
-    let limit = format!(" LIMIT 1 BY match_id LIMIT {} ", settings.limit);
+    let limit = format!(" LIMIT {} ", settings.limit);
 
     let mut query = String::new();
     // WITH
     query.push_str("WITH ");
     query.push_str(&format!(
-        "t_matches AS (SELECT * FROM match_info {} {} {}),",
+        "t_matches AS (SELECT * FROM match_info FINAL {} {} {})",
         info_where, order, limit
     ));
-    query.push_str(
-        "t_players AS (SELECT * FROM match_player FINAL WHERE match_id IN (SELECT match_id FROM t_matches) LIMIT 12 BY account_id)",
-    );
+    if has_player_fields {
+        query.push_str(
+            ", t_players AS (SELECT * FROM match_player FINAL WHERE match_id IN (SELECT match_id FROM t_matches))",
+        );
+    }
 
     // SELECT
     query.push_str("SELECT ");
     query.push_str(&select_fields.join(", "));
-    query.push_str(" FROM t_players INNER JOIN t_matches USING (match_id) ");
+    if has_player_fields {
+        query.push_str(" FROM t_players INNER JOIN t_matches USING (match_id) ");
+    } else {
+        query.push_str(" FROM t_matches ");
+    }
     // GROUP By
-    query.push_str(" GROUP BY ALL ");
+    query.push_str(" GROUP BY match_id ");
     // Order By
     query.push_str(&order);
     // Limit
