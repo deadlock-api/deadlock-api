@@ -58,7 +58,7 @@ async def update_account(account_id: int) -> tuple[int, list[PlayerMatchHistoryE
             k_EMsgClientToGCGetMatchHistory,
             msg,
             CMsgClientToGCGetMatchHistoryResponse,
-            cooldown_time=600000,
+            cooldown_time=24 * 60 * 60 * 10,  # 100req/day
             groups=["GetMatchHistory"],
         )
         if msg.result != msg.k_eResult_Success:
