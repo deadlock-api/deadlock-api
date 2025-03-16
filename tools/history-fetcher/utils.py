@@ -53,6 +53,7 @@ async def call_steam_proxy_raw(
     body = {
         "message_kind": msg_type,
         "job_cooldown_millis": cooldown_time,
+        "rate_limit_cooldown_millis": 2 * cooldown_time,
         "bot_in_all_groups": groups,
         "data": msg_data,
     }
