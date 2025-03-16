@@ -1,5 +1,4 @@
 mod active;
-mod bulk_metadata;
 mod ingest_event;
 mod ingest_salts;
 mod metadata;
@@ -22,7 +21,6 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(active::active_matches_raw))
         .routes(routes!(metadata::metadata))
         .routes(routes!(metadata::metadata_raw))
-        .routes(routes!(bulk_metadata::bulk_metadata))
         .routes(routes!(salts::salts))
         .routes(routes!(ingest_event::ingest_event))
         .routes(routes!(ingest_salts::ingest_salts))
