@@ -65,14 +65,6 @@ pub async fn fetch_match_history_from_clickhouse(
         .await
 }
 
-#[cached(
-    ty = "TimedCache<u32, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(5 * 60) }",
-    result = true,
-    convert = "{ account_id }",
-    sync_writes = "by_key",
-    key = "u32"
-)]
 async fn fetch_match_history_raw(
     config: &Config,
     http_client: &reqwest::Client,
@@ -143,6 +135,14 @@ async fn parse_match_history_raw(
         .collect())
 }
 
+#[cached(
+    ty = "TimedCache<u32, PlayerMatchHistory>",
+    create = "{ TimedCache::with_lifespan(5 * 60) }",
+    result = true,
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
 pub async fn fetch_steam_match_history(
     account_id: u32,
     config: &Config,
