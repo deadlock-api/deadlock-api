@@ -268,14 +268,10 @@ impl Variable {
                 Ok(format!("{rank_name} {subrank}"))
             }
             Self::HeroesPlayedToday => {
-                let todays_matches = Self::get_todays_matches(
-                    &state.config,
-                    &state.clickhouse_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let todays_matches =
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
+                        .await
+                        .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
                 let heroes_played = todays_matches.iter().fold(HashMap::new(), |mut acc, m| {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
@@ -426,14 +422,9 @@ impl Variable {
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::WinrateToday => {
-                let matches = Self::get_todays_matches(
-                    &state.config,
-                    &state.clickhouse_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let matches = Self::get_todays_matches(&state.config, &state.http_client, steam_id)
+                    .await
+                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -444,14 +435,9 @@ impl Variable {
                 ))
             }
             Self::WinsLossesToday => {
-                let matches = Self::get_todays_matches(
-                    &state.config,
-                    &state.clickhouse_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let matches = Self::get_todays_matches(&state.config, &state.http_client, steam_id)
+                    .await
+                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
@@ -461,37 +447,34 @@ impl Variable {
                 });
                 Ok(format!("{wins}-{losses}"))
             }
-            Self::MatchesToday => Ok(Self::get_todays_matches(
-                &state.config,
-                &state.clickhouse_client,
-                &state.http_client,
-                steam_id,
-            )
-            .await?
-            .len()
-            .to_string()),
-            Self::WinsToday => Ok(Self::get_todays_matches(
-                &state.config,
-                &state.clickhouse_client,
-                &state.http_client,
-                steam_id,
-            )
-            .await?
-            .iter()
-            .filter(|m| m.match_result as i8 == m.player_team)
-            .count()
-            .to_string()),
-            Self::LossesToday => Ok(Self::get_todays_matches(
-                &state.config,
-                &state.clickhouse_client,
-                &state.http_client,
-                steam_id,
-            )
-            .await?
-            .iter()
-            .filter(|m| m.match_result as i8 != m.player_team)
-            .count()
-            .to_string()),
+            Self::MatchesToday => {
+                Ok(
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
+                        .await?
+                        .len()
+                        .to_string(),
+                )
+            }
+            Self::WinsToday => {
+                Ok(
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
+                        .await?
+                        .iter()
+                        .filter(|m| m.match_result as i8 == m.player_team)
+                        .count()
+                        .to_string(),
+                )
+            }
+            Self::LossesToday => {
+                Ok(
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
+                        .await?
+                        .iter()
+                        .filter(|m| m.match_result as i8 != m.player_team)
+                        .count()
+                        .to_string(),
+                )
+            }
             Self::MostPlayedHero => {
                 let matches = Self::get_all_matches(
                     &state.config,
@@ -813,11 +796,12 @@ impl Variable {
 
     async fn get_todays_matches(
         config: &Config,
-        ch_client: &clickhouse::Client,
         http_client: &reqwest::Client,
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let matches = Self::get_all_matches(config, ch_client, http_client, steam_id).await?;
+        let matches = fetch_steam_match_history(steam_id, config, http_client)
+            .await
+            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
         let first_match = matches
             .first()
             .ok_or(VariableResolveError::FailedToFetchData("matches"))?;
