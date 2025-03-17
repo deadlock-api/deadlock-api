@@ -7,6 +7,7 @@ use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use serde_json::json;
 use std::time::Duration;
+use tracing::debug;
 
 async fn check_salt(http_client: &reqwest::Client, salts: &ClickhouseSalts) -> bool {
     let Some(cluster_id) = salts.cluster_id else {
