@@ -39,7 +39,7 @@ def get_accounts(client: Client) -> list[int]:
     SELECT DISTINCT account_id
     FROM match_player
     INNER JOIN match_info mi USING (match_id)
-    WHERE mi.start_time > now() - INTERVAL 1 WEEK
+    WHERE mi.start_time > now() - INTERVAL 2 WEEK
     """
     accounts = [r[0] for r in client.execute(query)]
     LOGGER.info(
