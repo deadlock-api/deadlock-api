@@ -84,7 +84,7 @@ pub struct BulkMatchMetadataQuery {
     #[param(inline, default = "SortDirection::Desc")]
     order_direction: SortDirection,
     #[serde(default = "default_limit")]
-    #[param(minimum = 1, maximum = 100000, default = 1000)]
+    #[param(minimum = 1, maximum = 10000, default = 1000)]
     limit: u32,
 }
 
@@ -113,9 +113,15 @@ pub async fn bulk_metadata(
         &headers,
         &state,
         "match_metadata_bulk",
-        &[RateLimitQuota::ip_limit(1, Duration::from_secs(1))],
+        &[RateLimitQuota::ip_limit(60, Duration::from_secs(60))],
     )
     .await?;
+    if query.limit > 10000 {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Limit is too high".to_string(),
+        });
+    }
     println!("{:#?}", query);
     let query = build_ch_query(query)?;
     let lines = fetch_lines(&state.clickhouse_client, &query)

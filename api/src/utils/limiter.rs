@@ -194,7 +194,7 @@ async fn check_requests(
         .min()
         .and_then(|t| DateTime::from_timestamp(*t as i64, 0))
         .unwrap_or_else(|| Utc::now() - Duration::from_secs(MAX_TTL_SECONDS as u64));
-    Ok((result.len() as u32, oldest_request))
+    Ok((result.len() as u32 - 1, oldest_request))
 }
 
 async fn increment_key(
