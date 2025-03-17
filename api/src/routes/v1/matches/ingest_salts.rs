@@ -85,6 +85,13 @@ pub async fn ingest_salts(
         match_salts
     };
 
+    if match_salts.is_empty() {
+        return Err(APIError::StatusMsg {
+            status: reqwest::StatusCode::BAD_REQUEST,
+            message: "No valid salts provided.".to_string(),
+        });
+    }
+
     insert_salts_to_clickhouse(&state.clickhouse_client, match_salts)
         .await
         .map_err(|e| APIError::InternalError {
