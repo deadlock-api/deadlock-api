@@ -19,7 +19,6 @@ pub struct ClickhouseMatchInfo {
     pub average_badge_team0: Option<u32>,
     #[serde(default)]
     pub average_badge_team1: Option<u32>,
-    pub account_hero_ids: Vec<(u32, u32)>,
 }
 
 #[cached(
@@ -38,10 +37,8 @@ async fn get_recently_fetched_match_ids(
         any(duration_s) as duration_s,
         any(match_mode) as match_mode,
         any(average_badge_team0),
-        any(average_badge_team1),
-        groupUniqArray(12)((account_id, hero_id)) as account_ids
+        any(average_badge_team1)
     FROM match_info FINAL
-        INNER JOIN match_player FINAL USING (match_id)
     WHERE created_at > now() - 600 AND match_outcome = 'TeamWin' AND match_info.match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal'
     GROUP BY match_id
     ORDER BY any(created_at) DESC
