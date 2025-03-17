@@ -33,15 +33,14 @@ async fn get_recently_fetched_match_ids(
 ) -> APIResult<Vec<ClickhouseMatchInfo>> {
     let query = r#"
     SELECT match_id,
-        any(start_time) as start_time,
-        any(duration_s) as duration_s,
-        any(match_mode) as match_mode,
-        any(average_badge_team0),
-        any(average_badge_team1)
+        start_time,
+        duration_s,
+        match_mode,
+        average_badge_team0,
+        average_badge_team1
     FROM match_info FINAL
     WHERE created_at > now() - 600 AND match_outcome = 'TeamWin' AND match_info.match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal'
-    GROUP BY match_id
-    ORDER BY any(created_at) DESC
+    ORDER BY created_at DESC
     "#;
     ch_client
         .query(query)
