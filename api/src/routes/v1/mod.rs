@@ -1,6 +1,7 @@
 use crate::state::AppState;
 use utoipa_axum::router::OpenApiRouter;
 
+mod analytics;
 mod builds;
 mod commands;
 mod info;
@@ -14,6 +15,7 @@ pub fn router() -> OpenApiRouter<AppState> {
         .nest("/matches", matches::router())
         .nest("/players", players::router())
         .nest("/leaderboard", leaderboard::router())
+        .nest("/analytics", analytics::router())
         .nest("/builds", builds::router())
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())
