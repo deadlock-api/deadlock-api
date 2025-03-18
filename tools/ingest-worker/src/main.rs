@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
+use crate::models::enums::MatchOutcome;
 use arl::RateLimiter;
 use async_compression::tokio::bufread::BzDecoder;
 use clickhouse::{Client, Compression};
@@ -256,6 +257,10 @@ async fn insert_matches(client: Client, matches: &[MatchInfo]) -> clickhouse::er
     let mut match_player_insert = client.insert("match_player")?;
     for match_info in matches.iter() {
         let ch_match_metadata: ClickhouseMatchInfo = match_info.clone().into();
+        if ch_match_metadata.match_outcome == MatchOutcome::Error {
+            println!("Match outcome is error, skipping match");
+            continue;
+        }
         match_info_insert.write(&ch_match_metadata).await?;
 
         let ch_players = match_info
