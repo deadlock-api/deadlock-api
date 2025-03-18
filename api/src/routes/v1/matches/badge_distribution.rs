@@ -14,9 +14,7 @@ use utoipa::{IntoParams, ToSchema};
 pub struct BadgeDistributionQuery {
     min_unix_timestamp: Option<u64>,
     max_unix_timestamp: Option<u64>,
-    #[param(minimum = 0)]
     min_match_id: Option<u64>,
-    #[param(minimum = 0)]
     max_match_id: Option<u64>,
 }
 

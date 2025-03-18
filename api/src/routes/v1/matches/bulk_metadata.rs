@@ -64,16 +64,14 @@ pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (WHERE)
     min_unix_timestamp: Option<u64>,
     max_unix_timestamp: Option<u64>,
-    #[param(minimum = 0)]
     min_match_id: Option<u64>,
-    #[param(minimum = 0)]
     max_match_id: Option<u64>,
     /// Comma separated list of match ids, limited by `limit`
     #[serde(deserialize_with = "comma_seperated_num_deserialize")]
     match_ids: Option<Vec<u64>>,
-    #[param(minimum = 0, maximum = 7000)]
+    #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
-    #[param(minimum = 0, maximum = 7000)]
+    #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
