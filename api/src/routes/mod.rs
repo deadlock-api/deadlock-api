@@ -1,4 +1,6 @@
+use crate::routes::v1::players::match_history;
 use crate::state::AppState;
+use axum::routing::get;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::Level;
@@ -7,9 +9,16 @@ use utoipa_axum::router::OpenApiRouter;
 mod v1;
 
 pub fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new().nest("/v1", v1::router()).layer(
-        TraceLayer::new_for_http()
-            .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
-            .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
-    )
+    OpenApiRouter::new()
+        // V2 Match History Endpoint for Backwards Compatibility with data.deadlock-api.com
+        .route(
+            "/v2/players/{account_id}/match-history",
+            get(match_history::match_history_v2),
+        )
+        .nest("/v1", v1::router())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
+        )
 }

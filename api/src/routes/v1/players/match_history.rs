@@ -17,6 +17,7 @@ use cached::proc_macro::cached;
 use futures::future::join;
 use itertools::{Itertools, chain};
 use prost::Message;
+use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, warn};
 use valveprotos::deadlock::{
@@ -185,7 +186,7 @@ pub async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
-) -> APIResult<impl IntoResponse> {
+) -> APIResult<Json<PlayerMatchHistory>> {
     apply_limits(
         &headers,
         &state,
@@ -231,4 +232,14 @@ pub async fn match_history(
         .unique_by(|e| e.match_id)
         .collect_vec();
     Ok(Json(combined_match_history))
+}
+
+pub async fn match_history_v2(
+    path: Path<AccountIdQuery>,
+    headers: HeaderMap,
+    state: State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    match_history(path, headers, state)
+        .await
+        .map(|r| Json(json!({"cursor": 0, "matches": r.0})))
 }

@@ -7,7 +7,7 @@ mod info;
 mod leaderboard;
 mod matches;
 mod patches;
-mod players;
+pub mod players;
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
