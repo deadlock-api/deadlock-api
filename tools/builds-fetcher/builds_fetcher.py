@@ -70,12 +70,8 @@ POSTGRES_CONN = create_pg_conn()
 
 
 def fetch_all_hero_ids() -> list[int]:
-    return [
-        h["id"]
-        for h in requests.get(
-            "https://assets.deadlock-api.com/v2/heroes?only_active=true"
-        ).json()
-    ]
+    url = "https://assets.deadlock-api.com/v2/heroes?only_active=true"
+    return [h["id"] for h in requests.get(url).json()]
 
 
 def upsert_builds(
@@ -113,9 +109,7 @@ def upsert_builds(
 
 
 def fetch_builds(hero: int, langs: (int, int), search: str | None = None):
-    LOGGER.debug(
-        f"Updating builds for hero {hero} in langs {langs} with search {search}"
-    )
+    LOGGER.debug(f"Updating builds for hero {hero=} {langs=} {search=}")
     start = time.time()
 
     msg = CMsgClientToGCFindHeroBuilds()
@@ -134,9 +128,7 @@ def fetch_builds(hero: int, langs: (int, int), search: str | None = None):
         LOGGER.error(f"Failed to fetch hero {hero} builds")
         return
 
-    LOGGER.info(
-        f"Found {len(msg.results)} builds for hero {hero} in langs {langs} with search {search}"
-    )
+    LOGGER.info(f"Found {len(msg.results)} builds for hero {hero=} {langs=} {search=}")
     upsert_builds(msg.results)
 
     end = time.time()
@@ -173,6 +165,6 @@ if __name__ == "__main__":
                     fetch_builds(hero, langs, "".join(search) if search else None)
                 except requests.exceptions.ReadTimeout | requests.exceptions.HTTPError:
                     LOGGER.exception(
-                        f"Failed to fetch builds for hero {hero} in langs {langs} with search {search} builds"
+                        f"Failed to fetch builds for {hero=} {langs=} {search=} builds"
                     )
                     sleep(10)
