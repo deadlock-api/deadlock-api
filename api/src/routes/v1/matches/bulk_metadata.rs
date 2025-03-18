@@ -302,7 +302,7 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
     query.push_str(&order);
     // Limit
     query.push_str(&limit);
-    debug!(query = %query);
+    debug!(?query);
     Ok(query)
 }
 

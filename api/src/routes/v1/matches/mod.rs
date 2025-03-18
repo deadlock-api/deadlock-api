@@ -1,4 +1,5 @@
 mod active;
+mod badge_distribution;
 mod bulk_metadata;
 mod ingest_event;
 mod ingest_salts;
@@ -27,4 +28,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(ingest_event::ingest_event))
         .routes(routes!(ingest_salts::ingest_salts))
         .routes(routes!(recently_fetched::recently_fetched))
+        .routes(routes!(badge_distribution::badge_distribution))
 }
