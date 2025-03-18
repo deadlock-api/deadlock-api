@@ -73,7 +73,7 @@ async fn get_badge_distribution(
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch badge distribution: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch recently fetched matches: {}", e),
+            message: format!("Failed to fetch badge distribution: {}", e),
         }
     })
 }
