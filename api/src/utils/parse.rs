@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Deserializer};
+use std::str::FromStr;
 
 const STEAM_ID_64_IDENT: u64 = 76561197960265728;
 
@@ -43,4 +44,62 @@ where
             }
             None => None,
         })
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum CommaSeperatedNum<T>
+where
+    T: std::fmt::Debug + FromStr,
+{
+    CommaStringList(String),
+    StringList(Vec<String>),
+    Single(T),
+    List(Vec<T>),
+}
+
+pub fn comma_seperated_num_deserialize<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<Vec<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: FromStr + Deserialize<'de> + std::fmt::Debug,
+{
+    let deserialized: Option<CommaSeperatedNum<T>> = Option::deserialize(deserializer)?;
+    let Some(deserialized) = deserialized else {
+        return Ok(None);
+    };
+
+    Ok(match deserialized {
+        CommaSeperatedNum::List(vec) => Some(vec),
+        CommaSeperatedNum::Single(val) => Some(vec![val]),
+        CommaSeperatedNum::StringList(val) => {
+            let mut out = vec![];
+            for s in val {
+                let parsed = s
+                    .parse()
+                    .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
+                out.push(parsed);
+            }
+            match out.is_empty() {
+                true => None,
+                false => Some(out),
+            }
+        }
+        CommaSeperatedNum::CommaStringList(str) => {
+            let str = str.replace("[", "").replace("]", "");
+
+            let mut out = vec![];
+            for s in str.split(',') {
+                let parsed = s.trim().parse().map_err(|_| {
+                    serde::de::Error::custom("Failed to parse comma seperated list")
+                })?;
+                out.push(parsed);
+            }
+            match out.is_empty() {
+                true => None,
+                false => Some(out),
+            }
+        }
+    })
 }

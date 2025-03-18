@@ -1,11 +1,14 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
+use crate::utils::parse::comma_seperated_num_deserialize;
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use strum_macros::IntoStaticStr;
@@ -65,6 +68,9 @@ pub struct BulkMatchMetadataQuery {
     min_match_id: Option<u64>,
     #[param(minimum = 0)]
     max_match_id: Option<u64>,
+    /// Comma separated list of match ids
+    #[serde(deserialize_with = "comma_seperated_num_deserialize")]
+    match_ids: Option<Vec<u64>>,
     #[param(minimum = 0, maximum = 7000)]
     min_duration_s: Option<u64>,
     #[param(minimum = 0, maximum = 7000)]
@@ -223,6 +229,14 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
     }
     if let Some(max_match_id) = settings.max_match_id {
         info_where_clauses.push(format!("match_id <= {}", max_match_id));
+    }
+    if let Some(match_ids) = settings.match_ids {
+        if !match_ids.is_empty() {
+            info_where_clauses.push(format!(
+                "match_id IN ({})",
+                match_ids.iter().map(|m| m.to_string()).join(",")
+            ));
+        }
     }
     if let Some(min_duration_s) = settings.min_duration_s {
         info_where_clauses.push(format!("duration_s >= {}", min_duration_s));
