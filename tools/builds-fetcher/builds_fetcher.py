@@ -163,7 +163,7 @@ if __name__ == "__main__":
         ):
             try:
                 fetch_builds(hero, langs, "".join(search))
-            except requests.exceptions.HTTPError:
+            except requests.exceptions.ReadTimeout | requests.exceptions.HTTPError:
                 LOGGER.exception(
                     f"Failed to fetch builds for hero {hero} in langs {langs} with search {search} builds"
                 )
