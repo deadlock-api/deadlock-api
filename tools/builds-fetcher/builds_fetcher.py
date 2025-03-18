@@ -112,14 +112,15 @@ def upsert_builds(
     POSTGRES_CONN.commit()
 
 
-def fetch_builds(hero: int, langs: (int, int), search: str):
+def fetch_builds(hero: int, langs: (int, int), search: str | None = None):
     LOGGER.debug(
         f"Updating builds for hero {hero} in langs {langs} with search {search}"
     )
     start = time.time()
 
     msg = CMsgClientToGCFindHeroBuilds()
-    msg.search_text = search
+    if search:
+        msg.search_text = search
     msg.hero_id = hero
     for lang in langs:
         msg.language.append(lang)
@@ -156,15 +157,22 @@ if __name__ == "__main__":
             LOGGER.exception("Failed to fetch heroes")
             sleep(10)
             continue
-        for hero, langs, search in itertools.product(
+        for hero, langs in itertools.product(
             heroes,
             more_itertools.chunked(ALL_LANGS, 2),
-            itertools.product(string.ascii_lowercase, repeat=2),
         ):
-            try:
-                fetch_builds(hero, langs, "".join(search))
-            except requests.exceptions.ReadTimeout | requests.exceptions.HTTPError:
-                LOGGER.exception(
-                    f"Failed to fetch builds for hero {hero} in langs {langs} with search {search} builds"
-                )
-                sleep(10)
+            if 0 in langs:
+                continue
+            searches = (
+                itertools.product(string.ascii_lowercase, repeat=2)
+                if 0 in langs
+                else [None]
+            )
+            for search in searches:
+                try:
+                    fetch_builds(hero, langs, "".join(search) if search else None)
+                except requests.exceptions.ReadTimeout | requests.exceptions.HTTPError:
+                    LOGGER.exception(
+                        f"Failed to fetch builds for hero {hero} in langs {langs} with search {search} builds"
+                    )
+                    sleep(10)
