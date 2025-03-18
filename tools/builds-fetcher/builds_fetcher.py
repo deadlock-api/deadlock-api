@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 LOGGER = logging.getLogger(__name__)
-UPDATE_INTERVAL = 3
+UPDATE_INTERVAL = int(os.environ.get("UPDATE_INTERVAL", 3))
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASS = os.environ.get("POSTGRES_PASS")
