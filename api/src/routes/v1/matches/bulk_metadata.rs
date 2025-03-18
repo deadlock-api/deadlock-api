@@ -68,7 +68,7 @@ pub struct BulkMatchMetadataQuery {
     min_match_id: Option<u64>,
     #[param(minimum = 0)]
     max_match_id: Option<u64>,
-    /// Comma separated list of match ids
+    /// Comma separated list of match ids, limited by `limit`
     #[serde(deserialize_with = "comma_seperated_num_deserialize")]
     match_ids: Option<Vec<u64>>,
     #[param(minimum = 0, maximum = 7000)]
