@@ -267,7 +267,8 @@ async fn insert_matches(client: Client, matches: &[MatchInfo]) -> clickhouse::er
                     match_info.match_id.unwrap(),
                     match_info
                         .winning_team
-                        .and_then(|t| p.team.map(|pt| pt == t)),
+                        .and_then(|t| p.team.map(|pt| pt == t))
+                        .unwrap(),
                     p,
                 )
                     .into()

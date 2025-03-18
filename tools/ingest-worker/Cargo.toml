@@ -5,14 +5,14 @@ edition = "2021"
 
 [dependencies]
 arl = "0.2.0"
-async-compression = { version = "0.4.18", features = ["tokio", "bzip2"] }
-clickhouse = { version = "0.13.1", features = ["test-util", "time"] }
+async-compression = { version = "0.4.21", features = ["tokio", "bzip2"] }
+clickhouse = { version = "0.13.2", features = ["test-util", "time"] }
 ctrlc = "3.4.5"
 futures = "0.3.31"
 prost = "0.13.5"
-reqwest = "0.12.12"
+reqwest = "0.12.15"
 rust-s3 = "0.35.1"
-serde = { version = "1.0.218", features = ["derive"] }
-serde_repr = "0.1.19"
-tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_repr = "0.1.20"
+tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }

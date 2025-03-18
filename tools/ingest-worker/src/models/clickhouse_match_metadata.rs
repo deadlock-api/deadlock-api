@@ -140,7 +140,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
 pub struct ClickhouseMatchPlayer {
     pub match_id: u64,
     pub account_id: u32,
-    pub won: Option<bool>,
+    pub won: bool,
     pub player_slot: u32,
     pub team: Team,
     pub kills: u32,
@@ -269,8 +269,8 @@ pub struct ClickhouseMatchPlayer {
     pub stats_level: Vec<u32>,
 }
 
-impl From<(u64, Option<bool>, Players)> for ClickhouseMatchPlayer {
-    fn from((match_id, won, value): (u64, Option<bool>, Players)) -> Self {
+impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
+    fn from((match_id, won, value): (u64, bool, Players)) -> Self {
         Self {
             match_id,
             account_id: value.account_id(),
