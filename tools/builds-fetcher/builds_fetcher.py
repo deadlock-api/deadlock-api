@@ -153,8 +153,6 @@ if __name__ == "__main__":
             heroes,
             more_itertools.chunked(ALL_LANGS, 2),
         ):
-            if 0 in langs:
-                continue
             searches = (
                 itertools.product(string.ascii_lowercase, repeat=2)
                 if 0 in langs
