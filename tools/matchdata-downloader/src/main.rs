@@ -183,7 +183,7 @@ async fn download_match(
     // Delete HLTV metas from main bucket/cache bucket if we're ingesting a full meta
     //
     // This may be because we got a user provided salt, or because the HLTV meta wasn't fully
-    // ingested (e.g if there was an error)
+    // ingested (e.g. if there was an error)
     let outdated_hltv_meta_key = format!("/processed/metadata/{}.meta_hltv.bz2", row.match_id);
     if key_exists(&bucket, &outdated_hltv_meta_key).await {
         if let Err(e) = bucket.delete_object(&outdated_hltv_meta_key).await {
