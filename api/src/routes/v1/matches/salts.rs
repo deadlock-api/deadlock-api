@@ -111,10 +111,8 @@ pub async fn fetch_match_salts(
     if has_metadata {
         warn!("Blocking request for match salts for match {match_id} with metadata");
         return Err(APIError::StatusMsg {
-            status: reqwest::StatusCode::BAD_REQUEST,
-            message:
-                "Fetching Match Salts for Matches where we have metadata is currently not supported"
-                    .to_string(),
+            status: reqwest::StatusCode::NOT_FOUND,
+            message: format!("Match salts for match {match_id} not found"),
         });
     }
 
