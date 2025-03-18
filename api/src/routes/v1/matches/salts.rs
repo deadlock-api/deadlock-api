@@ -101,6 +101,23 @@ pub async fn fetch_match_salts(
         }
     }
 
+    let has_metadata = ch_client
+        .query("SELECT match_id FROM match_info WHERE match_id = ?")
+        .bind(match_id)
+        .fetch_one::<u64>()
+        .await
+        .is_ok();
+
+    if has_metadata {
+        warn!("Blocking request for match salts for match {match_id} with metadata");
+        return Err(APIError::StatusMsg {
+            status: reqwest::StatusCode::BAD_REQUEST,
+            message:
+                "Fetching Match Salts for Matches where we have metadata is currently not supported"
+                    .to_string(),
+        });
+    }
+
     // If not in Clickhouse, fetch from Steam
     let msg = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
