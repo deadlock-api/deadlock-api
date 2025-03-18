@@ -96,6 +96,14 @@ async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
     Ok(decoded_message.into())
 }
 
+#[cached(
+    ty = "TimedCache<String, Leaderboard>",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    result = true,
+    convert = r#"{ format!("{:?}-{:?}", region, hero_id) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
 pub async fn fetch_parse_leaderboard(
     config: &Config,
     http_client: &reqwest::Client,
