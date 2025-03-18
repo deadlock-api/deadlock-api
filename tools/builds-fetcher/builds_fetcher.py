@@ -2,6 +2,7 @@ import itertools
 import logging
 import os
 import random
+import string
 import time
 from collections.abc import Sequence
 from datetime import datetime
@@ -20,9 +21,10 @@ from valveprotos_py.citadel_gcmessages_client_pb2 import (
 )
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 LOGGER = logging.getLogger(__name__)
-UPDATE_INTERVAL = 10
+UPDATE_INTERVAL = 3
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASS = os.environ.get("POSTGRES_PASS")
@@ -110,11 +112,14 @@ def upsert_builds(
     POSTGRES_CONN.commit()
 
 
-def update_hero_langs(hero: int, langs: (int, int)):
-    LOGGER.debug(f"Updating hero {hero} in langs {langs}")
+def fetch_builds(hero: int, langs: (int, int), search: str):
+    LOGGER.debug(
+        f"Updating builds for hero {hero} in langs {langs} with search {search}"
+    )
     start = time.time()
 
     msg = CMsgClientToGCFindHeroBuilds()
+    msg.search_text = search
     msg.hero_id = hero
     for lang in langs:
         msg.language.append(lang)
@@ -122,14 +127,15 @@ def update_hero_langs(hero: int, langs: (int, int)):
         k_EMsgClientToGCFindHeroBuilds,
         msg,
         CMsgClientToGCFindHeroBuildsResponse,
-        cooldown_time=10,
-        groups=["LowRateLimitApis"],
+        cooldown_time=10 * 60 * 1000,  # 10 minutes
     )
     if msg.response != CMsgClientToGCFindHeroBuildsResponse.k_eSuccess:
         LOGGER.error(f"Failed to fetch hero {hero} builds")
         return
 
-    LOGGER.info(f"Found {len(msg.results)} builds for hero {hero} in langs {langs}")
+    LOGGER.info(
+        f"Found {len(msg.results)} builds for hero {hero} in langs {langs} with search {search}"
+    )
     upsert_builds(msg.results)
 
     end = time.time()
@@ -150,11 +156,15 @@ if __name__ == "__main__":
             LOGGER.exception("Failed to fetch heroes")
             sleep(10)
             continue
-        for hero, langs in itertools.product(
-            heroes, more_itertools.chunked(ALL_LANGS, 2)
+        for hero, langs, search in itertools.product(
+            heroes,
+            more_itertools.chunked(ALL_LANGS, 2),
+            itertools.product(string.ascii_lowercase, repeat=2),
         ):
             try:
-                update_hero_langs(hero, langs)
+                fetch_builds(hero, langs, "".join(search))
             except requests.exceptions.HTTPError:
-                LOGGER.exception(f"Failed to fetch hero {hero} in langs {langs} builds")
+                LOGGER.exception(
+                    f"Failed to fetch builds for hero {hero} in langs {langs} with search {search} builds"
+                )
                 sleep(10)

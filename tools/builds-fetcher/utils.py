@@ -10,6 +10,7 @@ LOGGER = logging.getLogger(__name__)
 
 PROXY_URL = os.environ.get("PROXY_URL")
 PROXY_API_TOKEN = os.environ.get("PROXY_API_TOKEN")
+CLIENT = requests.Session()
 
 R = TypeVar("R", bound=Message)
 
@@ -19,12 +20,11 @@ def call_steam_proxy(
     msg: Message,
     response_type: type[R],
     cooldown_time: int,
-    groups: list[str],
 ) -> R:
     MAX_RETRIES = 3
     for i in range(MAX_RETRIES):
         try:
-            data = call_steam_proxy_raw(msg_type, msg, cooldown_time, groups)
+            data = call_steam_proxy_raw(msg_type, msg, cooldown_time)
             return response_type.FromString(data)
         except Exception as e:
             LOGGER.warning(f"Failed to call steam proxy: {e}")
@@ -35,9 +35,7 @@ def call_steam_proxy(
     )
 
 
-def call_steam_proxy_raw(
-    msg_type: int, msg: Message, cooldown_time: int, groups: list[str]
-) -> bytes:
+def call_steam_proxy_raw(msg_type: int, msg: Message, cooldown_time: int) -> bytes:
     assert PROXY_URL, "PROXY_URL must be defined"
     assert PROXY_API_TOKEN, "PROXY_API_TOKEN must be defined"
 
@@ -45,10 +43,9 @@ def call_steam_proxy_raw(
     body = {
         "message_kind": msg_type,
         "job_cooldown_millis": cooldown_time,
-        "bot_in_all_groups": groups,
         "data": msg_data,
     }
-    response = requests.post(
+    response = CLIENT.post(
         PROXY_URL,
         json=body,
         headers={"Authorization": f"Bearer {PROXY_API_TOKEN}"},
