@@ -128,7 +128,7 @@ pub async fn bulk_metadata(
             message: "Limit is too high".to_string(),
         });
     }
-    println!("{:#?}", query);
+    debug!(?query);
     let query = build_ch_query(query)?;
     let lines = fetch_lines(&state.clickhouse_client, &query)
         .await
