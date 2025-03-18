@@ -98,6 +98,7 @@ pub struct BulkMatchMetadataQuery {
     params(BulkMatchMetadataQuery),
     responses(
         (status = OK, body = [u8]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
     ),
     tags = ["Matches"],

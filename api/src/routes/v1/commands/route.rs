@@ -101,7 +101,6 @@ pub struct CommandResolveQuery {
     responses(
         (status = OK, body = String),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
     ),
     tags = ["Commands"],
     summary = "Resolve Command",

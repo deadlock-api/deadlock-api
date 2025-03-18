@@ -82,6 +82,7 @@ async fn get_badge_distribution(
     params(BadgeDistributionQuery),
     responses(
         (status = OK, description = "Badge Distribution", body = [BadgeDistribution]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch badge distribution")
     ),
     tags = ["Matches"],

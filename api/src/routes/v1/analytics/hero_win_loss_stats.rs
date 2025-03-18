@@ -118,6 +118,7 @@ async fn get_hero_win_loss_stats(
     params(HeroWinLossStatsQuery),
     responses(
         (status = OK, description = "Hero Win Loss Stats", body = [HeroWinLossStats]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero win loss stats")
     ),
     tags = ["Analytics"],
