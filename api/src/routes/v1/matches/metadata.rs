@@ -141,7 +141,7 @@ pub async fn metadata_raw(
         &headers,
         &state,
         "match_metadata",
-        &[RateLimitQuota::ip_limit(1000, Duration::from_secs(1))],
+        &[RateLimitQuota::ip_limit(700, Duration::from_secs(1))],
     )
     .await?;
     tryhard::retry_fn(|| {
@@ -191,7 +191,7 @@ pub async fn metadata(
         &headers,
         &state,
         "match_metadata",
-        &[RateLimitQuota::ip_limit(1000, Duration::from_secs(1))],
+        &[RateLimitQuota::ip_limit(700, Duration::from_secs(1))],
     )
     .await?;
     tryhard::retry_fn(|| async {
