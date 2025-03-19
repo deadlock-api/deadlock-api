@@ -191,7 +191,10 @@ pub async fn match_history(
         &headers,
         &state,
         "match_history",
-        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
+        &[
+            RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
+            RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+        ],
     )
     .await?;
     let ch_client = &state.clickhouse_client;
