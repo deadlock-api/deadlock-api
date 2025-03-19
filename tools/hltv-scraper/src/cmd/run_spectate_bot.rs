@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use axum::{
+    Json, Router,
     extract::State,
     routing::{get, post},
-    Json, Router,
 };
 use base64::prelude::*;
 use fred::interfaces::{ClientLike, HashesInterface};
@@ -23,11 +23,11 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::time::sleep;
-use tracing::{debug, error, field, info, warn, Span};
+use tracing::{Span, debug, error, field, info, warn};
 use valveprotos::{
     deadlock::{
-        c_msg_client_to_gc_spectate_user_response::EResponse, CMsgClientToGcSpectateLobby,
-        CMsgClientToGcSpectateLobbyResponse, EgcCitadelClientMessages,
+        CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse, EgcCitadelClientMessages,
+        c_msg_client_to_gc_spectate_user_response::EResponse,
     },
     gcsdk::EgcPlatform,
 };

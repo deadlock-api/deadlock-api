@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::{
     task::AbortHandle,
-    time::{interval, Duration},
+    time::{Duration, interval},
 };
 
 /// Starts polling a given URL at a specified interval, updating the shared state with the latest decoded JSON response.

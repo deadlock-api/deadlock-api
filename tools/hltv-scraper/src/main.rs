@@ -1,10 +1,10 @@
 use indicatif::ProgressStyle;
 use tracing_indicatif::{
-    filter::{hide_indicatif_span_fields, IndicatifFilter},
     IndicatifLayer,
+    filter::{IndicatifFilter, hide_indicatif_span_fields},
 };
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt::format::DefaultFields, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::format::DefaultFields};
 
 use crate::cli::run_cli;
 

@@ -1,5 +1,5 @@
-use base64::prelude::*;
 use base64::Engine;
+use base64::prelude::*;
 use clickhouse::Compression;
 use log::{debug, info, warn};
 use models::{InvokeResponse200, MatchIdQueryResult, MatchSalt};

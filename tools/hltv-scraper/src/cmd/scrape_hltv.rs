@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use jiff::{Timestamp, ToSpan};
 use lru::LruCache;
 use metrics::gauge;
-use object_store::{aws::AmazonS3Builder, ObjectStore};
+use object_store::{ObjectStore, aws::AmazonS3Builder};
 use prost::Message;
 use reqwest::Url;
 use serde_json::json;
@@ -87,7 +87,9 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
         gauge!("hltv.scraping_not_marked_spectated").set(scraping_not_spectated as f64);
 
         let Some(smi) = chosen_match else {
-            info!("no current match to watch... {current_count} in progress ({total_available_matches} total possible to spectate)");
+            info!(
+                "no current match to watch... {current_count} in progress ({total_available_matches} total possible to spectate)"
+            );
             sleep(Duration::from_millis(10000)).await;
             continue;
         };

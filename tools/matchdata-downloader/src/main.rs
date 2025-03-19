@@ -1,5 +1,5 @@
-use cached::proc_macro::cached;
 use cached::UnboundCache;
+use cached::proc_macro::cached;
 use clickhouse::{Client, Compression, Row};
 use futures::TryStreamExt;
 use s3::creds::Credentials;

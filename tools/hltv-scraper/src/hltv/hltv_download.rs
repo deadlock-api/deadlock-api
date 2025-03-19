@@ -6,12 +6,12 @@ use serde::Deserialize;
 use std::time::{Duration, Instant};
 use std::{io::Cursor, sync::Arc};
 use thiserror::Error;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::time::sleep;
 use tracing::{error, trace};
 use valveprotos::common::EDemoCommands;
 
-use crate::hltv::{hltv_extract_meta::extract_meta_from_fragment, FragmentType};
+use crate::hltv::{FragmentType, hltv_extract_meta::extract_meta_from_fragment};
 
 #[allow(unused)]
 #[derive(Debug)]
