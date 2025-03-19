@@ -197,6 +197,20 @@ impl Variable {
         }
     }
 
+    pub fn get_default_label(&self) -> Option<&str> {
+        match self {
+            Self::HeroHoursPlayed => Some("{hero_name} Hours Played"),
+            Self::HeroKd => Some("{hero_name} Kd"),
+            Self::HeroKills => Some("{hero_name} Kills"),
+            Self::HeroLeaderboardPlace => Some("{hero_name} Leaderboard Place"),
+            Self::HeroLosses => Some("{hero_name} Losses"),
+            Self::HeroMatches => Some("{hero_name} Matches"),
+            Self::HeroWinrate => Some("{hero_name} Winrate"),
+            Self::HeroWins => Some("{hero_name} Wins"),
+            _ => None,
+        }
+    }
+
     pub fn extra_args(&self) -> Vec<String> {
         match self {
             Self::HeroHoursPlayed

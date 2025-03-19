@@ -17,6 +17,7 @@ use utoipa::{IntoParams, ToSchema};
 pub struct VariableDescription {
     pub name: String,
     pub description: String,
+    pub default_label: Option<String>,
     pub extra_args: Vec<String>,
     pub category: VariableCategory,
 }
@@ -26,6 +27,7 @@ impl From<Variable> for VariableDescription {
         Self {
             name: v.get_name().to_string(),
             description: v.get_description().to_string(),
+            default_label: v.get_default_label().map(|l| l.to_string()),
             extra_args: v.extra_args(),
             category: v.get_category(),
         }
