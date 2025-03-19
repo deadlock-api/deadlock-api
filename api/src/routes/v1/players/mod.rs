@@ -1,6 +1,7 @@
 mod card;
 pub mod match_history;
 mod mate_stats;
+mod party_stats;
 pub mod types;
 
 use crate::state::AppState;
@@ -18,4 +19,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(card::card_raw))
         .routes(routes!(card::card))
         .routes(routes!(mate_stats::mate_stats))
+        .routes(routes!(party_stats::party_stats))
 }
