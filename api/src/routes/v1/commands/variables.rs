@@ -207,6 +207,8 @@ impl Variable {
             Self::HeroMatches => Some("{hero_name} Matches"),
             Self::HeroWinrate => Some("{hero_name} Winrate"),
             Self::HeroWins => Some("{hero_name} Wins"),
+            Self::WinsLossesToday => Some("Daily W-L"),
+            Self::LeaderboardPlace => Some("Place"),
             _ => None,
         }
     }
