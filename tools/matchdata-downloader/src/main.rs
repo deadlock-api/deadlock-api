@@ -221,11 +221,7 @@ async fn download_match(
     );
     let response = reqwest::get(&replay_url).await.unwrap();
     response.error_for_status_ref().unwrap();
-    let mut reader = StreamReader::new(
-        response
-            .bytes_stream()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)),
-    );
+    let mut reader = StreamReader::new(response.bytes_stream().map_err(std::io::Error::other));
     if let Err(e) = bucket.put_object_stream(&mut reader, &key).await {
         println!(
             "Failed to upload metadata for match {}: {}",
