@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cached = { version = "0.53.1", features = ["async", "tokio"] }
-clickhouse = { version = "0.13.0", features = ["time", "test-util"] }
+cached = { version = "0.55.1", features = ["async", "tokio"] }
+clickhouse = { version = "0.13.2", features = ["time", "test-util"] }
 futures = "0.3.31"
-reqwest = { version = "0.12.8", features = ["stream"] }
+reqwest = { version = "0.12.15", features = ["stream"] }
 rust-s3 = "0.35.1"
-serde = { version = "1.0.210", features = ["derive"] }
-tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
-tokio-util = { version = "0.7.12", features = ["io"] }
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
+tokio-util = { version = "0.7.14", features = ["io"] }

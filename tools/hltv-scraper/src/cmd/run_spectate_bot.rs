@@ -5,11 +5,9 @@ use axum::{
     Json, Router,
 };
 use base64::prelude::*;
-use fred::{
-    clients::RedisClient,
-    interfaces::{ClientLike, HashesInterface},
-    types::RedisConfig,
-};
+use fred::interfaces::{ClientLike, HashesInterface};
+use fred::prelude::Client as RedisClient;
+use fred::prelude::Config as RedisConfig;
 use itertools::Itertools;
 use jiff::{Timestamp, ToSpan as _};
 use lru::LruCache;

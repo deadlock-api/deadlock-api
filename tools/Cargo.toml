@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["salt-scraper", "hltv-scraper", "ingest-worker", "matchdata-downloader", "active-matches-scraper"]
