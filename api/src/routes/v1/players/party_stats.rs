@@ -87,7 +87,7 @@ async fn get_party_stats(
     };
     let query = format!(
         r#"
-    SELECT length(p.account_ids) as party_size, countIf(p.won) as wins, COUNT() as matches_played, groupUniqArray(p.match_id) as matches
+    SELECT length(p.account_ids) as party_size, coalesce(sum(p.won), 0) as wins, COUNT() as matches_played, groupUniqArray(p.match_id) as matches
     FROM match_parties p
         INNER ANY JOIN match_info mi USING (match_id)
     WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
