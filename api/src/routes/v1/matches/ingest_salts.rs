@@ -16,16 +16,22 @@ async fn check_salt(http_client: &reqwest::Client, salts: &ClickhouseSalts) -> b
     let Some(metadata_salt) = salts.metadata_salt else {
         return false;
     };
-    http_client
-        .head(format!(
-            "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-            cluster_id, salts.match_id, metadata_salt
-        ))
-        .timeout(Duration::from_secs(5))
-        .send()
-        .await
-        .and_then(|r| r.error_for_status())
-        .is_ok()
+
+    tryhard::retry_fn(|| async {
+        http_client
+            .head(format!(
+                "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
+                cluster_id, salts.match_id, metadata_salt
+            ))
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .and_then(|r| r.error_for_status())
+    })
+    .retries(3)
+    .fixed_backoff(Duration::from_millis(10))
+    .await
+    .is_ok()
 }
 
 pub async fn insert_salts_to_clickhouse(
