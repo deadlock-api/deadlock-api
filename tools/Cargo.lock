@@ -1508,14 +1508,16 @@ dependencies = [
  "arl",
  "clickhouse",
  "common",
- "env_logger",
  "futures",
- "log",
+ "metrics",
+ "metrics-exporter-prometheus",
  "once_cell",
  "rand 0.9.0",
  "reqwest",
  "serde",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
 ]
 
