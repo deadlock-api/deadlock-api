@@ -7,6 +7,7 @@ on:
     - 'master'
     paths:
     - 'builds-fetcher/**'
+    - 'common/**'
 
 permissions:
   contents: read

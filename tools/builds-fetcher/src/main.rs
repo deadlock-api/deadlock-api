@@ -1,5 +1,3 @@
-mod utils;
-
 use arl::RateLimiter;
 use itertools::Itertools;
 use log::{LevelFilter, debug, info, warn};
@@ -69,7 +67,7 @@ async fn run_update_loop(
     pg_client: &Pool<Postgres>,
 ) -> Result<(), anyhow::Error> {
     let limiter = RateLimiter::new(10, Duration::from_secs(10 * *UPDATE_INTERVAL));
-    let heroes = utils::fetch_hero_ids(http_client).await?;
+    let heroes = common::assets::fetch_hero_ids(http_client).await?;
 
     for hero_id in heroes {
         for langs in ALL_LANGS.chunks(2) {
@@ -171,7 +169,7 @@ async fn fetch_builds(
         search_text: search.clone(),
         hero_build_id: None,
     };
-    utils::call_steam_proxy(
+    common::utils::call_steam_proxy(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
         msg,

@@ -400,12 +400,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arl",
- "base64",
+ "common",
  "env_logger",
  "itertools 0.14.0",
  "log",
  "once_cell",
- "prost",
  "reqwest",
  "serde",
  "serde_json",
@@ -652,6 +651,19 @@ name = "colorchoice"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "once_cell",
+ "prost",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
+]
 
 [[package]]
 name = "concurrent-queue"
