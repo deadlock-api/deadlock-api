@@ -87,13 +87,16 @@ async fn update_account(
     http_client: &reqwest::Client,
     account_id: u32,
 ) {
-    let Ok(match_history) = fetch_account_match_history(http_client, account_id).await else {
-        counter!("history_fetcher.fetch_match_history.failure", "account_id" => account_id.to_string()).increment(1);
-        error!(
-            "Failed to fetch match history for account {}, skipping",
-            account_id
-        );
-        return;
+    let match_history = match fetch_account_match_history(http_client, account_id).await {
+        Ok(match_history) => match_history,
+        Err(e) => {
+            counter!("history_fetcher.fetch_match_history.failure", "account_id" => account_id.to_string()).increment(1);
+            error!(
+                "Failed to fetch match history for account {}, error: {:?}, skipping",
+                account_id, e
+            );
+            return;
+        }
     };
     counter!("history_fetcher.fetch_match_history.status", "status" => match_history.result.unwrap_or_default().to_string()).increment(1);
     if match_history
@@ -171,7 +174,7 @@ async fn fetch_account_match_history(
         Duration::from_secs(10 * 60),
         Duration::from_secs(5),
     )
-        .await
+    .await
 }
 
 async fn insert_match_history(
