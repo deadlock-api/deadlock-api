@@ -1,0 +1,19 @@
+[package]
+name = "history-fetcher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.97"
+arl = "0.2.0"
+clickhouse = "0.13.2"
+common = { version = "0.1.0", path = "../common" }
+futures = "0.3.31"
+once_cell = "1.21.1"
+tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
+log = "0.4.26"
+reqwest = "0.12.15"
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs", version = "0.0.0", features = ["deadlock", "serde"] }
+env_logger = "0.11.7"
+serde = { version = "1.0.219", features = ["derive"] }
+rand = "0.9.0"
