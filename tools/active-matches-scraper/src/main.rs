@@ -39,8 +39,6 @@ async fn main() {
         .with(env_filter)
         .init();
 
-    info!("Starting processing!");
-
     let builder = PrometheusBuilder::new()
         .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
     builder

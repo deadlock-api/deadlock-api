@@ -398,9 +398,9 @@ dependencies = [
  "anyhow",
  "arl",
  "common",
- "env_logger",
  "itertools 0.14.0",
- "log",
+ "metrics",
+ "metrics-exporter-prometheus",
  "once_cell",
  "reqwest",
  "serde",
@@ -408,6 +408,8 @@ dependencies = [
  "sqlx",
  "time",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
 ]
 
