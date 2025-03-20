@@ -50,6 +50,8 @@ services:
       context: builds-fetcher
     restart: always
     env_file: .env
+    environment:
+      RUST_LOG: info
 
   hltv-spectator:
     build:
