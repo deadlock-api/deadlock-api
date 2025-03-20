@@ -90,7 +90,7 @@ async fn update_account(
     let match_history = match fetch_account_match_history(http_client, account_id).await {
         Ok(match_history) => match_history,
         Err(e) => {
-            counter!("history_fetcher.fetch_match_history.failure", "account_id" => account_id.to_string()).increment(1);
+            counter!("history_fetcher.fetch_match_history.failure").increment(1);
             error!(
                 "Failed to fetch match history for account {}, error: {:?}, skipping",
                 account_id, e
@@ -103,6 +103,7 @@ async fn update_account(
         .result
         .is_none_or(|r| r != EResult::KEResultSuccess as i32)
     {
+        counter!("history_fetcher.fetch_match_history.failure").increment(1);
         error!(
             "Failed to fetch match history for account {}, result: {:?}, skipping",
             account_id, match_history.result
@@ -120,7 +121,7 @@ async fn update_account(
         .collect();
     match insert_match_history(ch_client, &match_history).await {
         Ok(_) => {
-            counter!("history_fetcher.insert_match_history.success", "account_id" => account_id.to_string()).increment(1);
+            counter!("history_fetcher.insert_match_history.success").increment(1);
             info!(
                 "Inserted {} new matches for account {}",
                 match_history.len(),
@@ -128,7 +129,7 @@ async fn update_account(
             )
         }
         Err(e) => {
-            counter!("history_fetcher.insert_match_history.failure", "account_id" => account_id.to_string()).increment(1);
+            counter!("history_fetcher.insert_match_history.failure").increment(1);
             error!(
                 "Failed to insert match history for account {}: {:?}",
                 account_id, e
