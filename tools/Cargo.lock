@@ -657,11 +657,13 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "metrics",
  "once_cell",
  "prost",
  "reqwest",
  "serde",
  "serde_json",
+ "tracing",
  "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
 ]
 
