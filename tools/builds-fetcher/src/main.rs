@@ -8,6 +8,8 @@ use sqlx::types::time::PrimitiveDateTime;
 use sqlx::{ConnectOptions, Pool, Postgres, QueryBuilder};
 use std::net::SocketAddrV4;
 use std::time::Duration;
+use rand::prelude::SliceRandom;
+use rand::rng;
 use time::OffsetDateTime;
 use tokio::time::sleep;
 use tracing::log::LevelFilter;
@@ -83,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
 
 #[instrument(skip(http_client, pg_client))]
 async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgres>) {
-    let heroes = match common::assets::fetch_hero_ids(http_client).await {
+    let mut heroes = match common::assets::fetch_hero_ids(http_client).await {
         Ok(heroes) => {
             counter!("builds_fetcher.heroes_fetched.success").increment(1);
             debug!("Fetched hero ids: {:?}", heroes);
@@ -96,6 +98,7 @@ async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgre
             return;
         }
     };
+    heroes.shuffle(&mut rng());
 
     let limiter = RateLimiter::new(10, Duration::from_secs(10 * *UPDATE_INTERVAL));
     for hero_id in heroes {

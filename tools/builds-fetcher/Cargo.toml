@@ -20,3 +20,4 @@ metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 common = { version = "0.1.0", path = "../common" }
+rand = "0.9.0"
