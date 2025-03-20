@@ -9,8 +9,6 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use futures::future::join;
 use object_store::ObjectStore;
 use prost::Message;
@@ -27,14 +25,6 @@ async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Resul
         .map(|r| r.to_vec())
 }
 
-#[cached(
-    ty = "TimedCache<u64, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
-    result = true,
-    convert = "{ match_id }",
-    sync_writes = "by_key",
-    key = "u64"
-)]
 async fn fetch_match_metadata_raw(
     config: &Config,
     http_client: &reqwest::Client,
