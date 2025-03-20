@@ -42,4 +42,4 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /app/target/release/${EXE_NAME} /usr/local/bin
 
-ENTRYPOINT ["/usr/local/bin/${exe_name}"]
+ENTRYPOINT "/usr/local/bin/${exe_name}"

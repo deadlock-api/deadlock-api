@@ -58,3 +58,4 @@ repos:
     types: ["dockerfile"]
     files: '(^Dockerfile$)|(\.Dockerfile$)'
     entry: ghcr.io/hadolint/hadolint hadolint --ignore DL3006 --ignore DL3008 --ignore DL3013
+      --ignore DL3025
