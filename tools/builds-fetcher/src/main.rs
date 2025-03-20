@@ -159,7 +159,7 @@ async fn update_builds(
     }
 }
 
-#[instrument(skip(pg_client))]
+#[instrument(skip(pg_client, builds))]
 async fn insert_builds(
     pg_client: &Pool<Postgres>,
     builds: Vec<HeroBuildResult>,
