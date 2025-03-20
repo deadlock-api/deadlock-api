@@ -1,8 +1,0 @@
-clickhouse_pool
-tqdm
-pydantic
-clickhouse_driver
-protobuf
-httpx[http2]
-valveprotos_py @ git+https://github.com/deadlock-api/valveprotos-py
-more-itertools

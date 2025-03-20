@@ -1,27 +1,31 @@
 services:
   active-matches-scraper:
     build:
-      context: active-matches-scraper
+      args:
+        EXE_NAME: active-matches-scraper
     restart: always
     env_file: .env
 
   ingest-worker:
     build:
-      context: ingest-worker
+      args:
+        EXE_NAME: ingest-worker
     restart: always
     env_file: .env
     stop_grace_period: 30s
 
   matchdata-downloader:
     build:
-      context: matchdata-downloader
+      args:
+        EXE_NAME: matchdata-downloader
     restart: always
     env_file: .env
     stop_grace_period: 30s
 
   salt-scraper:
     build:
-      context: salt-scraper
+      args:
+        EXE_NAME: salt-scraper
     restart: always
     environment:
       RUST_LOG: debug
@@ -41,13 +45,17 @@ services:
 
   history-fetcher:
     build:
-      context: history-fetcher
+      args:
+        EXE_NAME: history-fetcher
     restart: always
     env_file: .env
+    environment:
+      RUST_LOG: info
 
   builds-fetcher:
     build:
-      context: builds-fetcher
+      args:
+        EXE_NAME: builds-fetcher
     restart: always
     env_file: .env
     environment:
@@ -55,13 +63,15 @@ services:
 
   hltv-spectator:
     build:
-      context: hltv-scraper
+      args:
+        EXE_NAME: hltv-scraper
     restart: always
     env_file: .env
 
   hltv-scraper:
     build:
-      context: hltv-scraper
+      args:
+        EXE_NAME: hltv-scraper
     restart: always
     env_file: .env
     volumes:

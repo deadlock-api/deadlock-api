@@ -1,9 +1,10 @@
-ARG EXE_NAME=salt-scraper
+ARG EXE_NAME
 
 FROM rust:1.85.0-slim-bookworm AS chef
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential curl
+    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install --locked cargo-chef
 ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
@@ -11,7 +12,6 @@ ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
 WORKDIR /app
 
 FROM chef AS planner
-ARG EXE_NAME
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
@@ -22,10 +22,8 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo chef cook --release --recipe-path recipe.json
+    cargo chef cook --release --recipe-path recipe.json --bin ${EXE_NAME}
 COPY . .
-
-
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
@@ -44,4 +42,4 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /app/target/release/${EXE_NAME} /usr/local/bin
 
-ENTRYPOINT "/usr/local/bin/${exe_name}"
+ENTRYPOINT ["/usr/local/bin/${exe_name}"]

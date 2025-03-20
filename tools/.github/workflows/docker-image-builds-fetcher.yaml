@@ -40,4 +40,4 @@ jobs:
         push: true
         tags: ghcr.io/${{ github.repository }}/builds-fetcher:latest
         project: k7kl7zsmcs
-        context: builds-fetcher
+        build-args: EXE_NAME=builds-fetcher
