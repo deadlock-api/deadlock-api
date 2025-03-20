@@ -111,6 +111,9 @@ async fn update_builds(
         langs,
         search
     );
+    if builds.is_empty() {
+        return;
+    }
     if let Err(e) = insert_builds(pg_client, builds).await {
         warn!("Failed to insert builds: {:?}", e);
     }
