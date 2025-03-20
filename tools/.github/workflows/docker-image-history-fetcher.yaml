@@ -8,6 +8,7 @@ on:
     paths:
     - 'history-fetcher/**'
     - 'common/**'
+    - 'Dockerfile'
 
 permissions:
   contents: read

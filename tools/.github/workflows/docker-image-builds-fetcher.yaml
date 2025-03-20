@@ -8,6 +8,7 @@ on:
     paths:
     - 'builds-fetcher/**'
     - 'common/**'
+    - 'Dockerfile'
 
 permissions:
   contents: read
