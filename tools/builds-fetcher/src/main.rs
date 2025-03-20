@@ -48,7 +48,7 @@ static POSTGRES_PASSWORD: Lazy<String> = Lazy::new(|| std::env::var("POSTGRES_PA
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn",
+        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn",
     ));
     let fmt_layer = tracing_subscriber::fmt::layer();
 
