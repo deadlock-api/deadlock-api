@@ -1,11 +1,17 @@
 mod models;
 
 use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
-use arl::RateLimiter;
-use clickhouse::Client;
 use delay_map::HashSetDelay;
+use metrics::{counter, gauge};
+use metrics_exporter_prometheus::PrometheusBuilder;
+use std::net::SocketAddrV4;
 use std::sync::LazyLock;
 use std::time::Duration;
+use tokio::time::sleep;
+use tracing::{debug, error, info, instrument};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://localhost:8123".to_string())
@@ -23,7 +29,27 @@ static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
 
 #[tokio::main]
 async fn main() {
-    let client = Client::default()
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
+        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn",
+    ));
+    let fmt_layer = tracing_subscriber::fmt::layer();
+
+    tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(env_filter)
+        .init();
+
+    info!("Starting processing!");
+
+    let builder = PrometheusBuilder::new()
+        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
+    builder
+        .install()
+        .expect("failed to install recorder/exporter");
+
+    let http_client = reqwest::Client::new();
+
+    let ch_client = clickhouse::Client::default()
         .with_url(CLICKHOUSE_URL.clone())
         .with_user(CLICKHOUSE_USER.clone())
         .with_password(CLICKHOUSE_PASSWORD.clone())
@@ -31,69 +57,89 @@ async fn main() {
 
     let mut delay_set = HashSetDelay::new(Duration::from_secs(2 * 60));
 
-    let limiter = RateLimiter::new(1, Duration::from_secs(61));
     loop {
-        limiter.wait().await;
-        let start = std::time::Instant::now();
-        let active_matches: Vec<ActiveMatch> = match reqwest::get(ACTIVE_MATCHES_URL.clone()).await
-        {
-            Ok(response) => match response.json().await {
-                Ok(active_matches) => active_matches,
-                Err(e) => {
-                    eprintln!("Failed to parse active matches: {}", e);
-                    continue;
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to fetch active matches: {}", e);
-                continue;
-            }
-        };
-        let ch_active_matches: Vec<_> = active_matches
-            .into_iter()
-            .filter(|am| {
-                let key = (
-                    am.match_id,
-                    am.net_worth_team_0,
-                    am.net_worth_team_1,
-                    am.objectives_mask_team0,
-                    am.objectives_mask_team1,
-                    am.spectators,
-                    am.open_spectator_slots,
-                );
-                if delay_set.contains_key(&key) {
-                    return false;
-                }
-                delay_set.insert(key);
-                true
-            })
-            .map(ClickHouseActiveMatch::from)
-            .collect();
-        if ch_active_matches.is_empty() {
-            continue;
-        }
-        let matches = ch_active_matches.len();
-        let mut insert = match client.insert("active_matches") {
-            Ok(insert) => insert,
-            Err(e) => {
-                eprintln!("Failed to create insert: {}", e);
-                continue;
-            }
-        };
-        for ch_active_match in ch_active_matches {
-            match insert.write(&ch_active_match).await {
-                Ok(_) => (),
-                Err(e) => eprintln!("Failed to insert active match: {}", e),
-            }
-        }
-        match insert.end().await {
-            Ok(_) => (),
-            Err(e) => eprintln!("Failed to commit insert: {}", e),
-        }
-        println!(
-            "Inserted {} active matches in {:?}",
-            matches,
-            start.elapsed()
-        );
+        fetch_insert_active_matches(&http_client, &ch_client, &mut delay_set).await;
+        sleep(Duration::from_secs(61)).await;
     }
+}
+
+#[instrument(skip(http_client, ch_client, delay_set))]
+async fn fetch_insert_active_matches(
+    http_client: &reqwest::Client,
+    ch_client: &clickhouse::Client,
+    delay_set: &mut HashSetDelay<(u64, u32, u32, u16, u16, u16, u16)>,
+) {
+    let active_matches = match fetch_active_matches(http_client).await {
+        Ok(value) => {
+            gauge!("active_matches_scraper.fetched_active_matches").set(value.len() as f64);
+            counter!("active_matches_scraper.fetch_active_matches.success").increment(1);
+            debug!("Successfully fetched active_matches");
+            value
+        }
+        Err(e) => {
+            gauge!("active_matches_scraper.fetched_active_matches").set(0);
+            counter!("active_matches_scraper.fetch_active_matches.failure").increment(1);
+            error!("Failed to fetch active matches: {}", e);
+            return;
+        }
+    };
+    let ch_active_matches = active_matches
+        .into_iter()
+        .filter(|am| {
+            let key = (
+                am.match_id,
+                am.net_worth_team_0,
+                am.net_worth_team_1,
+                am.objectives_mask_team0,
+                am.objectives_mask_team1,
+                am.spectators,
+                am.open_spectator_slots,
+            );
+            let is_new = !delay_set.contains_key(&key);
+            if is_new {
+                delay_set.insert(key);
+            }
+            is_new
+        })
+        .map(ClickHouseActiveMatch::from)
+        .collect::<Vec<_>>();
+    if ch_active_matches.is_empty() {
+        info!("No new active matches found");
+        return;
+    }
+    match insert_active_matches(ch_client, &ch_active_matches).await {
+        Ok(_) => {
+            gauge!("active_matches_scraper.inserted_active_matches")
+                .set(ch_active_matches.len() as f64);
+            counter!("active_matches_scraper.insert_active_matches.success").increment(1);
+            info!("Inserted {} active matches", ch_active_matches.len());
+        }
+        Err(e) => {
+            gauge!("active_matches_scraper.inserted_active_matches").set(0);
+            counter!("active_matches_scraper.insert_active_matches.failure").increment(1);
+            error!("Failed to insert active matches: {}", e);
+        }
+    }
+}
+
+#[instrument(skip(ch_client))]
+async fn insert_active_matches(
+    ch_client: &clickhouse::Client,
+    ch_active_matches: &[ClickHouseActiveMatch],
+) -> clickhouse::error::Result<()> {
+    let mut insert = ch_client.insert("active_matches")?;
+    for ch_active_match in ch_active_matches {
+        insert.write(ch_active_match).await?;
+    }
+    insert.end().await
+}
+
+#[instrument(skip(http_client))]
+async fn fetch_active_matches(http_client: &reqwest::Client) -> reqwest::Result<Vec<ActiveMatch>> {
+    http_client
+        .get(ACTIVE_MATCHES_URL.clone())
+        .send()
+        .await?
+        .json()
+        .await
 }

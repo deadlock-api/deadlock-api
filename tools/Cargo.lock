@@ -6,9 +6,10 @@ version = 4
 name = "active-matches-scraper"
 version = "0.1.0"
 dependencies = [
- "arl",
  "clickhouse",
  "delay_map",
+ "metrics",
+ "metrics-exporter-prometheus",
  "once_cell",
  "openssl-sys",
  "reqwest",
@@ -16,6 +17,8 @@ dependencies = [
  "serde_repr",
  "time",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
