@@ -166,11 +166,10 @@ async fn fetch_builds(
     search: &Option<String>,
 ) -> reqwest::Result<CMsgClientToGcFindHeroBuildsResponse> {
     let msg = CMsgClientToGcFindHeroBuilds {
-        author_account_id: None,
         hero_id: hero_id.into(),
         language: langs.to_vec(),
         search_text: search.clone(),
-        hero_build_id: None,
+        ..Default::default()
     };
     common::utils::call_steam_proxy(
         http_client,
