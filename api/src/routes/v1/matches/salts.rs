@@ -127,8 +127,8 @@ pub async fn fetch_match_salts(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         msg,
+        Some(&["GetMatchMetaData"]),
         None,
-        Some(&["GetMatchMetaData", "GetMatchMetaDataOnDemand"]),
         Duration::from_secs(30 * 60),
         Duration::from_secs(2),
     )

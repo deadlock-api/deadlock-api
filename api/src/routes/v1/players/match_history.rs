@@ -81,8 +81,8 @@ async fn fetch_match_history_raw(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
         msg,
+        Some(&["GetMatchHistory"]),
         None,
-        Some(&["GetMatchHistory", "GetMatchHistoryOnDemand"]),
         Duration::from_secs(24 * 60 * 60 / 100), // 100req/day
         Duration::from_secs(3),
     )
