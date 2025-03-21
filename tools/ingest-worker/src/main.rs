@@ -4,7 +4,6 @@ use std::net::SocketAddrV4;
 use std::path::Path;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
-use crate::models::enums::MatchOutcome;
 use async_compression::tokio::bufread::BzDecoder;
 use clickhouse::Compression;
 use futures::StreamExt;
@@ -22,7 +21,7 @@ use tracing::{debug, error, info, instrument, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use valveprotos::deadlock::c_msg_match_meta_data_contents::MatchInfo;
+use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
 mod models;
@@ -162,6 +161,17 @@ async fn ingest_object(
 
     // Ingest to Clickhouse
     let match_info = parse_match_data(data)?;
+    if let Some(match_outcome) = match_info.match_outcome {
+        if match_outcome == EMatchOutcome::KEOutcomeError as i32 {
+            warn!("Match outcome is error, moving match to failed folder");
+            let new_path = format!(
+                "failed/metadata/{}",
+                Path::new(key).file_name().unwrap().to_str().unwrap()
+            );
+            move_object(bucket, key, &new_path).await?;
+            return Err(anyhow::anyhow!("Match outcome is error, skipping match"));
+        }
+    }
     match insert_match(ch_client, &match_info).await {
         Ok(_) => {
             counter!("ingest_worker.insert_match.success").increment(1);
@@ -262,10 +272,6 @@ fn parse_match_data(data: Vec<u8>) -> anyhow::Result<MatchInfo> {
 
 async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> anyhow::Result<()> {
     let ch_match_metadata: ClickhouseMatchInfo = match_info.clone().into();
-    if ch_match_metadata.match_outcome == MatchOutcome::Error {
-        warn!("Match outcome is error, skipping match");
-        return Err(anyhow::anyhow!("Match outcome is error, skipping match"));
-    }
     let ch_players = match_info
         .players
         .iter()
