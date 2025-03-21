@@ -49,8 +49,6 @@ async fn get_mate_stats(
     query: MateStatsQuery,
 ) -> APIResult<Vec<MateStats>> {
     let mut filters = vec![];
-    filters.push(format!("has(p.account_ids, {})", account_id));
-    filters.push(format!("mate_id != {}", account_id));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
@@ -88,15 +86,18 @@ async fn get_mate_stats(
     };
     let query = format!(
         r#"
-    SELECT mate_id, countIf(p.won) as wins, COUNT() as matches_played, groupUniqArray(p.match_id) as matches
-    FROM match_parties p
-        ARRAY JOIN p.account_ids as mate_id
-        INNER ANY JOIN match_info mi USING (match_id)
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
+    WITH matches AS (SELECT DISTINCT match_id, team, party
+                     FROM match_player
+                     WHERE account_id = {} {}),
+         mates AS (SELECT DISTINCT match_id, won, account_id
+                   FROM match_player
+                   WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches) AND account_id != {})
+    SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+    FROM mates
     GROUP BY mate_id
     ORDER BY matches_played DESC
     "#,
-        filters
+        account_id, filters, account_id
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
