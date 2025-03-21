@@ -83,7 +83,7 @@ async fn fetch_match_history_raw(
         msg,
         Some(&["GetMatchHistory"]),
         None,
-        Duration::from_secs(24 * 60 * 60 / 100), // 100req/day
+        Duration::from_secs(24 * 60 * 60 / 200), // 200req/day
         Duration::from_secs(3),
     )
     .await
