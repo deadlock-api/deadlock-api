@@ -10,6 +10,7 @@ use s3::error::S3Error;
 use s3::{Bucket, Region};
 use serde::Deserialize;
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::net::SocketAddrV4;
 use std::sync::LazyLock;
 use std::time::Duration;
@@ -48,12 +49,20 @@ static S3_CACHE_ENDPOINT_URL: LazyLock<String> =
 static S3_CACHE_REGION: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_CACHE_REGION").unwrap());
 
-#[derive(Row, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
 struct MatchSalts {
     match_id: u64,
     cluster_id: Option<u32>,
     metadata_salt: Option<u32>,
     replay_salt: Option<u32>,
+}
+
+impl Debug for MatchSalts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MatchSalts")
+            .field("match_id", &self.match_id)
+            .finish()
+    }
 }
 
 #[tokio::main]
