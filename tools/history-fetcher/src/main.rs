@@ -172,7 +172,7 @@ async fn fetch_account_match_history(
         msg,
         Some(&["GetMatchHistory"]),
         None,
-        Duration::from_secs(5 * 60),
+        Duration::from_secs(24 * 60 * 60 / 200), // 200 requests per day
         Duration::from_secs(5),
     )
     .await
