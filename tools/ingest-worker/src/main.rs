@@ -155,13 +155,13 @@ async fn ingest_object(
     // Decompress Data
     let data = obj.bytes().as_ref();
     let data = if key.ends_with(".bz2") {
-        bzip_decompress(key, data).await?
+        bzip_decompress(data).await?
     } else {
         data.to_vec()
     };
 
     // Ingest to Clickhouse
-    let match_info = parse_match_data(key, data)?;
+    let match_info = parse_match_data(data)?;
     match insert_match(ch_client, &match_info).await {
         Ok(_) => {
             counter!("ingest_worker.insert_match.success").increment(1);
@@ -204,7 +204,6 @@ async fn list_ingest_objects(bucket: &Bucket) -> Result<HashSet<String>, S3Error
         .collect::<HashSet<_>>())
 }
 
-#[instrument(skip(bucket))]
 async fn get_object(bucket: &Bucket, key: &str) -> Result<ResponseData, S3Error> {
     match bucket.get_object(key).await {
         Ok(data) => {
@@ -220,8 +219,7 @@ async fn get_object(bucket: &Bucket, key: &str) -> Result<ResponseData, S3Error>
     }
 }
 
-#[instrument(skip(data))]
-async fn bzip_decompress(key: &str, data: &[u8]) -> std::io::Result<Vec<u8>> {
+async fn bzip_decompress(data: &[u8]) -> std::io::Result<Vec<u8>> {
     let mut decompressed = vec![];
     match BzDecoder::new(data).read_to_end(&mut decompressed).await {
         Ok(_) => {
@@ -237,8 +235,7 @@ async fn bzip_decompress(key: &str, data: &[u8]) -> std::io::Result<Vec<u8>> {
     }
 }
 
-#[instrument(skip(data))]
-fn parse_match_data(key: &str, data: Vec<u8>) -> anyhow::Result<MatchInfo> {
+fn parse_match_data(data: Vec<u8>) -> anyhow::Result<MatchInfo> {
     let data = match CMsgMatchMetaData::decode(data.as_slice()) {
         Ok(m) => m.match_details.map_or(data, |m| m.clone()),
         Err(_) => data,
@@ -296,7 +293,6 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
     Ok(())
 }
 
-#[instrument(skip(bucket))]
 async fn move_object(bucket: &Bucket, old_key: &str, new_key: &str) -> Result<(), S3Error> {
     match tryhard::retry_fn(|| async {
         bucket.copy_object_internal(old_key, new_key).await?;
@@ -319,7 +315,6 @@ async fn move_object(bucket: &Bucket, old_key: &str, new_key: &str) -> Result<()
     }
 }
 
-#[instrument(skip(http_client))]
 async fn send_ingest_event(http_client: &reqwest::Client, match_id: u64) -> reqwest::Result<()> {
     let result = http_client
         .post(format!(
