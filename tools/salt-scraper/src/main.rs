@@ -1,13 +1,19 @@
 use base64::Engine;
 use base64::prelude::*;
 use clickhouse::Compression;
-use log::{debug, info, warn};
+use metrics::counter;
+use metrics_exporter_prometheus::PrometheusBuilder;
 use models::{InvokeResponse200, MatchIdQueryResult, MatchSalt};
 use prost::Message as _;
-use reqwest::Client;
+use reqwest::{Error, Response};
 use serde_json::json;
+use std::net::SocketAddrV4;
 use std::sync::LazyLock;
 use std::time::Duration;
+use tracing::{debug, info, instrument, warn};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
@@ -50,7 +56,21 @@ static SALTS_RATE_LIMIT_COOLDOWN_MILLIS: LazyLock<usize> = LazyLock::new(|| {
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
+        "debug,h2=warn,hyper_util=warn,hyper=warn,reqwest=warn,rustls=warn",
+    ));
+    let fmt_layer = tracing_subscriber::fmt::layer();
+
+    tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(env_filter)
+        .init();
+
+    let builder = PrometheusBuilder::new()
+        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
+    builder
+        .install()
+        .expect("failed to install recorder/exporter");
 
     let clickhouse_client = clickhouse::Client::default()
         .with_url(CLICKHOUSE_URL.clone())
@@ -59,7 +79,7 @@ async fn main() {
         .with_database(CLICKHOUSE_DB.clone())
         .with_compression(Compression::None);
 
-    let client = Client::builder()
+    let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .unwrap();
@@ -90,7 +110,7 @@ async fn main() {
         let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
         if recent_matches.len() < 100 {
             info!(
-                "Only got {} matches, fetching salts fot hltv matches.",
+                "Only got {} matches, fetching salts for hltv matches.",
                 recent_matches.len()
             );
             let query = r"
@@ -109,13 +129,71 @@ async fn main() {
                 .unwrap();
             recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
         }
-        for m in recent_matches {
-            fetch_match(&client, m).await;
+        for match_id in recent_matches {
+            match fetch_match(&http_client, match_id).await {
+                Ok(_) => debug!("Fetched match {}", match_id),
+                Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
+            }
         }
     }
 }
 
-async fn fetch_salt(client: &Client, match_id: u64) -> reqwest::Result<InvokeResponse200> {
+#[instrument(skip(http_client))]
+async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Result<()> {
+    // Fetch Salts
+    let salts = tryhard::retry_fn(|| fetch_salts(http_client, match_id))
+        .retries(10)
+        .exponential_backoff(Duration::from_secs(1))
+        .max_delay(Duration::from_secs(20))
+        .await;
+    let salts = match salts {
+        Ok(r) => {
+            counter!("salt_scraper.fetch_salts.success").increment(1);
+            info!("Fetched salts");
+            r
+        }
+        Err(e) => {
+            counter!("salt_scraper.fetch_salts.failure").increment(1);
+            warn!("Failed to fetch salts: {:?}", e);
+            return Err(e.into());
+        }
+    };
+
+    let username = salts.username.clone();
+
+    // Parse Salts
+    let salts = match parse_salts(salts) {
+        Ok(salts) => {
+            counter!("salt_scraper.parse_salt.success").increment(1);
+            debug!("Parsed salts");
+            salts
+        }
+        Err(e) => {
+            counter!("salt_scraper.parse_salt.failure").increment(1);
+            warn!("Failed to parse salts: {:?}", e);
+            return Err(e);
+        }
+    };
+
+    // Ingest Salts
+    match ingest_salts(http_client, match_id, salts, username).await {
+        Ok(_) => {
+            counter!("salt_scraper.ingest_salt.success").increment(1);
+            info!("Ingested salts");
+            Ok(())
+        }
+        Err(e) => {
+            counter!("salt_scraper.ingest_salt.failure").increment(1);
+            warn!("Failed to ingest salts: {:?}", e);
+            Err(e.into())
+        }
+    }
+}
+
+async fn fetch_salts(
+    http_client: &reqwest::Client,
+    match_id: u64,
+) -> reqwest::Result<InvokeResponse200> {
     let message = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
         ..Default::default()
@@ -130,7 +208,7 @@ async fn fetch_salt(client: &Client, match_id: u64) -> reqwest::Result<InvokeRes
         "bot_in_all_groups": ["GetMatchMetaData"],
         "data": data_b64,
     });
-    client
+    http_client
         .post(PROXY_URL.clone())
         .header("Authorization", format!("Bearer {}", *PROXY_API_TOKEN))
         .json(&body)
@@ -141,76 +219,36 @@ async fn fetch_salt(client: &Client, match_id: u64) -> reqwest::Result<InvokeRes
         .await
 }
 
-async fn fetch_match(client: &Client, match_id: u64) {
-    let res = tryhard::retry_fn(|| async {
-        match fetch_salt(client, match_id).await {
-            Ok(r) => Ok(r),
-            Err(e) => {
-                warn!("Failed to fetch match {}: {:?}", match_id, e);
-                Err(e)
-            }
+fn parse_salts(salts: InvokeResponse200) -> anyhow::Result<CMsgClientToGcGetMatchMetaDataResponse> {
+    let buf = BASE64_STANDARD.decode(salts.data)?;
+    let response = CMsgClientToGcGetMatchMetaDataResponse::decode(buf.as_slice())?;
+    if let Some(result) = response.result {
+        if result == KEResultRateLimited as i32 {
+            warn!("Got a rate limited response: {:?}", response);
+            return Err(anyhow::anyhow!("Rate limited"));
         }
-    })
-    .retries(10)
-    .exponential_backoff(Duration::from_secs(1))
-    .max_delay(Duration::from_secs(20))
-    .await;
-    let res = match res {
-        Ok(r) => r,
-        Err(e) => {
-            warn!("Failed to fetch match {}: {:?}", match_id, e);
-            return;
-        }
-    };
-
-    let buf = BASE64_STANDARD.decode(res.data).unwrap();
-    let response = CMsgClientToGcGetMatchMetaDataResponse::decode(buf.as_slice()).unwrap();
-    if let Some(r) = response.result {
-        if r == KEResultRateLimited as i32 {
-            warn!(
-                "Got a rate limited response with username {:?}: {:?}",
-                res.username, response
-            );
-            return;
-        }
-    };
-    match ingest_salts(client, &[(response, match_id, res.username.clone())]).await {
-        Ok(_) => info!(
-            "Ingested salts for match {} with username: {:?}",
-            match_id, res.username
-        ),
-        Err(e) => warn!(
-            "Failed to ingest salts for match {} with username {:?}: {:?}",
-            match_id, res.username, e
-        ),
-    };
+    }
+    Ok(response)
 }
 
 async fn ingest_salts(
-    client: &Client,
-    salts: &[(CMsgClientToGcGetMatchMetaDataResponse, u64, Option<String>)],
-) -> reqwest::Result<()> {
-    let salts: Vec<_> = salts
-        .iter()
-        .map(|(r, m, u)| {
-            let cluster_id = r.replay_group_id.unwrap_or(0);
-            let metadata_salt = r.metadata_salt.unwrap_or(0);
-            let replay_salt = r.replay_salt.unwrap_or(0);
-            MatchSalt {
-                cluster_id,
-                match_id: *m,
-                metadata_salt,
-                replay_salt,
-                username: u.clone(),
-            }
-        })
-        .collect();
-    debug!("Ingesting salts: {:?}", salts);
-    client
+    http_client: &reqwest::Client,
+    match_id: u64,
+    salts: CMsgClientToGcGetMatchMetaDataResponse,
+    username: Option<String>,
+) -> Result<Response, Error> {
+    let salts = vec![MatchSalt {
+        match_id,
+        cluster_id: salts.replay_group_id.unwrap_or(0),
+        metadata_salt: salts.metadata_salt.unwrap_or(0),
+        replay_salt: salts.replay_salt.unwrap_or(0),
+        username,
+    }];
+    http_client
         .post("https://api.deadlock-api.com/v1/matches/salts")
         .header("X-API-Key", INTERNAL_DEADLOCK_API_KEY.clone())
         .json(&salts)
         .send()
         .await
-        .map(|_| ())
+        .and_then(|r| r.error_for_status())
 }
