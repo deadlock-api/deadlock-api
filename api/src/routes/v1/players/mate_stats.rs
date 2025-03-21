@@ -50,6 +50,7 @@ async fn get_mate_stats(
 ) -> APIResult<Vec<MateStats>> {
     let mut filters = vec![];
     filters.push(format!("has(p.account_ids, {})", account_id));
+    filters.push(format!("mate_id != {}", account_id));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
