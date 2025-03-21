@@ -127,7 +127,7 @@ async fn update_builds(
 ) {
     let builds = match fetch_builds(http_client, hero_id, langs, &search)
         .await
-        .map(|b| b.results)
+        .map(|(_, b)| b.results)
     {
         Ok(builds) => {
             counter!("builds_fetcher.fetch_builds.success", "hero_id" => hero_id.to_string())
@@ -206,7 +206,7 @@ async fn fetch_builds(
     hero_id: u32,
     langs: &[i32],
     search: &Option<String>,
-) -> reqwest::Result<CMsgClientToGcFindHeroBuildsResponse> {
+) -> reqwest::Result<(String, CMsgClientToGcFindHeroBuildsResponse)> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),

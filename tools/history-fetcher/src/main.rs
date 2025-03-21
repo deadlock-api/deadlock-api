@@ -88,7 +88,7 @@ async fn update_account(
     account_id: u32,
 ) {
     let match_history = match fetch_account_match_history(http_client, account_id).await {
-        Ok(match_history) => match_history,
+        Ok((_, match_history)) => match_history,
         Err(e) => {
             counter!("history_fetcher.fetch_match_history.failure").increment(1);
             error!(
@@ -161,7 +161,7 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
 async fn fetch_account_match_history(
     http_client: &reqwest::Client,
     account_id: u32,
-) -> reqwest::Result<CMsgClientToGcGetMatchHistoryResponse> {
+) -> reqwest::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account_id.into(),
         ..Default::default()

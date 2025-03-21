@@ -29,7 +29,7 @@ pub async fn call_steam_proxy<T: Message + Default>(
     in_any_groups: Option<&[&str]>,
     cooldown_time: Duration,
     request_timeout: Duration,
-) -> reqwest::Result<T> {
+) -> reqwest::Result<(String, T)> {
     let serialized_message = msg.encode_to_vec();
     let encoded_message = BASE64_STANDARD.encode(&serialized_message);
     let result = http_client
@@ -49,8 +49,8 @@ pub async fn call_steam_proxy<T: Message + Default>(
         .error_for_status()?
         .json()
         .await
-        .map(|r: SteamProxyResponse| BASE64_STANDARD.decode(&r.data).unwrap())
-        .map(|r| T::decode(r.as_ref()).unwrap());
+        .map(|r: SteamProxyResponse| (r.username, BASE64_STANDARD.decode(&r.data).unwrap()))
+        .map(|(username, data)| (username, T::decode(data.as_ref()).unwrap()));
     match result {
         Ok(_) => {
             counter!("steam_proxy.call.success", "msg_type" => msg_type.as_str_name().to_string())

@@ -411,7 +411,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -664,7 +664,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1425,7 +1425,7 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1443,7 +1443,7 @@ dependencies = [
  "prost",
  "snap",
  "thiserror 1.0.69",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1485,7 +1485,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1525,7 +1525,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1928,7 +1928,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tryhard",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -3308,7 +3308,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tryhard",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -4297,17 +4297,6 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 name = "valveprotos"
 version = "0.0.0"
 source = "git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c#ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c"
-dependencies = [
- "heck",
- "prost",
- "prost-build",
- "prost-types",
-]
-
-[[package]]
-name = "valveprotos"
-version = "0.0.0"
-source = "git+https://github.com/johnpyp/valveprotos-rs#ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c"
 dependencies = [
  "heck",
  "prost",

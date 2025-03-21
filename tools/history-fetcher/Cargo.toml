@@ -12,7 +12,7 @@ futures = "0.3.31"
 once_cell = "1.21.1"
 tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
 reqwest = "0.12.15"
-valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs", version = "0.0.0", features = ["deadlock", "serde"] }
+valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock", "serde"] }
 metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
