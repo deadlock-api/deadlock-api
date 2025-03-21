@@ -118,7 +118,7 @@ async fn main() {
 
         if objs_to_ingest.is_empty() {
             info!("No files to fetch, waiting 10s ...");
-            sleep(Duration::from_secs(10)).await;
+            sleep(Duration::from_secs(60)).await;
             continue;
         }
 
