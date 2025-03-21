@@ -99,6 +99,7 @@ async fn main() {
     .unwrap();
 
     loop {
+        sleep(Duration::from_secs(10)).await;
         let objs_to_ingest = match list_ingest_objects(&bucket).await {
             Ok(value) => {
                 counter!("ingest_worker.list_ingest_objects.success").increment(1);
@@ -137,7 +138,10 @@ async fn main() {
                     counter!("ingest_worker.ingest_object.failure").increment(1);
                     error!("Error ingesting object: {}", e);
                 }
-            })
+            });
+
+        info!("Ingested all objects, waiting 10s ...");
+        sleep(Duration::from_secs(10)).await;
     }
 }
 
