@@ -88,9 +88,10 @@ async fn get_item_stats(
     };
     let query = format!(
         r#"
-    SELECT hero_id, item_id, coalesce(sum(won), 0) AS wins, count() AS matches_played, groupUniqArray(match_id) AS matches
-    FROM match_player_item_v2
+    SELECT hero_id, items.item_id as item_id, coalesce(sum(won), 0) AS wins, count() AS matches_played, groupUniqArray(match_id) AS matches
+    FROM match_player FINAL
         INNER ANY JOIN match_info AS mi USING (match_id)
+        ARRAY JOIN items.item_id
     WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
     GROUP BY hero_id, item_id
     ORDER BY hero_id, item_id
