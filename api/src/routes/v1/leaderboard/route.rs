@@ -3,7 +3,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
 use crate::state::AppState;
 use crate::utils;
-use crate::utils::assets;
+use crate::utils::parse;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -119,20 +119,6 @@ pub async fn fetch_parse_leaderboard(
     .await
 }
 
-async fn validate_hero_id(state: &AppState, hero_id: u32) -> APIResult<()> {
-    let hero_ids = assets::fetch_heroes(&state.http_client)
-        .await
-        .unwrap_or_default();
-    let is_valid = hero_ids.iter().any(|h| h.id == hero_id);
-    if !is_valid {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Hero ID {} is invalid", hero_id),
-        });
-    }
-    Ok(())
-}
-
 #[utoipa::path(
     get,
     path = "/{region}/raw",
@@ -173,7 +159,12 @@ pub async fn leaderboard_hero_raw(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
-    validate_hero_id(&state, hero_id).await?;
+    if !parse::validate_hero_id(&state.http_client, hero_id).await {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Invalid hero_id: {}", hero_id),
+        });
+    }
     tryhard::retry_fn(|| {
         fetch_leaderboard_raw(&state.config, &state.http_client, region, Some(hero_id))
     })
@@ -221,7 +212,12 @@ pub async fn leaderboard_hero(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
-    validate_hero_id(&state, hero_id).await?;
+    if !parse::validate_hero_id(&state.http_client, hero_id).await {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Invalid hero_id: {}", hero_id),
+        });
+    }
     fetch_parse_leaderboard(&state.config, &state.http_client, region, Some(hero_id))
         .await
         .map(Json)

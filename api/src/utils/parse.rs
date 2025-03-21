@@ -1,3 +1,4 @@
+use crate::utils::assets;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
@@ -102,4 +103,11 @@ where
             }
         }
     })
+}
+
+pub async fn validate_hero_id(http_client: &reqwest::Client, hero_id: u32) -> bool {
+    let Ok(hero_ids) = assets::fetch_heroes(http_client).await else {
+        return false;
+    };
+    hero_ids.iter().any(|h| h.id == hero_id)
 }
