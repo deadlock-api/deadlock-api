@@ -125,7 +125,7 @@ async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Re
     // Fetch Salts
     let salts = tryhard::retry_fn(|| fetch_salts(http_client, match_id))
         .retries(10)
-        .exponential_backoff(Duration::from_secs(1))
+        .fixed_backoff(Duration::from_secs(1))
         .max_delay(Duration::from_secs(20))
         .await;
     let (username, salts) = match salts {
