@@ -117,7 +117,7 @@ async fn main() {
         gauge!("ingest_worker.objs_to_ingest").set(objs_to_ingest.len() as f64);
 
         if objs_to_ingest.is_empty() {
-            info!("No files to fetch, waiting 10s ...");
+            info!("No files to fetch, waiting 60s ...");
             sleep(Duration::from_secs(60)).await;
             continue;
         }
