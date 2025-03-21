@@ -1,15 +1,24 @@
 use cached::UnboundCache;
 use cached::proc_macro::cached;
-use clickhouse::{Client, Compression, Row};
-use futures::TryStreamExt;
+use clickhouse::{Compression, Row};
+use futures::StreamExt;
+use itertools::Itertools;
+use metrics::{counter, gauge};
+use metrics_exporter_prometheus::PrometheusBuilder;
 use s3::creds::Credentials;
+use s3::error::S3Error;
 use s3::{Bucket, Region};
 use serde::Deserialize;
 use std::collections::HashSet;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::net::SocketAddrV4;
+use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::time::sleep;
-use tokio_util::io::StreamReader;
+use tokio_util::bytes::Bytes;
+use tracing::{debug, error, info, instrument};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
@@ -39,14 +48,8 @@ static S3_CACHE_ENDPOINT_URL: LazyLock<String> =
 static S3_CACHE_REGION: LazyLock<String> =
     LazyLock::new(|| std::env::var("S3_CACHE_REGION").unwrap());
 
-static DO_NOT_PULL_DEMO_FILES: LazyLock<bool> = LazyLock::new(|| {
-    std::env::var("DO_NOT_PULL_DEMO_FILES")
-        .map(|s| s == "true")
-        .unwrap_or(false)
-});
-
-#[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
-struct MatchIdQueryResult {
+#[derive(Row, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+struct MatchSalts {
     match_id: u64,
     cluster_id: Option<u32>,
     metadata_salt: Option<u32>,
@@ -55,7 +58,23 @@ struct MatchIdQueryResult {
 
 #[tokio::main]
 async fn main() {
-    let client = Client::default()
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
+        "debug,h2=warn,hyper_util=warn,hyper=warn,reqwest=warn,rustls=warn",
+    ));
+    let fmt_layer = tracing_subscriber::fmt::layer();
+
+    tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(env_filter)
+        .init();
+
+    let builder = PrometheusBuilder::new()
+        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
+    builder
+        .install()
+        .expect("failed to install recorder/exporter");
+
+    let client = clickhouse::Client::default()
         .with_url(CLICKHOUSE_URL.clone())
         .with_user(CLICKHOUSE_USER.clone())
         .with_password(CLICKHOUSE_PASSWORD.clone())
@@ -99,138 +118,140 @@ async fn main() {
     .unwrap()
     .with_path_style();
 
-    let failed = Arc::new(Mutex::new(vec![]));
-    let uploaded = Arc::new(Mutex::new(vec![]));
+    let mut failed = HashSet::new();
+    let mut uploaded = HashSet::new();
 
     loop {
-        println!("Fetching match ids to download");
-        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 1 MONTH LIMIT 100";
-        let match_ids_to_fetch: Vec<MatchIdQueryResult> =
-            client.query(query).fetch_all().await.unwrap();
-        let match_ids_to_fetch: HashSet<MatchIdQueryResult> = match_ids_to_fetch
+        info!("Fetching match ids to download");
+        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 1 MONTH";
+        let match_ids_to_fetch: Vec<MatchSalts> = client.query(query).fetch_all().await.unwrap();
+        let match_ids_to_fetch = match_ids_to_fetch
             .into_iter()
-            .filter(|row| !failed.lock().unwrap().contains(&row.match_id))
-            .filter(|row| !uploaded.lock().unwrap().contains(&row.match_id))
-            .filter(|row| row.cluster_id.is_some() && row.metadata_salt.is_some())
-            .collect();
+            .filter(|salts| !failed.contains(&salts.match_id))
+            .filter(|salts| !uploaded.contains(&salts.match_id))
+            .filter(|salts| salts.cluster_id.is_some() && salts.metadata_salt.is_some())
+            .unique_by(|salts| salts.match_id)
+            .collect_vec();
+
+        gauge!("matchdata_downloader.matches_to_download").set(match_ids_to_fetch.len() as f64);
 
         if match_ids_to_fetch.is_empty() {
-            println!("No matches to download, sleeping for 10s");
+            info!("No matches to download, sleeping for 10s");
             sleep(Duration::from_secs(10)).await;
             continue;
         }
 
-        futures::future::join_all(match_ids_to_fetch.into_iter().map(|row| {
-            download_match(
-                row,
-                bucket.clone(),
-                cache_bucket.clone(),
-                failed.clone(),
-                uploaded.clone(),
-            )
-        }))
-        .await;
+        let results: Vec<_> = futures::stream::iter(match_ids_to_fetch.iter())
+            .map(|salts| download_match(&bucket, &cache_bucket, salts))
+            .buffered(10)
+            .collect()
+            .await;
+        for (salts, result) in match_ids_to_fetch.iter().zip(results) {
+            match result {
+                Ok(_) => {
+                    info!("Match downloaded");
+                    uploaded.insert(salts.match_id);
+                }
+                Err(e) => {
+                    error!("Failed to download match: {}", e);
+                    failed.insert(salts.match_id);
+                }
+            }
+        }
     }
 }
 
+#[instrument(skip(bucket, cache_bucket))]
 async fn download_match(
-    row: MatchIdQueryResult,
-    bucket: Box<Bucket>,
-    cache_bucket: Box<Bucket>,
-    failed: Arc<Mutex<Vec<u64>>>,
-    uploaded: Arc<Mutex<Vec<u64>>>,
-) {
-    let key = format!("/ingest/metadata/{}.meta.bz2", row.match_id);
-    if key_exists(&bucket, &key).await {
-        return;
+    bucket: &Bucket,
+    cache_bucket: &Bucket,
+    salts: &MatchSalts,
+) -> anyhow::Result<()> {
+    // Check if metadata already exists
+    let key = format!("/ingest/metadata/{}.meta.bz2", salts.match_id);
+    if key_exists(bucket, &key).await {
+        return Ok(());
     }
+
+    // Download metadata
+    let bytes = fetch_metadata(salts).await?;
+
+    // Upload to S3
+    upload_object(bucket, &key, &bytes).await?;
+    upload_object(
+        cache_bucket,
+        &format!("{}.meta.bz2", salts.match_id),
+        &bytes,
+    )
+    .await?;
+
+    // Delete outdated HLTV metadata
+    let outdated_hltv_meta_key = format!("/processed/metadata/{}.meta_hltv.bz2", salts.match_id);
+    delete_object(bucket, &outdated_hltv_meta_key).await?;
+    delete_object(cache_bucket, &outdated_hltv_meta_key).await?;
+
+    Ok(())
+}
+
+async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
     let metadata_url = format!(
         "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-        row.cluster_id.unwrap(),
-        row.match_id,
-        row.metadata_salt.unwrap()
+        salts.cluster_id.unwrap(),
+        salts.match_id,
+        salts.metadata_salt.unwrap()
     );
-    let response = reqwest::get(&metadata_url)
+    match reqwest::get(&metadata_url)
         .await
-        .and_then(|r| r.error_for_status());
-    if let Err(e) = response {
-        println!(
-            "Failed to download metadata for match {}: {}",
-            row.match_id, e
-        );
-        failed.lock().unwrap().push(row.match_id);
-        return;
-    }
-    let bytes = response.unwrap().bytes().await.unwrap();
-    if let Err(e) = bucket.put_object(&key, &bytes).await {
-        println!(
-            "Failed to upload metadata for match {}: {}",
-            row.match_id, e
-        );
-        sleep(Duration::from_secs(10)).await;
-        return;
-    }
-    if let Err(e) = cache_bucket
-        .put_object(&format!("{}.meta.bz2", row.match_id), &bytes)
+        .and_then(|r| r.error_for_status())?
+        .bytes()
         .await
     {
-        println!(
-            "Failed to upload metadata to cache for match {}: {}",
-            row.match_id, e
-        );
-    }
-
-    // Delete HLTV metas from main bucket/cache bucket if we're ingesting a full meta
-    //
-    // This may be because we got a user provided salt, or because the HLTV meta wasn't fully
-    // ingested (e.g. if there was an error)
-    let outdated_hltv_meta_key = format!("/processed/metadata/{}.meta_hltv.bz2", row.match_id);
-    if key_exists(&bucket, &outdated_hltv_meta_key).await {
-        if let Err(e) = bucket.delete_object(&outdated_hltv_meta_key).await {
-            println!(
-                "Failed to delete outdated hltv meta key for match from main bucket {}: {}",
-                row.match_id, e
-            );
+        Ok(bytes) => {
+            counter!("matchdata_downloader.fetch_metadata.successful").increment(1);
+            debug!("Metadata fetched");
+            Ok(bytes)
+        }
+        Err(e) => {
+            counter!("matchdata_downloader.fetch_metadata.failure").increment(1);
+            error!("Failed to fetch metadata from {}: {}", metadata_url, e);
+            Err(e)
         }
     }
-    if key_exists(&cache_bucket, &outdated_hltv_meta_key).await {
-        if let Err(e) = cache_bucket.delete_object(&outdated_hltv_meta_key).await {
-            println!(
-                "Failed to delete outdated hltv meta key for match from cache_bucket {}: {}",
-                row.match_id, e
-            );
+}
+
+#[instrument(skip(bucket, bytes))]
+async fn upload_object(bucket: &Bucket, key: &str, bytes: &Bytes) -> Result<(), S3Error> {
+    match bucket.put_object(&key, bytes).await {
+        Ok(_) => {
+            counter!("matchdata_downloader.upload_object.successful").increment(1);
+            debug!("Uploaded object");
+            Ok(())
+        }
+        Err(e) => {
+            counter!("matchdata_downloader.upload_object.failure").increment(1);
+            error!("Failed to upload object: {}", e);
+            Err(e)
         }
     }
+}
 
-    println!("Uploaded metadata for match {}", row.match_id);
-    uploaded.lock().unwrap().push(row.match_id);
-
-    if *DO_NOT_PULL_DEMO_FILES {
-        return;
+#[instrument(skip(bucket))]
+async fn delete_object(bucket: &Bucket, key: &str) -> Result<(), S3Error> {
+    if !key_exists(bucket, key).await {
+        return Ok(());
     }
-
-    let key = format!("/ingest/demo/{}.dem.bz2", row.match_id);
-    if key_exists(&bucket, &key).await {
-        return;
+    match bucket.delete_object(&key).await {
+        Ok(_) => {
+            counter!("matchdata_downloader.delete_object.successful").increment(1);
+            debug!("Deleted object");
+            Ok(())
+        }
+        Err(e) => {
+            counter!("matchdata_downloader.delete_object.failure").increment(1);
+            error!("Failed to delete object: {}", e);
+            Err(e)
+        }
     }
-    let replay_url = format!(
-        "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
-        row.cluster_id.unwrap(),
-        row.match_id,
-        row.replay_salt.unwrap()
-    );
-    let response = reqwest::get(&replay_url).await.unwrap();
-    response.error_for_status_ref().unwrap();
-    let mut reader = StreamReader::new(response.bytes_stream().map_err(std::io::Error::other));
-    if let Err(e) = bucket.put_object_stream(&mut reader, &key).await {
-        println!(
-            "Failed to upload metadata for match {}: {}",
-            row.match_id, e
-        );
-        sleep(Duration::from_secs(10)).await;
-        return;
-    }
-    println!("Uploaded replay for match {}", row.match_id);
 }
 
 #[cached(
@@ -238,8 +259,9 @@ async fn download_match(
     create = "{ UnboundCache::new() }",
     convert = r#"{ format!("{}", file_path) }"#
 )]
+#[instrument(skip(bucket))]
 async fn key_exists(bucket: &Bucket, file_path: &str) -> bool {
-    println!("Checking if key exists: {}", file_path);
+    debug!("Checking if key exists");
     bucket
         .head_object(&file_path)
         .await
