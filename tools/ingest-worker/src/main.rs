@@ -165,7 +165,7 @@ async fn ingest_object(
     match insert_match(ch_client, &match_info).await {
         Ok(_) => {
             counter!("ingest_worker.insert_match.success").increment(1);
-            debug!("Inserted match data for object: {}", key);
+            debug!("Inserted match data");
         }
         Err(e) => {
             counter!("ingest_worker.insert_match.failure").increment(1);
@@ -209,7 +209,7 @@ async fn get_object(bucket: &Bucket, key: &str) -> Result<ResponseData, S3Error>
     match bucket.get_object(key).await {
         Ok(data) => {
             counter!("ingest_worker.fetch_object.success").increment(1);
-            debug!("Fetched object: {}", key);
+            debug!("Fetched object");
             Ok(data)
         }
         Err(e) => {
@@ -226,7 +226,7 @@ async fn bzip_decompress(key: &str, data: &[u8]) -> std::io::Result<Vec<u8>> {
     match BzDecoder::new(data).read_to_end(&mut decompressed).await {
         Ok(_) => {
             counter!("ingest_worker.decompress_object.success").increment(1);
-            debug!("Decompressed object: {}", key);
+            debug!("Decompressed object");
             Ok(decompressed)
         }
         Err(e) => {
@@ -252,16 +252,13 @@ fn parse_match_data(key: &str, data: Vec<u8>) -> anyhow::Result<MatchInfo> {
     match data {
         Some(m) => {
             counter!("ingest_worker.parse_match_data.success").increment(1);
-            debug!("Parsed match data for object: {}", key);
+            debug!("Parsed match data");
             Ok(m)
         }
         None => {
             counter!("ingest_worker.parse_match_data.failure").increment(1);
-            error!("Error parsing match data for object: {}", key);
-            Err(anyhow::anyhow!(
-                "Error parsing match data for object: {}",
-                key
-            ))
+            error!("Error parsing match data");
+            Err(anyhow::anyhow!("Error parsing match data"))
         }
     }
 }
@@ -311,7 +308,7 @@ async fn move_object(bucket: &Bucket, old_key: &str, new_key: &str) -> Result<()
     {
         Ok(_) => {
             counter!("ingest_worker.move_object.success").increment(1);
-            debug!("Moved object: {} to {}", old_key, new_key);
+            debug!("Moved object");
             Ok(())
         }
         Err(e) => {
@@ -339,7 +336,7 @@ async fn send_ingest_event(http_client: &reqwest::Client, match_id: u64) -> reqw
     match result {
         Ok(_) => {
             counter!("ingest_worker.send_event.success").increment(1);
-            debug!("Sent event for match: {}", match_id);
+            debug!("Sent event");
             Ok(())
         }
         Err(e) => {
