@@ -2,6 +2,7 @@ use prost::Message;
 use std::env;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
+use anyhow::bail;
 use async_compression::tokio::bufread::BzDecoder;
 use futures::StreamExt;
 use metrics::{counter, gauge};
@@ -10,7 +11,7 @@ use object_store::{GetResult, ObjectStore};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
@@ -93,10 +94,9 @@ async fn ingest_object(
     let match_info = parse_match_data(data)?;
     if let Some(match_outcome) = match_info.match_outcome {
         if match_outcome == EMatchOutcome::KEOutcomeError as i32 {
-            warn!("Match outcome is error, moving match to failed folder");
             let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
             move_object(store, key, &new_path).await?;
-            return Err(anyhow::anyhow!("Match outcome is error, skipping match"));
+            bail!("Match outcome is error moved to fail folder");
         }
     }
     match insert_match(ch_client, &match_info).await {
@@ -106,8 +106,7 @@ async fn ingest_object(
         }
         Err(e) => {
             counter!("ingest_worker.insert_match.failure").increment(1);
-            error!("Error inserting match data: {}", e);
-            return Err(anyhow::anyhow!("Error inserting match data: {}", key));
+            bail!("Error inserting match data: {}", e);
         }
     }
 

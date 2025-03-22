@@ -1,3 +1,4 @@
+use anyhow::bail;
 use metrics::counter;
 use models::{MatchIdQueryResult, MatchSalt};
 use reqwest::{Error, Response};
@@ -110,8 +111,7 @@ async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Re
     if let Some(result) = salts.result {
         if result == KEResultRateLimited as i32 {
             counter!("salt_scraper.parse_salt.failure").increment(1);
-            warn!("Got a rate limited response: {:?}", salts);
-            return Err(anyhow::anyhow!("Rate limited"));
+            bail!("Got a rate limited response: {:?}", salts);
         }
     }
     counter!("salt_scraper.parse_salt.success").increment(1);
