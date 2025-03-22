@@ -60,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
                 Ok(key) => {
                     counter!("ingest_worker.ingest_object.success").increment(1);
                     info!("Ingested object: {}", key);
+                    gauge!("ingest_worker.objs_to_ingest").decrement(1);
                 }
                 Err(e) => {
                     counter!("ingest_worker.ingest_object.failure").increment(1);

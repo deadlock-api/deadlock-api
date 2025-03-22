@@ -55,6 +55,7 @@ async fn main() -> anyhow::Result<()> {
             match result {
                 Ok(_) => {
                     info!("Match downloaded");
+                    gauge!("matchdata_downloader.matches_to_download").decrement(1);
                     uploaded.insert(salts.match_id);
                 }
                 Err(e) => {
