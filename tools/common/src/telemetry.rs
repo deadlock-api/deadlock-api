@@ -64,7 +64,7 @@ fn init_tracer_provider(pkg_name: &str) -> SdkTracerProvider {
 
 pub fn init_tracing(pkg_name: &str) -> OtelGuard {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,opentelemetry_sdk=info,tower=info",
+        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info",
     ));
     let fmt_layer = tracing_subscriber::fmt::layer();
 
