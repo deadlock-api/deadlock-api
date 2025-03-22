@@ -3,39 +3,21 @@ use cached::proc_macro::cached;
 use futures::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
-use metrics_exporter_prometheus::PrometheusBuilder;
 use models::MatchSalts;
 use object_store::path::Path;
 use object_store::{ObjectStore, PutPayload};
 use std::collections::HashSet;
-use std::net::SocketAddrV4;
 use std::time::Duration;
 use tokio::time::sleep;
 use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info, instrument};
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 
 mod models;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,hyper=warn,reqwest=warn,rustls=warn",
-    ));
-    let fmt_layer = tracing_subscriber::fmt::layer();
-
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(env_filter)
-        .init();
-
-    let builder =
-        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
-    builder
-        .install()
-        .expect("failed to install recorder/exporter");
+    common::init_tracing();
+    common::init_metrics()?;
 
     let ch_client = common::get_ch_client()?;
     let store = common::get_store()?;

@@ -3,15 +3,10 @@ mod models;
 use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
 use delay_map::HashSetDelay;
 use metrics::{counter, gauge};
-use metrics_exporter_prometheus::PrometheusBuilder;
-use std::net::SocketAddrV4;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, error, info, instrument};
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")
@@ -20,22 +15,8 @@ static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn",
-    ));
-    let fmt_layer = tracing_subscriber::fmt::layer();
-
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(env_filter)
-        .init();
-
-    let builder =
-        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
-    builder
-        .install()
-        .expect("failed to install recorder/exporter");
-
+    common::init_tracing();
+    common::init_metrics()?;
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 

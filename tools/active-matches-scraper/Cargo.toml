@@ -6,16 +6,11 @@ edition = "2024"
 [dependencies]
 clickhouse = { version = "0.13.2", features = ["time"] }
 serde = { version = "1.0.219", features = ["derive"] }
-time = { version = "0.3.40", features = ["serde"] }
 serde_repr = "0.1.20"
 tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
-once_cell = "1.21.1"
 reqwest = { version = "0.12.15", features = ["json"] }
 delay_map = "0.4.1"
-openssl-sys = { version = "0.9.106" }
 metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 common = { version = "0.1.0", path = "../common" }
 anyhow = "1.0.97"

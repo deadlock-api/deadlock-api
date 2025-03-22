@@ -1,15 +1,10 @@
 use metrics::counter;
-use metrics_exporter_prometheus::PrometheusBuilder;
 use models::{MatchIdQueryResult, MatchSalt};
 use reqwest::{Error, Response};
-use std::net::SocketAddrV4;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
@@ -29,21 +24,8 @@ static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,hyper=warn,reqwest=warn,rustls=warn",
-    ));
-    let fmt_layer = tracing_subscriber::fmt::layer();
-
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(env_filter)
-        .init();
-
-    let builder =
-        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
-    builder
-        .install()
-        .expect("failed to install recorder/exporter");
+    common::init_tracing();
+    common::init_metrics()?;
 
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))

@@ -12,9 +12,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = { version = "0.7.14", features = ["io"] }
 metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 anyhow = "1.0.97"
 itertools = "0.14.0"
 object_store = { version = "0.12.0", features = ["aws"] }

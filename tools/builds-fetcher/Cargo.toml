@@ -16,8 +16,6 @@ serde_json = "1.0.140"
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock", "serde"] }
 time = "0.3.40"
 metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 common = { version = "0.1.0", path = "../common" }
 rand = "0.9.0"

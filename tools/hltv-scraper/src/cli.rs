@@ -1,7 +1,4 @@
-use std::net::SocketAddrV4;
-
 use clap::{Parser, Subcommand};
-use metrics_exporter_prometheus::PrometheusBuilder;
 use tracing::error;
 
 #[derive(Parser)]
@@ -36,11 +33,7 @@ pub async fn run_cli() {
         Commands::ScrapeHltvMatches {
             spectate_bot_url: spectate_server_url,
         } => {
-            let builder = PrometheusBuilder::new()
-                .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
-            builder
-                .install()
-                .expect("failed to install recorder/exporter");
+            common::init_metrics().expect("Failed to initialize metrics server");
             if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url).await {
                 error!("Command failed: {:#?}", e);
             }

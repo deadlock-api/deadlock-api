@@ -1,21 +1,16 @@
 use arl::RateLimiter;
 use itertools::Itertools;
 use metrics::counter;
-use metrics_exporter_prometheus::PrometheusBuilder;
 use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use rand::rng;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
 use sqlx::{Pool, Postgres, QueryBuilder};
-use std::net::SocketAddrV4;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 use valveprotos::deadlock::c_msg_client_to_gc_find_hero_builds_response::HeroBuildResult;
 use valveprotos::deadlock::{
     CMsgClientToGcFindHeroBuilds, CMsgClientToGcFindHeroBuildsResponse, EgcCitadelClientMessages,
@@ -39,26 +34,9 @@ static UPDATE_INTERVAL: Lazy<u64> = Lazy::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn",
-    ));
-    let fmt_layer = tracing_subscriber::fmt::layer();
-
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(env_filter)
-        .init();
-
-    let builder =
-        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
-    builder
-        .install()
-        .expect("failed to install recorder/exporter");
-
-    debug!("Creating HTTP client");
+    common::init_tracing();
+    common::init_metrics()?;
     let http_client = reqwest::Client::new();
-
-    debug!("Creating PostgreSQL client");
     let pg_client = common::get_pg_client().await?;
 
     loop {

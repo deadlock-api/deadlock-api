@@ -11,16 +11,11 @@ dependencies = [
  "common",
  "delay_map",
  "metrics",
- "metrics-exporter-prometheus",
- "once_cell",
- "openssl-sys",
  "reqwest",
  "serde",
  "serde_repr",
- "time",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -362,7 +357,6 @@ dependencies = [
  "common",
  "itertools 0.14.0",
  "metrics",
- "metrics-exporter-prometheus",
  "once_cell",
  "rand 0.9.0",
  "reqwest",
@@ -372,7 +366,6 @@ dependencies = [
  "time",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "valveprotos",
 ]
 
@@ -623,6 +616,7 @@ dependencies = [
  "clickhouse",
  "fred",
  "metrics",
+ "metrics-exporter-prometheus",
  "object_store",
  "once_cell",
  "prost",
@@ -631,6 +625,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tracing",
+ "tracing-subscriber",
  "valveprotos",
 ]
 
@@ -861,7 +856,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c9e6a11ca8224451684bc0d7d5a7adbf8f2fd6887261a1cfc3c0432f9d4068e"
 dependencies = [
  "powerfmt",
- "serde",
 ]
 
 [[package]]
@@ -1409,14 +1403,11 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "metrics-exporter-prometheus",
- "once_cell",
  "rand 0.9.0",
  "reqwest",
  "serde",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "valveprotos",
 ]
 
@@ -1445,10 +1436,8 @@ dependencies = [
  "haste",
  "itertools 0.14.0",
  "jiff",
- "lazy_static",
  "lru",
  "metrics",
- "metrics-exporter-prometheus",
  "object_store",
  "prost",
  "reqwest",
@@ -1457,7 +1446,6 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "valveprotos",
 ]
 
@@ -1794,7 +1782,6 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "metrics-exporter-prometheus",
  "object_store",
  "prost",
  "reqwest",
@@ -1802,7 +1789,6 @@ dependencies = [
  "serde_repr",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "tryhard",
  "valveprotos",
 ]
@@ -2025,14 +2011,12 @@ dependencies = [
  "futures",
  "itertools 0.14.0",
  "metrics",
- "metrics-exporter-prometheus",
  "object_store",
  "reqwest",
  "serde",
  "tokio",
  "tokio-util",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -3063,16 +3047,11 @@ dependencies = [
  "anyhow",
  "clickhouse",
  "common",
- "futures",
  "metrics",
- "metrics-exporter-prometheus",
- "prost",
  "reqwest",
  "serde",
- "serde_json",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "tryhard",
  "valveprotos",
 ]

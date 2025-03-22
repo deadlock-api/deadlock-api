@@ -15,9 +15,7 @@ serde_repr = "0.1.20"
 tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
 metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 tryhard = "0.5.1"
 common = { version = "0.1.0", path = "../common" }
 anyhow = "1.0.97"
