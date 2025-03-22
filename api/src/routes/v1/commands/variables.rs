@@ -64,6 +64,7 @@ pub enum Variable {
     MaxBombStacks,
     MaxSpiritSnareStacks,
     MaxBonusHealthPerKill,
+    MaxGuidedOwlStacks,
     HeroHoursPlayed,
     HeroKd,
     HeroKills,
@@ -109,49 +110,50 @@ impl Variable {
 
     pub fn get_category(&self) -> VariableCategory {
         match self {
-            Variable::LatestPatchnotesLink
-            | Variable::LatestPatchnotesTitle
-            | Variable::SteamAccountName => VariableCategory::General,
+            Self::LatestPatchnotesLink | Self::LatestPatchnotesTitle | Self::SteamAccountName => {
+                VariableCategory::General
+            }
 
-            Variable::LossesToday
-            | Variable::MatchesToday
-            | Variable::WinrateToday
-            | Variable::WinsLossesToday
-            | Variable::WinsToday => VariableCategory::Daily,
+            Self::LossesToday
+            | Self::MatchesToday
+            | Self::WinrateToday
+            | Self::WinsLossesToday
+            | Self::WinsToday => VariableCategory::Daily,
 
-            Variable::LeaderboardPlace
-            | Variable::LeaderboardRank
-            | Variable::LeaderboardRankBadgeLevel
-            | Variable::LeaderboardRankImg => VariableCategory::Leaderboard,
+            Self::LeaderboardPlace
+            | Self::LeaderboardRank
+            | Self::LeaderboardRankBadgeLevel
+            | Self::LeaderboardRankImg => VariableCategory::Leaderboard,
 
-            Variable::HighestDenies
-            | Variable::HighestKillCount
-            | Variable::HighestLastHits
-            | Variable::HighestNetWorth
-            | Variable::HoursPlayed
-            | Variable::TotalKd
-            | Variable::TotalKills
-            | Variable::TotalMatches
-            | Variable::TotalWinrate
-            | Variable::TotalWins
-            | Variable::TotalLosses
-            | Variable::TotalWinsLosses
-            | Variable::HighestDeathCount => VariableCategory::Overall,
+            Self::HighestDenies
+            | Self::HighestKillCount
+            | Self::HighestLastHits
+            | Self::HighestNetWorth
+            | Self::HoursPlayed
+            | Self::TotalKd
+            | Self::TotalKills
+            | Self::TotalMatches
+            | Self::TotalWinrate
+            | Self::TotalWins
+            | Self::TotalLosses
+            | Self::TotalWinsLosses
+            | Self::HighestDeathCount => VariableCategory::Overall,
 
-            Variable::HeroHoursPlayed
-            | Variable::HeroKd
-            | Variable::HeroKills
-            | Variable::HeroLeaderboardPlace
-            | Variable::HeroLosses
-            | Variable::HeroMatches
-            | Variable::HeroWinrate
-            | Variable::HeroWins
-            | Variable::HeroesPlayedToday
-            | Variable::MostPlayedHero
-            | Variable::MostPlayedHeroCount
-            | Variable::MaxBombStacks
-            | Variable::MaxSpiritSnareStacks
-            | Variable::MaxBonusHealthPerKill => VariableCategory::Hero,
+            Self::HeroHoursPlayed
+            | Self::HeroKd
+            | Self::HeroKills
+            | Self::HeroLeaderboardPlace
+            | Self::HeroLosses
+            | Self::HeroMatches
+            | Self::HeroWinrate
+            | Self::HeroWins
+            | Self::HeroesPlayedToday
+            | Self::MostPlayedHero
+            | Self::MostPlayedHeroCount
+            | Self::MaxBombStacks
+            | Self::MaxSpiritSnareStacks
+            | Self::MaxBonusHealthPerKill
+            | Self::MaxGuidedOwlStacks => VariableCategory::Hero,
         }
     }
 
@@ -197,9 +199,10 @@ impl Variable {
             Self::WinrateToday => "Get the winrate today",
             Self::WinsLossesToday => "Get the number of wins and losses today",
             Self::WinsToday => "Get the number of wins today",
-            Self::MaxBombStacks => "Get the max bomb stacks on bebop sticky bomb",
-            Self::MaxSpiritSnareStacks => "Get the max spirit snare stacks on grey talon",
+            Self::MaxBombStacks => "Get the max bomb stacks on Bebop",
+            Self::MaxSpiritSnareStacks => "Get the max spirit snare stacks on Grey Talon",
             Self::MaxBonusHealthPerKill => "Get the max bonus health per kill on Mo & Krill",
+            Self::MaxGuidedOwlStacks => "Get the max guided owl stacks on Grey Talon",
         }
     }
 
@@ -746,64 +749,57 @@ impl Variable {
                     .count()
                     .to_string())
             }
-            Self::MaxBombStacks => state
-                .clickhouse_client
-                .query(
-                    r#"
-                SELECT max(ability_stats[2521902222]) as max_bomb_stacks
-                FROM match_player
-                    JOIN match_info USING match_id
-                WHERE
-                    game_mode = 'Normal'
-                    AND match_outcome = 'TeamWin'
-                    AND match_mode IN ('Ranked', 'Unranked')
-                    AND account_id=?
-                "#,
-                )
-                .bind(steam_id)
-                .fetch_one::<u64>()
-                .await
-                .map(|b| b.to_string())
-                .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks")),
-            Self::MaxSpiritSnareStacks => state
-                .clickhouse_client
-                .query(
-                    r#"
-                SELECT max(ability_stats[512733154]) as max_bomb_stacks
-                FROM match_player
-                    JOIN match_info USING match_id
-                WHERE
-                    game_mode = 'Normal'
-                    AND match_outcome = 'TeamWin'
-                    AND match_mode IN ('Ranked', 'Unranked')
-                    AND account_id=?
-                "#,
-                )
-                .bind(steam_id)
-                .fetch_one::<u64>()
-                .await
-                .map(|b| b.to_string())
-                .map_err(|_| VariableResolveError::FailedToFetchData("max spirit snare stacks")),
-            Self::MaxBonusHealthPerKill => state
-                .clickhouse_client
-                .query(
-                    r#"
-                SELECT max(ability_stats[1917840730]) as max_bomb_stacks
-                FROM match_player
-                    JOIN match_info USING match_id
-                WHERE
-                    game_mode = 'Normal'
-                    AND match_outcome = 'TeamWin'
-                    AND match_mode IN ('Ranked', 'Unranked')
-                    AND account_id=?
-                "#,
-                )
-                .bind(steam_id)
-                .fetch_one::<u64>()
-                .await
-                .map(|b| b.to_string())
-                .map_err(|_| VariableResolveError::FailedToFetchData("max bonus health per kill")),
+            Self::MaxBombStacks => {
+                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 2521902222)
+                    .await
+                    .map(|b| b.to_string())
+                    .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks"))
+            }
+            Self::MaxSpiritSnareStacks => {
+                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 512733154)
+                    .await
+                    .map(|b| b.to_string())
+                    .map_err(|_| VariableResolveError::FailedToFetchData("max spirit snare stacks"))
+            }
+            Self::MaxBonusHealthPerKill => {
+                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 1917840730)
+                    .await
+                    .map(|b| b.to_string())
+                    .map_err(|_| {
+                        VariableResolveError::FailedToFetchData("max bonus health per kill")
+                    })
+            }
+            Self::MaxGuidedOwlStacks => {
+                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 3242902780)
+                    .await
+                    .map(|b| b.to_string())
+                    .map_err(|_| VariableResolveError::FailedToFetchData("max guided owl"))
+            }
         }
+    }
+
+    async fn get_max_ability_stat(
+        ch_client: &clickhouse::Client,
+        steam_id: u32,
+        ability_id: i64,
+    ) -> clickhouse::error::Result<i64> {
+        ch_client
+            .query(
+                r#"
+                SELECT max(ability_stats[?]) as max_bomb_stacks
+                FROM match_player
+                    JOIN match_info USING match_id
+                WHERE
+                    game_mode = 'Normal'
+                    AND match_outcome = 'TeamWin'
+                    AND match_mode IN ('Ranked', 'Unranked')
+                    AND account_id=?
+                "#,
+            )
+            .bind(ability_id)
+            .bind(steam_id)
+            .fetch_one::<i64>()
+            .await
     }
 
     async fn get_all_matches(
