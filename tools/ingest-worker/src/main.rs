@@ -51,22 +51,22 @@ async fn main() -> anyhow::Result<()> {
 
         futures::stream::iter(&objs_to_ingest)
             .take(100)
-            .map(|key| ingest_object(&store, &http_client, &ch_client, key))
+            .map(|key| async {
+                match ingest_object(&store, &http_client, &ch_client, key).await {
+                    Ok(key) => {
+                        counter!("ingest_worker.ingest_object.success").increment(1);
+                        info!("Ingested object: {}", key);
+                        gauge!("ingest_worker.objs_to_ingest").decrement(1);
+                    }
+                    Err(e) => {
+                        counter!("ingest_worker.ingest_object.failure").increment(1);
+                        error!("Error ingesting object: {}", e);
+                    }
+                }
+            })
             .buffer_unordered(10)
             .collect::<Vec<_>>()
-            .await
-            .iter()
-            .for_each(|result| match result {
-                Ok(key) => {
-                    counter!("ingest_worker.ingest_object.success").increment(1);
-                    info!("Ingested object: {}", key);
-                    gauge!("ingest_worker.objs_to_ingest").decrement(1);
-                }
-                Err(e) => {
-                    counter!("ingest_worker.ingest_object.failure").increment(1);
-                    error!("Error ingesting object: {}", e);
-                }
-            });
+            .await;
 
         info!("Ingested all objects, waiting 10s ...");
         sleep(Duration::from_secs(10)).await;

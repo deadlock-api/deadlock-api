@@ -46,23 +46,28 @@ async fn main() -> anyhow::Result<()> {
             continue;
         }
 
-        let results: Vec<_> = futures::stream::iter(match_ids_to_fetch.iter())
-            .map(|salts| download_match(&store, &cache_store, salts))
-            .buffered(10)
-            .collect()
+        let results = futures::stream::iter(match_ids_to_fetch.iter())
+            .map(|salts| async {
+                match download_match(&store, &cache_store, salts).await {
+                    Ok(_) => {
+                        gauge!("matchdata_downloader.matches_to_download").decrement(1);
+                        info!("Match downloaded");
+                        Ok(())
+                    }
+                    Err(e) => {
+                        error!("Failed to download match: {}", e);
+                        Err(e)
+                    }
+                }
+            })
+            .buffer_unordered(10)
+            .collect::<Vec<_>>()
             .await;
         for (salts, result) in match_ids_to_fetch.iter().zip(results) {
-            match result {
-                Ok(_) => {
-                    info!("Match downloaded");
-                    gauge!("matchdata_downloader.matches_to_download").decrement(1);
-                    uploaded.insert(salts.match_id);
-                }
-                Err(e) => {
-                    error!("Failed to download match: {}", e);
-                    failed.insert(salts.match_id);
-                }
-            }
+            match result.is_ok() {
+                true => uploaded.insert(salts.match_id),
+                false => failed.insert(salts.match_id),
+            };
         }
     }
 }
