@@ -6,6 +6,7 @@ use reqwest::{Error, Response};
 use std::net::SocketAddrV4;
 use std::sync::LazyLock;
 use std::time::Duration;
+use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -116,6 +117,7 @@ async fn main() {
                 Ok(_) => debug!("Fetched match {}", match_id),
                 Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
             }
+            sleep(Duration::from_secs(1)).await;
         }
     }
 }
