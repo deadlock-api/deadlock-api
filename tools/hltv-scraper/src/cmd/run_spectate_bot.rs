@@ -1,3 +1,4 @@
+use crate::easy_poll::start_polling_text;
 use anyhow::{Context, Result};
 use axum::{
     Json, Router,
@@ -5,9 +6,8 @@ use axum::{
     routing::{get, post},
 };
 use base64::prelude::*;
-use fred::interfaces::{ClientLike, HashesInterface};
+use fred::interfaces::HashesInterface;
 use fred::prelude::Client as RedisClient;
-use fred::prelude::Config as RedisConfig;
 use itertools::Itertools;
 use jiff::{Timestamp, ToSpan as _};
 use lru::LruCache;
@@ -31,8 +31,6 @@ use valveprotos::{
     },
     gcsdk::EgcPlatform,
 };
-
-use crate::easy_poll::start_polling_text;
 
 const MAX_SPECTATED_MATCHES: usize = 275;
 const BOT_RUNTIME_HOURS: u64 = 6;
@@ -115,12 +113,7 @@ struct SpectatorBot {
 
 impl SpectatorBot {
     async fn new(proxy_api_url: String, api_token: String) -> Result<Self> {
-        let config = RedisConfig::from_url(
-            &env::var("REDIS_URL").unwrap_or("redis://127.0.0.1".to_string()),
-        )?;
-        let redis = RedisClient::new(config, None, None, None);
-        redis.connect();
-        redis.wait_for_connect().await?;
+        let redis = common::get_redis_client().await?;
 
         Ok(Self {
             client: Client::new(),

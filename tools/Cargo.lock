@@ -6,7 +6,9 @@ version = 4
 name = "active-matches-scraper"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clickhouse",
+ "common",
  "delay_map",
  "metrics",
  "metrics-exporter-prometheus",
@@ -616,13 +618,18 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "base64",
+ "clickhouse",
+ "fred",
  "metrics",
+ "object_store",
  "once_cell",
  "prost",
  "reqwest",
  "serde",
  "serde_json",
+ "sqlx",
  "tracing",
  "valveprotos",
 ]
@@ -1432,6 +1439,7 @@ dependencies = [
  "base64",
  "cached",
  "clap",
+ "common",
  "dashmap",
  "fred",
  "haste",
@@ -1783,6 +1791,7 @@ dependencies = [
  "anyhow",
  "async-compression",
  "clickhouse",
+ "common",
  "futures",
  "metrics",
  "metrics-exporter-prometheus",
@@ -2012,6 +2021,7 @@ dependencies = [
  "anyhow",
  "cached",
  "clickhouse",
+ "common",
  "futures",
  "itertools 0.14.0",
  "metrics",

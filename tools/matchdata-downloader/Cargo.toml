@@ -18,3 +18,4 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 anyhow = "1.0.97"
 itertools = "0.14.0"
 object_store = { version = "0.12.0", features = ["aws"] }
+common = { version = "0.1.0", path = "../common" }

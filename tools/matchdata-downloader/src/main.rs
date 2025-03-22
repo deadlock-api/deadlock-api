@@ -1,16 +1,13 @@
 use cached::UnboundCache;
 use cached::proc_macro::cached;
-use clickhouse::Compression;
 use futures::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use models::MatchSalts;
-use object_store::aws::AmazonS3Builder;
 use object_store::path::Path;
 use object_store::{ObjectStore, PutPayload};
 use std::collections::HashSet;
-use std::env;
 use std::net::SocketAddrV4;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -40,30 +37,9 @@ async fn main() -> anyhow::Result<()> {
         .install()
         .expect("failed to install recorder/exporter");
 
-    let ch_client = clickhouse::Client::default()
-        .with_url(env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string()))
-        .with_user(env::var("CLICKHOUSE_USER")?)
-        .with_password(env::var("CLICKHOUSE_PASSWORD")?)
-        .with_database(env::var("CLICKHOUSE_DB")?)
-        .with_compression(Compression::None);
-
-    let store = AmazonS3Builder::new()
-        .with_region(env::var("S3_REGION")?)
-        .with_bucket_name(env::var("S3_BUCKET_NAME")?)
-        .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("S3_ENDPOINT_URL")?)
-        .with_allow_http(true)
-        .build()?;
-
-    let cache_store = AmazonS3Builder::new()
-        .with_region(env::var("S3_CACHE_REGION")?)
-        .with_bucket_name(env::var("S3_CACHE_BUCKET_NAME")?)
-        .with_access_key_id(env::var("S3_CACHE_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("S3_CACHE_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("S3_CACHE_ENDPOINT_URL")?)
-        .with_allow_http(true)
-        .build()?;
+    let ch_client = common::get_ch_client()?;
+    let store = common::get_store()?;
+    let cache_store = common::get_cache_store()?;
 
     let mut failed = HashSet::new();
     let mut uploaded = HashSet::new();

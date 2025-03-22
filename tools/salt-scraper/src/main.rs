@@ -1,4 +1,3 @@
-use clickhouse::Compression;
 use metrics::counter;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use models::{MatchIdQueryResult, MatchSalt};
@@ -22,15 +21,6 @@ mod models;
 static INTERNAL_DEADLOCK_API_KEY: LazyLock<String> = LazyLock::new(|| {
     std::env::var("INTERNAL_DEADLOCK_API_KEY").expect("INTERNAL_DEADLOCK_API_KEY must be set")
 });
-static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
-});
-static CLICKHOUSE_USER: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_USER").unwrap_or("default".to_string()));
-static CLICKHOUSE_PASSWORD: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_PASSWORD").unwrap());
-static CLICKHOUSE_DB: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_DB").unwrap_or("default".to_string()));
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("SALTS_COOLDOWN_MILLIS")
         .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
@@ -38,7 +28,7 @@ static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
 });
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,h2=warn,hyper_util=warn,hyper=warn,reqwest=warn,rustls=warn",
     ));
@@ -49,23 +39,16 @@ async fn main() {
         .with(env_filter)
         .init();
 
-    let builder = PrometheusBuilder::new()
-        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
+    let builder =
+        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
     builder
         .install()
         .expect("failed to install recorder/exporter");
 
-    let ch_client = clickhouse::Client::default()
-        .with_url(CLICKHOUSE_URL.clone())
-        .with_user(CLICKHOUSE_USER.clone())
-        .with_password(CLICKHOUSE_PASSWORD.clone())
-        .with_database(CLICKHOUSE_DB.clone())
-        .with_compression(Compression::None);
-
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
-        .build()
-        .unwrap();
+        .build()?;
+    let ch_client = common::get_ch_client()?;
 
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
@@ -88,8 +71,7 @@ async fn main() {
         ORDER BY toStartOfDay(fromUnixTimestamp(start_time)) DESC, intDivOrZero(match_score, 250) DESC, match_id DESC -- Within batches of a day, prioritize higher ranked matches
         LIMIT 100
         ";
-        let recent_matches: Vec<MatchIdQueryResult> =
-            ch_client.query(query).fetch_all().await.unwrap();
+        let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
         let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
         if recent_matches.len() < 100 {
             info!(
@@ -108,8 +90,7 @@ async fn main() {
                 .query(query)
                 .bind(100 - recent_matches.len())
                 .fetch_all()
-                .await
-                .unwrap();
+                .await?;
             recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
         }
         for match_id in recent_matches {
@@ -177,7 +158,7 @@ async fn fetch_salts(
         match_id: Some(match_id),
         ..Default::default()
     };
-    common::utils::call_steam_proxy(
+    common::call_steam_proxy(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         msg,

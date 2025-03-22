@@ -13,22 +13,13 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
-static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("CLICKHOUSE_URL").unwrap_or("http://localhost:8123".to_string())
-});
-static CLICKHOUSE_USER: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_USER").unwrap());
-static CLICKHOUSE_PASSWORD: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_PASSWORD").unwrap());
-static CLICKHOUSE_DB: LazyLock<String> = LazyLock::new(|| std::env::var("CLICKHOUSE_DB").unwrap());
-
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")
         .unwrap_or("https://api.deadlock-api.com/v1/matches/active".to_string())
 });
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn",
     ));
@@ -39,19 +30,14 @@ async fn main() {
         .with(env_filter)
         .init();
 
-    let builder = PrometheusBuilder::new()
-        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
+    let builder =
+        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
     builder
         .install()
         .expect("failed to install recorder/exporter");
 
     let http_client = reqwest::Client::new();
-
-    let ch_client = clickhouse::Client::default()
-        .with_url(CLICKHOUSE_URL.clone())
-        .with_user(CLICKHOUSE_USER.clone())
-        .with_password(CLICKHOUSE_PASSWORD.clone())
-        .with_database(CLICKHOUSE_DB.clone());
+    let ch_client = common::get_ch_client()?;
 
     let mut delay_set = HashSetDelay::new(Duration::from_secs(2 * 60));
 

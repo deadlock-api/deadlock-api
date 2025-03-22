@@ -4,13 +4,11 @@ use std::net::SocketAddrV4;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use async_compression::tokio::bufread::BzDecoder;
-use clickhouse::Compression;
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use metrics_exporter_prometheus::PrometheusBuilder;
-use object_store::aws::AmazonS3Builder;
 use object_store::path::Path;
-use object_store::{ClientOptions, GetResult, ObjectStore};
+use object_store::{GetResult, ObjectStore};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
@@ -42,30 +40,8 @@ async fn main() -> anyhow::Result<()> {
         .expect("failed to install recorder/exporter");
 
     let http_client = reqwest::Client::new();
-
-    let ch_client = clickhouse::Client::default()
-        .with_url(env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string()))
-        .with_user(env::var("CLICKHOUSE_USER")?)
-        .with_password(env::var("CLICKHOUSE_PASSWORD")?)
-        .with_database(env::var("CLICKHOUSE_DB")?)
-        .with_compression(Compression::None);
-
-    let store = AmazonS3Builder::new()
-        .with_region(env::var("S3_REGION")?)
-        .with_bucket_name(env::var("S3_BUCKET_NAME")?)
-        .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("S3_ENDPOINT_URL")?)
-        .with_allow_http(true)
-        .with_client_options(
-            ClientOptions::default().with_timeout(Duration::from_secs(
-                env::var("S3_TIMEOUT_S")
-                    .ok()
-                    .and_then(|e| e.parse().ok())
-                    .unwrap_or(10),
-            )),
-        )
-        .build()?;
+    let ch_client = common::get_ch_client()?;
+    let store = common::get_store()?;
 
     loop {
         let objs_to_ingest = match list_ingest_objects(&store).await {

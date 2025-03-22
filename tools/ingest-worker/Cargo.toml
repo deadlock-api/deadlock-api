@@ -18,5 +18,6 @@ metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-anyhow = "1.0.97"
 tryhard = "0.5.1"
+common = { version = "0.1.0", path = "../common" }
+anyhow = "1.0.97"

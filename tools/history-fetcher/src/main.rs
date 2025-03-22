@@ -2,10 +2,8 @@ mod types;
 
 use crate::types::{PlayerMatchHistory, PlayerMatchHistoryEntry};
 use arl::RateLimiter;
-use clickhouse::Compression;
 use metrics::{counter, gauge};
 use metrics_exporter_prometheus::PrometheusBuilder;
-use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use rand::rng;
 use std::net::SocketAddrV4;
@@ -18,13 +16,6 @@ use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResul
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
 };
-
-static CLICKHOUSE_URL: Lazy<String> =
-    Lazy::new(|| std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string()));
-static CLICKHOUSE_USER: Lazy<String> = Lazy::new(|| std::env::var("CLICKHOUSE_USER").unwrap());
-static CLICKHOUSE_PASSWORD: Lazy<String> =
-    Lazy::new(|| std::env::var("CLICKHOUSE_PASSWORD").unwrap());
-static CLICKHOUSE_DB: Lazy<String> = Lazy::new(|| std::env::var("CLICKHOUSE_DB").unwrap());
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -44,16 +35,8 @@ async fn main() -> anyhow::Result<()> {
         .install()
         .expect("failed to install recorder/exporter");
 
-    debug!("Creating HTTP client");
     let http_client = reqwest::Client::new();
-
-    debug!("Creating Clickhouse client");
-    let ch_client = clickhouse::Client::default()
-        .with_url(CLICKHOUSE_URL.clone())
-        .with_user(CLICKHOUSE_USER.clone())
-        .with_password(CLICKHOUSE_PASSWORD.clone())
-        .with_database(CLICKHOUSE_DB.clone())
-        .with_compression(Compression::None);
+    let ch_client = common::get_ch_client()?;
 
     let limiter = RateLimiter::new(20, Duration::from_secs(60));
 
@@ -166,7 +149,7 @@ async fn fetch_account_match_history(
         account_id: account_id.into(),
         ..Default::default()
     };
-    common::utils::call_steam_proxy(
+    common::call_steam_proxy(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
         msg,

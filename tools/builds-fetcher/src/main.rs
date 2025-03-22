@@ -5,14 +5,13 @@ use metrics_exporter_prometheus::PrometheusBuilder;
 use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use rand::rng;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions, PgQueryResult};
+use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
-use sqlx::{ConnectOptions, Pool, Postgres, QueryBuilder};
+use sqlx::{Pool, Postgres, QueryBuilder};
 use std::net::SocketAddrV4;
 use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::time::sleep;
-use tracing::log::LevelFilter;
 use tracing::{debug, info, instrument, warn};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -37,13 +36,6 @@ static UPDATE_INTERVAL: Lazy<u64> = Lazy::new(|| {
         .and_then(|interval| interval.parse().ok())
         .unwrap_or(3)
 });
-static POSTGRES_HOST: Lazy<String> =
-    Lazy::new(|| std::env::var("POSTGRES_HOST").unwrap_or("localhost".to_string()));
-static POSTGRES_USERNAME: Lazy<String> =
-    Lazy::new(|| std::env::var("POSTGRES_USERNAME").unwrap_or("postgres".to_string()));
-static POSTGRES_DBNAME: Lazy<String> =
-    Lazy::new(|| std::env::var("POSTGRES_DBNAME").unwrap_or("postgres".to_string()));
-static POSTGRES_PASSWORD: Lazy<String> = Lazy::new(|| std::env::var("POSTGRES_PASSWORD").unwrap());
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -67,25 +59,16 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
 
     debug!("Creating PostgreSQL client");
-    let pg_options = PgConnectOptions::new_without_pgpass()
-        .host(&POSTGRES_HOST)
-        .username(&POSTGRES_USERNAME)
-        .password(&POSTGRES_PASSWORD)
-        .database(&POSTGRES_DBNAME)
-        .log_slow_statements(LevelFilter::Warn, Duration::from_secs(5));
-    let postgres_client = PgPoolOptions::new()
-        .max_connections(10)
-        .connect_with(pg_options)
-        .await?;
+    let pg_client = common::get_pg_client().await?;
 
     loop {
-        run_update_loop(&http_client, &postgres_client).await;
+        run_update_loop(&http_client, &pg_client).await;
     }
 }
 
 #[instrument(skip(http_client, pg_client))]
 async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgres>) {
-    let mut heroes = match common::assets::fetch_hero_ids(http_client).await {
+    let mut heroes = match common::fetch_hero_ids(http_client).await {
         Ok(heroes) => {
             counter!("builds_fetcher.heroes_fetched.success").increment(1);
             debug!("Fetched hero ids: {:?}", heroes);
@@ -213,7 +196,7 @@ async fn fetch_builds(
         search_text: search.clone(),
         ..Default::default()
     };
-    common::utils::call_steam_proxy(
+    common::call_steam_proxy(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
         msg,

@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::{collections::HashSet, env, fs};
+use std::{collections::HashSet, fs};
 use std::{num::NonZeroUsize, sync::Arc};
 use std::{path::PathBuf, time::Duration};
 use tokio::time::sleep;
@@ -10,7 +10,7 @@ use dashmap::DashMap;
 use jiff::{Timestamp, ToSpan};
 use lru::LruCache;
 use metrics::gauge;
-use object_store::{ObjectStore, aws::AmazonS3Builder};
+use object_store::ObjectStore;
 use prost::Message;
 use reqwest::Url;
 use serde_json::json;
@@ -36,22 +36,11 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let root_path = PathBuf::from("./localstore");
     fs::create_dir_all(&root_path)?;
 
-    let aws_store = AmazonS3Builder::new()
-        .with_region(env::var("S3_REGION")?)
-        .with_bucket_name(env::var("S3_BUCKET_NAME")?)
-        .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("S3_ENDPOINT_URL")?)
-        .with_allow_http(true)
-        .build()?;
+    let aws_store = common::get_store()?;
     let store = Arc::new(aws_store);
 
     loop {
-        let matches_res = match spec_client
-            .get(base_url.join("matches").unwrap())
-            .send()
-            .await
-        {
+        let matches_res = match spec_client.get(base_url.join("matches")?).send().await {
             Ok(matches_res) => matches_res,
             Err(e) => {
                 error!("Failed to get matches to check against: {:#?}", e);
