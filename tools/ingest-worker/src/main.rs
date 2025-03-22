@@ -1,7 +1,6 @@
 use prost::Message;
-use std::collections::HashSet;
+use std::env;
 use std::net::SocketAddrV4;
-use std::path::Path;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use async_compression::tokio::bufread::BzDecoder;
@@ -9,11 +8,9 @@ use clickhouse::Compression;
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use metrics_exporter_prometheus::PrometheusBuilder;
-use s3::creds::Credentials;
-use s3::error::S3Error;
-use s3::request::ResponseData;
-use s3::{Bucket, Region};
-use std::sync::LazyLock;
+use object_store::aws::AmazonS3Builder;
+use object_store::path::Path;
+use object_store::{ClientOptions, GetResult, ObjectStore};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::time::sleep;
@@ -26,32 +23,8 @@ use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
 mod models;
 
-static CLICKHOUSE_URL: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string())
-});
-static CLICKHOUSE_USER: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_USER").unwrap());
-static CLICKHOUSE_PASSWORD: LazyLock<String> =
-    LazyLock::new(|| std::env::var("CLICKHOUSE_PASSWORD").unwrap());
-static CLICKHOUSE_DB: LazyLock<String> = LazyLock::new(|| std::env::var("CLICKHOUSE_DB").unwrap());
-static S3_BUCKET_NAME: LazyLock<String> =
-    LazyLock::new(|| std::env::var("S3_BUCKET_NAME").unwrap());
-static S3_ACCESS_KEY_ID: LazyLock<String> =
-    LazyLock::new(|| std::env::var("S3_ACCESS_KEY_ID").unwrap());
-static S3_SECRET_ACCESS_KEY: LazyLock<String> =
-    LazyLock::new(|| std::env::var("S3_SECRET_ACCESS_KEY").unwrap());
-static S3_ENDPOINT_URL: LazyLock<String> =
-    LazyLock::new(|| std::env::var("S3_ENDPOINT_URL").unwrap());
-static S3_REGION: LazyLock<String> = LazyLock::new(|| std::env::var("S3_REGION").unwrap());
-static S3_TIMEOUT_S: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("S3_TIMEOUT_S")
-        .unwrap_or("20".to_string())
-        .parse()
-        .unwrap_or(20)
-});
-
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,h2=warn,hyper_util=warn,hyper=warn,reqwest=warn,rustls=warn",
     ));
@@ -62,8 +35,8 @@ async fn main() {
         .with(env_filter)
         .init();
 
-    let builder = PrometheusBuilder::new()
-        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap());
+    let builder =
+        PrometheusBuilder::new().with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?);
     builder
         .install()
         .expect("failed to install recorder/exporter");
@@ -71,36 +44,31 @@ async fn main() {
     let http_client = reqwest::Client::new();
 
     let ch_client = clickhouse::Client::default()
-        .with_url(CLICKHOUSE_URL.clone())
-        .with_user(CLICKHOUSE_USER.clone())
-        .with_password(CLICKHOUSE_PASSWORD.clone())
-        .with_database(CLICKHOUSE_DB.clone())
+        .with_url(env::var("CLICKHOUSE_URL").unwrap_or("http://127.0.0.1:8123".to_string()))
+        .with_user(env::var("CLICKHOUSE_USER")?)
+        .with_password(env::var("CLICKHOUSE_PASSWORD")?)
+        .with_database(env::var("CLICKHOUSE_DB")?)
         .with_compression(Compression::None);
 
-    let s3credentials = Credentials::new(
-        Some(&S3_ACCESS_KEY_ID),
-        Some(&S3_SECRET_ACCESS_KEY),
-        None,
-        None,
-        None,
-    )
-    .unwrap();
-
-    let bucket = Bucket::new(
-        &S3_BUCKET_NAME,
-        Region::Custom {
-            region: S3_REGION.clone(),
-            endpoint: S3_ENDPOINT_URL.clone(),
-        },
-        s3credentials.clone(),
-    )
-    .unwrap()
-    .with_request_timeout(Duration::from_secs(*S3_TIMEOUT_S))
-    .unwrap();
+    let store = AmazonS3Builder::new()
+        .with_region(env::var("S3_REGION")?)
+        .with_bucket_name(env::var("S3_BUCKET_NAME")?)
+        .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
+        .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
+        .with_endpoint(env::var("S3_ENDPOINT_URL")?)
+        .with_allow_http(true)
+        .with_client_options(
+            ClientOptions::default().with_timeout(Duration::from_secs(
+                env::var("S3_TIMEOUT_S")
+                    .ok()
+                    .and_then(|e| e.parse().ok())
+                    .unwrap_or(10),
+            )),
+        )
+        .build()?;
 
     loop {
-        sleep(Duration::from_secs(10)).await;
-        let objs_to_ingest = match list_ingest_objects(&bucket).await {
+        let objs_to_ingest = match list_ingest_objects(&store).await {
             Ok(value) => {
                 counter!("ingest_worker.list_ingest_objects.success").increment(1);
                 debug!("Listed {} objects", value.len());
@@ -124,7 +92,7 @@ async fn main() {
 
         futures::stream::iter(&objs_to_ingest)
             .take(100)
-            .map(|key| ingest_object(&bucket, &http_client, &ch_client, key))
+            .map(|key| ingest_object(&store, &http_client, &ch_client, key))
             .buffer_unordered(10)
             .collect::<Vec<_>>()
             .await
@@ -145,20 +113,20 @@ async fn main() {
     }
 }
 
-#[instrument(skip(bucket, http_client, ch_client))]
+#[instrument(skip(store, http_client, ch_client))]
 async fn ingest_object(
-    bucket: &Bucket,
+    store: &impl ObjectStore,
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
-    key: &str,
+    key: &Path,
 ) -> anyhow::Result<String> {
     // Fetch Data
-    let obj = get_object(bucket, key).await?;
+    let obj = get_object(store, key).await?;
 
     // Decompress Data
-    let data = obj.bytes().as_ref();
-    let data = if key.ends_with(".bz2") {
-        bzip_decompress(data).await?
+    let data = obj.bytes().await?;
+    let data = if key.filename().is_some_and(|f| f.ends_with(".bz2")) {
+        bzip_decompress(&data).await?
     } else {
         data.to_vec()
     };
@@ -168,11 +136,8 @@ async fn ingest_object(
     if let Some(match_outcome) = match_info.match_outcome {
         if match_outcome == EMatchOutcome::KEOutcomeError as i32 {
             warn!("Match outcome is error, moving match to failed folder");
-            let new_path = format!(
-                "failed/metadata/{}",
-                Path::new(key).file_name().unwrap().to_str().unwrap()
-            );
-            move_object(bucket, key, &new_path).await?;
+            let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
+            move_object(store, key, &new_path).await?;
             return Err(anyhow::anyhow!("Match outcome is error, skipping match"));
         }
     }
@@ -189,11 +154,8 @@ async fn ingest_object(
     }
 
     // Move Object to processed folder
-    let new_path = format!(
-        "processed/metadata/{}",
-        Path::new(key).file_name().unwrap().to_str().unwrap()
-    );
-    move_object(bucket, key, &new_path).await?;
+    let new_path = Path::from(format!("processed/metadata/{}", key.filename().unwrap()));
+    move_object(store, key, &new_path).await?;
 
     // Send Ingest Event
     if let Some(match_id) = match_info.match_id {
@@ -202,24 +164,24 @@ async fn ingest_object(
     Ok(key.to_string())
 }
 
-async fn list_ingest_objects(bucket: &Bucket) -> Result<HashSet<String>, S3Error> {
-    let objs = bucket
-        .list("ingest/metadata".parse().unwrap(), None)
-        .await?;
-    Ok(objs
-        .into_iter()
-        .flat_map(|dir| dir.contents)
-        .filter(|obj| {
-            obj.key.ends_with(".meta")
-                || obj.key.ends_with(".meta.bz2")
-                || obj.key.ends_with(".meta_hltv.bz2")
-        })
-        .map(|o| o.key)
-        .collect::<HashSet<_>>())
+async fn list_ingest_objects(store: &impl ObjectStore) -> object_store::Result<Vec<Path>> {
+    let exts = [".meta", ".meta.bz2", ".meta_hltv.bz2"];
+    let p = object_store::path::Path::from("ingest/metadata/");
+
+    let mut metas = vec![];
+    let mut list_stream = store.list(Some(&p));
+    while let Some(meta) = list_stream.next().await.transpose()? {
+        debug!("Found object: {:?}", meta.location);
+        let filename = meta.location.filename();
+        if filename.is_some_and(|name| exts.iter().any(|a| name.ends_with(a))) {
+            metas.push(meta.location);
+        }
+    }
+    Ok(metas)
 }
 
-async fn get_object(bucket: &Bucket, key: &str) -> Result<ResponseData, S3Error> {
-    match bucket.get_object(key).await {
+async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Result<GetResult> {
+    match store.get(key).await {
         Ok(data) => {
             counter!("ingest_worker.fetch_object.success").increment(1);
             debug!("Fetched object");
@@ -303,14 +265,15 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
     Ok(())
 }
 
-async fn move_object(bucket: &Bucket, old_key: &str, new_key: &str) -> Result<(), S3Error> {
-    match tryhard::retry_fn(|| async {
-        bucket.copy_object_internal(old_key, new_key).await?;
-        bucket.delete_object(old_key).await.map(|_| ())
-    })
-    .retries(5)
-    .exponential_backoff(Duration::from_millis(10))
-    .await
+async fn move_object(
+    store: &impl ObjectStore,
+    old_key: &Path,
+    new_key: &Path,
+) -> object_store::Result<()> {
+    match tryhard::retry_fn(|| store.rename(old_key, new_key))
+        .retries(5)
+        .exponential_backoff(Duration::from_millis(10))
+        .await
     {
         Ok(_) => {
             counter!("ingest_worker.move_object.success").increment(1);
@@ -331,10 +294,7 @@ async fn send_ingest_event(http_client: &reqwest::Client, match_id: u64) -> reqw
             "https://api.deadlock-api.com/v1/matches/{}/ingest",
             match_id
         ))
-        .header(
-            "X-Api-Key",
-            std::env::var("INTERNAL_DEADLOCK_API_KEY").unwrap(),
-        )
+        .header("X-Api-Key", env::var("INTERNAL_DEADLOCK_API_KEY").unwrap())
         .send()
         .await
         .and_then(|res| res.error_for_status());
