@@ -88,18 +88,19 @@ async fn get_party_stats(
         r#"
     WITH matches AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
-                             INNER ANY JOIN match_info mi USING (match_id)
+                           INNER ANY
+                           JOIN match_info mi USING (match_id)
                      WHERE account_id = {} {}),
          parties AS (SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
-                   FROM match_player
-                   WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches)
-                   GROUP BY match_id)
+                     FROM match_player
+                     WHERE account_id = {} or (match_id, team, party) IN (SELECT match_id, team, party FROM matches WHERE party != 0)
+                     GROUP BY match_id)
     SELECT length(account_ids) as party_size, sum(won) as wins, COUNT(DISTINCT match_id) as matches_played, groupUniqArray(match_id) as matches
     FROM parties
     GROUP BY party_size
     ORDER BY party_size
     "#,
-        account_id, filters
+        account_id, filters, account_id
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
