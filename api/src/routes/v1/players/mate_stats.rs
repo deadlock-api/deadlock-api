@@ -88,6 +88,7 @@ async fn get_mate_stats(
         r#"
     WITH matches AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
+                         INNER ANY JOIN match_info mi USING (match_id)
                      WHERE account_id = {} {}),
          mates AS (SELECT DISTINCT match_id, won, account_id
                    FROM match_player
