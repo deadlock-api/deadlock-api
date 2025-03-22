@@ -49,7 +49,6 @@ async fn get_party_stats(
     query: PartyStatsQuery,
 ) -> APIResult<Vec<PartyStats>> {
     let mut filters = vec![];
-    filters.push(format!("has(p.account_ids, {})", account_id));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
@@ -87,14 +86,20 @@ async fn get_party_stats(
     };
     let query = format!(
         r#"
-    SELECT length(p.account_ids) as party_size, coalesce(sum(p.won), 0) as wins, COUNT() as matches_played, groupUniqArray(p.match_id) as matches
-    FROM match_parties p
-        INNER ANY JOIN match_info mi USING (match_id)
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
+    WITH matches AS (SELECT DISTINCT match_id, team, party
+                     FROM match_player
+                             INNER ANY JOIN match_info mi USING (match_id)
+                     WHERE account_id = {} {}),
+         parties AS (SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
+                   FROM match_player
+                   WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches)
+                   GROUP BY match_id)
+    SELECT length(account_ids) as party_size, sum(won) as wins, COUNT(DISTINCT match_id) as matches_played, groupUniqArray(match_id) as matches
+    FROM parties
     GROUP BY party_size
     ORDER BY party_size
     "#,
-        filters
+        account_id, filters
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
