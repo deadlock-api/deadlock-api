@@ -62,6 +62,8 @@ pub enum VariableCategory {
 #[strum(serialize_all = "snake_case")]
 pub enum Variable {
     MaxBombStacks,
+    MaxSpiritSnareStacks,
+    MaxBonusHealthPerKill,
     HeroHoursPlayed,
     HeroKd,
     HeroKills,
@@ -147,7 +149,9 @@ impl Variable {
             | Variable::HeroesPlayedToday
             | Variable::MostPlayedHero
             | Variable::MostPlayedHeroCount
-            | Variable::MaxBombStacks => VariableCategory::Hero,
+            | Variable::MaxBombStacks
+            | Variable::MaxSpiritSnareStacks
+            | Variable::MaxBonusHealthPerKill => VariableCategory::Hero,
         }
     }
 
@@ -194,6 +198,8 @@ impl Variable {
             Self::WinsLossesToday => "Get the number of wins and losses today",
             Self::WinsToday => "Get the number of wins today",
             Self::MaxBombStacks => "Get the max bomb stacks on bebop sticky bomb",
+            Self::MaxSpiritSnareStacks => "Get the max spirit snare stacks on grey talon",
+            Self::MaxBonusHealthPerKill => "Get the max bonus health per kill on Mo & Krill",
         }
     }
 
@@ -759,6 +765,44 @@ impl Variable {
                 .await
                 .map(|b| b.to_string())
                 .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks")),
+            Self::MaxSpiritSnareStacks => state
+                .clickhouse_client
+                .query(
+                    r#"
+                SELECT max(ability_stats[512733154]) as max_bomb_stacks
+                FROM match_player
+                    JOIN match_info USING match_id
+                WHERE
+                    game_mode = 'Normal'
+                    AND match_outcome = 'TeamWin'
+                    AND match_mode IN ('Ranked', 'Unranked')
+                    AND account_id=?
+                "#,
+                )
+                .bind(steam_id)
+                .fetch_one::<u64>()
+                .await
+                .map(|b| b.to_string())
+                .map_err(|_| VariableResolveError::FailedToFetchData("max spirit snare stacks")),
+            Self::MaxBonusHealthPerKill => state
+                .clickhouse_client
+                .query(
+                    r#"
+                SELECT max(ability_stats[1917840730]) as max_bomb_stacks
+                FROM match_player
+                    JOIN match_info USING match_id
+                WHERE
+                    game_mode = 'Normal'
+                    AND match_outcome = 'TeamWin'
+                    AND match_mode IN ('Ranked', 'Unranked')
+                    AND account_id=?
+                "#,
+                )
+                .bind(steam_id)
+                .fetch_one::<u64>()
+                .await
+                .map(|b| b.to_string())
+                .map_err(|_| VariableResolveError::FailedToFetchData("max bonus health per kill")),
         }
     }
 
