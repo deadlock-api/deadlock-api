@@ -1,17 +1,12 @@
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use metrics::counter;
-use metrics_exporter_prometheus::{BuildError, PrometheusBuilder};
 use once_cell::sync::Lazy;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::net::SocketAddrV4;
 use std::time::Duration;
 use tracing::instrument;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
 static STEAM_PROXY_URL: Lazy<String> = Lazy::new(|| std::env::var("STEAM_PROXY_URL").unwrap());
@@ -67,22 +62,4 @@ pub async fn call_steam_proxy<T: Message + Default>(
         }
     }
     result
-}
-
-pub fn init_tracing() {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info",
-    ));
-    let fmt_layer = tracing_subscriber::fmt::layer();
-
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(env_filter)
-        .init();
-}
-
-pub fn init_metrics() -> Result<(), BuildError> {
-    PrometheusBuilder::new()
-        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap())
-        .install()
 }

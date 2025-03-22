@@ -34,7 +34,7 @@ static UPDATE_INTERVAL: Lazy<u64> = Lazy::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    common::init_tracing();
+    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
     let http_client = reqwest::Client::new();
     let pg_client = common::get_pg_client().await?;
@@ -44,7 +44,6 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-#[instrument(skip(http_client, pg_client))]
 async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgres>) {
     let mut heroes = match common::fetch_hero_ids(http_client).await {
         Ok(heroes) => {
