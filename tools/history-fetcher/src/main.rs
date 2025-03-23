@@ -124,7 +124,11 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     WITH matches AS (
             SELECT match_id
             FROM match_info
-            WHERE start_time BETWEEN now() - INTERVAL 6 MONTH AND now() - INTERVAL 2 WEEK),
+            WHERE
+                match_outcome = 'TeamWin'
+                AND match_mode IN ('Ranked', 'Unranked')
+                AND game_mode = 'Normal'
+                AND start_time BETWEEN now() - INTERVAL 6 MONTH AND now() - INTERVAL 2 WEEK),
         histories AS (
             SELECT match_id, account_id
             FROM player_match_history
