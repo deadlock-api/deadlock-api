@@ -94,7 +94,7 @@ async fn get_item_win_loss_stats(
     };
     let query = format!(
         r#"
-    WITH matches AS (SELECT DISTINCT match_id
+    WITH matches AS (SELECT match_id
             FROM match_info
             WHERE match_outcome = 'TeamWin'
             AND match_mode IN ('Ranked', 'Unranked')
