@@ -16,3 +16,4 @@ metrics = "0.24"
 tracing = "0.1.41"
 serde = { version = "1.0.219", features = ["derive"] }
 rand = "0.9.0"
+itertools = "0.14.0"

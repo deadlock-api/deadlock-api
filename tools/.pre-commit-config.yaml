@@ -14,24 +14,6 @@ repos:
   - id: mixed-line-ending
   - id: pretty-format-json
     args: [--autofix]
-- repo: https://github.com/asottile/pyupgrade
-  rev: v3.19.0
-  hooks:
-  - id: pyupgrade
-    args: [--py311-plus]
-- repo: https://github.com/PyCQA/autoflake
-  rev: v2.3.1
-  hooks:
-  - id: autoflake
-- repo: https://github.com/PyCQA/isort
-  rev: 5.13.2
-  hooks:
-  - id: isort
-    args: [--profile, black, --filter-files]
-- repo: https://github.com/ambv/black
-  rev: 24.10.0
-  hooks:
-  - id: black
 
         # Hooks for validation
 - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -45,7 +27,7 @@ repos:
   - id: check-ast
   - id: debug-statements
 - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-  rev: 3.0.3
+  rev: 3.2.0
   hooks:
   - id: editorconfig-checker
     alias: ec
