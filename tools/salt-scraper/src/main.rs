@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         )
         SELECT match_id
         FROM matches
-        WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
+        WHERE start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-12-01')
         AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
         ORDER BY toStartOfDay(fromUnixTimestamp(start_time)) DESC, intDivOrZero(match_score, 250) DESC, match_id DESC -- Within batches of a day, prioritize higher ranked matches
         LIMIT 100
