@@ -58,7 +58,7 @@ async fn get_badge_distribution(
         r#"
     SELECT
         coalesce(t_badge_level, 0) as badge_level,
-        toUInt64(COUNT(DISTINCT match_id)) AS total_matches
+        COUNT() as total_matches
     FROM match_info
         ARRAY JOIN [average_badge_team0, average_badge_team1] AS t_badge_level
     WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' AND badge_level > 0 {}
