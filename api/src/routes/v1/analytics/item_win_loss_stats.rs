@@ -47,59 +47,72 @@ async fn get_item_win_loss_stats(
     ch_client: &clickhouse::Client,
     query: ItemWinLossStatsQuery,
 ) -> APIResult<Vec<ItemWinLossStats>> {
-    let mut filters = vec![];
+    let mut player_filters = vec![];
     if let Some(hero_id) = query.hero_id {
-        filters.push(format!("hero_id = {}", hero_id));
+        player_filters.push(format!("hero_id = {}", hero_id));
     }
+    let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {}", min_unix_timestamp));
+        info_filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {}", max_unix_timestamp));
+        info_filters.push(format!("start_time <= {}", max_unix_timestamp));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {}", min_match_id));
+        info_filters.push(format!("match_id >= {}", min_match_id));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {}", max_match_id));
+        info_filters.push(format!("match_id <= {}", max_match_id));
     }
     if let Some(min_badge_level) = query.min_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 >= {} AND average_badge_team1 >= {}",
             min_badge_level, min_badge_level
         ));
     }
     if let Some(max_badge_level) = query.max_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 <= {} AND average_badge_team1 <= {}",
             max_badge_level, max_badge_level
         ));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        filters.push(format!("duration_s >= {}", min_duration_s));
+        info_filters.push(format!("duration_s >= {}", min_duration_s));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("duration_s <= {}", max_duration_s));
+        info_filters.push(format!("duration_s <= {}", max_duration_s));
     }
-    let filters = if filters.is_empty() {
+    let info_filters = if info_filters.is_empty() {
         "".to_string()
     } else {
-        format!(" AND {}", filters.join(" AND "))
+        format!(" AND {}", info_filters.join(" AND "))
+    };
+    let player_filters = if player_filters.is_empty() {
+        "".to_string()
+    } else {
+        format!(" AND {}", player_filters.join(" AND "))
     };
     let query = format!(
         r#"
+    WITH matches AS (SELECT DISTINCT match_id
+            FROM match_info
+            WHERE match_outcome = 'TeamWin'
+            AND match_mode IN ('Ranked', 'Unranked')
+            AND game_mode = 'Normal' {}),
+        players AS (SELECT items.item_id as items, won
+            FROM match_player
+            WHERE match_id IN (SELECT match_id FROM matches) {})
     SELECT
         item_id,
-        sum(won) AS wins,
-        sum(not won) AS losses,
+        sum(won)      AS wins,
+        sum(not won)  AS losses,
         wins + losses AS matches
-    FROM match_player_item_v2
-        INNER ANY JOIN match_info mi USING (match_id)
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
+    FROM players
+        ARRAY JOIN items as item_id
     GROUP BY item_id
     ORDER BY item_id
     "#,
-        filters
+        info_filters, player_filters
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
