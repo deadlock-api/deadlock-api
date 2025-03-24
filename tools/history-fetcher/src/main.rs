@@ -128,7 +128,7 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
                 match_outcome = 'TeamWin'
                 AND match_mode IN ('Ranked', 'Unranked')
                 AND game_mode = 'Normal'
-                AND start_time BETWEEN now() - INTERVAL 6 MONTH AND now() - INTERVAL 2 WEEK),
+                AND start_time BETWEEN now() - INTERVAL 6 MONTH AND now() - INTERVAL 1 WEEK),
         histories AS (
             SELECT match_id, account_id
             FROM player_match_history
@@ -141,14 +141,8 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     UNION DISTINCT
 
     SELECT account_id as id, NULL as max_match_id
-    FROM player
-    WHERE account_id NOT IN (SELECT account_id FROM player_match_history)
-
-    UNION DISTINCT
-
-    SELECT account_id as id, NULL as max_match_id
     FROM match_player
-    WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK)
+    WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 1 WEEK)
     "#,
         )
         .fetch_all()
