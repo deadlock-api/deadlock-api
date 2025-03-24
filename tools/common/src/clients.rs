@@ -8,6 +8,7 @@ use sqlx::{ConnectOptions, Pool, Postgres};
 use std::env;
 use std::env::VarError;
 use std::time::Duration;
+use object_store::ClientOptions;
 use tracing::log::LevelFilter;
 
 pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {
@@ -27,6 +28,7 @@ pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
         .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
         .with_endpoint(env::var("S3_ENDPOINT_URL")?)
         .with_allow_http(true)
+        .with_client_options(ClientOptions::default().with_timeout(Duration::from_secs(30)))
         .build()?)
 }
 
@@ -38,6 +40,7 @@ pub fn get_cache_store() -> anyhow::Result<impl object_store::ObjectStore> {
         .with_secret_access_key(env::var("S3_CACHE_SECRET_ACCESS_KEY")?)
         .with_endpoint(env::var("S3_CACHE_ENDPOINT_URL")?)
         .with_allow_http(true)
+        .with_client_options(ClientOptions::default().with_timeout(Duration::from_secs(30)))
         .build()?)
 }
 
