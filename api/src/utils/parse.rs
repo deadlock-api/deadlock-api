@@ -27,6 +27,13 @@ where
                 steam_id as u32
             }
         })
+        .and_then(|steam_id| {
+            if steam_id > 0 {
+                Ok(steam_id)
+            } else {
+                Err(serde::de::Error::custom("Invalid steam id"))
+            }
+        })
 }
 
 pub fn parse_steam_id_option<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
@@ -45,6 +52,7 @@ where
             }
             None => None,
         })
+        .map(|steam_id| steam_id.filter(|&s| s > 0))
 }
 
 #[derive(Debug, Deserialize)]
