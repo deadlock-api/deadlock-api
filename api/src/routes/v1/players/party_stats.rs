@@ -88,8 +88,6 @@ async fn get_party_stats(
         r#"
     WITH matches AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
-                           INNER ANY
-                           JOIN match_info mi USING (match_id)
                      WHERE account_id = {} {}),
          parties AS (SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
                      FROM match_player
