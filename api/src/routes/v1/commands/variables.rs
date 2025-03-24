@@ -786,7 +786,7 @@ impl Variable {
         ch_client
             .query(
                 r#"
-                SELECT max(ability_stats[?]) as max_bomb_stacks
+                SELECT max(ability_stats[?]) as max_ability_stat
                 FROM match_player
                     JOIN match_info USING match_id
                 WHERE
