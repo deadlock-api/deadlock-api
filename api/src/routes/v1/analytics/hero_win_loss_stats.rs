@@ -87,6 +87,14 @@ async fn get_hero_win_loss_stats(
     };
     let query = format!(
         r#"
+    WITH t_matches AS (
+        SELECT match_id
+        FROM match_info
+        WHERE match_outcome = 'TeamWin'
+            AND match_mode IN ('Ranked', 'Unranked')
+            AND game_mode = 'Normal'
+            {}
+        )
     SELECT
         hero_id,
         sum(won) AS wins,
@@ -96,8 +104,7 @@ async fn get_hero_win_loss_stats(
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists
     FROM match_player FINAL
-        INNER ANY JOIN match_info mi USING (match_id)
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
+    WHERE match_id IN t_matches
     GROUP BY hero_id
     ORDER BY hero_id
     "#,
