@@ -52,7 +52,12 @@ async fn main() -> anyhow::Result<()> {
         futures::stream::iter(&objs_to_ingest)
             .take(100)
             .map(|key| async {
-                match timeout(Duration::from_secs(30), ingest_object(&store, &http_client, &ch_client, key)).await {
+                match timeout(
+                    Duration::from_secs(30),
+                    ingest_object(&store, &http_client, &ch_client, key),
+                )
+                .await
+                {
                     Ok(Ok(key)) => {
                         counter!("ingest_worker.ingest_object.success").increment(1);
                         info!("Ingested object: {}", key);
