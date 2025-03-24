@@ -10,7 +10,7 @@ use object_store::path::Path;
 use object_store::{GetResult, ObjectStore};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
-use tokio::time::sleep;
+use tokio::time::{sleep, timeout};
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
@@ -52,15 +52,19 @@ async fn main() -> anyhow::Result<()> {
         futures::stream::iter(&objs_to_ingest)
             .take(100)
             .map(|key| async {
-                match ingest_object(&store, &http_client, &ch_client, key).await {
-                    Ok(key) => {
+                match timeout(Duration::from_secs(30), ingest_object(&store, &http_client, &ch_client, key)).await {
+                    Ok(Ok(key)) => {
                         counter!("ingest_worker.ingest_object.success").increment(1);
                         info!("Ingested object: {}", key);
                         gauge!("ingest_worker.objs_to_ingest").decrement(1);
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         counter!("ingest_worker.ingest_object.failure").increment(1);
                         error!("Error ingesting object: {}", e);
+                    }
+                    Err(_) => {
+                        counter!("ingest_worker.ingest_object.timeout").increment(1);
+                        error!("Ingest object timed out");
                     }
                 }
             })
