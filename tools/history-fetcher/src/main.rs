@@ -96,7 +96,7 @@ async fn update_account(
     }
     let match_history: PlayerMatchHistory = match_history
         .into_iter()
-        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account.id as u32, r))
+        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account.id, r))
         .collect();
     match insert_match_history(ch_client, &match_history).await {
         Ok(_) => {
@@ -154,7 +154,7 @@ async fn fetch_account_match_history(
     account: &Account,
 ) -> reqwest::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
     let msg = CMsgClientToGcGetMatchHistory {
-        account_id: (account.id as u32).into(),
+        account_id: account.id.into(),
         continue_cursor: account.max_match_id.map(|a| a + 1),
         ..Default::default()
     };
