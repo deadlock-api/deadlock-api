@@ -17,7 +17,7 @@ use valveprotos::deadlock::{
 
 #[derive(Debug, Row, Deserialize)]
 struct Account {
-    id: u64,
+    id: u32,
     max_match_id: Option<u64>,
 }
 
