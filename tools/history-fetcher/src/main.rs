@@ -191,5 +191,6 @@ async fn update_account_limited(
         return;
     }
     limiter.wait().await;
-    update_account(ch_client, http_client, account).await
+    update_account(ch_client, http_client, account).await;
+    gauge!("history_fetcher.fetched_accounts").decrement(1);
 }
