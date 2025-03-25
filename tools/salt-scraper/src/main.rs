@@ -55,27 +55,27 @@ async fn main() -> anyhow::Result<()> {
         LIMIT 100
         ";
         let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
-        let mut recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
-        if recent_matches.len() < 100 {
-            info!(
-                "Only got {} matches, fetching salts for hltv matches.",
-                recent_matches.len()
-            );
-            let query = r"
-                SELECT DISTINCT match_id
-                FROM match_info
-                WHERE match_id NOT IN (SELECT match_id FROM match_salts)
-                    AND start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
-                ORDER BY match_id
-                LIMIT ?
-                ";
-            let additional_matches: Vec<MatchIdQueryResult> = ch_client
-                .query(query)
-                .bind(100 - recent_matches.len())
-                .fetch_all()
-                .await?;
-            recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
-        }
+        let recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
+        // if recent_matches.len() < 100 {
+        //     info!(
+        //         "Only got {} matches, fetching salts for hltv matches.",
+        //         recent_matches.len()
+        //     );
+        //     let query = r"
+        //         SELECT DISTINCT match_id
+        //         FROM match_info
+        //         WHERE match_id NOT IN (SELECT match_id FROM match_salts)
+        //             AND start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
+        //         ORDER BY match_id
+        //         LIMIT ?
+        //         ";
+        //     let additional_matches: Vec<MatchIdQueryResult> = ch_client
+        //         .query(query)
+        //         .bind(100 - recent_matches.len())
+        //         .fetch_all()
+        //         .await?;
+        //     recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
+        // }
         for match_id in recent_matches {
             match fetch_match(&http_client, match_id).await {
                 Ok(_) => debug!("Fetched match {}", match_id),
