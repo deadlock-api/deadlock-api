@@ -128,7 +128,7 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
                 match_outcome = 'TeamWin'
                 AND match_mode IN ('Ranked', 'Unranked')
                 AND game_mode = 'Normal'
-                AND start_time BETWEEN now() - INTERVAL 6 MONTH AND now() - INTERVAL 1 WEEK),
+                AND start_time <= now() - INTERVAL 1 WEEK),
         histories AS (
             SELECT match_id, account_id
             FROM player_match_history
