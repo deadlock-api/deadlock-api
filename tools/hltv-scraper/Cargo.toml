@@ -13,7 +13,7 @@ dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
 haste = { git = "https://github.com/johnpyp/haste.git", rev = "d7fae1be70afbad95bb5c6a62100d9fbe4610723", features = ["deadlock", "broadcast"] }
 itertools = "0.14.0"
-jiff = { version = "0.2.4", features = ["serde"] }
+jiff = { version = "0.2.5", features = ["serde"] }
 lru = "0.13.0"
 metrics = "0.24"
 object_store = { version = "0.12.0", features = ["aws"] }
@@ -25,5 +25,5 @@ tokio = { version = "1.44.1", features = ["full"] }
 tracing = "0.1.41"
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
 thiserror = "2.0.12"
-async-compression = { version = "0.4.21", features = ["tokio", "bzip2", "zstd"] }
+async-compression = { version = "0.4.22", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }
