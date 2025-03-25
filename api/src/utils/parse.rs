@@ -119,3 +119,9 @@ pub async fn validate_hero_id(http_client: &reqwest::Client, hero_id: u32) -> bo
     };
     hero_ids.iter().any(|h| h.id == hero_id)
 }
+
+pub fn default_last_month_timestamp() -> Option<u64> {
+    let now = chrono::Utc::now();
+    let last_month = now - chrono::Duration::days(30);
+    Some(last_month.timestamp() as u64)
+}
