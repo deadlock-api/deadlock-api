@@ -3,14 +3,11 @@ use crate::routes::v1::builds::query;
 use crate::routes::v1::builds::query::BuildsSearchQuery;
 use crate::routes::v1::builds::structs::Build;
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use itertools::Itertools;
 use sqlx::Row;
-use std::time::Duration;
 
 #[utoipa::path(
     get,
@@ -28,16 +25,8 @@ use std::time::Duration;
 )]
 pub async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,
-    headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "builds",
-        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
-    )
-    .await?;
     let query = query::sql_query(&params);
     let builds = sqlx::query(&query)
         .fetch_all(&state.postgres_client)
