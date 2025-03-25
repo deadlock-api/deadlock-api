@@ -168,7 +168,7 @@ This endpoint analyzes completed matches to calculate how often a specific pair 
 Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn hero_synergies(
+pub async fn hero_synergies_stats(
     Query(query): Query<HeroSynergyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

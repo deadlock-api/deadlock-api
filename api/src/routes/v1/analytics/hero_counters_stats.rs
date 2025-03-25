@@ -166,7 +166,7 @@ This endpoint analyzes completed matches to calculate how often a specific hero 
 Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn hero_counters(
+pub async fn hero_counters_stats(
     Query(query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

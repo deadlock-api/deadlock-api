@@ -1,5 +1,5 @@
-mod hero_counters;
-mod hero_synergies;
+mod hero_counters_stats;
+mod hero_synergies_stats;
 mod hero_win_loss_stats;
 mod item_win_loss_stats;
 
@@ -16,6 +16,6 @@ pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(hero_win_loss_stats::hero_win_loss_stats))
         .routes(routes!(item_win_loss_stats::item_win_loss_stats))
-        .routes(routes!(hero_counters::hero_counters))
-        .routes(routes!(hero_synergies::hero_synergies))
+        .routes(routes!(hero_counters_stats::hero_counters_stats))
+        .routes(routes!(hero_synergies_stats::hero_synergies_stats))
 }
