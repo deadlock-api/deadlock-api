@@ -125,3 +125,7 @@ pub fn default_last_month_timestamp() -> Option<u64> {
     let last_month = now - chrono::Duration::days(30);
     Some(last_month.timestamp() as u64)
 }
+
+pub fn default_true() -> Option<bool> {
+    true.into()
+}

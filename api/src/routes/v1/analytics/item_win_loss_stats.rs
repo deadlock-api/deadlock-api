@@ -1,5 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
+use crate::utils::parse::default_last_month_timestamp;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -14,7 +15,9 @@ use utoipa::{IntoParams, ToSchema};
 pub struct ItemWinLossStatsQuery {
     /// Filter matches based on the hero ID.
     hero_id: Option<u32>,
-    /// Filter matches based on their start time (Unix timestamp).
+    /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
+    #[serde(default = "default_last_month_timestamp")]
+    #[param(default = default_last_month_timestamp)]
     min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<u64>,

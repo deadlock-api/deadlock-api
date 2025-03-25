@@ -1,5 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
+use crate::utils::parse::{default_last_month_timestamp, default_true};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -10,13 +11,11 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-fn default_true() -> Option<bool> {
-    true.into()
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct HeroCounterStatsQuery {
-    /// Filter matches based on their start time (Unix timestamp).
+    /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
+    #[serde(default = "default_last_month_timestamp")]
+    #[param(default = default_last_month_timestamp)]
     min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<u64>,
