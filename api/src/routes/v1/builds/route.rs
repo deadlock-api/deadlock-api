@@ -24,6 +24,7 @@ use std::time::Duration;
     ),
     tags = ["Builds"],
     summary = "Search for builds",
+    description = "Search for builds based on various criteria."
 )]
 pub async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,

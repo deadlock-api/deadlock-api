@@ -11,17 +11,23 @@ fn default_limit() -> Option<u32> {
 #[derive(Serialize, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortBy {
+    /// Sort by the number of weekly favorites.
     #[default]
     #[display("weekly_favorites")]
     WeeklyFavorites,
+    /// Sort by the number of all-time favorites.
     #[display("favorites")]
     Favorites,
+    /// Sort by the number of weekly ignores. (currently always 0)
     #[display("ignores")]
     Ignores,
+    /// Sort by the number of weekly reports. (currently always 0)
     #[display("reports")]
     Reports,
+    /// Sort by the last time the build was updated.
     #[display("updated_at")]
     UpdatedAt,
+    /// Sort by the build version.
     #[display("version")]
     Version,
 }
@@ -29,9 +35,11 @@ pub enum BuildsSearchQuerySortBy {
 #[derive(Serialize, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortDirection {
+    /// Sort in descending order.
     #[default]
     #[display("desc")]
     Desc,
+    /// Sort in ascending order.
     #[display("asc")]
     Asc,
 }
@@ -40,23 +48,35 @@ pub enum BuildsSearchQuerySortDirection {
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildsSearchQuery {
+    /// The index of the first build to return.
     pub start: Option<u32>,
+    /// The maximum number of builds to return.
     #[serde(default = "default_limit")]
     #[param(inline, default = "100")]
     pub limit: Option<u32>,
+    /// The field to sort the builds by.
     #[serde(default)]
     #[param(inline)]
     pub sort_by: BuildsSearchQuerySortBy,
+    /// The direction to sort the builds in.
     #[serde(default)]
     #[param(inline)]
     pub sort_direction: BuildsSearchQuerySortDirection,
+    /// Search for builds with a name containing this string.
     pub search_name: Option<String>,
+    /// Search for builds with a description containing this string.
     pub search_description: Option<String>,
+    /// Only return the latest version of each build.
     pub only_latest: Option<bool>,
+    /// Filter builds by language.
     pub language: Option<u32>,
+    /// Filter builds by ID.
     pub build_id: Option<u32>,
+    /// Filter builds by version.
     pub version: Option<u32>,
+    /// Filter builds by hero ID.
     pub hero_id: Option<u32>,
+    /// Filter builds by rollup category.
     pub rollup_category: Option<u32>,
     /// The author's SteamID3
     #[serde(default)]

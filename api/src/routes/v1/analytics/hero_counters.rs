@@ -16,18 +16,27 @@ fn default_true() -> Option<bool> {
 
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct HeroCounterStatsQuery {
+    /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
+    /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
+    /// Filter matches based on their ID.
     min_match_id: Option<u64>,
+    /// Filter matches based on their ID.
     max_match_id: Option<u64>,
+    /// When `true`, only considers matchups where both `hero_id` and `enemy_hero_id` were assigned to the same lane (e.g., both Mid Lane). When `false`, considers all matchups regardless of assigned lane.
     #[serde(default = "default_true")]
     #[param(default = true)]
     same_lane_filter: Option<bool>,
@@ -35,9 +44,13 @@ pub struct HeroCounterStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroCounterStats {
+    /// The ID of the hero.
     pub hero_id: u32,
+    /// The ID of the opposing hero.
     pub enemy_hero_id: u32,
+    /// The number of times `hero_id` won the match when facing `enemy_hero_id`.
     pub wins: u64,
+    /// The total number of matches played between `hero_id` and `enemy_hero_id` that meet the filter criteria.
     pub matches_played: u64,
 }
 
@@ -136,7 +149,13 @@ async fn get_hero_counter_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Counter Stats",
-    description = r"This endpoint returns the hero counter stats."
+    description = r#"
+Retrieves hero-versus-hero matchup statistics based on historical match data.
+
+This endpoint analyzes completed matches to calculate how often a specific hero (`hero_id`) wins against an enemy hero (`enemy_hero_id`) and the total number of times they have faced each other under the specified filter conditions.
+
+Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+    "#
 )]
 pub async fn hero_counters(
     Query(query): Query<HeroCounterStatsQuery>,

@@ -12,18 +12,27 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct ItemWinLossStatsQuery {
+    /// Filter matches based on the hero ID.
     hero_id: Option<u32>,
+    /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
+    /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
+    /// Filter matches based on their ID.
     min_match_id: Option<u64>,
+    /// Filter matches based on their ID.
     max_match_id: Option<u64>,
 }
 
@@ -134,7 +143,13 @@ async fn get_item_win_loss_stats(
     ),
     tags = ["Analytics"],
     summary = "Item Win Loss Stats",
-    description = r"This endpoint returns the item win loss stats."
+    description = r#"
+Retrieves item win/loss statistics based on historical match data.
+
+This endpoint analyzes completed matches to calculate how often matches were won or lost when specific items were present within those matches.
+
+Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+    "#
 )]
 pub async fn item_win_loss_stats(
     Query(query): Query<ItemWinLossStatsQuery>,

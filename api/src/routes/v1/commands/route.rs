@@ -15,10 +15,15 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct VariableDescription {
+    /// The name of the variable.
     pub name: String,
+    /// The description of the variable.
     pub description: String,
+    /// The default label for the variable.
     pub default_label: Option<String>,
+    /// Extra arguments that can be passed to the variable.
     pub extra_args: Vec<String>,
+    /// The category of the variable.
     pub category: VariableCategory,
 }
 
@@ -63,7 +68,7 @@ pub async fn available_variables() -> APIResult<impl IntoResponse> {
     ),
     tags = ["Commands"],
     summary = "Widget Versions",
-    description = "Returns a dict of str->int of widget versions."
+    description = "Returns a map of str->int of widget versions."
 )]
 pub async fn widget_versions() -> APIResult<impl IntoResponse> {
     let widget_versions_file = std::fs::File::open("widget_versions.json").map_err(|e| {
@@ -84,11 +89,14 @@ pub async fn widget_versions() -> APIResult<impl IntoResponse> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 pub struct CommandResolveQuery {
+    /// The players region
     #[serde(default)]
     #[param(inline)]
     pub region: LeaderboardRegion,
+    /// The players SteamID3
     #[serde(deserialize_with = "parse_steam_id")]
     pub account_id: u32,
+    /// The command template to resolve
     #[serde(default)]
     pub template: String,
     /// Hero name to check for hero specific stats

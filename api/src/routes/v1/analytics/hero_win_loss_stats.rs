@@ -12,17 +12,25 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct HeroWinLossStatsQuery {
+    /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
+    /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
+    /// Filter matches based on their ID.
     min_match_id: Option<u64>,
+    /// Filter matches based on their ID.
     max_match_id: Option<u64>,
 }
 
@@ -130,7 +138,13 @@ async fn get_hero_win_loss_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Win Loss Stats",
-    description = r"This endpoint returns the hero win loss stats."
+    description = r#"
+Retrieves overall win/loss and performance statistics for each hero based on historical match data.
+
+This endpoint analyzes completed matches. For each hero, it calculates their total wins, losses, matches played, kills, deaths, and assists across all matches.
+
+Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
+    "#
 )]
 pub async fn hero_win_loss_stats(
     Query(query): Query<HeroWinLossStatsQuery>,
