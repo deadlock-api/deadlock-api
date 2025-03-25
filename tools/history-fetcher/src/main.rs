@@ -134,7 +134,7 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     WHERE match_id IN matches AND (match_id, account_id) NOT IN histories
     GROUP BY account_id
     ORDER BY max_match_id
-    LIMIT 1000
+    LIMIT 100
 
     UNION ALL
 
@@ -144,7 +144,7 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
         AND (match_id, account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
     GROUP BY account_id
     ORDER BY max(match_id)
-    LIMIT 1000
+    LIMIT 2000
     "#,
         )
         .fetch_all()
