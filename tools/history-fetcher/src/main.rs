@@ -5,8 +5,6 @@ use arl::RateLimiter;
 use clickhouse::Row;
 use itertools::Itertools;
 use metrics::{counter, gauge};
-use rand::prelude::SliceRandom;
-use rand::rng;
 use serde::Deserialize;
 use std::time::Duration;
 use tracing::{debug, error, info, instrument};
@@ -32,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
     let limiter = RateLimiter::new(25, Duration::from_secs(60));
 
     loop {
-        let mut accounts = match fetch_accounts(&ch_client).await {
+        let accounts = match fetch_accounts(&ch_client).await {
             Ok(accounts) => {
                 gauge!("history_fetcher.fetched_accounts").set(accounts.len() as f64);
                 counter!("history_fetcher.fetch_accounts.success").increment(1);
@@ -47,13 +45,11 @@ async fn main() -> anyhow::Result<()> {
                 continue;
             }
         };
-        accounts.shuffle(&mut rng());
         futures::future::join_all(
             accounts
                 .iter()
                 .sorted_by_key(|a| a.max_match_id.unwrap_or_default())
                 .rev()
-                .take(10000)
                 .map(|account| update_account_limited(&limiter, &ch_client, &http_client, account)),
         )
         .await;
@@ -137,12 +133,18 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     FROM match_player
     WHERE match_id IN matches AND (match_id, account_id) NOT IN histories
     GROUP BY account_id
+    ORDER BY max_match_id
+    LIMIT 1000
 
-    UNION DISTINCT
+    UNION ALL
 
     SELECT account_id as id, NULL as max_match_id
     FROM match_player
     WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 1 WEEK)
+        AND (match_id, account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
+    GROUP BY account_id
+    ORDER BY max(match_id)
+    LIMIT 1000
     "#,
         )
         .fetch_all()
