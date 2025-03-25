@@ -1,7 +1,7 @@
 use clickhouse::Compression;
 use fred::clients::Client as RedisClient;
 use fred::interfaces::{ClientLike, FredResult};
-use fred::prelude::Config as RedisConfig;
+use fred::prelude::{Config as RedisConfig, ReconnectPolicy};
 use object_store::ClientOptions;
 use object_store::aws::AmazonS3Builder;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
@@ -60,7 +60,8 @@ pub async fn get_pg_client() -> anyhow::Result<Pool<Postgres>> {
 pub async fn get_redis_client() -> FredResult<RedisClient> {
     let config =
         RedisConfig::from_url(&env::var("REDIS_URL").unwrap_or("redis://127.0.0.1".to_string()))?;
-    let redis = RedisClient::new(config, None, None, None);
+    let reconnect_policy = ReconnectPolicy::new_linear(10, 10000, 100);
+    let redis = RedisClient::new(config, None, None, reconnect_policy.into());
     redis.connect();
     redis.wait_for_connect().await?;
     Ok(redis)
