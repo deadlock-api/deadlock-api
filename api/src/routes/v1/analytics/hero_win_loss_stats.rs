@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
-use crate::utils::parse::default_last_month_timestamp;
+use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -35,6 +35,9 @@ pub struct HeroWinLossStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
+    /// Filter for matches with a specific player account ID.
+    #[serde(deserialize_with = "parse_steam_id_option")]
+    pub account_id: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -60,41 +63,50 @@ async fn get_hero_win_loss_stats(
     ch_client: &clickhouse::Client,
     query: HeroWinLossStatsQuery,
 ) -> APIResult<Vec<HeroWinLossStats>> {
-    let mut filters = vec![];
+    let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {}", min_unix_timestamp));
+        info_filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {}", max_unix_timestamp));
+        info_filters.push(format!("start_time <= {}", max_unix_timestamp));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {}", min_match_id));
+        info_filters.push(format!("match_id >= {}", min_match_id));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {}", max_match_id));
+        info_filters.push(format!("match_id <= {}", max_match_id));
     }
     if let Some(min_badge_level) = query.min_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 >= {} AND average_badge_team1 >= {}",
             min_badge_level, min_badge_level
         ));
     }
     if let Some(max_badge_level) = query.max_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 <= {} AND average_badge_team1 <= {}",
             max_badge_level, max_badge_level
         ));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        filters.push(format!("duration_s >= {}", min_duration_s));
+        info_filters.push(format!("duration_s >= {}", min_duration_s));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("duration_s <= {}", max_duration_s));
+        info_filters.push(format!("duration_s <= {}", max_duration_s));
     }
-    let filters = if filters.is_empty() {
+    let info_filters = if info_filters.is_empty() {
         "".to_string()
     } else {
-        format!(" AND {}", filters.join(" AND "))
+        format!(" AND {}", info_filters.join(" AND "))
+    };
+    let mut player_filters = vec![];
+    if let Some(account_id) = query.account_id {
+        player_filters.push(format!("account_id = {}", account_id));
+    }
+    let player_filters = if player_filters.is_empty() {
+        "".to_string()
+    } else {
+        format!(" AND {}", player_filters.join(" AND "))
     };
     let query = format!(
         r#"
@@ -115,11 +127,11 @@ async fn get_hero_win_loss_stats(
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists
     FROM match_player FINAL
-    WHERE match_id IN t_matches
+    WHERE match_id IN t_matches {}
     GROUP BY hero_id
     ORDER BY hero_id
     "#,
-        filters
+        info_filters, player_filters
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {

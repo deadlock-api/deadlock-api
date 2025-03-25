@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
-use crate::utils::parse::default_last_month_timestamp;
+use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -37,6 +37,9 @@ pub struct ItemWinLossStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
+    /// Filter for matches with a specific player account ID.
+    #[serde(deserialize_with = "parse_steam_id_option")]
+    pub account_id: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -59,10 +62,6 @@ async fn get_item_win_loss_stats(
     ch_client: &clickhouse::Client,
     query: ItemWinLossStatsQuery,
 ) -> APIResult<Vec<ItemWinLossStats>> {
-    let mut player_filters = vec![];
-    if let Some(hero_id) = query.hero_id {
-        player_filters.push(format!("hero_id = {}", hero_id));
-    }
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -99,6 +98,13 @@ async fn get_item_win_loss_stats(
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
+    let mut player_filters = vec![];
+    if let Some(hero_id) = query.hero_id {
+        player_filters.push(format!("hero_id = {}", hero_id));
+    }
+    if let Some(account_id) = query.account_id {
+        player_filters.push(format!("account_id = {}", account_id));
+    }
     let player_filters = if player_filters.is_empty() {
         "".to_string()
     } else {
