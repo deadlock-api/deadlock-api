@@ -24,7 +24,9 @@ pub struct BadgeDistributionQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct BadgeDistribution {
+    /// The badge level.
     pub badge_level: u32,
+    /// The total number of matches.
     pub total_matches: u64,
 }
 

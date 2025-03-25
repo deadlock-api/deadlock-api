@@ -43,17 +43,27 @@ FROM fetched_matches
 
 #[derive(Deserialize, Row)]
 struct TableSizeRow {
+    /// Name of the table.
     pub table: String,
+    /// Whether the table is a view.
     pub is_view: bool,
+    /// Number of rows in the table.
     pub rows: Option<u64>,
+    /// Compressed size of the table in bytes.
     pub data_compressed_bytes: Option<u64>,
+    /// Uncompressed size of the table in bytes.
     pub data_uncompressed_bytes: Option<u64>,
 }
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TableSize {
+    /// Whether the table is a view.
     pub is_view: bool,
+    /// Number of rows in the table.
     pub rows: Option<u64>,
+    /// Compressed size of the table in bytes.
     pub data_compressed_bytes: Option<u64>,
+    /// Uncompressed size of the table in bytes.
     pub data_uncompressed_bytes: Option<u64>,
 }
 
@@ -70,7 +80,9 @@ impl From<TableSizeRow> for TableSize {
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct APIInfo {
+    /// The number of matches fetched in the last 24 hours.
     pub fetched_matches_per_day: u64,
+    /// The sizes of all tables in the database.
     pub table_sizes: HashMap<String, TableSize>,
 }
 

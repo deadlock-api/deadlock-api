@@ -13,8 +13,11 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Copy, Clone, Serialize, Default, ToSchema)]
 pub struct StatusServices {
+    /// Whether Clickhouse is reachable.
     pub clickhouse: bool,
+    /// Whether Postgres is reachable.
     pub postgres: bool,
+    /// Whether Redis is reachable.
     pub redis: bool,
 }
 
@@ -26,6 +29,7 @@ impl StatusServices {
 
 #[derive(Debug, Copy, Clone, Serialize, Default, ToSchema)]
 pub struct Status {
+    /// Status of the services.
     pub services: StatusServices,
 }
 

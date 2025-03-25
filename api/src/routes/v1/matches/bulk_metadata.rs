@@ -44,52 +44,75 @@ pub enum SortKey {
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
+    /// Include match info in the response.
     #[serde(default = "true_default")]
     #[param(inline, default = "true")]
     include_info: bool,
+    /// Include damage matrix in the response.
     #[serde(default)]
     include_damage_matrix: bool,
+    /// Include objectives in the response.
     #[serde(default)]
     include_objectives: bool,
+    /// Include midboss in the response.
     #[serde(default)]
     include_mid_boss: bool,
+    /// Include player info in the response.
     #[serde(default)]
     include_player_info: bool,
+    /// Include player items in the response.
     #[serde(default)]
     include_player_items: bool,
+    /// Include player stats in the response.
     #[serde(default)]
     include_player_stats: bool,
+    /// Include player death details in the response.
     #[serde(default)]
     include_player_death_details: bool,
+    /// Include player match paths in the response.
     #[serde(default)]
     include_player_match_paths: bool,
     // Parameters that influence what data is included in the response (WHERE)
-    min_unix_timestamp: Option<u64>,
-    max_unix_timestamp: Option<u64>,
-    min_match_id: Option<u64>,
-    max_match_id: Option<u64>,
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
     #[serde(deserialize_with = "comma_seperated_num_deserialize")]
     match_ids: Option<Vec<u64>>,
+    /// Filter matches based on their start time (Unix timestamp).
+    min_unix_timestamp: Option<u64>,
+    /// Filter matches based on their start time (Unix timestamp).
+    max_unix_timestamp: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
+    /// Filter matches based on their ID.
+    min_match_id: Option<u64>,
+    /// Filter matches based on their ID.
+    max_match_id: Option<u64>,
+    /// Filter matches based on whether they are in the high skill range.
     is_high_skill_range_parties: Option<bool>,
+    /// Filter matches based on whether they are in the low priority pool.
     is_low_pri_pool: Option<bool>,
+    /// Filter matches based on whether they are in the new player pool.
     is_new_player_pool: Option<bool>,
     // Parameters that influence the ordering of the response (ORDER BY)
+    /// The field to order the results by.
     #[serde(default)]
     #[param(inline, default = "SortKey::MatchId")]
     order_by: SortKey,
+    /// The direction to order the results by.
     #[serde(default)]
     #[param(inline, default = "SortDirection::Desc")]
     order_direction: SortDirection,
+    /// The maximum number of matches to return.
     #[serde(default = "default_limit")]
     #[param(minimum = 1, maximum = 10000, default = 1000)]
     limit: u32,

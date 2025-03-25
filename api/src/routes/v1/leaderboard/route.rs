@@ -24,6 +24,7 @@ use valveprotos::deadlock::{
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct LeaderboardQuery {
+    /// The region to fetch the leaderboard for.
     #[serde(default)]
     #[param(inline)]
     pub region: LeaderboardRegion,
@@ -31,9 +32,11 @@ pub struct LeaderboardQuery {
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct LeaderboardHeroQuery {
+    /// The region to fetch the leaderboard for.
     #[serde(default)]
     #[param(inline)]
     pub region: LeaderboardRegion,
+    /// The hero ID to fetch the leaderboard for.
     pub hero_id: u32,
 }
 
