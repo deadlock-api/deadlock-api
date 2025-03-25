@@ -74,7 +74,6 @@ async fn get_hero_stats(
     query: HeroStatsQuery,
 ) -> APIResult<Vec<HeroStats>> {
     let mut filters = vec![];
-    filters.push(format!("account_id = {}", account_id));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
@@ -110,6 +109,7 @@ async fn get_hero_stats(
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
+    let account_filter = format!("account_id = {}", account_id);
     let query = format!(
         r#"
     SELECT
@@ -134,13 +134,14 @@ async fn get_hero_stats(
         avg(arrayMax(stats.shots_hit) / greatest(1, arrayMax(stats.shots_hit) + arrayMax(stats.shots_missed))) AS accuracy,
         avg(arrayMax(stats.hero_bullets_hit_crit) / greatest(1, arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit))) AS crit_shot_rate,
         groupUniqArray(mi.match_id) as matches
-    FROM match_player mp
+    FROM match_player mp FINAL
         INNER ANY JOIN match_info mi USING (match_id)
+    PREWHERE {}
     WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {}
     GROUP BY hero_id
     ORDER BY hero_id
     "#,
-        filters
+        account_filter, filters
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
