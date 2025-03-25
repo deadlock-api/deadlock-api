@@ -9,6 +9,7 @@ on:
     - 'active-matches-scraper/**'
     - 'common/**'
     - 'Dockerfile'
+    - 'Cargo.{toml,lock}'
 
 permissions:
   contents: read

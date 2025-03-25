@@ -9,6 +9,7 @@ on:
     - 'ingest-worker/**'
     - 'common/**'
     - 'Dockerfile'
+    - 'Cargo.{toml,lock}'
 
 permissions:
   contents: read

@@ -9,6 +9,7 @@ on:
     - 'matchdata-downloader/**'
     - 'common/**'
     - 'Dockerfile'
+    - 'Cargo.{toml,lock}'
 
 permissions:
   contents: read
