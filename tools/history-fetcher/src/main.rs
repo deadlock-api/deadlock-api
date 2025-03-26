@@ -77,14 +77,14 @@ async fn update_account(
     {
         counter!("history_fetcher.fetch_match_history.failure").increment(1);
         error!(
-            "Failed to fetch match history for account {}, result: {:?}, skipping",
-            account.id, match_history.result
+            "Failed to fetch match history, result: {:?}, skipping",
+            match_history.result
         );
         return;
     }
     let match_history = match_history.matches;
     if match_history.is_empty() {
-        debug!("No new matches for account {}", account.id);
+        debug!("No new matches {}", account.id);
         return;
     }
     let match_history: PlayerMatchHistory = match_history
@@ -94,18 +94,11 @@ async fn update_account(
     match insert_match_history(ch_client, &match_history).await {
         Ok(_) => {
             counter!("history_fetcher.insert_match_history.success").increment(1);
-            info!(
-                "Inserted {} new matches for account {}",
-                match_history.len(),
-                account.id
-            )
+            info!("Inserted new matches {}", match_history.len(),)
         }
         Err(e) => {
             counter!("history_fetcher.insert_match_history.failure").increment(1);
-            error!(
-                "Failed to insert match history for account {}: {:?}",
-                account.id, e
-            )
+            error!("Failed to insert match history: {:?}", e)
         }
     }
 }
