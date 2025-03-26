@@ -1,4 +1,4 @@
-use crate::utils::parse_steam_id;
+use crate::utils::parse::parse_steam_id;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};

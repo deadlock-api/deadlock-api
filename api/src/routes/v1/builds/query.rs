@@ -1,4 +1,4 @@
-use crate::utils::parse_steam_id_option;
+use crate::utils::parse::parse_steam_id_option;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, QueryBuilder};
