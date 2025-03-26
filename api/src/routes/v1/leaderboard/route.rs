@@ -40,6 +40,14 @@ pub struct LeaderboardHeroQuery {
     pub hero_id: u32,
 }
 
+#[cached(
+    ty = "TimedCache<String, Vec<u8>>",
+    create = "{ TimedCache::with_lifespan(60) }",
+    result = true,
+    convert = r#"{ format!("{:?}-{:?}", region, hero_id) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
 async fn fetch_leaderboard_raw(
     config: &Config,
     http_client: &reqwest::Client,
