@@ -24,6 +24,7 @@ impl CacheControlMiddleware {
     }
 
     /// Sets the `private` directive.
+    #[allow(dead_code)]
     pub fn private(mut self) -> Self {
         self.private = true;
         self

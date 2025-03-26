@@ -27,6 +27,7 @@ pub struct RateLimitQuota {
 }
 
 impl RateLimitQuota {
+    #[allow(dead_code)]
     pub fn ip_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
@@ -34,6 +35,8 @@ impl RateLimitQuota {
             rate_limit_quota_type: RateLimitQuotaType::IP,
         }
     }
+
+    #[allow(dead_code)]
     pub fn key_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
@@ -41,6 +44,8 @@ impl RateLimitQuota {
             rate_limit_quota_type: RateLimitQuotaType::Key,
         }
     }
+
+    #[allow(dead_code)]
     pub fn global_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
