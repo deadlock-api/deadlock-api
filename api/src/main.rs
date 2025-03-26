@@ -6,8 +6,9 @@
 
 use crate::api_doc::ApiDoc;
 use axum::extract::Request;
+use axum::http::{HeaderMap, header};
 use axum::middleware::from_fn;
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Router, ServiceExt};
 use axum_prometheus::PrometheusMetricLayer;
@@ -38,6 +39,15 @@ use middleware::fallback;
 
 const DEFAULT_CACHE_TIME: u64 = 60;
 
+async fn favicon() -> impl IntoResponse {
+    let favicon = include_bytes!("../public/favicon.ico");
+    let mut headers = HeaderMap::new();
+    if let Ok(content_type) = "image/x-icon".parse() {
+        headers.insert(header::CONTENT_TYPE, content_type);
+    }
+    (headers, favicon)
+}
+
 async fn get_router() -> ApplicationResult<NormalizePath<Router>> {
     debug!("Loading application state");
     let state = AppState::from_env().await?;
@@ -49,6 +59,8 @@ async fn get_router() -> ApplicationResult<NormalizePath<Router>> {
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         // Redirect root to /docs
         .route("/", get(|| async { Redirect::to("/docs") }))
+        // Serve favicon
+        .route("/favicon.ico", get(favicon))
         // Add application routes
         .merge(routes::router())
         // Add prometheus metrics route
