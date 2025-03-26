@@ -67,7 +67,7 @@ where
     List(Vec<T>),
 }
 
-pub fn comma_seperated_num_deserialize<'de, D, T>(
+pub fn comma_separated_num_deserialize<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<Vec<T>>, D::Error>
 where

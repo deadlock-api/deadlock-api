@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
-use crate::utils::parse::comma_seperated_num_deserialize;
+use crate::utils::parse::comma_separated_num_deserialize;
 use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -75,7 +75,7 @@ pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
-    #[serde(deserialize_with = "comma_seperated_num_deserialize")]
+    #[serde(deserialize_with = "comma_separated_num_deserialize")]
     match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
