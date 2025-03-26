@@ -93,7 +93,7 @@ async fn get_badge_distribution(
     ),
     tags = ["Matches"],
     summary = "Badge Distribution",
-    description = r"This endpoint returns the player badge distribution."
+    description = "This endpoint returns the player badge distribution."
 )]
 pub async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,

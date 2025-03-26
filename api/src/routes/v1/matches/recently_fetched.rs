@@ -60,7 +60,7 @@ async fn get_recently_fetched_match_ids(
     ),
     tags = ["Matches"],
     summary = "Recently Fetched Matches",
-    description = r"This endpoint returns a list of match ids that have been fetched within the last 10 minutes."
+    description = "This endpoint returns a list of match ids that have been fetched within the last 10 minutes."
 )]
 pub async fn recently_fetched(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     get_recently_fetched_match_ids(&state.clickhouse_client)

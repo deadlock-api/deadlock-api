@@ -126,7 +126,7 @@ async fn get_item_stats(
     ),
     tags = ["Players"],
     summary = "Item Stats",
-    description = r"This endpoint returns the item stats."
+    description = "This endpoint returns the item stats."
 )]
 pub async fn item_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

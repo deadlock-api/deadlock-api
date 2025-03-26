@@ -127,7 +127,7 @@ async fn get_mate_stats(
     ),
     tags = ["Players"],
     summary = "Mate Stats",
-    description = r"This endpoint returns the mate stats."
+    description = "This endpoint returns the mate stats."
 )]
 pub async fn mate_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

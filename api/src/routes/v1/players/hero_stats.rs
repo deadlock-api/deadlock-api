@@ -163,7 +163,7 @@ async fn get_hero_stats(
     ),
     tags = ["Players"],
     summary = "Hero Stats",
-    description = r"This endpoint returns the hero stats."
+    description = "This endpoint returns statistics for each hero played by a given player account."
 )]
 pub async fn hero_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

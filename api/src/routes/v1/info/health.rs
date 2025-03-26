@@ -77,6 +77,8 @@ async fn check_health(
         (status = INTERNAL_SERVER_ERROR, body = String)
     ),
     tags = ["Info"],
+    summary = "Health Check",
+    description = "Checks the health of the services."
 )]
 pub async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
     check_health(

@@ -128,7 +128,7 @@ async fn get_party_stats(
     ),
     tags = ["Players"],
     summary = "Party Stats",
-    description = r"This endpoint returns the party stats."
+    description = "This endpoint returns the party stats."
 )]
 pub async fn party_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

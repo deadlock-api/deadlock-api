@@ -94,6 +94,8 @@ pub struct APIInfo {
         (status = INTERNAL_SERVER_ERROR, body = String)
     ),
     tags = ["Info"],
+    summary = "API Info",
+    description = "Returns information about the API."
 )]
 pub async fn info(State(state): State<AppState>) -> APIResult<Json<APIInfo>> {
     let (table_sizes, fetched_matches_per_day) = join(

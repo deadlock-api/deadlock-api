@@ -40,14 +40,6 @@ pub struct LeaderboardHeroQuery {
     pub hero_id: u32,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(60) }",
-    result = true,
-    convert = r#"{ format!("{:?}-{:?}", region, hero_id) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn fetch_leaderboard_raw(
     config: &Config,
     http_client: &reqwest::Client,
@@ -133,7 +125,9 @@ pub async fn fetch_parse_leaderboard(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard as Protobuf",
-    description = "Returns the leaderboard as protobuf message"
+    description = r#"
+Returns the leaderboard, serialized as protobuf message.
+    "#
 )]
 pub async fn leaderboard_raw(
     State(state): State<AppState>,
@@ -156,7 +150,9 @@ pub async fn leaderboard_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard as Protobuf",
-    description = "Returns the leaderboard for a specific hero"
+    description = r#"
+Returns the leaderboard for a specific hero, serialized as protobuf message.
+    "#
 )]
 pub async fn leaderboard_hero_raw(
     State(state): State<AppState>,
@@ -187,7 +183,9 @@ pub async fn leaderboard_hero_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard",
-    description = "Returns the leaderboard"
+    description = r#"
+Returns the leaderboard.
+    "#
 )]
 pub async fn leaderboard(
     State(state): State<AppState>,
@@ -209,7 +207,9 @@ pub async fn leaderboard(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard",
-    description = "Returns the leaderboard for a specific hero"
+    description = r#"
+Returns the leaderboard for a specific hero.
+    "#
 )]
 pub async fn leaderboard_hero(
     State(state): State<AppState>,
