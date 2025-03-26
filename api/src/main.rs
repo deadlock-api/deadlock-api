@@ -34,6 +34,7 @@ mod utils;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
+use crate::utils::tracing::init_tracing;
 use error::*;
 use middleware::fallback;
 
@@ -95,7 +96,7 @@ async fn get_router() -> ApplicationResult<NormalizePath<Router>> {
 
 #[tokio::main]
 async fn main() -> ApplicationResult<()> {
-    tracing_subscriber::fmt::init();
+    init_tracing();
 
     let router = get_router().await?;
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
