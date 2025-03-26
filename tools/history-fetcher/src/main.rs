@@ -3,10 +3,7 @@ mod types;
 use crate::types::{PlayerMatchHistory, PlayerMatchHistoryEntry};
 use arl::RateLimiter;
 use clickhouse::Row;
-use itertools::Itertools;
 use metrics::{counter, gauge};
-use rand::prelude::SliceRandom;
-use rand::rng;
 use serde::Deserialize;
 use std::time::Duration;
 use tracing::{debug, error, info, instrument};
@@ -32,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let limiter = RateLimiter::new(25, Duration::from_secs(60));
 
     loop {
-        let mut accounts = match fetch_accounts(&ch_client).await {
+        let accounts = match fetch_accounts(&ch_client).await {
             Ok(accounts) => {
                 gauge!("history_fetcher.fetched_accounts").set(accounts.len() as f64);
                 counter!("history_fetcher.fetch_accounts.success").increment(1);
@@ -47,13 +44,9 @@ async fn main() -> anyhow::Result<()> {
                 continue;
             }
         };
-        accounts.shuffle(&mut rng());
         futures::future::join_all(
             accounts
                 .iter()
-                .sorted_by_key(|a| a.max_match_id.unwrap_or_default())
-                .rev()
-                .take(10000)
                 .map(|account| update_account_limited(&limiter, &ch_client, &http_client, account)),
         )
         .await;
@@ -121,30 +114,11 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     ch_client
         .query(
             r#"
-    WITH matches AS (
-            SELECT match_id
-            FROM match_info
-            WHERE
-                match_outcome = 'TeamWin'
-                AND match_mode IN ('Ranked', 'Unranked')
-                AND game_mode = 'Normal'
-                AND start_time BETWEEN '2024-08-01' AND now() - INTERVAL 1 WEEK),
-        histories AS (
-            SELECT match_id, account_id
-            FROM player_match_history
-            WHERE match_id IN matches)
-    SELECT account_id as id, max(match_id) as max_match_id
-    FROM match_player
-    WHERE match_id IN matches AND (match_id, account_id) NOT IN histories
-    GROUP BY account_id
-
-    UNION ALL
-
-    SELECT account_id as id, NULL as max_match_id
-    FROM match_player
-    WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 1 WEEK)
-        AND (match_id, account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
-    GROUP BY account_id
+SELECT DISTINCT mp.account_id AS id, NULL AS max_match_id
+FROM match_player AS mp
+INNER ANY JOIN match_info AS mi ON mp.match_id = mi.match_id
+WHERE mi.start_time > now() - INTERVAL 2 DAY AND account_id > 0 AND match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal'
+ORDER BY rand()
     "#,
         )
         .fetch_all()
