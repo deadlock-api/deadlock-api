@@ -168,9 +168,9 @@ pub async fn bulk_metadata(
     Ok(Json(parsed_result))
 }
 
-fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
+fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
-    if settings.include_info {
+    if query.include_info {
         select_fields.extend(vec![
             "match_id".to_owned(),
             "any(start_time) as start_time".to_owned(),
@@ -187,25 +187,25 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(game_mode_version) as game_mode_version".to_owned(),
         ]);
     }
-    if settings.include_damage_matrix {
+    if query.include_damage_matrix {
         select_fields
             .push("(any(sample_time_s) as sample_time_s, any(stat_type) as stat_type, any(source_name) as source_name)::JSON as damage_matrix".to_owned());
     }
-    if settings.include_mid_boss {
+    if query.include_mid_boss {
         select_fields.push("any(mid_boss) as mid_boss".to_owned());
     }
-    if settings.include_objectives {
+    if query.include_objectives {
         select_fields.push("any(objectives) as objectives".to_owned());
     }
     // Player Select Fields
-    let has_player_fields = settings.include_player_info
-        || settings.include_player_items
-        || settings.include_player_stats
-        || settings.include_player_death_details
-        || settings.include_player_match_paths;
+    let has_player_fields = query.include_player_info
+        || query.include_player_items
+        || query.include_player_stats
+        || query.include_player_death_details
+        || query.include_player_match_paths;
     if has_player_fields {
         let mut player_select_fields = vec!["account_id", "hero_id", "player_slot", "team"];
-        if settings.include_player_info {
+        if query.include_player_info {
             player_select_fields.extend(vec![
                 "kills",
                 "deaths",
@@ -220,16 +220,16 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
                 "abandon_match_time_s",
             ]);
         }
-        if settings.include_player_items {
+        if query.include_player_items {
             player_select_fields.push("items");
         }
-        if settings.include_player_stats {
+        if query.include_player_stats {
             player_select_fields.push("stats");
         }
-        if settings.include_player_death_details {
+        if query.include_player_death_details {
             player_select_fields.push("death_details");
         }
-        if settings.include_player_match_paths {
+        if query.include_player_match_paths {
             player_select_fields.extend(vec![
                 "won",
                 "x_pos",
@@ -254,70 +254,70 @@ fn build_ch_query(settings: BulkMatchMetadataQuery) -> APIResult<String> {
         });
     }
 
-    let mut info_where_clauses = vec![];
-    if let Some(min_unix_timestamp) = settings.min_unix_timestamp {
-        info_where_clauses.push(format!("start_time >= {}", min_unix_timestamp));
+    let mut info_filters = vec![];
+    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
+        info_filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
-    if let Some(max_unix_timestamp) = settings.max_unix_timestamp {
-        info_where_clauses.push(format!("start_time <= {}", max_unix_timestamp));
+    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
+        info_filters.push(format!("start_time <= {}", max_unix_timestamp));
     }
-    if let Some(min_match_id) = settings.min_match_id {
-        info_where_clauses.push(format!("match_id >= {}", min_match_id));
+    if let Some(min_match_id) = query.min_match_id {
+        info_filters.push(format!("match_id >= {}", min_match_id));
     }
-    if let Some(max_match_id) = settings.max_match_id {
-        info_where_clauses.push(format!("match_id <= {}", max_match_id));
+    if let Some(max_match_id) = query.max_match_id {
+        info_filters.push(format!("match_id <= {}", max_match_id));
     }
-    if let Some(match_ids) = settings.match_ids {
+    if let Some(match_ids) = query.match_ids {
         if !match_ids.is_empty() {
-            info_where_clauses.push(format!(
+            info_filters.push(format!(
                 "match_id IN ({})",
                 match_ids.iter().map(|m| m.to_string()).join(",")
             ));
         }
     }
-    if let Some(min_duration_s) = settings.min_duration_s {
-        info_where_clauses.push(format!("duration_s >= {}", min_duration_s));
+    if let Some(min_duration_s) = query.min_duration_s {
+        info_filters.push(format!("duration_s >= {}", min_duration_s));
     }
-    if let Some(max_duration_s) = settings.max_duration_s {
-        info_where_clauses.push(format!("duration_s <= {}", max_duration_s));
+    if let Some(max_duration_s) = query.max_duration_s {
+        info_filters.push(format!("duration_s <= {}", max_duration_s));
     }
-    if let Some(min_average_badge) = settings.min_average_badge {
-        info_where_clauses.push(format!("average_badge_team0 >= {}", min_average_badge));
-        info_where_clauses.push(format!("average_badge_team1 >= {}", min_average_badge));
+    if let Some(min_average_badge) = query.min_average_badge {
+        info_filters.push(format!("average_badge_team0 >= {}", min_average_badge));
+        info_filters.push(format!("average_badge_team1 >= {}", min_average_badge));
     }
-    if let Some(max_average_badge) = settings.max_average_badge {
-        info_where_clauses.push(format!("average_badge_team0 <= {}", max_average_badge));
-        info_where_clauses.push(format!("average_badge_team1 <= {}", max_average_badge));
+    if let Some(max_average_badge) = query.max_average_badge {
+        info_filters.push(format!("average_badge_team0 <= {}", max_average_badge));
+        info_filters.push(format!("average_badge_team1 <= {}", max_average_badge));
     }
-    if let Some(is_high_skill_range_parties) = settings.is_high_skill_range_parties {
-        info_where_clauses.push(format!(
+    if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
+        info_filters.push(format!(
             "is_high_skill_range_parties = {}",
             is_high_skill_range_parties
         ));
     }
-    if let Some(is_low_pri_pool) = settings.is_low_pri_pool {
-        info_where_clauses.push(format!("low_pri_pool = {}", is_low_pri_pool));
+    if let Some(is_low_pri_pool) = query.is_low_pri_pool {
+        info_filters.push(format!("low_pri_pool = {}", is_low_pri_pool));
     }
-    if let Some(is_new_player_pool) = settings.is_new_player_pool {
-        info_where_clauses.push(format!("new_player_pool = {}", is_new_player_pool));
+    if let Some(is_new_player_pool) = query.is_new_player_pool {
+        info_filters.push(format!("new_player_pool = {}", is_new_player_pool));
     }
 
-    let info_where = if !info_where_clauses.is_empty() {
-        format!(" WHERE {} ", info_where_clauses.join(" AND "))
+    let info_filters = if !info_filters.is_empty() {
+        format!(" WHERE {} ", info_filters.join(" AND "))
     } else {
         "".to_owned()
     };
-    let order_by: &str = settings.order_by.into();
-    let order_direction: &str = settings.order_direction.into();
+    let order_by: &str = query.order_by.into();
+    let order_direction: &str = query.order_direction.into();
     let order = format!(" ORDER BY {} {} ", order_by, order_direction);
-    let limit = format!(" LIMIT {} ", settings.limit);
+    let limit = format!(" LIMIT {} ", query.limit);
 
     let mut query = String::new();
     // WITH
     query.push_str("WITH ");
     query.push_str(&format!(
         "t_matches AS (SELECT * FROM match_info FINAL {} {} {})",
-        info_where, order, limit
+        info_filters, order, limit
     ));
     if has_player_fields {
         query.push_str(
