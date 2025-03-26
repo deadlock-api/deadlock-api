@@ -79,8 +79,7 @@ pub struct BuildsSearchQuery {
     /// Filter builds by rollup category.
     pub rollup_category: Option<u32>,
     /// The author's SteamID3
-    #[serde(default)]
-    #[serde(deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub author_id: Option<u32>,
 }
 

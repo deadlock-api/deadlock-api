@@ -40,7 +40,7 @@ pub struct HeroSynergyStatsQuery {
     #[param(default = true)]
     same_lane_filter: Option<bool>,
     /// Filter for matches with a specific player account ID.
-    #[serde(deserialize_with = "parse_steam_id_option")]
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
 }
 
