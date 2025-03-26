@@ -22,6 +22,7 @@ env:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 concurrency:
   cancel-in-progress: true
@@ -151,4 +152,4 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
-          project: k7kl7zsmcs
+          project: ${{ env.DEPOT_PROJECT_ID }}
