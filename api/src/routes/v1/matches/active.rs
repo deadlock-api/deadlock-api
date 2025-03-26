@@ -3,6 +3,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
 use crate::state::AppState;
 use crate::utils;
+use crate::utils::parse::parse_steam_id_option;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -23,8 +24,8 @@ use valveprotos::deadlock::{
 #[derive(Deserialize, IntoParams)]
 pub struct ActiveMatchesQuery {
     /// The account ID to filter active matches by (SteamID3)
-    #[serde(default)]
-    pub account_id: Option<u32>,
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    account_id: Option<u32>,
 }
 
 #[cached(
