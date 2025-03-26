@@ -110,7 +110,11 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
 SELECT DISTINCT mp.account_id AS id, NULL AS max_match_id
 FROM match_player AS mp
 INNER ANY JOIN match_info AS mi ON mp.match_id = mi.match_id
-WHERE mi.start_time > now() - INTERVAL 2 DAY AND account_id > 0 AND match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal'
+WHERE mi.start_time > now() - INTERVAL 2 DAY
+    AND account_id > 0
+    AND match_outcome = 'TeamWin'
+    AND match_mode IN ('Ranked', 'Unranked')
+    AND game_mode = 'Normal'
 ORDER BY rand()
 LIMIT 1000
 
@@ -122,7 +126,7 @@ FROM match_player AS mp
 WHERE mi.match_outcome = 'TeamWin'
     AND mi.match_mode IN ('Ranked', 'Unranked')
     AND mi.game_mode = 'Normal'
-    AND mi.start_time BETWEEN '2024-08-01' AND now() - INTERVAL 1 WEEK
+    AND mi.start_time BETWEEN '2024-08-01' AND now() - INTERVAL 2 DAY
     AND mp.account_id > 0
     AND (mp.match_id, mp.account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
 GROUP BY mp.account_id
