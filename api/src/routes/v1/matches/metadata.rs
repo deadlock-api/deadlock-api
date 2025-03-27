@@ -42,12 +42,12 @@ async fn fetch_match_metadata_raw(
     .await;
     if let Ok(data) = results.0 {
         debug!("Match metadata found in cache");
-        counter!("metadata.cache.hit", "source" => "salt").increment(1);
+        counter!("metadata_fetch", "s3" => "minio", "source" => "salt").increment(1);
         return Ok(data);
     }
     if let Ok(data) = results.1 {
         debug!("Match metadata found in cache, hltv");
-        counter!("metadata.cache.hit", "source" => "hltv").increment(1);
+        counter!("metadata_fetch", "s3" => "minio", "source" => "hltv").increment(1);
         return Ok(data);
     }
 
@@ -59,12 +59,12 @@ async fn fetch_match_metadata_raw(
     .await;
     if let Ok(data) = results.0 {
         debug!("Match metadata found on s3");
-        counter!("metadata.s3.hit", "source" => "salt").increment(1);
+        counter!("metadata_fetch", "s3" => "hetzner", "source" => "salt").increment(1);
         return Ok(data);
     }
     if let Ok(data) = results.1 {
         debug!("Match metadata found on s3, hltv");
-        counter!("metadata.s3.hit", "source" => "hltv").increment(1);
+        counter!("metadata_fetch", "s3" => "hetzner", "source" => "hltv").increment(1);
         return Ok(data);
     }
 
