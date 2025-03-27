@@ -197,6 +197,10 @@ async fn push_meta_to_object_store(
     let p_str = format!("/ingest/metadata/{match_id}.meta_hltv.bz2");
     let p = object_store::path::Path::from(p_str.clone());
     store.put(&p, output.clone().into()).await?;
+
+    // Push to cache
+    let p_str = format!("{match_id}.meta_hltv.bz2");
+    let p = object_store::path::Path::from(p_str.clone());
     if let Err(e) = cache_store.put(&p, output.into()).await {
         warn!("[{label} {match_id}] Got error writing meta to cache store: {:?}", e);
     }
