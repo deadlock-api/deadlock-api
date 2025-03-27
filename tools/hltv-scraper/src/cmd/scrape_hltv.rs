@@ -15,7 +15,7 @@ use prost::Message;
 use reqwest::Url;
 use serde_json::json;
 use tokio::io::AsyncWriteExt as _;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
 use crate::cmd::{
@@ -38,6 +38,8 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 
     let aws_store = common::get_store()?;
     let store = Arc::new(aws_store);
+    let aws_cache_store = common::get_cache_store()?;
+    let cache_store = Arc::new(aws_cache_store);
 
     loop {
         let matches_res = match spec_client.get(base_url.join("matches")?).send().await {
@@ -92,6 +94,7 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
         download_task(
             base_url.clone(),
             store.clone(),
+            cache_store.clone(),
             currently_downloading.clone(),
             smi,
         );
@@ -103,6 +106,7 @@ pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 fn download_task(
     base_url: Url,
     store: Arc<impl ObjectStore>,
+    cache_store: Arc<impl ObjectStore>,
     currently_downloading: Arc<DashMap<u64, bool>>,
     smi: SpectatedMatchInfo,
 ) {
@@ -132,8 +136,14 @@ fn download_task(
 
         if did_finish_match {
             let match_metadata = match_metadata.unwrap();
-            if let Err(e) =
-                push_meta_to_object_store(store, &match_metadata, &smi.match_type, match_id).await
+            if let Err(e) = push_meta_to_object_store(
+                store,
+                cache_store,
+                &match_metadata,
+                &smi.match_type,
+                match_id,
+            )
+            .await
             {
                 error!(
                     "[{label} {match_id}] Got error writing meta to object store: {:?}",
@@ -161,6 +171,7 @@ fn download_task(
 
 async fn push_meta_to_object_store(
     store: Arc<impl ObjectStore>,
+    cache_store: Arc<impl ObjectStore>,
     match_metadata: &CMsgMatchMetaData,
     match_type: &SpectatedMatchType,
     match_id: u64,
@@ -185,7 +196,10 @@ async fn push_meta_to_object_store(
 
     let p_str = format!("/ingest/metadata/{match_id}.meta_hltv.bz2");
     let p = object_store::path::Path::from(p_str.clone());
-    store.put(&p, output.into()).await?;
+    store.put(&p, output.clone().into()).await?;
+    if let Err(e) = cache_store.put(&p, output.into()).await {
+        warn!("[{label} {match_id}] Got error writing meta to cache store: {:?}", e);
+    }
 
     info!("[{label} {match_id}] Wrote meta to {p_str}!");
     Ok(())
