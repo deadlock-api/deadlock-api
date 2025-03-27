@@ -10,6 +10,7 @@ use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use futures::future::join;
+use metrics::counter;
 use object_store::ObjectStore;
 use prost::Message;
 use std::time::Duration;
@@ -41,10 +42,12 @@ async fn fetch_match_metadata_raw(
     .await;
     if let Ok(data) = results.0 {
         debug!("Match metadata found in cache");
+        counter!("metadata.cache.hit", "source" => "salt").increment(1);
         return Ok(data);
     }
     if let Ok(data) = results.1 {
         debug!("Match metadata found in cache, hltv");
+        counter!("metadata.cache.hit", "source" => "hltv").increment(1);
         return Ok(data);
     }
 
@@ -56,10 +59,12 @@ async fn fetch_match_metadata_raw(
     .await;
     if let Ok(data) = results.0 {
         debug!("Match metadata found on s3");
+        counter!("metadata.s3.hit", "source" => "salt").increment(1);
         return Ok(data);
     }
     if let Ok(data) = results.1 {
         debug!("Match metadata found on s3, hltv");
+        counter!("metadata.s3.hit", "source" => "hltv").increment(1);
         return Ok(data);
     }
 
@@ -74,6 +79,7 @@ async fn fetch_match_metadata_raw(
         ))
         .send()
         .await
+        .and_then(|resp| resp.error_for_status())
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to fetch match metadata: {e}"),
         })?
