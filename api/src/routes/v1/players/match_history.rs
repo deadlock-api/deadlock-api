@@ -51,7 +51,7 @@ pub async fn fetch_match_history_from_clickhouse(
     tryhard::retry_fn(||
             async {
                 ch_client.query(
-                    "SELECT ?fields FROM player_match_history FINAL WHERE account_id = ? ORDER BY start_time DESC"
+                    "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? ORDER BY start_time DESC"
                 )
                     .bind(account_id)
                     .fetch_all()
