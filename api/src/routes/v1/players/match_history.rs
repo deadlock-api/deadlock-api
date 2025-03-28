@@ -25,7 +25,7 @@ use valveprotos::deadlock::{
     c_msg_client_to_gc_get_match_history_response,
 };
 
-pub async fn insert_match_history_to_clickhouse(
+pub async fn insert_match_history_to_ch(
     ch_client: &clickhouse::Client,
     match_history: &[PlayerMatchHistoryEntry],
 ) -> clickhouse::error::Result<()> {
@@ -222,9 +222,16 @@ pub async fn match_history(
         .cloned()
         .collect_vec();
     if !ch_missing_entries.is_empty() {
-        let insert_to_ch = insert_match_history_to_clickhouse(ch_client, &ch_missing_entries).await;
-        if let Err(e) = insert_to_ch {
-            warn!("Failed to insert player match history to ClickHouse: {e:?}")
+        let ch_client = state.clickhouse_client;
+        let handle = tokio::spawn(async move {
+            let result = insert_match_history_to_ch(&ch_client, &ch_missing_entries).await;
+            if let Err(e) = result {
+                warn!("Failed to insert player match history to ClickHouse: {e:?}")
+            };
+        })
+        .await;
+        if let Err(e) = handle {
+            warn!("Failed to spawn task to insert player match history to ClickHouse: {e:?}");
         };
     }
 
