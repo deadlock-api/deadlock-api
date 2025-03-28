@@ -202,7 +202,10 @@ async fn push_meta_to_object_store(
     let p_str = format!("{match_id}.meta_hltv.bz2");
     let p = object_store::path::Path::from(p_str.clone());
     if let Err(e) = cache_store.put(&p, output.into()).await {
-        warn!("[{label} {match_id}] Got error writing meta to cache store: {:?}", e);
+        warn!(
+            "[{label} {match_id}] Got error writing meta to cache store: {:?}",
+            e
+        );
     }
 
     info!("[{label} {match_id}] Wrote meta to {p_str}!");
