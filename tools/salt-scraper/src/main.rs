@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
                 }
             })
-            .buffer_unordered(4)
+            .buffer_unordered(2)
             .collect::<Vec<_>>()
             .await;
     }
