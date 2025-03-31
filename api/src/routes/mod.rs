@@ -1,11 +1,14 @@
 use crate::routes::v1::analytics::hero_stats;
 use crate::routes::v1::players::match_history;
 use crate::state::AppState;
+use axum::extract::{MatchedPath, Request};
 use axum::routing::get;
+use querystring::querify;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
-use tracing::Level;
+use tracing::{Level, span};
 use utoipa_axum::router::OpenApiRouter;
+use uuid::Uuid;
 
 mod v1;
 
@@ -23,7 +26,26 @@ pub fn router() -> OpenApiRouter<AppState> {
         .nest("/v1", v1::router())
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
+                .make_span_with(|request: &Request<_>| {
+                    let method = request.method();
+
+                    let api_key = request
+                        .headers()
+                        .get("X-API-Key")
+                        .and_then(|v| v.to_str().ok())
+                        .map(String::from)
+                        .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(&s)).ok());
+
+                    let path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+
+                    let mut query = querify(request.uri().query().unwrap_or_default());
+                    query.retain(|d| d.0 != "api_key"); // remove api_key from query
+
+                    span!(Level::INFO, "request", %method, path, ?query, ?api_key)
+                })
                 .on_response(trace::DefaultOnResponse::new().level(Level::INFO))
                 .on_failure(trace::DefaultOnFailure::new().level(Level::ERROR)),
         )
