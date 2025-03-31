@@ -1,10 +1,10 @@
 use anyhow::bail;
+use futures::StreamExt;
 use metrics::counter;
 use models::{MatchIdQueryResult, MatchSalt};
 use reqwest::{Error, Response};
 use std::sync::LazyLock;
 use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
@@ -22,15 +22,18 @@ static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
         .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
         .unwrap_or(36_000)
 });
+static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .unwrap()
+});
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
     common::init_metrics()?;
 
-    let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()?;
     let ch_client = common::get_ch_client()?;
 
     loop {
@@ -70,20 +73,23 @@ async fn main() -> anyhow::Result<()> {
         //         .await?;
         //     recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
         // }
-        for match_id in recent_matches {
-            match fetch_match(&http_client, match_id).await {
-                Ok(_) => info!("Fetched match {}", match_id),
-                Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
-            }
-            sleep(Duration::from_millis(1000)).await;
-        }
+        futures::stream::iter(recent_matches)
+            .map(|match_id| async move {
+                match fetch_match(match_id).await {
+                    Ok(_) => info!("Fetched match {}", match_id),
+                    Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
+                }
+            })
+            .buffer_unordered(10)
+            .collect::<Vec<_>>()
+            .await;
     }
 }
 
-#[instrument(skip(http_client))]
-async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Result<()> {
+#[instrument()]
+async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
     // Fetch Salts
-    let salts = tryhard::retry_fn(|| fetch_salts(http_client, match_id))
+    let salts = tryhard::retry_fn(|| fetch_salts(match_id))
         .retries(10)
         .fixed_backoff(Duration::from_secs(1))
         .max_delay(Duration::from_secs(20))
@@ -112,7 +118,7 @@ async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Re
     debug!("Parsed salts");
 
     // Ingest Salts
-    match ingest_salts(http_client, match_id, salts, username.into()).await {
+    match ingest_salts(match_id, salts, username.into()).await {
         Ok(_) => {
             counter!("salt_scraper.ingest_salt.success").increment(1);
             debug!("Ingested salts");
@@ -127,7 +133,6 @@ async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Re
 }
 
 async fn fetch_salts(
-    http_client: &reqwest::Client,
     match_id: u64,
 ) -> reqwest::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
     let msg = CMsgClientToGcGetMatchMetaData {
@@ -135,7 +140,7 @@ async fn fetch_salts(
         ..Default::default()
     };
     common::call_steam_proxy(
-        http_client,
+        &HTTP_CLIENT,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         msg,
         Some(&["GetMatchMetaData"]),
@@ -147,7 +152,6 @@ async fn fetch_salts(
 }
 
 async fn ingest_salts(
-    http_client: &reqwest::Client,
     match_id: u64,
     salts: CMsgClientToGcGetMatchMetaDataResponse,
     username: Option<String>,
@@ -159,7 +163,7 @@ async fn ingest_salts(
         replay_salt: salts.replay_salt.unwrap_or(0),
         username,
     }];
-    http_client
+    HTTP_CLIENT
         .post("https://api.deadlock-api.com/v1/matches/salts")
         .header("X-API-Key", INTERNAL_DEADLOCK_API_KEY.clone())
         .json(&salts)
