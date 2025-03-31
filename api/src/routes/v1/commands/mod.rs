@@ -7,7 +7,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Commands", description = "Command related endpoints")))]
+#[openapi(tags((
+    name = "Commands",
+    description = "Endpoints to resolve commands and variables for the [Deadlock Streamkit](https://streamkit.deadlock-api.com/)."
+)))]
 pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {

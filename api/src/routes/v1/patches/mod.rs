@@ -7,7 +7,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Patches", description = "Patches related endpoints")))]
+#[openapi(tags((
+    name = "Patches",
+    description = "Endpoints that return data about game patches."
+)))]
 pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {
