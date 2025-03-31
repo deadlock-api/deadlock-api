@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
                 Ok(_) => info!("Fetched match {}", match_id),
                 Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
             }
-            sleep(Duration::from_millis(1500)).await;
+            sleep(Duration::from_millis(1000)).await;
         }
     }
 }
