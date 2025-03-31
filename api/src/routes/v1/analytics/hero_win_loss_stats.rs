@@ -153,13 +153,7 @@ async fn get_hero_win_loss_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Win Loss Stats",
-    description = r#"
-Retrieves overall win/loss and performance statistics for each hero based on historical match data.
-
-This endpoint analyzes completed matches. For each hero, it calculates their total wins, losses, matches played, kills, deaths, and assists across all matches.
-
-Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
-    "#
+    description = "Retrieves overall win/loss and performance statistics for each hero based on historical match data."
 )]
 pub async fn hero_win_loss_stats(
     Query(query): Query<HeroWinLossStatsQuery>,
