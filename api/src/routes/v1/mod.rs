@@ -1,7 +1,7 @@
 use crate::state::AppState;
 use utoipa_axum::router::OpenApiRouter;
 
-mod analytics;
+pub mod analytics;
 mod builds;
 mod commands;
 mod info;

@@ -1,3 +1,4 @@
+use crate::routes::v1::analytics::hero_stats;
 use crate::routes::v1::players::match_history;
 use crate::state::AppState;
 use axum::routing::get;
@@ -14,6 +15,10 @@ pub fn router() -> OpenApiRouter<AppState> {
         .route(
             "/v2/players/{account_id}/match-history",
             get(match_history::match_history_v2),
+        )
+        .route(
+            "/v1/analytics/hero-win-loss-stats",
+            get(hero_stats::hero_stats),
         )
         .nest("/v1", v1::router())
         .layer(

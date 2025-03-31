@@ -12,7 +12,7 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
-pub struct HeroWinLossStatsQuery {
+pub struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -41,7 +41,7 @@ pub struct HeroWinLossStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct HeroWinLossStats {
+pub struct AnalyticsHeroStats {
     pub hero_id: u32,
     pub wins: u64,
     pub losses: u64,
@@ -63,17 +63,17 @@ pub struct HeroWinLossStats {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<HeroWinLossStats>>",
+    ty = "TimedCache<String, Vec<AnalyticsHeroStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
     convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
     key = "String"
 )]
-async fn get_hero_win_loss_stats(
+async fn get_hero_stats(
     ch_client: &clickhouse::Client,
-    query: HeroWinLossStatsQuery,
-) -> APIResult<Vec<HeroWinLossStats>> {
+    query: HeroStatsQuery,
+) -> APIResult<Vec<AnalyticsHeroStats>> {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -159,31 +159,31 @@ async fn get_hero_win_loss_stats(
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero win loss stats: {}", e);
+        warn!("Failed to fetch hero stats: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch hero win loss stats: {}", e),
+            message: format!("Failed to fetch hero stats: {}", e),
         }
     })
 }
 
 #[utoipa::path(
     get,
-    path = "/hero-win-loss-stats",
-    params(HeroWinLossStatsQuery),
+    path = "/hero-stats",
+    params(HeroStatsQuery),
     responses(
-        (status = OK, description = "Hero Win Loss Stats", body = [HeroWinLossStats]),
+        (status = OK, description = "Hero Stats", body = [AnalyticsHeroStats]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero win loss stats")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero stats")
     ),
     tags = ["Analytics"],
-    summary = "Hero Win Loss Stats",
-    description = "Retrieves overall win/loss and performance statistics for each hero based on historical match data."
+    summary = "Hero Stats",
+    description = "Retrieves performance statistics for each hero based on historical match data."
 )]
-pub async fn hero_win_loss_stats(
-    Query(query): Query<HeroWinLossStatsQuery>,
+pub async fn hero_stats(
+    Query(query): Query<HeroStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_win_loss_stats(&state.clickhouse_client, query)
+    get_hero_stats(&state.clickhouse_client, query)
         .await
         .map(Json)
 }
