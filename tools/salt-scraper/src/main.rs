@@ -90,9 +90,8 @@ async fn main() -> anyhow::Result<()> {
 async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
     // Fetch Salts
     let salts = tryhard::retry_fn(|| fetch_salts(match_id))
-        .retries(10)
+        .retries(30)
         .fixed_backoff(Duration::from_secs(1))
-        .max_delay(Duration::from_secs(20))
         .await;
     let (username, salts) = match salts {
         Ok(r) => {
