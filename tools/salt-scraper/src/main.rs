@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
         // }
         for match_id in recent_matches {
             match fetch_match(&http_client, match_id).await {
-                Ok(_) => debug!("Fetched match {}", match_id),
+                Ok(_) => info!("Fetched match {}", match_id),
                 Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
             }
             sleep(Duration::from_millis(1500)).await;
@@ -91,7 +91,7 @@ async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Re
     let (username, salts) = match salts {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
-            info!("Fetched salts");
+            debug!("Fetched salts");
             r
         }
         Err(e) => {
@@ -115,7 +115,7 @@ async fn fetch_match(http_client: &reqwest::Client, match_id: u64) -> anyhow::Re
     match ingest_salts(http_client, match_id, salts, username.into()).await {
         Ok(_) => {
             counter!("salt_scraper.ingest_salt.success").increment(1);
-            info!("Ingested salts");
+            debug!("Ingested salts");
             Ok(())
         }
         Err(e) => {
