@@ -49,6 +49,17 @@ pub struct HeroWinLossStats {
     pub total_kills: u64,
     pub total_deaths: u64,
     pub total_assists: u64,
+    pub total_net_worth: u64,
+    pub total_last_hits: u64,
+    pub total_denies: u64,
+    pub total_player_damage: u64,
+    pub total_player_damage_taken: u64,
+    pub total_boss_damage: u64,
+    pub total_creep_damage: u64,
+    pub total_neutral_damage: u64,
+    pub total_max_health: u64,
+    pub total_shots_hit: u64,
+    pub total_shots_missed: u64,
 }
 
 #[cached(
@@ -125,7 +136,18 @@ async fn get_hero_win_loss_stats(
         wins + losses AS matches,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
-        sum(assists) AS total_assists
+        sum(assists) AS total_assists,
+        sum(net_worth) AS total_net_worth,
+        sum(last_hits) AS total_last_hits,
+        sum(denies) AS total_denies,
+        sum(arrayMax(stats.player_damage)) AS total_player_damage,
+        sum(arrayMax(stats.player_damage_taken)) AS total_player_damage_taken,
+        sum(arrayMax(stats.boss_damage)) AS total_boss_damage,
+        sum(arrayMax(stats.creep_damage)) AS total_creep_damage,
+        sum(arrayMax(stats.neutral_damage)) AS total_neutral_damage,
+        sum(arrayMax(stats.max_health)) AS total_max_health,
+        sum(arrayMax(stats.shots_hit)) AS total_shots_hit,
+        sum(arrayMax(stats.shots_missed)) AS total_shots_missed
     FROM match_player FINAL
     {}
     WHERE match_id IN t_matches
