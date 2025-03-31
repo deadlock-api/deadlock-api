@@ -106,7 +106,7 @@ async fn get_hero_win_loss_stats(
     let player_filters = if player_filters.is_empty() {
         "".to_string()
     } else {
-        format!(" AND {}", player_filters.join(" AND "))
+        format!(" PREWHERE {}", player_filters.join(" AND "))
     };
     let query = format!(
         r#"
@@ -127,8 +127,10 @@ async fn get_hero_win_loss_stats(
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists
     FROM match_player FINAL
-    WHERE match_id IN t_matches {}
+    {}
+    WHERE match_id IN t_matches
     GROUP BY hero_id
+    HAVING COUNT() > 1
     ORDER BY hero_id
     "#,
         info_filters, player_filters
