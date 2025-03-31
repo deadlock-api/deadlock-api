@@ -16,7 +16,7 @@ clickhouse = "0.13.2"
 sqlx = { version = "0.8.3", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.16.0", features = ["v4"] }
 cached = { version = "0.55.1", features = ["async", "serde", "tokio"] }
-axum = { version = "0.8.1", features = ["http2"] }
+axum = { version = "0.8.3", features = ["http2"] }
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.3.1", features = ["axum_extras", "chrono"] }
 serde = { version = "1.0.219", features = ["derive"] }
@@ -46,5 +46,5 @@ strum_macros = "0.27.1"
 hmac = "0.12.1"
 sha2 = "0.10.8"
 hex = "0.4.3"
-axum-extra = { version = "0.10.0", features = ["query"] }
+axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.1"
