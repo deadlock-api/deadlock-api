@@ -103,11 +103,11 @@ pub struct BulkMatchMetadataQuery {
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
     #[serde(default)]
-    #[param(inline, default = "SortKey::MatchId")]
+    #[param(inline)]
     order_by: SortKey,
     /// The direction to order the results by.
     #[serde(default)]
-    #[param(inline, default = "SortDirection::Desc")]
+    #[param(inline)]
     order_direction: SortDirection,
     /// The maximum number of matches to return.
     #[serde(default = "default_limit")]
