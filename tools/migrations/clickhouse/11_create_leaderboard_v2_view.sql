@@ -8,7 +8,6 @@ WITH last_player_cards AS (SELECT account_id, ranked_badge_level
                            ORDER BY created_at DESC
                            LIMIT 1 BY account_id)
 SELECT pmh.account_id                                 as account_id,
-       anyLast(region_mode)                           as region_mode,
        rank() OVER (ORDER BY ranked_badge_level DESC) AS rank,
        any(pc.ranked_badge_level)                     as ranked_badge_level,
        SUM(pmh.match_result)                          AS wins,
@@ -17,7 +16,6 @@ SELECT pmh.account_id                                 as account_id,
        SUM(pmh.player_deaths)                         AS deaths,
        SUM(pmh.player_assists)                        AS assists
 FROM player_match_history pmh FINAL
-      INNER JOIN player ON player.account_id = pmh.account_id
       INNER JOIN last_player_cards pc ON pmh.account_id = pc.account_id
 WHERE pmh.match_mode IN ('Ranked', 'Unranked')
 GROUP BY pmh.account_id
