@@ -1,8 +1,8 @@
 use crate::config::Config;
 use clap::Parser;
 use derive_more::From;
-use object_store::ClientOptions;
 use object_store::aws::AmazonS3Builder;
+use object_store::{BackoffConfig, ClientOptions, RetryConfig};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use std::fmt::Display;
@@ -76,6 +76,15 @@ impl AppState {
                     .with_allow_http2()
                     .with_timeout(Duration::from_secs(5)),
             )
+            .with_retry(RetryConfig {
+                backoff: BackoffConfig {
+                    init_backoff: Duration::from_millis(10),
+                    max_backoff: Duration::from_secs(3),
+                    base: 2.,
+                },
+                max_retries: 3,
+                retry_timeout: Duration::from_secs(5),
+            })
             .build()?;
 
         // Create a Redis connection pool
