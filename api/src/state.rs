@@ -60,6 +60,15 @@ impl AppState {
                     .with_allow_http2()
                     .with_timeout(Duration::from_secs(5)),
             )
+            .with_retry(RetryConfig {
+                backoff: BackoffConfig {
+                    init_backoff: Duration::from_millis(10),
+                    max_backoff: Duration::from_secs(3),
+                    base: 2.,
+                },
+                max_retries: 3,
+                retry_timeout: Duration::from_secs(5),
+            })
             .build()?;
 
         // Create an S3 cache client
