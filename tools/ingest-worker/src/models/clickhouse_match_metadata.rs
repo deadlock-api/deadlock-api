@@ -1,9 +1,6 @@
-use crate::models::enums::{
-    CombatType, GameMode, MatchMode, MatchOutcome, MoveType, Objective, Team,
-};
+use crate::models::enums::{GameMode, MatchMode, MatchOutcome, Objective, Team};
 use clickhouse::Row;
 use serde::Serialize;
-use valveprotos::deadlock::CMsgMatchPlayerPathsData;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::MatchInfo;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::Players;
 
@@ -270,18 +267,10 @@ pub struct ClickhouseMatchPlayer {
     pub stats_damage_mitigated: Vec<u32>,
     #[serde(rename = "stats.level")]
     pub stats_level: Vec<u32>,
-    pub x_pos: Vec<u32>,
-    pub y_pos: Vec<u32>,
-    pub alive: Vec<bool>,
-    pub health: Vec<u32>,
-    pub combat_type: Vec<CombatType>,
-    pub move_type: Vec<MoveType>,
 }
 
-impl From<(u64, bool, Players, Option<CMsgMatchPlayerPathsData>)> for ClickhouseMatchPlayer {
-    fn from(
-        (match_id, won, value, match_paths): (u64, bool, Players, Option<CMsgMatchPlayerPathsData>),
-    ) -> Self {
+impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
+    fn from((match_id, won, value): (u64, bool, Players)) -> Self {
         Self {
             match_id,
             account_id: value.account_id(),
@@ -413,66 +402,6 @@ impl From<(u64, bool, Players, Option<CMsgMatchPlayerPathsData>)> for Clickhouse
             book_reward_xp_amount: value.book_rewards.iter().map(|v| v.xp_amount()).collect(),
             book_reward_book_id: value.book_rewards.iter().map(|v| v.book_id()).collect(),
             abandon_match_time_s: value.abandon_match_time_s(),
-            x_pos: match_paths
-                .as_ref()
-                .and_then(|paths| {
-                    paths
-                        .paths
-                        .iter()
-                        .find(|p| p.player_slot == value.player_slot)
-                })
-                .map(|p| p.x_pos.clone())
-                .unwrap_or_default(),
-            y_pos: match_paths
-                .as_ref()
-                .and_then(|paths| {
-                    paths
-                        .paths
-                        .iter()
-                        .find(|p| p.player_slot == value.player_slot)
-                })
-                .map(|p| p.y_pos.clone())
-                .unwrap_or_default(),
-            alive: match_paths
-                .as_ref()
-                .and_then(|paths| {
-                    paths
-                        .paths
-                        .iter()
-                        .find(|p| p.player_slot == value.player_slot)
-                })
-                .map(|p| p.alive.clone())
-                .unwrap_or_default(),
-            health: match_paths
-                .as_ref()
-                .and_then(|paths| {
-                    paths
-                        .paths
-                        .iter()
-                        .find(|p| p.player_slot == value.player_slot)
-                })
-                .map(|p| p.health.clone())
-                .unwrap_or_default(),
-            combat_type: match_paths
-                .as_ref()
-                .and_then(|paths| {
-                    paths
-                        .paths
-                        .iter()
-                        .find(|p| p.player_slot == value.player_slot)
-                })
-                .map(|p| p.combat_type.iter().map(|m| (*m).into()).collect())
-                .unwrap_or_default(),
-            move_type: match_paths
-                .as_ref()
-                .and_then(|paths| {
-                    paths
-                        .paths
-                        .iter()
-                        .find(|p| p.player_slot == value.player_slot)
-                })
-                .map(|p| p.move_type.iter().map(|m| (*m).into()).collect())
-                .unwrap_or_default(),
         }
     }
 }

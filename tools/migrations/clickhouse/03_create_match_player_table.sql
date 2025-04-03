@@ -84,26 +84,5 @@ CREATE TABLE IF NOT EXISTS match_player
         heal_lost UInt32,
         damage_mitigated UInt32,
         level UInt32
-    ),
-    x_pos: Array (UInt32) default [],
-    y_pos: Array (UInt32) default [],
-    alive: Array (Bool) default [],
-    health: Array (UInt32) default [],
-    combat_type: Array (Enum8 (
-        'Out' = 0,
-        'Player' = 1,
-        'EnemyNpc' = 2,
-        'Neutral' = 3,
-    )) default [],
-    move_type: Array (Enum8 (
-        'Normal' = 0,
-        'Ability' = 1,
-        'AbilityDebuff' = 2,
-        'GroundDash' = 3,
-        'Slide' = 4,
-        'RopeClimbing' = 5,
-        'Ziplining' = 6,
-        'InAir' = 7,
-        'AirDash' = 8,
-    )) default []
+    )
 ) ENGINE = ReplacingMergeTree ORDER BY (match_id, account_id);

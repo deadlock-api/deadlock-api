@@ -1,6 +1,5 @@
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::EMatchOutcome;
-use valveprotos::deadlock::c_msg_match_player_paths_data::{ECombatType, EMoveType};
 use valveprotos::deadlock::{
     ECitadelGameMode, ECitadelLobbyTeam, ECitadelMatchMode, ECitadelTeamObjective,
 };
@@ -195,85 +194,6 @@ impl From<u8> for RegionMode {
             4 => RegionMode::Russia,
             5 => RegionMode::Oceania,
             _ => RegionMode::Row,
-        }
-    }
-}
-
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
-pub enum CombatType {
-    Out = 0,
-    Player = 1,
-    EnemyNpc = 2,
-    Neutral = 3,
-}
-
-impl From<ECombatType> for CombatType {
-    fn from(value: ECombatType) -> Self {
-        match value {
-            ECombatType::KECombatTypeOut => Self::Out,
-            ECombatType::KECombatTypePlayer => Self::Player,
-            ECombatType::KECombatTypeEnemyNpc => Self::EnemyNpc,
-            ECombatType::KECombatTypeNeutral => Self::Neutral,
-        }
-    }
-}
-
-impl From<i32> for CombatType {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => CombatType::Out,
-            1 => CombatType::Player,
-            2 => CombatType::EnemyNpc,
-            3 => CombatType::Neutral,
-            _ => CombatType::Out,
-        }
-    }
-}
-
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
-pub enum MoveType {
-    Normal = 0,
-    Ability = 1,
-    AbilityDebuff = 2,
-    GroundDash = 3,
-    Slide = 4,
-    RopeClimbing = 5,
-    Ziplining = 6,
-    InAir = 7,
-    AirDash = 8,
-}
-
-impl From<EMoveType> for MoveType {
-    fn from(value: EMoveType) -> Self {
-        match value {
-            EMoveType::KEMoveTypeNormal => Self::Normal,
-            EMoveType::KEMoveTypeAbility => Self::Ability,
-            EMoveType::KEMoveTypeAbilityDebuff => Self::AbilityDebuff,
-            EMoveType::KEMoveTypeGroundDash => Self::GroundDash,
-            EMoveType::KEMoveTypeSlide => Self::Slide,
-            EMoveType::KEMoveTypeRopeClimbing => Self::RopeClimbing,
-            EMoveType::KEMoveTypeZiplining => Self::Ziplining,
-            EMoveType::KEMoveTypeInAir => Self::InAir,
-            EMoveType::KEMoveTypeAirDash => Self::AirDash,
-        }
-    }
-}
-
-impl From<i32> for MoveType {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => MoveType::Normal,
-            1 => MoveType::Ability,
-            2 => MoveType::AbilityDebuff,
-            3 => MoveType::GroundDash,
-            4 => MoveType::Slide,
-            5 => MoveType::RopeClimbing,
-            6 => MoveType::Ziplining,
-            7 => MoveType::InAir,
-            8 => MoveType::AirDash,
-            _ => MoveType::Normal,
         }
     }
 }

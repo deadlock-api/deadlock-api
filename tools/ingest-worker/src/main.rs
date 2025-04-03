@@ -217,7 +217,6 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
                     .and_then(|t| p.team.map(|pt| pt == t))
                     .unwrap(),
                 p,
-                match_info.match_paths.clone(),
             )
                 .into()
         });
