@@ -58,6 +58,8 @@ pub enum ScoreboardQuerySortDirection {
 
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct ScoreboardQuery {
+    /// Filter matches based on the hero ID.
+    hero_id: Option<u32>,
     /// The field to sort by.
     #[serde(default)]
     #[param(inline)]
@@ -93,16 +95,27 @@ async fn get_scoreboard(
     ch_client: &clickhouse::Client,
     query: ScoreboardQuery,
 ) -> APIResult<Vec<ScoreboardEntry>> {
+    let mut player_filters = vec![];
+    if let Some(hero_id) = query.hero_id {
+        player_filters.push(format!("hero_id = {}", hero_id));
+    }
+    let player_filters = if !player_filters.is_empty() {
+        format!(" WHERE {} ", player_filters.join(" AND "))
+    } else {
+        "".to_owned()
+    };
     let query = format!(
         r#"
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value
 FROM match_player
+{}
 GROUP BY account_id
 ORDER BY value {}
 LIMIT {} OFFSET {}
     "#,
         query.start.unwrap_or_default() + 1,
         query.sort_by.get_select_clause(),
+        player_filters,
         query.sort_direction,
         query.limit.unwrap_or_default(),
         query.start.unwrap_or_default() + 1,
