@@ -69,9 +69,6 @@ pub struct BulkMatchMetadataQuery {
     /// Include player death details in the response.
     #[serde(default)]
     include_player_death_details: bool,
-    /// Include player match paths in the response.
-    #[serde(default)]
-    include_player_match_paths: bool,
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
@@ -201,8 +198,7 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let has_player_fields = query.include_player_info
         || query.include_player_items
         || query.include_player_stats
-        || query.include_player_death_details
-        || query.include_player_match_paths;
+        || query.include_player_death_details;
     if has_player_fields {
         let mut player_select_fields = vec!["account_id", "hero_id", "player_slot", "team"];
         if query.include_player_info {
@@ -228,17 +224,6 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         }
         if query.include_player_death_details {
             player_select_fields.push("death_details");
-        }
-        if query.include_player_match_paths {
-            player_select_fields.extend(vec![
-                "won",
-                "x_pos",
-                "y_pos",
-                "alive",
-                "health",
-                "combat_type",
-                "move_type",
-            ]);
         }
         let player_select_fields = format!(
             "groupUniqArray(12)(({})::JSON) as players",
