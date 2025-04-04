@@ -48,7 +48,10 @@ async fn main() -> Result<()> {
     loop {
         match fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &limiter).await {
             Ok(_) => info!("Updated Steam profiles"),
-            Err(e) => error!("Error updating Steam profiles: {}", e),
+            Err(e) => {
+                error!("Error updating Steam profiles: {}", e);
+                continue;
+            }
         }
 
         debug!("Sleeping for {:?} before next update", *FETCH_INTERVAL);
