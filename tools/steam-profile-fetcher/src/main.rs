@@ -189,7 +189,7 @@ async fn save_profiles(
     let mut query_builder = sqlx::QueryBuilder::new(
         "INSERT INTO steam_profiles (
             account_id, personaname, profileurl,
-            avatar, personastate, realname, loccountrycode
+            avatar, personastate, realname, countrycode
         ) ",
     );
 

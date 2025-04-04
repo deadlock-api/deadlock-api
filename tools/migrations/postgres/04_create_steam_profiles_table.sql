@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS steam_profiles
     avatar TEXT,
     personastate INTEGER,
     realname VARCHAR(255),
-    loccountrycode VARCHAR(8) NULL,
+    countrycode VARCHAR(8) NULL,
     last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
