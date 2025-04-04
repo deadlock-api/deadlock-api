@@ -209,12 +209,9 @@ async fn save_profiles(
             personaname = EXCLUDED.personaname,
             profileurl = EXCLUDED.profileurl,
             avatar = EXCLUDED.avatar,
-            avatarmedium = EXCLUDED.avatarmedium,
-            avatarfull = EXCLUDED.avatarfull,
             personastate = EXCLUDED.personastate,
-            communityvisibilitystate = EXCLUDED.communityvisibilitystate,
             realname = EXCLUDED.realname,
-            loccountrycode = EXCLUDED.loccountrycode",
+            countrycode = EXCLUDED.loccountrycode",
     );
 
     let query = query_builder.build();
