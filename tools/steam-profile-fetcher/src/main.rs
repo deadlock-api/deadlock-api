@@ -211,7 +211,7 @@ async fn save_profiles(
             avatar = EXCLUDED.avatar,
             personastate = EXCLUDED.personastate,
             realname = EXCLUDED.realname,
-            countrycode = EXCLUDED.loccountrycode",
+            countrycode = EXCLUDED.countrycode",
     );
 
     let query = query_builder.build();
