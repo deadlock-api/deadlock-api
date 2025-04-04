@@ -189,8 +189,7 @@ async fn save_profiles(
     let mut query_builder = sqlx::QueryBuilder::new(
         "INSERT INTO steam_profiles (
             account_id, personaname, profileurl,
-            avatar, avatarmedium, avatarfull, personastate, communityvisibilitystate,
-            realname, loccountrycode
+            avatar, personastate, realname, loccountrycode
         ) ",
     );
 
@@ -199,10 +198,7 @@ async fn save_profiles(
             .push_bind(&profile.personaname)
             .push_bind(&profile.profileurl)
             .push_bind(&profile.avatar)
-            .push_bind(&profile.avatarmedium)
-            .push_bind(&profile.avatarfull)
             .push_bind(profile.personastate as i32)
-            .push_bind(profile.communityvisibilitystate as i32)
             .push_bind(&profile.realname)
             .push_bind(&profile.loccountrycode);
     });

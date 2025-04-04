@@ -20,12 +20,9 @@ pub struct SteamPlayerSummaryResponseInner {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SteamPlayerSummary {
     pub steamid: String,
-    pub communityvisibilitystate: u8,
     pub personaname: String,
     pub profileurl: String,
     pub avatar: String,
-    pub avatarmedium: String,
-    pub avatarfull: String,
     pub personastate: u8,
     pub realname: Option<String>,
     pub loccountrycode: Option<String>,
