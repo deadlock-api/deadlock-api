@@ -25,6 +25,13 @@ static FETCH_INTERVAL: Lazy<Duration> = Lazy::new(|| {
     )
 });
 
+static REQUESTS_PER_MINUTE: Lazy<usize> = Lazy::new(|| {
+    env::var("REQUESTS_PER_MINUTE")
+        .unwrap_or_else(|_| "10".to_string())
+        .parse()
+        .unwrap_or(10)
+});
+
 static BATCH_SIZE: Lazy<usize> = Lazy::new(|| {
     env::var("BATCH_SIZE")
         .unwrap_or_else(|_| "100".to_string())
@@ -44,7 +51,7 @@ async fn main() -> Result<()> {
     let ch_client = common::get_ch_client()?;
     let pg_client = common::get_pg_client().await?;
 
-    let limiter = RateLimiter::new(20, Duration::from_secs(60));
+    let limiter = RateLimiter::new(*REQUESTS_PER_MINUTE, Duration::from_secs(60));
 
     loop {
         match fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &limiter).await {
