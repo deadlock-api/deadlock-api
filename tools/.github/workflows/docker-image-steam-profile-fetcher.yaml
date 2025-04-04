@@ -1,0 +1,45 @@
+name: docker-image-steam-profile-fetcher
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - 'master'
+    paths:
+    - 'steam-profile-fetcher/**'
+    - 'common/**'
+    - 'Dockerfile'
+    - 'Cargo.{toml,lock}'
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: '0'
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - uses: depot/setup-action@v1
+    - uses: depot/build-push-action@v1
+      with:
+        platforms: linux/arm64
+        push: true
+        tags: ghcr.io/${{ github.repository }}/steam-profile-fetcher:latest
+        project: k7kl7zsmcs
+        build-args: EXE_NAME=steam-profile-fetcher

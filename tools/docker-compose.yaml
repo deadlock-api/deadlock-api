@@ -52,6 +52,13 @@ services:
     environment:
       RUST_LOG: info
 
+  steam-profile-fetcher:
+    build:
+      args:
+        EXE_NAME: steam-profile-fetcher
+    restart: always
+    env_file: .env
+
   builds-fetcher:
     build:
       args:
