@@ -3,8 +3,9 @@ use arl::RateLimiter;
 use chrono::{DateTime, Utc};
 use metrics::{counter, gauge};
 use once_cell::sync::Lazy;
+use sqlx::postgres::PgQueryResult;
 use sqlx::types::chrono;
-use sqlx::PgPool;
+use sqlx::{Error, PgPool};
 use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
@@ -82,15 +83,41 @@ async fn fetch_and_update_profiles(
     for chunk in account_ids.chunks(*BATCH_SIZE) {
         limiter.wait().await;
 
-        let profiles = steam_api::fetch_steam_profiles(http_client, chunk).await?;
-        if profiles.is_empty() {
-            continue;
-        }
+        let profiles = match steam_api::fetch_steam_profiles(http_client, chunk).await {
+            Ok(profiles) => {
+                info!("Fetched {} Steam profiles", profiles.len());
+                counter!("steam_profile_fetcher.fetched_profiles.success")
+                    .increment(profiles.len() as u64);
+                profiles
+            }
+            Err(e) => {
+                error!("Failed to fetch Steam profiles: {}", e);
+                counter!("steam_profile_fetcher.fetched_profiles.failure")
+                    .increment(chunk.len() as u64);
+                continue;
+            }
+        };
 
-        save_profiles(pg_client, &profiles).await?;
-        remaining -= profiles.len();
-        info!("{} account IDs remaining to update", remaining);
-        gauge!("steam_profile_fetcher.account_ids_to_update").decrement(profiles.len() as f64);
+        match save_profiles(pg_client, &profiles).await {
+            Ok(_) => {
+                remaining -= profiles.len();
+                info!(
+                    "Saved {} Steam profiles, {} account IDs remaining to update",
+                    profiles.len(),
+                    remaining
+                );
+                gauge!("steam_profile_fetcher.account_ids_to_update")
+                    .decrement(profiles.len() as f64);
+                counter!("steam_profile_fetcher.saved_profiles.success")
+                    .increment(profiles.len() as u64);
+            }
+            Err(e) => {
+                error!("Failed to save Steam profiles: {}", e);
+                counter!("steam_profile_fetcher.saved_profiles.failure")
+                    .increment(profiles.len() as u64);
+                continue;
+            }
+        }
     }
 
     Ok(())
@@ -147,11 +174,10 @@ async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<HashMap<u32, Dat
 }
 
 #[instrument(skip_all)]
-async fn save_profiles(pg_client: &PgPool, profiles: &[SteamPlayerSummary]) -> Result<()> {
-    if profiles.is_empty() {
-        return Ok(());
-    }
-
+async fn save_profiles(
+    pg_client: &PgPool,
+    profiles: &[SteamPlayerSummary],
+) -> std::result::Result<PgQueryResult, Error> {
     let mut query_builder = sqlx::QueryBuilder::new(
         "INSERT INTO steam_profiles (
             account_id, personaname, profileurl,
@@ -188,9 +214,5 @@ async fn save_profiles(pg_client: &PgPool, profiles: &[SteamPlayerSummary]) -> R
     );
 
     let query = query_builder.build();
-    let result = query.execute(pg_client).await?;
-
-    info!("Saved {} Steam profiles", result.rows_affected());
-    counter!("steam_profile_fetcher.saved_profiles").increment(profiles.len() as u64);
-    Ok(())
+    query.execute(pg_client).await
 }
