@@ -155,9 +155,10 @@ async fn get_ch_account_ids(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<AccountId>> {
     let query = "
-        SELECT DISTINCT account_id
-        FROM match_player
-        WHERE account_id > 0
+SELECT DISTINCT account_id
+FROM match_player
+WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 1 MONTH)
+AND account_id > 0
     ";
     ch_client.query(query).fetch_all().await
 }
