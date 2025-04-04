@@ -148,7 +148,7 @@ pub async fn metadata_raw(
         &state,
         "match_metadata",
         &[
-            RateLimitQuota::ip_limit(200, Duration::from_secs(1)),
+            RateLimitQuota::ip_limit(2000, Duration::from_secs(10)),
             RateLimitQuota::global_limit(700, Duration::from_secs(1)),
         ],
     )
@@ -201,7 +201,7 @@ pub async fn metadata(
         &state,
         "match_metadata",
         &[
-            RateLimitQuota::ip_limit(200, Duration::from_secs(1)),
+            RateLimitQuota::ip_limit(2000, Duration::from_secs(10)),
             RateLimitQuota::global_limit(700, Duration::from_secs(1)),
         ],
     )
