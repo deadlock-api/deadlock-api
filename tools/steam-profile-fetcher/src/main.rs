@@ -89,7 +89,6 @@ async fn fetch_and_update_profiles(
     Ok(())
 }
 
-#[instrument(skip_all)]
 async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
     pg_client: &PgPool,
@@ -111,7 +110,6 @@ async fn get_account_ids_to_update(
     Ok(account_ids_to_update)
 }
 
-#[instrument(skip_all)]
 async fn get_ch_account_ids(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<AccountId>> {
@@ -123,7 +121,6 @@ async fn get_ch_account_ids(
     ch_client.query(query).fetch_all().await
 }
 
-#[instrument(skip_all)]
 async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<HashMap<u32, DateTime<Utc>>> {
     Ok(
         sqlx::query!("SELECT DISTINCT account_id, last_updated FROM steam_profiles")

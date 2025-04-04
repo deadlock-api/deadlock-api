@@ -9,7 +9,7 @@ use crate::models::{AccountId, SteamPlayerSummary, SteamPlayerSummaryResponse};
 static STEAM_API_KEY: Lazy<String> =
     Lazy::new(|| env::var("STEAM_API_KEY").expect("STEAM_API_KEY must be set"));
 
-#[instrument(skip_all)]
+#[instrument(fields(account_ids = account_ids.len()))]
 pub async fn fetch_steam_profiles(
     http_client: &reqwest::Client,
     account_ids: &[AccountId],
