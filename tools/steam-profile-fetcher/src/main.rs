@@ -1,4 +1,5 @@
 use anyhow::Result;
+use arl::RateLimiter;
 use chrono::{DateTime, Utc};
 use metrics::{counter, gauge};
 use once_cell::sync::Lazy;
@@ -17,9 +18,9 @@ use models::{AccountId, SteamPlayerSummary};
 static FETCH_INTERVAL: Lazy<Duration> = Lazy::new(|| {
     Duration::from_secs(
         env::var("FETCH_INTERVAL_SECONDS")
-            .unwrap_or_else(|_| "5".to_string())
+            .unwrap_or_else(|_| "600".to_string())
             .parse()
-            .unwrap_or(5),
+            .unwrap_or(10 * 60),
     )
 });
 
@@ -42,8 +43,10 @@ async fn main() -> Result<()> {
     let ch_client = common::get_ch_client()?;
     let pg_client = common::get_pg_client().await?;
 
+    let limiter = RateLimiter::new(40, Duration::from_secs(60));
+
     loop {
-        match fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
+        match fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &limiter).await {
             Ok(_) => info!("Updated Steam profiles"),
             Err(e) => error!("Error updating Steam profiles: {}", e),
         }
@@ -58,6 +61,7 @@ async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     pg_client: &PgPool,
+    limiter: &RateLimiter,
 ) -> Result<()> {
     let account_ids = get_account_ids_to_update(ch_client, pg_client).await?;
 
@@ -73,17 +77,17 @@ async fn fetch_and_update_profiles(
 
     let mut remaining = account_ids.len();
     for chunk in account_ids.chunks(*BATCH_SIZE) {
-        let profiles = steam_api::fetch_steam_profiles(http_client, chunk).await?;
+        limiter.wait().await;
 
-        if !profiles.is_empty() {
-            save_profiles(pg_client, &profiles).await?;
-            remaining -= profiles.len();
-            info!("{} account IDs remaining to update", remaining);
-            gauge!("steam_profile_fetcher.account_ids_to_update").decrement(profiles.len() as f64);
+        let profiles = steam_api::fetch_steam_profiles(http_client, chunk).await?;
+        if profiles.is_empty() {
+            continue;
         }
 
-        debug!("Sleeping for {:?} before next batch", *FETCH_INTERVAL);
-        sleep(*FETCH_INTERVAL).await;
+        save_profiles(pg_client, &profiles).await?;
+        remaining -= profiles.len();
+        info!("{} account IDs remaining to update", remaining);
+        gauge!("steam_profile_fetcher.account_ids_to_update").decrement(profiles.len() as f64);
     }
 
     Ok(())
