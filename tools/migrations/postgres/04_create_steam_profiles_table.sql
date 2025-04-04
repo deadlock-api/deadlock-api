@@ -7,10 +7,7 @@ CREATE TABLE IF NOT EXISTS steam_profiles
     personaname VARCHAR(255),
     profileurl TEXT,
     avatar TEXT,
-    avatarmedium TEXT,
-    avatarfull TEXT,
     personastate INTEGER,
-    communityvisibilitystate INTEGER,
     realname VARCHAR(255),
     loccountrycode VARCHAR(8) NULL,
     last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
