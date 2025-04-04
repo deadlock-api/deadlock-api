@@ -141,45 +141,49 @@ async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<HashMap<u32, Dat
 
 #[instrument(skip_all)]
 async fn save_profiles(pg_client: &PgPool, profiles: &[SteamPlayerSummary]) -> Result<()> {
-    for profile in profiles {
-        let account_id = common::steam_id64_to_account_id(profile.steamid.parse()?) as i32;
-        debug!("Saving profile for account ID {}", account_id);
-        sqlx::query!(
-            r#"
-            INSERT INTO steam_profiles (
-                account_id, personaname, profileurl,
-                avatar, avatarmedium, avatarfull, personastate, communityvisibilitystate,
-                realname, loccountrycode
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            ON CONFLICT (account_id)
-            DO UPDATE SET
-                personaname = EXCLUDED.personaname,
-                profileurl = EXCLUDED.profileurl,
-                avatar = EXCLUDED.avatar,
-                avatarmedium = EXCLUDED.avatarmedium,
-                avatarfull = EXCLUDED.avatarfull,
-                personastate = EXCLUDED.personastate,
-                communityvisibilitystate = EXCLUDED.communityvisibilitystate,
-                realname = EXCLUDED.realname,
-                loccountrycode = EXCLUDED.loccountrycode
-            "#,
-            account_id,
-            profile.personaname,
-            profile.profileurl,
-            profile.avatar,
-            profile.avatarmedium,
-            profile.avatarfull,
-            profile.personastate as i32,
-            profile.communityvisibilitystate as i32,
-            profile.realname,
-            profile.loccountrycode,
-        )
-        .execute(pg_client)
-        .await?;
+    if profiles.is_empty() {
+        return Ok(());
     }
 
-    info!("Saved {} Steam profiles", profiles.len());
+    let mut query_builder = sqlx::QueryBuilder::new(
+        "INSERT INTO steam_profiles (
+            account_id, personaname, profileurl,
+            avatar, avatarmedium, avatarfull, personastate, communityvisibilitystate,
+            realname, loccountrycode
+        ) ",
+    );
+
+    query_builder.push_values(profiles, |mut b, profile| {
+        b.push_bind(common::steam_id64_to_account_id(profile.steamid.parse().unwrap()) as i32)
+            .push_bind(&profile.personaname)
+            .push_bind(&profile.profileurl)
+            .push_bind(&profile.avatar)
+            .push_bind(&profile.avatarmedium)
+            .push_bind(&profile.avatarfull)
+            .push_bind(profile.personastate as i32)
+            .push_bind(profile.communityvisibilitystate as i32)
+            .push_bind(&profile.realname)
+            .push_bind(&profile.loccountrycode);
+    });
+
+    query_builder.push(
+        " ON CONFLICT (account_id)
+        DO UPDATE SET
+            personaname = EXCLUDED.personaname,
+            profileurl = EXCLUDED.profileurl,
+            avatar = EXCLUDED.avatar,
+            avatarmedium = EXCLUDED.avatarmedium,
+            avatarfull = EXCLUDED.avatarfull,
+            personastate = EXCLUDED.personastate,
+            communityvisibilitystate = EXCLUDED.communityvisibilitystate,
+            realname = EXCLUDED.realname,
+            loccountrycode = EXCLUDED.loccountrycode",
+    );
+
+    let query = query_builder.build();
+    let result = query.execute(pg_client).await?;
+
+    info!("Saved {} Steam profiles", result.rows_affected());
     counter!("steam_profile_fetcher.saved_profiles").increment(profiles.len() as u64);
     Ok(())
 }
