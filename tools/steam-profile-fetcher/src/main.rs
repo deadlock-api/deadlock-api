@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
     let ch_client = common::get_ch_client()?;
     let pg_client = common::get_pg_client().await?;
 
-    let limiter = RateLimiter::new(40, Duration::from_secs(60));
+    let limiter = RateLimiter::new(20, Duration::from_secs(60));
 
     loop {
         match fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &limiter).await {
