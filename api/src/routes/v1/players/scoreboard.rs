@@ -76,8 +76,28 @@ pub enum ScoreboardQuerySortDirection {
 pub struct ScoreboardQuery {
     /// Filter matches based on the hero ID.
     hero_id: Option<u32>,
-    /// Filter by minimum number of matches played.
+    /// Filter by min number of matches played.
     min_matches: Option<u32>,
+    /// Filter matches based on their start time (Unix timestamp).
+    min_unix_timestamp: Option<u64>,
+    /// Filter matches based on their start time (Unix timestamp).
+    max_unix_timestamp: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
+    #[param(maximum = 7000)]
+    min_duration_s: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
+    #[param(maximum = 7000)]
+    max_duration_s: Option<u64>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
+    #[param(minimum = 0, maximum = 116)]
+    min_average_badge: Option<u8>,
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
+    #[param(minimum = 0, maximum = 116)]
+    max_average_badge: Option<u8>,
+    /// Filter matches based on their ID.
+    min_match_id: Option<u64>,
+    /// Filter matches based on their ID.
+    max_match_id: Option<u64>,
     /// The field to sort by.
     #[serde(default)]
     #[param(inline)]
@@ -113,7 +133,49 @@ async fn get_scoreboard(
     ch_client: &clickhouse::Client,
     query: ScoreboardQuery,
 ) -> APIResult<Vec<ScoreboardEntry>> {
+    let mut info_filters = vec![];
+    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
+        info_filters.push(format!("start_time >= {}", min_unix_timestamp));
+    }
+    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
+        info_filters.push(format!("start_time <= {}", max_unix_timestamp));
+    }
+    if let Some(min_match_id) = query.min_match_id {
+        info_filters.push(format!("match_id >= {}", min_match_id));
+    }
+    if let Some(max_match_id) = query.max_match_id {
+        info_filters.push(format!("match_id <= {}", max_match_id));
+    }
+    if let Some(min_badge_level) = query.min_average_badge {
+        info_filters.push(format!(
+            "average_badge_team0 >= {} AND average_badge_team1 >= {}",
+            min_badge_level, min_badge_level
+        ));
+    }
+    if let Some(max_badge_level) = query.max_average_badge {
+        info_filters.push(format!(
+            "average_badge_team0 <= {} AND average_badge_team1 <= {}",
+            max_badge_level, max_badge_level
+        ));
+    }
+    if let Some(min_duration_s) = query.min_duration_s {
+        info_filters.push(format!("duration_s >= {}", min_duration_s));
+    }
+    if let Some(max_duration_s) = query.max_duration_s {
+        info_filters.push(format!("duration_s <= {}", max_duration_s));
+    }
+    let info_filters = if !info_filters.is_empty() {
+        format!(" WHERE {} ", info_filters.join(" AND "))
+    } else {
+        "".to_owned()
+    };
     let mut player_filters = vec![];
+    if !info_filters.is_empty() {
+        player_filters.push(format!(
+            "match_id IN (SELECT match_id FROM match_info {}) ",
+            info_filters
+        ));
+    }
     if let Some(hero_id) = query.hero_id {
         player_filters.push(format!("hero_id = {}", hero_id));
     }
