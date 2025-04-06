@@ -8,6 +8,22 @@
 > officially involved in producing or managing Valve properties. Valve and all associated properties are trademarks or
 > registered trademarks of Valve Corporation.
 
+## 📚 API Endpoints
+
+The API provides endpoints for:
+
+- **Matches**: Match data and statistics
+- **Players**: Player profiles and statistics
+- **Leaderboard**: Competitive rankings
+- **Analytics**: Game analytics and statistics
+- **Builds**: Hero build information
+- **Patches**: Game update information
+- **Commands**: Streamkit integration
+- **Info**: General API information
+
+For detailed API documentation, visit the [live API docs](https://api.deadlock-api.com/docs) or run the API locally and
+navigate to `/docs`.
+
 ## 📖 Overview
 
 Deadlock API is a Rust-based REST API that provides data and statistics for the game Deadlock. It offers endpoints for
@@ -127,36 +143,6 @@ Run the test suite with:
 ```bash
 cargo test
 ```
-
-## 📚 API Endpoints
-
-The API provides endpoints for:
-
-- **Matches**: Match data and statistics
-- **Players**: Player profiles and statistics
-- **Leaderboard**: Competitive rankings
-- **Analytics**: Game analytics and statistics
-- **Builds**: Hero build information
-- **Patches**: Game update information
-- **Commands**: Streamkit integration
-- **Info**: General API information
-
-For detailed API documentation, visit the [live API docs](https://api.deadlock-api.com/docs) or run the API locally and
-navigate to `/docs`.
-
-## 📝 Examples
-
-Check out the `examples/` directory for sample code demonstrating how to use the API:
-
-```bash
-# Run an example
-cargo run --example basic_usage
-```
-
-Available examples:
-
-- `basic_usage.rs`: Shows how to make basic API requests
-- `run_local_api.rs`: Demonstrates how to run the API locally
 
 ## 🤝 Contributing
 
