@@ -22,6 +22,18 @@ pub enum ScoreboardQuerySortBy {
     #[default]
     #[display("kills_per_match")]
     KillsPerMatch,
+    /// Sort by the winrate
+    #[display("winrate")]
+    Winrate,
+    /// Sort by the number of wins
+    #[display("wins")]
+    Wins,
+    /// Sort by the number of losses
+    #[display("losses")]
+    Losses,
+    /// Sort by the number of matches
+    #[display("matches")]
+    Matches,
     /// Sort by the most deaths per match
     #[display("deaths_per_match")]
     DeathsPerMatch,
@@ -40,6 +52,10 @@ impl ScoreboardQuerySortBy {
             Self::DeathsPerMatch => "max(deaths)",
             Self::Kills => "sum(kills)",
             Self::Deaths => "sum(deaths)",
+            Self::Winrate => "sum(won) / count(distinct match_id)",
+            Self::Wins => "sum(won)",
+            Self::Losses => "sum(not won)",
+            Self::Matches => "count(distinct match_id)",
         }
     }
 }
@@ -60,6 +76,8 @@ pub enum ScoreboardQuerySortDirection {
 pub struct ScoreboardQuery {
     /// Filter matches based on the hero ID.
     hero_id: Option<u32>,
+    /// Filter by minimum number of matches played.
+    min_matches: Option<u32>,
     /// The field to sort by.
     #[serde(default)]
     #[param(inline)]
@@ -104,18 +122,29 @@ async fn get_scoreboard(
     } else {
         "".to_owned()
     };
+    let mut player_having = vec![];
+    if let Some(min_matches) = query.min_matches {
+        player_having.push(format!("count(distinct match_id) >= {}", min_matches));
+    }
+    let player_having = if !player_having.is_empty() {
+        format!(" HAVING {} ", player_having.join(" AND "))
+    } else {
+        "".to_owned()
+    };
     let query = format!(
         r#"
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value
 FROM match_player
 {}
 GROUP BY account_id
+{}
 ORDER BY value {}
 LIMIT {} OFFSET {}
     "#,
         query.start.unwrap_or_default() + 1,
         query.sort_by.get_select_clause(),
         player_filters,
+        player_having,
         query.sort_direction,
         query.limit.unwrap_or_default(),
         query.start.unwrap_or_default() + 1,
