@@ -53,6 +53,11 @@ async fn main() -> anyhow::Result<()> {
         ";
         let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
         let recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
+        if recent_matches.is_empty() {
+            info!("No new matches to fetch, sleeping 60s...");
+            tokio::time::sleep(Duration::from_secs(60)).await;
+            continue;
+        }
         // if recent_matches.len() < 100 {
         //     info!(
         //         "Only got {} matches, fetching salts for hltv matches.",
