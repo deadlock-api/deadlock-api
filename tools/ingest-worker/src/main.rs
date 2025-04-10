@@ -50,7 +50,6 @@ async fn main() -> anyhow::Result<()> {
         }
 
         futures::stream::iter(&objs_to_ingest)
-            .take(100)
             .map(|key| async {
                 match timeout(
                     Duration::from_secs(30),
