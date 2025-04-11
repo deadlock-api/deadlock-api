@@ -1,31 +1,12 @@
 use crate::config::Config;
+use crate::error::LoadAppStateError;
 use clap::Parser;
-use derive_more::From;
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
-use std::fmt::Display;
 use std::time::Duration;
 use tracing::debug;
-
-#[derive(Debug, From)]
-pub enum LoadAppStateError {
-    Redis(redis::RedisError),
-    ObjectStore(object_store::Error),
-    Clickhouse(clickhouse::error::Error),
-    PostgreSQL(sqlx::Error),
-}
-impl Display for LoadAppStateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Redis(e) => write!(f, "Redis error: {e}"),
-            Self::ObjectStore(e) => write!(f, "Object store error: {e}"),
-            Self::Clickhouse(e) => write!(f, "Clickhouse error: {e}"),
-            Self::PostgreSQL(e) => write!(f, "PostgreSQL error: {e}"),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct AppState {

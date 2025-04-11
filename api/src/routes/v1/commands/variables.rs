@@ -13,28 +13,21 @@ use futures::future::join;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::Display;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
+use thiserror::Error;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Error)]
 pub enum VariableResolveError {
+    #[error("Failed to fetch data: {0}")]
     FailedToFetchData(&'static str),
+    #[error("Failed to fetch steam name")]
     FailedToFetchSteamName,
+    #[error("Player not found in leaderboard")]
     PlayerNotFoundInLeaderboard,
+    #[error("Missing argument: {0}")]
     MissingArgument(&'static str),
-}
-
-impl Display for VariableResolveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::FailedToFetchData(data) => write!(f, "Failed to fetch data: {}", data),
-            Self::FailedToFetchSteamName => write!(f, "Failed to fetch steam name"),
-            Self::PlayerNotFoundInLeaderboard => write!(f, "Player not found in leaderboard"),
-            Self::MissingArgument(arg) => write!(f, "Missing argument: {}", arg),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Clone, Copy, ToSchema)]

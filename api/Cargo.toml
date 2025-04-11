@@ -49,3 +49,4 @@ hex = "0.4.3"
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.1"
 querystring = "1.1.0"
+thiserror = "2.0.12"
