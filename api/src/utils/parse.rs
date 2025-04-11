@@ -130,3 +130,126 @@ pub fn default_last_month_timestamp() -> Option<u64> {
 pub fn default_true() -> Option<bool> {
     true.into()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use rstest::rstest;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct SteamIdTestStruct {
+        #[serde(deserialize_with = "parse_steam_id")]
+        steam_id: u32,
+    }
+
+    #[rstest]
+    #[case(76561198123456789u64, 163191061u32)] // Steam ID 64 to Steam ID 32
+    #[case(123456u64, 123456u32)] // Steam ID 32 stays the same
+    fn test_parse_steam_id_valid(#[case] input: u64, #[case] expected: u32) {
+        let json = format!("{{\"steam_id\": {}}}", input);
+        let result: SteamIdTestStruct = serde_json::from_str(&json).unwrap();
+        assert_eq!(result.steam_id, expected);
+    }
+
+    #[rstest]
+    #[case(0u64)] // Invalid Steam ID (0)
+    fn test_parse_steam_id_invalid(#[case] input: u64) {
+        let json = format!("{{\"steam_id\": {}}}", input);
+        let result = serde_json::from_str::<SteamIdTestStruct>(&json);
+        assert!(result.is_err());
+    }
+
+    #[derive(Deserialize)]
+    struct SteamIdOptionTestStruct {
+        #[serde(deserialize_with = "parse_steam_id_option")]
+        steam_id: Option<u32>,
+    }
+
+    #[rstest]
+    #[case(76561198123456789u64, Some(163191061u32))] // Steam ID 64 to Steam ID 32
+    #[case(123456u64, Some(123456u32))] // Steam ID 32 stays the same
+    #[case(0u64, None)] // Invalid Steam ID (0) becomes None
+    fn test_parse_steam_id_option_with_value(#[case] input: u64, #[case] expected: Option<u32>) {
+        let json = format!("{{\"steam_id\": {}}}", input);
+        let result: SteamIdOptionTestStruct = serde_json::from_str(&json).unwrap();
+        assert_eq!(result.steam_id, expected);
+    }
+
+    #[test]
+    fn test_parse_steam_id_option_null() {
+        let json = "{\"steam_id\": null}";
+        let result: SteamIdOptionTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.steam_id, None);
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct CommaSeparatedTestStruct {
+        #[serde(deserialize_with = "comma_separated_num_deserialize")]
+        ids: Option<Vec<u32>>,
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"1,2,3\"}", Some(vec![1, 2, 3]))] // Comma-separated string
+    #[case("{\"ids\": [1, 2, 3]}", Some(vec![1, 2, 3]))] // Array
+    #[case("{\"ids\": 1}", Some(vec![1]))] // Single value
+    #[case("{\"ids\": [\"1\", \"2\", \"3\"]}", Some(vec![1, 2, 3]))] // String array
+    #[case("{\"ids\": null}", None)] // Null
+    #[case("{\"ids\": \"[1,2,3]\"}", Some(vec![1, 2, 3]))] // Brackets
+    fn test_comma_separated_num_deserialize(
+        #[case] json: &str,
+        #[case] expected: Option<Vec<u32>>,
+    ) {
+        let result: CommaSeparatedTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.ids, expected);
+    }
+
+    #[derive(Deserialize)]
+    struct DateTimeTestStruct {
+        #[serde(deserialize_with = "parse_rfc2822_datetime")]
+        date: DateTime<FixedOffset>,
+    }
+
+    #[rstest]
+    #[case(
+        "{\"date\": \"Wed, 21 Oct 2015 07:28:00 GMT\"}",
+        "Wed, 21 Oct 2015 07:28:00 +0000"
+    )]
+    fn test_parse_rfc2822_datetime_valid(#[case] json: &str, #[case] expected: &str) {
+        let result: DateTimeTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.date.to_rfc2822(), expected);
+    }
+
+    #[rstest]
+    #[case("{\"date\": \"2015-10-21T07:28:00Z\"}")]
+    fn test_parse_rfc2822_datetime_invalid(#[case] json: &str) {
+        let result = serde_json::from_str::<DateTimeTestStruct>(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_default_last_month_timestamp() {
+        let result = default_last_month_timestamp();
+        assert!(result.is_some());
+
+        let now = Utc::now().timestamp() as u64;
+        let one_month_ago = now - (30 * 24 * 60 * 60); // 30 days in seconds
+
+        // The result should be approximately one month ago (allowing for some difference due to time of day)
+        let timestamp = result.unwrap();
+        let diff = if timestamp > one_month_ago {
+            timestamp - one_month_ago
+        } else {
+            one_month_ago - timestamp
+        };
+
+        // The difference should be less than 24 hours (86400 seconds)
+        assert!(diff < 86400, "Timestamp difference is too large: {}", diff);
+    }
+
+    #[test]
+    fn test_default_true() {
+        assert_eq!(default_true(), Some(true));
+    }
+}
