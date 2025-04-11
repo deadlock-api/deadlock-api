@@ -162,6 +162,12 @@ pub async fn bulk_metadata(
         .map_err(|_| APIError::InternalError {
             message: "Failed to parse match metadata".to_string(),
         })?;
+    if parsed_result.is_empty() {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::NOT_FOUND,
+            message: "No matches found".to_string(),
+        });
+    }
     Ok(Json(parsed_result))
 }
 
