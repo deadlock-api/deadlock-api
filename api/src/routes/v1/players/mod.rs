@@ -7,7 +7,9 @@ mod party_stats;
 mod scoreboard;
 pub mod types;
 
+use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
+use std::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -21,9 +23,13 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(match_history::match_history))
         .routes(routes!(card::card_raw))
         .routes(routes!(card::card))
-        .routes(routes!(mate_stats::mate_stats))
-        .routes(routes!(party_stats::party_stats))
-        .routes(routes!(item_stats::item_stats))
-        .routes(routes!(hero_stats::hero_stats))
-        .routes(routes!(scoreboard::scoreboard))
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(mate_stats::mate_stats))
+                .routes(routes!(party_stats::party_stats))
+                .routes(routes!(item_stats::item_stats))
+                .routes(routes!(hero_stats::hero_stats))
+                .routes(routes!(scoreboard::scoreboard))
+                .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
+        )
 }

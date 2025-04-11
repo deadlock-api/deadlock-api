@@ -4,7 +4,9 @@ pub mod hero_stats;
 mod hero_synergies_stats;
 mod item_win_loss_stats;
 
+use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
+use std::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -20,4 +22,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(hero_counters_stats::hero_counters_stats))
         .routes(routes!(hero_synergies_stats::hero_synergies_stats))
         .routes(routes!(hero_comb_win_loss_stats::hero_comb_win_loss_stats))
+        .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60)))
 }

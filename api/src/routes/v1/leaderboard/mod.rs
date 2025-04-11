@@ -1,7 +1,9 @@
 pub mod route;
 pub mod types;
 
+use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
+use std::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -16,4 +18,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(route::leaderboard_hero_raw))
         .routes(routes!(route::leaderboard))
         .routes(routes!(route::leaderboard_hero))
+        .layer(CacheControlMiddleware::new(Duration::from_secs(10 * 60)))
 }
