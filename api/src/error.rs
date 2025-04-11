@@ -118,3 +118,65 @@ impl IntoResponse for APIError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use std::time::Duration;
+
+    #[test]
+    fn test_api_error_status() {
+        let error = APIError::Status {
+            status: StatusCode::NOT_FOUND,
+        };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn test_api_error_status_msg() {
+        let error = APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Invalid input".to_string(),
+        };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_api_error_status_msg_json() {
+        let error = APIError::StatusMsgJson {
+            status: StatusCode::BAD_REQUEST,
+            message: serde_json::json!({"field": "username", "reason": "too short"}),
+        };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_api_error_internal_error() {
+        let error = APIError::InternalError {
+            message: "Database connection failed".to_string(),
+        };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn test_api_error_rate_limit_exceeded() {
+        use crate::utils::limiter::{RateLimitQuota, RateLimitStatus};
+        use chrono::Utc;
+
+        let quota = RateLimitQuota::ip_limit(100, Duration::from_secs(60));
+        let status = RateLimitStatus {
+            quota,
+            requests: 100,
+            oldest_request: Utc::now(),
+        };
+
+        let error = APIError::RateLimitExceeded { status };
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+    }
+}
