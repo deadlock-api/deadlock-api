@@ -119,8 +119,20 @@ jobs:
         with:
           shared-key: ${{ runner.os }}-rust-${{ env.RUST_TOOLCHAIN }}
 
+      # Setup Mise
+      - uses: jdx/mise-action@v2
+
+      # Setup Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Load .env
+        uses: aarcangeli/load-dotenv@v1
+        with:
+          filenames: '.env.testing'
+
       - name: Run tests
-        run: cargo test
+        run: mise run test
 
   deploy:
     name: Deploy
