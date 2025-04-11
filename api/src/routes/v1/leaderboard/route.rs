@@ -42,7 +42,7 @@ pub struct LeaderboardHeroQuery {
 
 #[cached(
     ty = "TimedCache<String, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = r#"{ format!("{:?}-{:?}", region, hero_id) }"#,
     sync_writes = "by_key",
