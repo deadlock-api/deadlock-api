@@ -30,6 +30,8 @@ pub enum LoadAppStateError {
     Clickhouse(#[from] clickhouse::error::Error),
     #[error("PostgreSQL error: {0}")]
     PostgreSQL(#[from] sqlx::Error),
+    #[error("Parsing error: {0}")]
+    Parsing(#[from] clap::error::Error),
 }
 
 #[allow(dead_code)]

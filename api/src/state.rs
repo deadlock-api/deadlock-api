@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::error::LoadAppStateError;
-use clap::Parser;
+use clap::{CommandFactory, FromArgMatches};
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
@@ -21,7 +21,8 @@ pub struct AppState {
 
 impl AppState {
     pub async fn from_env() -> Result<AppState, LoadAppStateError> {
-        let config = Config::parse();
+        let config =
+            Config::from_arg_matches_mut(&mut Config::command().ignore_errors(true).get_matches())?;
 
         // Create an HTTP client
         debug!("Creating HTTP client");
@@ -122,16 +123,5 @@ impl AppState {
             ch_client,
             pg_client,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[ignore]
-    #[tokio::test]
-    async fn test_load_app_state() {
-        AppState::from_env().await.expect("Load app state");
     }
 }
