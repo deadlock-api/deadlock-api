@@ -1,4 +1,5 @@
 use axum::http::HeaderValue;
+use axum::http::header::CACHE_CONTROL;
 use axum::{extract::Request, response::Response};
 use std::fmt::Write;
 use std::future::Future;
@@ -79,10 +80,18 @@ where
         Box::pin(async move {
             let mut response: Response = future.await?;
 
-            response
-                .headers_mut()
-                .insert(axum::http::header::CACHE_CONTROL, header);
+            // Do not cache non-success responses
+            if !response.status().is_success() {
+                return Ok(response);
+            }
 
+            // Do not override existing cache control headers
+            if response.headers().contains_key(CACHE_CONTROL) {
+                return Ok(response);
+            }
+
+            // Add cache control header
+            response.headers_mut().insert(CACHE_CONTROL, header);
             Ok(response)
         })
     }
