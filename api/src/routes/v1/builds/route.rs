@@ -29,7 +29,7 @@ pub async fn search_builds(
 ) -> APIResult<impl IntoResponse> {
     let query = query::sql_query(&params);
     let builds = sqlx::query(&query)
-        .fetch_all(&state.postgres_client)
+        .fetch_all(&state.pg_client)
         .await
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to fetch builds: {e}"),

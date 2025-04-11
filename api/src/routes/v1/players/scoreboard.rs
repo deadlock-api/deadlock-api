@@ -237,7 +237,5 @@ pub async fn scoreboard(
     Query(query): Query<ScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_scoreboard(&state.clickhouse_client, query)
-        .await
-        .map(Json)
+    get_scoreboard(&state.ch_client, query).await.map(Json)
 }

@@ -197,7 +197,7 @@ pub async fn match_history(
         ],
     )
     .await?;
-    let ch_client = &state.clickhouse_client;
+    let ch_client = &state.ch_client;
 
     // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
@@ -222,7 +222,7 @@ pub async fn match_history(
         .cloned()
         .collect_vec();
     if !ch_missing_entries.is_empty() {
-        let ch_client = state.clickhouse_client;
+        let ch_client = state.ch_client;
         let handle = tokio::spawn(async move {
             let result = insert_match_history_to_ch(&ch_client, &ch_missing_entries).await;
             if let Err(e) = result {

@@ -183,7 +183,5 @@ pub async fn hero_stats(
     Query(query): Query<HeroStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_stats(&state.clickhouse_client, query)
-        .await
-        .map(Json)
+    get_hero_stats(&state.ch_client, query).await.map(Json)
 }

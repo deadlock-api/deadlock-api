@@ -152,11 +152,12 @@ pub async fn bulk_metadata(
     }
     debug!(?query);
     let query = build_ch_query(query)?;
-    let lines = fetch_lines(&state.clickhouse_client, &query)
-        .await
-        .map_err(|_| APIError::InternalError {
-            message: "Failed to fetch match metadata".to_string(),
-        })?;
+    let lines =
+        fetch_lines(&state.ch_client, &query)
+            .await
+            .map_err(|_| APIError::InternalError {
+                message: "Failed to fetch match metadata".to_string(),
+            })?;
     let parsed_result = parse_lines(lines)
         .await
         .map_err(|_| APIError::InternalError {

@@ -164,7 +164,7 @@ pub async fn item_win_loss_stats(
     Query(query): Query<ItemWinLossStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_item_win_loss_stats(&state.clickhouse_client, query)
+    get_item_win_loss_stats(&state.ch_client, query)
         .await
         .map(Json)
 }

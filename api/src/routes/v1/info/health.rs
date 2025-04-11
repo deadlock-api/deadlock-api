@@ -42,17 +42,17 @@ pub struct Status {
     key = "String"
 )]
 async fn check_health(
-    clickhouse_client: clickhouse::Client,
-    postgres_client: Pool<Postgres>,
+    ch_client: clickhouse::Client,
+    pg_client: Pool<Postgres>,
     redis_client: &mut redis::aio::MultiplexedConnection,
 ) -> APIResult<Status> {
     let mut status = Status::default();
 
     // Check Clickhouse connection
-    status.services.clickhouse = clickhouse_client.query("SELECT 1").execute().await.is_ok();
+    status.services.clickhouse = ch_client.query("SELECT 1").execute().await.is_ok();
 
     // Check Postgres connection
-    status.services.postgres = !postgres_client.is_closed();
+    status.services.postgres = !pg_client.is_closed();
 
     // Check Redis connection
     status.services.redis = redis_client
@@ -81,11 +81,7 @@ async fn check_health(
     description = "Checks the health of the services."
 )]
 pub async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
-    check_health(
-        state.clickhouse_client,
-        state.postgres_client,
-        &mut state.redis_client,
-    )
-    .await
-    .map(Json)
+    check_health(state.ch_client, state.pg_client, &mut state.redis_client)
+        .await
+        .map(Json)
 }

@@ -15,8 +15,8 @@ pub struct AppState {
     pub s3_client: object_store::aws::AmazonS3,
     pub s3_cache_client: object_store::aws::AmazonS3,
     pub redis_client: redis::aio::MultiplexedConnection,
-    pub clickhouse_client: clickhouse::Client,
-    pub postgres_client: Pool<Postgres>,
+    pub ch_client: clickhouse::Client,
+    pub pg_client: Pool<Postgres>,
 }
 
 impl AppState {
@@ -85,7 +85,7 @@ impl AppState {
 
         // Create a Clickhouse connection pool
         debug!("Creating Clickhouse client");
-        let clickhouse_client = clickhouse::Client::default()
+        let ch_client = clickhouse::Client::default()
             .with_url(format!(
                 "http://{}:{}",
                 config.clickhouse_host, config.clickhouse_http_port
@@ -97,7 +97,7 @@ impl AppState {
             .with_option("output_format_json_named_tuples_as_objects", "1")
             .with_option("enable_json_type", "1")
             .with_option("enable_named_columns_in_function_tuple", "1");
-        if let Err(e) = clickhouse_client.query("SELECT 1").fetch_one::<u8>().await {
+        if let Err(e) = ch_client.query("SELECT 1").fetch_one::<u8>().await {
             return Err(LoadAppStateError::Clickhouse(e));
         }
 
@@ -108,7 +108,7 @@ impl AppState {
             .username(&config.postgres_username)
             .password(&config.postgres_password)
             .database(&config.postgres_dbname);
-        let postgres_client = PgPoolOptions::new()
+        let pg_client = PgPoolOptions::new()
             .max_connections(config.postgres_pool_size)
             .connect_with(pg_options)
             .await?;
@@ -119,8 +119,8 @@ impl AppState {
             s3_client,
             s3_cache_client,
             redis_client,
-            clickhouse_client,
-            postgres_client,
+            ch_client,
+            pg_client,
         })
     }
 }

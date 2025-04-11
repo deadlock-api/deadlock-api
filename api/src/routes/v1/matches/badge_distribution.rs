@@ -99,7 +99,7 @@ pub async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_badge_distribution(&state.clickhouse_client, query)
+    get_badge_distribution(&state.ch_client, query)
         .await
         .map(Json)
 }

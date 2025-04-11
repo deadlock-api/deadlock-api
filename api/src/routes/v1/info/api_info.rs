@@ -100,11 +100,11 @@ pub struct APIInfo {
 pub async fn info(State(state): State<AppState>) -> APIResult<Json<APIInfo>> {
     let (table_sizes, fetched_matches_per_day) = join(
         state
-            .clickhouse_client
+            .ch_client
             .query(TABLE_SIZES_QUERY)
             .fetch_all::<TableSizeRow>(),
         state
-            .clickhouse_client
+            .ch_client
             .query(FETCHED_MATCHES_LAST_24H_QUERY)
             .fetch_one::<u64>(),
     )

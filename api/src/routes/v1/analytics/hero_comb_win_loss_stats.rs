@@ -200,7 +200,7 @@ pub async fn hero_comb_win_loss_stats(
     Query(query): Query<HeroCombWinLossStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_comb_hero_win_loss_stats(&state.clickhouse_client, query)
+    get_comb_hero_win_loss_stats(&state.ch_client, query)
         .await
         .map(Json)
 }

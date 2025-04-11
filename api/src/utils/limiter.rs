@@ -118,9 +118,7 @@ pub async fn apply_limits(
 
     // Validate the API key if it is present
     let api_key = match api_key {
-        Some(key) => is_api_key_valid(&state.postgres_client, key)
-            .await
-            .then_some(key),
+        Some(key) => is_api_key_valid(&state.pg_client, key).await.then_some(key),
         None => None,
     };
 
@@ -143,7 +141,7 @@ pub async fn apply_limits(
     let quotas = match api_key {
         None => quotas.to_vec(),
         Some(api_key) => {
-            let custom_quotas = get_custom_quotas(state, api_key, key).await;
+            let custom_quotas = get_custom_quotas(&state.pg_client, api_key, key).await;
             if custom_quotas.is_empty() {
                 let has_api_key_limits = quotas
                     .iter()
@@ -240,13 +238,17 @@ pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
     create = "{ TimedCache::with_lifespan(10 * 60) }",
     convert = r#"{ format!("{api_key}-{path}") }"#
 )]
-pub async fn get_custom_quotas(state: &AppState, api_key: Uuid, path: &str) -> Vec<RateLimitQuota> {
+pub async fn get_custom_quotas(
+    pg_client: &Pool<Postgres>,
+    api_key: Uuid,
+    path: &str,
+) -> Vec<RateLimitQuota> {
     sqlx::query!(
         "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
         api_key,
         path
     )
-    .fetch_all(&state.postgres_client)
+    .fetch_all(pg_client)
     .await
     .ok()
     .map(|rows| {

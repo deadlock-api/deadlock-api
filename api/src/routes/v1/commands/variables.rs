@@ -356,7 +356,7 @@ impl Variable {
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -371,7 +371,7 @@ impl Variable {
             Self::HighestDenies => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -386,7 +386,7 @@ impl Variable {
             Self::HighestKillCount => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -401,7 +401,7 @@ impl Variable {
             Self::HighestLastHits => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -416,7 +416,7 @@ impl Variable {
             Self::HighestNetWorth => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -431,7 +431,7 @@ impl Variable {
             Self::HoursPlayed => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -496,7 +496,7 @@ impl Variable {
             Self::MostPlayedHero => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -520,7 +520,7 @@ impl Variable {
             Self::MostPlayedHeroCount => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -538,7 +538,7 @@ impl Variable {
             Self::TotalKd => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -551,7 +551,7 @@ impl Variable {
             Self::TotalKills => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -565,7 +565,7 @@ impl Variable {
             Self::TotalMatches => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -575,7 +575,7 @@ impl Variable {
             Self::TotalWinrate => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -592,7 +592,7 @@ impl Variable {
             Self::TotalWins => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -606,7 +606,7 @@ impl Variable {
             Self::TotalLosses => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -620,7 +620,7 @@ impl Variable {
             Self::TotalWinsLosses => {
                 let matches = Self::get_all_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                 )
@@ -649,7 +649,7 @@ impl Variable {
             Self::HeroHoursPlayed => {
                 let hero_matches = Self::get_hero_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                     extra_args,
@@ -661,7 +661,7 @@ impl Variable {
             Self::HeroKd => {
                 let hero_matches = Self::get_hero_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                     extra_args,
@@ -675,7 +675,7 @@ impl Variable {
             Self::HeroKills => {
                 let hero_matches = Self::get_hero_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                     extra_args,
@@ -689,7 +689,7 @@ impl Variable {
             }
             Self::HeroMatches => Self::get_hero_matches(
                 &state.config,
-                &state.clickhouse_client,
+                &state.ch_client,
                 &state.http_client,
                 steam_id,
                 extra_args,
@@ -699,7 +699,7 @@ impl Variable {
             Self::HeroLosses => {
                 let hero_matches = Self::get_hero_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                     extra_args,
@@ -714,7 +714,7 @@ impl Variable {
             Self::HeroWinrate => {
                 let hero_matches = Self::get_hero_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                     extra_args,
@@ -730,7 +730,7 @@ impl Variable {
             Self::HeroWins => {
                 let hero_matches = Self::get_hero_matches(
                     &state.config,
-                    &state.clickhouse_client,
+                    &state.ch_client,
                     &state.http_client,
                     steam_id,
                     extra_args,
@@ -743,19 +743,19 @@ impl Variable {
                     .to_string())
             }
             Self::MaxBombStacks => {
-                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 2521902222)
+                Self::get_max_ability_stat(&state.ch_client, steam_id, 2521902222)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks"))
             }
             Self::MaxSpiritSnareStacks => {
-                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 512733154)
+                Self::get_max_ability_stat(&state.ch_client, steam_id, 512733154)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| VariableResolveError::FailedToFetchData("max spirit snare stacks"))
             }
             Self::MaxBonusHealthPerKill => {
-                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 1917840730)
+                Self::get_max_ability_stat(&state.ch_client, steam_id, 1917840730)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| {
@@ -763,7 +763,7 @@ impl Variable {
                     })
             }
             Self::MaxGuidedOwlStacks => {
-                Self::get_max_ability_stat(&state.clickhouse_client, steam_id, 3242902780)
+                Self::get_max_ability_stat(&state.ch_client, steam_id, 3242902780)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| VariableResolveError::FailedToFetchData("max guided owl"))

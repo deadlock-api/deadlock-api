@@ -157,7 +157,7 @@ pub async fn metadata_raw(
         fetch_match_metadata_raw(
             &state.config,
             &state.http_client,
-            &state.clickhouse_client,
+            &state.ch_client,
             &state.s3_client,
             &state.s3_cache_client,
             match_id,
@@ -210,7 +210,7 @@ pub async fn metadata(
         let raw_data = fetch_match_metadata_raw(
             &state.config,
             &state.http_client,
-            &state.clickhouse_client,
+            &state.ch_client,
             &state.s3_client,
             &state.s3_cache_client,
             match_id,

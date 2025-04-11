@@ -49,11 +49,9 @@ impl MatchCreatedWebhookPayload {
     convert = r#"{ format!("") }"#,
     sync_writes = "default"
 )]
-async fn get_webhook_urls(
-    postgres_client: &Pool<Postgres>,
-) -> Result<Vec<(String, String)>, APIError> {
+async fn get_webhook_urls(pg_client: &Pool<Postgres>) -> Result<Vec<(String, String)>, APIError> {
     sqlx::query!("SELECT webhook_url, secret FROM webhooks")
-        .fetch_all(postgres_client)
+        .fetch_all(pg_client)
         .await
         .map(|rows| {
             rows.into_iter()
@@ -140,7 +138,7 @@ pub async fn ingest_event(
         })?;
 
     let payload = MatchCreatedWebhookPayload::new(match_id);
-    let webhook_urls: Vec<(String, String)> = get_webhook_urls(&state.postgres_client).await?;
+    let webhook_urls: Vec<(String, String)> = get_webhook_urls(&state.pg_client).await?;
     for (webhook_url, secret) in webhook_urls {
         let payload = serde_json::to_vec(&payload).map_err(|_| APIError::InternalError {
             message: "Failed to serialize payload".to_string(),

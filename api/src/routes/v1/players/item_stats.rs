@@ -133,7 +133,7 @@ pub async fn item_stats(
     Query(query): Query<ItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_item_stats(&state.clickhouse_client, account_id, query)
+    get_item_stats(&state.ch_client, account_id, query)
         .await
         .map(Json)
 }

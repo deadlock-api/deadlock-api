@@ -135,7 +135,7 @@ pub async fn party_stats(
     Query(query): Query<PartyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_party_stats(&state.clickhouse_client, account_id, query)
+    get_party_stats(&state.ch_client, account_id, query)
         .await
         .map(Json)
 }

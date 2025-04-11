@@ -216,7 +216,7 @@ pub async fn salts(
         fetch_match_salts(
             &state.config,
             &state.http_client,
-            &state.clickhouse_client,
+            &state.ch_client,
             match_id,
             needs_demo,
         )
