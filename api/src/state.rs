@@ -106,6 +106,7 @@ impl AppState {
         debug!("Creating PostgreSQL client");
         let pg_options = PgConnectOptions::new_without_pgpass()
             .host(&config.postgres_host)
+            .port(config.postgres_port)
             .username(&config.postgres_username)
             .password(&config.postgres_password)
             .database(&config.postgres_dbname);
