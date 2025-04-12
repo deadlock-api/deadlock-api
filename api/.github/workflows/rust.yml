@@ -86,11 +86,11 @@ jobs:
         with:
           shared-key: ${{ runner.os }}-rust-${{ env.RUST_TOOLCHAIN }}
 
-      - name: Check formatting (cargo fmt)
-        run: cargo fmt --all -- --check
+      - name: Setup go-task
+        run: curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin
 
       - name: Lint code (cargo clippy)
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: task lint
 
   test:
     name: Test
@@ -119,20 +119,14 @@ jobs:
         with:
           shared-key: ${{ runner.os }}-rust-${{ env.RUST_TOOLCHAIN }}
 
-      # Setup Mise
-      - uses: jdx/mise-action@v2
+      - name: Setup go-task
+        run: curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin
 
-      # Setup Docker
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Load .env
-        uses: aarcangeli/load-dotenv@v1
-        with:
-          filenames: '.env.testing'
-
       - name: Run tests
-        run: mise run test
+        run: task test
 
   deploy:
     name: Deploy

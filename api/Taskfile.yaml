@@ -1,0 +1,44 @@
+version: '3'
+
+env:
+  TESTING_DOCKER_COMPOSE: docker-compose.testing.yaml
+  TESTING_ENV_FILE: .env.testing
+
+tasks:
+  format:
+    desc: "Formats the code using cargo fmt."
+    cmds:
+      - cargo fmt --all
+
+  format:check:
+    desc: "Checks if the code is formatted using cargo fmt."
+    cmds:
+      - cargo fmt --all -- --check
+
+  lint:
+    desc: "Runs cargo clippy for linting."
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
+    deps:
+      - task: format:check
+
+  teardown-test-env:
+    desc: "Stops and removes the testing Docker containers."
+    cmds:
+      - docker compose -f $TESTING_DOCKER_COMPOSE down
+
+  setup-test-env:
+    desc: "Sets up the testing Docker environment."
+    deps:
+      - task: teardown-test-env
+    cmds:
+      - docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait
+
+  test:
+    desc: "Runs the cargo tests after setting up the test environment."
+    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
+    deps:
+      - task: setup-test-env
+    cmds:
+      - cargo test
+      - task: teardown-test-env
