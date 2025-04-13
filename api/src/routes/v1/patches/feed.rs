@@ -113,6 +113,6 @@ mod tests {
         let patches = fetch_patch_notes(&reqwest::Client::new())
             .await
             .expect("Failed to fetch patch notes");
-        println!("{:#?}", patches);
+        assert!(patches.len() > 7);
     }
 }
