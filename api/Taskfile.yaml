@@ -40,16 +40,24 @@ tasks:
     dotenv: [ '{{.TESTING_ENV_FILE}}' ]
     preconditions:
       - '[[ $(docker compose -f $TESTING_DOCKER_COMPOSE ps --format json postgres | jq ".Health") != "healthy" ]]'
+    vars:
+      FILE:
+        sh: find tests/data/postgres/ -type f -name '*.sql'
     cmds:
-      - docker compose -f $TESTING_DOCKER_COMPOSE exec -T postgres psql -U $POSTGRES_USERNAME -d $POSTGRES_DBNAME < ./tests/data/postgres.sql
+      - for: { var: FILE }
+        cmd: docker compose -f $TESTING_DOCKER_COMPOSE exec -T postgres psql -U $POSTGRES_USERNAME -d $POSTGRES_DBNAME < {{.ITEM}}
 
   import-test-data-clickhouse:
     desc: "Imports test data into ClickHouse."
     dotenv: [ '{{.TESTING_ENV_FILE}}' ]
     preconditions:
       - '[[ $(docker compose -f $TESTING_DOCKER_COMPOSE ps --format json clickhouse | jq ".Health") != "healthy" ]]'
+    vars:
+      FILE:
+        sh: find tests/data/clickhouse/ -type f -name '*.sql'
     cmds:
-      - docker compose -f $TESTING_DOCKER_COMPOSE exec -T clickhouse clickhouse-client -u $CLICKHOUSE_USERNAME --password $CLICKHOUSE_PASSWORD < ./tests/data/clickhouse.sql
+      - for: { var: FILE }
+        cmd: docker compose -f $TESTING_DOCKER_COMPOSE exec -T clickhouse clickhouse-client -u $CLICKHOUSE_USERNAME --password $CLICKHOUSE_PASSWORD < {{.ITEM}}
 
   import-test-data:
     desc: "Sets up the testing Docker environment."

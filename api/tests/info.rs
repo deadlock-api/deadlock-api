@@ -5,24 +5,28 @@ use deadlock_api_rust::routes::v1::info::health::Status;
 
 #[tokio::test]
 async fn test_info() {
-    let response = utils::request_endpoint("/v1/info").await;
+    let response = utils::request_endpoint("/v1/info", []).await;
     let info: APIInfo = response.json().await.expect("Failed to parse response");
 
-    assert_eq!(
-        info.table_sizes
-            .get("active_matches")
+    let expected_table_sizes = [
+        ("active_matches", 100),
+        ("match_salts", 100),
+        ("match_info", 100),
+        ("match_player", 1200),
+    ];
+    for (table, expected_rows) in expected_table_sizes {
+        let rows = info
+            .table_sizes
+            .get(table)
             .and_then(|t| t.rows)
-            .unwrap(),
-        20
-    );
-    for table in ["match_info", "match_salts", "match_player"] {
-        assert_eq!(info.table_sizes.get(table).and_then(|t| t.rows).unwrap(), 5);
+            .expect("Failed to find table size for {table}");
+        assert_eq!(rows, expected_rows);
     }
 }
 
 #[tokio::test]
 async fn test_health() {
-    let response = utils::request_endpoint("/v1/info/health").await;
+    let response = utils::request_endpoint("/v1/info/health", []).await;
     let status: Status = response.json().await.expect("Failed to parse response");
     assert!(status.services.all_ok());
 }
