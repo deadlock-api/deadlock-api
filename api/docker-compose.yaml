@@ -1,5 +1,5 @@
 services:
-  deadlock-api-rust:
+  api:
     image: ghcr.io/deadlock-api/deadlock-api-rust/deadlock-api-rust:latest
     build: .
     env_file: .env

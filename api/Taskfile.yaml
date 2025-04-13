@@ -27,12 +27,43 @@ tasks:
     cmds:
       - docker compose -f $TESTING_DOCKER_COMPOSE down
 
+  start-test-env:
+    desc: "Starts the testing Docker environment."
+    env:
+      NO_BUILD: 0
+    cmds:
+      - "if [[ $NO_BUILD = 1 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans; fi"
+      - "if [[ $NO_BUILD = 0 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans --build; fi"
+
+  import-test-data-postgres:
+    desc: "Imports test data into PostgreSQL."
+    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
+    preconditions:
+      - '[[ $(docker compose -f $TESTING_DOCKER_COMPOSE ps --format json postgres | jq ".Health") != "healthy" ]]'
+    cmds:
+      - docker compose -f $TESTING_DOCKER_COMPOSE exec -T postgres psql -U $POSTGRES_USERNAME -d $POSTGRES_DBNAME < ./tests/data/postgres.sql
+
+  import-test-data-clickhouse:
+    desc: "Imports test data into ClickHouse."
+    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
+    preconditions:
+      - '[[ $(docker compose -f $TESTING_DOCKER_COMPOSE ps --format json clickhouse | jq ".Health") != "healthy" ]]'
+    cmds:
+      - docker compose -f $TESTING_DOCKER_COMPOSE exec -T clickhouse clickhouse-client -u $CLICKHOUSE_USERNAME --password $CLICKHOUSE_PASSWORD < ./tests/data/clickhouse.sql
+
+  import-test-data:
+    desc: "Sets up the testing Docker environment."
+    deps:
+      - task: import-test-data-postgres
+      - task: import-test-data-clickhouse
+
   setup-test-env:
     desc: "Sets up the testing Docker environment."
     deps:
       - task: teardown-test-env
     cmds:
-      - docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait
+      - task: start-test-env
+      - task: import-test-data
 
   test:
     desc: "Runs the cargo tests after setting up the test environment."

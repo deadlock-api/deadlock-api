@@ -125,8 +125,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Setup Depot
+        uses: depot/setup-action@v1
+
+      - name: Build and load
+        uses: depot/build-push-action@v1
+        with:
+          project: ${{ env.DEPOT_PROJECT_ID }}
+          platforms: linux/arm64
+          context: .
+          file: Dockerfile.testing
+          tags: deadlock-api-rust:testing
+          load: true
+          push: false
+
       - name: Run tests
-        run: task test
+        run: NO_BUILD=1 task test
 
   deploy:
     name: Deploy
