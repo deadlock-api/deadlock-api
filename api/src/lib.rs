@@ -48,7 +48,7 @@ async fn favicon() -> impl IntoResponse {
     (headers, favicon)
 }
 
-async fn get_router() -> ApplicationResult<NormalizePath<Router>> {
+async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
     debug!("Loading application state");
     let state = AppState::from_env().await?;
     debug!("Application state loaded");
@@ -82,7 +82,7 @@ async fn get_router() -> ApplicationResult<NormalizePath<Router>> {
         .split_for_parts();
 
     let server_url = match cfg!(debug_assertions) {
-        true => "http://localhost:3000",
+        true => &format!("http://localhost:{port}"),
         false => "https://api.deadlock-api.com",
     };
     api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
@@ -93,11 +93,11 @@ async fn get_router() -> ApplicationResult<NormalizePath<Router>> {
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))
 }
 
-pub async fn run_api() -> ApplicationResult<()> {
+pub async fn run_api(port: u16) -> ApplicationResult<()> {
     init_tracing();
 
-    let router = get_router().await?;
-    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, 3000));
+    let router = get_router(port).await?;
+    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, port));
     let listener = tokio::net::TcpListener::bind(&address).await?;
     info!("Listening on http://{address}");
     axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?;
@@ -115,7 +115,7 @@ mod tests {
     #[ignore]
     #[tokio::test]
     async fn test_router() {
-        let router = get_router().await.expect("Router");
+        let router = get_router(3000).await.expect("Router");
 
         {
             // Test docs redirect from root
