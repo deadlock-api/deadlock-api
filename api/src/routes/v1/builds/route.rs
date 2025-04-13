@@ -1,6 +1,8 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::query;
-use crate::routes::v1::builds::query::BuildsSearchQuery;
+use crate::routes::v1::builds::query::{
+    BuildsSearchQuery, BuildsSearchQuerySortBy, BuildsSearchQuerySortDirection,
+};
 use crate::routes::v1::builds::structs::Build;
 use crate::state::AppState;
 use axum::Json;
@@ -44,6 +46,25 @@ pub async fn search_builds(
             .sorted_by_key(|a| a.hero_build.version)
             .rev()
             .unique_by(|a| a.hero_build.hero_build_id)
+            .sorted_by_key(|build| {
+                let direction = if params.sort_direction == BuildsSearchQuerySortDirection::Desc {
+                    -1
+                } else {
+                    1
+                };
+                let key = match params.sort_by {
+                    BuildsSearchQuerySortBy::WeeklyFavorites => build.num_weekly_favorites,
+                    BuildsSearchQuerySortBy::Favorites => build.num_favorites,
+                    BuildsSearchQuerySortBy::Ignores => build.num_ignores,
+                    BuildsSearchQuerySortBy::Reports => build.num_reports,
+                    BuildsSearchQuerySortBy::Version => build.hero_build.version.into(),
+                    BuildsSearchQuerySortBy::UpdatedAt => {
+                        (build.hero_build.last_updated_timestamp as u32).into()
+                    }
+                }
+                .unwrap_or_default() as i64;
+                direction * key
+            })
             .collect()
     } else {
         builds

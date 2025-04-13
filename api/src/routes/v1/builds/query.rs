@@ -8,7 +8,7 @@ fn default_limit() -> Option<u32> {
     100.into()
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Default, Display)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortBy {
     /// Sort by the number of weekly favorites.
@@ -32,7 +32,7 @@ pub enum BuildsSearchQuerySortBy {
     Version,
 }
 
-#[derive(Serialize, Deserialize, ToSchema, Default, Display)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default, Display, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortDirection {
     /// Sort in descending order.
@@ -44,7 +44,7 @@ pub enum BuildsSearchQuerySortDirection {
     Asc,
 }
 
-#[derive(Serialize, Deserialize, IntoParams)]
+#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildsSearchQuery {
@@ -144,6 +144,14 @@ pub fn sql_query(params: &BuildsSearchQuery) -> String {
     query_builder.push(params.sort_by.to_string().to_lowercase());
     query_builder.push(" ");
     query_builder.push(params.sort_direction.to_string().to_lowercase());
+    query_builder.push(" NULLS ");
+    query_builder.push(
+        if params.sort_direction == BuildsSearchQuerySortDirection::Desc {
+            "LAST"
+        } else {
+            "FIRST"
+        },
+    );
 
     if let Some(limit) = params.limit {
         query_builder.push(" LIMIT ");
@@ -179,7 +187,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -193,7 +201,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -207,7 +215,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -221,7 +229,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'description') LIKE '%strength items%' ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'description') LIKE '%strength items%' ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -235,7 +243,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND language = 1 ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND language = 1 ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -249,7 +257,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND build_id = 12345 ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND build_id = 12345 ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -263,7 +271,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND version = 2 ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND version = 2 ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -277,7 +285,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND hero = 23 ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND hero = 23 ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -291,7 +299,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND author_id = 74963221 ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND author_id = 74963221 ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -305,7 +313,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -319,7 +327,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY ignores desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY ignores desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -333,7 +341,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY reports desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY reports desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -347,7 +355,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY updated_at desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY updated_at desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -361,7 +369,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY version desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY version desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -375,7 +383,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -389,7 +397,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites asc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites asc NULLS FIRST LIMIT 100"
         );
     }
 
@@ -403,7 +411,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc LIMIT 50"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc NULLS LAST LIMIT 50"
         );
     }
 
@@ -417,7 +425,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc LIMIT 100 OFFSET 10"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc NULLS LAST LIMIT 100 OFFSET 10"
         );
     }
 
@@ -436,7 +444,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank%' AND hero = 42 ORDER BY updated_at asc LIMIT 25 OFFSET 5"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank%' AND hero = 42 ORDER BY updated_at asc NULLS FIRST LIMIT 25 OFFSET 5"
         );
     }
 
@@ -451,7 +459,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank%' AND lower(data->'hero_build'->>'description') LIKE '%strength%' ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank%' AND lower(data->'hero_build'->>'description') LIKE '%strength%' ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -468,7 +476,7 @@ mod tests {
         // the function itself doesn't do anything unexpected with malicious input
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%'; drop table hero_builds; --%' ORDER BY favorites desc LIMIT 100"
+            " SELECT data as builds FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%'; drop table hero_builds; --%' ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -482,7 +490,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc"
+            " SELECT data as builds FROM hero_builds WHERE TRUE ORDER BY favorites desc NULLS LAST"
         );
     }
 }
