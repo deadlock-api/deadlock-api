@@ -127,8 +127,12 @@ pub fn default_last_month_timestamp() -> Option<u64> {
     Some(last_month.and_utc().timestamp() as u64)
 }
 
-pub fn default_true() -> Option<bool> {
+pub fn default_true_option() -> Option<bool> {
     true.into()
+}
+
+pub fn default_true() -> bool {
+    true
 }
 
 #[cfg(test)]
@@ -249,7 +253,12 @@ mod tests {
     }
 
     #[test]
+    fn test_default_true_option() {
+        assert_eq!(default_true_option(), Some(true));
+    }
+
+    #[test]
     fn test_default_true() {
-        assert_eq!(default_true(), Some(true));
+        assert!(default_true());
     }
 }

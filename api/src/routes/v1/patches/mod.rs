@@ -1,4 +1,4 @@
-mod big_patch_days;
+pub mod big_patch_days;
 pub mod feed;
 
 use crate::middleware::cache::CacheControlMiddleware;

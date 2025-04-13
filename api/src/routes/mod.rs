@@ -10,7 +10,7 @@ use tracing::{Level, span};
 use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
-mod v1;
+pub mod v1;
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()

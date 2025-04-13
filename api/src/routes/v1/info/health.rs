@@ -6,12 +6,12 @@ use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use redis::AsyncCommands;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{Pool, Postgres};
 use utoipa::ToSchema;
 
-#[derive(Debug, Copy, Clone, Serialize, Default, ToSchema)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct StatusServices {
     /// Whether Clickhouse is reachable.
     pub clickhouse: bool,
@@ -27,7 +27,7 @@ impl StatusServices {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Default, ToSchema)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct Status {
     /// Status of the services.
     pub services: StatusServices,

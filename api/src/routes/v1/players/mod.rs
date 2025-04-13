@@ -1,10 +1,10 @@
-mod card;
-mod hero_stats;
-mod item_stats;
+pub mod card;
+pub mod hero_stats;
+pub mod item_stats;
 pub mod match_history;
-mod mate_stats;
-mod party_stats;
-mod scoreboard;
+pub mod mate_stats;
+pub mod party_stats;
+pub mod scoreboard;
 pub mod types;
 
 use crate::middleware::cache::CacheControlMiddleware;

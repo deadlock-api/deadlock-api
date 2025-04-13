@@ -8,7 +8,7 @@ mod api_doc;
 mod config;
 mod error;
 mod middleware;
-mod routes;
+pub mod routes;
 pub mod state;
 mod utils;
 

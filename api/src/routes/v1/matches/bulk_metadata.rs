@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
-use crate::utils::parse::comma_separated_num_deserialize;
+use crate::utils::parse::{comma_separated_num_deserialize, default_true};
 use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -15,10 +15,6 @@ use strum_macros::IntoStaticStr;
 use tokio::io::{AsyncBufReadExt, Lines};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
-
-fn true_default() -> bool {
-    true
-}
 
 fn default_limit() -> u32 {
     1000
@@ -45,74 +41,74 @@ pub enum SortKey {
 pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.
-    #[serde(default = "true_default")]
+    #[serde(default = "default_true")]
     #[param(inline, default = "true")]
-    include_info: bool,
+    pub include_info: bool,
     /// Include damage matrix in the response.
     #[serde(default)]
-    include_damage_matrix: bool,
+    pub include_damage_matrix: bool,
     /// Include objectives in the response.
     #[serde(default)]
-    include_objectives: bool,
+    pub include_objectives: bool,
     /// Include midboss in the response.
     #[serde(default)]
-    include_mid_boss: bool,
+    pub include_mid_boss: bool,
     /// Include player info in the response.
     #[serde(default)]
-    include_player_info: bool,
+    pub include_player_info: bool,
     /// Include player items in the response.
     #[serde(default)]
-    include_player_items: bool,
+    pub include_player_items: bool,
     /// Include player stats in the response.
     #[serde(default)]
-    include_player_stats: bool,
+    pub include_player_stats: bool,
     /// Include player death details in the response.
     #[serde(default)]
-    include_player_death_details: bool,
+    pub include_player_death_details: bool,
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
     #[serde(deserialize_with = "comma_separated_num_deserialize")]
-    match_ids: Option<Vec<u64>>,
+    pub match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    pub min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    pub max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    min_duration_s: Option<u64>,
+    pub min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    max_duration_s: Option<u64>,
+    pub max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    min_average_badge: Option<u8>,
+    pub min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    max_average_badge: Option<u8>,
+    pub max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    min_match_id: Option<u64>,
+    pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    max_match_id: Option<u64>,
+    pub max_match_id: Option<u64>,
     /// Filter matches based on whether they are in the high skill range.
-    is_high_skill_range_parties: Option<bool>,
+    pub is_high_skill_range_parties: Option<bool>,
     /// Filter matches based on whether they are in the low priority pool.
-    is_low_pri_pool: Option<bool>,
+    pub is_low_pri_pool: Option<bool>,
     /// Filter matches based on whether they are in the new player pool.
-    is_new_player_pool: Option<bool>,
+    pub is_new_player_pool: Option<bool>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
     #[serde(default)]
     #[param(inline)]
-    order_by: SortKey,
+    pub order_by: SortKey,
     /// The direction to order the results by.
     #[serde(default)]
     #[param(inline)]
-    order_direction: SortDirection,
+    pub order_direction: SortDirection,
     /// The maximum number of matches to return.
     #[serde(default = "default_limit")]
     #[param(minimum = 1, maximum = 10000, default = 1000)]
-    limit: u32,
+    pub limit: u32,
 }
 
 #[utoipa::path(

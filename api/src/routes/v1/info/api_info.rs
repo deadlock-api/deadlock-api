@@ -42,7 +42,7 @@ FROM fetched_matches
 "#;
 
 #[derive(Deserialize, Row)]
-struct TableSizeRow {
+pub struct TableSizeRow {
     /// Name of the table.
     pub table: String,
     /// Whether the table is a view.
@@ -55,7 +55,7 @@ struct TableSizeRow {
     pub data_uncompressed_bytes: Option<u64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
 pub struct TableSize {
     /// Whether the table is a view.
     pub is_view: bool,
@@ -78,7 +78,7 @@ impl From<TableSizeRow> for TableSize {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct APIInfo {
     /// The number of matches fetched in the last 24 hours.
     pub fetched_matches_per_day: u64,

@@ -13,13 +13,13 @@ use utoipa::{IntoParams, ToSchema};
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct BadgeDistributionQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    pub min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    pub max_unix_timestamp: Option<u64>,
     /// Filter matches based on their ID.
-    min_match_id: Option<u64>,
+    pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    max_match_id: Option<u64>,
+    pub max_match_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -38,7 +38,7 @@ pub struct BadgeDistribution {
     sync_writes = "by_key",
     key = "String"
 )]
-async fn get_badge_distribution(
+pub async fn get_badge_distribution(
     ch_client: &clickhouse::Client,
     query: BadgeDistributionQuery,
 ) -> APIResult<Vec<BadgeDistribution>> {

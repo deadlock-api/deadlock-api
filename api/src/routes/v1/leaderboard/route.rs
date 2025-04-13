@@ -48,7 +48,7 @@ pub struct LeaderboardHeroQuery {
     sync_writes = "by_key",
     key = "String"
 )]
-async fn fetch_leaderboard_raw(
+pub async fn fetch_leaderboard_raw(
     config: &Config,
     http_client: &reqwest::Client,
     region: LeaderboardRegion,
@@ -81,7 +81,7 @@ async fn fetch_leaderboard_raw(
     })
 }
 
-async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
+pub async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
     let decoded_message = CMsgClientToGcGetLeaderboardResponse::decode(raw_data).map_err(|e| {
         APIError::InternalError {
             message: format!("Failed to parse leaderboard: {e}"),

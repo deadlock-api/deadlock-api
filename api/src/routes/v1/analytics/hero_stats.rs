@@ -16,25 +16,25 @@ pub struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    min_unix_timestamp: Option<u64>,
+    pub min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    pub max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    min_duration_s: Option<u64>,
+    pub min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    max_duration_s: Option<u64>,
+    pub max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    min_average_badge: Option<u8>,
+    pub min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    max_average_badge: Option<u8>,
+    pub max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    min_match_id: Option<u64>,
+    pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    max_match_id: Option<u64>,
+    pub max_match_id: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
@@ -70,7 +70,7 @@ pub struct AnalyticsHeroStats {
     sync_writes = "by_key",
     key = "String"
 )]
-async fn get_hero_stats(
+pub async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     query: HeroStatsQuery,
 ) -> APIResult<Vec<AnalyticsHeroStats>> {

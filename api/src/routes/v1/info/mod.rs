@@ -1,5 +1,5 @@
-mod api_info;
-mod health;
+pub mod api_info;
+pub mod health;
 
 use crate::state::AppState;
 use utoipa::OpenApi;

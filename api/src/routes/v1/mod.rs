@@ -2,12 +2,12 @@ use crate::state::AppState;
 use utoipa_axum::router::OpenApiRouter;
 
 pub mod analytics;
-mod builds;
-mod commands;
-mod info;
-mod leaderboard;
-mod matches;
-mod patches;
+pub mod builds;
+pub mod commands;
+pub mod info;
+pub mod leaderboard;
+pub mod matches;
+pub mod patches;
 pub mod players;
 
 pub fn router() -> OpenApiRouter<AppState> {

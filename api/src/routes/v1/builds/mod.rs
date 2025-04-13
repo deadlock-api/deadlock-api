@@ -1,6 +1,6 @@
-mod query;
-mod route;
-mod structs;
+pub mod query;
+pub mod route;
+pub mod structs;
 
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;

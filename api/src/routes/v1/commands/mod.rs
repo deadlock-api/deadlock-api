@@ -1,5 +1,5 @@
-mod route;
-mod variables;
+pub mod route;
+pub mod variables;
 
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;

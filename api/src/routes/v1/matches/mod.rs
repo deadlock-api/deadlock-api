@@ -1,12 +1,12 @@
-mod active;
-mod badge_distribution;
-mod bulk_metadata;
-mod ingest_event;
-mod ingest_salts;
-mod metadata;
-mod recently_fetched;
-mod salts;
-mod types;
+pub mod active;
+pub mod badge_distribution;
+pub mod bulk_metadata;
+pub mod ingest_event;
+pub mod ingest_salts;
+pub mod metadata;
+pub mod recently_fetched;
+pub mod salts;
+pub mod types;
 
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;

@@ -23,10 +23,10 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MatchCreatedWebhookPayload {
-    match_id: u64,
-    salts_url: String,
-    metadata_url: String,
-    raw_metadata_url: String,
+    pub match_id: u64,
+    pub salts_url: String,
+    pub metadata_url: String,
+    pub raw_metadata_url: String,
 }
 
 impl MatchCreatedWebhookPayload {
@@ -49,7 +49,9 @@ impl MatchCreatedWebhookPayload {
     convert = r#"{ format!("") }"#,
     sync_writes = "default"
 )]
-async fn get_webhook_urls(pg_client: &Pool<Postgres>) -> Result<Vec<(String, String)>, APIError> {
+pub async fn get_webhook_urls(
+    pg_client: &Pool<Postgres>,
+) -> Result<Vec<(String, String)>, APIError> {
     sqlx::query!("SELECT webhook_url, secret FROM webhooks")
         .fetch_all(pg_client)
         .await

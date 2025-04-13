@@ -25,7 +25,7 @@ use valveprotos::deadlock::{
 pub struct ActiveMatchesQuery {
     /// The account ID to filter active matches by (SteamID3)
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    account_id: Option<u32>,
+    pub account_id: Option<u32>,
 }
 
 #[cached(
@@ -36,7 +36,7 @@ pub struct ActiveMatchesQuery {
     sync_writes = "by_key",
     key = "String"
 )]
-async fn fetch_active_matches_raw(
+pub async fn fetch_active_matches_raw(
     config: &Config,
     http_client: &reqwest::Client,
 ) -> APIResult<Vec<u8>> {
@@ -63,7 +63,7 @@ async fn fetch_active_matches_raw(
     })
 }
 
-async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
+pub async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     if raw_data.len() < 7 {
         return Err(APIError::InternalError {
             message: "Invalid active matches data".to_string(),

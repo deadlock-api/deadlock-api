@@ -14,25 +14,25 @@ use utoipa::{IntoParams, ToSchema};
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct ItemStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    pub min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    pub max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    min_duration_s: Option<u64>,
+    pub min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    max_duration_s: Option<u64>,
+    pub max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    min_average_badge: Option<u8>,
+    pub min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    max_average_badge: Option<u8>,
+    pub max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    min_match_id: Option<u64>,
+    pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    max_match_id: Option<u64>,
+    pub max_match_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]

@@ -1,8 +1,8 @@
-mod hero_comb_win_loss_stats;
-mod hero_counters_stats;
+pub mod hero_comb_win_loss_stats;
+pub mod hero_counters_stats;
 pub mod hero_stats;
-mod hero_synergies_stats;
-mod item_win_loss_stats;
+pub mod hero_synergies_stats;
+pub mod item_win_loss_stats;
 
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
