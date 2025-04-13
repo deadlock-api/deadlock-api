@@ -86,19 +86,8 @@ pub struct BuildsSearchQuery {
 impl Default for BuildsSearchQuery {
     fn default() -> Self {
         Self {
-            start: None,
             limit: Some(100),
-            sort_by: BuildsSearchQuerySortBy::Favorites,
-            sort_direction: BuildsSearchQuerySortDirection::Desc,
-            search_name: None,
-            search_description: None,
-            only_latest: None,
-            language: None,
-            build_id: None,
-            version: None,
-            hero_id: None,
-            rollup_category: None,
-            author_id: None,
+            ..Default::default()
         }
     }
 }
