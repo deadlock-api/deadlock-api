@@ -9,7 +9,6 @@ async fn test_info() {
     let info: APIInfo = response.json().await.expect("Failed to parse response");
 
     let expected_table_sizes = [
-        ("active_matches", 100),
         ("match_salts", 100),
         ("match_info", 100),
         ("match_player", 1200),
