@@ -17,6 +17,10 @@ create table hero_builds
     primary key (hero, build_id, version)
 );
 
+create index hero_builds_author_id_index on hero_builds (author_id);
+create index hero_builds_weekly_favorites_index on hero_builds (weekly_favorites desc);
+create index hero_builds_language_index on hero_builds (language);
+
 INSERT INTO hero_builds (hero, build_id, version, author_id, favorites, ignores, reports, updated_at, data, language,
                          weekly_favorites, rollup_category)
 VALUES (15, 192325, 16, 84801726, 0, 0, 0, '2025-01-30 03:52:04.000000', '{
