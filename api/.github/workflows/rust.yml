@@ -34,6 +34,18 @@ jobs:
     runs-on: ubuntu-24.04-arm
 
     steps:
+      - name: Determine Docker Tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DOCKER_TAG="${{ inputs.tag }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            DOCKER_TAG="latest"
+          else
+            DOCKER_TAG="${{ github.sha }}"
+          fi
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+          echo "Using Docker tag: $DOCKER_TAG"
+
       ###############################
       ##           Setup           ##
       ###############################
@@ -73,15 +85,6 @@ jobs:
       ###############################
       ##           Build           ##
       ###############################
-      - name: Determine Docker Tag
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "DOCKER_TAG=${{ inputs.tag }}" >> $GITHUB_ENV
-          else # Must be push to main
-            echo "DOCKER_TAG=latest" >> $GITHUB_ENV
-          fi
-          echo "Using Docker tag: $DOCKER_TAG"
-
       - name: Build and Load Docker image
         uses: depot/build-push-action@v1
         with:
