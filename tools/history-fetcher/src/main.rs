@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let limiter = RateLimiter::new(13, Duration::from_secs(60));
+    let limiter = RateLimiter::new(130, Duration::from_secs(10 * 60));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
@@ -130,7 +130,7 @@ WHERE mi.match_outcome = 'TeamWin'
     AND mp.account_id > 0
     AND (mp.match_id, mp.account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
 GROUP BY mp.account_id
-ORDER BY rand()
+ORDER BY COUNT(DISTINCT mp.match_id) DESC
 LIMIT 100
     "#,
         )
