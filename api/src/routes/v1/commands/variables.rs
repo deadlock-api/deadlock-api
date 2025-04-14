@@ -8,6 +8,8 @@ use crate::routes::v1::players::match_history::{
 use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::state::AppState;
 use crate::utils::assets;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use chrono::Duration;
 use futures::future::join;
 use itertools::{Itertools, chain};
@@ -351,7 +353,7 @@ impl Variable {
             .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)
             .map(|e| e.badge_level.unwrap_or_default().to_string()),
             Self::SteamAccountName => {
-                Self::get_steam_account_name(&state.config, &state.http_client, steam_id).await
+                get_steam_account_name(&state.config, &state.http_client, steam_id).await
             }
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(
@@ -873,35 +875,6 @@ impl Variable {
             .collect())
     }
 
-    async fn get_steam_account_name(
-        config: &Config,
-        http_client: &reqwest::Client,
-        steam_id: u32,
-    ) -> Result<String, VariableResolveError> {
-        let steamid64 = steam_id as u64 + 76561197960265728;
-        let response = http_client
-            .get(format!(
-                "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?steamids={}",
-                steamid64
-            ))
-            .header("x-webapi-key", config.steam_api_key.clone())
-            .send()
-            .await
-            .map_err(|_| VariableResolveError::FailedToFetchSteamName)?
-            .json::<serde_json::Value>()
-            .await
-            .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
-        response
-            .get("response")
-            .and_then(|r| r.get("players"))
-            .and_then(|p| p.as_array())
-            .and_then(|p| p.first())
-            .and_then(|p| p.get("personaname"))
-            .and_then(|p| p.as_str())
-            .map(|p| p.to_string())
-            .ok_or(VariableResolveError::FailedToFetchSteamName)
-    }
-
     async fn get_leaderboard_entry(
         config: &Config,
         http_client: &reqwest::Client,
@@ -911,7 +884,7 @@ impl Variable {
     ) -> Result<LeaderboardEntry, VariableResolveError> {
         let (leaderboard, steam_name) = join(
             fetch_parse_leaderboard(config, http_client, region, hero_id),
-            Self::get_steam_account_name(config, http_client, steam_id),
+            get_steam_account_name(config, http_client, steam_id),
         )
         .await;
         let leaderboard =
@@ -923,4 +896,41 @@ impl Variable {
             .find(|entry| entry.account_name.clone().is_some_and(|n| n == steam_name))
             .ok_or(VariableResolveError::PlayerNotFoundInLeaderboard)
     }
+}
+
+#[cached(
+    ty = "TimedCache<u32, String>",
+    create = "{ TimedCache::with_lifespan(24 * 60 * 60) }",
+    result = true,
+    convert = "{ steam_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
+async fn get_steam_account_name(
+    config: &Config,
+    http_client: &reqwest::Client,
+    steam_id: u32,
+) -> Result<String, VariableResolveError> {
+    let steamid64 = steam_id as u64 + 76561197960265728;
+    let response = http_client
+        .get(format!(
+            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?steamids={}",
+            steamid64
+        ))
+        .header("x-webapi-key", config.steam_api_key.clone())
+        .send()
+        .await
+        .map_err(|_| VariableResolveError::FailedToFetchSteamName)?
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+    response
+        .get("response")
+        .and_then(|r| r.get("players"))
+        .and_then(|p| p.as_array())
+        .and_then(|p| p.first())
+        .and_then(|p| p.get("personaname"))
+        .and_then(|p| p.as_str())
+        .map(|p| p.to_string())
+        .ok_or(VariableResolveError::FailedToFetchSteamName)
 }
