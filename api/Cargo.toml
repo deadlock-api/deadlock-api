@@ -13,7 +13,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 redis = { version = "0.29.5", features = ["tokio-comp"] }
 clap = { version = "4.5.36", features = ["env", "derive"] }
 clickhouse = "0.13.2"
-sqlx = { version = "0.8.3", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
+sqlx = { version = "0.8.4", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.16.0", features = ["v4"] }
 cached = { version = "0.55.1", features = ["async", "serde", "tokio"] }
 axum = { version = "0.8.3", features = ["http2"] }
