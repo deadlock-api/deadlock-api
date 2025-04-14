@@ -12,8 +12,6 @@ use rstest::rstest;
 #[tokio::test]
 async fn test_builds(
     #[values(None, Some(10))] limit: Option<usize>,
-    #[values(None, Some(15))] hero_id: Option<u32>,
-    #[values(None, Some(74963216), Some(123031))] author_id: Option<u32>,
     #[values(
         None,
         Some(BuildsSearchQuerySortBy::UpdatedAt),
@@ -28,6 +26,9 @@ async fn test_builds(
     #[values(None, Some(true), Some(false))] only_latest: Option<bool>,
     #[values(None, Some(6))] language: Option<u32>,
     #[values(None, Some(132494))] build_id: Option<u32>,
+    #[values(None, Some(16))] version: Option<u32>,
+    #[values(None, Some(15))] hero_id: Option<u32>,
+    #[values(None, Some(18373975))] author_id: Option<u32>,
 ) {
     let mut queries = vec![];
     if let Some(limit) = limit {
@@ -60,6 +61,9 @@ async fn test_builds(
     if let Some(build_id) = build_id {
         queries.push(("build_id", build_id.to_string()));
     }
+    if let Some(version) = version {
+        queries.push(("version", version.to_string()));
+    }
     let queries = queries
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
@@ -67,8 +71,8 @@ async fn test_builds(
     let response = utils::request_endpoint("/v1/builds", queries).await;
     let builds: Vec<Build> = response.json().await.expect("Failed to parse response");
 
-    let sort_by = sort_by.unwrap_or(BuildsSearchQuerySortBy::WeeklyFavorites);
-    let sort_direction = sort_direction.unwrap_or(BuildsSearchQuerySortDirection::Desc);
+    let sort_by = sort_by.unwrap_or_default();
+    let sort_direction = sort_direction.unwrap_or_default();
     let builds_sorted = if sort_direction == BuildsSearchQuerySortDirection::Desc {
         builds.iter().rev().collect::<Vec<_>>()
     } else {
@@ -121,6 +125,9 @@ async fn test_builds(
         }
         if let Some(language) = language {
             assert_eq!(build.hero_build.language, language);
+        }
+        if let Some(version) = version {
+            assert_eq!(build.hero_build.version, version);
         }
         if let Some(search_name) = search_name {
             assert!(
