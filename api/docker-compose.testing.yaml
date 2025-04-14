@@ -1,9 +1,7 @@
 services:
   api:
-    image: deadlock-api-rust:testing
-    build:
-      context: .
-      dockerfile: Dockerfile.testing
+    image: ${IMAGE:-deadlock-api-rust:testing}
+    build: .
     env_file: .env.testing
     ports:
       - "3000:3000"
