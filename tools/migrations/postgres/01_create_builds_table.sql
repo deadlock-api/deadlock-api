@@ -15,3 +15,5 @@ CREATE TABLE IF NOT EXISTS hero_builds
 );
 
 CREATE INDEX hero_builds_author_id_index ON hero_builds (author_id);
+CREATE INDEX hero_builds_weekly_favorites_index ON hero_builds (weekly_favorites desc);
+CREATE INDEX hero_builds_language_index ON hero_builds (language);
