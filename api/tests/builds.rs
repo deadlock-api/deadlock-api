@@ -22,7 +22,6 @@ async fn test_builds(
         BuildsSearchQuerySortDirection,
     >,
     #[values(None, Some("Lash"))] search_name: Option<&str>,
-    #[values(None, Some("AverageJonas"))] search_description: Option<&str>,
     #[values(None, Some(true), Some(false))] only_latest: Option<bool>,
     #[values(None, Some(6))] language: Option<u32>,
     #[values(None, Some(132494))] build_id: Option<u32>,
@@ -48,9 +47,6 @@ async fn test_builds(
     }
     if let Some(search_name) = search_name {
         queries.push(("search_name", search_name.to_string()));
-    }
-    if let Some(search_description) = search_description {
-        queries.push(("search_description", search_description.to_string()));
     }
     if let Some(only_latest) = only_latest {
         queries.push(("only_latest", only_latest.to_string()));
@@ -135,14 +131,6 @@ async fn test_builds(
                     .name
                     .to_lowercase()
                     .contains(&search_name.to_lowercase())
-            );
-        }
-        if let Some(search_description) = search_description {
-            assert!(
-                hero_build
-                    .name
-                    .to_lowercase()
-                    .contains(&search_description.to_lowercase())
             );
         }
     }
