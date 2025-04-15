@@ -1,4 +1,5 @@
 use crate::utils::parse::parse_steam_id_option;
+use crate::utils::types::SortDirectionDesc;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, QueryBuilder};
@@ -32,18 +33,6 @@ pub enum BuildsSearchQuerySortBy {
     Version,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default, Display, Eq, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum BuildsSearchQuerySortDirection {
-    /// Sort in descending order.
-    #[default]
-    #[display("desc")]
-    Desc,
-    /// Sort in ascending order.
-    #[display("asc")]
-    Asc,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
@@ -61,7 +50,7 @@ pub struct BuildsSearchQuery {
     /// The direction to sort the builds in.
     #[serde(default)]
     #[param(inline)]
-    pub sort_direction: BuildsSearchQuerySortDirection,
+    pub sort_direction: SortDirectionDesc,
     /// Search for builds with a name containing this string.
     pub search_name: Option<String>,
     /// Search for builds with a description containing this string.
@@ -89,7 +78,7 @@ impl Default for BuildsSearchQuery {
             start: None,
             limit: Some(100),
             sort_by: BuildsSearchQuerySortBy::Favorites,
-            sort_direction: BuildsSearchQuerySortDirection::Desc,
+            sort_direction: SortDirectionDesc::Desc,
             search_name: None,
             search_description: None,
             only_latest: None,
@@ -145,13 +134,11 @@ pub fn sql_query(params: &BuildsSearchQuery) -> String {
     query_builder.push(" ");
     query_builder.push(params.sort_direction.to_string().to_lowercase());
     query_builder.push(" NULLS ");
-    query_builder.push(
-        if params.sort_direction == BuildsSearchQuerySortDirection::Desc {
-            "LAST"
-        } else {
-            "FIRST"
-        },
-    );
+    query_builder.push(if params.sort_direction == SortDirectionDesc::Desc {
+        "LAST"
+    } else {
+        "FIRST"
+    });
 
     if let Some(limit) = params.limit {
         query_builder.push(" LIMIT ");
@@ -376,7 +363,7 @@ mod tests {
     #[test]
     fn test_sort_direction_desc() {
         let query = BuildsSearchQuery {
-            sort_direction: BuildsSearchQuerySortDirection::Desc,
+            sort_direction: SortDirectionDesc::Desc,
             ..Default::default()
         };
 
@@ -390,7 +377,7 @@ mod tests {
     #[test]
     fn test_sort_direction_asc() {
         let query = BuildsSearchQuery {
-            sort_direction: BuildsSearchQuerySortDirection::Asc,
+            sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
 
@@ -435,7 +422,7 @@ mod tests {
             search_name: Some("Tank".to_string()),
             hero_id: Some(42),
             sort_by: BuildsSearchQuerySortBy::UpdatedAt,
-            sort_direction: BuildsSearchQuerySortDirection::Asc,
+            sort_direction: SortDirectionDesc::Asc,
             limit: Some(25),
             start: Some(5),
             ..Default::default()

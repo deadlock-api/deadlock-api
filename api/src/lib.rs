@@ -10,7 +10,7 @@ mod error;
 mod middleware;
 pub mod routes;
 pub mod state;
-mod utils;
+pub mod utils;
 
 use crate::api_doc::ApiDoc;
 use crate::middleware::api_key::write_api_key_to_header;

@@ -2,6 +2,7 @@ use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use crate::utils::parse::{comma_separated_num_deserialize, default_true};
+use crate::utils::types::SortDirectionAsc;
 use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -20,14 +21,6 @@ fn default_limit() -> u32 {
     1000
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default, IntoStaticStr)]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum SortDirection {
-    #[default]
-    Desc,
-    Asc,
-}
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default, IntoStaticStr)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
@@ -104,7 +97,7 @@ pub struct BulkMatchMetadataQuery {
     /// The direction to order the results by.
     #[serde(default)]
     #[param(inline)]
-    pub order_direction: SortDirection,
+    pub order_direction: SortDirectionAsc,
     /// The maximum number of matches to return.
     #[serde(default = "default_limit")]
     #[param(minimum = 1, maximum = 10000, default = 1000)]
@@ -296,8 +289,7 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         "".to_owned()
     };
     let order_by: &str = query.order_by.into();
-    let order_direction: &str = query.order_direction.into();
-    let order = format!(" ORDER BY {} {} ", order_by, order_direction);
+    let order = format!(" ORDER BY {} {} ", order_by, query.order_direction);
     let limit = format!(" LIMIT {} ", query.limit);
 
     let mut query = String::new();

@@ -1,5 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
+use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -15,9 +16,11 @@ fn default_limit() -> Option<u32> {
     100.into()
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema, Default, Display)]
+#[derive(
+    Copy, Clone, Debug, Serialize, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash,
+)]
 #[serde(rename_all = "snake_case")]
-pub enum ScoreboardQuerySortBy {
+pub enum PlayerScoreboardQuerySortBy {
     /// Sort by the most kills per match
     #[default]
     #[display("kills_per_match")]
@@ -45,7 +48,7 @@ pub enum ScoreboardQuerySortBy {
     Deaths,
 }
 
-impl ScoreboardQuerySortBy {
+impl PlayerScoreboardQuerySortBy {
     pub fn get_select_clause(&self) -> &'static str {
         match self {
             Self::KillsPerMatch => "max(kills)",
@@ -60,20 +63,8 @@ impl ScoreboardQuerySortBy {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema, Default, Display)]
-#[serde(rename_all = "snake_case")]
-pub enum ScoreboardQuerySortDirection {
-    /// Sort in descending order.
-    #[default]
-    #[display("desc")]
-    Desc,
-    /// Sort in ascending order.
-    #[display("asc")]
-    Asc,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
-pub struct ScoreboardQuery {
+#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, IntoParams)]
+pub struct PlayerScoreboardQuery {
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
     /// Filter by min number of matches played.
@@ -101,11 +92,11 @@ pub struct ScoreboardQuery {
     /// The field to sort by.
     #[serde(default)]
     #[param(inline)]
-    pub sort_by: ScoreboardQuerySortBy,
+    pub sort_by: PlayerScoreboardQuerySortBy,
     /// The direction to sort players in.
     #[serde(default)]
     #[param(inline)]
-    pub sort_direction: ScoreboardQuerySortDirection,
+    pub sort_direction: SortDirectionDesc,
     /// The offset to start fetching players from.
     pub start: Option<u32>,
     /// The maximum number of players to fetch.
@@ -115,24 +106,24 @@ pub struct ScoreboardQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct ScoreboardEntry {
+pub struct PlayerScoreboardEntry {
     pub rank: u64,
     pub account_id: u32,
     pub value: f64,
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<ScoreboardEntry>>",
+    ty = "TimedCache<PlayerScoreboardQuery, Vec<PlayerScoreboardEntry>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
+    convert = "{ query }",
     sync_writes = "by_key",
-    key = "String"
+    key = "PlayerScoreboardQuery"
 )]
-async fn get_scoreboard(
+async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
-    query: ScoreboardQuery,
-) -> APIResult<Vec<ScoreboardEntry>> {
+    query: PlayerScoreboardQuery,
+) -> APIResult<Vec<PlayerScoreboardEntry>> {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -222,20 +213,22 @@ LIMIT {} OFFSET {}
 
 #[utoipa::path(
     get,
-    path = "/scoreboard",
-    params(ScoreboardQuery),
+    path = "/players",
+    params(PlayerScoreboardQuery),
     responses(
-        (status = OK, description = "Scoreboard", body = [ScoreboardEntry]),
+        (status = OK, description = "Player Scoreboard", body = [PlayerScoreboardEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch scoreboard")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player scoreboard")
     ),
-    tags = ["Players"],
-    summary = "Scoreboard",
-    description = "This endpoint returns the scoreboard."
+    tags = ["Analytics"],
+    summary = "Player Scoreboard",
+    description = "This endpoint returns the player scoreboard."
 )]
-pub async fn scoreboard(
-    Query(query): Query<ScoreboardQuery>,
+pub async fn player_scoreboard(
+    Query(query): Query<PlayerScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_scoreboard(&state.ch_client, query).await.map(Json)
+    get_player_scoreboard(&state.ch_client, query)
+        .await
+        .map(Json)
 }

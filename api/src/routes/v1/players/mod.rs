@@ -4,7 +4,6 @@ pub mod item_stats;
 pub mod match_history;
 pub mod mate_stats;
 pub mod party_stats;
-pub mod scoreboard;
 pub mod types;
 
 use crate::middleware::cache::CacheControlMiddleware;
@@ -29,7 +28,6 @@ pub fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(party_stats::party_stats))
                 .routes(routes!(item_stats::item_stats))
                 .routes(routes!(hero_stats::hero_stats))
-                .routes(routes!(scoreboard::scoreboard))
                 .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
         )
 }

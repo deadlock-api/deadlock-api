@@ -1,10 +1,9 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::query;
-use crate::routes::v1::builds::query::{
-    BuildsSearchQuery, BuildsSearchQuerySortBy, BuildsSearchQuerySortDirection,
-};
+use crate::routes::v1::builds::query::{BuildsSearchQuery, BuildsSearchQuerySortBy};
 use crate::routes::v1::builds::structs::Build;
 use crate::state::AppState;
+use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -47,7 +46,7 @@ pub async fn search_builds(
             .rev()
             .unique_by(|a| a.hero_build.hero_build_id)
             .sorted_by_key(|build| {
-                let direction = if params.sort_direction == BuildsSearchQuerySortDirection::Desc {
+                let direction = if params.sort_direction == SortDirectionDesc::Desc {
                     -1
                 } else {
                     1

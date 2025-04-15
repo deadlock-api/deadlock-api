@@ -3,6 +3,7 @@ pub mod hero_counters_stats;
 pub mod hero_stats;
 pub mod hero_synergies_stats;
 pub mod item_win_loss_stats;
+pub mod player_scoreboard;
 
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
@@ -22,5 +23,10 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(hero_counters_stats::hero_counters_stats))
         .routes(routes!(hero_synergies_stats::hero_synergies_stats))
         .routes(routes!(hero_comb_stats::hero_comb_stats))
+        .nest(
+            "/scoreboards",
+            OpenApiRouter::with_openapi(ApiDoc::openapi())
+                .routes(routes!(player_scoreboard::player_scoreboard)),
+        )
         .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60)))
 }

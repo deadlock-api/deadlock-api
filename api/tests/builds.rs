@@ -1,10 +1,9 @@
 #![allow(clippy::too_many_arguments)]
 
 mod utils;
-use deadlock_api_rust::routes::v1::builds::query::{
-    BuildsSearchQuerySortBy, BuildsSearchQuerySortDirection,
-};
+use deadlock_api_rust::routes::v1::builds::query::BuildsSearchQuerySortBy;
 use deadlock_api_rust::routes::v1::builds::structs::Build;
+use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
 
@@ -18,9 +17,7 @@ async fn test_builds(
         Some(BuildsSearchQuerySortBy::Version)
     )]
     sort_by: Option<BuildsSearchQuerySortBy>,
-    #[values(None, Some(BuildsSearchQuerySortDirection::Asc))] sort_direction: Option<
-        BuildsSearchQuerySortDirection,
-    >,
+    #[values(None, Some(SortDirectionDesc::Asc))] sort_direction: Option<SortDirectionDesc>,
     #[values(None, Some("Lash"))] search_name: Option<&str>,
     #[values(None, Some(true), Some(false))] only_latest: Option<bool>,
     #[values(None, Some(6))] language: Option<u32>,
@@ -69,7 +66,7 @@ async fn test_builds(
 
     let sort_by = sort_by.unwrap_or_default();
     let sort_direction = sort_direction.unwrap_or_default();
-    let builds_sorted = if sort_direction == BuildsSearchQuerySortDirection::Desc {
+    let builds_sorted = if sort_direction == SortDirectionDesc::Desc {
         builds.iter().rev().collect::<Vec<_>>()
     } else {
         builds.iter().collect::<Vec<_>>()
