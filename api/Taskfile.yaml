@@ -17,10 +17,10 @@ tasks:
 
   lint:
     desc: "Runs cargo clippy for linting."
-    cmds:
-      - cargo clippy --all-targets --all-features -- -D warnings
     deps:
       - task: format:check
+    cmds:
+      - cargo clippy --all-targets --all-features -- -D warnings
 
   teardown-test-env:
     desc: "Stops and removes the testing Docker containers."
