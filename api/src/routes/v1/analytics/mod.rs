@@ -1,4 +1,4 @@
-pub mod hero_comb_win_loss_stats;
+pub mod hero_comb_stats;
 pub mod hero_counters_stats;
 pub mod hero_stats;
 pub mod hero_synergies_stats;
@@ -21,6 +21,6 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(item_win_loss_stats::item_win_loss_stats))
         .routes(routes!(hero_counters_stats::hero_counters_stats))
         .routes(routes!(hero_synergies_stats::hero_synergies_stats))
-        .routes(routes!(hero_comb_win_loss_stats::hero_comb_win_loss_stats))
+        .routes(routes!(hero_comb_stats::hero_comb_stats))
         .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60)))
 }

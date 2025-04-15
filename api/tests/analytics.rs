@@ -1,14 +1,14 @@
 mod utils;
 
-use deadlock_api_rust::routes::v1::analytics::hero_comb_win_loss_stats::HeroCombWinLossStats;
+use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
 use itertools::Itertools;
 use rstest::rstest;
 
 #[rstest]
 #[tokio::test]
-async fn test_hero_comb_win_loss_stats(
-    #[values(None, Some(1))] min_matches: Option<u32>,
+async fn test_hero_comb_stats(
+    #[values(None, Some(1))] min_matches: Option<u64>,
     #[values(None, Some(vec![1, 15]), Some(vec![10, 11, 12]))] include_hero_ids: Option<Vec<u32>>,
     #[values(None, Some(vec![2, 52]), Some(vec![16, 25]))] exclude_hero_ids: Option<Vec<u32>>,
 ) {
@@ -32,14 +32,16 @@ async fn test_hero_comb_win_loss_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/hero-comb-win-loss-stats", queries).await;
-    let comb_stats: Vec<HeroCombWinLossStats> =
-        response.json().await.expect("Failed to parse response");
+    let response = utils::request_endpoint("/v1/analytics/hero-comb-stats", queries).await;
+    let comb_stats: Vec<HeroCombStats> = response.json().await.expect("Failed to parse response");
 
     for comb in comb_stats.iter() {
         assert_eq!(comb.wins + comb.losses, comb.matches);
+        assert_eq!(comb.hero_ids.len(), 6);
         assert_eq!(comb.hero_ids.iter().unique().count(), 6);
-        assert!(comb.matches >= 1);
+        if let Some(min_matches) = min_matches {
+            assert!(comb.matches >= min_matches);
+        }
         if let Some(include_hero_ids) = include_hero_ids.as_ref() {
             assert!(include_hero_ids.iter().all(|id| comb.hero_ids.contains(id)));
         }

@@ -19,7 +19,7 @@ fn default_min_matches() -> Option<u32> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
-pub struct HeroCombWinLossStatsQuery {
+pub struct HeroCombStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -58,14 +58,14 @@ pub struct HeroCombWinLossStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct HeroCombWinLossStats {
+pub struct HeroCombStats {
     pub hero_ids: Vec<u32>,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
 }
 
-fn build_comb_hero_win_loss_query(query: &HeroCombWinLossStatsQuery) -> String {
+fn build_comb_hero_query(query: &HeroCombStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -175,53 +175,49 @@ ORDER BY matches DESC
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<HeroCombWinLossStats>>",
+    ty = "TimedCache<String, Vec<HeroCombStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
     convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_comb_hero_win_loss_stats(
+pub async fn get_comb_stats(
     ch_client: &clickhouse::Client,
-    query: HeroCombWinLossStatsQuery,
-) -> APIResult<Vec<HeroCombWinLossStats>> {
-    let query = build_comb_hero_win_loss_query(&query);
+    query: HeroCombStatsQuery,
+) -> APIResult<Vec<HeroCombStats>> {
+    let query = build_comb_hero_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero comb win loss stats: {}", e);
+        warn!("Failed to fetch hero comb stats: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch hero comb win loss stats: {}", e),
+            message: format!("Failed to fetch hero comb stats: {}", e),
         }
     })
 }
 
 #[utoipa::path(
     get,
-    path = "/hero-comb-win-loss-stats",
-    params(HeroCombWinLossStatsQuery),
+    path = "/hero-comb-stats",
+    params(HeroCombStatsQuery),
     responses(
-        (status = OK, description = "Hero Win Loss Stats", body = [HeroCombWinLossStats]),
+        (status = OK, description = "Hero Comb Stats", body = [HeroCombStats]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero comb win loss stats")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero comb stats")
     ),
     tags = ["Analytics"],
-    summary = "Hero Comb Win Loss Stats",
+    summary = "Hero Comb Stats",
     description = r#"
-Retrieves overall win/loss and performance statistics for each hero combination.
-
-This endpoint analyzes completed matches. For each hero combination, it calculates their total wins and matches played across all matches.
+Retrieves overall statistics for each hero combination.
 
 Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
     "#
 )]
-pub async fn hero_comb_win_loss_stats(
-    Query(query): Query<HeroCombWinLossStatsQuery>,
+pub async fn hero_comb_stats(
+    Query(query): Query<HeroCombStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_comb_hero_win_loss_stats(&state.ch_client, query)
-        .await
-        .map(Json)
+    get_comb_stats(&state.ch_client, query).await.map(Json)
 }
 
 #[cfg(test)]
@@ -231,7 +227,7 @@ mod test {
     use rstest::rstest;
 
     #[rstest]
-    fn test_build_comb_hero_win_loss_query(
+    fn test_build_comb_hero_query(
         #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
         #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
         #[values(None, Some(600))] min_duration_s: Option<u64>,
@@ -245,7 +241,7 @@ mod test {
         #[values(None, Some(vec![1, 2, 3]))] exclude_hero_ids: Option<Vec<u32>>,
         #[values(None, Some(1))] min_matches: Option<u32>,
     ) {
-        let query = HeroCombWinLossStatsQuery {
+        let query = HeroCombStatsQuery {
             min_unix_timestamp,
             max_unix_timestamp,
             min_duration_s,
@@ -259,7 +255,7 @@ mod test {
             exclude_hero_ids: exclude_hero_ids.clone(),
             min_matches,
         };
-        let query = build_comb_hero_win_loss_query(&query);
+        let query = build_comb_hero_query(&query);
 
         if let Some(min_unix_timestamp) = min_unix_timestamp {
             assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
