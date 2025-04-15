@@ -220,9 +220,11 @@ async fn increment_key(
 }
 
 #[cached(
-    ty = "TimedCache<String, bool>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
-    convert = r#"{ format!("{api_key}") }"#
+    ty = "TimedCache<Uuid, bool>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    convert = "{ api_key }",
+    sync_writes = "by_key",
+    key = "Uuid"
 )]
 pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
     sqlx::query!("SELECT COUNT(*) FROM api_keys WHERE key = $1", api_key)
