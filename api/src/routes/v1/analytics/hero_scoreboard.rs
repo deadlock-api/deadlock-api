@@ -1,6 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::state::AppState;
+use crate::utils::parse::default_last_month_timestamp;
 use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
@@ -12,23 +13,13 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-fn default_limit() -> Option<u32> {
-    100.into()
-}
-
-fn default_min_matches() -> Option<u32> {
-    10.into()
-}
-
 #[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, IntoParams)]
-pub struct PlayerScoreboardQuery {
-    /// Filter matches based on the hero ID.
-    pub hero_id: Option<u32>,
-    /// The minimum number of matches played for a player to be included in the scoreboard.
-    #[serde(default = "default_min_matches")]
-    #[param(minimum = 1, default = 10)]
+pub struct HeroScoreboardQuery {
+    /// Filter by min number of matches played.
     pub min_matches: Option<u32>,
-    /// Filter matches based on their start time (Unix timestamp).
+    /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
+    #[serde(default = "default_last_month_timestamp")]
+    #[param(default = default_last_month_timestamp)]
     pub min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
     pub max_unix_timestamp: Option<u64>,
@@ -51,37 +42,31 @@ pub struct PlayerScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]
     pub sort_by: ScoreboardQuerySortBy,
-    /// The direction to sort players in.
+    /// The direction to sort heroes in.
     #[serde(default)]
     #[param(inline)]
     pub sort_direction: SortDirectionDesc,
-    /// The offset to start fetching players from.
-    pub start: Option<u32>,
-    /// The maximum number of players to fetch.
-    #[serde(default = "default_limit")]
-    #[param(inline, default = "100", maximum = 10000, minimum = 1)]
-    pub limit: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct PlayerScoreboardEntry {
+pub struct HeroScoreboardEntry {
     pub rank: u64,
-    pub account_id: u32,
+    pub hero_id: u32,
     pub value: f64,
 }
 
 #[cached(
-    ty = "TimedCache<PlayerScoreboardQuery, Vec<PlayerScoreboardEntry>>",
+    ty = "TimedCache<HeroScoreboardQuery, Vec<HeroScoreboardEntry>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
     convert = "{ query }",
     sync_writes = "by_key",
-    key = "PlayerScoreboardQuery"
+    key = "HeroScoreboardQuery"
 )]
-async fn get_player_scoreboard(
+async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
-    query: PlayerScoreboardQuery,
-) -> APIResult<Vec<PlayerScoreboardEntry>> {
+    query: HeroScoreboardQuery,
+) -> APIResult<Vec<HeroScoreboardEntry>> {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -125,10 +110,6 @@ async fn get_player_scoreboard(
             info_filters
         ));
     }
-    if let Some(hero_id) = query.hero_id {
-        player_filters.push(format!("hero_id = {}", hero_id));
-    }
-    player_filters.push("account_id > 0".to_string());
     let player_filters = if !player_filters.is_empty() {
         format!(" WHERE {} ", player_filters.join(" AND "))
     } else {
@@ -145,21 +126,17 @@ async fn get_player_scoreboard(
     };
     let query = format!(
         r#"
-SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value
+SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value
 FROM match_player
 {}
-GROUP BY account_id
+GROUP BY hero_id
 {}
 ORDER BY value {}
-LIMIT {} OFFSET {}
     "#,
-        query.start.unwrap_or_default() + 1,
         query.sort_by.get_select_clause(),
         player_filters,
         player_having,
         query.sort_direction,
-        query.limit.unwrap_or_default(),
-        query.start.unwrap_or_default() + 1,
     );
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
@@ -172,22 +149,20 @@ LIMIT {} OFFSET {}
 
 #[utoipa::path(
     get,
-    path = "/players",
-    params(PlayerScoreboardQuery),
+    path = "/heroes",
+    params(HeroScoreboardQuery),
     responses(
-        (status = OK, description = "Player Scoreboard", body = [PlayerScoreboardEntry]),
+        (status = OK, description = "Hero Scoreboard", body = [HeroScoreboardEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player scoreboard")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero scoreboard")
     ),
     tags = ["Analytics"],
-    summary = "Player Scoreboard",
-    description = "This endpoint returns the player scoreboard."
+    summary = "Hero Scoreboard",
+    description = "This endpoint returns the hero scoreboard."
 )]
-pub async fn player_scoreboard(
-    Query(query): Query<PlayerScoreboardQuery>,
+pub async fn hero_scoreboard(
+    Query(query): Query<HeroScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_player_scoreboard(&state.ch_client, query)
-        .await
-        .map(Json)
+    get_hero_scoreboard(&state.ch_client, query).await.map(Json)
 }
