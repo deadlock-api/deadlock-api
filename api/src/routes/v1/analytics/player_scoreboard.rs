@@ -68,7 +68,7 @@ pub struct PlayerScoreboardEntry {
     pub rank: u64,
     pub account_id: u32,
     pub value: f64,
-    pub matches_analyzed: u64,
+    pub matches: u64,
 }
 
 #[cached(
@@ -149,7 +149,7 @@ async fn get_player_scoreboard(
     };
     let query = format!(
         r#"
-SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches_analyzed
+SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
 {}
 GROUP BY account_id
