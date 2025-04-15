@@ -16,49 +16,82 @@ fn default_limit() -> Option<u32> {
     100.into()
 }
 
-#[derive(
-    Copy, Clone, Debug, Serialize, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash,
-)]
+fn default_min_matches() -> Option<u32> {
+    10.into()
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, ToSchema, Display, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum PlayerScoreboardQuerySortBy {
-    /// Sort by the most kills per match
-    #[default]
-    #[display("kills_per_match")]
-    KillsPerMatch,
-    /// Sort by the winrate
-    #[display("winrate")]
-    Winrate,
+    /// Sort by the number of matches
+    #[display("matches")]
+    Matches,
     /// Sort by the number of wins
     #[display("wins")]
     Wins,
     /// Sort by the number of losses
     #[display("losses")]
     Losses,
-    /// Sort by the number of matches
-    #[display("matches")]
-    Matches,
-    /// Sort by the most deaths per match
-    #[display("deaths_per_match")]
-    DeathsPerMatch,
-    /// Sort by the most kills per match
+    /// Sort by the winrate
+    #[display("winrate")]
+    Winrate,
+    /// Sort by the max kills per match
+    #[display("max_kills_per_match")]
+    MaxKillsPerMatch,
+    /// Sort by the avg kills per match
+    #[display("avg_kills_per_match")]
+    AvgKillsPerMatch,
+    /// Sort by the max total kills
     #[display("kills")]
     Kills,
-    /// Sort by the most deaths per match
+    /// Sort by the max deaths per match
+    #[display("max_deaths_per_match")]
+    MaxDeathsPerMatch,
+    /// Sort by the avg deaths per match
+    #[display("avg_deaths_per_match")]
+    AvgDeathsPerMatch,
+    /// Sort by the max total deaths
     #[display("deaths")]
     Deaths,
+    /// Sort by the max damage per match
+    #[display("max_damage_per_match")]
+    MaxDamagePerMatch,
+    /// Sort by the avg damage per match
+    #[display("avg_damage_per_match")]
+    AvgDamagePerMatch,
+    /// Sort by the max total damage
+    #[display("damage")]
+    Damage,
+    /// Sort by the max damage per match
+    #[display("max_damage_taken_per_match")]
+    MaxDamageTakenPerMatch,
+    /// Sort by the avg damage per match
+    #[display("avg_damage_taken_per_match")]
+    AvgDamageTakenPerMatch,
+    /// Sort by the max total damage
+    #[display("damage_taken")]
+    DamageTaken,
 }
 
 impl PlayerScoreboardQuerySortBy {
     pub fn get_select_clause(&self) -> &'static str {
         match self {
-            Self::KillsPerMatch => "max(kills)",
-            Self::DeathsPerMatch => "max(deaths)",
-            Self::Kills => "sum(kills)",
-            Self::Deaths => "sum(deaths)",
-            Self::Winrate => "sum(won) / count(distinct match_id)",
+            Self::Matches => "count(distinct match_id)",
             Self::Wins => "sum(won)",
             Self::Losses => "sum(not won)",
-            Self::Matches => "count(distinct match_id)",
+            Self::Winrate => "sum(won) / count(distinct match_id)",
+            Self::MaxKillsPerMatch => "max(kills)",
+            Self::AvgKillsPerMatch => "avg(kills)",
+            Self::Kills => "sum(kills)",
+            Self::MaxDeathsPerMatch => "max(deaths)",
+            Self::AvgDeathsPerMatch => "avg(deaths)",
+            Self::Deaths => "sum(deaths)",
+            Self::MaxDamagePerMatch => "max(arrayMax(stats.player_damage))",
+            Self::AvgDamagePerMatch => "avg(arrayMax(stats.player_damage))",
+            Self::Damage => "sum(arrayMax(stats.player_damage))",
+            Self::MaxDamageTakenPerMatch => "max(arrayMax(stats.player_damage_taken))",
+            Self::AvgDamageTakenPerMatch => "avg(arrayMax(stats.player_damage_taken))",
+            Self::DamageTaken => "sum(arrayMax(stats.player_damage_taken))",
         }
     }
 }
@@ -67,7 +100,9 @@ impl PlayerScoreboardQuerySortBy {
 pub struct PlayerScoreboardQuery {
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
-    /// Filter by min number of matches played.
+    /// The minimum number of matches played for a player to be included in the scoreboard.
+    #[serde(default = "default_min_matches")]
+    #[param(minimum = 1, default = 10)]
     pub min_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,
@@ -90,7 +125,6 @@ pub struct PlayerScoreboardQuery {
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
     /// The field to sort by.
-    #[serde(default)]
     #[param(inline)]
     pub sort_by: PlayerScoreboardQuerySortBy,
     /// The direction to sort players in.
@@ -170,6 +204,7 @@ async fn get_player_scoreboard(
     if let Some(hero_id) = query.hero_id {
         player_filters.push(format!("hero_id = {}", hero_id));
     }
+    player_filters.push("account_id > 0".to_string());
     let player_filters = if !player_filters.is_empty() {
         format!(" WHERE {} ", player_filters.join(" AND "))
     } else {
