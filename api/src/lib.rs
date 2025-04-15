@@ -22,7 +22,7 @@ use axum::http::{HeaderMap, header};
 use axum::middleware::from_fn;
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
-use axum::{Router, ServiceExt};
+use axum::{Json, Router, ServiceExt};
 use axum_prometheus::PrometheusMetricLayer;
 use error::*;
 use middleware::fallback;
@@ -89,7 +89,8 @@ async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
 
     let router = router
         .with_state(state)
-        .merge(Scalar::with_url("/docs", api));
+        .merge(Scalar::with_url("/docs", api.clone()))
+        .route("/openapi.json", get(|| async { Json(api) }));
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))
 }
 
