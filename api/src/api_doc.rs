@@ -11,9 +11,17 @@ API for the Game [Deadlock](https://store.steampowered.com/app/1422450)
 
 deadlock-api.com is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone officially involved in producing or managing Valve properties. Valve and all associated properties are trademarks or registered trademarks of Valve Corporation
         "#,
-        contact(name = "Deadlock API  - Discord", url = "https://discord.gg/XMF9Xrgfqu"),
+        contact(name = "Deadlock API - Discord", url = "https://discord.gg/XMF9Xrgfqu"),
+        license(
+            name = "MIT",
+            url = "https://github.com/deadlock-api/deadlock-api-rust/blob/master/LICENSE"
+        )
     ),
     modifiers(&SecurityAddon),
+    external_docs(
+        description = "Source Code",
+        url = "https://github.com/deadlock-api/deadlock-api-rust"
+    )
 )]
 pub struct ApiDoc;
 
