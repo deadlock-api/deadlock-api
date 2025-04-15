@@ -151,6 +151,15 @@ pub enum ScoreboardQuerySortBy {
     /// Sort by the max total boss_damage
     #[display("boss_damage")]
     BossDamage,
+    /// Sort by the max max_health per match
+    #[display("max_max_health_per_match")]
+    MaxMaxHealthPerMatch,
+    /// Sort by the avg max_health per match
+    #[display("avg_max_health_per_match")]
+    AvgMaxHealthPerMatch,
+    /// Sort by the max total max_health
+    #[display("max_health")]
+    MaxHealth,
 }
 
 impl ScoreboardQuerySortBy {
@@ -205,6 +214,9 @@ impl ScoreboardQuerySortBy {
             Self::MaxBossDamagePerMatch => "max(arrayMax(stats.boss_damage))",
             Self::AvgBossDamagePerMatch => "avg(arrayMax(stats.boss_damage))",
             Self::BossDamage => "sum(arrayMax(stats.boss_damage))",
+            Self::MaxMaxHealthPerMatch => "max(arrayMax(stats.max_health))",
+            Self::AvgMaxHealthPerMatch => "avg(arrayMax(stats.max_health))",
+            Self::MaxHealth => "sum(arrayMax(stats.max_health))",
         }
     }
 }
