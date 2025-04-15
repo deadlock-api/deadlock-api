@@ -1,6 +1,7 @@
 mod utils;
 
 use deadlock_api_rust::routes::v1::analytics::hero_comb_win_loss_stats::HeroCombWinLossStats;
+use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
 use itertools::Itertools;
 use rstest::rstest;
 
@@ -52,4 +53,35 @@ async fn test_hero_comb_win_loss_stats(
     }
     let hero_ids = comb_stats.into_iter().map(|c| c.hero_ids).collect_vec();
     assert_eq!(hero_ids.iter().unique().count(), hero_ids.len());
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_hero_counters_stats(#[values(None, Some(20))] min_matches: Option<u64>) {
+    let mut queries = vec![];
+    if let Some(min_matches) = min_matches {
+        queries.push(("min_matches", min_matches.to_string()));
+    }
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
+    let counter_stats: Vec<HeroCounterStats> =
+        response.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        counter_stats
+            .iter()
+            .map(|c| (c.hero_id, c.enemy_hero_id))
+            .unique()
+            .count(),
+        counter_stats.len()
+    );
+    for counter_stat in counter_stats {
+        if let Some(min_matches) = min_matches {
+            assert!(counter_stat.wins <= counter_stat.matches_played);
+            assert!(counter_stat.matches_played >= min_matches);
+        }
+    }
 }

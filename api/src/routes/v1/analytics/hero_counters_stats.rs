@@ -13,6 +13,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
+fn default_min_matches() -> Option<u64> {
+    50.into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct HeroCounterStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -44,6 +48,10 @@ pub struct HeroCounterStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
+    /// The minimum number of matches played for a hero combination to be included in the response.
+    #[serde(default = "default_min_matches")]
+    #[param(minimum = 1, default = 50)]
+    pub min_matches: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -58,18 +66,7 @@ pub struct HeroCounterStats {
     pub matches_played: u64,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<HeroCounterStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn get_hero_counter_stats(
-    ch_client: &clickhouse::Client,
-    query: HeroCounterStatsQuery,
-) -> APIResult<Vec<HeroCounterStats>> {
+fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -135,11 +132,32 @@ async fn get_hero_counter_stats(
       AND p1.team != p2.team
       {}
     GROUP BY p1.hero_id, p2.hero_id
-    HAVING matches_played > 1
+    HAVING matches_played >= {}
     ORDER BY p1.hero_id, p2.hero_id
     "#,
-        info_filters, player_filters
+        info_filters,
+        player_filters,
+        query
+            .min_matches
+            .or(default_min_matches())
+            .unwrap_or_default()
     );
+    query
+}
+
+#[cached(
+    ty = "TimedCache<String, Vec<HeroCounterStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = r#"{ format!("{:?}", query) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn get_hero_counter_stats(
+    ch_client: &clickhouse::Client,
+    query: &HeroCounterStatsQuery,
+) -> APIResult<Vec<HeroCounterStats>> {
+    let query = build_hero_counter_stats_query(query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero counter stats: {}", e);
@@ -172,7 +190,88 @@ pub async fn hero_counters_stats(
     Query(query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_counter_stats(&state.ch_client, query)
+    get_hero_counter_stats(&state.ch_client, &query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    #![allow(clippy::too_many_arguments)]
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    fn test_build_hero_counters_stats_query(
+        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
+        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
+        #[values(None, Some(600))] min_duration_s: Option<u64>,
+        #[values(None, Some(1800))] max_duration_s: Option<u64>,
+        #[values(None, Some(1))] min_average_badge: Option<u8>,
+        #[values(None, Some(116))] max_average_badge: Option<u8>,
+        #[values(None, Some(10000))] min_match_id: Option<u64>,
+        #[values(None, Some(1000000))] max_match_id: Option<u64>,
+        #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+        #[values(None, Some(18373975))] account_id: Option<u32>,
+        #[values(None, Some(10))] min_matches: Option<u64>,
+    ) {
+        let query = HeroCounterStatsQuery {
+            min_unix_timestamp,
+            max_unix_timestamp,
+            min_duration_s,
+            max_duration_s,
+            min_average_badge,
+            max_average_badge,
+            min_match_id,
+            max_match_id,
+            same_lane_filter,
+            account_id,
+            min_matches,
+        };
+        let query = build_hero_counter_stats_query(&query);
+
+        if let Some(min_unix_timestamp) = min_unix_timestamp {
+            assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
+        }
+        if let Some(max_unix_timestamp) = max_unix_timestamp {
+            assert!(query.contains(&format!("start_time <= {}", max_unix_timestamp)));
+        }
+        if let Some(min_duration_s) = min_duration_s {
+            assert!(query.contains(&format!("duration_s >= {}", min_duration_s)));
+        }
+        if let Some(max_duration_s) = max_duration_s {
+            assert!(query.contains(&format!("duration_s <= {}", max_duration_s)));
+        }
+        if let Some(min_average_badge) = min_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 >= {} AND average_badge_team1 >= {}",
+                min_average_badge, min_average_badge
+            )));
+        }
+        if let Some(max_average_badge) = max_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 <= {} AND average_badge_team1 <= {}",
+                max_average_badge, max_average_badge
+            )));
+        }
+        if let Some(min_match_id) = min_match_id {
+            assert!(query.contains(&format!("match_id >= {}", min_match_id)));
+        }
+        if let Some(max_match_id) = max_match_id {
+            assert!(query.contains(&format!("match_id <= {}", max_match_id)));
+        }
+        if let Some(same_lane_filter) = same_lane_filter {
+            if same_lane_filter {
+                assert!(query.contains("p1.assigned_lane = p2.assigned_lane"));
+            } else {
+                assert!(!query.contains("p1.assigned_lane = p2.assigned_lane"));
+            }
+        }
+        if let Some(account_id) = account_id {
+            assert!(query.contains(&format!("account_id = {}", account_id)));
+        }
+        if let Some(min_matches) = min_matches {
+            assert!(query.contains(&format!("matches_played >= {}", min_matches)));
+        }
+    }
 }
