@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
+fn default_min_matches() -> Option<u32> {
+    2.into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct HeroCombWinLossStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -47,6 +51,10 @@ pub struct HeroCombWinLossStatsQuery {
     /// Comma separated list of hero ids to exclude
     #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
     pub exclude_hero_ids: Option<Vec<u32>>,
+    /// The minimum number of matches played for a hero combination to be included in the response.
+    #[serde(default = "default_min_matches")]
+    #[param(minimum = 1, default = 2)]
+    pub min_matches: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -57,18 +65,7 @@ pub struct HeroCombWinLossStats {
     pub matches: u64,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<HeroCombWinLossStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-pub async fn get_comb_hero_win_loss_stats(
-    ch_client: &clickhouse::Client,
-    query: HeroCombWinLossStatsQuery,
-) -> APIResult<Vec<HeroCombWinLossStats>> {
+fn build_comb_hero_win_loss_query(query: &HeroCombWinLossStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -163,11 +160,33 @@ SELECT
 FROM hero_combinations
 WHERE true {} {}
 GROUP BY hero_ids
-HAVING matches > 1
+HAVING matches >= {}
 ORDER BY matches DESC
     "#,
-        info_filters, player_filters, hero_filters
+        info_filters,
+        player_filters,
+        hero_filters,
+        query
+            .min_matches
+            .or(default_min_matches())
+            .unwrap_or_default()
     );
+    query
+}
+
+#[cached(
+    ty = "TimedCache<String, Vec<HeroCombWinLossStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = r#"{ format!("{:?}", query) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+pub async fn get_comb_hero_win_loss_stats(
+    ch_client: &clickhouse::Client,
+    query: HeroCombWinLossStatsQuery,
+) -> APIResult<Vec<HeroCombWinLossStats>> {
+    let query = build_comb_hero_win_loss_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero comb win loss stats: {}", e);
@@ -203,4 +222,100 @@ pub async fn hero_comb_win_loss_stats(
     get_comb_hero_win_loss_stats(&state.ch_client, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    #![allow(clippy::too_many_arguments)]
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    fn test_build_comb_hero_win_loss_query(
+        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
+        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
+        #[values(None, Some(600))] min_duration_s: Option<u64>,
+        #[values(None, Some(1800))] max_duration_s: Option<u64>,
+        #[values(None, Some(1))] min_average_badge: Option<u8>,
+        #[values(None, Some(116))] max_average_badge: Option<u8>,
+        #[values(None, Some(10000))] min_match_id: Option<u64>,
+        #[values(None, Some(1000000))] max_match_id: Option<u64>,
+        #[values(None, Some(18373975))] account_id: Option<u32>,
+        #[values(None, Some(vec![1, 2, 3]))] include_hero_ids: Option<Vec<u32>>,
+        #[values(None, Some(vec![1, 2, 3]))] exclude_hero_ids: Option<Vec<u32>>,
+        #[values(None, Some(1))] min_matches: Option<u32>,
+    ) {
+        let query = HeroCombWinLossStatsQuery {
+            min_unix_timestamp,
+            max_unix_timestamp,
+            min_duration_s,
+            max_duration_s,
+            min_average_badge,
+            max_average_badge,
+            min_match_id,
+            max_match_id,
+            account_id,
+            include_hero_ids: include_hero_ids.clone(),
+            exclude_hero_ids: exclude_hero_ids.clone(),
+            min_matches,
+        };
+        let query = build_comb_hero_win_loss_query(&query);
+
+        if let Some(min_unix_timestamp) = min_unix_timestamp {
+            assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
+        }
+        if let Some(max_unix_timestamp) = max_unix_timestamp {
+            assert!(query.contains(&format!("start_time <= {}", max_unix_timestamp)));
+        }
+        if let Some(min_duration_s) = min_duration_s {
+            assert!(query.contains(&format!("duration_s >= {}", min_duration_s)));
+        }
+        if let Some(max_duration_s) = max_duration_s {
+            assert!(query.contains(&format!("duration_s <= {}", max_duration_s)));
+        }
+        if let Some(min_average_badge) = min_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 >= {} AND average_badge_team1 >= {}",
+                min_average_badge, min_average_badge
+            )));
+        }
+        if let Some(max_average_badge) = max_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 <= {} AND average_badge_team1 <= {}",
+                max_average_badge, max_average_badge
+            )));
+        }
+        if let Some(min_match_id) = min_match_id {
+            assert!(query.contains(&format!("match_id >= {}", min_match_id)));
+        }
+        if let Some(max_match_id) = max_match_id {
+            assert!(query.contains(&format!("match_id <= {}", max_match_id)));
+        }
+        if let Some(account_id) = account_id {
+            assert!(query.contains(&format!("has(account_ids, {})", account_id)));
+        }
+        if let Some(include_hero_ids) = include_hero_ids {
+            assert!(query.contains(&format!(
+                "hasAll(hero_ids, [{}])",
+                include_hero_ids
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )));
+        }
+        if let Some(exclude_hero_ids) = exclude_hero_ids {
+            assert!(query.contains(&format!(
+                "not hasAny(hero_ids, [{}])",
+                exclude_hero_ids
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )));
+        }
+        if let Some(min_matches) = min_matches {
+            assert!(query.contains(&format!("matches >= {}", min_matches)));
+        }
+    }
 }
