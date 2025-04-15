@@ -68,6 +68,7 @@ pub struct PlayerScoreboardEntry {
     pub rank: u64,
     pub account_id: u32,
     pub value: f64,
+    pub matches_analyzed: u64,
 }
 
 #[cached(
@@ -83,6 +84,9 @@ async fn get_player_scoreboard(
     query: PlayerScoreboardQuery,
 ) -> APIResult<Vec<PlayerScoreboardEntry>> {
     let mut info_filters = vec![];
+    info_filters.push("match_outcome = 'TeamWin'".to_string());
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
+    info_filters.push("game_mode = 'Normal'".to_string());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
@@ -145,7 +149,7 @@ async fn get_player_scoreboard(
     };
     let query = format!(
         r#"
-SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value
+SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches_analyzed
 FROM match_player
 {}
 GROUP BY account_id

@@ -53,6 +53,7 @@ pub struct HeroScoreboardEntry {
     pub rank: u64,
     pub hero_id: u32,
     pub value: f64,
+    pub matches_analyzed: u64,
 }
 
 #[cached(
@@ -68,6 +69,9 @@ async fn get_hero_scoreboard(
     query: HeroScoreboardQuery,
 ) -> APIResult<Vec<HeroScoreboardEntry>> {
     let mut info_filters = vec![];
+    info_filters.push("match_outcome = 'TeamWin'".to_string());
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
+    info_filters.push("game_mode = 'Normal'".to_string());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
     }
@@ -126,7 +130,7 @@ async fn get_hero_scoreboard(
     };
     let query = format!(
         r#"
-SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value
+SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct match_id) as matches_analyzed
 FROM match_player
 {}
 GROUP BY hero_id
