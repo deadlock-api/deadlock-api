@@ -122,13 +122,14 @@ UNION ALL
 
 SELECT mp.account_id AS id, toNullable(max(mp.match_id)) AS max_match_id
 FROM match_player AS mp
-    INNER ANY JOIN match_info AS mi USING (match_id)
-WHERE mi.match_outcome = 'TeamWin'
-    AND mi.match_mode IN ('Ranked', 'Unranked')
-    AND mi.game_mode = 'Normal'
-    AND mi.start_time BETWEEN '2024-08-01' AND now() - INTERVAL 2 DAY
-    AND mp.account_id > 0
-    AND (mp.match_id, mp.account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
+WHERE mp.account_id > 0
+  AND match_id IN (SELECT match_id
+                   FROM match_info
+                   WHERE match_outcome = 'TeamWin'
+                     AND match_mode IN ('Ranked', 'Unranked')
+                     AND game_mode = 'Normal'
+                     AND start_time BETWEEN '2024-08-01' AND now() - INTERVAL 2 DAY)
+  AND (mp.match_id, mp.account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
 GROUP BY mp.account_id
 ORDER BY COUNT(DISTINCT mp.match_id) DESC
 LIMIT 100
