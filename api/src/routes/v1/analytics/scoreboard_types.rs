@@ -102,6 +102,7 @@ pub enum ScoreboardQuerySortBy {
     #[display("max_creep_kills_per_match")]
     MaxCreepKillsPerMatch,
     /// Sort by the avg creep_kills per match
+    #[display("avg_creep_kills_per_match")]
     AvgCreepKillsPerMatch,
     /// Sort by the max total creep_kills
     #[display("creep_kills")]
@@ -160,6 +161,42 @@ pub enum ScoreboardQuerySortBy {
     /// Sort by the max total max_health
     #[display("max_health")]
     MaxHealth,
+    /// Sort by the max shots_hit per match
+    #[display("max_shots_hit_per_match")]
+    MaxShotsHitPerMatch,
+    /// Sort by the avg shots_hit per match
+    #[display("avg_shots_hit_per_match")]
+    AvgShotsHitPerMatch,
+    /// Sort by the max total shots_hit
+    #[display("shots_hit")]
+    ShotsHit,
+    /// Sort by the max shots_missed per match
+    #[display("max_shots_missed_per_match")]
+    MaxShotsMissedPerMatch,
+    /// Sort by the avg shots_missed per match
+    #[display("avg_shots_missed_per_match")]
+    AvgShotsMissedPerMatch,
+    /// Sort by the max total shots_missed
+    #[display("shots_missed")]
+    ShotsMissed,
+    /// Sort by the max hero_bullets_hit per match
+    #[display("max_hero_bullets_hit_per_match")]
+    MaxHeroBulletsHitPerMatch,
+    /// Sort by the avg hero_bullets_hit per match
+    #[display("avg_hero_bullets_hit_per_match")]
+    AvgHeroBulletsHitPerMatch,
+    /// Sort by the max total hero_bullets_hit
+    #[display("hero_bullets_hit")]
+    HeroBulletsHit,
+    /// Sort by the max hero_bullets_hit_crit per match
+    #[display("max_hero_bullets_hit_crit_per_match")]
+    MaxHeroBulletsHitCritPerMatch,
+    /// Sort by the avg hero_bullets_hit_crit per match
+    #[display("avg_hero_bullets_hit_crit_per_match")]
+    AvgHeroBulletsHitCritPerMatch,
+    /// Sort by the max total hero_bullets_hit_crit
+    #[display("hero_bullets_hit_crit")]
+    HeroBulletsHitCrit,
 }
 
 impl ScoreboardQuerySortBy {
@@ -217,6 +254,18 @@ impl ScoreboardQuerySortBy {
             Self::MaxMaxHealthPerMatch => "max(arrayMax(stats.max_health))",
             Self::AvgMaxHealthPerMatch => "avg(arrayMax(stats.max_health))",
             Self::MaxHealth => "sum(arrayMax(stats.max_health))",
+            Self::MaxShotsHitPerMatch => "max(arrayMax(stats.shots_hit))",
+            Self::AvgShotsHitPerMatch => "avg(arrayMax(stats.shots_hit))",
+            Self::ShotsHit => "sum(arrayMax(stats.shots_hit))",
+            Self::MaxShotsMissedPerMatch => "max(arrayMax(stats.shots_missed))",
+            Self::AvgShotsMissedPerMatch => "avg(arrayMax(stats.shots_missed))",
+            Self::ShotsMissed => "sum(arrayMax(stats.shots_missed))",
+            Self::MaxHeroBulletsHitPerMatch => "max(arrayMax(stats.hero_bullets_hit))",
+            Self::AvgHeroBulletsHitPerMatch => "avg(arrayMax(stats.hero_bullets_hit))",
+            Self::HeroBulletsHit => "sum(arrayMax(stats.hero_bullets_hit))",
+            Self::MaxHeroBulletsHitCritPerMatch => "max(arrayMax(stats.hero_bullets_hit_crit))",
+            Self::AvgHeroBulletsHitCritPerMatch => "avg(arrayMax(stats.hero_bullets_hit_crit))",
+            Self::HeroBulletsHitCrit => "sum(arrayMax(stats.hero_bullets_hit_crit))",
         }
     }
 }
