@@ -4,6 +4,8 @@ use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
 use deadlock_api_rust::routes::v1::analytics::hero_scoreboard::HeroScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
+use deadlock_api_rust::routes::v1::analytics::hero_synergies_stats::HeroSynergyStats;
+use deadlock_api_rust::routes::v1::analytics::item_win_loss_stats::ItemWinLossStats;
 use deadlock_api_rust::routes::v1::analytics::player_scoreboard::PlayerScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use deadlock_api_rust::utils::types::SortDirectionDesc;
@@ -245,5 +247,84 @@ async fn test_hero_stats() {
         assert!(stat.total_kills <= stat.matches * 100);
         assert!(stat.total_deaths <= stat.matches * 100);
         assert!(stat.total_assists <= stat.matches * 100);
+    }
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_hero_synergies_stats(
+    #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
+) {
+    let mut queries = vec![];
+    if let Some(same_lane_filter) = same_lane_filter {
+        queries.push(("same_lane_filter", same_lane_filter.to_string()));
+    }
+    if let Some(account_id) = account_id {
+        queries.push(("account_id", account_id.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/hero-synergy-stats", queries).await;
+    let synergy_stats: Vec<HeroSynergyStats> =
+        response.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        synergy_stats
+            .iter()
+            .map(|s| (s.hero_id1, s.hero_id2))
+            .unique()
+            .count(),
+        synergy_stats.len()
+    );
+
+    for stat in synergy_stats {
+        assert!(
+            stat.hero_id1 < stat.hero_id2,
+            "hero_id1 should be less than hero_id2"
+        );
+        assert!(
+            stat.wins <= stat.matches_played,
+            "Wins should not exceed total matches"
+        );
+        assert_ne!(
+            stat.hero_id1, stat.hero_id2,
+            "Heroes in a synergy pair should be different"
+        );
+    }
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_item_win_loss_stats(
+    #[values(None, Some(1))] hero_id: Option<u32>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
+) {
+    let mut queries = vec![];
+    if let Some(hero_id) = hero_id {
+        queries.push(("hero_id", hero_id.to_string()));
+    }
+    if let Some(account_id) = account_id {
+        queries.push(("account_id", account_id.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/item-win-loss-stats", queries).await;
+    let item_stats: Vec<ItemWinLossStats> =
+        response.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        item_stats.iter().map(|s| s.item_id).unique().count(),
+        item_stats.len(),
+    );
+
+    for stat in &item_stats {
+        assert_eq!(stat.wins + stat.losses, stat.matches);
     }
 }
