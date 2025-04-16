@@ -15,7 +15,7 @@ use object_store::ObjectStore;
 use prost::Message;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
-use tracing::debug;
+use tracing::{debug, error};
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
 async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Result<Vec<u8>> {
@@ -153,7 +153,7 @@ pub async fn metadata_raw(
         ],
     )
     .await?;
-    tryhard::retry_fn(|| {
+    match tryhard::retry_fn(|| {
         fetch_match_metadata_raw(
             &state.config,
             &state.http_client,
@@ -166,6 +166,13 @@ pub async fn metadata_raw(
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))
     .await
+    {
+        Ok(r) => Ok(r),
+        Err(e) => {
+            error!("Failed to fetch match metadata: {e}");
+            Err(e)
+        }
+    }
 }
 
 #[utoipa::path(
@@ -206,7 +213,7 @@ pub async fn metadata(
         ],
     )
     .await?;
-    tryhard::retry_fn(|| async {
+    match tryhard::retry_fn(|| async {
         let raw_data = fetch_match_metadata_raw(
             &state.config,
             &state.http_client,
@@ -221,4 +228,11 @@ pub async fn metadata(
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))
     .await
+    {
+        Ok(r) => Ok(r),
+        Err(e) => {
+            error!("Failed to fetch match metadata: {e}");
+            Err(e)
+        }
+    }
 }
