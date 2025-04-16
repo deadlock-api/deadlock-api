@@ -3,6 +3,7 @@ mod utils;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
 use deadlock_api_rust::routes::v1::analytics::hero_scoreboard::HeroScoreboardEntry;
+use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
 use deadlock_api_rust::routes::v1::analytics::player_scoreboard::PlayerScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use deadlock_api_rust::utils::types::SortDirectionDesc;
@@ -225,5 +226,24 @@ async fn test_player_scoreboard(
                 unreachable!();
             }
         }
+    }
+}
+
+#[tokio::test]
+async fn test_hero_stats() {
+    let response = utils::request_endpoint("/v1/analytics/hero-stats", []).await;
+    let hero_stats: Vec<AnalyticsHeroStats> =
+        response.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        hero_stats.iter().map(|stat| stat.hero_id).unique().count(),
+        hero_stats.len()
+    );
+
+    for stat in &hero_stats {
+        assert_eq!(stat.wins + stat.losses, stat.matches);
+        assert!(stat.total_kills <= stat.matches * 100);
+        assert!(stat.total_deaths <= stat.matches * 100);
+        assert!(stat.total_assists <= stat.matches * 100);
     }
 }
