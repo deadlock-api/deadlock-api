@@ -2,6 +2,10 @@ mod utils;
 
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
+use deadlock_api_rust::routes::v1::analytics::hero_scoreboard::HeroScoreboardEntry;
+use deadlock_api_rust::routes::v1::analytics::player_scoreboard::PlayerScoreboardEntry;
+use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
+use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
 
@@ -84,6 +88,142 @@ async fn test_hero_counters_stats(#[values(None, Some(20))] min_matches: Option<
         if let Some(min_matches) = min_matches {
             assert!(counter_stat.wins <= counter_stat.matches_played);
             assert!(counter_stat.matches_played >= min_matches);
+        }
+    }
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_hero_scoreboard(
+    #[values(None, Some(10))] min_matches: Option<u64>,
+    #[values(ScoreboardQuerySortBy::Winrate, ScoreboardQuerySortBy::Matches)]
+    sort_by: ScoreboardQuerySortBy,
+    #[values(None, Some(SortDirectionDesc::Asc))] sort_direction: Option<SortDirectionDesc>,
+) {
+    let mut queries = vec![];
+    queries.push(("sort_by", sort_by.to_string()));
+    if let Some(min_matches) = min_matches {
+        queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(sort_direction) = sort_direction {
+        queries.push(("sort_direction", sort_direction.to_string()));
+    }
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/scoreboards/heroes", queries).await;
+    let hero_scoreboard: Vec<HeroScoreboardEntry> =
+        response.json().await.expect("Failed to parse response");
+
+    // Verify min_matches requirement
+    if let Some(min_matches) = min_matches {
+        for entry in &hero_scoreboard {
+            assert!(entry.matches >= min_matches);
+        }
+    }
+
+    // Verify sorting
+    if hero_scoreboard.len() > 1 {
+        let check_sorted = |field_extractor: fn(&HeroScoreboardEntry) -> f64,
+                            desc: SortDirectionDesc| {
+            let mut sorted = true;
+            for i in 0..hero_scoreboard.len() - 1 {
+                let current = field_extractor(&hero_scoreboard[i]);
+                let next = field_extractor(&hero_scoreboard[i + 1]);
+                match desc {
+                    SortDirectionDesc::Desc => sorted &= current >= next,
+                    SortDirectionDesc::Asc => sorted &= current <= next,
+                }
+            }
+            sorted
+        };
+
+        match sort_by {
+            ScoreboardQuerySortBy::Winrate => {
+                let extractor = |entry: &HeroScoreboardEntry| entry.value;
+                assert!(check_sorted(extractor, sort_direction.unwrap_or_default()));
+            }
+            ScoreboardQuerySortBy::Matches => {
+                let extractor = |entry: &HeroScoreboardEntry| entry.value;
+                assert!(check_sorted(extractor, sort_direction.unwrap_or_default()));
+            }
+            _ => {
+                unreachable!();
+            }
+        }
+    }
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_player_scoreboard(
+    #[values(None, Some(5))] min_matches: Option<u64>,
+    #[values(ScoreboardQuerySortBy::Winrate, ScoreboardQuerySortBy::Matches)]
+    sort_by: ScoreboardQuerySortBy,
+    #[values(None, Some(SortDirectionDesc::Asc))] sort_direction: Option<SortDirectionDesc>,
+    #[values(None, Some(10))] limit: Option<u64>,
+) {
+    let mut queries = vec![];
+    queries.push(("sort_by", sort_by.to_string()));
+    if let Some(min_matches) = min_matches {
+        queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(sort_direction) = sort_direction {
+        queries.push(("sort_direction", sort_direction.to_string()));
+    }
+    if let Some(limit) = limit {
+        queries.push(("limit", limit.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/scoreboards/players", queries).await;
+    let player_scoreboard: Vec<PlayerScoreboardEntry> =
+        response.json().await.expect("Failed to parse response");
+
+    // Verify we don't get more entries than the limit
+    if let Some(limit) = limit {
+        assert!(player_scoreboard.len() <= limit as usize);
+    }
+
+    // Verify min_matches requirement
+    if let Some(min_matches) = min_matches {
+        for entry in &player_scoreboard {
+            assert!(entry.matches >= min_matches);
+        }
+    }
+
+    // Verify sorting
+    if player_scoreboard.len() > 1 {
+        let check_sorted = |field_extractor: fn(&PlayerScoreboardEntry) -> f64,
+                            sort_direction: SortDirectionDesc| {
+            let mut sorted = true;
+            for i in 0..player_scoreboard.len() - 1 {
+                let current = field_extractor(&player_scoreboard[i]);
+                let next = field_extractor(&player_scoreboard[i + 1]);
+                match sort_direction {
+                    SortDirectionDesc::Desc => sorted &= current >= next,
+                    SortDirectionDesc::Asc => sorted &= current <= next,
+                }
+            }
+            sorted
+        };
+
+        match sort_by {
+            ScoreboardQuerySortBy::Winrate => {
+                let extractor = |entry: &PlayerScoreboardEntry| entry.value;
+                assert!(check_sorted(extractor, sort_direction.unwrap_or_default()));
+            }
+            ScoreboardQuerySortBy::Matches => {
+                let extractor = |entry: &PlayerScoreboardEntry| entry.value;
+                assert!(check_sorted(extractor, sort_direction.unwrap_or_default()));
+            }
+            _ => {
+                unreachable!();
+            }
         }
     }
 }

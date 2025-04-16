@@ -5,7 +5,7 @@ pub mod hero_stats;
 pub mod hero_synergies_stats;
 pub mod item_win_loss_stats;
 pub mod player_scoreboard;
-mod scoreboard_types;
+pub mod scoreboard_types;
 
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::state::AppState;
