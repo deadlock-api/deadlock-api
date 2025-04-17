@@ -6,9 +6,9 @@ edition = "2024"
 [dependencies]
 once_cell = "1.21.3"
 reqwest = { version = "0.12.15", features = ["json"] }
-sqlx = { version = "0.8.3", features = ["macros", "postgres", "runtime-tokio", "time"] }
-tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
-anyhow = "1.0.97"
+sqlx = { version = "0.8.5", features = ["macros", "postgres", "runtime-tokio", "time"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros"] }
+anyhow = "1.0.98"
 serde = { version = "1.0.219", features = ["derive"] }
 itertools = "0.14.0"
 arl = "0.2.0"

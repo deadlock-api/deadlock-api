@@ -7,11 +7,11 @@ edition = "2024"
 reqwest = { version = "0.12.15", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
-tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros"] }
 metrics = "0.24"
 tracing = "0.1.41"
 clickhouse = "0.13.2"
 tryhard = "0.5.1"
-anyhow = "1.0.97"
+anyhow = "1.0.98"
 common = { version = "0.1.0", path = "../common" }
 futures = "0.3.31"
