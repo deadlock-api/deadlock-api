@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
-pub struct ItemWinLossStatsQuery {
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+pub struct ItemStatsQuery {
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -43,25 +43,14 @@ pub struct ItemWinLossStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct ItemWinLossStats {
+pub struct ItemStats {
     pub item_id: u32,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<ItemWinLossStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-pub async fn get_item_win_loss_stats(
-    ch_client: &clickhouse::Client,
-    query: ItemWinLossStatsQuery,
-) -> APIResult<Vec<ItemWinLossStats>> {
+fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -132,39 +121,51 @@ pub async fn get_item_win_loss_stats(
     "#,
         info_filters, player_filters
     );
+    query
+}
+
+#[cached(
+    ty = "TimedCache<ItemStatsQuery, Vec<ItemStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = r#"{ query }"#,
+    sync_writes = "by_key",
+    key = "ItemStatsQuery"
+)]
+pub async fn get_item_stats(
+    ch_client: &clickhouse::Client,
+    query: ItemStatsQuery,
+) -> APIResult<Vec<ItemStats>> {
+    let query = build_item_stats_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch item win loss stats: {}", e);
+        warn!("Failed to fetch item stats: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch item win loss stats: {}", e),
+            message: format!("Failed to fetch item stats: {}", e),
         }
     })
 }
 
 #[utoipa::path(
     get,
-    path = "/item-win-loss-stats",
-    params(ItemWinLossStatsQuery),
+    path = "/item-stats",
+    params(ItemStatsQuery),
     responses(
-        (status = OK, description = "Item Win Loss Stats", body = [ItemWinLossStats]),
+        (status = OK, description = "Item Stats", body = [ItemStats]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch item win loss stats")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch item stats")
     ),
     tags = ["Analytics"],
-    summary = "Item Win Loss Stats",
+    summary = "Item Stats",
     description = r#"
-Retrieves item win/loss statistics based on historical match data.
-
-This endpoint analyzes completed matches to calculate how often matches were won or lost when specific items were present within those matches.
+Retrieves item statistics based on historical match data.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn item_win_loss_stats(
-    Query(query): Query<ItemWinLossStatsQuery>,
+pub async fn item_stats(
+    Query(query): Query<ItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_item_win_loss_stats(&state.ch_client, query)
-        .await
-        .map(Json)
+    get_item_stats(&state.ch_client, query).await.map(Json)
 }

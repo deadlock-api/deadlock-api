@@ -5,7 +5,7 @@ use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterSt
 use deadlock_api_rust::routes::v1::analytics::hero_scoreboard::HeroScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
 use deadlock_api_rust::routes::v1::analytics::hero_synergies_stats::HeroSynergyStats;
-use deadlock_api_rust::routes::v1::analytics::item_win_loss_stats::ItemWinLossStats;
+use deadlock_api_rust::routes::v1::analytics::item_stats::ItemStats;
 use deadlock_api_rust::routes::v1::analytics::player_scoreboard::PlayerScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use deadlock_api_rust::utils::types::SortDirectionDesc;
@@ -299,7 +299,7 @@ async fn test_hero_synergies_stats(
 
 #[rstest]
 #[tokio::test]
-async fn test_item_win_loss_stats(
+async fn test_item_stats(
     #[values(None, Some(1))] hero_id: Option<u32>,
     #[values(None, Some(18373975))] account_id: Option<u32>,
 ) {
@@ -315,9 +315,8 @@ async fn test_item_win_loss_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/item-win-loss-stats", queries).await;
-    let item_stats: Vec<ItemWinLossStats> =
-        response.json().await.expect("Failed to parse response");
+    let response = utils::request_endpoint("/v1/analytics/item-stats", queries).await;
+    let item_stats: Vec<ItemStats> = response.json().await.expect("Failed to parse response");
 
     assert_eq!(
         item_stats.iter().map(|s| s.item_id).unique().count(),

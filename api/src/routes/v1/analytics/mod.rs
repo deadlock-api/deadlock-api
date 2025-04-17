@@ -3,7 +3,7 @@ pub mod hero_counters_stats;
 pub mod hero_scoreboard;
 pub mod hero_stats;
 pub mod hero_synergies_stats;
-pub mod item_win_loss_stats;
+pub mod item_stats;
 pub mod player_scoreboard;
 pub mod scoreboard_types;
 
@@ -21,7 +21,7 @@ pub struct ApiDoc;
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(hero_stats::hero_stats))
-        .routes(routes!(item_win_loss_stats::item_win_loss_stats))
+        .routes(routes!(item_stats::item_stats))
         .routes(routes!(hero_counters_stats::hero_counters_stats))
         .routes(routes!(hero_synergies_stats::hero_synergies_stats))
         .routes(routes!(hero_comb_stats::hero_comb_stats))
