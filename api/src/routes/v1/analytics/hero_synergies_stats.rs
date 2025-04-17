@@ -182,3 +182,79 @@ pub async fn hero_synergies_stats(
         .await
         .map(Json)
 }
+
+#[cfg(test)]
+mod test {
+    #![allow(clippy::too_many_arguments)]
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    fn test_build_hero_synergy_stats_query(
+        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
+        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
+        #[values(None, Some(600))] min_duration_s: Option<u64>,
+        #[values(None, Some(1800))] max_duration_s: Option<u64>,
+        #[values(None, Some(1))] min_average_badge: Option<u8>,
+        #[values(None, Some(116))] max_average_badge: Option<u8>,
+        #[values(None, Some(10000))] min_match_id: Option<u64>,
+        #[values(None, Some(1000000))] max_match_id: Option<u64>,
+        #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+        #[values(None, Some(18373975))] account_id: Option<u32>,
+    ) {
+        let query = HeroSynergyStatsQuery {
+            min_unix_timestamp,
+            max_unix_timestamp,
+            min_duration_s,
+            max_duration_s,
+            min_average_badge,
+            max_average_badge,
+            min_match_id,
+            max_match_id,
+            same_lane_filter,
+            account_id,
+        };
+        let query = build_hero_synergy_stats_query(&query);
+
+        if let Some(min_unix_timestamp) = min_unix_timestamp {
+            assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
+        }
+        if let Some(max_unix_timestamp) = max_unix_timestamp {
+            assert!(query.contains(&format!("start_time <= {}", max_unix_timestamp)));
+        }
+        if let Some(min_duration_s) = min_duration_s {
+            assert!(query.contains(&format!("duration_s >= {}", min_duration_s)));
+        }
+        if let Some(max_duration_s) = max_duration_s {
+            assert!(query.contains(&format!("duration_s <= {}", max_duration_s)));
+        }
+        if let Some(min_average_badge) = min_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 >= {} AND average_badge_team1 >= {}",
+                min_average_badge, min_average_badge
+            )));
+        }
+        if let Some(max_average_badge) = max_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 <= {} AND average_badge_team1 <= {}",
+                max_average_badge, max_average_badge
+            )));
+        }
+        if let Some(min_match_id) = min_match_id {
+            assert!(query.contains(&format!("match_id >= {}", min_match_id)));
+        }
+        if let Some(max_match_id) = max_match_id {
+            assert!(query.contains(&format!("match_id <= {}", max_match_id)));
+        }
+        if let Some(same_lane_filter) = same_lane_filter {
+            if same_lane_filter {
+                assert!(query.contains("p1.assigned_lane = p2.assigned_lane"));
+            } else {
+                assert!(!query.contains("p1.assigned_lane = p2.assigned_lane"));
+            }
+        }
+        if let Some(account_id) = account_id {
+            assert!(query.contains(&format!("account_id = {}", account_id)));
+        }
+    }
+}

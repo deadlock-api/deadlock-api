@@ -199,3 +199,96 @@ pub async fn player_scoreboard(
         .await
         .map(Json)
 }
+
+#[cfg(test)]
+mod test {
+    #![allow(clippy::too_many_arguments)]
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    fn test_build_player_scoreboard_query(
+        #[values(None, Some(15))] hero_id: Option<u32>,
+        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
+        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
+        #[values(None, Some(600))] min_duration_s: Option<u64>,
+        #[values(None, Some(1800))] max_duration_s: Option<u64>,
+        #[values(None, Some(1))] min_average_badge: Option<u8>,
+        #[values(None, Some(116))] max_average_badge: Option<u8>,
+        #[values(None, Some(10000))] min_match_id: Option<u64>,
+        #[values(None, Some(1000000))] max_match_id: Option<u64>,
+        #[values(ScoreboardQuerySortBy::Matches, ScoreboardQuerySortBy::Wins)]
+        sort_by: ScoreboardQuerySortBy,
+        #[values(SortDirectionDesc::Asc, SortDirectionDesc::Desc)]
+        sort_direction: SortDirectionDesc,
+        #[values(None, Some(10))] min_matches: Option<u32>,
+        #[values(None, Some(5))] start: Option<u32>,
+        #[values(None, Some(10))] limit: Option<u32>,
+    ) {
+        let query = PlayerScoreboardQuery {
+            hero_id,
+            min_unix_timestamp,
+            max_unix_timestamp,
+            min_duration_s,
+            max_duration_s,
+            min_average_badge,
+            max_average_badge,
+            min_match_id,
+            max_match_id,
+            sort_by,
+            min_matches,
+            sort_direction,
+            start,
+            limit,
+        };
+        let query = build_player_scoreboard_query(&query);
+
+        if let Some(hero_id) = hero_id {
+            assert!(query.contains(&format!("hero_id = {}", hero_id)));
+        }
+        if let Some(min_unix_timestamp) = min_unix_timestamp {
+            assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
+        }
+        if let Some(max_unix_timestamp) = max_unix_timestamp {
+            assert!(query.contains(&format!("start_time <= {}", max_unix_timestamp)));
+        }
+        if let Some(min_duration_s) = min_duration_s {
+            assert!(query.contains(&format!("duration_s >= {}", min_duration_s)));
+        }
+        if let Some(max_duration_s) = max_duration_s {
+            assert!(query.contains(&format!("duration_s <= {}", max_duration_s)));
+        }
+        if let Some(min_average_badge) = min_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 >= {} AND average_badge_team1 >= {}",
+                min_average_badge, min_average_badge
+            )));
+        }
+        if let Some(max_average_badge) = max_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 <= {} AND average_badge_team1 <= {}",
+                max_average_badge, max_average_badge
+            )));
+        }
+        if let Some(min_match_id) = min_match_id {
+            assert!(query.contains(&format!("match_id >= {}", min_match_id)));
+        }
+        if let Some(max_match_id) = max_match_id {
+            assert!(query.contains(&format!("match_id <= {}", max_match_id)));
+        }
+        if let Some(min_matches) = min_matches {
+            assert!(query.contains(&format!("count(distinct match_id) >= {}", min_matches)));
+        }
+        assert!(query.contains(&format!("ORDER BY value {}", sort_direction)));
+        assert!(query.contains(&format!(
+            "toFloat64({}) as value",
+            sort_by.get_select_clause()
+        )));
+        if let Some(start) = start {
+            assert!(query.contains(&format!("OFFSET {}", start + 1)));
+        }
+        if let Some(limit) = limit {
+            assert!(query.contains(&format!("LIMIT {}", limit)));
+        }
+    }
+}
