@@ -58,7 +58,7 @@ pub struct HeroSynergyStats {
     pub matches_played: u64,
 }
 
-fn build_hero_synergy_stats(query: &HeroSynergyStatsQuery) -> String {
+fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -144,7 +144,7 @@ pub async fn get_hero_synergy_stats(
     ch_client: &clickhouse::Client,
     query: HeroSynergyStatsQuery,
 ) -> APIResult<Vec<HeroSynergyStats>> {
-    let query = build_hero_synergy_stats(&query);
+    let query = build_hero_synergy_stats_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero synergy stats: {}", e);
