@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::state::AppState;
-use crate::utils::parse::default_last_month_timestamp;
+use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
 use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
@@ -39,6 +39,9 @@ pub struct HeroScoreboardQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
+    /// Filter for matches with a specific player account ID.
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    pub account_id: Option<u32>,
     /// The field to sort by.
     #[param(inline)]
     pub sort_by: ScoreboardQuerySortBy,
@@ -56,18 +59,7 @@ pub struct HeroScoreboardEntry {
     pub matches: u64,
 }
 
-#[cached(
-    ty = "TimedCache<HeroScoreboardQuery, Vec<HeroScoreboardEntry>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = "{ query }",
-    sync_writes = "by_key",
-    key = "HeroScoreboardQuery"
-)]
-async fn get_hero_scoreboard(
-    ch_client: &clickhouse::Client,
-    query: HeroScoreboardQuery,
-) -> APIResult<Vec<HeroScoreboardEntry>> {
+fn build_hero_scoreboard_query(query: &HeroScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_outcome = 'TeamWin'".to_string());
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
@@ -114,6 +106,9 @@ async fn get_hero_scoreboard(
             info_filters
         ));
     }
+    if let Some(account_id) = query.account_id {
+        player_filters.push(format!("account_id = {}", account_id));
+    }
     let player_filters = if !player_filters.is_empty() {
         format!(" WHERE {} ", player_filters.join(" AND "))
     } else {
@@ -142,6 +137,22 @@ ORDER BY value {}
         player_having,
         query.sort_direction,
     );
+    query
+}
+
+#[cached(
+    ty = "TimedCache<HeroScoreboardQuery, Vec<HeroScoreboardEntry>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ query }",
+    sync_writes = "by_key",
+    key = "HeroScoreboardQuery"
+)]
+async fn get_hero_scoreboard(
+    ch_client: &clickhouse::Client,
+    query: HeroScoreboardQuery,
+) -> APIResult<Vec<HeroScoreboardEntry>> {
+    let query = build_hero_scoreboard_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch scoreboard: {}", e);
@@ -169,4 +180,87 @@ pub async fn hero_scoreboard(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     get_hero_scoreboard(&state.ch_client, query).await.map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    #![allow(clippy::too_many_arguments)]
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    fn test_build_hero_scoreboard_query(
+        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
+        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
+        #[values(None, Some(600))] min_duration_s: Option<u64>,
+        #[values(None, Some(1800))] max_duration_s: Option<u64>,
+        #[values(None, Some(1))] min_average_badge: Option<u8>,
+        #[values(None, Some(116))] max_average_badge: Option<u8>,
+        #[values(None, Some(10000))] min_match_id: Option<u64>,
+        #[values(None, Some(1000000))] max_match_id: Option<u64>,
+        #[values(ScoreboardQuerySortBy::Matches, ScoreboardQuerySortBy::Wins)]
+        sort_by: ScoreboardQuerySortBy,
+        #[values(SortDirectionDesc::Asc, SortDirectionDesc::Desc)]
+        sort_direction: SortDirectionDesc,
+        #[values(None, Some(18373975))] account_id: Option<u32>,
+        #[values(None, Some(10))] min_matches: Option<u32>,
+    ) {
+        let query = HeroScoreboardQuery {
+            min_unix_timestamp,
+            max_unix_timestamp,
+            min_duration_s,
+            max_duration_s,
+            min_average_badge,
+            max_average_badge,
+            min_match_id,
+            max_match_id,
+            account_id,
+            sort_by,
+            min_matches,
+            sort_direction,
+        };
+        let query = build_hero_scoreboard_query(&query);
+
+        if let Some(min_unix_timestamp) = min_unix_timestamp {
+            assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
+        }
+        if let Some(max_unix_timestamp) = max_unix_timestamp {
+            assert!(query.contains(&format!("start_time <= {}", max_unix_timestamp)));
+        }
+        if let Some(min_duration_s) = min_duration_s {
+            assert!(query.contains(&format!("duration_s >= {}", min_duration_s)));
+        }
+        if let Some(max_duration_s) = max_duration_s {
+            assert!(query.contains(&format!("duration_s <= {}", max_duration_s)));
+        }
+        if let Some(min_average_badge) = min_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 >= {} AND average_badge_team1 >= {}",
+                min_average_badge, min_average_badge
+            )));
+        }
+        if let Some(max_average_badge) = max_average_badge {
+            assert!(query.contains(&format!(
+                "average_badge_team0 <= {} AND average_badge_team1 <= {}",
+                max_average_badge, max_average_badge
+            )));
+        }
+        if let Some(min_match_id) = min_match_id {
+            assert!(query.contains(&format!("match_id >= {}", min_match_id)));
+        }
+        if let Some(max_match_id) = max_match_id {
+            assert!(query.contains(&format!("match_id <= {}", max_match_id)));
+        }
+        if let Some(account_id) = account_id {
+            assert!(query.contains(&format!("account_id = {}", account_id)));
+        }
+        if let Some(min_matches) = min_matches {
+            assert!(query.contains(&format!("count(distinct match_id) >= {}", min_matches)));
+        }
+        assert!(query.contains(&format!("ORDER BY value {}", sort_direction)));
+        assert!(query.contains(&format!(
+            "toFloat64({}) as value",
+            sort_by.get_select_clause()
+        )));
+    }
 }
