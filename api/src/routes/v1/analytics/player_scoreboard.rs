@@ -71,18 +71,7 @@ pub struct PlayerScoreboardEntry {
     pub matches: u64,
 }
 
-#[cached(
-    ty = "TimedCache<PlayerScoreboardQuery, Vec<PlayerScoreboardEntry>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = "{ query }",
-    sync_writes = "by_key",
-    key = "PlayerScoreboardQuery"
-)]
-async fn get_player_scoreboard(
-    ch_client: &clickhouse::Client,
-    query: PlayerScoreboardQuery,
-) -> APIResult<Vec<PlayerScoreboardEntry>> {
+fn build_player_scoreboard_query(query: &PlayerScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_outcome = 'TeamWin'".to_string());
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
@@ -147,7 +136,7 @@ async fn get_player_scoreboard(
     } else {
         "".to_owned()
     };
-    let query = format!(
+    format!(
         r#"
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
@@ -164,7 +153,22 @@ LIMIT {} OFFSET {}
         query.sort_direction,
         query.limit.unwrap_or_default(),
         query.start.unwrap_or_default() + 1,
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<PlayerScoreboardQuery, Vec<PlayerScoreboardEntry>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ query }",
+    sync_writes = "by_key",
+    key = "PlayerScoreboardQuery"
+)]
+async fn get_player_scoreboard(
+    ch_client: &clickhouse::Client,
+    query: PlayerScoreboardQuery,
+) -> APIResult<Vec<PlayerScoreboardEntry>> {
+    let query = build_player_scoreboard_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch scoreboard: {}", e);

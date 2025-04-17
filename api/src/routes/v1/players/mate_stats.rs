@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct MateStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,
@@ -43,19 +43,7 @@ pub struct MateStats {
     pub matches: Vec<u64>,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<MateStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{}-{:?}", account_id, query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn get_mate_stats(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-    query: MateStatsQuery,
-) -> APIResult<Vec<MateStats>> {
+fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -92,7 +80,7 @@ async fn get_mate_stats(
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     WITH matches AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
@@ -106,7 +94,23 @@ async fn get_mate_stats(
     ORDER BY matches_played DESC
     "#,
         account_id, filters, account_id
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<(u32, MateStatsQuery), Vec<MateStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ (account_id, query) }",
+    sync_writes = "by_key",
+    key = "(u32, MateStatsQuery)"
+)]
+async fn get_mate_stats(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    query: MateStatsQuery,
+) -> APIResult<Vec<MateStats>> {
+    let query = build_mate_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch mate stats: {}", e);

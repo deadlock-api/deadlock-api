@@ -5,7 +5,7 @@ use valveprotos::deadlock::{
     CMsgClientToGcGetLeaderboardResponse, c_msg_client_to_gc_get_leaderboard_response,
 };
 
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Eq, PartialEq, Hash)]
 #[repr(i32)]
 pub enum LeaderboardRegion {
     #[default]

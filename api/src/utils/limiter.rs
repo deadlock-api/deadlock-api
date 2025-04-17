@@ -238,7 +238,9 @@ pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
 #[cached(
     ty = "TimedCache<String, Vec<RateLimitQuota>>",
     create = "{ TimedCache::with_lifespan(10 * 60) }",
-    convert = r#"{ format!("{api_key}-{path}") }"#
+    convert = r#"{ format!("{api_key}-{path}") }"#,
+    sync_writes = "by_key",
+    key = "String"
 )]
 pub async fn get_custom_quotas(
     pg_client: &Pool<Postgres>,

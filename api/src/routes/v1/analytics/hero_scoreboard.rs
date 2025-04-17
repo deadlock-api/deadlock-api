@@ -123,7 +123,7 @@ fn build_hero_scoreboard_query(query: &HeroScoreboardQuery) -> String {
     } else {
         "".to_owned()
     };
-    let query = format!(
+    format!(
         r#"
 SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
@@ -136,8 +136,7 @@ ORDER BY value {}
         player_filters,
         player_having,
         query.sort_direction,
-    );
-    query
+    )
 }
 
 #[cached(

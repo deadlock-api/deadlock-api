@@ -99,7 +99,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     WITH matches AS (SELECT match_id
             FROM match_info
@@ -120,15 +120,14 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     ORDER BY item_id
     "#,
         info_filters, player_filters
-    );
-    query
+    )
 }
 
 #[cached(
     ty = "TimedCache<ItemStatsQuery, Vec<ItemStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ query }"#,
+    convert = "{ query }",
     sync_writes = "by_key",
     key = "ItemStatsQuery"
 )]

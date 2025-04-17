@@ -17,7 +17,7 @@ fn default_min_matches() -> Option<u64> {
     50.into()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct HeroCounterStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -115,7 +115,7 @@ fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     WITH matches AS (SELECT match_id
                  FROM match_info
@@ -141,23 +141,22 @@ fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
             .min_matches
             .or(default_min_matches())
             .unwrap_or_default()
-    );
-    query
+    )
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<HeroCounterStats>>",
+    ty = "TimedCache<HeroCounterStatsQuery, Vec<HeroCounterStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
+    convert = "{ query }",
     sync_writes = "by_key",
-    key = "String"
+    key = "HeroCounterStatsQuery"
 )]
 async fn get_hero_counter_stats(
     ch_client: &clickhouse::Client,
-    query: &HeroCounterStatsQuery,
+    query: HeroCounterStatsQuery,
 ) -> APIResult<Vec<HeroCounterStats>> {
-    let query = build_hero_counter_stats_query(query);
+    let query = build_hero_counter_stats_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero counter stats: {}", e);
@@ -190,7 +189,7 @@ pub async fn hero_counters_stats(
     Query(query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_counter_stats(&state.ch_client, &query)
+    get_hero_counter_stats(&state.ch_client, query)
         .await
         .map(Json)
 }

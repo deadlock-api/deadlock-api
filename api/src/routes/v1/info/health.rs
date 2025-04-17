@@ -34,12 +34,11 @@ pub struct Status {
 }
 
 #[cached(
-    ty = "TimedCache<String, Status>",
+    ty = "TimedCache<u8, Status>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
-    convert = r#"{ format!("") }"#,
-    sync_writes = "by_key",
-    key = "String"
+    convert = "{ 0 }",
+    sync_writes = "default"
 )]
 async fn check_health(
     ch_client: clickhouse::Client,

@@ -58,10 +58,10 @@ pub struct PatchCategory {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<Patch>>",
+    ty = "TimedCache<u8, Vec<Patch>>",
     create = "{ TimedCache::with_lifespan(30 * 60) }",
     result = true,
-    convert = r#"{ format!("") }"#,
+    convert = "{ 0 }",
     sync_writes = "default"
 )]
 pub async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {

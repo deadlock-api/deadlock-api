@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct PartyStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,
@@ -43,19 +43,7 @@ pub struct PartyStats {
     pub matches: Vec<u64>,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<PartyStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{}-{:?}", account_id, query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn get_party_stats(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-    query: PartyStatsQuery,
-) -> APIResult<Vec<PartyStats>> {
+fn build_party_stats_query(account_id: u32, query: &PartyStatsQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -92,7 +80,7 @@ async fn get_party_stats(
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     WITH matches AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
@@ -107,7 +95,23 @@ async fn get_party_stats(
     ORDER BY party_size
     "#,
         account_id, filters, account_id
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<(u32, PartyStatsQuery), Vec<PartyStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ (account_id, query) }",
+    sync_writes = "by_key",
+    key = "(u32, PartyStatsQuery)"
+)]
+async fn get_party_stats(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    query: PartyStatsQuery,
+) -> APIResult<Vec<PartyStats>> {
+    let query = build_party_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch party stats: {}", e);

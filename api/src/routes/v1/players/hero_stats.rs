@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,
@@ -60,19 +60,7 @@ pub struct HeroStats {
     pub matches: Vec<u64>,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<HeroStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{}-{:?}", account_id, query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn get_hero_stats(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-    query: HeroStatsQuery,
-) -> APIResult<Vec<HeroStats>> {
+fn build_hero_stats_query(account_id: u32, query: &HeroStatsQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -110,7 +98,7 @@ async fn get_hero_stats(
         format!(" AND {}", filters.join(" AND "))
     };
     let account_filter = format!("account_id = {}", account_id);
-    let query = format!(
+    format!(
         r#"
     SELECT
         hero_id,
@@ -142,7 +130,23 @@ async fn get_hero_stats(
     ORDER BY hero_id
     "#,
         account_filter, filters
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<(u32, HeroStatsQuery), Vec<HeroStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ (account_id, query) }",
+    sync_writes = "by_key",
+    key = "(u32, HeroStatsQuery)"
+)]
+async fn get_hero_stats(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    query: HeroStatsQuery,
+) -> APIResult<Vec<HeroStats>> {
+    let query = build_hero_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero stats: {}", e);

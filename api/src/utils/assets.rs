@@ -10,10 +10,10 @@ pub struct AssetsHero {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<AssetsHero>>",
+    ty = "TimedCache<u8, Vec<AssetsHero>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ format!("") }"#
+    convert = "{ 0 }"
 )]
 pub async fn fetch_heroes(http_client: &reqwest::Client) -> reqwest::Result<Vec<AssetsHero>> {
     http_client
@@ -32,10 +32,11 @@ pub struct AssetsRanks {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<AssetsRanks>>",
+    ty = "TimedCache<u8, Vec<AssetsRanks>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ format!("") }"#
+    convert = "{ 0 }",
+    sync_writes = "default"
 )]
 pub async fn fetch_ranks(http_client: &reqwest::Client) -> reqwest::Result<Vec<AssetsRanks>> {
     http_client

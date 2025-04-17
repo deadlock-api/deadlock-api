@@ -66,12 +66,12 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
 }
 
 #[cached(
-    ty = "TimedCache<String, CMsgClientToGcGetMatchMetaDataResponse>",
+    ty = "TimedCache<(u64, bool), CMsgClientToGcGetMatchMetaDataResponse>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ format!("{match_id}-{needs_demo}") }"#,
+    convert = "{ (match_id, needs_demo) }",
     sync_writes = "by_key",
-    key = "String"
+    key = "(u64, bool)"
 )]
 pub async fn fetch_match_salts(
     config: &Config,
@@ -80,7 +80,7 @@ pub async fn fetch_match_salts(
     match_id: u64,
     needs_demo: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
-    // 30742540 is he first match from december, block older requests to avoid spamming
+    // 30742540 is the first match from december, block older requests to avoid spamming
     if match_id < 30742540 {
         return Err(APIError::StatusMsg {
             status: reqwest::StatusCode::NOT_FOUND,

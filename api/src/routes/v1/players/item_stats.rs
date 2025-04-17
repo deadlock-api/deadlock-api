@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct ItemStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,
@@ -44,19 +44,7 @@ pub struct ItemStats {
     pub matches: Vec<u64>,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<ItemStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{}-{:?}", account_id, query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn get_item_stats(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-    query: ItemStatsQuery,
-) -> APIResult<Vec<ItemStats>> {
+fn build_item_stats_query(account_id: u32, query: &ItemStatsQuery) -> String {
     let mut filters = vec![];
     filters.push(format!("account_id = {}", account_id));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
@@ -94,7 +82,7 @@ async fn get_item_stats(
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     SELECT hero_id, items.item_id as item_id, coalesce(sum(won), 0) AS wins, count() AS matches_played, groupUniqArray(match_id) AS matches
     FROM match_player FINAL
@@ -105,7 +93,23 @@ async fn get_item_stats(
     ORDER BY hero_id, item_id
     "#,
         filters
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<(u32, ItemStatsQuery), Vec<ItemStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ (account_id, query) }",
+    sync_writes = "by_key",
+    key = "(u32, ItemStatsQuery)"
+)]
+async fn get_item_stats(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    query: ItemStatsQuery,
+) -> APIResult<Vec<ItemStats>> {
+    let query = build_item_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch item stats: {}", e);

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct BadgeDistributionQuery {
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,
@@ -30,18 +30,7 @@ pub struct BadgeDistribution {
     pub total_matches: u64,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<BadgeDistribution>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-pub async fn get_badge_distribution(
-    ch_client: &clickhouse::Client,
-    query: BadgeDistributionQuery,
-) -> APIResult<Vec<BadgeDistribution>> {
+fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -60,7 +49,7 @@ pub async fn get_badge_distribution(
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     SELECT
         coalesce(t_badge_level, 0) as badge_level,
@@ -72,7 +61,22 @@ pub async fn get_badge_distribution(
     ORDER BY badge_level
     "#,
         filters
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<BadgeDistributionQuery, Vec<BadgeDistribution>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ query }",
+    sync_writes = "by_key",
+    key = "BadgeDistributionQuery"
+)]
+pub async fn get_badge_distribution(
+    ch_client: &clickhouse::Client,
+    query: BadgeDistributionQuery,
+) -> APIResult<Vec<BadgeDistribution>> {
+    let query = build_badge_distribution_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch badge distribution: {}", e);

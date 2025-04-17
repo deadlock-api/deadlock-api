@@ -137,7 +137,7 @@ fn build_comb_hero_query(query: &HeroCombStatsQuery) -> String {
     } else {
         format!(" AND {}", hero_filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
 WITH hero_combinations AS (
     SELECT
@@ -170,8 +170,7 @@ ORDER BY matches DESC
             .min_matches
             .or(default_min_matches())
             .unwrap_or_default()
-    );
-    query
+    )
 }
 
 #[cached(

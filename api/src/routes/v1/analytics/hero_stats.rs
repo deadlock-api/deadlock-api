@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -62,18 +62,7 @@ pub struct AnalyticsHeroStats {
     pub total_shots_missed: u64,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<AnalyticsHeroStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-pub async fn get_hero_stats(
-    ch_client: &clickhouse::Client,
-    query: HeroStatsQuery,
-) -> APIResult<Vec<AnalyticsHeroStats>> {
+fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -119,7 +108,7 @@ pub async fn get_hero_stats(
     } else {
         format!(" PREWHERE {}", player_filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     WITH t_matches AS (
         SELECT match_id
@@ -156,7 +145,22 @@ pub async fn get_hero_stats(
     ORDER BY hero_id
     "#,
         info_filters, player_filters
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<HeroStatsQuery, Vec<AnalyticsHeroStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ query }",
+    sync_writes = "by_key",
+    key = "HeroStatsQuery"
+)]
+pub async fn get_hero_stats(
+    ch_client: &clickhouse::Client,
+    query: HeroStatsQuery,
+) -> APIResult<Vec<AnalyticsHeroStats>> {
+    let query = build_hero_stats_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero stats: {}", e);

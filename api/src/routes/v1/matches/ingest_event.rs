@@ -43,10 +43,10 @@ impl MatchCreatedWebhookPayload {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<(String, String)>>",
+    ty = "TimedCache<u8, Vec<(String, String)>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = r#"{ format!("") }"#,
+    convert = "{ 0 }",
     sync_writes = "default"
 )]
 pub async fn get_webhook_urls(

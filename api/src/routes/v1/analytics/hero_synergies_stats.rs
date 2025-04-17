@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct HeroSynergyStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -58,18 +58,7 @@ pub struct HeroSynergyStats {
     pub matches_played: u64,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<HeroSynergyStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-pub async fn get_hero_synergy_stats(
-    ch_client: &clickhouse::Client,
-    query: HeroSynergyStatsQuery,
-) -> APIResult<Vec<HeroSynergyStats>> {
+fn build_hero_synergy_stats(query: &HeroSynergyStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {}", min_unix_timestamp));
@@ -118,7 +107,7 @@ pub async fn get_hero_synergy_stats(
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let query = format!(
+    format!(
         r#"
     WITH matches AS (SELECT match_id
                  FROM match_info
@@ -140,7 +129,22 @@ pub async fn get_hero_synergy_stats(
     ORDER BY p1.hero_id, p2.hero_id
     "#,
         info_filters, player_filters
-    );
+    )
+}
+
+#[cached(
+    ty = "TimedCache<HeroSynergyStatsQuery, Vec<HeroSynergyStats>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ query }",
+    sync_writes = "by_key",
+    key = "HeroSynergyStatsQuery"
+)]
+pub async fn get_hero_synergy_stats(
+    ch_client: &clickhouse::Client,
+    query: HeroSynergyStatsQuery,
+) -> APIResult<Vec<HeroSynergyStats>> {
+    let query = build_hero_synergy_stats(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero synergy stats: {}", e);

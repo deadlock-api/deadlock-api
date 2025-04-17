@@ -29,12 +29,11 @@ pub struct ActiveMatchesQuery {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<u8>>",
+    ty = "TimedCache<u8, Vec<u8>>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
-    convert = r#"{ format!("") }"#,
-    sync_writes = "by_key",
-    key = "String"
+    convert = "{ 0 }",
+    sync_writes = "default"
 )]
 pub async fn fetch_active_matches_raw(
     config: &Config,

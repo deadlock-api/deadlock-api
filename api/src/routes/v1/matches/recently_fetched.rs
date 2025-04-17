@@ -22,10 +22,10 @@ pub struct ClickhouseMatchInfo {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<ClickhouseMatchInfo>>",
+    ty = "TimedCache<u8, Vec<ClickhouseMatchInfo>>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
-    convert = r#"{ format!("") }"#,
+    convert = "{ 0 }",
     sync_writes = "default"
 )]
 async fn get_recently_fetched_match_ids(

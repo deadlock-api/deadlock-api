@@ -41,12 +41,12 @@ pub struct LeaderboardHeroQuery {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<u8>>",
+    ty = "TimedCache<(LeaderboardRegion, Option<u32>), Vec<u8>>",
     create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
-    convert = r#"{ format!("{:?}-{:?}", region, hero_id) }"#,
+    convert = "{ (region, hero_id) }",
     sync_writes = "by_key",
-    key = "String"
+    key = "(LeaderboardRegion, Option<u32>)"
 )]
 pub async fn fetch_leaderboard_raw(
     config: &Config,
