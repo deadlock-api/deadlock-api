@@ -5,6 +5,7 @@ use crate::state::AppState;
 use crate::utils::parse::parse_steam_id;
 use axum::Json;
 use axum::extract::{Query, State};
+use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -117,6 +118,7 @@ pub struct CommandResolveQuery {
     description = "Resolves a command and returns the resolved command."
 )]
 pub async fn command_resolve(
+    headers: HeaderMap,
     State(state): State<AppState>,
     Query(query): Query<CommandResolveQuery>,
 ) -> String {
@@ -136,7 +138,13 @@ pub async fn command_resolve(
                 let template_str = format!("{{{}}}", v.get_name());
                 async {
                     match v
-                        .resolve(&state, query.account_id, query.region, &extra_args)
+                        .resolve(
+                            &headers,
+                            &state,
+                            query.account_id,
+                            query.region,
+                            &extra_args,
+                        )
                         .await
                     {
                         Ok(resolved) => Ok((template_str, resolved)),
@@ -186,6 +194,7 @@ pub struct VariablesResolveQuery {
     description = "Resolves variables and returns a map of variable name to resolved value."
 )]
 pub async fn variables_resolve(
+    headers: HeaderMap,
     State(state): State<AppState>,
     Query(query): Query<VariablesResolveQuery>,
 ) -> Json<HashMap<String, String>> {
@@ -203,7 +212,13 @@ pub async fn variables_resolve(
             .filter(|v| variables_to_resolve.contains(&v.get_name()))
             .map(|v| async {
                 match v
-                    .resolve(&state, query.account_id, query.region, &extra_args)
+                    .resolve(
+                        &headers,
+                        &state,
+                        query.account_id,
+                        query.region,
+                        &extra_args,
+                    )
                     .await
                 {
                     Ok(resolved) => Some((v.get_name().to_string(), resolved)),

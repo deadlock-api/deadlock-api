@@ -35,7 +35,7 @@ pub enum LoadAppStateError {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum APIError {
     #[error("Status {status}")]
     Status { status: StatusCode },

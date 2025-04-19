@@ -8,6 +8,8 @@ use crate::routes::v1::players::match_history::{
 use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::state::AppState;
 use crate::utils::assets;
+use crate::utils::limiter::{RateLimitQuota, apply_limits};
+use axum::http::HeaderMap;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;
@@ -17,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
+use tracing::error;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
 
@@ -233,6 +236,7 @@ impl Variable {
 
     pub async fn resolve(
         &self,
+        headers: &HeaderMap,
         state: &AppState,
         steam_id: u32,
         region: LeaderboardRegion,
@@ -240,15 +244,10 @@ impl Variable {
     ) -> Result<String, VariableResolveError> {
         match self {
             Self::LeaderboardRankImg => {
-                let leaderboard_entry = Self::get_leaderboard_entry(
-                    &state.config,
-                    &state.http_client,
-                    steam_id,
-                    region,
-                    None,
-                )
-                .await
-                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                let leaderboard_entry =
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, None)
+                        .await
+                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -264,15 +263,10 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("rank"))
             }
             Self::LeaderboardRank => {
-                let leaderboard_entry = Self::get_leaderboard_entry(
-                    &state.config,
-                    &state.http_client,
-                    steam_id,
-                    region,
-                    None,
-                )
-                .await
-                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                let leaderboard_entry =
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, None)
+                        .await
+                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -319,41 +313,27 @@ impl Variable {
                 .ok()
                 .flatten()
                 .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
-                let leaderboard_entry = Self::get_leaderboard_entry(
-                    &state.config,
-                    &state.http_client,
-                    steam_id,
-                    region,
-                    Some(hero_id),
-                )
-                .await
-                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                let leaderboard_entry =
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, Some(hero_id))
+                        .await
+                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardPlace => {
-                let leaderboard_entry = Self::get_leaderboard_entry(
-                    &state.config,
-                    &state.http_client,
-                    steam_id,
-                    region,
-                    None,
-                )
-                .await
-                .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                let leaderboard_entry =
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, None)
+                        .await
+                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
-            Self::LeaderboardRankBadgeLevel => Self::get_leaderboard_entry(
-                &state.config,
-                &state.http_client,
-                steam_id,
-                region,
-                None,
-            )
-            .await
-            .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)
-            .map(|e| e.badge_level.unwrap_or_default().to_string()),
+            Self::LeaderboardRankBadgeLevel => {
+                Self::get_leaderboard_entry(headers, state, steam_id, region, None)
+                    .await
+                    .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)
+                    .map(|e| e.badge_level.unwrap_or_default().to_string())
+            }
             Self::SteamAccountName => {
-                get_steam_account_name(&state.config, &state.http_client, steam_id).await
+                get_steam_account_name(headers, state, &state.http_client, steam_id).await
             }
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(
@@ -876,15 +856,15 @@ impl Variable {
     }
 
     async fn get_leaderboard_entry(
-        config: &Config,
-        http_client: &reqwest::Client,
+        headers: &HeaderMap,
+        state: &AppState,
         steam_id: u32,
         region: LeaderboardRegion,
         hero_id: Option<u32>,
     ) -> Result<LeaderboardEntry, VariableResolveError> {
         let (leaderboard, steam_name) = join(
-            fetch_parse_leaderboard(config, http_client, region, hero_id),
-            get_steam_account_name(config, http_client, steam_id),
+            fetch_parse_leaderboard(&state.config, &state.http_client, region, hero_id),
+            get_steam_account_name(headers, state, &state.http_client, steam_id),
         )
         .await;
         let leaderboard =
@@ -907,7 +887,8 @@ impl Variable {
     key = "u32"
 )]
 async fn get_steam_account_name(
-    config: &Config,
+    headers: &HeaderMap,
+    state: &AppState,
     http_client: &reqwest::Client,
     steam_id: u32,
 ) -> Result<String, VariableResolveError> {
@@ -917,14 +898,14 @@ async fn get_steam_account_name(
             "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?steamids={}",
             steamid64
         ))
-        .header("x-webapi-key", config.steam_api_key.clone())
+        .header("x-webapi-key", state.config.steam_api_key.clone())
         .send()
         .await
         .map_err(|_| VariableResolveError::FailedToFetchSteamName)?
         .json::<serde_json::Value>()
         .await
         .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
-    response
+    let result = response
         .get("response")
         .and_then(|r| r.get("players"))
         .and_then(|p| p.as_array())
@@ -932,5 +913,19 @@ async fn get_steam_account_name(
         .and_then(|p| p.get("personaname"))
         .and_then(|p| p.as_str())
         .map(|p| p.to_string())
-        .ok_or(VariableResolveError::FailedToFetchSteamName)
+        .ok_or(VariableResolveError::FailedToFetchSteamName);
+    if result.is_ok() {
+        apply_limits(
+            headers,
+            state,
+            "steam_account_name",
+            &[
+                RateLimitQuota::ip_limit(10, std::time::Duration::from_secs(24 * 60 * 60)),
+                RateLimitQuota::global_limit(1000, std::time::Duration::from_secs(24 * 60 * 60)),
+            ],
+        )
+        .await
+        .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+    }
+    result
 }
