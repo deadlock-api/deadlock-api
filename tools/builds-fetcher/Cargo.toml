@@ -18,4 +18,4 @@ time = "0.3.41"
 metrics = "0.24"
 tracing = "0.1.41"
 common = { version = "0.1.0", path = "../common" }
-rand = "0.9.0"
+rand = "0.9.1"

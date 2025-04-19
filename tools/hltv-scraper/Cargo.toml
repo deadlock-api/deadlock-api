@@ -8,7 +8,7 @@ anyhow = "1.0.98"
 axum = "0.8.3"
 base64 = "0.22.1"
 cached = { version = "0.55", features = ["async", "async_tokio_rt_multi_thread"] }
-clap = { version = "4.5.36", features = ["derive", "env"] }
+clap = { version = "4.5.37", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
 haste = { git = "https://github.com/johnpyp/haste.git", rev = "d7fae1be70afbad95bb5c6a62100d9fbe4610723", features = ["deadlock", "broadcast"] }
