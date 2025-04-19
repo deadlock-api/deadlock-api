@@ -137,14 +137,15 @@ async fn get_account_ids_to_update(
     let ch_account_ids = get_ch_account_ids(ch_client).await?;
     let pg_account_ids = get_pg_account_ids(pg_client).await?;
 
-    let one_week_ago = Utc::now() - Duration::from_secs(7 * 24 * 60 * 60);
+    let two_week_ago = Utc::now() - Duration::from_secs(2 * 24 * 60 * 60);
 
     // Filter out account IDs that are already in PostgreSQL
     let account_ids_to_update: Vec<AccountId> = ch_account_ids
         .into_iter()
         .filter(|id| {
-            !pg_account_ids.contains_key(&id.account_id)
-                || pg_account_ids[&id.account_id] < one_week_ago
+            pg_account_ids
+                .get(&id.account_id)
+                .is_none_or(|l| l < &two_week_ago)
         })
         .collect();
 
