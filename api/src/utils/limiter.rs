@@ -10,7 +10,7 @@ use sqlx::{Pool, Postgres};
 use std::time::Duration;
 use uuid::Uuid;
 
-const MAX_TTL_SECONDS: isize = 3600;
+const MAX_TTL_SECONDS: isize = 24 * 60 * 60;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum RateLimitQuotaType {
