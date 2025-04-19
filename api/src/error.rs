@@ -31,7 +31,11 @@ pub enum LoadAppStateError {
     #[error("PostgreSQL error: {0}")]
     PostgreSQL(#[from] sqlx::Error),
     #[error("Parsing error: {0}")]
-    Parsing(#[from] clap::error::Error),
+    ParsingConfig(#[from] clap::error::Error),
+    #[error("Parsing Json error: {0}")]
+    ParsingJson(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] io::Error),
 }
 
 #[allow(dead_code)]

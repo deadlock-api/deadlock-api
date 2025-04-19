@@ -15,11 +15,12 @@ pub mod utils;
 use crate::api_doc::ApiDoc;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::feature_flags::feature_flags;
 use crate::state::AppState;
 use crate::utils::tracing::init_tracing;
 use axum::extract::Request;
 use axum::http::{HeaderMap, header};
-use axum::middleware::from_fn;
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Json, Router, ServiceExt};
@@ -29,7 +30,7 @@ use middleware::fallback;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tower_http::compression::{CompressionLayer, DefaultPredicate};
-use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_layer::Layer;
 use tracing::{debug, info};
@@ -68,6 +69,7 @@ async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
         .layer(prometheus_layer)
         // Add Middlewares
         .layer(from_fn(write_api_key_to_header))
+        .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(CacheControlMiddleware::new(Duration::from_secs(
             DEFAULT_CACHE_TIME,
         )))

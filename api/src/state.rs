@@ -3,10 +3,18 @@ use crate::error::LoadAppStateError;
 use clap::{CommandFactory, FromArgMatches};
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
+use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
+use std::collections::HashMap;
+use std::fs::File;
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, warn};
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FeatureFlags {
+    pub routes: HashMap<String, bool>,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -17,6 +25,7 @@ pub struct AppState {
     pub redis_client: redis::aio::MultiplexedConnection,
     pub ch_client: clickhouse::Client,
     pub pg_client: Pool<Postgres>,
+    pub feature_flags: FeatureFlags,
 }
 
 impl AppState {
@@ -115,6 +124,16 @@ impl AppState {
             .connect_with(pg_options)
             .await?;
 
+        // Load feature flags
+        debug!("Loading feature flags");
+        let feature_flags = File::open("feature_flags.json")
+            .map_err(LoadAppStateError::from)
+            .and_then(|f| serde_json::from_reader(f).map_err(LoadAppStateError::from))
+            .unwrap_or_else(|e| {
+                warn!("Failed to load feature flags: {e}");
+                FeatureFlags::default()
+            });
+
         Ok(Self {
             config,
             http_client,
@@ -123,6 +142,7 @@ impl AppState {
             redis_client,
             ch_client,
             pg_client,
+            feature_flags,
         })
     }
 }
