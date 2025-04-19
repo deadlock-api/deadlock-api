@@ -71,12 +71,7 @@ async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
         .layer(CacheControlMiddleware::new(Duration::from_secs(
             DEFAULT_CACHE_TIME,
         )))
-        .layer(
-            CorsLayer::default()
-                .allow_headers(AllowHeaders::any())
-                .allow_origin(AllowOrigin::any())
-                .allow_methods(AllowMethods::any()),
-        )
+        .layer(CorsLayer::permissive())
         .layer(CompressionLayer::<DefaultPredicate>::default())
         .fallback(fallback::fallback)
         .split_for_parts();
