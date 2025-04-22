@@ -15,7 +15,7 @@ static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
+    common::init_tracing();
     common::init_metrics()?;
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;

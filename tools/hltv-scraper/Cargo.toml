@@ -13,7 +13,7 @@ dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
 haste = { git = "https://github.com/johnpyp/haste.git", rev = "d7fae1be70afbad95bb5c6a62100d9fbe4610723", features = ["deadlock", "broadcast"] }
 itertools = "0.14.0"
-jiff = { version = "0.2.8", features = ["serde"] }
+jiff = { version = "0.2.10", features = ["serde"] }
 lru = "0.14.0"
 metrics = "0.24"
 object_store = { version = "0.12.0", features = ["aws"] }

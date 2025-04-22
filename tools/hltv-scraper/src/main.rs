@@ -8,7 +8,7 @@ mod hltv;
 
 #[tokio::main]
 async fn main() {
-    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
+    common::init_tracing();
     tracing::info!("Starting processing!");
     run_cli().await;
 }

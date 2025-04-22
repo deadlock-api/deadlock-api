@@ -20,7 +20,7 @@ struct Account {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
+    common::init_tracing();
     common::init_metrics()?;
 
     let http_client = reqwest::Client::new();

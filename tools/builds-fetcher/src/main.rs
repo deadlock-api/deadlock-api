@@ -34,7 +34,7 @@ static UPDATE_INTERVAL: Lazy<u64> = Lazy::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
+    common::init_tracing();
     common::init_metrics()?;
     let http_client = reqwest::Client::new();
     let pg_client = common::get_pg_client().await?;

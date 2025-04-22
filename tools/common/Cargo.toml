@@ -11,17 +11,12 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock", "serde"] }
 prost = "0.13.5"
-metrics = "0.24.1"
+metrics = "0.24.2"
 tracing = "0.1.41"
 clickhouse = "0.13.2"
 object_store = { version = "0.12.0", features = ["aws"] }
 anyhow = "1.0.98"
 sqlx = { version = "0.8.5", features = ["macros", "postgres", "runtime-tokio", "time"] }
 fred = { version = "10.1.0", features = ["i-hexpire"] }
-metrics-exporter-prometheus = "0.16"
+metrics-exporter-prometheus = "0.17"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tracing-opentelemetry = { version = "0.30.0", features = ["metrics"] }
-opentelemetry = { version = "0.29.1", features = ["trace", "metrics"] }
-opentelemetry_sdk = { version = "0.29.0", default-features = false, features = ["trace", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.29.0", features = ["metrics", "grpc-tonic"] }
-opentelemetry-semantic-conventions = { version = "0.29.0", features = ["semconv_experimental"] }

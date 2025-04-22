@@ -31,7 +31,7 @@ static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
+    common::init_tracing();
     common::init_metrics()?;
 
     let ch_client = common::get_ch_client()?;

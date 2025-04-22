@@ -42,7 +42,7 @@ static BATCH_SIZE: Lazy<usize> = Lazy::new(|| {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let _guard = common::init_tracing(env!("CARGO_PKG_NAME"));
+    common::init_tracing();
     common::init_metrics()?;
 
     info!("Starting Steam Profile Fetcher");
