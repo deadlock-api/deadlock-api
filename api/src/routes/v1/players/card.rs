@@ -172,7 +172,10 @@ pub async fn card_raw(
         &headers,
         &state,
         "card",
-        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
+        &[
+            RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
+            RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+        ],
     )
     .await?;
     tryhard::retry_fn(|| fetch_player_card_raw(&state.config, &state.http_client, account_id))
@@ -212,7 +215,10 @@ pub async fn card(
         &headers,
         &state,
         "card",
-        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
+        &[
+            RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
+            RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+        ],
     )
     .await?;
     tryhard::retry_fn(|| async {

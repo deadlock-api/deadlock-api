@@ -130,7 +130,7 @@ pub async fn bulk_metadata(
         &headers,
         &state,
         "match_metadata_bulk",
-        &[RateLimitQuota::ip_limit(60, Duration::from_secs(60))],
+        &[RateLimitQuota::ip_limit(10, Duration::from_secs(1))],
     )
     .await?;
     if query.limit > 10000 {

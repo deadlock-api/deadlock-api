@@ -209,7 +209,7 @@ pub async fn salts(
         &headers,
         &state,
         "salts",
-        &[RateLimitQuota::ip_limit(100, Duration::from_secs(1))],
+        &[RateLimitQuota::ip_limit(4000, Duration::from_secs(10))],
     )
     .await?;
     tryhard::retry_fn(|| {
