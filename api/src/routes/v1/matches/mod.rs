@@ -33,8 +33,6 @@ pub fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(bulk_metadata::bulk_metadata))
                 .routes(routes!(salts::salts))
                 .routes(routes!(badge_distribution::badge_distribution))
-                .layer(CacheControlMiddleware::new(Duration::from_secs(
-                    24 * 60 * 60,
-                ))),
+                .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
         )
 }
