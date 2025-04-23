@@ -3,6 +3,7 @@ pub mod hero_stats;
 pub mod item_stats;
 pub mod match_history;
 pub mod mate_stats;
+pub mod mmr_history;
 pub mod party_stats;
 pub mod types;
 
@@ -20,6 +21,7 @@ pub struct ApiDoc;
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))
+        .routes(routes!(mmr_history::mmr_history))
         .routes(routes!(card::card_raw))
         .routes(routes!(card::card))
         .merge(
