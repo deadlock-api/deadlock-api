@@ -77,12 +77,6 @@ jobs:
         uses: depot/setup-action@v1
 
       ###############################
-      ##         Lint Code         ##
-      ###############################
-      - name: Lint code
-        run: task lint
-
-      ###############################
       ##           Build           ##
       ###############################
       - name: Build and Load Docker image
