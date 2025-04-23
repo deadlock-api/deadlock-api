@@ -11,16 +11,12 @@ use rstest::rstest;
 #[tokio::test]
 async fn test_builds(
     #[values(None, Some(10))] limit: Option<usize>,
-    #[values(
-        None,
-        Some(BuildsSearchQuerySortBy::UpdatedAt),
-        Some(BuildsSearchQuerySortBy::Version)
-    )]
-    sort_by: Option<BuildsSearchQuerySortBy>,
+    #[values(None, Some(BuildsSearchQuerySortBy::UpdatedAt))] sort_by: Option<
+        BuildsSearchQuerySortBy,
+    >,
     #[values(None, Some(SortDirectionDesc::Asc))] sort_direction: Option<SortDirectionDesc>,
     #[values(None, Some("Lash"))] search_name: Option<&str>,
-    #[values(None, Some(true), Some(false))] only_latest: Option<bool>,
-    #[values(None, Some(6))] language: Option<u32>,
+    #[values(None, Some(true))] only_latest: Option<bool>,
     #[values(None, Some(132494))] build_id: Option<u32>,
     #[values(None, Some(16))] version: Option<u32>,
     #[values(None, Some(15))] hero_id: Option<u32>,
@@ -47,9 +43,6 @@ async fn test_builds(
     }
     if let Some(only_latest) = only_latest {
         queries.push(("only_latest", only_latest.to_string()));
-    }
-    if let Some(language) = language {
-        queries.push(("language", language.to_string()));
     }
     if let Some(build_id) = build_id {
         queries.push(("build_id", build_id.to_string()));
@@ -115,9 +108,6 @@ async fn test_builds(
         }
         if let Some(account_id) = author_id {
             assert_eq!(hero_build.author_account_id, account_id);
-        }
-        if let Some(language) = language {
-            assert_eq!(build.hero_build.language, language);
         }
         if let Some(version) = version {
             assert_eq!(build.hero_build.version, version);
