@@ -1,6 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::types::AccountIdQuery;
 use crate::state::AppState;
+use crate::utils::parse::default_true;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -35,6 +36,10 @@ pub struct MateStatsQuery {
     pub max_match_id: Option<u64>,
     /// Filter based on the number of matches played.
     pub min_matches_played: Option<u64>,
+    /// Filter based on the number of matches played.
+    #[serde(default = "default_true")]
+    #[param(default = true)]
+    pub same_party: bool,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -82,25 +87,48 @@ fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
-    format!(
-        r#"
-    WITH matches AS (SELECT DISTINCT match_id, team, party
-                     FROM match_player
-                     WHERE account_id = {} AND party != 0 {}),
-         mates AS (SELECT DISTINCT match_id, won, account_id
-                   FROM match_player
-                   WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches) AND account_id != {})
-    SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
-    FROM mates
-    GROUP BY mate_id
-    HAVING matches_played > {}
-    ORDER BY matches_played DESC
-    "#,
-        account_id,
-        filters,
-        account_id,
-        query.min_matches_played.unwrap_or_default()
-    )
+
+    if query.same_party {
+        format!(
+            r#"
+            WITH matches AS (SELECT DISTINCT match_id, team, party
+                             FROM match_player
+                             WHERE account_id = {} AND party != 0 {}),
+                 mates AS (SELECT DISTINCT match_id, won, account_id
+                           FROM match_player
+                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches) AND account_id != {})
+            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+            FROM mates
+            GROUP BY mate_id
+            HAVING matches_played > {}
+            ORDER BY matches_played DESC
+            "#,
+            account_id,
+            filters,
+            account_id,
+            query.min_matches_played.unwrap_or_default()
+        )
+    } else {
+        format!(
+            r#"
+            WITH matches AS (SELECT DISTINCT match_id, team
+                             FROM match_player
+                             WHERE account_id = {} {}),
+                 mates AS (SELECT DISTINCT match_id, won, account_id
+                           FROM match_player
+                           WHERE (match_id, team) IN (SELECT match_id, team FROM matches) AND account_id != {})
+            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+            FROM mates
+            GROUP BY mate_id
+            HAVING matches_played > {}
+            ORDER BY matches_played DESC
+            "#,
+            account_id,
+            filters,
+            account_id,
+            query.min_matches_played.unwrap_or_default()
+        )
+    }
 }
 
 #[cached(
