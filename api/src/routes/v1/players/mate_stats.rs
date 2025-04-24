@@ -33,6 +33,8 @@ pub struct MateStatsQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
+    /// Filter based on the number of matches played.
+    pub min_matches_played: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -91,9 +93,13 @@ fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
     SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
     FROM mates
     GROUP BY mate_id
+    HAVING matches_played > {}
     ORDER BY matches_played DESC
     "#,
-        account_id, filters, account_id
+        account_id,
+        filters,
+        account_id,
+        query.min_matches_played.unwrap_or_default()
     )
 }
 
