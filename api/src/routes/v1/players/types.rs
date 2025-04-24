@@ -14,7 +14,7 @@ pub struct AccountIdQuery {
 
 pub type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Row)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Row, Eq, PartialEq, Hash)]
 pub struct PlayerMatchHistoryEntry {
     pub account_id: u32,
     pub match_id: u32,

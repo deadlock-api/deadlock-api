@@ -8,7 +8,7 @@ use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -37,6 +37,12 @@ pub struct MatchHistoryQuery {
     #[serde(default)]
     #[param(default)]
     pub force_refetch: bool,
+    /// Return only the already stored match history from ClickHouse.
+    /// There is no rate limit for this option, so if you need a lot of data, you can use this option.
+    /// This option is not compatible with `force_refetch`.
+    #[serde(default)]
+    #[param(default)]
+    pub only_stored_history: bool,
 }
 
 pub async fn insert_match_history_to_ch(
@@ -250,11 +256,27 @@ Relevant Protobuf Messages:
 )]
 pub async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    Query(MatchHistoryQuery { force_refetch }): Query<MatchHistoryQuery>,
+    Query(query): Query<MatchHistoryQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<Json<PlayerMatchHistory>> {
-    if force_refetch {
+    if query.force_refetch && query.only_stored_history {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot use both force_refetch and only_stored_history at the same time"
+                .to_string(),
+        });
+    }
+
+    // If only stored history is requested, we can just fetch from ClickHouse
+    if query.only_stored_history {
+        return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
+            .await
+            .map(Json);
+    }
+
+    // Apply rate limits based on the query parameters
+    if query.force_refetch {
         apply_limits(
             &headers,
             &state,
@@ -277,12 +299,16 @@ pub async fn match_history(
         )
         .await?;
     };
-    let ch_client = &state.ch_client;
 
     // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
-        fetch_steam_match_history(account_id, &state.config, &state.http_client, force_refetch),
-        fetch_match_history_from_clickhouse(ch_client, account_id),
+        fetch_steam_match_history(
+            account_id,
+            &state.config,
+            &state.http_client,
+            query.force_refetch,
+        ),
+        fetch_match_history_from_clickhouse(&state.ch_client, account_id),
     )
     .await;
     let steam_match_history = match steam_match_history {
@@ -299,7 +325,7 @@ pub async fn match_history(
     let ch_missing_entries = steam_match_history
         .iter()
         .filter(|e| !ch_match_ids.contains(&e.match_id))
-        .cloned()
+        .copied()
         .collect_vec();
     if !ch_missing_entries.is_empty() {
         let ch_client = state.ch_client;
