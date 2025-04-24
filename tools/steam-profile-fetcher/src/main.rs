@@ -1,12 +1,12 @@
 use anyhow::Result;
 use arl::RateLimiter;
-use chrono::{DateTime, Utc};
+use itertools::Itertools;
 use metrics::{counter, gauge};
 use once_cell::sync::Lazy;
+use rand::rng;
+use rand::seq::SliceRandom;
 use sqlx::postgres::PgQueryResult;
-use sqlx::types::chrono;
 use sqlx::{Error, PgPool};
-use std::collections::HashMap;
 use std::env;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -14,7 +14,7 @@ use tracing::{debug, error, info, instrument};
 mod models;
 mod steam_api;
 
-use models::{AccountId, SteamPlayerSummary};
+use models::SteamPlayerSummary;
 
 static FETCH_INTERVAL: Lazy<Duration> = Lazy::new(|| {
     Duration::from_secs(
@@ -87,43 +87,40 @@ async fn fetch_and_update_profiles(
     gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
     let mut remaining = account_ids.len();
-    for chunk in account_ids.chunks(*BATCH_SIZE) {
-        limiter.wait().await;
+    limiter.wait().await;
 
-        let profiles = match steam_api::fetch_steam_profiles(http_client, chunk).await {
-            Ok(profiles) => {
-                info!("Fetched {} Steam profiles", profiles.len());
-                counter!("steam_profile_fetcher.fetched_profiles.success")
-                    .increment(profiles.len() as u64);
-                profiles
-            }
-            Err(e) => {
-                error!("Failed to fetch Steam profiles: {}", e);
-                counter!("steam_profile_fetcher.fetched_profiles.failure")
-                    .increment(chunk.len() as u64);
-                continue;
-            }
-        };
+    let profiles = match steam_api::fetch_steam_profiles(http_client, &account_ids).await {
+        Ok(profiles) => {
+            info!("Fetched {} Steam profiles", profiles.len());
+            counter!("steam_profile_fetcher.fetched_profiles.success")
+                .increment(profiles.len() as u64);
+            profiles
+        }
+        Err(e) => {
+            error!("Failed to fetch Steam profiles: {}", e);
+            counter!("steam_profile_fetcher.fetched_profiles.failure")
+                .increment(account_ids.len() as u64);
+            return Err(e);
+        }
+    };
 
-        match save_profiles(pg_client, &profiles).await {
-            Ok(_) => {
-                remaining -= profiles.len();
-                info!(
-                    "Saved {} Steam profiles, {} account IDs remaining to update",
-                    profiles.len(),
-                    remaining
-                );
-                gauge!("steam_profile_fetcher.account_ids_to_update")
-                    .decrement(profiles.len() as f64);
-                counter!("steam_profile_fetcher.saved_profiles.success")
-                    .increment(profiles.len() as u64);
-            }
-            Err(e) => {
-                error!("Failed to save Steam profiles: {}", e);
-                counter!("steam_profile_fetcher.saved_profiles.failure")
-                    .increment(profiles.len() as u64);
-                continue;
-            }
+    match save_profiles(pg_client, &profiles).await {
+        Ok(_) => {
+            remaining -= profiles.len();
+            info!(
+                "Saved {} Steam profiles, {} account IDs remaining to update",
+                profiles.len(),
+                remaining
+            );
+            gauge!("steam_profile_fetcher.account_ids_to_update").decrement(profiles.len() as f64);
+            counter!("steam_profile_fetcher.saved_profiles.success")
+                .increment(profiles.len() as u64);
+        }
+        Err(e) => {
+            error!("Failed to save Steam profiles: {}", e);
+            counter!("steam_profile_fetcher.saved_profiles.failure")
+                .increment(profiles.len() as u64);
+            return Err(e.into());
         }
     }
 
@@ -133,51 +130,37 @@ async fn fetch_and_update_profiles(
 async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
     pg_client: &PgPool,
-) -> Result<Vec<AccountId>> {
+) -> Result<Vec<u32>> {
     let ch_account_ids = get_ch_account_ids(ch_client).await?;
-    let pg_account_ids = get_pg_account_ids(pg_client).await?;
+    let mut pg_account_ids = get_pg_account_ids(pg_client).await?;
+    pg_account_ids.shuffle(&mut rng());
 
-    let two_week_ago = Utc::now() - Duration::from_secs(2 * 24 * 60 * 60);
-
-    // Filter out account IDs that are already in PostgreSQL
-    let account_ids_to_update: Vec<AccountId> = ch_account_ids
+    Ok(ch_account_ids
         .into_iter()
-        .filter(|id| {
-            pg_account_ids
-                .get(&id.account_id)
-                .is_none_or(|l| l < &two_week_ago)
-        })
-        .collect();
-
-    Ok(account_ids_to_update)
+        .chain(pg_account_ids.into_iter())
+        .unique()
+        .take(*BATCH_SIZE)
+        .collect())
 }
 
-async fn get_ch_account_ids(
-    ch_client: &clickhouse::Client,
-) -> clickhouse::error::Result<Vec<AccountId>> {
+async fn get_ch_account_ids(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Vec<u32>> {
     let query = "
 SELECT DISTINCT account_id
 FROM match_player
 WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 1 MONTH)
 AND account_id > 0
+ORDER BY RAND()
     ";
     ch_client.query(query).fetch_all().await
 }
 
-async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<HashMap<u32, DateTime<Utc>>> {
+async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
     Ok(
-        sqlx::query!("SELECT DISTINCT account_id, last_updated FROM steam_profiles")
+        sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated > now() - INTERVAL '2 weeks'")
             .fetch_all(pg_client)
             .await?
             .into_iter()
-            .map(|row| {
-                (
-                    row.account_id as u32,
-                    DateTime::from_timestamp_nanos(
-                        row.last_updated.assume_utc().unix_timestamp_nanos() as i64,
-                    ),
-                )
-            })
+            .map(|row| row.account_id as u32)
             .collect(),
     )
 }

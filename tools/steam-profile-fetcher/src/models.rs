@@ -1,10 +1,4 @@
-use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-
-#[derive(Row, Debug, Clone, Deserialize)]
-pub struct AccountId {
-    pub account_id: u32,
-}
 
 // Steam API response structures
 #[derive(Debug, Serialize, Deserialize)]
