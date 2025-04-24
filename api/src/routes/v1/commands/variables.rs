@@ -16,6 +16,7 @@ use chrono::Duration;
 use futures::future::join;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
@@ -333,7 +334,14 @@ impl Variable {
                     .map(|e| e.badge_level.unwrap_or_default().to_string())
             }
             Self::SteamAccountName => {
-                get_steam_account_name(headers, state, &state.http_client, steam_id).await
+                get_steam_account_name(
+                    headers,
+                    state,
+                    &state.http_client,
+                    &state.pg_client,
+                    steam_id,
+                )
+                .await
             }
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(
@@ -863,7 +871,13 @@ impl Variable {
     ) -> Result<LeaderboardEntry, VariableResolveError> {
         let (leaderboard, steam_name) = join(
             fetch_parse_leaderboard(&state.config, &state.http_client, region, hero_id),
-            get_steam_account_name(headers, state, &state.http_client, steam_id),
+            get_steam_account_name(
+                headers,
+                state,
+                &state.http_client,
+                &state.pg_client,
+                steam_id,
+            ),
         )
         .await;
         let leaderboard =
@@ -882,6 +896,27 @@ impl Variable {
     }
 }
 
+async fn get_steam_account_name(
+    headers: &HeaderMap,
+    state: &AppState,
+    http_client: &reqwest::Client,
+    pg_client: &Pool<Postgres>,
+    steam_id: u32,
+) -> Result<String, VariableResolveError> {
+    match fetch_steam_account_name(headers, state, http_client, steam_id).await {
+        Ok(name) => Ok(name),
+        Err(_) => sqlx::query!(
+            "SELECT personaname FROM steam_profiles WHERE account_id = $1",
+            steam_id as i32
+        )
+        .fetch_one(pg_client)
+        .await
+        .ok()
+        .and_then(|row| row.personaname)
+        .ok_or(VariableResolveError::FailedToFetchSteamName),
+    }
+}
+
 #[cached(
     ty = "TimedCache<u32, String>",
     create = "{ TimedCache::with_lifespan(24 * 60 * 60) }",
@@ -890,7 +925,7 @@ impl Variable {
     sync_writes = "by_key",
     key = "u32"
 )]
-async fn get_steam_account_name(
+async fn fetch_steam_account_name(
     headers: &HeaderMap,
     state: &AppState,
     http_client: &reqwest::Client,
