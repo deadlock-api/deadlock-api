@@ -1,3 +1,4 @@
+pub mod build_item_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
 pub mod hero_scoreboard;
@@ -25,6 +26,7 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(hero_counters_stats::hero_counters_stats))
         .routes(routes!(hero_synergies_stats::hero_synergies_stats))
         .routes(routes!(hero_comb_stats::hero_comb_stats))
+        .routes(routes!(build_item_stats::build_item_stats))
         .nest(
             "/scoreboards",
             OpenApiRouter::with_openapi(ApiDoc::openapi())
