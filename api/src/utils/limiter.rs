@@ -8,6 +8,7 @@ use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
 use std::time::Duration;
+use tracing::{error, warn};
 use uuid::Uuid;
 
 const MAX_TTL_SECONDS: isize = 24 * 60 * 60;
@@ -131,11 +132,11 @@ pub async fn apply_limits(
     }
 
     let prefix = api_key.map(|k| k.to_string()).unwrap_or(ip.to_string());
-    increment_key(state.redis_client.clone(), &prefix, key)
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to increment key: {e}"),
-        })?;
+    let increment_result = increment_key(state.redis_client.clone(), &prefix, key).await;
+    if let Err(e) = increment_result {
+        error!("Failed to increment rate limit key: {e}, will not apply limits");
+        return Ok(None);
+    }
 
     // Check for custom quotas
     let quotas = match api_key {
@@ -169,6 +170,7 @@ pub async fn apply_limits(
         let Ok((requests, oldest_request)) =
             check_requests(&mut state.redis_client.clone(), &prefixed_key, quota.period).await
         else {
+            error!("Failed to check rate limit key: {prefixed_key}, will not apply limits");
             continue;
         };
         let status = RateLimitStatus {
