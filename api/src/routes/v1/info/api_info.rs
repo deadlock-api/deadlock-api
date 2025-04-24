@@ -4,7 +4,6 @@ use axum::Json;
 use axum::extract::State;
 use clickhouse::Row;
 use futures::future::join;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
@@ -116,7 +115,6 @@ pub async fn info(State(state): State<AppState>) -> APIResult<Json<APIInfo>> {
         })?
         .into_iter()
         .map(|row| (row.table.clone(), row.into()))
-        .sorted_by_key(|(table, _)| table.clone())
         .collect();
 
     let fetched_matches_per_day = fetched_matches_per_day.map_err(|e| APIError::InternalError {

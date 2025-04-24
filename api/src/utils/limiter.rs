@@ -12,14 +12,14 @@ use uuid::Uuid;
 
 const MAX_TTL_SECONDS: isize = 24 * 60 * 60;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum RateLimitQuotaType {
     IP,
     Key,
     Global,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct RateLimitQuota {
     pub limit: u32,
     pub period: Duration,
@@ -152,7 +152,7 @@ pub async fn apply_limits(
                     .filter(|q| {
                         !has_api_key_limits || q.rate_limit_quota_type != RateLimitQuotaType::IP
                     })
-                    .cloned()
+                    .copied()
                     .collect()
             } else {
                 custom_quotas

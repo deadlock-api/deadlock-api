@@ -240,7 +240,7 @@ mod test {
         #[values(None, Some(vec![1, 2, 3]))] exclude_hero_ids: Option<Vec<u32>>,
         #[values(None, Some(1))] min_matches: Option<u32>,
     ) {
-        let query = HeroCombStatsQuery {
+        let comb_query = HeroCombStatsQuery {
             min_unix_timestamp,
             max_unix_timestamp,
             min_duration_s,
@@ -250,11 +250,11 @@ mod test {
             min_match_id,
             max_match_id,
             account_id,
-            include_hero_ids: include_hero_ids.clone(),
-            exclude_hero_ids: exclude_hero_ids.clone(),
+            include_hero_ids,
+            exclude_hero_ids,
             min_matches,
         };
-        let query = build_comb_hero_query(&query);
+        let query = build_comb_hero_query(&comb_query);
 
         if let Some(min_unix_timestamp) = min_unix_timestamp {
             assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
@@ -289,7 +289,7 @@ mod test {
         if let Some(account_id) = account_id {
             assert!(query.contains(&format!("has(account_ids, {})", account_id)));
         }
-        if let Some(include_hero_ids) = include_hero_ids {
+        if let Some(include_hero_ids) = comb_query.include_hero_ids {
             assert!(query.contains(&format!(
                 "hasAll(hero_ids, [{}])",
                 include_hero_ids
@@ -299,7 +299,7 @@ mod test {
                     .join(", ")
             )));
         }
-        if let Some(exclude_hero_ids) = exclude_hero_ids {
+        if let Some(exclude_hero_ids) = comb_query.exclude_hero_ids {
             assert!(query.contains(&format!(
                 "not hasAny(hero_ids, [{}])",
                 exclude_hero_ids

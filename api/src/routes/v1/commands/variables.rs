@@ -842,16 +842,15 @@ impl Variable {
             return Ok(vec![]);
         }
 
-        Ok(vec![first_match]
+        Ok(vec![*first_match]
             .into_iter()
             .chain(
                 matches
-                    .iter()
+                    .into_iter()
                     .tuple_windows()
                     .take_while(|(c, l)| c.start_time - l.start_time <= 6 * 60 * 60)
                     .map(|(_, c)| c),
             )
-            .cloned()
             .collect())
     }
 
@@ -873,7 +872,12 @@ impl Variable {
         leaderboard
             .entries
             .into_iter()
-            .find(|entry| entry.account_name.clone().is_some_and(|n| n == steam_name))
+            .find(|entry| {
+                entry
+                    .account_name
+                    .as_ref()
+                    .is_some_and(|n| n == &steam_name)
+            })
             .ok_or(VariableResolveError::PlayerNotFoundInLeaderboard)
     }
 }
