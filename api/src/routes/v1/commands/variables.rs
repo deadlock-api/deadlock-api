@@ -20,7 +20,7 @@ use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
-use tracing::error;
+use tracing::{error, warn};
 use utoipa::ToSchema;
 use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
 
@@ -905,15 +905,18 @@ async fn get_steam_account_name(
 ) -> Result<String, VariableResolveError> {
     match fetch_steam_account_name(headers, state, http_client, steam_id).await {
         Ok(name) => Ok(name),
-        Err(_) => sqlx::query!(
-            "SELECT personaname FROM steam_profiles WHERE account_id = $1",
-            steam_id as i32
-        )
-        .fetch_one(pg_client)
-        .await
-        .ok()
-        .and_then(|row| row.personaname)
-        .ok_or(VariableResolveError::FailedToFetchSteamName),
+        Err(_) => {
+            warn!("Failed to fetch steam account name from API, falling back to database");
+            sqlx::query!(
+                "SELECT personaname FROM steam_profiles WHERE account_id = $1",
+                steam_id as i32
+            )
+            .fetch_one(pg_client)
+            .await
+            .ok()
+            .and_then(|row| row.personaname)
+            .ok_or(VariableResolveError::FailedToFetchSteamName)
+        }
     }
 }
 
