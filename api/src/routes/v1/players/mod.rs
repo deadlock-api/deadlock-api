@@ -1,4 +1,5 @@
 pub mod card;
+pub mod enemy_stats;
 pub mod hero_stats;
 pub mod item_stats;
 pub mod match_history;
@@ -27,6 +28,7 @@ pub fn router() -> OpenApiRouter<AppState> {
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(mate_stats::mate_stats))
+                .routes(routes!(enemy_stats::enemy_stats))
                 .routes(routes!(party_stats::party_stats))
                 .routes(routes!(item_stats::item_stats))
                 .routes(routes!(hero_stats::hero_stats))
