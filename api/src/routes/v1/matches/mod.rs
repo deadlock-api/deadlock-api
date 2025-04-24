@@ -26,11 +26,11 @@ pub fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(ingest_event::ingest_event))
         .routes(routes!(ingest_salts::ingest_salts))
         .routes(routes!(recently_fetched::recently_fetched))
+        .routes(routes!(bulk_metadata::bulk_metadata))
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(metadata::metadata))
                 .routes(routes!(metadata::metadata_raw))
-                .routes(routes!(bulk_metadata::bulk_metadata))
                 .routes(routes!(salts::salts))
                 .routes(routes!(badge_distribution::badge_distribution))
                 .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
