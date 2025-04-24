@@ -784,7 +784,7 @@ impl Variable {
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
         let (steam_match_history, ch_match_history) = join(
-            fetch_steam_match_history(steam_id, config, http_client),
+            fetch_steam_match_history(steam_id, config, http_client, false),
             fetch_match_history_from_clickhouse(ch_client, steam_id),
         )
         .await;
@@ -830,7 +830,7 @@ impl Variable {
         http_client: &reqwest::Client,
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let matches = fetch_steam_match_history(steam_id, config, http_client)
+        let matches = fetch_steam_match_history(steam_id, config, http_client, false)
             .await
             .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
         let first_match = matches

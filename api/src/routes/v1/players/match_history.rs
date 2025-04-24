@@ -7,7 +7,7 @@ use crate::state::AppState;
 use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use base64::Engine;
@@ -17,13 +17,27 @@ use cached::proc_macro::cached;
 use futures::future::join;
 use itertools::{Itertools, chain};
 use prost::Message;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, warn};
+use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
     c_msg_client_to_gc_get_match_history_response,
 };
+
+const MAX_REFETCH_ITERATIONS: i32 = 100;
+
+#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+pub struct MatchHistoryQuery {
+    /// Refetch the match history from Steam, even if it is already cached in ClickHouse.
+    /// Only use this if you are sure that the data in ClickHouse is outdated.
+    /// Enabling this flag results in a strict rate limit.
+    #[serde(default)]
+    #[param(default)]
+    pub force_refetch: bool,
+}
 
 pub async fn insert_match_history_to_ch(
     ch_client: &clickhouse::Client,
@@ -70,10 +84,11 @@ async fn fetch_match_history_raw(
     config: &Config,
     http_client: &reqwest::Client,
     account_id: u32,
+    continue_cursor: Option<u64>,
 ) -> APIResult<Vec<u8>> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: Some(account_id),
-        continue_cursor: None,
+        continue_cursor,
         ranked_interval: None,
     };
     utils::steam::call_steam_proxy(
@@ -104,7 +119,7 @@ async fn fetch_match_history_raw(
 async fn parse_match_history_raw(
     account_id: u32,
     raw_data: &[u8],
-) -> APIResult<PlayerMatchHistory> {
+) -> APIResult<(PlayerMatchHistory, Option<u64>)> {
     let decoded_message = CMsgClientToGcGetMatchHistoryResponse::decode(raw_data).map_err(|e| {
         APIError::InternalError {
             message: format!("Failed to parse player match history: {e}"),
@@ -121,47 +136,98 @@ async fn parse_match_history_raw(
             ),
         });
     }
-    Ok(decoded_message
-        .matches
-        .into_iter()
-        .flat_map(
-            |e| match PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
-                Some(entry) => Some(entry),
-                None => {
-                    warn!("Failed to parse player match history entry: {:?}", e);
-                    None
-                }
-            },
-        )
-        .collect())
+    Ok((
+        decoded_message
+            .matches
+            .into_iter()
+            .flat_map(
+                |e| match PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
+                    Some(entry) => Some(entry),
+                    None => {
+                        warn!("Failed to parse player match history entry: {:?}", e);
+                        None
+                    }
+                },
+            )
+            .collect(),
+        decoded_message.continue_cursor,
+    ))
 }
 
 #[cached(
-    ty = "TimedCache<u32, PlayerMatchHistory>",
+    ty = "TimedCache<(u32, bool), PlayerMatchHistory>",
     create = "{ TimedCache::with_lifespan(5 * 60) }",
     result = true,
-    convert = "{ account_id }",
+    convert = "{ (account_id, force_refetch) }",
     sync_writes = "by_key",
-    key = "u32"
+    key = "(u32, bool)"
 )]
 pub async fn fetch_steam_match_history(
     account_id: u32,
     config: &Config,
     http_client: &reqwest::Client,
+    force_refetch: bool,
 ) -> APIResult<PlayerMatchHistory> {
-    tryhard::retry_fn(|| async {
-        let raw_data = fetch_match_history_raw(config, http_client, account_id).await?;
-        parse_match_history_raw(account_id, &raw_data).await
-    })
-    .retries(10)
-    .fixed_backoff(Duration::from_millis(10))
-    .await
+    let mut continue_cursor = None;
+    let mut all_matches = vec![];
+    let mut iterations = 0;
+    loop {
+        iterations += 1;
+        let result = tryhard::retry_fn(|| async {
+            let raw_data =
+                fetch_match_history_raw(config, http_client, account_id, continue_cursor).await?;
+            parse_match_history_raw(account_id, &raw_data).await
+        })
+        .retries(10)
+        .fixed_backoff(Duration::from_millis(10))
+        .await?;
+
+        // Check if the result is empty, in which case we can stop
+        if result.0.is_empty() {
+            break;
+        }
+        // Add the new matches to the list
+        all_matches.extend(result.0);
+
+        // If force_refetch is false, then we stop fetching more matches
+        if !force_refetch {
+            break;
+        }
+
+        // Check if the new continue cursor is None or 0, in which case we stop fetching more matches
+        if result.1.is_none_or(|c| c == 0) {
+            break;
+        }
+
+        // Check if the new continue cursor is bigger than the previous one, in which case we stop fetching more matches
+        if let Some(prev_cursor) = continue_cursor {
+            if let Some(new_cursor) = result.1 {
+                if new_cursor >= prev_cursor {
+                    break;
+                }
+            }
+        }
+
+        // Check if we have reached the maximum number of iterations, in which case we stop fetching more matches
+        if iterations > MAX_REFETCH_ITERATIONS {
+            break;
+        }
+
+        // Update the continue cursor
+        continue_cursor = result.1;
+    }
+    Ok(all_matches
+        .into_iter()
+        .unique_by(|e| e.match_id)
+        .sorted_by_key(|e| e.match_id)
+        .rev()
+        .collect_vec())
 }
 
 #[utoipa::path(
     get,
     path = "/{account_id}/match-history",
-    params(AccountIdQuery),
+    params(AccountIdQuery, MatchHistoryQuery),
     responses(
         (status = OK, body = [PlayerMatchHistoryEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -184,24 +250,38 @@ Relevant Protobuf Messages:
 )]
 pub async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
+    Query(MatchHistoryQuery { force_refetch }): Query<MatchHistoryQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> APIResult<Json<PlayerMatchHistory>> {
-    apply_limits(
-        &headers,
-        &state,
-        "match_history",
-        &[
-            RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
-            RateLimitQuota::global_limit(100, Duration::from_secs(1)),
-        ],
-    )
-    .await?;
+    if force_refetch {
+        apply_limits(
+            &headers,
+            &state,
+            "match_history_refetch",
+            &[
+                RateLimitQuota::ip_limit(5, Duration::from_secs(3600)),
+                RateLimitQuota::global_limit(10, Duration::from_secs(3600)),
+            ],
+        )
+        .await?;
+    } else {
+        apply_limits(
+            &headers,
+            &state,
+            "match_history",
+            &[
+                RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
+                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
+    };
     let ch_client = &state.ch_client;
 
     // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
-        fetch_steam_match_history(account_id, &state.config, &state.http_client),
+        fetch_steam_match_history(account_id, &state.config, &state.http_client, force_refetch),
         fetch_match_history_from_clickhouse(ch_client, account_id),
     )
     .await;
@@ -246,10 +326,11 @@ pub async fn match_history(
 
 pub async fn match_history_v2(
     path: Path<AccountIdQuery>,
+    query: Query<MatchHistoryQuery>,
     headers: HeaderMap,
     state: State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    match_history(path, headers, state)
+    match_history(path, query, headers, state)
         .await
         .map(|r| Json(json!({"cursor": 0, "matches": r.0})))
 }
