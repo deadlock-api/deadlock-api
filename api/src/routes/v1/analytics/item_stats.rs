@@ -48,6 +48,7 @@ pub struct ItemStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
+    pub players: u64,
 }
 
 fn build_item_stats_query(query: &ItemStatsQuery) -> String {
@@ -106,14 +107,15 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
             WHERE match_outcome = 'TeamWin'
             AND match_mode IN ('Ranked', 'Unranked')
             AND game_mode = 'Normal' {}),
-        players AS (SELECT items.item_id as items, won
+        players AS (SELECT account_id, items.item_id as items, won
             FROM match_player
             WHERE match_id IN (SELECT match_id FROM matches) {})
     SELECT
         item_id,
         sum(won)      AS wins,
         sum(not won)  AS losses,
-        wins + losses AS matches
+        wins + losses AS matches,
+        COUNT(DISTINCT account_id) AS players
     FROM players
         ARRAY JOIN items as item_id
     GROUP BY item_id
