@@ -38,7 +38,7 @@ fn build_mmr_history_query(account_id: u32) -> String {
 
 #[cached(
     ty = "TimedCache<u32, Vec<MMRHistory>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(5 * 60) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
