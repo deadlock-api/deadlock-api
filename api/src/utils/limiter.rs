@@ -11,7 +11,7 @@ use std::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 
-const MAX_TTL_SECONDS: isize = 24 * 60 * 60;
+const MAX_TTL_SECONDS: isize = 60 * 60;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum RateLimitQuotaType {
