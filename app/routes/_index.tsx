@@ -66,8 +66,8 @@ export default function Index() {
 
       <hr className="my-8 border-gray-700" />
 
-      <section className="flex flex-col sm:flex-row gap-10 flex-wrap justify-around">
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 mx-2 my-4 sm:my-0 sm:mx-0 min-w-72">
+      <section className="flex flex-col sm:flex-row gap-4 flex-wrap justify-around">
+        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center grow shadow-2xl border-2 border-gray-700 min-w-72">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="text-lg font-bold text-center">Popular Heroes</h3>
             <p className="text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -77,14 +77,14 @@ export default function Index() {
           <Link to="/heroes">
             <button
               type="button"
-              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
             >
               View All Heroes
             </button>
           </Link>
         </div>
 
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 mx-2 my-4 sm:my-0 sm:mx-0 min-w-72">
+        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center grow shadow-2xl border-2 border-gray-700  min-w-72">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Best Heroes</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -94,14 +94,14 @@ export default function Index() {
           <Link to="/heroes">
             <button
               type="button"
-              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
             >
               View All Heroes
             </button>
           </Link>
         </div>
 
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 mx-2 my-4 sm:my-0 sm:mx-0 min-w-72">
+        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 grow min-w-72">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Popular Items</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -111,14 +111,14 @@ export default function Index() {
           <Link to="/items">
             <button
               type="button"
-              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
             >
               View All Items
             </button>
           </Link>
         </div>
 
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 mx-2 my-4 sm:my-0 sm:mx-0 min-w-72">
+        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 grow min-w-72">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Best Items</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -128,7 +128,7 @@ export default function Index() {
           <Link to="/items">
             <button
               type="button"
-              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
             >
               View All Items
             </button>
