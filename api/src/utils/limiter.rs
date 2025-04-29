@@ -8,7 +8,7 @@ use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
 use std::time::Duration;
-use tracing::{error, warn};
+use tracing::error;
 use uuid::Uuid;
 
 const MAX_TTL_SECONDS: isize = 24 * 60 * 60;
