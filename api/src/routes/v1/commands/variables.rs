@@ -5,6 +5,7 @@ use crate::routes::v1::patches::feed::fetch_patch_notes;
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
 };
+use crate::routes::v1::players::mmr_history::MMRHistory;
 use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::state::AppState;
 use crate::utils::assets;
@@ -83,8 +84,9 @@ pub enum Variable {
     LatestPatchnotesTitle,
     LeaderboardPlace,
     LeaderboardRank,
-    LeaderboardRankBadgeLevel,
     LeaderboardRankImg,
+    MMRHistoryRank,
+    MMRHistoryRankImg,
     LossesToday,
     MatchesToday,
     MostPlayedHero,
@@ -109,9 +111,11 @@ impl Variable {
 
     pub fn get_category(&self) -> VariableCategory {
         match self {
-            Self::LatestPatchnotesLink | Self::LatestPatchnotesTitle | Self::SteamAccountName => {
-                VariableCategory::General
-            }
+            Self::LatestPatchnotesLink
+            | Self::LatestPatchnotesTitle
+            | Self::SteamAccountName
+            | Self::MMRHistoryRank
+            | Self::MMRHistoryRankImg => VariableCategory::General,
 
             Self::LossesToday
             | Self::MatchesToday
@@ -119,10 +123,9 @@ impl Variable {
             | Self::WinsLossesToday
             | Self::WinsToday => VariableCategory::Daily,
 
-            Self::LeaderboardPlace
-            | Self::LeaderboardRank
-            | Self::LeaderboardRankBadgeLevel
-            | Self::LeaderboardRankImg => VariableCategory::Leaderboard,
+            Self::LeaderboardPlace | Self::LeaderboardRank | Self::LeaderboardRankImg => {
+                VariableCategory::Leaderboard
+            }
 
             Self::HighestDenies
             | Self::HighestKillCount
@@ -181,7 +184,6 @@ impl Variable {
             Self::LatestPatchnotesTitle => "Get the title of the latest patch notes",
             Self::LeaderboardPlace => "Get the leaderboard place",
             Self::LeaderboardRank => "Get the leaderboard rank",
-            Self::LeaderboardRankBadgeLevel => "Get the leaderboard rank badge level",
             Self::LeaderboardRankImg => "Get the leaderboard rank",
             Self::LossesToday => "Get the number of losses today",
             Self::MatchesToday => "Get the number of matches today",
@@ -202,6 +204,8 @@ impl Variable {
             Self::MaxSpiritSnareStacks => "Get the max spirit snare stacks on Grey Talon",
             Self::MaxBonusHealthPerKill => "Get the max bonus health per kill on Mo & Krill",
             Self::MaxGuidedOwlStacks => "Get the max guided owl stacks on Grey Talon",
+            Self::MMRHistoryRank => "Get the MMR history rank",
+            Self::MMRHistoryRankImg => "Get the MMR history rank",
         }
     }
 
@@ -217,6 +221,8 @@ impl Variable {
             Self::HeroWins => Some("{hero_name} Wins"),
             Self::WinsLossesToday => Some("Daily W-L"),
             Self::LeaderboardPlace => Some("Place"),
+            Self::LeaderboardRank => Some("Rank"),
+            Self::MMRHistoryRank => Some("Rank"),
             _ => None,
         }
     }
@@ -326,12 +332,6 @@ impl Variable {
                         .await
                         .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
-            }
-            Self::LeaderboardRankBadgeLevel => {
-                Self::get_leaderboard_entry(headers, state, steam_id, region, None)
-                    .await
-                    .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)
-                    .map(|e| e.badge_level.unwrap_or_default().to_string())
             }
             Self::SteamAccountName => {
                 get_steam_account_name(
@@ -758,6 +758,37 @@ impl Variable {
                     .map(|b| b.to_string())
                     .map_err(|_| VariableResolveError::FailedToFetchData("max guided owl"))
             }
+            Self::MMRHistoryRank => {
+                let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
+                    .await
+                    .map_err(|_| VariableResolveError::FailedToFetchData("mmr history"))?;
+                let ranks = assets::fetch_ranks(&state.http_client)
+                    .await
+                    .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
+                let rank_name = ranks
+                    .iter()
+                    .find(|r| r.tier == mmr_history.division)
+                    .map(|r| r.name.clone())
+                    .ok_or(VariableResolveError::FailedToFetchData("rank"))?;
+                Ok(format!("{rank_name} {}", mmr_history.division_tier))
+            }
+            Self::MMRHistoryRankImg => {
+                let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
+                    .await
+                    .map_err(|_| VariableResolveError::FailedToFetchData("mmr history"))?;
+                let ranks = assets::fetch_ranks(&state.http_client)
+                    .await
+                    .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
+                ranks
+                    .iter()
+                    .find(|r| r.tier == mmr_history.division)
+                    .and_then(|r| {
+                        r.images
+                            .get(&format!("small_subrank{}", mmr_history.division_tier))
+                    })
+                    .cloned()
+                    .ok_or(VariableResolveError::FailedToFetchData("rank"))
+            }
         }
     }
 
@@ -781,7 +812,7 @@ impl Variable {
             )
             .bind(ability_id)
             .bind(steam_id)
-            .fetch_one::<i64>()
+            .fetch_one()
             .await
     }
 
@@ -894,6 +925,33 @@ impl Variable {
             })
             .ok_or(VariableResolveError::PlayerNotFoundInLeaderboard)
     }
+}
+
+#[cached(
+    ty = "TimedCache<u32, MMRHistory>",
+    create = "{ TimedCache::with_lifespan(60) }",
+    result = true,
+    convert = "{ steam_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
+async fn get_last_mmr_history(
+    ch_client: &clickhouse::Client,
+    steam_id: u32,
+) -> clickhouse::error::Result<MMRHistory> {
+    ch_client
+        .query(
+            r#"
+                SELECT ?fields
+                FROM mmr_history
+                WHERE account_id = ?
+                ORDER BY match_id DESC
+                LIMIT 1
+                "#,
+        )
+        .bind(steam_id)
+        .fetch_one()
+        .await
 }
 
 async fn get_steam_account_name(
