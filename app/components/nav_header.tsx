@@ -7,7 +7,7 @@ export default function NavHeader() {
         <div className="flex items-center gap-12">
           <Link to="/" className="text-lg font-medium text-white">
             <span className="flex gap-2">
-              <img src="public/favicon.webp" alt="Icon" width={36} height={36} />
+              <img src="favicon.webp" alt="Icon" width={36} height={36} />
               <h1 className="text-3xl font-bold tracking-tight">Deadlock API</h1>
             </span>
           </Link>
