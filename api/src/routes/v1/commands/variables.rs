@@ -905,8 +905,10 @@ async fn get_steam_account_name(
 ) -> Result<String, VariableResolveError> {
     match fetch_steam_account_name(headers, state, http_client, steam_id).await {
         Ok(name) => Ok(name),
-        Err(_) => {
-            warn!("Failed to fetch steam account name from API, falling back to database");
+        Err(e) => {
+            warn!(
+                "Failed to fetch steam account name from API, falling back to database, error: {e}"
+            );
             sqlx::query!(
                 "SELECT personaname FROM steam_profiles WHERE account_id = $1",
                 steam_id as i32
