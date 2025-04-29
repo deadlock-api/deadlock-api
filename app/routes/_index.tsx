@@ -35,7 +35,7 @@ export default function Index() {
           or a player wanting to analyze your performance, the Deadlock API has you covered.
         </p>
         <div className="flex flex-col sm:flex-row gap-6 justify-center">
-          <div className="flex-1 bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
+          <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
             <a
               href="https://assets.deadlock-api.com/"
               target="_blank"
@@ -48,7 +48,7 @@ export default function Index() {
               Provides static game assets such as static heroes/item data, images, icons, sounds.
             </span>
           </div>
-          <div className="flex-1 bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
+          <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
             <a
               href="https://api.deadlock-api.com/"
               target="_blank"
@@ -66,8 +66,8 @@ export default function Index() {
 
       <hr className="my-8 border-gray-700" />
 
-      <section className="flex flex-col sm:flex-row gap-4 flex-wrap justify-around">
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center grow shadow-2xl border-2 border-gray-700 min-w-72">
+      <section className="grid lg:grid-cols-2 gap-4 sm:grid-cols-1 2xl:grid-cols-3">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="text-lg font-bold text-center">Popular Heroes</h3>
             <p className="text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -84,7 +84,7 @@ export default function Index() {
           </Link>
         </div>
 
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center grow shadow-2xl border-2 border-gray-700  min-w-72">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Best Heroes</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -101,7 +101,7 @@ export default function Index() {
           </Link>
         </div>
 
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 grow min-w-72">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Popular Items</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -118,7 +118,7 @@ export default function Index() {
           </Link>
         </div>
 
-        <div className="flex-1 bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 grow min-w-72">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Best Items</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
