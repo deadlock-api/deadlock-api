@@ -947,6 +947,7 @@ async fn fetch_steam_account_name(
         .header("x-webapi-key", state.config.steam_api_key.clone())
         .send()
         .await
+        .and_then(|r| r.error_for_status())
         .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?
         .json::<serde_json::Value>()
         .await
