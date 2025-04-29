@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { AssetsHero } from "~/types/assets_hero";
 import { useMemo } from "react";
+import type { AssetsHero } from "~/types/assets_hero";
 
 export default function HeroName({ heroId }: { heroId: number }) {
   const { data } = useQuery<AssetsHero[]>({

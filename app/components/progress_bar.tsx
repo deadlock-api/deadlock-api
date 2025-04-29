@@ -13,7 +13,7 @@ export function ProgressBar({ value, min, max, color }: { value?: number; min?: 
           backgroundColor: color || "rgb(37, 99, 235)",
           width: `${(((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100}%`,
         }}
-      ></div>
+      />
     </div>
   );
 }

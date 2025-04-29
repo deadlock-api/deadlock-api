@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { APIHeroStats } from "~/types/api_hero_stats";
-import HeroName from "~/components/hero_name";
-import { ProgressBarWithLabel } from "~/components/progress_bar";
 import { useMemo } from "react";
 import HeroImage from "~/components/hero_image";
+import HeroName from "~/components/hero_name";
+import { ProgressBarWithLabel } from "~/components/progress_bar";
+import type { APIHeroStats } from "~/types/api_hero_stats";
 
 export default function HeroStatsTable({
   columns,
@@ -28,8 +28,8 @@ export default function HeroStatsTable({
     () =>
       sortBy
         ? [...(data || [])].sort((a, b) => {
-            const a_score = sortBy != "winrate" ? a[sortBy] : a.wins / a.matches;
-            const b_score = sortBy != "winrate" ? b[sortBy] : b.wins / b.matches;
+            const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
+            const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
             return b_score - a_score;
           })
         : data,
@@ -54,7 +54,7 @@ export default function HeroStatsTable({
         <tbody>
           {limitedData?.map((row, index) => (
             <tr
-              key={index}
+              key={row.hero_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
               <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>

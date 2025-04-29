@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { AssetsItem } from "~/types/assets_item";
+import type { AssetsItem } from "~/types/assets_item";
 
 export default function ItemName({ itemId }: { itemId: number }) {
   const { data } = useQuery<AssetsItem[]>({
