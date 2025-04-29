@@ -1,10 +1,10 @@
 import type { MetaFunction } from "@remix-run/node";
-import HeroStatsTable from "~/components/hero_stats_table";
 import { Link } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
-import { APIInfo } from "~/types/api_info";
 import { useMemo } from "react";
+import HeroStatsTable from "~/components/hero_stats_table";
 import ItemStatsTable from "~/components/item_stats_table";
+import type { APIInfo } from "~/types/api_info";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Deadlock API" }, { name: "description", content: "Match Data, Player Data, and more" }];
@@ -17,7 +17,7 @@ export default function Index() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const totalFetchedMatches = useMemo(() => data?.table_sizes["match_info"]?.rows, [data]);
+  const totalFetchedMatches = useMemo(() => data?.table_sizes.match_info?.rows, [data]);
 
   return (
     <>
@@ -75,7 +75,10 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <HeroStatsTable hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
           <Link to="/heroes">
-            <button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+            <button
+              type="button"
+              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+            >
               View All Heroes
             </button>
           </Link>
@@ -89,7 +92,10 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <HeroStatsTable hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
           <Link to="/heroes">
-            <button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+            <button
+              type="button"
+              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+            >
               View All Heroes
             </button>
           </Link>
@@ -103,7 +109,10 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <ItemStatsTable hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
           <Link to="/items">
-            <button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+            <button
+              type="button"
+              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+            >
               View All Items
             </button>
           </Link>
@@ -117,7 +126,10 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <ItemStatsTable hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
           <Link to="/items">
-            <button className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+            <button
+              type="button"
+              className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+            >
               View All Items
             </button>
           </Link>

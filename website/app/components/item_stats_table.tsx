@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { ProgressBarWithLabel } from "~/components/progress_bar";
 import { useMemo } from "react";
-import { APIItemStats } from "~/types/api_item_stats";
 import ItemImage from "~/components/item_image";
 import ItemName from "~/components/item_name";
-import { AssetsItem } from "~/types/assets_item";
+import { ProgressBarWithLabel } from "~/components/progress_bar";
+import type { APIItemStats } from "~/types/api_item_stats";
+import type { AssetsItem } from "~/types/assets_item";
 
 export default function ItemStatsTable({
   columns,
@@ -38,8 +38,8 @@ export default function ItemStatsTable({
     () =>
       sortBy
         ? [...(filteredData || [])].sort((a, b) => {
-            const a_score = sortBy != "winrate" ? a[sortBy] : a.wins / a.matches;
-            const b_score = sortBy != "winrate" ? b[sortBy] : b.wins / b.matches;
+            const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
+            const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
             return b_score - a_score;
           })
         : filteredData,
@@ -63,7 +63,7 @@ export default function ItemStatsTable({
         <tbody>
           {limitedData?.map((row, index) => (
             <tr
-              key={index}
+              key={row.item_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
               <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>
