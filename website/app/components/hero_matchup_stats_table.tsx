@@ -209,7 +209,7 @@ export default function HeroMatchupStatsTable({
               <td className="px-4 py-3 align-middle">
                 <div className="flex flex-col gap-2">
                   <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
-                    <HeroImage heroId={heroWorstAgainst[heroId].enemy_hero_id} />
+                    <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
                     <ProgressBarWithLabel
                       min={0}
                       max={heroWorstAgainst[heroId].matches_played}
