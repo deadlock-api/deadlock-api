@@ -938,6 +938,18 @@ async fn fetch_steam_account_name(
     http_client: &reqwest::Client,
     steam_id: u32,
 ) -> Result<String, VariableResolveError> {
+    apply_limits(
+        headers,
+        state,
+        "steam_account_name",
+        &[
+            RateLimitQuota::ip_limit(100, std::time::Duration::from_secs(60 * 60)),
+            RateLimitQuota::global_limit(1000, std::time::Duration::from_secs(60 * 60)),
+        ],
+    )
+    .await
+    .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?;
+
     let steamid64 = steam_id as u64 + 76561197960265728;
     let response = http_client
         .get(format!(
@@ -951,7 +963,7 @@ async fn fetch_steam_account_name(
         .json::<serde_json::Value>()
         .await
         .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?;
-    let result = response
+    response
         .get("response")
         .and_then(|r| r.get("players"))
         .and_then(|p| p.as_array())
@@ -961,19 +973,5 @@ async fn fetch_steam_account_name(
         .map(|p| p.to_string())
         .ok_or(VariableResolveError::FailedToFetchSteamName(
             "Failed to parse steam name".to_string(),
-        ));
-    if result.is_ok() {
-        apply_limits(
-            headers,
-            state,
-            "steam_account_name",
-            &[
-                RateLimitQuota::ip_limit(100, std::time::Duration::from_secs(60 * 60)),
-                RateLimitQuota::global_limit(1000, std::time::Duration::from_secs(60 * 60)),
-            ],
-        )
-        .await
-        .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?;
-    }
-    result
+        ))
 }
