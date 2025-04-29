@@ -34,7 +34,7 @@ export default function Index() {
           player statistics, and more. Whether you are a developer looking to integrate game data into your application
           or a player wanting to analyze your performance, the Deadlock API has you covered.
         </p>
-        <div className="flex flex-col sm:flex-row gap-6 justify-center">
+        <div className="grid md:grid-cols-2 sm:grid-cols-1 gap-4">
           <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
             <a
               href="https://assets.deadlock-api.com/"
