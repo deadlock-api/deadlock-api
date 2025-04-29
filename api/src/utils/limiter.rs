@@ -96,6 +96,7 @@ impl RateLimitStatus {
 
     pub fn raise_if_exceeded(&self) -> Result<(), APIError> {
         if self.is_exceeded() {
+            error!("Rate limit exceeded: {:?}", self);
             return Err(APIError::RateLimitExceeded {
                 status: self.clone(),
             });
