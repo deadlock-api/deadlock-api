@@ -941,10 +941,9 @@ async fn fetch_steam_account_name(
     let steamid64 = steam_id as u64 + 76561197960265728;
     let response = http_client
         .get(format!(
-            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?steamids={}",
-            steamid64
+            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={}&steamids={}",
+            state.config.steam_api_key, steamid64
         ))
-        .header("x-webapi-key", state.config.steam_api_key.clone())
         .send()
         .await
         .and_then(|r| r.error_for_status())
