@@ -1,13 +1,9 @@
-import {
-  Links,
-  Meta,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-} from "@remix-run/react";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
 
 import "./tailwind.css";
+import NavHeader from "~/components/nav_header";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -28,6 +24,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/ico" href="favicon.ico" />
+        <link rel="icon" type="image/webp" href="favicon.webp" />
+        <link rel="icon" type="image/png" href="favicon.png" />
         <Meta />
         <Links />
       </head>
@@ -40,8 +39,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: 100,
+    },
+  },
+});
 export default function App() {
-  return <Outlet />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NavHeader />
+
+      <main className="flex justify-center items-start">
+        <div className="mt-6 w-full max-w-4xl bg-gray-900 rounded-lg shadow-lg p-8">
+          <Outlet />
+        </div>
+      </main>
+    </QueryClientProvider>
+  );
 }
 
 export function HydrateFallback() {
