@@ -11,7 +11,17 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Heroes() {
-  const [tab, setTab] = useState("synergies");
+  const urlTab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
+  const [tab, setTab] = useState(urlTab || "general");
+
+  const handleTabChange = (newTab: string) => {
+    setTab(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", newTab);
+      window.history.pushState({}, "", url);
+    }
+  };
 
   return (
     <>
@@ -23,7 +33,7 @@ export default function Heroes() {
           <li className="me-2">
             <button
               type="button"
-              onClick={() => setTab("general")}
+              onClick={() => handleTabChange("general")}
               aria-current={tab === "general" ? "page" : undefined}
               className={
                 tab === "general"
@@ -37,7 +47,7 @@ export default function Heroes() {
           <li className="me-2">
             <button
               type="button"
-              onClick={() => setTab("synergies")}
+              onClick={() => handleTabChange("synergies")}
               aria-current={tab === "synergies" ? "page" : undefined}
               className={
                 tab === "synergies"
