@@ -28,8 +28,8 @@ use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
 pub enum VariableResolveError {
     #[error("Failed to fetch data: {0}")]
     FailedToFetchData(&'static str),
-    #[error("Failed to fetch steam name")]
-    FailedToFetchSteamName,
+    #[error("Failed to fetch steam name: {0}")]
+    FailedToFetchSteamName(String),
     #[error("Player not found in leaderboard")]
     PlayerNotFoundInLeaderboard,
     #[error("Missing argument: {0}")]
@@ -917,7 +917,9 @@ async fn get_steam_account_name(
             .await
             .ok()
             .and_then(|row| row.personaname)
-            .ok_or(VariableResolveError::FailedToFetchSteamName)
+            .ok_or(VariableResolveError::FailedToFetchSteamName(
+                "Failed to fetch steam name from database".to_string(),
+            ))
         }
     }
 }
@@ -945,10 +947,10 @@ async fn fetch_steam_account_name(
         .header("x-webapi-key", state.config.steam_api_key.clone())
         .send()
         .await
-        .map_err(|_| VariableResolveError::FailedToFetchSteamName)?
+        .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?
         .json::<serde_json::Value>()
         .await
-        .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+        .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?;
     let result = response
         .get("response")
         .and_then(|r| r.get("players"))
@@ -957,7 +959,9 @@ async fn fetch_steam_account_name(
         .and_then(|p| p.get("personaname"))
         .and_then(|p| p.as_str())
         .map(|p| p.to_string())
-        .ok_or(VariableResolveError::FailedToFetchSteamName);
+        .ok_or(VariableResolveError::FailedToFetchSteamName(
+            "Failed to parse steam name".to_string(),
+        ));
     if result.is_ok() {
         apply_limits(
             headers,
@@ -969,7 +973,7 @@ async fn fetch_steam_account_name(
             ],
         )
         .await
-        .map_err(|_| VariableResolveError::FailedToFetchSteamName)?;
+        .map_err(|e| VariableResolveError::FailedToFetchSteamName(e.to_string()))?;
     }
     result
 }
