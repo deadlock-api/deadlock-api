@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.98"
-axum = "0.8.3"
+axum = "0.8.4"
 base64 = "0.22.1"
 cached = { version = "0.55", features = ["async", "async_tokio_rt_multi_thread"] }
 clap = { version = "4.5.37", features = ["derive", "env"] }
