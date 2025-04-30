@@ -13,6 +13,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
+fn default_min_matches() -> Option<u64> {
+    50.into()
+}
+
 #[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct HeroSynergyStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -44,6 +48,10 @@ pub struct HeroSynergyStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
+    /// The minimum number of matches played for a hero combination to be included in the response.
+    #[serde(default = "default_min_matches")]
+    #[param(minimum = 1, default = 50)]
+    pub min_matches: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -125,10 +133,15 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
       AND p1.hero_id < p2.hero_id
       {}
     GROUP BY p1.hero_id, p2.hero_id
-    HAVING matches_played > 1
+    HAVING matches_played >= {}
     ORDER BY p1.hero_id, p2.hero_id
     "#,
-        info_filters, player_filters
+        info_filters,
+        player_filters,
+        query
+            .min_matches
+            .or(default_min_matches())
+            .unwrap_or_default()
     )
 }
 
