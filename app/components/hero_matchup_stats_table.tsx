@@ -1,3 +1,4 @@
+import { useNavigate } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import HeroImage from "~/components/hero_image";
@@ -18,6 +19,8 @@ export default function HeroMatchupStatsTable({
   heroId: number;
   stat: HeroMatchupStatsTableStat;
 }) {
+  const navigate = useNavigate();
+
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats").then((res) => res.json()),
@@ -112,7 +115,15 @@ export default function HeroMatchupStatsTable({
         </thead>
         <tbody>
           {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
-            <tr key={synergy.hero_id2} className="bg-gray-800 text-center">
+            <tr
+              key={stat === HeroMatchupStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id}
+              onClick={() => {
+                navigate(
+                  `/heroes?tab=hero-details&heroId=${stat === HeroMatchupStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id}`,
+                );
+              }}
+              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
+            >
               <td className="p-2">{index + 1}</td>
               <td className="p-2">
                 <div className="flex items-center gap-2">
