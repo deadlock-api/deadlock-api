@@ -22,6 +22,9 @@ export default function HeroStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
+  const minWinrate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
+  const maxWinrate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
+  const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
   const maxMatches = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
   const sumMatches = useMemo(() => data?.reduce((acc, row) => acc + row.matches, 0) || 0, [data]);
   const sortedData = useMemo(
@@ -70,9 +73,9 @@ export default function HeroStatsTable({
                   title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
                 >
                   <ProgressBarWithLabel
-                    min={0}
-                    max={row.matches}
-                    value={row.wins}
+                    min={minWinrate}
+                    max={maxWinrate}
+                    value={row.wins / row.matches}
                     color={"#ff00ff"}
                     label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
                   />
@@ -84,7 +87,7 @@ export default function HeroStatsTable({
                   title={`${row.matches.toLocaleString()} matches / ${maxMatches.toLocaleString()} total matches`}
                 >
                   <ProgressBarWithLabel
-                    min={0}
+                    min={minMatches}
                     max={maxMatches}
                     value={row.matches}
                     color={"#00ffff"}
