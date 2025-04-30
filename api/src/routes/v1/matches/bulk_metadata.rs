@@ -237,16 +237,16 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
 
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {}", min_unix_timestamp));
+        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {}", max_unix_timestamp));
+        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {}", min_match_id));
+        info_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {}", max_match_id));
+        info_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(match_ids) = query.match_ids {
         if !match_ids.is_empty() {
@@ -257,30 +257,29 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         }
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {}", min_duration_s));
+        info_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {}", max_duration_s));
+        info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     if let Some(min_average_badge) = query.min_average_badge {
-        info_filters.push(format!("average_badge_team0 >= {}", min_average_badge));
-        info_filters.push(format!("average_badge_team1 >= {}", min_average_badge));
+        info_filters.push(format!("average_badge_team0 >= {min_average_badge}"));
+        info_filters.push(format!("average_badge_team1 >= {min_average_badge}"));
     }
     if let Some(max_average_badge) = query.max_average_badge {
-        info_filters.push(format!("average_badge_team0 <= {}", max_average_badge));
-        info_filters.push(format!("average_badge_team1 <= {}", max_average_badge));
+        info_filters.push(format!("average_badge_team0 <= {max_average_badge}"));
+        info_filters.push(format!("average_badge_team1 <= {max_average_badge}"));
     }
     if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
         info_filters.push(format!(
-            "is_high_skill_range_parties = {}",
-            is_high_skill_range_parties
+            "is_high_skill_range_parties = {is_high_skill_range_parties}"
         ));
     }
     if let Some(is_low_pri_pool) = query.is_low_pri_pool {
-        info_filters.push(format!("low_pri_pool = {}", is_low_pri_pool));
+        info_filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
     }
     if let Some(is_new_player_pool) = query.is_new_player_pool {
-        info_filters.push(format!("new_player_pool = {}", is_new_player_pool));
+        info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
     }
 
     let info_filters = if !info_filters.is_empty() {
@@ -296,8 +295,7 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     // WITH
     query.push_str("WITH ");
     query.push_str(&format!(
-        "t_matches AS (SELECT * FROM match_info FINAL {} {} {})",
-        info_filters, order, limit
+        "t_matches AS (SELECT * FROM match_info FINAL {info_filters} {order} {limit})"
     ));
     if has_player_fields {
         query.push_str(

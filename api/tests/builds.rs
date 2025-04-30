@@ -82,8 +82,7 @@ async fn test_builds(
     let is_sorted = builds_sorted.is_sorted_by_key(|k| get_sort_key(sort_by, k));
     assert!(
         is_sorted,
-        "Builds are not sorted by {} in {} order",
-        sort_by, sort_direction
+        "Builds are not sorted by {sort_by} in {sort_direction} order"
     );
 
     if let Some(limit) = limit {

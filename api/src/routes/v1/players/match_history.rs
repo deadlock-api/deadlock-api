@@ -134,12 +134,9 @@ async fn parse_match_history_raw(
     if decoded_message.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess as i32
     }) {
-        println!("{:?}", decoded_message);
+        println!("{decoded_message:?}");
         return Err(APIError::InternalError {
-            message: format!(
-                "Failed to fetch player match history: {:?}",
-                decoded_message
-            ),
+            message: format!("Failed to fetch player match history: {decoded_message:?}"),
         });
     }
     Ok((

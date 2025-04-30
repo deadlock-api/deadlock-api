@@ -29,10 +29,9 @@ fn build_mmr_history_query(account_id: u32) -> String {
         r#"
     SELECT match_id, player_score, rank, division, division_tier
     FROM mmr_history FINAL
-    WHERE account_id = {}
+    WHERE account_id = {account_id}
     ORDER BY match_id
-    "#,
-        account_id
+    "#
     )
 }
 
@@ -53,7 +52,7 @@ async fn get_mmr_history(
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch mmr history: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch mmr history: {}", e),
+            message: format!("Failed to fetch mmr history: {e}"),
         }
     })
 }

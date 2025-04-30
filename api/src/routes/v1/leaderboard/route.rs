@@ -93,7 +93,7 @@ pub async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
         .is_none_or(|r| r != c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32)
     {
         return Err(APIError::InternalError {
-            message: format!("Failed to fetch leaderbaord: {:?}", KEResultSuccess),
+            message: format!("Failed to fetch leaderbaord: {KEResultSuccess:?}"),
         });
     }
     Ok(decoded_message.into())
@@ -161,7 +161,7 @@ pub async fn leaderboard_hero_raw(
     if !parse::validate_hero_id(&state.http_client, hero_id).await {
         return Err(APIError::StatusMsg {
             status: StatusCode::BAD_REQUEST,
-            message: format!("Invalid hero_id: {}", hero_id),
+            message: format!("Invalid hero_id: {hero_id}"),
         });
     }
     tryhard::retry_fn(|| {
@@ -218,7 +218,7 @@ pub async fn leaderboard_hero(
     if !parse::validate_hero_id(&state.http_client, hero_id).await {
         return Err(APIError::StatusMsg {
             status: StatusCode::BAD_REQUEST,
-            message: format!("Invalid hero_id: {}", hero_id),
+            message: format!("Invalid hero_id: {hero_id}"),
         });
     }
     fetch_parse_leaderboard(&state.config, &state.http_client, region, Some(hero_id))

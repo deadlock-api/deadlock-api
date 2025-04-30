@@ -47,7 +47,7 @@ async fn get_recently_fetched_match_ids(
         .fetch_all()
         .await
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch recently fetched matches: {}", e),
+            message: format!("Failed to fetch recently fetched matches: {e}"),
         })
 }
 

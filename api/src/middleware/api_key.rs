@@ -35,7 +35,7 @@ mod tests {
             .map(|v| v.to_str().unwrap_or("invalid"))
             .unwrap_or("none");
 
-        format!("has_api_key={}, value={}", has_api_key, api_key_value)
+        format!("has_api_key={has_api_key}, value={api_key_value}")
     }
 
     fn app() -> Router {

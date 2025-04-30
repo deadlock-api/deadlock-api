@@ -152,7 +152,7 @@ mod tests {
     #[case(76561198123456789u64, 163191061u32)] // Steam ID 64 to Steam ID 32
     #[case(123456u64, 123456u32)] // Steam ID 32 stays the same
     fn test_parse_steam_id_valid(#[case] input: u64, #[case] expected: u32) {
-        let json = format!("{{\"steam_id\": {}}}", input);
+        let json = format!("{{\"steam_id\": {input}}}");
         let result: SteamIdTestStruct = serde_json::from_str(&json).unwrap();
         assert_eq!(result.steam_id, expected);
     }
@@ -160,7 +160,7 @@ mod tests {
     #[rstest]
     #[case(0u64)] // Invalid Steam ID (0)
     fn test_parse_steam_id_invalid(#[case] input: u64) {
-        let json = format!("{{\"steam_id\": {}}}", input);
+        let json = format!("{{\"steam_id\": {input}}}");
         let result = serde_json::from_str::<SteamIdTestStruct>(&json);
         assert!(result.is_err());
     }
@@ -176,7 +176,7 @@ mod tests {
     #[case(123456u64, Some(123456u32))] // Steam ID 32 stays the same
     #[case(0u64, None)] // Invalid Steam ID (0) becomes None
     fn test_parse_steam_id_option_with_value(#[case] input: u64, #[case] expected: Option<u32>) {
-        let json = format!("{{\"steam_id\": {}}}", input);
+        let json = format!("{{\"steam_id\": {input}}}");
         let result: SteamIdOptionTestStruct = serde_json::from_str(&json).unwrap();
         assert_eq!(result.steam_id, expected);
     }
@@ -242,14 +242,10 @@ mod tests {
 
         // The result should be approximately one month ago (allowing for some difference due to time of day)
         let timestamp = result.unwrap();
-        let diff = if timestamp > one_month_ago {
-            timestamp - one_month_ago
-        } else {
-            one_month_ago - timestamp
-        };
+        let diff = timestamp.abs_diff(one_month_ago);
 
         // The difference should be less than 24 hours (86400 seconds)
-        assert!(diff < 86400, "Timestamp difference is too large: {}", diff);
+        assert!(diff < 86400, "Timestamp difference is too large: {diff}");
     }
 
     #[test]

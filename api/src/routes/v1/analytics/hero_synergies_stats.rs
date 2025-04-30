@@ -69,34 +69,32 @@ pub struct HeroSynergyStats {
 fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {}", min_unix_timestamp));
+        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {}", max_unix_timestamp));
+        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {}", min_match_id));
+        info_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {}", max_match_id));
+        info_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_badge_level) = query.min_average_badge {
         info_filters.push(format!(
-            "average_badge_team0 >= {} AND average_badge_team1 >= {}",
-            min_badge_level, min_badge_level
+            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
         ));
     }
     if let Some(max_badge_level) = query.max_average_badge {
         info_filters.push(format!(
-            "average_badge_team0 <= {} AND average_badge_team1 <= {}",
-            max_badge_level, max_badge_level
+            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
         ));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {}", min_duration_s));
+        info_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {}", max_duration_s));
+        info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
         "".to_string()
@@ -108,7 +106,7 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
         player_filters.push("p1.assigned_lane = p2.assigned_lane".to_string());
     }
     if let Some(account_id) = query.account_id {
-        player_filters.push(format!("p1.account_id = {}", account_id));
+        player_filters.push(format!("p1.account_id = {account_id}"));
     }
     let player_filters = if player_filters.is_empty() {
         "".to_string()
@@ -162,7 +160,7 @@ pub async fn get_hero_synergy_stats(
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero synergy stats: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch hero synergy stats: {}", e),
+            message: format!("Failed to fetch hero synergy stats: {e}"),
         }
     })
 }
@@ -232,34 +230,32 @@ mod test {
         let query = build_hero_synergy_stats_query(&query);
 
         if let Some(min_unix_timestamp) = min_unix_timestamp {
-            assert!(query.contains(&format!("start_time >= {}", min_unix_timestamp)));
+            assert!(query.contains(&format!("start_time >= {min_unix_timestamp}")));
         }
         if let Some(max_unix_timestamp) = max_unix_timestamp {
-            assert!(query.contains(&format!("start_time <= {}", max_unix_timestamp)));
+            assert!(query.contains(&format!("start_time <= {max_unix_timestamp}")));
         }
         if let Some(min_duration_s) = min_duration_s {
-            assert!(query.contains(&format!("duration_s >= {}", min_duration_s)));
+            assert!(query.contains(&format!("duration_s >= {min_duration_s}")));
         }
         if let Some(max_duration_s) = max_duration_s {
-            assert!(query.contains(&format!("duration_s <= {}", max_duration_s)));
+            assert!(query.contains(&format!("duration_s <= {max_duration_s}")));
         }
         if let Some(min_average_badge) = min_average_badge {
             assert!(query.contains(&format!(
-                "average_badge_team0 >= {} AND average_badge_team1 >= {}",
-                min_average_badge, min_average_badge
+                "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
             )));
         }
         if let Some(max_average_badge) = max_average_badge {
             assert!(query.contains(&format!(
-                "average_badge_team0 <= {} AND average_badge_team1 <= {}",
-                max_average_badge, max_average_badge
+                "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
             )));
         }
         if let Some(min_match_id) = min_match_id {
-            assert!(query.contains(&format!("match_id >= {}", min_match_id)));
+            assert!(query.contains(&format!("match_id >= {min_match_id}")));
         }
         if let Some(max_match_id) = max_match_id {
-            assert!(query.contains(&format!("match_id <= {}", max_match_id)));
+            assert!(query.contains(&format!("match_id <= {max_match_id}")));
         }
         if let Some(same_lane_filter) = same_lane_filter {
             if same_lane_filter {
@@ -269,10 +265,10 @@ mod test {
             }
         }
         if let Some(min_matches) = min_matches {
-            assert!(query.contains(&format!("matches_played >= {}", min_matches)));
+            assert!(query.contains(&format!("matches_played >= {min_matches}")));
         }
         if let Some(account_id) = account_id {
-            assert!(query.contains(&format!("account_id = {}", account_id)));
+            assert!(query.contains(&format!("account_id = {account_id}")));
         }
     }
 }

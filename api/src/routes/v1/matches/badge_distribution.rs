@@ -33,16 +33,16 @@ pub struct BadgeDistribution {
 fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {}", min_unix_timestamp));
+        filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {}", max_unix_timestamp));
+        filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {}", min_match_id));
+        filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {}", max_match_id));
+        filters.push(format!("match_id <= {max_match_id}"));
     }
     let filters = if filters.is_empty() {
         "".to_string()
@@ -56,11 +56,10 @@ fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
         COUNT() as total_matches
     FROM match_info
         ARRAY JOIN [average_badge_team0, average_badge_team1] AS t_badge_level
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' AND badge_level > 0 {}
+    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' AND badge_level > 0 {filters}
     GROUP BY badge_level
     ORDER BY badge_level
-    "#,
-        filters
+    "#
     )
 }
 
@@ -81,7 +80,7 @@ pub async fn get_badge_distribution(
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch badge distribution: {}", e);
         APIError::InternalError {
-            message: format!("Failed to fetch badge distribution: {}", e),
+            message: format!("Failed to fetch badge distribution: {e}"),
         }
     })
 }
