@@ -139,6 +139,17 @@ export default function Index() {
       <hr className="my-8 border-gray-700" />
 
       <section>
+        <h2 className="text-3xl font-bold text-center">Sponsors</h2>
+        <div className="flex flex-wrap justify-around items-center gap-4 m-4">
+          <a href="https://deadlock.blast.tv/" title="Blast.TV" target="_blank" rel="noreferrer" className="max-w-64">
+            <img loading="lazy" src="sponsors/blast.svg" alt="https://deadlock.blast.tv/" />
+          </a>
+        </div>
+      </section>
+
+      <hr className="my-8 border-gray-700" />
+
+      <section>
         <p className="mb-4 text-gray-300 text-center text-balance">
           <a href="https://deadlock-api.com/" title="Deadlock API" className="underline text-blue-400">
             deadlock-api.com
