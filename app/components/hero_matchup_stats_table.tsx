@@ -212,10 +212,10 @@ export default function HeroMatchupStatsTable({
                     <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
                     <ProgressBarWithLabel
                       min={0}
-                      max={heroWorstAgainst[heroId].matches_played}
-                      value={heroWorstAgainst[heroId].wins}
+                      max={heroWorstAgainst[heroId]?.matches_played}
+                      value={heroWorstAgainst[heroId]?.wins}
                       color={"#00ffff"}
-                      label={`${(Math.round((heroWorstAgainst[heroId].wins / heroWorstAgainst[heroId].matches_played) * 100 * 100) / 100).toFixed(2)}% `}
+                      label={`${(Math.round((heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played) * 100 * 100) / 100).toFixed(2)}% `}
                     />
                   </div>
                 </div>
