@@ -37,16 +37,16 @@ pub enum BuildsSearchQuerySortBy {
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildsSearchQuery {
+    /// The field to sort the builds by.
+    #[serde(default)]
+    #[param(inline)]
+    pub sort_by: BuildsSearchQuerySortBy,
     /// The index of the first build to return.
     pub start: Option<u32>,
     /// The maximum number of builds to return.
     #[serde(default = "default_limit")]
     #[param(inline, default = "100")]
     pub limit: Option<u32>,
-    /// The field to sort the builds by.
-    #[serde(default)]
-    #[param(inline)]
-    pub sort_by: BuildsSearchQuerySortBy,
     /// The direction to sort the builds in.
     #[serde(default)]
     #[param(inline)]

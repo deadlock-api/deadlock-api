@@ -15,6 +15,13 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct HeroScoreboardQuery {
+    /// The field to sort by.
+    #[param(inline)]
+    pub sort_by: ScoreboardQuerySortBy,
+    /// The direction to sort heroes in.
+    #[serde(default)]
+    #[param(inline)]
+    pub sort_direction: SortDirectionDesc,
     /// Filter by min number of matches played.
     pub min_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -42,13 +49,6 @@ pub struct HeroScoreboardQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
-    /// The field to sort by.
-    #[param(inline)]
-    pub sort_by: ScoreboardQuerySortBy,
-    /// The direction to sort heroes in.
-    #[serde(default)]
-    #[param(inline)]
-    pub sort_direction: SortDirectionDesc,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]

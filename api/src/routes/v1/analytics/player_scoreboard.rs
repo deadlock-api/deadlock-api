@@ -22,6 +22,13 @@ fn default_min_matches() -> Option<u32> {
 
 #[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, IntoParams)]
 pub struct PlayerScoreboardQuery {
+    /// The field to sort by.
+    #[param(inline)]
+    pub sort_by: ScoreboardQuerySortBy,
+    /// The direction to sort players in.
+    #[serde(default)]
+    #[param(inline)]
+    pub sort_direction: SortDirectionDesc,
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
@@ -48,13 +55,6 @@ pub struct PlayerScoreboardQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
-    /// The field to sort by.
-    #[param(inline)]
-    pub sort_by: ScoreboardQuerySortBy,
-    /// The direction to sort players in.
-    #[serde(default)]
-    #[param(inline)]
-    pub sort_direction: SortDirectionDesc,
     /// The offset to start fetching players from.
     pub start: Option<u32>,
     /// The maximum number of players to fetch.
