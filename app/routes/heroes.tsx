@@ -18,16 +18,15 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const location = useLocation();
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
   useEffect(() => {
-    console.log("location", location.search);
-    const searchParams = new URLSearchParams(location.search);
-    setSearchParams(searchParams);
+    const params = new URLSearchParams(location.search);
+    setSearchParams(params);
 
-    const searchTab = searchParams?.get("tab");
+    const searchTab = params?.get("tab");
     if (searchTab) {
       setTab(searchTab);
     }
 
-    const searchHeroIdString = searchParams?.get("heroId");
+    const searchHeroIdString = params?.get("heroId");
     const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
     setHeroId(searchHeroId);
   }, [location.search]);
@@ -134,8 +133,6 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           </div>
         </>
       )}
-      {tab}
-      {heroId}
     </>
   );
 }

@@ -1,3 +1,4 @@
+import { useNavigate } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import HeroImage from "~/components/hero_image";
@@ -11,6 +12,8 @@ export default function HeroesMatchupStatsTable({
 }: {
   hideHeader?: boolean;
 }) {
+  const navigate = useNavigate();
+
   const { data: synergyData } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats").then((res) => res.json()),
@@ -52,6 +55,16 @@ export default function HeroesMatchupStatsTable({
     return bestSynergies;
   }, [synergyData]);
 
+  const heroMinBestSynergyWinrate = useMemo(() => {
+    if (Object.keys(heroBestSynergies).length === 0) return 0;
+    return Math.min(...Object.values(heroBestSynergies).map((synergy) => synergy.wins / synergy.matches_played));
+  }, [heroBestSynergies]);
+
+  const heroMaxBestSynergyWinrate = useMemo(() => {
+    if (Object.keys(heroBestSynergies).length === 0) return 0;
+    return Math.max(...Object.values(heroBestSynergies).map((synergy) => synergy.wins / synergy.matches_played));
+  }, [heroBestSynergies]);
+
   const heroWorstSynergies = useMemo(() => {
     function worstCombination(synergyMap: Record<number, APIHeroSynergyStats[]>, heroId: number) {
       if (!synergyMap[heroId]) return null;
@@ -81,6 +94,16 @@ export default function HeroesMatchupStatsTable({
     return bestSynergies;
   }, [synergyData]);
 
+  const heroMinWorstSynergyWinrate = useMemo(() => {
+    if (Object.keys(heroWorstSynergies).length === 0) return 0;
+    return Math.min(...Object.values(heroWorstSynergies).map((synergy) => synergy.wins / synergy.matches_played));
+  }, [heroWorstSynergies]);
+
+  const heroMaxWorstSynergyWinrate = useMemo(() => {
+    if (Object.keys(heroWorstSynergies).length === 0) return 0;
+    return Math.max(...Object.values(heroWorstSynergies).map((synergy) => synergy.wins / synergy.matches_played));
+  }, [heroWorstSynergies]);
+
   const heroBestAgainst = useMemo(() => {
     function bestAgainst(counterMap: Record<number, APIHeroCounterStats[]>, heroId: number) {
       if (!counterMap[heroId]) return null;
@@ -103,6 +126,16 @@ export default function HeroesMatchupStatsTable({
     return bestCounters;
   }, [counterData]);
 
+  const heroMinBestAgainstWinrate = useMemo(() => {
+    if (Object.keys(heroBestAgainst).length === 0) return 0;
+    return Math.min(...Object.values(heroBestAgainst).map((counter) => counter.wins / counter.matches_played));
+  }, [heroBestAgainst]);
+
+  const heroMaxBestAgainstWinrate = useMemo(() => {
+    if (Object.keys(heroBestAgainst).length === 0) return 0;
+    return Math.max(...Object.values(heroBestAgainst).map((counter) => counter.wins / counter.matches_played));
+  }, [heroBestAgainst]);
+
   const heroWorstAgainst = useMemo(() => {
     function worstAgainst(counterMap: Record<number, APIHeroCounterStats[]>, heroId: number) {
       if (!counterMap[heroId]) return null;
@@ -124,6 +157,16 @@ export default function HeroesMatchupStatsTable({
     }
     return worstCounters;
   }, [counterData]);
+
+  const heroMinWorstAgainstWinrate = useMemo(() => {
+    if (Object.keys(heroWorstAgainst).length === 0) return 0;
+    return Math.min(...Object.values(heroWorstAgainst).map((counter) => counter.wins / counter.matches_played));
+  }, [heroWorstAgainst]);
+
+  const heroMaxWorstAgainstWinrate = useMemo(() => {
+    if (Object.keys(heroWorstAgainst).length === 0) return 0;
+    return Math.max(...Object.values(heroWorstAgainst).map((counter) => counter.wins / counter.matches_played));
+  }, [heroWorstAgainst]);
 
   const heroIds = useMemo(() => {
     const allHeroIds = new Set<number>();
@@ -155,7 +198,8 @@ export default function HeroesMatchupStatsTable({
           {heroIds?.map((heroId, index) => (
             <tr
               key={heroId}
-              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
+              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
+              onClick={() => navigate(`/heroes?tab=hero-details&heroId=${heroId}`)}
             >
               <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>
               <td className="px-4 py-3 align-middle">
@@ -169,9 +213,9 @@ export default function HeroesMatchupStatsTable({
                   <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-3">
                     <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
                     <ProgressBarWithLabel
-                      min={0}
-                      max={heroBestSynergies[heroId]?.matches_played}
-                      value={heroBestSynergies[heroId]?.wins}
+                      min={heroMinBestSynergyWinrate}
+                      max={heroMaxBestSynergyWinrate}
+                      value={heroBestSynergies[heroId]?.wins / heroBestSynergies[heroId]?.matches_played}
                       color={"#ff00ff"}
                       label={`${(Math.round((heroBestSynergies[heroId]?.wins / heroBestSynergies[heroId]?.matches_played) * 100 * 100) / 100).toFixed(2)}% `}
                     />
@@ -183,9 +227,9 @@ export default function HeroesMatchupStatsTable({
                   <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-3">
                     <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
                     <ProgressBarWithLabel
-                      min={0}
-                      max={heroWorstSynergies[heroId]?.matches_played}
-                      value={heroWorstSynergies[heroId]?.wins}
+                      min={heroMinWorstSynergyWinrate}
+                      max={heroMaxWorstSynergyWinrate}
+                      value={heroWorstSynergies[heroId]?.wins / heroWorstSynergies[heroId]?.matches_played}
                       color={"#ff00ff"}
                       label={`${(Math.round((heroWorstSynergies[heroId]?.wins / heroWorstSynergies[heroId]?.matches_played) * 100 * 100) / 100).toFixed(2)}% `}
                     />
@@ -197,9 +241,9 @@ export default function HeroesMatchupStatsTable({
                   <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
                     <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
                     <ProgressBarWithLabel
-                      min={0}
-                      max={heroBestAgainst[heroId]?.matches_played}
-                      value={heroBestAgainst[heroId]?.wins}
+                      min={heroMinBestAgainstWinrate}
+                      max={heroMaxBestAgainstWinrate}
+                      value={heroBestAgainst[heroId]?.wins / heroBestAgainst[heroId]?.matches_played}
                       color={"#00ffff"}
                       label={`${(Math.round((heroBestAgainst[heroId]?.wins / heroBestAgainst[heroId]?.matches_played) * 100 * 100) / 100).toFixed(2)}% `}
                     />
@@ -211,9 +255,9 @@ export default function HeroesMatchupStatsTable({
                   <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
                     <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
                     <ProgressBarWithLabel
-                      min={0}
-                      max={heroWorstAgainst[heroId]?.matches_played}
-                      value={heroWorstAgainst[heroId]?.wins}
+                      min={heroMinWorstAgainstWinrate}
+                      max={heroMaxWorstAgainstWinrate}
+                      value={heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played}
                       color={"#00ffff"}
                       label={`${(Math.round((heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played) * 100 * 100) / 100).toFixed(2)}% `}
                     />
