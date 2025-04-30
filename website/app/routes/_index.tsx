@@ -73,7 +73,7 @@ export default function Index() {
             <p className="text-gray-300 text-center text-sm">(Last 30 days)</p>
           </div>
           <hr className="w-full border-gray-700 mb-2" />
-          <HeroStatsTable hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
+          <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
           <Link to="/heroes">
             <button
               type="button"
@@ -90,7 +90,7 @@ export default function Index() {
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
           </div>
           <hr className="w-full border-gray-700 mb-2" />
-          <HeroStatsTable hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
+          <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
           <Link to="/heroes">
             <button
               type="button"
@@ -107,7 +107,7 @@ export default function Index() {
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
           </div>
           <hr className="w-full border-gray-700 mb-2" />
-          <ItemStatsTable hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
+          <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
           <Link to="/items">
             <button
               type="button"
@@ -124,7 +124,7 @@ export default function Index() {
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
           </div>
           <hr className="w-full border-gray-700 mb-2" />
-          <ItemStatsTable hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
+          <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
           <Link to="/items">
             <button
               type="button"
