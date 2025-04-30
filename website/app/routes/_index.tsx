@@ -66,7 +66,7 @@ export default function Index() {
 
       <hr className="my-8 border-gray-700" />
 
-      <section className="grid md:grid-cols-2 gap-4 sm:grid-cols-1">
+      <section className="grid gap-4 lg:grid-cols-3 sm:grid-cols-2">
         <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="text-lg font-bold text-center">Popular Heroes</h3>
