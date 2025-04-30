@@ -23,19 +23,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
         <link rel="icon" type="image/ico" href="favicon.ico" />
         <link rel="icon" type="image/webp" href="favicon.webp" />
         <link rel="icon" type="image/png" href="favicon.png" />
+
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="Deadlock API provides game data like images, stats, and more." />
         <meta name="keywords" content="Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities" />
         <meta name="Cache-Control" content="public, max-age=86400" />
         <meta name="robots" content="index, follow" />
+
         <meta name="og:title" content="Deadlock API" />
         <meta name="og:description" content="Deadlock API provides game data like images, stats, and more." />
         <meta name="og:image" content="https://deadlock-api.com/favicon.webp" />
         <meta name="og:url" content="https://deadlock-api.com" />
         <meta name="og:type" content="website" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta property="twitter:domain" content="deadlock-api.pages.dev" />
+        <meta property="twitter:url" content="https://deadlock-api.pages.dev" />
+        <meta name="twitter:title" content="Deadlock API" />
+        <meta name="twitter:description" content="Deadlock API provides game data like images, stats, and more." />
+        <meta name="twitter:image" content="https://deadlock-api.com/favicon.webp" />
+
         <Meta />
         <Links />
       </head>
