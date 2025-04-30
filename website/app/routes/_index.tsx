@@ -34,32 +34,61 @@ export default function Index() {
           player statistics, and more. Whether you are a developer looking to integrate game data into your application
           or a player wanting to analyze your performance, the Deadlock API has you covered.
         </p>
-        <div className="grid md:grid-cols-2 sm:grid-cols-1 gap-4">
-          <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
-            <a
-              href="https://assets.deadlock-api.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 underline text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors duration-200"
-            >
-              Assets API
-            </a>
-            <span className="text-gray-300 text-center text-base group-hover:text-white transition-colors duration-200">
-              Provides static game assets such as static heroes/item data, images, icons, sounds.
-            </span>
-          </div>
-          <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
-            <a
-              href="https://api.deadlock-api.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 underline text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors duration-200"
-            >
-              Game Data API
-            </a>
-            <span className="text-gray-300 text-center text-base group-hover:text-white transition-colors duration-200">
-              Offers game data including matches, players, and statistics.
-            </span>
+        <div className=" border border-gray-700 rounded-xl p-4">
+          <h3 className="text-xl font-bold text-center mb-4">Services</h3>
+          <div className="grid xl:grid-cols-4 lg:grid-cols-2 sm:grid-cols-1 gap-4">
+            <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
+              <a
+                href="https://assets.deadlock-api.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors duration-200"
+              >
+                Assets API
+              </a>
+              <span className="text-gray-300 text-center text-balance text-base group-hover:text-white transition-colors duration-200">
+                Provides static game assets such as static heroes/item data, images, icons, sounds.
+              </span>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
+              <a
+                href="https://api.deadlock-api.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors duration-200"
+              >
+                Game Data API
+              </a>
+              <span className="text-gray-300 text-center text-balance text-base group-hover:text-white transition-colors duration-200">
+                Offers game data including matches, players, and statistics.
+              </span>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
+              <a
+                href="https://minio.deadlock-api.com/browser/db-snapshot/public%2F"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors duration-200"
+              >
+                Database Dumps
+              </a>
+              <span className="text-gray-300 text-center text-balance text-base group-hover:text-white transition-colors duration-200">
+                Download up-to-date database snapshots for offline analysis or research.
+              </span>
+            </div>
+            <div className="bg-gray-800 rounded-xl p-8 flex flex-col items-center shadow-lg border border-gray-700 transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:border-blue-400 group cursor-pointer">
+              <a
+                href="https://streamkit.deadlock-api.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline text-lg font-semibold mb-3 group-hover:text-blue-300 transition-colors duration-200"
+              >
+                Streamkit
+              </a>
+              <span className="text-gray-300 text-center text-balance text-base group-hover:text-white transition-colors duration-200">
+                Tools for Streamers, including custom commands and customizable overlays.
+              </span>
+            </div>
           </div>
         </div>
       </section>
