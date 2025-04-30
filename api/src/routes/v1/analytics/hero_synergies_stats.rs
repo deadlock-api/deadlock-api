@@ -214,6 +214,7 @@ mod test {
         #[values(None, Some(1000000))] max_match_id: Option<u64>,
         #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
         #[values(None, Some(18373975))] account_id: Option<u32>,
+        #[values(None, Some(10))] min_matches: Option<u64>,
     ) {
         let query = HeroSynergyStatsQuery {
             min_unix_timestamp,
@@ -226,6 +227,7 @@ mod test {
             max_match_id,
             same_lane_filter,
             account_id,
+            min_matches,
         };
         let query = build_hero_synergy_stats_query(&query);
 
@@ -265,6 +267,9 @@ mod test {
             } else {
                 assert!(!query.contains("p1.assigned_lane = p2.assigned_lane"));
             }
+        }
+        if let Some(min_matches) = min_matches {
+            assert!(query.contains(&format!("matches_played >= {}", min_matches)));
         }
         if let Some(account_id) = account_id {
             assert!(query.contains(&format!("account_id = {}", account_id)));
