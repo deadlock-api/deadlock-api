@@ -30,7 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="bg-center bg-no-repeat bg-cover bg-[url('/background.svg')]">
         {children}
         <ScrollRestoration />
         <Scripts />
