@@ -129,8 +129,12 @@ def get_matches_starting_from(client, start_id: int = 28626948) -> list[Match]:
         Match(
             match_id=row[0],
             teams=[
-                MatchTeam(players=row[1], average_badge_team=row[3], won=row[5] == 'Team0'),
-                MatchTeam(players=row[2], average_badge_team=row[4], won=row[5] == 'Team1'),
+                MatchTeam(
+                    players=row[1], average_badge_team=row[3], won=row[5] == "Team0"
+                ),
+                MatchTeam(
+                    players=row[2], average_badge_team=row[4], won=row[5] == "Team1"
+                ),
             ],
         )
         for row in result
@@ -197,16 +201,18 @@ def set_player_mmr(client, data: list[tuple[int, dict[int, float]]]):
         ],
     )
 
+
 def clamp_to_rank(mmr: float) -> float:
     min_rank = min(RANKS)
     max_rank = max(RANKS)
     return max(min_rank, min(max_rank, mmr))
 
-def clamp_error(error: float) -> float:
-    return max(-1., min(1., error))
 
-def run_regression(match: Match, all_player_mmrs: dict[int, float]) -> dict[int, float]:
+def run_regression(
+    match: Match, all_player_mmrs: dict[int, float]
+) -> (dict[int, float], float):
     updates = {}
+    sum_errors = 0
     for team in match.teams:
         # Get the average MMR of the team
         avg_team_rank_true = RANKS.index(team.average_badge_team)
@@ -225,8 +231,6 @@ def run_regression(match: Match, all_player_mmrs: dict[int, float]) -> dict[int,
         else:
             error -= ERROR_ADJUSTMENT
 
-        error = clamp_error(error)
-
         # gamma = max(2, abs(avg_team_rank_true - 6)) / 2
         # lr = LEARNING_RATE / gamma
         updates.update(
@@ -237,7 +241,8 @@ def run_regression(match: Match, all_player_mmrs: dict[int, float]) -> dict[int,
             f"Match {match.match_id}: Team {avg_team_rank_true} - "
             f"Average MMR {avg_team_rank_pred} - Error {error}"
         )
-    return updates
+        sum_errors += abs(error)
+    return updates, sum_errors
 
 
 def main(client):
@@ -248,23 +253,34 @@ def main(client):
 
     all_player_mmrs = get_all_player_mmrs(client, starting_id)
     updates = []
+    errors = []
     for i, match in tqdm(enumerate(matches), desc="Processing matches"):
-        updated_mmrs = run_regression(match, all_player_mmrs)
+        updated_mmrs, error = run_regression(match, all_player_mmrs)
+        errors.append(error)
         all_player_mmrs.update(updated_mmrs)
         updates.append((match.match_id, updated_mmrs))
         if i % 10000 == 0:
             set_player_mmr(client, updates)
             updates = []
     set_player_mmr(client, updates)
-    LOGGER.info(f"Processed {len(matches)} matches")
+    errors = errors[-1000:]
+    LOGGER.info(
+        f"Processed {len(matches)} matches, Average error: {sum(errors) / max(1, len(errors))}"
+    )
 
 
 if __name__ == "__main__":
     with ch_client as client:
         while True:
-            start = time.time()
-            main(client)
-            end = time.time()
-            duration = end - start
-            if duration < UPDATE_INTERVAL:
-                sleep(UPDATE_INTERVAL - (end - start))
+            try:
+                start = time.time()
+                main(client)
+                end = time.time()
+                duration = end - start
+                if duration < UPDATE_INTERVAL:
+                    sleep(UPDATE_INTERVAL - (end - start))
+            except:
+                LOGGER.exception(
+                    "Error while running regression, retrying in 10 seconds"
+                )
+                sleep(10)

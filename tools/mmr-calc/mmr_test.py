@@ -25,7 +25,7 @@ class PlayerMMR(BaseModel):
 
 
 def get_all_player_mmrs(client) -> list[PlayerMMR]:
-    query = f"""
+    query = """
     SELECT account_id, match_id, player_score
     FROM mmr_history
     ORDER BY account_id, match_id DESC
@@ -39,7 +39,7 @@ def get_all_player_mmrs(client) -> list[PlayerMMR]:
 
 
 def get_match_scores(client, match_ids: list[int]) -> dict[int, int]:
-    query = f"""
+    query = """
     SELECT match_id, match_score
     FROM active_matches
     WHERE match_id IN %(match_ids)s
