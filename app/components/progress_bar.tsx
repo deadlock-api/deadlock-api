@@ -29,7 +29,7 @@ export function ProgressBarWithLabel({
   return (
     <div className="flex flex-col gap-2  min-w-16">
       <ProgressBar value={value} min={min} max={max} color={color} />
-      <span className="ml-2 text-sm text-gray-700 dark:text-gray-300 text-left">{label || `${percentage}%` || 0}</span>
+      <span className="text-sm text-gray-700 dark:text-gray-300 text-left">{label || `${percentage}%` || 0}</span>
     </div>
   );
 }
