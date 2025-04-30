@@ -27,6 +27,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/ico" href="favicon.ico" />
         <link rel="icon" type="image/webp" href="favicon.webp" />
         <link rel="icon" type="image/png" href="favicon.png" />
+        <meta name="description" content="Deadlock API provides game data like images, stats, and more." />
+        <meta name="keywords" content="Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities" />
+        <meta name="Cache-Control" content="public, max-age=86400" />
+        <meta name="robots" content="index, follow" />
         <Meta />
         <Links />
       </head>
