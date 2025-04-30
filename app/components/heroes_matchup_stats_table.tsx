@@ -185,12 +185,12 @@ export default function HeroesMatchupStatsTable({
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3 text-left">Hero</th>
-              <th className="px-4 py-3 text-left">Best Combination</th>
-              <th className="px-4 py-3 text-left">Worst Combination</th>
-              <th className="px-4 py-3 text-left">Best Against</th>
-              <th className="px-4 py-3 text-left">Worst Against</th>
+              <th className="p-3">#</th>
+              <th className="p-3 text-left">Hero</th>
+              <th className="p-3 text-left">Best Combination</th>
+              <th className="p-3 text-left">Worst Combination</th>
+              <th className="p-3 text-left">Best Against</th>
+              <th className="p-3 text-left">Worst Against</th>
             </tr>
           </thead>
         )}
@@ -201,14 +201,14 @@ export default function HeroesMatchupStatsTable({
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
               onClick={() => navigate(`/heroes?tab=hero-details&heroId=${heroId}`)}
             >
-              <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>
-              <td className="px-4 py-3 align-middle">
+              <td className="p-3 align-middle font-semibold">{index + 1}</td>
+              <td className="p-3 align-middle">
                 <div className="flex items-center gap-3">
                   <HeroImage heroId={heroId} />
                   <HeroName heroId={heroId} />
                 </div>
               </td>
-              <td className="px-4 py-3 align-middle">
+              <td className="p-3 align-middle">
                 <div className="flex flex-col gap-2">
                   <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-3">
                     <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
@@ -222,7 +222,7 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 align-middle">
+              <td className="p-3 align-middle">
                 <div className="flex flex-col gap-2">
                   <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-3">
                     <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
@@ -236,7 +236,7 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 align-middle">
+              <td className="p-3 align-middle">
                 <div className="flex flex-col gap-2">
                   <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
                     <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
@@ -250,7 +250,7 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="px-4 py-3 align-middle">
+              <td className="p-3 align-middle">
                 <div className="flex flex-col gap-2">
                   <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
                     <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
