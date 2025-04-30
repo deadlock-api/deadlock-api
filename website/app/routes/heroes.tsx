@@ -109,11 +109,13 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           <HeroesMatchupStatsTable />
         </div>
       )}
-      {tab === "hero-details" && heroId && (
+      {tab === "hero-details" && (
         <>
-          <h2 className="text-2xl font-bold text-center mb-2">
-            Details for <HeroName heroId={heroId} />
-          </h2>
+          {heroId && (
+            <h2 className="text-2xl font-bold text-center mb-2">
+              Details for <HeroName heroId={heroId} />
+            </h2>
+          )}
           <div className="flex flex-col gap-4">
             <HeroSelector
               selectedHero={heroId ?? null}
@@ -126,10 +128,12 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 }
               }}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.SYNERGY} />
-              <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.COUNTER} />
-            </div>
+            {heroId && (
+              <div className="grid grid-cols-2 gap-4">
+                <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.SYNERGY} />
+                <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.COUNTER} />
+              </div>
+            )}
           </div>
         </>
       )}
