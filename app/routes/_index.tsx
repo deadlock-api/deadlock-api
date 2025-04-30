@@ -135,6 +135,18 @@ export default function Index() {
           </Link>
         </div>
       </section>
+
+      <hr className="my-8 border-gray-700" />
+
+      <section>
+        <p className="mb-4 text-gray-300 text-center text-balance">
+          <a href="https://deadlock-api.com/" title="Deadlock API" className="underline text-blue-400">
+            deadlock-api.com
+          </a>{" "}
+          is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone officially involved in
+          producing or managing Valve properties.
+        </p>
+      </section>
     </>
   );
 }
