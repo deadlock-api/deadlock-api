@@ -28,8 +28,10 @@ export default function ItemStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
+  const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
+  const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
+  const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
   const maxMatches = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
-  const sumMatches = useMemo(() => (data || []).reduce((acc, item) => acc + item.matches, 0), [data]);
   const filteredData = useMemo(
     () => data?.filter((d) => assetsItems?.map((i) => i.id).includes(d.item_id)),
     [data, assetsItems],
@@ -56,7 +58,7 @@ export default function ItemStatsTable({
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3 text-left">Item</th>
               {columns.includes("winRate") && <th className="px-4 py-3">Win Rate</th>}
-              {columns.includes("pickRate") && <th className="px-4 py-3">Pick Rate</th>}
+              {columns.includes("usage") && <th className="px-4 py-3">Usage</th>}
             </tr>
           </thead>
         )}
@@ -79,25 +81,22 @@ export default function ItemStatsTable({
                   title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
                 >
                   <ProgressBarWithLabel
-                    min={0}
-                    max={row.matches}
-                    value={row.wins}
+                    min={minWinRate}
+                    max={maxWinRate}
+                    value={row.wins / row.matches}
                     color={"#ff00ff"}
                     label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
                   />
                 </td>
               )}
-              {columns.includes("pickRate") && (
-                <td
-                  className="px-4 py-3 align-middle"
-                  title={`${row.matches.toLocaleString()} matches / ${maxMatches.toLocaleString()} total matches`}
-                >
+              {columns.includes("usage") && (
+                <td className="px-4 py-3 align-middle" title={`${row.matches.toLocaleString()} matches`}>
                   <ProgressBarWithLabel
-                    min={0}
+                    min={minMatches}
                     max={maxMatches}
                     value={row.matches}
                     color={"#00ffff"}
-                    label={`${(Math.round((row.matches / sumMatches) * 100 * 100) / 100).toFixed(2)}% `}
+                    label={row.matches.toLocaleString()}
                   />
                 </td>
               )}

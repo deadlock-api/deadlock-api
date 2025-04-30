@@ -107,7 +107,7 @@ export default function Index() {
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
           </div>
           <hr className="w-full border-gray-700 mb-2" />
-          <ItemStatsTable hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
+          <ItemStatsTable hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
           <Link to="/items">
             <button
               type="button"
