@@ -28,7 +28,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
 
     const searchHeroIdString = params?.get("heroId");
     const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-    setHeroId(searchHeroId);
+    setHeroId(searchHeroId || 15);
   }, [location.search]);
 
   const searchTab = searchParams?.get("tab");
@@ -36,7 +36,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
 
   const searchHeroIdString = searchParams?.get("heroId");
   const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-  const [heroId, setHeroId] = useState(searchHeroId || null);
+  const [heroId, setHeroId] = useState(searchHeroId || 15);
 
   const handleTabChange = (newTab: string) => {
     setTab(newTab);
@@ -111,14 +111,12 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       )}
       {tab === "hero-details" && (
         <>
-          {heroId && (
-            <h2 className="text-2xl font-bold text-center mb-2">
-              Details for <HeroName heroId={heroId} />
-            </h2>
-          )}
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Details for <HeroName heroId={heroId} />
+          </h2>
           <div className="flex flex-col gap-4">
             <HeroSelector
-              selectedHero={heroId ?? null}
+              selectedHero={heroId}
               onHeroSelected={(selectedHeroId) => {
                 setHeroId(selectedHeroId);
                 if (typeof window !== "undefined") {
@@ -128,12 +126,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 }
               }}
             />
-            {heroId && (
-              <div className="grid grid-cols-2 gap-4">
-                <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.SYNERGY} />
-                <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.COUNTER} />
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-4">
+              <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.SYNERGY} />
+              <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.COUNTER} />
+            </div>
           </div>
         </>
       )}
