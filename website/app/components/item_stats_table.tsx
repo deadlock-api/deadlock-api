@@ -19,16 +19,18 @@ export default function ItemStatsTable({
   hideIndex?: boolean;
   sortBy?: keyof APIItemStats | "winrate";
 }) {
-  const { data: assetsItems } = useQuery<AssetsItem[]>({
+  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
     queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
-  const { data } = useQuery<APIItemStats[]>({
+  const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
     queryKey: ["api-item-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/item-stats").then((res) => res.json()),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
+
+  const isLoading = useMemo(() => isLoadingItemStats || isLoadingItemAssets, [isLoadingItemStats, isLoadingItemAssets]);
 
   const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
@@ -51,16 +53,24 @@ export default function ItemStatsTable({
   );
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <>
       <table className="w-full border-separate border-spacing-y-1">
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              {!hideIndex && <th className="p-3">#</th>}
-              <th className="p-3 text-left">Item</th>
-              {columns.includes("winRate") && <th className="p-3">Win Rate</th>}
-              {columns.includes("usage") && <th className="p-3">Usage</th>}
+              {!hideIndex && <th className="p-2">#</th>}
+              <th className="p-2 text-left">Item</th>
+              {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
+              {columns.includes("usage") && <th className="p-2">Usage</th>}
             </tr>
           </thead>
         )}
@@ -70,16 +80,16 @@ export default function ItemStatsTable({
               key={row.item_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
-              {!hideIndex && <td className="p-3 align-middle font-semibold">{index + 1}</td>}
-              <td className="p-3 align-middle">
-                <div className="flex items-center gap-3 text-left">
+              {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
+              <td className="p-2 align-middle">
+                <div className="flex items-center gap-2 text-left">
                   <ItemImage itemId={row.item_id} />
                   <ItemName itemId={row.item_id} />
                 </div>
               </td>
               {columns.includes("winRate") && (
                 <td
-                  className="p-3 align-middle"
+                  className="p-2 align-middle"
                   title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
                 >
                   <ProgressBarWithLabel
@@ -92,7 +102,7 @@ export default function ItemStatsTable({
                 </td>
               )}
               {columns.includes("usage") && (
-                <td className="p-3 align-middle" title={`${row.matches.toLocaleString()} matches`}>
+                <td className="p-2 align-middle" title={`${row.matches.toLocaleString()} matches`}>
                   <ProgressBarWithLabel
                     min={minMatches}
                     max={maxMatches}

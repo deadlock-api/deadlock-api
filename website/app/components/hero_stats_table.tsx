@@ -18,7 +18,7 @@ export default function HeroStatsTable({
   hideIndex?: boolean;
   sortBy?: keyof APIHeroStats | "winrate";
 }) {
-  const { data } = useQuery<APIHeroStats[]>({
+  const { data, isLoading } = useQuery<APIHeroStats[]>({
     queryKey: ["api-hero-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-stats").then((res) => res.json()),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -42,17 +42,25 @@ export default function HeroStatsTable({
   );
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <>
       <table className="w-full border-separate border-spacing-y-1">
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              {!hideIndex && <th className="p-3">#</th>}
-              <th className="p-3 text-left">Hero</th>
-              {columns.includes("winRate") && <th className="p-3">Win Rate</th>}
-              {columns.includes("pickRate") && <th className="p-3">Pick Rate</th>}
-              {columns.includes("KDA") && <th className="p-3">Kills/Deaths/Assists</th>}
+              {!hideIndex && <th className="p-2">#</th>}
+              <th className="p-2 text-left">Hero</th>
+              {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
+              {columns.includes("pickRate") && <th className="p-2">Pick Rate</th>}
+              {columns.includes("KDA") && <th className="p-2">Kills/Deaths/Assists</th>}
             </tr>
           </thead>
         )}
@@ -62,16 +70,16 @@ export default function HeroStatsTable({
               key={row.hero_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
-              {!hideIndex && <td className="p-3 align-middle font-semibold">{index + 1}</td>}
-              <td className="p-3 align-middle">
-                <div className="flex items-center gap-3">
+              {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
+              <td className="p-2 align-middle">
+                <div className="flex items-center gap-2">
                   <HeroImage heroId={row.hero_id} />
                   <HeroName heroId={row.hero_id} />
                 </div>
               </td>
               {columns.includes("winRate") && (
                 <td
-                  className="p-3 align-middle"
+                  className="p-2 align-middle"
                   title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
                 >
                   <ProgressBarWithLabel
@@ -85,7 +93,7 @@ export default function HeroStatsTable({
               )}
               {columns.includes("pickRate") && (
                 <td
-                  className="p-3 align-middle"
+                  className="p-2 align-middle"
                   title={`${row.matches.toLocaleString()} matches / ${maxMatches.toLocaleString()} total matches`}
                 >
                   <ProgressBarWithLabel
@@ -98,7 +106,7 @@ export default function HeroStatsTable({
                 </td>
               )}
               {columns.includes("KDA") && (
-                <td className="p-3 align-middle">
+                <td className="p-2 align-middle">
                   <span className="px-2 font-semibold text-green-500">
                     {(Math.round((row.total_kills / row.matches) * 10) / 10).toFixed(1)}
                   </span>
