@@ -13,7 +13,7 @@ export default function Items() {
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Item Stats</h2>
       <p className="mb-4 text-gray-300 text-center text-sm italic">(Last 30 days)</p>
-      <ItemStatsTable columns={["winRate", "pickRate"]} sortBy="winrate" />
+      <ItemStatsTable columns={["winRate", "usage"]} sortBy="winrate" />
     </>
   );
 }
