@@ -8,7 +8,7 @@ export default function HeroSelector({
 }: { onHeroSelected: (selectedHeroId: number) => void; selectedHero?: number | null }) {
   const { data } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes").then((res) => res.json()),
+    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
