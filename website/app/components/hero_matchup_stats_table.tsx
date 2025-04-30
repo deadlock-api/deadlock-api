@@ -109,8 +109,8 @@ export default function HeroMatchupStatsTable({
           <tr className="bg-gray-800 text-center">
             <th className="p-2">#</th>
             <th className="p-2 text-left">Hero</th>
-            {stat === HeroMatchupStatsTableStat.SYNERGY && <th className="p-2 text-left">Best Combination</th>}
-            {stat === HeroMatchupStatsTableStat.COUNTER && <th className="p-2 text-left">Best Against</th>}
+            {stat === HeroMatchupStatsTableStat.SYNERGY && <th className="p-2 text-left">Win Rate Combination</th>}
+            {stat === HeroMatchupStatsTableStat.COUNTER && <th className="p-2 text-left">Win Rate Against</th>}
           </tr>
         </thead>
         <tbody>
