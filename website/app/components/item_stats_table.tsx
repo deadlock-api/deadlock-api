@@ -57,10 +57,10 @@ export default function ItemStatsTable({
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              {!hideIndex && <th className="px-4 py-3">#</th>}
-              <th className="px-4 py-3 text-left">Item</th>
-              {columns.includes("winRate") && <th className="px-4 py-3">Win Rate</th>}
-              {columns.includes("usage") && <th className="px-4 py-3">Usage</th>}
+              {!hideIndex && <th className="p-3">#</th>}
+              <th className="p-3 text-left">Item</th>
+              {columns.includes("winRate") && <th className="p-3">Win Rate</th>}
+              {columns.includes("usage") && <th className="p-3">Usage</th>}
             </tr>
           </thead>
         )}
@@ -70,8 +70,8 @@ export default function ItemStatsTable({
               key={row.item_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
-              {!hideIndex && <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>}
-              <td className="px-4 py-3 align-middle">
+              {!hideIndex && <td className="p-3 align-middle font-semibold">{index + 1}</td>}
+              <td className="p-3 align-middle">
                 <div className="flex items-center gap-3 text-left">
                   <ItemImage itemId={row.item_id} />
                   <ItemName itemId={row.item_id} />
@@ -79,7 +79,7 @@ export default function ItemStatsTable({
               </td>
               {columns.includes("winRate") && (
                 <td
-                  className="px-4 py-3 align-middle"
+                  className="p-3 align-middle"
                   title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
                 >
                   <ProgressBarWithLabel
@@ -92,7 +92,7 @@ export default function ItemStatsTable({
                 </td>
               )}
               {columns.includes("usage") && (
-                <td className="px-4 py-3 align-middle" title={`${row.matches.toLocaleString()} matches`}>
+                <td className="p-3 align-middle" title={`${row.matches.toLocaleString()} matches`}>
                   <ProgressBarWithLabel
                     min={minMatches}
                     max={maxMatches}

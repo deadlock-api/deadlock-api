@@ -94,17 +94,17 @@ export default function HeroMatchupStatsTable({
       <table className="w-full border-separate border-spacing-y-1">
         <thead>
           <tr className="bg-gray-800 text-center">
-            <th className="px-4 py-3">#</th>
-            <th className="px-4 py-3 text-left">Hero</th>
-            {stat === HeroMatchupStatsTableStat.SYNERGY && <th className="px-4 py-3 text-left">Best Combination</th>}
-            {stat === HeroMatchupStatsTableStat.COUNTER && <th className="px-4 py-3 text-left">Best Against</th>}
+            <th className="p-3">#</th>
+            <th className="p-3 text-left">Hero</th>
+            {stat === HeroMatchupStatsTableStat.SYNERGY && <th className="p-3 text-left">Best Combination</th>}
+            {stat === HeroMatchupStatsTableStat.COUNTER && <th className="p-3 text-left">Best Against</th>}
           </tr>
         </thead>
         <tbody>
           {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
             <tr key={synergy.hero_id2} className="bg-gray-800 text-center">
-              <td className="px-4 py-3">{index + 1}</td>
-              <td className="px-4 py-3">
+              <td className="p-3">{index + 1}</td>
+              <td className="p-3">
                 <div className="flex items-center gap-3">
                   {stat === HeroMatchupStatsTableStat.SYNERGY && (
                     <>
@@ -121,7 +121,7 @@ export default function HeroMatchupStatsTable({
                 </div>
               </td>
               {stat === HeroMatchupStatsTableStat.SYNERGY && (
-                <td className="px-4 py-3">
+                <td className="p-3">
                   <ProgressBarWithLabel
                     min={minSynergyWinrate}
                     max={maxSynergyWinrate}
@@ -132,7 +132,7 @@ export default function HeroMatchupStatsTable({
                 </td>
               )}
               {stat === HeroMatchupStatsTableStat.COUNTER && (
-                <td className="px-4 py-3">
+                <td className="p-3">
                   <ProgressBarWithLabel
                     min={minCounterWinrate}
                     max={maxCounterWinrate}
