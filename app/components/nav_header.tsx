@@ -22,10 +22,31 @@ export default function NavHeader() {
         </div>
         <div className="flex items-center gap-4">
           <a
+            href="https://stats.uptimerobot.com/V1HIfGQT77"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 text-gray-500 hover:text-green-400 rounded flex items-center"
+            title="Service Status"
+            aria-label="Service Status"
+          >
+            <span className="sr-only">Service Status</span>
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              aria-hidden={true}
+            >
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+              <circle cx="12" cy="12" r="6" fill="currentColor" />
+            </svg>
+          </a>
+          <a
             href="https://discord.gg/XMF9Xrgfqu"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-gray-500 hover:text-white rounded"
+            className="p-2 text-gray-500 rounded hover:text-[#7289da]"
             aria-label="Discord"
             title="Discord Server beitreten"
           >
@@ -38,7 +59,7 @@ export default function NavHeader() {
             href="https://github.com/deadlock-api/"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-gray-500 hover:text-white rounded"
+            className="p-2 text-gray-500 rounded hover:text-white"
             title="GitHub Repository besuchen"
           >
             <span className="sr-only">GitHub Repository besuchen</span>
@@ -50,7 +71,7 @@ export default function NavHeader() {
             href="https://www.patreon.com/user?u=68961896"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-gray-500 hover:text-white rounded"
+            className="p-2 text-gray-500 rounded hover:text-[#f96854]"
             title="Support on Patreon"
           >
             <span className="sr-only">Support on Patreon</span>
