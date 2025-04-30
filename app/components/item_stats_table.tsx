@@ -10,11 +10,13 @@ export default function ItemStatsTable({
   columns,
   limit,
   hideHeader,
+  hideIndex,
   sortBy,
 }: {
   columns: string[];
   limit?: number;
   hideHeader?: boolean;
+  hideIndex?: boolean;
   sortBy?: keyof APIItemStats | "winrate";
 }) {
   const { data: assetsItems } = useQuery<AssetsItem[]>({
@@ -55,7 +57,7 @@ export default function ItemStatsTable({
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              <th className="px-4 py-3">#</th>
+              {!hideIndex && <th className="px-4 py-3">#</th>}
               <th className="px-4 py-3 text-left">Item</th>
               {columns.includes("winRate") && <th className="px-4 py-3">Win Rate</th>}
               {columns.includes("usage") && <th className="px-4 py-3">Usage</th>}
@@ -68,7 +70,7 @@ export default function ItemStatsTable({
               key={row.item_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
-              <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>
+              {!hideIndex && <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>}
               <td className="px-4 py-3 align-middle">
                 <div className="flex items-center gap-3 text-left">
                   <ItemImage itemId={row.item_id} />

@@ -9,11 +9,13 @@ export default function HeroStatsTable({
   columns,
   limit,
   hideHeader,
+  hideIndex,
   sortBy,
 }: {
   columns: string[];
   limit?: number;
   hideHeader?: boolean;
+  hideIndex?: boolean;
   sortBy?: keyof APIHeroStats | "winrate";
 }) {
   const { data } = useQuery<APIHeroStats[]>({
@@ -46,11 +48,11 @@ export default function HeroStatsTable({
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3 text-left">Hero</th>
-              {columns.includes("winRate") && <th className="px-4 py-3">Win Rate</th>}
-              {columns.includes("pickRate") && <th className="px-4 py-3">Pick Rate</th>}
-              {columns.includes("KDA") && <th className="px-4 py-3">Kills/Deaths/Assists</th>}
+              {!hideIndex && <th className="p-3">#</th>}
+              <th className="p-3 text-left">Hero</th>
+              {columns.includes("winRate") && <th className="p-3">Win Rate</th>}
+              {columns.includes("pickRate") && <th className="p-3">Pick Rate</th>}
+              {columns.includes("KDA") && <th className="p-3">Kills/Deaths/Assists</th>}
             </tr>
           </thead>
         )}
@@ -60,8 +62,8 @@ export default function HeroStatsTable({
               key={row.hero_id}
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
-              <td className="px-4 py-3 align-middle font-semibold">{index + 1}</td>
-              <td className="px-4 py-3 align-middle">
+              {!hideIndex && <td className="p-3 align-middle font-semibold">{index + 1}</td>}
+              <td className="p-3 align-middle">
                 <div className="flex items-center gap-3">
                   <HeroImage heroId={row.hero_id} />
                   <HeroName heroId={row.hero_id} />
@@ -69,7 +71,7 @@ export default function HeroStatsTable({
               </td>
               {columns.includes("winRate") && (
                 <td
-                  className="px-4 py-3 align-middle"
+                  className="p-3 align-middle"
                   title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
                 >
                   <ProgressBarWithLabel
@@ -83,7 +85,7 @@ export default function HeroStatsTable({
               )}
               {columns.includes("pickRate") && (
                 <td
-                  className="px-4 py-3 align-middle"
+                  className="p-3 align-middle"
                   title={`${row.matches.toLocaleString()} matches / ${maxMatches.toLocaleString()} total matches`}
                 >
                   <ProgressBarWithLabel
@@ -96,7 +98,7 @@ export default function HeroStatsTable({
                 </td>
               )}
               {columns.includes("KDA") && (
-                <td className="px-4 py-3 align-middle">
+                <td className="p-3 align-middle">
                   <span className="px-2 font-semibold text-green-500">
                     {(Math.round((row.total_kills / row.matches) * 10) / 10).toFixed(1)}
                   </span>
