@@ -14,17 +14,19 @@ export default function HeroesMatchupStatsTable({
 }) {
   const navigate = useNavigate();
 
-  const { data: synergyData } = useQuery<APIHeroSynergyStats[]>({
+  const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats").then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const { data: counterData } = useQuery<APIHeroCounterStats[]>({
+  const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
     queryKey: ["api-hero-counter-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-counter-stats").then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
+
+  const isLoading = useMemo(() => isLoadingSynergy || isLoadingCounter, [isLoadingSynergy, isLoadingCounter]);
 
   const heroBestSynergies = useMemo(() => {
     function bestCombination(synergyMap: Record<number, APIHeroSynergyStats[]>, heroId: number) {
@@ -179,18 +181,26 @@ export default function HeroesMatchupStatsTable({
     return Array.from(allHeroIds);
   }, [heroBestSynergies, heroBestAgainst]);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <>
       <table className="w-full border-separate border-spacing-y-1">
         {!hideHeader && (
           <thead>
             <tr className="bg-gray-800 text-center">
-              <th className="p-3">#</th>
-              <th className="p-3 text-left">Hero</th>
-              <th className="p-3 text-left">Best Combination</th>
-              <th className="p-3 text-left">Worst Combination</th>
-              <th className="p-3 text-left">Best Against</th>
-              <th className="p-3 text-left">Worst Against</th>
+              <th className="p-2">#</th>
+              <th className="p-2 text-left">Hero</th>
+              <th className="p-2 text-left">Best Combination</th>
+              <th className="p-2 text-left">Worst Combination</th>
+              <th className="p-2 text-left">Best Against</th>
+              <th className="p-2 text-left">Worst Against</th>
             </tr>
           </thead>
         )}
@@ -201,16 +211,16 @@ export default function HeroesMatchupStatsTable({
               className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
               onClick={() => navigate(`/heroes?tab=hero-details&heroId=${heroId}`)}
             >
-              <td className="p-3 align-middle font-semibold">{index + 1}</td>
-              <td className="p-3 align-middle">
-                <div className="flex items-center gap-3">
+              <td className="p-2 align-middle font-semibold">{index + 1}</td>
+              <td className="p-2 align-middle">
+                <div className="flex items-center gap-2">
                   <HeroImage heroId={heroId} />
                   <HeroName heroId={heroId} />
                 </div>
               </td>
-              <td className="p-3 align-middle">
+              <td className="p-2 align-middle">
                 <div className="flex flex-col gap-2">
-                  <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-3">
+                  <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
                     <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
                     <ProgressBarWithLabel
                       min={heroMinBestSynergyWinrate}
@@ -222,9 +232,9 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="p-3 align-middle">
+              <td className="p-2 align-middle">
                 <div className="flex flex-col gap-2">
-                  <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-3">
+                  <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
                     <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
                     <ProgressBarWithLabel
                       min={heroMinWorstSynergyWinrate}
@@ -236,9 +246,9 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="p-3 align-middle">
+              <td className="p-2 align-middle">
                 <div className="flex flex-col gap-2">
-                  <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
+                  <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
                     <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
                     <ProgressBarWithLabel
                       min={heroMinBestAgainstWinrate}
@@ -250,9 +260,9 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="p-3 align-middle">
+              <td className="p-2 align-middle">
                 <div className="flex flex-col gap-2">
-                  <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-3">
+                  <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
                     <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
                     <ProgressBarWithLabel
                       min={heroMinWorstAgainstWinrate}

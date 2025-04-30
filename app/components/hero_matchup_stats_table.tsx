@@ -18,17 +18,19 @@ export default function HeroMatchupStatsTable({
   heroId: number;
   stat: HeroMatchupStatsTableStat;
 }) {
-  const { data: synergyData } = useQuery<APIHeroSynergyStats[]>({
+  const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats").then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const { data: counterData } = useQuery<APIHeroCounterStats[]>({
+  const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
     queryKey: ["api-hero-counter-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-counter-stats").then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
+
+  const isLoading = useMemo(() => isLoadingSynergy || isLoadingCounter, [isLoadingSynergy, isLoadingCounter]);
 
   const heroSynergies = useMemo(() => {
     const synergies: APIHeroSynergyStats[] = [];
@@ -89,23 +91,31 @@ export default function HeroMatchupStatsTable({
     return result;
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <>
       <table className="w-full border-separate border-spacing-y-1">
         <thead>
           <tr className="bg-gray-800 text-center">
-            <th className="p-3">#</th>
-            <th className="p-3 text-left">Hero</th>
-            {stat === HeroMatchupStatsTableStat.SYNERGY && <th className="p-3 text-left">Best Combination</th>}
-            {stat === HeroMatchupStatsTableStat.COUNTER && <th className="p-3 text-left">Best Against</th>}
+            <th className="p-2">#</th>
+            <th className="p-2 text-left">Hero</th>
+            {stat === HeroMatchupStatsTableStat.SYNERGY && <th className="p-2 text-left">Best Combination</th>}
+            {stat === HeroMatchupStatsTableStat.COUNTER && <th className="p-2 text-left">Best Against</th>}
           </tr>
         </thead>
         <tbody>
           {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
             <tr key={synergy.hero_id2} className="bg-gray-800 text-center">
-              <td className="p-3">{index + 1}</td>
-              <td className="p-3">
-                <div className="flex items-center gap-3">
+              <td className="p-2">{index + 1}</td>
+              <td className="p-2">
+                <div className="flex items-center gap-2">
                   {stat === HeroMatchupStatsTableStat.SYNERGY && (
                     <>
                       <HeroImage heroId={synergy.hero_id2} />
@@ -121,7 +131,7 @@ export default function HeroMatchupStatsTable({
                 </div>
               </td>
               {stat === HeroMatchupStatsTableStat.SYNERGY && (
-                <td className="p-3">
+                <td className="p-2">
                   <ProgressBarWithLabel
                     min={minSynergyWinrate}
                     max={maxSynergyWinrate}
@@ -132,7 +142,7 @@ export default function HeroMatchupStatsTable({
                 </td>
               )}
               {stat === HeroMatchupStatsTableStat.COUNTER && (
-                <td className="p-3">
+                <td className="p-2">
                   <ProgressBarWithLabel
                     min={minCounterWinrate}
                     max={maxCounterWinrate}
