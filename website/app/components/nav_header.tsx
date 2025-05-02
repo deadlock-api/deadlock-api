@@ -2,7 +2,7 @@ import { Link } from "@remix-run/react";
 
 export default function NavHeader() {
   return (
-    <header className="px-8 py-4 bg-gray-800 shadow">
+    <header className="px-8 py-4 bg-gray-900 shadow">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-12">
           <Link to="/" className="text-lg font-medium text-white">
