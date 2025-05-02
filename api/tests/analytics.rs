@@ -294,6 +294,38 @@ async fn test_hero_synergies_stats(
             stat.hero_id1, stat.hero_id2,
             "Heroes in a synergy pair should be different"
         );
+        assert!(
+            stat.kills1 > 0 && stat.kills2 > 0,
+            "Kills should be greater than 0"
+        );
+        assert!(
+            stat.deaths1 > 0 && stat.deaths2 > 0,
+            "Deaths should be greater than 0"
+        );
+        assert!(
+            stat.assists1 > 0 && stat.assists2 > 0,
+            "Assists should be greater than 0"
+        );
+        assert!(
+            stat.denies1 > 0 && stat.denies2 > 0,
+            "Denies should be greater than 0"
+        );
+        assert!(
+            stat.last_hits1 > 0 && stat.last_hits2 > 0,
+            "Last hits should be greater than 0"
+        );
+        assert!(
+            stat.networth1 > 0 && stat.networth2 > 0,
+            "Net worth should be greater than 0"
+        );
+        assert!(
+            stat.obj_damage1 > 0 && stat.obj_damage2 > 0,
+            "Objective damage should be greater than 0"
+        );
+        assert!(
+            stat.creeps1 > 0 && stat.creeps2 > 0,
+            "Creeps should be greater than 0"
+        );
     }
 }
 

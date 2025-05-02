@@ -64,6 +64,38 @@ pub struct HeroSynergyStats {
     pub wins: u64,
     /// The total number of matches played where `hero_id1` and `hero_id2` were on the same team, meeting the filter criteria.
     pub matches_played: u64,
+    /// The number of kills by `hero_id1` when playing with `hero_id2`.
+    pub kills1: u64,
+    /// The number of kills by `hero_id2` when playing with `hero_id1`.
+    pub kills2: u64,
+    /// The number of deaths by `hero_id1` when playing with `hero_id2`.
+    pub deaths1: u64,
+    /// The number of deaths by `hero_id2` when playing with `hero_id1`.
+    pub deaths2: u64,
+    /// The number of assists by `hero_id1` when playing with `hero_id2`.
+    pub assists1: u64,
+    /// The number of assists by `hero_id2` when playing with `hero_id1`.
+    pub assists2: u64,
+    /// The number of denies by `hero_id1` when playing with `hero_id2`.
+    pub denies1: u64,
+    /// The number of denies by `hero_id2` when playing with `hero_id1`.
+    pub denies2: u64,
+    /// The number of last hits by `hero_id1` when playing with `hero_id2`.
+    pub last_hits1: u64,
+    /// The number of last hits by `hero_id2` when playing with `hero_id1`.
+    pub last_hits2: u64,
+    /// The net worth of `hero_id1` when playing with `hero_id2`.
+    pub networth1: u64,
+    /// The net worth of `hero_id2` when playing with `hero_id1`.
+    pub networth2: u64,
+    /// The amount of objective damage dealt by `hero_id1` when playing with `hero_id2`.
+    pub obj_damage1: u64,
+    /// The amount of objective damage dealt by `hero_id2` when playing with `hero_id1`.
+    pub obj_damage2: u64,
+    /// The number of creeps killed by `hero_id1` when playing with `hero_id2`.
+    pub creeps1: u64,
+    /// The number of creeps killed by `hero_id2` when playing with `hero_id1`.
+    pub creeps2: u64,
 }
 
 fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
@@ -123,7 +155,23 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
     SELECT p1.hero_id  AS hero_id1,
            p2.hero_id  AS hero_id2,
            SUM(p1.won) AS wins,
-           COUNT()     AS matches_played
+           COUNT()     AS matches_played,
+           SUM(p1.kills) AS kills1,
+           SUM(p2.kills) AS kills2,
+           SUM(p1.deaths) AS deaths1,
+           SUM(p2.deaths) AS deaths2,
+           SUM(p1.assists) AS assists1,
+           SUM(p2.assists) AS assists2,
+           SUM(p1.denies) AS denies1,
+           SUM(p2.denies) AS denies2,
+           SUM(p1.last_hits) AS last_hits1,
+           SUM(p2.last_hits) AS last_hits2,
+           SUM(p1.net_worth) AS networth1,
+           SUM(p2.net_worth) AS networth2,
+           SUM(arrayMax(p1.stats.neutral_damage)) AS obj_damage1,
+           SUM(arrayMax(p2.stats.neutral_damage)) AS obj_damage2,
+           SUM(arrayMax(p1.stats.creep_kills)) AS creeps1,
+           SUM(arrayMax(p2.stats.creep_kills)) AS creeps2
     FROM match_player p1
              INNER JOIN match_player p2 USING (match_id)
     WHERE match_id IN matches
