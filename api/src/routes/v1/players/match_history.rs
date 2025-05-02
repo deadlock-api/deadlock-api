@@ -290,8 +290,8 @@ pub async fn match_history(
             &state,
             "match_history",
             &[
-                RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
-                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+                RateLimitQuota::ip_limit(200, Duration::from_secs(60)),
+                RateLimitQuota::global_limit(600, Duration::from_secs(60)),
             ],
         )
         .await?;
