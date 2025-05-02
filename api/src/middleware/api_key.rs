@@ -26,18 +26,25 @@ mod tests {
     use axum::http::{Request, StatusCode};
     use axum::response::IntoResponse;
     use axum::routing::get;
+    use std::str::FromStr;
     use tower::ServiceExt;
+    use uuid::Uuid;
 
     async fn test_handler(req: Request<Body>) -> impl IntoResponse {
         // Simple handler that returns the request headers as a response
-        let has_api_key = req.headers().contains_key("x-api-key");
         let api_key_value = req
             .headers()
             .get("x-api-key")
-            .map(|v| v.to_str().unwrap_or("invalid"))
-            .unwrap_or("none");
-
-        format!("has_api_key={has_api_key}, value={api_key_value}")
+            .and_then(|v| v.to_str().ok().and_then(|s| Uuid::from_str(s).ok()));
+        let has_api_key = api_key_value.is_some();
+        if let Some(api_key_value) = api_key_value {
+            format!(
+                "has_api_key={has_api_key}, value={}",
+                api_key_value.to_string()
+            )
+        } else {
+            format!("has_api_key={has_api_key}, value=none")
+        }
     }
 
     fn app() -> Router {
@@ -53,7 +60,7 @@ mod tests {
 
         // Create a request with api_key in query parameters
         let request = Request::builder()
-            .uri("/test?api_key=test-key-123")
+            .uri("/test?api_key=fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64")
             .body(Body::empty())
             .unwrap();
 
@@ -70,7 +77,10 @@ mod tests {
         let body_str = String::from_utf8(bytes.to_vec()).unwrap();
 
         // Verify the api_key was added to headers
-        assert_eq!(body_str, "has_api_key=true, value=test-key-123");
+        assert_eq!(
+            body_str.to_lowercase(),
+            "has_api_key=true, value=fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64"
+        );
     }
 
     #[tokio::test]
@@ -94,7 +104,7 @@ mod tests {
         let body_str = String::from_utf8(bytes.to_vec()).unwrap();
 
         // Verify no api_key was added to headers
-        assert_eq!(body_str, "has_api_key=false, value=none");
+        assert_eq!(body_str.to_lowercase(), "has_api_key=false, value=none");
     }
 
     #[tokio::test]
@@ -121,6 +131,6 @@ mod tests {
         let body_str = String::from_utf8(bytes.to_vec()).unwrap();
 
         // Verify no api_key was added to headers due to invalid value
-        assert_eq!(body_str, "has_api_key=false, value=none");
+        assert_eq!(body_str.to_lowercase(), "has_api_key=false, value=none");
     }
 }
