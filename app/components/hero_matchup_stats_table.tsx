@@ -142,7 +142,10 @@ export default function HeroMatchupStatsTable({
                 </div>
               </td>
               {stat === HeroMatchupStatsTableStat.SYNERGY && (
-                <td className="p-2">
+                <td
+                  className="p-2"
+                  title={`${synergy.wins.toLocaleString()} wins / ${synergy.matches_played.toLocaleString()} matches`}
+                >
                   <ProgressBarWithLabel
                     min={minSynergyWinrate}
                     max={maxSynergyWinrate}
@@ -153,7 +156,10 @@ export default function HeroMatchupStatsTable({
                 </td>
               )}
               {stat === HeroMatchupStatsTableStat.COUNTER && (
-                <td className="p-2">
+                <td
+                  className="p-2"
+                  title={`${counter.wins.toLocaleString()} wins / ${counter.matches_played.toLocaleString()} matches`}
+                >
                   <ProgressBarWithLabel
                     min={minCounterWinrate}
                     max={maxCounterWinrate}
