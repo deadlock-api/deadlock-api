@@ -1,3 +1,4 @@
+import { useNavigate } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import HeroImage from "~/components/hero_image";
@@ -18,6 +19,7 @@ export default function HeroStatsTable({
   hideIndex?: boolean;
   sortBy?: keyof APIHeroStats | "winrate";
 }) {
+  const navigate = useNavigate();
   const { data, isLoading } = useQuery<APIHeroStats[]>({
     queryKey: ["api-hero-stats"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-stats").then((res) => res.json()),
@@ -68,7 +70,8 @@ export default function HeroStatsTable({
           {limitedData?.map((row, index) => (
             <tr
               key={row.hero_id}
-              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
+              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
+              onClick={() => navigate(`/heroes?tab=hero-details&heroId=${row.hero_id}`)}
             >
               {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
               <td className="p-2 align-middle">

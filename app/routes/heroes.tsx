@@ -21,7 +21,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     const params = new URLSearchParams(location.search);
     setSearchParams(params);
 
-    const searchTab = params?.get("tab");
+    const searchTab = params?.get("tab") || initialTab || "general";
     if (searchTab) {
       setTab(searchTab);
     }
@@ -29,7 +29,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     const searchHeroIdString = params?.get("heroId");
     const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
     setHeroId(searchHeroId || 15);
-  }, [location.search]);
+  }, [location.search, initialTab]);
 
   const searchTab = searchParams?.get("tab");
   const [tab, setTab] = useState(searchTab || initialTab || "general");
