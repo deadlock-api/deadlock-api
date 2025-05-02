@@ -1,10 +1,12 @@
 use axum::http::HeaderValue;
 use axum::{extract::Request, middleware::Next, response::Response};
+use querystring::querify;
 
 pub async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
     let query_api_key = request.uri().query().and_then(|query| {
-        url::form_urlencoded::parse(query.as_bytes())
-            .find(|(key, _)| key == "api_key")
+        querify(query)
+            .into_iter()
+            .find(|(key, _)| *key == "api_key")
             .map(|(_, value)| value.to_string())
     });
     if let Some(api_key) = query_api_key {
