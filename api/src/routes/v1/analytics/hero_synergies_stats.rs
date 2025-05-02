@@ -41,10 +41,14 @@ pub struct HeroSynergyStatsQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
-    /// When `true`, only considers matchups where both `hero_id` and `enemy_hero_id` were assigned to the same lane (e.g., both Mid Lane). When `false`, considers all matchups regardless of assigned lane.
+    /// When `true`, only considers matchups where both `hero_id1` and `hero_id2` were assigned to the same lane (e.g., both Mid Lane). When `false`, considers all matchups regardless of assigned lane.
     #[serde(default = "default_true_option")]
     #[param(default = true)]
     pub same_lane_filter: Option<bool>,
+    /// When `true`, only considers matchups where both `hero_id` and `hero_id2` were on the same party. When `false`, considers all matchups regardless of party affiliation.
+    #[serde(default = "default_true_option")]
+    #[param(default = true)]
+    pub same_party_filter: Option<bool>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
@@ -136,6 +140,9 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
     let mut player_filters = vec![];
     if query.same_lane_filter.unwrap_or(true) {
         player_filters.push("p1.assigned_lane = p2.assigned_lane".to_string());
+    }
+    if query.same_party_filter.unwrap_or(true) {
+        player_filters.push("p1.party = p2.party AND p1.party > 0".to_string());
     }
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("p1.account_id = {account_id}"));
@@ -259,6 +266,7 @@ mod test {
         #[values(None, Some(10000))] min_match_id: Option<u64>,
         #[values(None, Some(1000000))] max_match_id: Option<u64>,
         #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+        #[values(None, Some(true), Some(false))] same_party_filter: Option<bool>,
         #[values(None, Some(18373975))] account_id: Option<u32>,
         #[values(None, Some(10))] min_matches: Option<u64>,
     ) {
@@ -272,6 +280,7 @@ mod test {
             min_match_id,
             max_match_id,
             same_lane_filter,
+            same_party_filter,
             account_id,
             min_matches,
         };
@@ -310,6 +319,13 @@ mod test {
                 assert!(query.contains("p1.assigned_lane = p2.assigned_lane"));
             } else {
                 assert!(!query.contains("p1.assigned_lane = p2.assigned_lane"));
+            }
+        }
+        if let Some(same_party_filter) = same_party_filter {
+            if same_party_filter {
+                assert!(query.contains("p1.party = p2.party AND p1.party > 0"));
+            } else {
+                assert!(!query.contains("p1.party = p2.party"));
             }
         }
         if let Some(min_matches) = min_matches {
