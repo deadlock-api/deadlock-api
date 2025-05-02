@@ -177,7 +177,7 @@ export default function Index() {
         </p>
         <div className="flex flex-wrap justify-around items-center gap-4 m-4">
           <a href="https://deadlock.blast.tv/" title="Blast.TV" target="_blank" rel="noreferrer" className="max-w-64">
-            <img loading="lazy" src="sponsors/blast.svg" alt="https://deadlock.blast.tv/" />
+            <img src="sponsors/blast.svg" alt="https://deadlock.blast.tv/" />
           </a>
         </div>
       </section>
