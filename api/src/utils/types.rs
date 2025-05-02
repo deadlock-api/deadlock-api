@@ -1,10 +1,8 @@
 use derive_more::Display;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use utoipa::ToSchema;
 
-#[derive(
-    Copy, Clone, Debug, Serialize, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash,
-)]
+#[derive(Copy, Clone, Debug, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum SortDirectionAsc {
     /// Sort in descending order.
@@ -16,9 +14,7 @@ pub enum SortDirectionAsc {
     Asc,
 }
 
-#[derive(
-    Copy, Clone, Debug, Serialize, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash,
-)]
+#[derive(Copy, Clone, Debug, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum SortDirectionDesc {
     /// Sort in descending order. (default)

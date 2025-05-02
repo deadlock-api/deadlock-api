@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct MateStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,

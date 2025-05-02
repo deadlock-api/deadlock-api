@@ -5,7 +5,7 @@ use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 pub enum ActiveMatchTeam {
     #[default]
@@ -25,7 +25,7 @@ impl From<i32> for ActiveMatchTeam {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 pub enum ActiveMatchMode {
     #[default]
@@ -54,7 +54,7 @@ impl From<i32> for ActiveMatchMode {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 pub enum ActiveMatchGameMode {
     #[default]
@@ -76,7 +76,7 @@ impl From<i32> for ActiveMatchGameMode {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 pub enum ActiveMatchRegionMode {
     #[default]
@@ -102,7 +102,7 @@ impl From<i32> for ActiveMatchRegionMode {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, ToSchema)]
 pub struct ActiveMatchPlayer {
     pub account_id: Option<u32>,
     pub team: Option<i32>,
@@ -123,7 +123,7 @@ impl From<MatchPlayer> for ActiveMatchPlayer {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct ActiveMatch {
     pub start_time: Option<u32>,

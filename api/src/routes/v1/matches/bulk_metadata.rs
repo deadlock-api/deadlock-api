@@ -10,7 +10,7 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::time::Duration;
 use strum_macros::IntoStaticStr;
 use tokio::io::{AsyncBufReadExt, Lines};
@@ -21,7 +21,7 @@ fn default_limit() -> u32 {
     1000
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default, IntoStaticStr)]
+#[derive(Debug, Clone, Deserialize, ToSchema, Default, IntoStaticStr)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum SortKey {
@@ -30,7 +30,7 @@ pub enum SortKey {
     StartTime,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, IntoParams)]
 pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.

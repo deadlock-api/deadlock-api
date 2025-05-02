@@ -2,12 +2,12 @@ use crate::config::Config;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use prost::Message;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use std::time::Duration;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct SteamProxyResponse {
     pub data: String,
     pub username: String,

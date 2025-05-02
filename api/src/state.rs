@@ -3,7 +3,7 @@ use crate::error::LoadAppStateError;
 use clap::{CommandFactory, FromArgMatches};
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
@@ -11,7 +11,7 @@ use std::fs::File;
 use std::time::Duration;
 use tracing::{debug, warn};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct FeatureFlags {
     pub routes: HashMap<String, bool>,
 }

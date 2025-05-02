@@ -1,7 +1,7 @@
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::types::SortDirectionDesc;
 use derive_more::Display;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::{Execute, QueryBuilder};
 use utoipa::{IntoParams, ToSchema};
 
@@ -9,7 +9,7 @@ fn default_limit() -> Option<u32> {
     100.into()
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Default, Display)]
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortBy {
     /// Sort by the number of weekly favorites.
@@ -33,7 +33,7 @@ pub enum BuildsSearchQuerySortBy {
     Version,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, IntoParams)]
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildsSearchQuery {

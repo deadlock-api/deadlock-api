@@ -20,7 +20,7 @@ fn default_min_matches() -> Option<u32> {
     10.into()
 }
 
-#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams)]
 pub struct PlayerScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]

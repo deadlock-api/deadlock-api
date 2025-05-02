@@ -18,7 +18,7 @@ fn default_min_matches() -> Option<u32> {
     2.into()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, IntoParams)]
 pub struct HeroCombStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]

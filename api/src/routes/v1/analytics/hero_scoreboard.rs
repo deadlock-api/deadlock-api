@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Serialize, Deserialize, IntoParams)]
+#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams)]
 pub struct HeroScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]

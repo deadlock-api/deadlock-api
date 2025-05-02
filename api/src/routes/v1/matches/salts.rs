@@ -32,7 +32,7 @@ pub struct SaltsQuery {
     pub needs_demo: bool,
 }
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 pub struct MatchSaltsResponse {
     pub match_id: u64,
     pub cluster_id: Option<u32>,

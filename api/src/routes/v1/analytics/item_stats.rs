@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct ItemStatsQuery {
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,

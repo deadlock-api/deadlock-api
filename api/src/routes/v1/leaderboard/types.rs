@@ -16,7 +16,7 @@ pub enum LeaderboardRegion {
     Oceania = 5,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct LeaderboardEntry {
     /// The account name of the player.
     pub account_name: Option<String>,
@@ -46,7 +46,7 @@ impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for Lea
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct Leaderboard {
     /// The leaderboard entries.

@@ -14,7 +14,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use itertools::Itertools;
 use prost::Message;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::time::Duration;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
@@ -22,7 +22,7 @@ use valveprotos::deadlock::{
     c_msg_citadel_profile_card,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct PlayerCardSlotStat {
     pub stat_id: Option<i32>,
     pub stat_score: Option<u32>,
@@ -37,7 +37,7 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct PlayerCardSlotHero {
     pub hero_id: Option<u32>,
     pub hero_kills: Option<u32>,
@@ -54,7 +54,7 @@ impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct PlayerCardSlot {
     pub slot_id: Option<u32>,
     pub hero: Option<PlayerCardSlotHero>,
@@ -71,7 +71,7 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct PlayerCard {
     pub account_id: Option<u32>,
     pub ranked_badge_level: Option<u32>,

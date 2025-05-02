@@ -12,7 +12,7 @@ use sqlx::{Execute, Pool, Postgres, QueryBuilder};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct BuildItemStatsQuery {
     /// Filter builds based on the hero ID.
     pub hero_id: Option<u32>,
@@ -24,7 +24,7 @@ pub struct BuildItemStatsQuery {
     pub max_last_updated_unix_timestamp: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, ToSchema, Eq, PartialEq, Hash)]
 pub struct BuildItemStats {
     pub item_id: i64,
     pub builds: i64,

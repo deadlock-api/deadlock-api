@@ -17,7 +17,7 @@ use cached::proc_macro::cached;
 use futures::future::join;
 use itertools::{Itertools, chain};
 use prost::Message;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, warn};
@@ -29,7 +29,7 @@ use valveprotos::deadlock::{
 
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 
-#[derive(Copy, Debug, Clone, Serialize, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct MatchHistoryQuery {
     /// Refetch the match history from Steam, even if it is already cached in ClickHouse.
     /// Only use this if you are sure that the data in ClickHouse is outdated.
