@@ -64,6 +64,38 @@ pub struct HeroCounterStats {
     pub wins: u64,
     /// The total number of matches played between `hero_id` and `enemy_hero_id` that meet the filter criteria.
     pub matches_played: u64,
+    /// The number of kills by `hero_id` when facing `enemy_hero_id`.
+    pub kills: u64,
+    /// The number of kills by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_kills: u64,
+    /// The number of deaths by `hero_id` when facing `enemy_hero_id`.
+    pub deaths: u64,
+    /// The number of deaths by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_deaths: u64,
+    /// The number of assists by `hero_id` when facing `enemy_hero_id`.
+    pub assists: u64,
+    /// The number of assists by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_assists: u64,
+    /// The number of denies by `hero_id` when facing `enemy_hero_id`.
+    pub denies: u64,
+    /// The number of denies by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_denies: u64,
+    /// The number of last hits by `hero_id` when facing `enemy_hero_id`.
+    pub last_hits: u64,
+    /// The number of last hits by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_last_hits: u64,
+    /// The net worth of `hero_id` when facing `enemy_hero_id`.
+    pub networth: u64,
+    /// The net worth of `enemy_hero_id` when facing `hero_id`.
+    pub enemy_networth: u64,
+    /// The amount of objective damage dealt by `hero_id` when facing `enemy_hero_id`.
+    pub obj_damage: u64,
+    /// The amount of objective damage dealt by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_obj_damage: u64,
+    /// The number of creeps killed by `hero_id` when facing `enemy_hero_id`.
+    pub creeps: u64,
+    /// The number of creeps killed by `enemy_hero_id` when facing `hero_id`.
+    pub enemy_creeps: u64,
 }
 
 fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
@@ -123,7 +155,23 @@ fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
     SELECT p1.hero_id  AS hero_id,
            p2.hero_id  AS enemy_hero_id,
            SUM(p1.won) AS wins,
-           COUNT()     AS matches_played
+           COUNT()     AS matches_played,
+           SUM(p1.kills) AS kills,
+           SUM(p2.kills) AS enemy_kills,
+           SUM(p1.deaths) AS deaths,
+           SUM(p2.deaths) AS enemy_deaths,
+           SUM(p1.assists) AS assists,
+           SUM(p2.assists) AS enemy_assists,
+           SUM(p1.denies) AS denies,
+           SUM(p2.denies) AS enemy_denies,
+           SUM(p1.last_hits) AS last_hits,
+           SUM(p2.last_hits) AS enemy_last_hits,
+           SUM(p1.net_worth) AS networth,
+           SUM(p2.net_worth) AS enemy_networth,
+           SUM(arrayMax(p1.stats.neutral_damage)) AS obj_damage,
+           SUM(arrayMax(p2.stats.neutral_damage)) AS enemy_obj_damage,
+           SUM(arrayMax(p1.stats.creep_kills)) AS creeps,
+           SUM(arrayMax(p2.stats.creep_kills)) AS enemy_creeps
     FROM match_player p1
              INNER JOIN match_player p2 USING (match_id)
     WHERE match_id IN matches
