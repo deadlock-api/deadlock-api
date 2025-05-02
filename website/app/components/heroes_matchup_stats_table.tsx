@@ -218,7 +218,10 @@ export default function HeroesMatchupStatsTable({
                   <HeroName heroId={heroId} />
                 </div>
               </td>
-              <td className="p-2 align-middle">
+              <td
+                className="p-2 align-middle"
+                title={`${heroBestSynergies[heroId]?.wins.toLocaleString()} wins / ${heroBestSynergies[heroId]?.matches_played.toLocaleString()} matches`}
+              >
                 <div className="flex flex-col gap-2">
                   <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
                     <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
@@ -232,7 +235,10 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="p-2 align-middle">
+              <td
+                className="p-2 align-middle"
+                title={`${heroWorstSynergies[heroId]?.wins.toLocaleString()} wins / ${heroWorstSynergies[heroId]?.matches_played.toLocaleString()} matches`}
+              >
                 <div className="flex flex-col gap-2">
                   <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
                     <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
@@ -246,7 +252,10 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="p-2 align-middle">
+              <td
+                className="p-2 align-middle"
+                title={`${heroBestAgainst[heroId]?.wins.toLocaleString()} wins / ${heroBestAgainst[heroId]?.matches_played.toLocaleString()} matches`}
+              >
                 <div className="flex flex-col gap-2">
                   <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
                     <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
@@ -260,7 +269,10 @@ export default function HeroesMatchupStatsTable({
                   </div>
                 </div>
               </td>
-              <td className="p-2 align-middle">
+              <td
+                className="p-2 align-middle"
+                title={`${heroWorstAgainst[heroId]?.wins.toLocaleString()} wins / ${heroWorstAgainst[heroId]?.matches_played.toLocaleString()} matches`}
+              >
                 <div className="flex flex-col gap-2">
                   <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
                     <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
