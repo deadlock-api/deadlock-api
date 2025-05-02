@@ -40,9 +40,9 @@ pub fn router() -> OpenApiRouter<AppState> {
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {
                     let method = request.method();
+                    let headers = request.headers();
 
-                    let api_key = request
-                        .headers()
+                    let api_key = headers
                         .get("X-API-Key")
                         .and_then(|v| v.to_str().ok())
                         .map(String::from)
@@ -54,7 +54,13 @@ pub fn router() -> OpenApiRouter<AppState> {
                     let mut query = querify(request.uri().query().unwrap_or_default());
                     query.retain(|d| d.0 != "api_key"); // remove api_key from query
 
-                    span!(Level::INFO, "request", %method, ?path, ?query, ?api_key)
+                    let ip = headers
+                        .get("CF-Connecting-IP")
+                        .or(headers.get("X-Real-IP"))
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("0.0.0.0");
+
+                    span!(Level::INFO, "request", %method, ?path, ?query, ?api_key, ?ip)
                 })
                 .on_response(trace::DefaultOnResponse::new().level(Level::INFO))
                 .on_failure(trace::DefaultOnFailure::new().level(Level::ERROR)),
