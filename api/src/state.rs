@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::error::LoadAppStateError;
-use clap::{CommandFactory, FromArgMatches};
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
 use serde::Deserialize;
@@ -30,8 +29,7 @@ pub struct AppState {
 
 impl AppState {
     pub async fn from_env() -> Result<AppState, LoadAppStateError> {
-        let config =
-            Config::from_arg_matches_mut(&mut Config::command().ignore_errors(true).get_matches())?;
+        let config: Config = envy::from_env()?;
 
         // Create an HTTP client
         debug!("Creating HTTP client");

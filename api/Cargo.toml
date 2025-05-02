@@ -7,8 +7,8 @@ edition = "2024"
 reqwest = { version = "0.12.15", features = ["json"] }
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-redis = { version = "0.30.0", features = ["tokio-comp"] }
-clap = { version = "4.5.37", features = ["env", "derive"] }
+redis = { version = "0.30.0", features = ["tokio-comp"], default-features = false }
+envy = "0.4.2"
 clickhouse = "0.13.2"
 sqlx = { version = "0.8.5", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.16.0", features = ["v4"] }
@@ -20,11 +20,11 @@ serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 serde_json = "1.0.140"
 derive_more = { version = "2.0.1", features = ["display", "from"] }
-object_store = { version = "0.12.0", features = ["aws"] }
+object_store = { version = "0.12.0", features = ["aws"], default-features = false }
 tower = "0.5.2"
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
-tower-http = { version = "0.6.2", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace"] }
+tower-http = { version = "0.6.2", features = ["compression-zstd", "compression-gzip", "cors", "decompression-zstd", "decompression-gzip", "normalize-path", "trace"] }
 tracing = "0.1.41"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 serde-xml-rs = "0.7.1"
@@ -32,7 +32,7 @@ axum-prometheus = "0.8.0"
 itertools = "0.14.0"
 futures = "0.3.31"
 snap = "1.1.1"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "6365c92e780fccbdb4aa2459010cb961d65db591", features = ["deadlock", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "da6ae6c5e8c9e818c22e2e8937e862dc230274b7", features = ["deadlock", "serde"] }
 prost = "0.13.5"
 base64 = "0.22.1"
 tryhard = "0.5.1"

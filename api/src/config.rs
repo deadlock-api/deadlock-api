@@ -1,90 +1,104 @@
-use clap::Parser;
+use serde::Deserialize;
 
-#[derive(Parser, Debug, Clone)]
+fn default_redis_url() -> String {
+    "redis://localhost:6379".to_string()
+}
+
+fn default_clickhouse_host() -> String {
+    "localhost".to_string()
+}
+
+fn default_clickhouse_http_port() -> u16 {
+    8123
+}
+
+fn default_clickhouse_native_port() -> u16 {
+    9000
+}
+
+fn default_clickhouse_username() -> String {
+    "default".to_string()
+}
+
+fn default_clickhouse_dbname() -> String {
+    "default".to_string()
+}
+
+fn default_postgres_host() -> String {
+    "localhost".to_string()
+}
+
+fn default_postgres_port() -> u16 {
+    5432
+}
+
+fn default_postgres_username() -> String {
+    "postgres".to_string()
+}
+
+fn default_postgres_dbname() -> String {
+    "postgres".to_string()
+}
+
+fn default_postgres_pool_size() -> u32 {
+    10
+}
+
+#[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     // ========================================
     // ===== General Application Settings =====
     // ========================================
-    #[clap(
-        long,
-        env,
-        default_value = "false",
-        help = "If set to true, only requests with an API key are allowed"
-    )]
+    #[serde(default)]
     pub emergency_mode: bool,
 
-    #[clap(long, env, help = "Steam API Key")]
     pub steam_api_key: String,
 
-    #[clap(long, env, help = "Deadlock API Internal API Key")]
     pub internal_api_key: String,
 
-    #[clap(long, env, help = "The Steam Proxy URL to use for Steam API requests")]
     pub steam_proxy_url: String,
 
-    #[clap(
-        long,
-        env,
-        help = "The Steam Proxy API key to use for Steam API requests"
-    )]
     pub steam_proxy_api_key: String,
 
     // ========================================
     // ===== Database Connection Settings =====
     // ========================================
-    #[clap(
-        long,
-        env,
-        default_value = "redis://localhost:6379",
-        help = "{redis|rediss}://[<username>][:<password>@]<hostname>[:port][/<db>]"
-    )]
+    #[serde(default = "default_redis_url")]
     pub redis_url: String,
 
-    #[clap(long, env)]
     pub s3_region: String,
-    #[clap(long, env)]
     pub s3_bucket: String,
-    #[clap(long, env)]
     pub s3_access_key_id: String,
-    #[clap(long, env)]
     pub s3_secret_access_key: String,
-    #[clap(long, env)]
     pub s3_endpoint: String,
 
-    #[clap(long, env)]
     pub s3_cache_region: String,
-    #[clap(long, env)]
     pub s3_cache_bucket: String,
-    #[clap(long, env)]
     pub s3_cache_access_key_id: String,
-    #[clap(long, env)]
     pub s3_cache_secret_access_key: String,
-    #[clap(long, env)]
     pub s3_cache_endpoint: String,
 
-    #[clap(long, env, default_value = "localhost")]
+    #[serde(default = "default_clickhouse_host")]
     pub clickhouse_host: String,
-    #[clap(long, env, default_value = "8123")]
+    #[serde(default = "default_clickhouse_http_port")]
     pub clickhouse_http_port: u16,
-    #[clap(long, env, default_value = "9000")]
+    #[serde(default = "default_clickhouse_native_port")]
     pub clickhouse_native_port: u16,
-    #[clap(long, env, default_value = "default")]
+    #[serde(default = "default_clickhouse_username")]
     pub clickhouse_username: String,
-    #[clap(long, env)]
     pub clickhouse_password: String,
-    #[clap(long, env, default_value = "default")]
+    #[serde(default = "default_clickhouse_dbname")]
     pub clickhouse_dbname: String,
 
-    #[clap(long, env, default_value = "localhost")]
+    #[serde(default = "default_postgres_host")]
     pub postgres_host: String,
-    #[clap(long, env, default_value = "5432")]
+    #[serde(default = "default_postgres_port")]
     pub postgres_port: u16,
-    #[clap(long, env, default_value = "postgres")]
+    #[serde(default = "default_postgres_username")]
     pub postgres_username: String,
-    #[clap(long, env)]
     pub postgres_password: String,
-    #[clap(long, env, default_value = "postgres")]
+    #[serde(default = "default_postgres_dbname")]
     pub postgres_dbname: String,
-    #[clap(long, env, default_value = "10")]
+    #[serde(default = "default_postgres_pool_size")]
     pub postgres_pool_size: u32,
 }
