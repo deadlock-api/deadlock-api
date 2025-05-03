@@ -5,6 +5,7 @@ import HeroImage from "~/components/hero_image";
 import HeroName from "~/components/hero_name";
 import { ProgressBarWithLabel } from "~/components/progress_bar";
 import type { APIHeroCounterStats } from "~/types/api_hero_counter_stats";
+import type { APIHeroStats } from "~/types/api_hero_stats";
 import type { APIHeroSynergyStats } from "~/types/api_hero_synergy_stats";
 
 export enum HeroMatchupStatsTableStat {
@@ -20,6 +21,12 @@ export default function HeroMatchupStatsTable({
   stat: HeroMatchupStatsTableStat;
 }) {
   const navigate = useNavigate();
+
+  const { data: heroData, isLoading: isLoadingHero } = useQuery<APIHeroStats[]>({
+    queryKey: ["api-hero-stats"],
+    queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-stats").then((res) => res.json()),
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+  });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats"],
@@ -39,13 +46,31 @@ export default function HeroMatchupStatsTable({
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const isLoading = useMemo(() => isLoadingSynergy || isLoadingCounter, [isLoadingSynergy, isLoadingCounter]);
+  const isLoading = useMemo(
+    () => isLoadingSynergy || isLoadingCounter || isLoadingHero,
+    [isLoadingSynergy, isLoadingCounter, isLoadingHero],
+  );
+
+  const heroStatsMap = useMemo(() => {
+    const map: Record<number, APIHeroStats> = {};
+    for (const hero of heroData || []) {
+      map[hero.hero_id] = hero;
+    }
+    return map;
+  }, [heroData]);
 
   const heroSynergies = useMemo(() => {
-    const synergies: APIHeroSynergyStats[] = [];
+    const synergies: (APIHeroSynergyStats & { rel_winrate: number })[] = [];
     for (const synergy of synergyData || []) {
       if (synergy.hero_id1 === heroId) {
-        synergies.push(synergy);
+        synergies.push({
+          ...synergy,
+          rel_winrate:
+            synergy.wins / synergy.matches_played -
+            (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
+              heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+              2,
+        });
       }
       if (synergy.hero_id2 === heroId) {
         synergies.push({
@@ -53,42 +78,52 @@ export default function HeroMatchupStatsTable({
           hero_id2: synergy.hero_id1,
           wins: synergy.wins,
           matches_played: synergy.matches_played,
+          rel_winrate:
+            synergy.wins / synergy.matches_played -
+            (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
+              heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+              2,
         });
       }
     }
-    synergies.sort((a, b) => b.wins / b.matches_played - a.wins / a.matches_played);
+    synergies.sort((a, b) => b.rel_winrate - a.rel_winrate);
     return synergies;
-  }, [heroId, synergyData]);
+  }, [heroId, synergyData, heroStatsMap]);
 
   const minSynergyWinrate = useMemo(() => {
     if (heroSynergies.length === 0) return 0;
-    return Math.min(...heroSynergies.map((synergy) => synergy.wins / synergy.matches_played));
+    return Math.min(...heroSynergies.map((synergy) => synergy.rel_winrate));
   }, [heroSynergies]);
 
   const maxSynergyWinrate = useMemo(() => {
     if (heroSynergies.length === 0) return 0;
-    return Math.max(...heroSynergies.map((synergy) => synergy.wins / synergy.matches_played));
+    return Math.max(...heroSynergies.map((synergy) => synergy.rel_winrate));
   }, [heroSynergies]);
 
   const heroCounters = useMemo(() => {
-    const counters: APIHeroCounterStats[] = [];
+    const counters: (APIHeroCounterStats & { rel_winrate: number })[] = [];
     for (const counter of counterData || []) {
       if (counter.hero_id === heroId) {
-        counters.push(counter);
+        counters.push({
+          ...counter,
+          rel_winrate:
+            counter.wins / counter.matches_played -
+            heroStatsMap[counter.hero_id].wins / heroStatsMap[counter.hero_id].matches,
+        });
       }
     }
     counters.sort((a, b) => b.wins / b.matches_played - a.wins / a.matches_played);
     return counters;
-  }, [heroId, counterData]);
+  }, [heroId, counterData, heroStatsMap]);
 
   const minCounterWinrate = useMemo(() => {
     if (heroCounters.length === 0) return 0;
-    return Math.min(...heroCounters.map((counter) => counter.wins / counter.matches_played));
+    return Math.min(...heroCounters.map((counter) => counter.rel_winrate));
   }, [heroCounters]);
 
   const maxCounterWinrate = useMemo(() => {
     if (heroCounters.length === 0) return 0;
-    return Math.max(...heroCounters.map((counter) => counter.wins / counter.matches_played));
+    return Math.max(...heroCounters.map((counter) => counter.rel_winrate));
   }, [heroCounters]);
 
   function zip<T, U>(a: T[], b: U[]): [T, U][] {
@@ -155,9 +190,9 @@ export default function HeroMatchupStatsTable({
                   <ProgressBarWithLabel
                     min={minSynergyWinrate}
                     max={maxSynergyWinrate}
-                    value={synergy.wins / synergy.matches_played}
+                    value={synergy.rel_winrate}
                     color={"#ff00ff"}
-                    label={`${(Math.round((synergy.wins / synergy.matches_played) * 100 * 100) / 100).toFixed(2)}% (${synergy.wins}/${synergy.matches_played})`}
+                    label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
                   />
                 </td>
               )}
@@ -169,9 +204,9 @@ export default function HeroMatchupStatsTable({
                   <ProgressBarWithLabel
                     min={minCounterWinrate}
                     max={maxCounterWinrate}
-                    value={counter.wins / counter.matches_played}
+                    value={counter.rel_winrate}
                     color={"#00ffff"}
-                    label={`${(Math.round((counter.wins / counter.matches_played) * 100 * 100) / 100).toFixed(2)}% (${counter.wins}/${counter.matches_played})`}
+                    label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
                   />
                 </td>
               )}
