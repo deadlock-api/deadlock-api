@@ -10,32 +10,39 @@ import type { APIHeroSynergyStats } from "~/types/api_hero_synergy_stats";
 
 export default function HeroesMatchupStatsTable({
   hideHeader,
+  minRank,
+  maxRank,
 }: {
   hideHeader?: boolean;
+  minRank?: number;
+  maxRank?: number;
 }) {
   const navigate = useNavigate();
 
   const { data: heroData, isLoading: isLoadingHero } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-stats").then((res) => res.json()),
+    queryKey: ["api-hero-stats", minRank, maxRank],
+    queryFn: () =>
+      fetch(
+        `https://api.deadlock-api.com/v1/analytics/hero-stats?min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
+      ).then((res) => res.json()),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
-    queryKey: ["api-hero-synergy-stats"],
+    queryKey: ["api-hero-synergy-stats", minRank, maxRank],
     queryFn: () =>
-      fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true").then((res) =>
-        res.json(),
-      ),
+      fetch(
+        `https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true&min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
+      ).then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
-    queryKey: ["api-hero-counter-stats"],
+    queryKey: ["api-hero-counter-stats", minRank, maxRank],
     queryFn: () =>
-      fetch("https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true").then((res) =>
-        res.json(),
-      ),
+      fetch(
+        `https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true&min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
+      ).then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
@@ -47,6 +54,7 @@ export default function HeroesMatchupStatsTable({
   const heroStatsMap = useMemo(() => {
     const map: Record<number, APIHeroStats> = {};
     for (const hero of heroData || []) {
+      if (!hero?.matches || !hero?.wins) continue;
       map[hero.hero_id] = hero;
     }
     return map;
@@ -63,25 +71,27 @@ export default function HeroesMatchupStatsTable({
 
     const synergyMap: Record<number, (APIHeroSynergyStats & { rel_winrate: number })[]> = {};
     for (const synergy of synergyData || []) {
+      if (!synergy?.matches_played || !synergy?.wins) continue;
+      if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
       if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
       if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
       synergyMap[synergy.hero_id1].push({
         ...synergy,
         rel_winrate:
-          synergy.wins / synergy.matches_played -
-          (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
-            heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+          synergy?.wins / synergy?.matches_played -
+          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
+            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
             2,
       });
       synergyMap[synergy.hero_id2].push({
         hero_id1: synergy.hero_id2,
         hero_id2: synergy.hero_id1,
-        wins: synergy.wins,
+        wins: synergy?.wins,
         matches_played: synergy.matches_played,
         rel_winrate:
-          synergy.wins / synergy.matches_played -
-          (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
-            heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+          synergy?.wins / synergy?.matches_played -
+          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
+            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
             2,
       });
     }
@@ -117,25 +127,27 @@ export default function HeroesMatchupStatsTable({
 
     const synergyMap: Record<number, (APIHeroSynergyStats & { rel_winrate: number })[]> = {};
     for (const synergy of synergyData || []) {
+      if (!synergy?.matches_played || !synergy?.wins) continue;
+      if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
       if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
       if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
       synergyMap[synergy.hero_id1].push({
         ...synergy,
         rel_winrate:
-          synergy.wins / synergy.matches_played -
-          (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
-            heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+          synergy?.wins / synergy.matches_played -
+          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
+            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
             2,
       });
       synergyMap[synergy.hero_id2].push({
         hero_id1: synergy.hero_id2,
         hero_id2: synergy.hero_id1,
-        wins: synergy.wins,
+        wins: synergy?.wins,
         matches_played: synergy.matches_played,
         rel_winrate:
-          synergy.wins / synergy.matches_played -
-          (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
-            heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+          synergy?.wins / synergy.matches_played -
+          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
+            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
             2,
       });
     }
@@ -171,12 +183,14 @@ export default function HeroesMatchupStatsTable({
 
     const counterMap: Record<number, (APIHeroCounterStats & { rel_winrate: number })[]> = {};
     for (const counter of counterData || []) {
+      if (!counter?.matches_played || !counter?.wins) continue;
+      if (!heroStatsMap[counter.hero_id]?.matches || !heroStatsMap[counter.hero_id]?.wins) continue;
       if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
       counterMap[counter.hero_id].push({
         ...counter,
         rel_winrate:
-          counter.wins / counter.matches_played -
-          heroStatsMap[counter.hero_id].wins / heroStatsMap[counter.hero_id].matches,
+          counter?.wins / counter?.matches_played -
+          heroStatsMap[counter.hero_id]?.wins / heroStatsMap[counter.hero_id]?.matches,
       });
     }
     const bestCounters: Record<number, APIHeroCounterStats & { rel_winrate: number }> = {};
@@ -211,12 +225,14 @@ export default function HeroesMatchupStatsTable({
 
     const counterMap: Record<number, (APIHeroCounterStats & { rel_winrate: number })[]> = {};
     for (const counter of counterData || []) {
+      if (!counter?.matches_played || !counter?.wins) continue;
+      if (!heroStatsMap[counter.hero_id]?.matches) continue;
       if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
       counterMap[counter.hero_id].push({
         ...counter,
         rel_winrate:
-          counter.wins / counter.matches_played -
-          heroStatsMap[counter.hero_id].wins / heroStatsMap[counter.hero_id].matches,
+          counter?.wins / counter?.matches_played -
+          heroStatsMap[counter.hero_id]?.wins / heroStatsMap[counter.hero_id]?.matches,
       });
     }
     const worstCounters: Record<number, APIHeroCounterStats & { rel_winrate: number }> = {};
