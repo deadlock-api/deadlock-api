@@ -267,10 +267,18 @@ export default function HeroesMatchupStatsTable({
             <tr className="bg-gray-800 text-center">
               <th className="p-2">#</th>
               <th className="p-2 text-left">Hero</th>
-              <th className="p-2 text-left">Best Combination</th>
-              <th className="p-2 text-left">Worst Combination</th>
-              <th className="p-2 text-left">Best Against</th>
-              <th className="p-2 text-left">Worst Against</th>
+              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
+                Best Combination
+              </th>
+              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
+                Worst Combination
+              </th>
+              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
+                Best Against
+              </th>
+              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
+                Worst Against
+              </th>
             </tr>
           </thead>
         )}
