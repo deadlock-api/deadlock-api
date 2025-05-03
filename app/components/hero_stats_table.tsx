@@ -12,17 +12,24 @@ export default function HeroStatsTable({
   hideHeader,
   hideIndex,
   sortBy,
+  minRank,
+  maxRank,
 }: {
   columns: string[];
   limit?: number;
   hideHeader?: boolean;
   hideIndex?: boolean;
   sortBy?: keyof APIHeroStats | "winrate";
+  minRank?: number;
+  maxRank?: number;
 }) {
   const navigate = useNavigate();
   const { data, isLoading } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-stats").then((res) => res.json()),
+    queryKey: ["api-hero-stats", minRank, maxRank],
+    queryFn: () =>
+      fetch(
+        `https://api.deadlock-api.com/v1/analytics/hero-stats?min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
+      ).then((res) => res.json()),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 

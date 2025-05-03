@@ -6,6 +6,7 @@ import HeroName from "~/components/hero_name";
 import HeroSelector from "~/components/hero_selector";
 import HeroStatsTable from "~/components/hero_stats_table";
 import HeroesMatchupStatsTable from "~/components/heroes_matchup_stats_table";
+import RankSelector from "~/components/rank_selector";
 
 export const meta: MetaFunction = () => {
   return [
@@ -15,6 +16,9 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "general" }) {
+  const [minRank, setMinRank] = useState<number>(0);
+  const [maxRank, setMaxRank] = useState<number>(11);
+
   const location = useLocation();
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
   useEffect(() => {
@@ -52,6 +56,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
       <p className="mb-4 text-gray-300 text-center text-sm italic">(Last 30 days)</p>
 
+      <div className="flex gap-4 justify-center text-center p-4 w-fit mx-auto rounded-lg bg-gray-100 dark:bg-gray-800">
+        <RankSelector onRankSelected={setMinRank} selectedRank={minRank} label="Minimum Rank" />
+        <RankSelector onRankSelected={setMaxRank} selectedRank={maxRank} label="Maximum Rank" />
+      </div>
       <div className="text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700 mb-4">
         <ul className="flex flex-wrap -mb-px">
           <li className="me-2">
@@ -101,12 +109,17 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
 
       {tab === "general" && (
         <div className="flex flex-col gap-4">
-          <HeroStatsTable columns={["winRate", "pickRate", "KDA"]} sortBy="winrate" />
+          <HeroStatsTable
+            columns={["winRate", "pickRate", "KDA"]}
+            sortBy="winrate"
+            minRank={minRank}
+            maxRank={maxRank}
+          />
         </div>
       )}
       {tab === "matchups" && (
         <div className="flex flex-col gap-4">
-          <HeroesMatchupStatsTable />
+          <HeroesMatchupStatsTable minRank={minRank} maxRank={maxRank} />
         </div>
       )}
       {tab === "hero-details" && (
@@ -127,8 +140,18 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               }}
             />
             <div className="grid grid-cols-2 gap-4">
-              <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.SYNERGY} />
-              <HeroMatchupStatsTable heroId={heroId} stat={HeroMatchupStatsTableStat.COUNTER} />
+              <HeroMatchupStatsTable
+                heroId={heroId}
+                stat={HeroMatchupStatsTableStat.SYNERGY}
+                minRank={minRank}
+                maxRank={maxRank}
+              />
+              <HeroMatchupStatsTable
+                heroId={heroId}
+                stat={HeroMatchupStatsTableStat.COUNTER}
+                minRank={minRank}
+                maxRank={maxRank}
+              />
             </div>
           </div>
         </>
