@@ -16,13 +16,19 @@ export default function HeroesMatchupStatsTable({
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats").then((res) => res.json()),
+    queryFn: () =>
+      fetch("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true").then((res) =>
+        res.json(),
+      ),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
     queryKey: ["api-hero-counter-stats"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/hero-counter-stats").then((res) => res.json()),
+    queryFn: () =>
+      fetch("https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true").then((res) =>
+        res.json(),
+      ),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
