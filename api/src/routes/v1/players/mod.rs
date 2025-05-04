@@ -25,6 +25,7 @@ pub fn router() -> OpenApiRouter<AppState> {
             OpenApiRouter::new()
                 .routes(routes!(match_history::match_history))
                 .routes(routes!(mmr_history::mmr_history))
+                .routes(routes!(mmr_history::hero_mmr_history))
                 .routes(routes!(card::card_raw))
                 .routes(routes!(card::card))
                 .layer(CacheControlMiddleware::new(Duration::from_secs(5 * 60))),
