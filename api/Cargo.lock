@@ -2249,9 +2249,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.5.11"
+version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2f103c6d277498fbceb16e84d317e2a400f160f46904d5f5410848c829511a3"
+checksum = "928fca9cf2aa042393a8325b9ead81d2f0df4cb12e1e24cef072922ccd99c5af"
 dependencies = [
  "bitflags",
 ]
@@ -2607,9 +2607,9 @@ dependencies = [
 
 [[package]]
 name = "serde-xml-rs"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6560602b989198ebb381e3192c86970116b3b2e13b8b8a39d6d0850e40b6b81"
+checksum = "176b7ff880ab6ead7a020e773e9c096467fe347615a3e22ac29300cbdef67a5d"
 dependencies = [
  "log",
  "serde",

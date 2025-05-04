@@ -33,27 +33,29 @@ pub struct Patch {
     pub guid: PatchGuid,
     pub author: String,
     pub category: PatchCategory,
-    #[serde(rename(deserialize = "creator"))]
+    #[serde(rename(deserialize = "dc:creator"))]
     pub dc_creator: String,
-    #[serde(rename(deserialize = "encoded"))]
+    #[serde(rename(deserialize = "content:encoded"))]
     pub content_encoded: String,
-    #[serde(rename(deserialize = "comments"))]
+    #[serde(rename(deserialize = "slash:comments"))]
     pub slash_comments: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct PatchGuid {
+    #[serde(rename(deserialize = "@isPermaLink"))]
     pub is_perma_link: bool,
-    #[serde(rename(deserialize = "$value"))]
+    #[serde(rename(deserialize = "#text"))]
     pub text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct PatchCategory {
+    #[serde(rename(deserialize = "@domain"))]
     pub domain: String,
-    #[serde(rename(deserialize = "$value"))]
+    #[serde(rename(deserialize = "#text"))]
     pub text: String,
 }
 
