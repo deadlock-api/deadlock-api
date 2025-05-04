@@ -1,7 +1,7 @@
-import type { MetaFunction } from "@remix-run/node";
-import { Link } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Link } from "react-router";
+import type { MetaFunction } from "react-router";
 import HeroStatsTable from "~/components/hero_stats_table";
 import ItemStatsTable from "~/components/item_stats_table";
 import type { APIInfo } from "~/types/api_info";

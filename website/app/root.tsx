@@ -1,5 +1,5 @@
-import type { LinksFunction } from "@remix-run/node";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "@remix-run/react";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import type { LinksFunction } from "react-router";
 
 import "./tailwind.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

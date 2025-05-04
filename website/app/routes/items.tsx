@@ -1,4 +1,4 @@
-import type { MetaFunction } from "@remix-run/node";
+import type { MetaFunction } from "react-router";
 import ItemStatsTable from "~/components/item_stats_table";
 
 export const meta: MetaFunction = () => {
