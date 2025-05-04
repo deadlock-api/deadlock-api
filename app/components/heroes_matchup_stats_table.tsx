@@ -1,6 +1,6 @@
-import { useNavigate } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useNavigate } from "react-router";
 import HeroImage from "~/components/hero_image";
 import HeroName from "~/components/hero_name";
 import { ProgressBarWithLabel } from "~/components/progress_bar";
@@ -12,37 +12,59 @@ export default function HeroesMatchupStatsTable({
   hideHeader,
   minRank,
   maxRank,
+  minDate,
+  maxDate,
 }: {
   hideHeader?: boolean;
   minRank?: number;
   maxRank?: number;
+  minDate?: Date;
+  maxDate?: Date;
 }) {
   const navigate = useNavigate();
 
+  const minDateTimestamp = useMemo(() => (minDate ? Math.floor(minDate.getTime() / 1000) : null), [minDate]);
+  const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
+
   const { data: heroData, isLoading: isLoadingHero } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats", minRank, maxRank],
-    queryFn: () =>
-      fetch(
-        `https://api.deadlock-api.com/v1/analytics/hero-stats?min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
-      ).then((res) => res.json()),
+    queryKey: ["api-hero-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+    queryFn: async () => {
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
+      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
+      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
+      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      const res = await fetch(url);
+      return await res.json();
+    },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
-    queryKey: ["api-hero-synergy-stats", minRank, maxRank],
-    queryFn: () =>
-      fetch(
-        `https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true&min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
-      ).then((res) => res.json()),
+    queryKey: ["api-hero-synergy-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+    queryFn: async () => {
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true");
+      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
+      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
+      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      const res = await fetch(url);
+      return await res.json();
+    },
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
-    queryKey: ["api-hero-counter-stats", minRank, maxRank],
-    queryFn: () =>
-      fetch(
-        `https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true&min_average_badge=${(minRank || 0) * 10}&max_average_badge=${(maxRank || 11) * 10 + 6}`,
-      ).then((res) => res.json()),
+    queryKey: ["api-hero-counter-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+    queryFn: async () => {
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true");
+      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
+      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
+      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      const res = await fetch(url);
+      return await res.json();
+    },
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 

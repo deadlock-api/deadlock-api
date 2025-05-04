@@ -1,12 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
-
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
   }
+}
+
+.react-datepicker-wrapper input {
+  text-align: center;
+  padding: 4px 0;
+  max-width: 140px;
 }
