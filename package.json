@@ -12,9 +12,12 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@base-ui-components/react": "1.0.0-alpha.8",
+    "@mui/base": "5.0.0-beta.70",
     "@react-router/fs-routes": "^7.5.3",
     "@react-router/node": "^7.5.3",
     "@tanstack/react-query": "^5.75.2",
+    "clsx": "^2.1.1",
     "isbot": "^5.1.27",
     "react": "^19.1.0",
     "react-datepicker": "^8.3.0",

@@ -10,14 +10,14 @@ import type { APIHeroSynergyStats } from "~/types/api_hero_synergy_stats";
 
 export default function HeroesMatchupStatsTable({
   hideHeader,
-  minRank,
-  maxRank,
+  minRankId,
+  maxRankId,
   minDate,
   maxDate,
 }: {
   hideHeader?: boolean;
-  minRank?: number;
-  maxRank?: number;
+  minRankId?: number;
+  maxRankId?: number;
   minDate?: Date;
   maxDate?: Date;
 }) {
@@ -27,11 +27,11 @@ export default function HeroesMatchupStatsTable({
   const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHero } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
-      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
-      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
+      url.searchParams.set("max_average_badge", (maxRankId ?? 115).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       const res = await fetch(url);
@@ -41,11 +41,11 @@ export default function HeroesMatchupStatsTable({
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
-    queryKey: ["api-hero-synergy-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-synergy-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true");
-      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
-      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
+      url.searchParams.set("max_average_badge", (maxRankId ?? 115).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       const res = await fetch(url);
@@ -55,11 +55,11 @@ export default function HeroesMatchupStatsTable({
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
-    queryKey: ["api-hero-counter-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-counter-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true");
-      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
-      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
+      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       const res = await fetch(url);
