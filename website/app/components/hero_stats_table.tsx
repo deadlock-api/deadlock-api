@@ -12,8 +12,8 @@ export default function HeroStatsTable({
   hideHeader,
   hideIndex,
   sortBy,
-  minRank,
-  maxRank,
+  minRankId,
+  maxRankId,
   minDate,
   maxDate,
 }: {
@@ -22,8 +22,8 @@ export default function HeroStatsTable({
   hideHeader?: boolean;
   hideIndex?: boolean;
   sortBy?: keyof APIHeroStats | "winrate";
-  minRank?: number;
-  maxRank?: number;
+  minRankId?: number;
+  maxRankId?: number;
   minDate?: Date;
   maxDate?: Date;
 }) {
@@ -32,12 +32,13 @@ export default function HeroStatsTable({
   const minDateTimestamp = useMemo(() => (minDate ? Math.floor(minDate.getTime() / 1000) : null), [minDate]);
   const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
 
-  const { data, isLoading } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats", minRank, maxRank, minDateTimestamp, maxDateTimestamp],
+  const { data: heroData, isLoading } = useQuery<APIHeroStats[]>({
+    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
-      url.searchParams.set("min_average_badge", ((minRank || 0) * 10).toString());
-      url.searchParams.set("max_average_badge", ((maxRank || 11) * 10 + 6).toString());
+      // Use rank IDs directly, defaulting to 0 and 115
+      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
+      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       const res = await fetch(url);
@@ -46,21 +47,21 @@ export default function HeroStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
-  const minWinrate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const maxWinrate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
-  const maxMatches = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
-  const sumMatches = useMemo(() => data?.reduce((acc, row) => acc + row.matches, 0) || 0, [data]);
+  const minWinrate = useMemo(() => Math.min(...(heroData || []).map((item) => item.wins / item.matches)), [heroData]);
+  const maxWinrate = useMemo(() => Math.max(...(heroData || []).map((item) => item.wins / item.matches)), [heroData]);
+  const minMatches = useMemo(() => Math.min(...(heroData || []).map((item) => item.matches)), [heroData]);
+  const maxMatches = useMemo(() => Math.max(...(heroData || []).map((item) => item.matches)), [heroData]);
+  const sumMatches = useMemo(() => heroData?.reduce((acc, row) => acc + row.matches, 0) || 0, [heroData]);
   const sortedData = useMemo(
     () =>
       sortBy
-        ? [...(data || [])].sort((a, b) => {
+        ? [...(heroData || [])].sort((a, b) => {
             const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
             const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
             return b_score - a_score;
           })
-        : data,
-    [data, sortBy],
+        : heroData,
+    [heroData, sortBy],
   );
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
@@ -83,6 +84,7 @@ export default function HeroStatsTable({
               {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
               {columns.includes("pickRate") && <th className="p-2">Pick Rate</th>}
               {columns.includes("KDA") && <th className="p-2">Kills/Deaths/Assists</th>}
+              {columns.includes("totalMatches") && <th className="p-2">Total Matches</th>}
             </tr>
           </thead>
         )}
@@ -143,6 +145,7 @@ export default function HeroStatsTable({
                   </span>
                 </td>
               )}
+              {columns.includes("totalMatches") && <td className="p-2 align-middle">{row.matches.toLocaleString()}</td>}
             </tr>
           ))}
         </tbody>

@@ -18,8 +18,8 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "general" }) {
-  const [minRank, setMinRank] = useState<number>(0);
-  const [maxRank, setMaxRank] = useState<number>(11);
+  const [minRankId, setMinRankId] = useState<number>(0);
+  const [maxRankId, setMaxRankId] = useState<number>(116);
 
   const initialStartDate = new Date();
   initialStartDate.setDate(initialStartDate.getDate() - 30);
@@ -69,8 +69,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       <p className="mb-4 text-gray-300 text-center text-sm italic">(Last 30 days)</p>
 
       <div className="flex gap-4 justify-center items-center text-center p-4 mb-4 w-fit mx-auto rounded-lg bg-gray-100 dark:bg-gray-800">
-        <RankSelector onRankSelected={setMinRank} selectedRank={minRank} label="Minimum Rank" />
-        <RankSelector onRankSelected={setMaxRank} selectedRank={maxRank} label="Maximum Rank" />
+        <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
+        <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
 
         <hr className="bg-white h-12 w-0.25" />
 
@@ -145,10 +145,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       {tab === "general" && (
         <div className="flex flex-col gap-4">
           <HeroStatsTable
-            columns={["winRate", "pickRate", "KDA"]}
+            columns={["winRate", "pickRate", "KDA", "totalMatches"]}
             sortBy="winrate"
-            minRank={minRank}
-            maxRank={maxRank}
+            minRankId={minRankId}
+            maxRankId={maxRankId}
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
           />
@@ -157,8 +157,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       {tab === "matchups" && (
         <div className="flex flex-col gap-4">
           <HeroesMatchupStatsTable
-            minRank={minRank}
-            maxRank={maxRank}
+            minRankId={minRankId}
+            maxRankId={maxRankId}
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
           />
@@ -185,16 +185,16 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               <HeroMatchupStatsTable
                 heroId={heroId}
                 stat={HeroMatchupStatsTableStat.SYNERGY}
-                minRank={minRank}
-                maxRank={maxRank}
+                minRankId={minRankId}
+                maxRankId={maxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
               />
               <HeroMatchupStatsTable
                 heroId={heroId}
                 stat={HeroMatchupStatsTableStat.COUNTER}
-                minRank={minRank}
-                maxRank={maxRank}
+                minRankId={minRankId}
+                maxRankId={maxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
               />
