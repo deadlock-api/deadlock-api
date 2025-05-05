@@ -136,7 +136,7 @@ export default function RankSelector({
         value={selectedRank ?? undefined} // Use undefined for uncontrolled without value?
         onValueChange={handleSelect}
       >
-        <Select.Trigger className="flex h-10 min-w-36 items-center justify-between gap-3 rounded-md border border-gray-200 dark:border-gray-600 pr-3 pl-3.5 text-base text-gray-900 dark:text-gray-100 select-none hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 active:bg-gray-100 dark:active:bg-gray-700 data-[popup-open]:bg-gray-100 dark:data-[popup-open]:bg-gray-700">
+        <Select.Trigger className="flex h-10 min-w-42 items-center justify-between gap-3 rounded-md border border-gray-200 dark:border-gray-600 pr-3 pl-3.5 text-base text-gray-900 dark:text-gray-100 select-none hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 active:bg-gray-100 dark:active:bg-gray-700 data-[popup-open]:bg-gray-100 dark:data-[popup-open]:bg-gray-700">
           <Select.Value placeholder="Select Rank...">
             {(label, value) => {
               const currentSelectedDetails = selectOptions.find((opt) => opt.value === value);
