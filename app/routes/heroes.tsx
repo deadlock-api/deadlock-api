@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
-import { useLocation } from "react-router";
 import type { MetaFunction } from "react-router";
+import { useLocation } from "react-router";
 import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/hero_matchup_stats_table";
 import HeroName from "~/components/hero_name";
 import HeroSelector from "~/components/hero_selector";
@@ -199,6 +199,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             <HeroSelector
               selectedHero={heroId}
               onHeroSelected={(selectedHeroId) => {
+                if (!selectedHeroId) return;
                 setHeroId(selectedHeroId);
                 if (typeof window !== "undefined") {
                   const url = new URL(window.location.href);
