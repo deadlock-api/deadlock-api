@@ -11,6 +11,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
+fn default_min_matches() -> Option<u32> {
+    10.into()
+}
+
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub struct ItemStatsQuery {
     /// Filter matches based on the hero ID.
@@ -37,6 +41,10 @@ pub struct ItemStatsQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
+    /// The minimum number of matches played for an item to be included in the response.
+    #[serde(default = "default_min_matches")]
+    #[param(minimum = 1, default = 2)]
+    pub min_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
@@ -98,6 +106,10 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
+    let min_matches = query
+        .min_matches
+        .or(default_min_matches())
+        .unwrap_or_default();
     format!(
         r#"
     WITH matches AS (SELECT match_id
@@ -117,6 +129,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     FROM players
         ARRAY JOIN items as item_id
     GROUP BY item_id
+    HAVING matches >= {min_matches}
     ORDER BY item_id
     "#
     )
@@ -186,6 +199,7 @@ mod test {
         #[values(None, Some(10000))] min_match_id: Option<u64>,
         #[values(None, Some(1000000))] max_match_id: Option<u64>,
         #[values(None, Some(18373975))] account_id: Option<u32>,
+        #[values(None, Some(10))] min_matches: Option<u32>,
     ) {
         let query = ItemStatsQuery {
             hero_id,
@@ -198,6 +212,7 @@ mod test {
             min_match_id,
             max_match_id,
             account_id,
+            min_matches,
         };
         let query = build_item_stats_query(&query);
 
@@ -231,6 +246,9 @@ mod test {
         }
         if let Some(account_id) = account_id {
             assert!(query.contains(&format!("account_id = {account_id}")));
+        }
+        if let Some(min_matches) = min_matches {
+            assert!(query.contains(&format!("matches >= {min_matches}")));
         }
     }
 }
