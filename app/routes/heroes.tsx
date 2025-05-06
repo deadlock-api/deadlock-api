@@ -9,6 +9,7 @@ import HeroStatsTable from "~/components/hero_stats_table";
 import HeroesMatchupStatsTable from "~/components/heroes_matchup_stats_table";
 import RankSelector from "~/components/rank_selector";
 import "react-datepicker/dist/react-datepicker.css";
+import HeroCombStatsTable from "~/components/hero_combs_stats_table";
 
 export const meta: MetaFunction = () => {
   return [
@@ -128,6 +129,20 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           <li className="me-2">
             <button
               type="button"
+              onClick={() => handleTabChange("hero-combs")}
+              aria-current={tab === "hero-combs" ? "page" : undefined}
+              className={
+                tab === "hero-combs"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+              }
+            >
+              Hero Combinations
+            </button>
+          </li>
+          <li className="me-2">
+            <button
+              type="button"
               onClick={() => handleTabChange("hero-details")}
               aria-current={tab === "hero-details" ? "page" : undefined}
               className={
@@ -157,6 +172,17 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       {tab === "matchups" && (
         <div className="flex flex-col gap-4">
           <HeroesMatchupStatsTable
+            minRankId={minRankId}
+            maxRankId={maxRankId}
+            minDate={startDate || undefined}
+            maxDate={endDate || undefined}
+          />
+        </div>
+      )}
+      {tab === "hero-combs" && (
+        <div className="flex flex-col gap-4">
+          <HeroCombStatsTable
+            columns={["winRate", "pickRate", "totalMatches"]}
             minRankId={minRankId}
             maxRankId={maxRankId}
             minDate={startDate || undefined}
