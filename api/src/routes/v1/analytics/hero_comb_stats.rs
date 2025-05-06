@@ -5,17 +5,25 @@ use crate::utils::parse::{
 };
 use axum::Json;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::ops::AddAssign;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u32> {
-    2.into()
+    100.into()
+}
+
+fn default_comb_size() -> Option<u8> {
+    6.into()
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
@@ -55,6 +63,10 @@ pub struct HeroCombStatsQuery {
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 2)]
     pub min_matches: Option<u32>,
+    /// The combination size to return.
+    #[serde(default = "default_comb_size")]
+    #[param(minimum = 2, maximum = 6, default = 6)]
+    pub comb_size: Option<u8>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -63,6 +75,14 @@ pub struct HeroCombStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
+}
+
+impl AddAssign for HeroCombStats {
+    fn add_assign(&mut self, rhs: Self) {
+        self.wins += rhs.wins;
+        self.losses += rhs.losses;
+        self.matches += rhs.matches;
+    }
 }
 
 fn build_comb_hero_query(query: &HeroCombStatsQuery) -> String {
@@ -159,7 +179,7 @@ FROM hero_combinations
 WHERE true {} {}
 GROUP BY hero_ids
 HAVING matches >= {}
-ORDER BY matches DESC
+ORDER BY wins / greatest(1, matches) DESC
     "#,
         info_filters,
         player_filters,
@@ -183,14 +203,44 @@ pub async fn get_comb_stats(
     ch_client: &clickhouse::Client,
     query: HeroCombStatsQuery,
 ) -> APIResult<Vec<HeroCombStats>> {
-    let query = build_comb_hero_query(&query);
+    let ch_query = build_comb_hero_query(&query);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero comb stats: {}", e);
-        APIError::InternalError {
-            message: format!("Failed to fetch hero comb stats: {e}"),
+    let comb_stats: Vec<HeroCombStats> =
+        ch_client.query(&ch_query).fetch_all().await.map_err(|e| {
+            warn!("Failed to fetch hero comb stats: {}", e);
+            APIError::InternalError {
+                message: format!("Failed to fetch hero comb stats: {e}"),
+            }
+        })?;
+    let comb_size = match query.comb_size {
+        Some(6) => return Ok(comb_stats),
+        Some(x) if !(2..=6).contains(&x) => {
+            return Err(APIError::StatusMsg {
+                status: StatusCode::BAD_REQUEST,
+                message: "Combination size must be between 2 and 6".to_string(),
+            });
         }
-    })
+        Some(x) => x,
+        None => return Ok(comb_stats),
+    };
+    let mut comb_stats_agg = HashMap::new();
+    for comb_stat in comb_stats.iter() {
+        for comb_hero_ids in comb_stat.hero_ids.iter().combinations(comb_size as usize) {
+            *comb_stats_agg
+                .entry(comb_hero_ids.to_vec())
+                .or_insert(HeroCombStats {
+                    hero_ids: comb_hero_ids.into_iter().cloned().collect_vec(),
+                    wins: 0,
+                    losses: 0,
+                    matches: 0,
+                }) += comb_stat.clone();
+        }
+    }
+    Ok(comb_stats_agg
+        .into_values()
+        .sorted_by_key(|c| c.wins / c.matches)
+        .rev()
+        .collect())
 }
 
 #[utoipa::path(
@@ -251,6 +301,7 @@ mod test {
             include_hero_ids,
             exclude_hero_ids,
             min_matches,
+            comb_size: None,
         };
         let query = build_comb_hero_query(&comb_query);
 
