@@ -184,10 +184,14 @@ ORDER BY wins / greatest(1, matches) DESC
         info_filters,
         player_filters,
         hero_filters,
-        query
-            .min_matches
-            .or(default_min_matches())
-            .unwrap_or_default()
+        (query.comb_size.or(default_comb_size()).unwrap_or_default() == 6)
+            .then_some(
+                query
+                    .min_matches
+                    .or(default_min_matches())
+                    .unwrap_or_default()
+            )
+            .unwrap_or_default(),
     )
 }
 
@@ -238,6 +242,13 @@ pub async fn get_comb_stats(
     }
     Ok(comb_stats_agg
         .into_values()
+        .filter(|c| {
+            c.matches
+                >= query
+                    .min_matches
+                    .or(default_min_matches())
+                    .unwrap_or_default()
+        })
         .sorted_by_key(|c| c.wins / c.matches)
         .rev()
         .collect())
