@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import ItemImage from "~/components/item_image";
 import ItemName from "~/components/item_name";
+import ItemTier from "~/components/item_tier";
 import { ProgressBarWithLabel } from "~/components/progress_bar";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
@@ -92,6 +93,7 @@ export default function ItemStatsTable({
             <tr className="bg-gray-800 text-center">
               {!hideIndex && <th className="p-2">#</th>}
               <th className="p-2 text-left">Item</th>
+              <th className="p-2 text-left">Tier</th>
               {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
               {columns.includes("usage") && <th className="p-2">Usage</th>}
             </tr>
@@ -110,6 +112,13 @@ export default function ItemStatsTable({
                   <ItemName itemId={row.item_id} />
                 </div>
               </td>
+              {columns.includes("itemsTier") && (
+                <td className="p-2 align-middle">
+                  <div className="flex items-center gap-2 text-left">
+                    <ItemTier itemId={row.item_id} />
+                  </div>
+                </td>
+              )}
               {columns.includes("winRate") && (
                 <td
                   className="p-2 align-middle"
