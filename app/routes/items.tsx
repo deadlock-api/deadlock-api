@@ -60,7 +60,7 @@ export default function Items() {
         </div>
       </div>
       <ItemStatsTable
-        columns={["winRate", "usage"]}
+        columns={["itemsTier", "winRate", "usage"]}
         sortBy="winrate"
         minRankId={minRankId}
         maxRankId={maxRankId}
