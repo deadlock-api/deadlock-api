@@ -12,21 +12,44 @@ export default function ItemStatsTable({
   hideHeader,
   hideIndex,
   sortBy,
+  minRankId,
+  maxRankId,
+  minDate,
+  maxDate,
+  hero,
 }: {
   columns: string[];
   limit?: number;
   hideHeader?: boolean;
   hideIndex?: boolean;
   sortBy?: keyof APIItemStats | "winrate";
+  minRankId?: number;
+  maxRankId?: number;
+  minDate?: Date;
+  maxDate?: Date;
+  hero?: number | null;
 }) {
+  const minDateTimestamp = useMemo(() => (minDate ? Math.floor(minDate.getTime() / 1000) : null), [minDate]);
+  const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
+
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
     queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
+
   const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
-    queryKey: ["api-item-stats"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/analytics/item-stats").then((res) => res.json()),
+    queryKey: ["api-item-stats", hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryFn: async () => {
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
+      if (hero) url.searchParams.set("hero_id", hero.toString());
+      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
+      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
+      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
+      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      const res = await fetch(url);
+      return await res.json();
+    },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
