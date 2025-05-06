@@ -1,5 +1,6 @@
 import { Select } from "@base-ui-components/react/select";
 import { useQuery } from "@tanstack/react-query";
+import type React from "react";
 import { useMemo } from "react";
 import type { AssetsRank } from "~/types/assets_rank";
 
@@ -78,7 +79,7 @@ function CheckIcon(props: React.ComponentProps<"svg">) {
 
 export default function RankSelector({
   onRankSelected,
-  selectedRank, // Expects rankId
+  selectedRank,
   label,
 }: { onRankSelected: (selectedRankId: number) => void; selectedRank?: number | null; label?: string }) {
   const { data: ranksData } = useQuery<AssetsRank[]>({
@@ -89,17 +90,7 @@ export default function RankSelector({
 
   const sortedRanks = useMemo(() => ranksData?.sort((a, b) => a.tier - b.tier) ?? [], [ranksData]);
 
-  // Map for lookup remains useful
-  const ranksByTier = useMemo(() => {
-    const map = new Map<number, AssetsRank>();
-    for (const rank of sortedRanks) {
-      map.set(rank.tier, rank);
-    }
-    return map;
-  }, [sortedRanks]);
-
-  const handleSelect = (value: number | null /* Allow null if deselect is possible */) => {
-    // Adapt based on exact payload, assuming { value: number | null }
+  const handleSelect = (value: number | null) => {
     if (value !== null) {
       onRankSelected(value);
     }
@@ -124,11 +115,6 @@ export default function RankSelector({
     return options;
   }, [sortedRanks]);
 
-  // Find details for the currently selected rank ID
-  const selectedOptionDetails = useMemo(() => {
-    return selectOptions.find((opt) => opt.value === selectedRank);
-  }, [selectedRank, selectOptions]);
-
   return (
     <div className="w-full max-w-xs">
       <span className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">{label || "Select Rank"}</span>
@@ -138,7 +124,7 @@ export default function RankSelector({
       >
         <Select.Trigger className="flex h-10 min-w-42 items-center justify-between gap-3 rounded-md border border-gray-200 dark:border-gray-600 pr-3 pl-3.5 text-base text-gray-900 dark:text-gray-100 select-none hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 active:bg-gray-100 dark:active:bg-gray-700 data-[popup-open]:bg-gray-100 dark:data-[popup-open]:bg-gray-700">
           <Select.Value placeholder="Select Rank...">
-            {(label, value) => {
+            {(_, value) => {
               const currentSelectedDetails = selectOptions.find((opt) => opt.value === value);
               const placeholder = "Select Rank...";
               if (!currentSelectedDetails) {
