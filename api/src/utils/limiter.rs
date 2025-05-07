@@ -124,6 +124,21 @@ pub async fn apply_limits(
         None => None,
     };
 
+    // If no api key, and there are no IP quotas, but there are key quotas, return an error
+    if api_key.is_none()
+        && !quotas
+            .iter()
+            .any(|q| q.rate_limit_quota_type == RateLimitQuotaType::IP)
+        && quotas
+            .iter()
+            .any(|q| q.rate_limit_quota_type == RateLimitQuotaType::Key)
+    {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::FORBIDDEN,
+            message: "API key is required for this endpoint".to_string(),
+        });
+    }
+
     // If the service is in emergency mode, only requests with an API key are allowed
     if state.config.emergency_mode && api_key.is_none() {
         return Err(APIError::StatusMsg {
