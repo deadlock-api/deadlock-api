@@ -90,7 +90,7 @@ pub async fn start_custom(
     let party_code = create::get_party_code(&mut state.redis_client, party_id)
         .await
         .map_err(|_| APIError::InternalError {
-            message: "Failed to retrieve account name".to_string(),
+            message: "Failed to retrieve party code".to_string(),
         })?;
 
     let Some((account_name, _)) = party_code.split_once(':') else {
