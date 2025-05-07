@@ -306,7 +306,7 @@ mod test {
             ..Default::default()
         };
         let query_str = build_player_scoreboard_query(&query);
-        assert!(query_str.contains("ORDER BY value DESC"));
+        assert!(query_str.contains("ORDER BY value desc"));
         assert!(query_str.contains(&format!(
             "toFloat64({}) as value",
             sort_by.get_select_clause()

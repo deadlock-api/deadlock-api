@@ -262,7 +262,7 @@ mod test {
             ..Default::default()
         };
         let sql = build_hero_scoreboard_query(&query);
-        assert!(sql.contains("ORDER BY value Desc"));
+        assert!(sql.contains("ORDER BY value desc"));
         assert!(sql.contains(&format!(
             "toFloat64({}) as value",
             ScoreboardQuerySortBy::Wins.get_select_clause()
