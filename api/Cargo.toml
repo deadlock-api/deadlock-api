@@ -27,7 +27,7 @@ object_store = { version = "0.12.0", features = ["aws"], default-features = fals
 tower = "0.5.2"
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
-tower-http = { version = "0.6.2", features = ["compression-zstd", "compression-gzip", "cors", "decompression-zstd", "decompression-gzip", "normalize-path", "trace"] }
+tower-http = { version = "0.6.3", features = ["compression-zstd", "compression-gzip", "cors", "decompression-zstd", "decompression-gzip", "normalize-path", "trace"] }
 tracing = "0.1.41"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 serde-xml-rs = "0.8.0"
