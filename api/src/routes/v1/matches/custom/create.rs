@@ -20,10 +20,11 @@ use tracing::{debug, info, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
     CMsgClientToGcPartyAction, CMsgClientToGcPartyActionResponse, CMsgClientToGcPartyCreate,
-    CMsgClientToGcPartyCreateResponse, CMsgClientToGcPartySetReadyState,
-    CMsgClientToGcPartySetReadyStateResponse, CMsgPartyMmInfo, CMsgRegionPingTimesClient,
-    ECitadelBotDifficulty, ECitadelMmPreference, EgcCitadelClientMessages,
-    c_msg_client_to_gc_party_action_response, c_msg_client_to_gc_party_set_ready_state_response,
+    CMsgClientToGcPartyCreateResponse, CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse,
+    CMsgClientToGcPartySetReadyState, CMsgClientToGcPartySetReadyStateResponse, CMsgPartyMmInfo,
+    CMsgRegionPingTimesClient, ECitadelBotDifficulty, ECitadelMmPreference,
+    EgcCitadelClientMessages, c_msg_client_to_gc_party_action_response,
+    c_msg_client_to_gc_party_leave_response, c_msg_client_to_gc_party_set_ready_state_response,
     cso_citadel_party,
 };
 use valveprotos::gcsdk::EgcPlatform;
@@ -236,6 +237,60 @@ async fn make_ready(
     Ok(())
 }
 
+async fn leave_party(
+    config: &Config,
+    http_client: &reqwest::Client,
+    username: String,
+    party_id: u64,
+) -> APIResult<()> {
+    let msg = CMsgClientToGcPartyLeave {
+        party_id: party_id.into(),
+    };
+    let result = steam::call_steam_proxy(
+        config,
+        http_client,
+        SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
+            msg,
+            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(0),
+            request_timeout: Duration::from_secs(2),
+            username: username.clone().into(),
+        },
+    )
+    .await
+    .map_err(|e| APIError::InternalError {
+        message: format!("Failed to leave party: {e}"),
+    })
+    .and_then(|r| {
+        BASE64_STANDARD
+            .decode(&r.data)
+            .map_err(|e| APIError::InternalError {
+                message: format!("Failed to decode leave party response: {e}"),
+            })
+    })
+    .and_then(|raw_data| {
+        CMsgClientToGcPartyLeaveResponse::decode(raw_data.as_ref()).map_err(|e| {
+            APIError::InternalError {
+                message: format!("Failed to parse leave party response: {e}"),
+            }
+        })
+    })?;
+
+    info!("Left Party: {username} {party_id} {result:?}");
+    let result = result.result;
+    if result
+        .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
+    {
+        warn!("Failed to leave party: {username} {party_id} {result:?}");
+        return Err(APIError::InternalError {
+            message: format!("Failed to leave party: {result:?}"),
+        });
+    }
+    Ok(())
+}
+
 #[utoipa::path(
     post,
     path = "/create",
@@ -273,6 +328,19 @@ pub async fn create_custom(
             message: "Failed to create party".to_string(),
         });
     };
+
+    let config_clone = state.config.clone();
+    let username_clone = username.clone();
+    tokio::spawn(async move {
+        sleep(Duration::from_secs(15 * 60)).await; // Wait for 15 minutes
+
+        // Leave the party
+        let http_client = reqwest::Client::new();
+        let result = leave_party(&config_clone, &http_client, username_clone, party_id).await;
+        if let Err(e) = result {
+            warn!("Failed to leave party: {e}");
+        };
+    });
 
     let party_code = wait_for_party_code(&mut state.redis_client, party_id)
         .await
