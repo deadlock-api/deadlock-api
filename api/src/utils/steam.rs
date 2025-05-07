@@ -1,6 +1,9 @@
 use crate::config::Config;
+use crate::error::{APIError, APIResult};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use prost::Message;
 use serde::Deserialize;
 use serde_json::json;
@@ -52,4 +55,38 @@ pub async fn call_steam_proxy(
         .error_for_status()?
         .json()
         .await
+}
+
+#[cached(
+    ty = "TimedCache<u8, u32>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
+    let steam_info = http_client
+        .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
+        .send()
+        .await
+        .and_then(|resp| resp.error_for_status())
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch steam info: {e}"),
+        })?
+        .text().await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch steam info: {e}"),
+        })?;
+    for line in steam_info.lines() {
+        if line.starts_with("ClientVersion=") {
+            return line.split('=').nth(1).and_then(|v| v.parse().ok()).ok_or(
+                APIError::InternalError {
+                    message: "Failed to parse client version".to_string(),
+                },
+            );
+        }
+    }
+    Err(APIError::InternalError {
+        message: "Failed to fetch client version".to_string(),
+    })
 }

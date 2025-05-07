@@ -1,6 +1,7 @@
 pub mod active;
 pub mod badge_distribution;
 pub mod bulk_metadata;
+pub mod custom;
 pub mod ingest_event;
 pub mod ingest_salts;
 pub mod metadata;
@@ -35,4 +36,5 @@ pub fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(badge_distribution::badge_distribution))
                 .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
         )
+        .nest("/custom", custom::router())
 }
