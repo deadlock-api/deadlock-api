@@ -300,7 +300,9 @@ impl Variable {
                     .collect::<HashMap<_, _>>();
                 Ok(heroes_played
                     .into_iter()
-                    .map(|(hero_id, count)| format!("{} ({})", heroes[&hero_id], count))
+                    .filter_map(|(hero_id, count)| {
+                        format!("{} ({})", heroes.get(&hero_id)?, count).into()
+                    })
                     .join(", "))
             }
             Self::HeroLeaderboardPlace => {
