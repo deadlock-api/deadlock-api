@@ -252,9 +252,7 @@ impl Variable {
         match self {
             Self::LeaderboardRankImg => {
                 let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, None)
-                        .await
-                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, None).await?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -271,9 +269,7 @@ impl Variable {
             }
             Self::LeaderboardRank => {
                 let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, None)
-                        .await
-                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, None).await?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -290,9 +286,7 @@ impl Variable {
             }
             Self::HeroesPlayedToday => {
                 let todays_matches =
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
-                        .await
-                        .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id).await?;
                 let heroes_played = todays_matches.iter().fold(HashMap::new(), |mut acc, m| {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
@@ -322,15 +316,12 @@ impl Variable {
                 .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(headers, state, steam_id, region, Some(hero_id))
-                        .await
-                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                        .await?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardPlace => {
                 let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, None)
-                        .await
-                        .map_err(|_| VariableResolveError::PlayerNotFoundInLeaderboard)?;
+                    Self::get_leaderboard_entry(headers, state, steam_id, region, None).await?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::SteamAccountName => {
@@ -430,9 +421,8 @@ impl Variable {
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::WinrateToday => {
-                let matches = Self::get_todays_matches(&state.config, &state.http_client, steam_id)
-                    .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let matches =
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id).await?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -443,9 +433,8 @@ impl Variable {
                 ))
             }
             Self::WinsLossesToday => {
-                let matches = Self::get_todays_matches(&state.config, &state.http_client, steam_id)
-                    .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+                let matches =
+                    Self::get_todays_matches(&state.config, &state.http_client, steam_id).await?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
