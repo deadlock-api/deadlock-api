@@ -87,7 +87,7 @@ pub async fn start_custom(
     Path(PartyIdQuery { party_id }): Path<PartyIdQuery>,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let party_code = create::wait_for_party_code(&mut state.redis_client, party_id)
+    let party_code = create::get_party_code(&mut state.redis_client, party_id)
         .await
         .map_err(|_| APIError::InternalError {
             message: "Failed to retrieve account name".to_string(),

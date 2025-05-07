@@ -96,13 +96,20 @@ async fn create_party(
     Ok((decoded_message, result.username))
 }
 
+pub async fn get_party_code(
+    redis_client: &mut redis::aio::MultiplexedConnection,
+    party_id: u64,
+) -> RedisResult<String> {
+    redis_client.get(party_id.to_string()).await
+}
+
 pub async fn wait_for_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> RedisResult<String> {
     let mut retries_left = 100;
     loop {
-        match redis_client.get(party_id.to_string()).await {
+        match get_party_code(redis_client, party_id).await {
             Ok(party_code) => {
                 return Ok(party_code);
             }
