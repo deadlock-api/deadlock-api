@@ -1,5 +1,4 @@
 mod create;
-mod types;
 
 use crate::state::AppState;
 use utoipa::OpenApi;

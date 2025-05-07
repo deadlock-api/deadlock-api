@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::custom::types::{CreateCustomQuery, CreateCustomResponse};
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use crate::utils::steam;
@@ -14,9 +13,11 @@ use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use itertools::Itertools;
 use prost::Message;
 use redis::{AsyncCommands, RedisResult};
+use serde::Serialize;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, info, warn};
+use utoipa::ToSchema;
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
     CMsgClientToGcPartyAction, CMsgClientToGcPartyActionResponse, CMsgClientToGcPartyCreate,
@@ -29,10 +30,15 @@ use valveprotos::deadlock::{
 };
 use valveprotos::gcsdk::EgcPlatform;
 
+#[derive(Serialize, ToSchema)]
+pub struct CreateCustomResponse {
+    pub party_id: u64,
+    pub party_code: String,
+}
+
 async fn create_party(
     config: &Config,
     http_client: &reqwest::Client,
-    query: CreateCustomQuery,
 ) -> APIResult<(CMsgClientToGcPartyCreateResponse, String)> {
     let msg = CMsgClientToGcPartyCreate {
         party_mm_info: CMsgPartyMmInfo {
@@ -55,13 +61,13 @@ async fn create_party(
         private_lobby_settings: cso_citadel_party::PrivateLobbySettings {
             min_roster_size: None,
             match_slots: vec![],
-            randomize_lanes: query.randomize_lanes,
+            randomize_lanes: false.into(),
             server_region: None,
-            is_publicly_visible: query.is_publicly_visible,
-            cheats_enabled: query.cheats_enabled,
+            is_publicly_visible: true.into(),
+            cheats_enabled: false.into(),
             available_regions: vec![],
-            duplicate_heroes_enabled: query.duplicate_heroes_enabled,
-            experimental_heroes_enabled: query.experimental_heroes_enabled,
+            duplicate_heroes_enabled: false.into(),
+            experimental_heroes_enabled: false.into(),
         }
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),
@@ -294,7 +300,6 @@ async fn leave_party(
 #[utoipa::path(
     post,
     path = "/create",
-    params(CreateCustomQuery),
     responses(
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
@@ -307,7 +312,6 @@ async fn leave_party(
 pub async fn create_custom(
     headers: HeaderMap,
     State(mut state): State<AppState>,
-    Json(query): Json<CreateCustomQuery>,
 ) -> APIResult<impl IntoResponse> {
     apply_limits(
         &headers,
@@ -320,7 +324,7 @@ pub async fn create_custom(
     )
     .await?;
 
-    let (created_party, username) = create_party(&state.config, &state.http_client, query).await?;
+    let (created_party, username) = create_party(&state.config, &state.http_client).await?;
     debug!("Created party: {:?}", created_party);
     let Some(party_id) = created_party.party_id.filter(|&p| p > 0) else {
         warn!("Failed to create party");
