@@ -115,6 +115,7 @@ impl Signature {
 #[utoipa::path(
     post,
     path = "/{match_id}/ingest",
+    params(MatchIdQuery),
     responses(
         (status = OK),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),

@@ -5,6 +5,7 @@ use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
 use crate::state::AppState;
 use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
+use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
@@ -125,12 +126,15 @@ pub async fn fetch_match_salts(
     let response = utils::steam::call_steam_proxy(
         config,
         http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
-        msg,
-        Some(&["GetMatchMetaData"]),
-        None,
-        Duration::from_secs(30 * 60),
-        Duration::from_secs(2),
+        SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
+            msg,
+            in_all_groups: Some(vec!["GetMatchMetaData".to_string()]),
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(30 * 60),
+            request_timeout: Duration::from_secs(2),
+            username: None,
+        },
     )
     .await;
     match response {

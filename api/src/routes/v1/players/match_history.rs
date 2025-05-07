@@ -6,6 +6,7 @@ use crate::routes::v1::players::types::{
 use crate::state::AppState;
 use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
+use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -100,12 +101,15 @@ async fn fetch_match_history_raw(
     utils::steam::call_steam_proxy(
         config,
         http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
-        msg,
-        Some(&["GetMatchHistory"]),
-        None,
-        Duration::from_secs(24 * 60 * 60 / 200), // 200req/day
-        Duration::from_secs(3),
+        SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
+            msg,
+            in_all_groups: Some(vec!["GetMatchHistory".to_string()]),
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 20), // 200req/day
+            request_timeout: Duration::from_secs(3),
+            username: None,
+        },
     )
     .await
     .map_err(|e| APIError::InternalError {

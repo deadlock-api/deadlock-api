@@ -4,6 +4,7 @@ use crate::routes::v1::matches::types::ActiveMatch;
 use crate::state::AppState;
 use crate::utils;
 use crate::utils::parse::parse_steam_id_option;
+use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -42,12 +43,15 @@ pub async fn fetch_active_matches_raw(
     utils::steam::call_steam_proxy(
         config,
         http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
-        CMsgClientToGcGetActiveMatches::default(),
-        Some(&["LowRateLimitApis"]),
-        None,
-        Duration::from_secs(60),
-        Duration::from_secs(2),
+        SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
+            msg: CMsgClientToGcGetActiveMatches::default(),
+            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(60),
+            request_timeout: Duration::from_secs(2),
+            username: None,
+        },
     )
     .await
     .map_err(|e| APIError::InternalError {

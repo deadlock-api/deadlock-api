@@ -4,6 +4,7 @@ use crate::routes::v1::players::types::AccountIdQuery;
 use crate::state::AppState;
 use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
+use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
@@ -113,12 +114,15 @@ async fn fetch_player_card_raw(
     utils::steam::call_steam_proxy(
         config,
         http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcGetProfileCard,
-        msg,
-        Some(&["LowRateLimitApis"]),
-        None,
-        Duration::from_secs(10),
-        Duration::from_secs(2),
+        SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetProfileCard,
+            msg,
+            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(10),
+            request_timeout: Duration::from_secs(2),
+            username: None,
+        },
     )
     .await
     .map_err(|e| APIError::InternalError {
