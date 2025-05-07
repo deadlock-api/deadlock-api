@@ -2,10 +2,11 @@ use derive_more::Display;
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-#[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ScoreboardQuerySortBy {
     /// Sort by the number of matches
+    #[default]
     #[display("matches")]
     Matches,
     /// Sort by the number of wins

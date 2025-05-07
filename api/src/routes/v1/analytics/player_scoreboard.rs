@@ -20,7 +20,7 @@ fn default_min_matches() -> Option<u32> {
     10.into()
 }
 
-#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams)]
+#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
 pub struct PlayerScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]
@@ -201,89 +201,117 @@ pub async fn player_scoreboard(
 mod test {
     #![allow(clippy::too_many_arguments)]
     use super::*;
-    use rstest::rstest;
 
-    #[rstest]
-    fn test_build_player_scoreboard_query(
-        #[values(None, Some(15))] hero_id: Option<u32>,
-        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
-        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
-        #[values(None, Some(600))] min_duration_s: Option<u64>,
-        #[values(None, Some(1800))] max_duration_s: Option<u64>,
-        #[values(None, Some(1))] min_average_badge: Option<u8>,
-        #[values(None, Some(116))] max_average_badge: Option<u8>,
-        #[values(None, Some(10000))] min_match_id: Option<u64>,
-        #[values(None, Some(1000000))] max_match_id: Option<u64>,
-        #[values(ScoreboardQuerySortBy::Matches, ScoreboardQuerySortBy::Wins)]
-        sort_by: ScoreboardQuerySortBy,
-        #[values(SortDirectionDesc::Asc, SortDirectionDesc::Desc)]
-        sort_direction: SortDirectionDesc,
-        #[values(None, Some(10))] min_matches: Option<u32>,
-        #[values(None, Some(5))] start: Option<u32>,
-        #[values(None, Some(10))] limit: Option<u32>,
-    ) {
+    #[test]
+    fn test_build_player_scoreboard_query_hero_id() {
+        let hero_id = Some(15);
         let query = PlayerScoreboardQuery {
             hero_id,
+            sort_by: ScoreboardQuerySortBy::Matches,
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("hero_id = 15"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_unix_timestamps() {
+        let min_unix_timestamp = Some(1672531200);
+        let max_unix_timestamp = Some(1675209599);
+        let query = PlayerScoreboardQuery {
             min_unix_timestamp,
             max_unix_timestamp,
+            sort_by: ScoreboardQuerySortBy::Matches,
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("start_time >= 1672531200"));
+        assert!(query_str.contains("start_time <= 1675209599"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_duration() {
+        let min_duration_s = Some(600);
+        let max_duration_s = Some(1800);
+        let query = PlayerScoreboardQuery {
             min_duration_s,
             max_duration_s,
+            sort_by: ScoreboardQuerySortBy::Matches,
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("duration_s >= 600"));
+        assert!(query_str.contains("duration_s <= 1800"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_badge_levels() {
+        let min_average_badge = Some(1);
+        let max_average_badge = Some(116);
+        let query = PlayerScoreboardQuery {
             min_average_badge,
             max_average_badge,
+            sort_by: ScoreboardQuerySortBy::Matches,
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
+        assert!(query_str.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_match_ids() {
+        let min_match_id = Some(10000);
+        let max_match_id = Some(1000000);
+        let query = PlayerScoreboardQuery {
             min_match_id,
             max_match_id,
-            sort_by,
+            sort_by: ScoreboardQuerySortBy::Matches,
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("match_id >= 10000"));
+        assert!(query_str.contains("match_id <= 1000000"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_min_matches() {
+        let min_matches = Some(10);
+        let query = PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Matches,
             min_matches,
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("count(distinct match_id) >= 10"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_order_and_limit_offset() {
+        let sort_by = ScoreboardQuerySortBy::Wins;
+        let sort_direction = SortDirectionDesc::Desc;
+        let start = Some(5);
+        let limit = Some(10);
+        let query = PlayerScoreboardQuery {
+            sort_by,
             sort_direction,
             start,
             limit,
+            ..Default::default()
         };
-        let query = build_player_scoreboard_query(&query);
-
-        if let Some(hero_id) = hero_id {
-            assert!(query.contains(&format!("hero_id = {hero_id}")));
-        }
-        if let Some(min_unix_timestamp) = min_unix_timestamp {
-            assert!(query.contains(&format!("start_time >= {min_unix_timestamp}")));
-        }
-        if let Some(max_unix_timestamp) = max_unix_timestamp {
-            assert!(query.contains(&format!("start_time <= {max_unix_timestamp}")));
-        }
-        if let Some(min_duration_s) = min_duration_s {
-            assert!(query.contains(&format!("duration_s >= {min_duration_s}")));
-        }
-        if let Some(max_duration_s) = max_duration_s {
-            assert!(query.contains(&format!("duration_s <= {max_duration_s}")));
-        }
-        if let Some(min_average_badge) = min_average_badge {
-            assert!(query.contains(&format!(
-                "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
-            )));
-        }
-        if let Some(max_average_badge) = max_average_badge {
-            assert!(query.contains(&format!(
-                "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
-            )));
-        }
-        if let Some(min_match_id) = min_match_id {
-            assert!(query.contains(&format!("match_id >= {min_match_id}")));
-        }
-        if let Some(max_match_id) = max_match_id {
-            assert!(query.contains(&format!("match_id <= {max_match_id}")));
-        }
-        if let Some(min_matches) = min_matches {
-            assert!(query.contains(&format!("count(distinct match_id) >= {min_matches}")));
-        }
-        assert!(query.contains(&format!("ORDER BY value {sort_direction}")));
-        assert!(query.contains(&format!(
+        let query_str = build_player_scoreboard_query(&query);
+        assert!(query_str.contains("ORDER BY value DESC"));
+        assert!(query_str.contains(&format!(
             "toFloat64({}) as value",
             sort_by.get_select_clause()
         )));
-        if let Some(start) = start {
-            assert!(query.contains(&format!("OFFSET {}", start + 1)));
-        }
-        if let Some(limit) = limit {
-            assert!(query.contains(&format!("LIMIT {limit}")));
-        }
+        assert!(query_str.contains("OFFSET 6"));
+        assert!(query_str.contains("LIMIT 10"));
     }
 }

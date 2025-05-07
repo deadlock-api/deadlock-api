@@ -15,7 +15,7 @@ fn default_min_matches() -> Option<u32> {
     10.into()
 }
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub struct ItemStatsQuery {
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
@@ -185,70 +185,129 @@ pub async fn item_stats(
 mod test {
     #![allow(clippy::too_many_arguments)]
     use super::*;
-    use rstest::rstest;
 
-    #[rstest]
-    fn test_build_item_stats_query(
-        #[values(None, Some(15))] hero_id: Option<u32>,
-        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
-        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
-        #[values(None, Some(600))] min_duration_s: Option<u64>,
-        #[values(None, Some(1800))] max_duration_s: Option<u64>,
-        #[values(None, Some(1))] min_average_badge: Option<u8>,
-        #[values(None, Some(116))] max_average_badge: Option<u8>,
-        #[values(None, Some(10000))] min_match_id: Option<u64>,
-        #[values(None, Some(1000000))] max_match_id: Option<u64>,
-        #[values(None, Some(18373975))] account_id: Option<u32>,
-        #[values(None, Some(10))] min_matches: Option<u32>,
-    ) {
+    #[test]
+    fn test_build_item_stats_query_min_unix_timestamp() {
+        let min_unix_timestamp = 1672531200;
         let query = ItemStatsQuery {
-            hero_id,
-            min_unix_timestamp,
-            max_unix_timestamp,
-            min_duration_s,
-            max_duration_s,
-            min_average_badge,
-            max_average_badge,
-            min_match_id,
-            max_match_id,
-            account_id,
-            min_matches,
+            min_unix_timestamp: min_unix_timestamp.into(),
+            ..Default::default()
         };
-        let query = build_item_stats_query(&query);
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("start_time >= {min_unix_timestamp}")));
+    }
 
-        if let Some(min_unix_timestamp) = min_unix_timestamp {
-            assert!(query.contains(&format!("start_time >= {min_unix_timestamp}")));
-        }
-        if let Some(max_unix_timestamp) = max_unix_timestamp {
-            assert!(query.contains(&format!("start_time <= {max_unix_timestamp}")));
-        }
-        if let Some(min_duration_s) = min_duration_s {
-            assert!(query.contains(&format!("duration_s >= {min_duration_s}")));
-        }
-        if let Some(max_duration_s) = max_duration_s {
-            assert!(query.contains(&format!("duration_s <= {max_duration_s}")));
-        }
-        if let Some(min_average_badge) = min_average_badge {
-            assert!(query.contains(&format!(
-                "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
-            )));
-        }
-        if let Some(max_average_badge) = max_average_badge {
-            assert!(query.contains(&format!(
-                "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
-            )));
-        }
-        if let Some(min_match_id) = min_match_id {
-            assert!(query.contains(&format!("match_id >= {min_match_id}")));
-        }
-        if let Some(max_match_id) = max_match_id {
-            assert!(query.contains(&format!("match_id <= {max_match_id}")));
-        }
-        if let Some(account_id) = account_id {
-            assert!(query.contains(&format!("account_id = {account_id}")));
-        }
-        if let Some(min_matches) = min_matches {
-            assert!(query.contains(&format!("matches >= {min_matches}")));
-        }
+    #[test]
+    fn test_build_item_stats_query_max_unix_timestamp() {
+        let max_unix_timestamp = 1675209599;
+        let query = ItemStatsQuery {
+            max_unix_timestamp: max_unix_timestamp.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("start_time <= {max_unix_timestamp}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_duration_s() {
+        let min_duration_s = 600;
+        let query = ItemStatsQuery {
+            min_duration_s: min_duration_s.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("duration_s >= {min_duration_s}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_duration_s() {
+        let max_duration_s = 1800;
+        let query = ItemStatsQuery {
+            max_duration_s: max_duration_s.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("duration_s <= {max_duration_s}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_average_badge() {
+        let min_average_badge = 1;
+        let query = ItemStatsQuery {
+            min_average_badge: min_average_badge.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!(
+            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
+        )));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_average_badge() {
+        let max_average_badge = 116;
+        let query = ItemStatsQuery {
+            max_average_badge: max_average_badge.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!(
+            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
+        )));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_match_id() {
+        let min_match_id = 10000;
+        let query = ItemStatsQuery {
+            min_match_id: min_match_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("match_id >= {min_match_id}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_match_id() {
+        let max_match_id = 1000000;
+        let query = ItemStatsQuery {
+            max_match_id: max_match_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("match_id <= {max_match_id}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_account_id() {
+        let account_id = 18373975;
+        let query = ItemStatsQuery {
+            account_id: account_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("account_id = {account_id}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_matches() {
+        let min_matches = 10;
+        let query = ItemStatsQuery {
+            min_matches: min_matches.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("matches >= {min_matches}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_hero_id() {
+        let hero_id = 15;
+        let query = ItemStatsQuery {
+            hero_id: hero_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_item_stats_query(&query);
+        assert!(query_str.contains(&format!("hero_id = {hero_id}")));
     }
 }

@@ -17,7 +17,7 @@ fn default_min_matches() -> Option<u64> {
     50.into()
 }
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub struct HeroSynergyStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -253,86 +253,100 @@ pub async fn hero_synergies_stats(
 mod test {
     #![allow(clippy::too_many_arguments)]
     use super::*;
-    use rstest::rstest;
 
-    #[rstest]
-    fn test_build_hero_synergy_stats_query(
-        #[values(None, Some(1672531200))] min_unix_timestamp: Option<u64>,
-        #[values(None, Some(1675209599))] max_unix_timestamp: Option<u64>,
-        #[values(None, Some(600))] min_duration_s: Option<u64>,
-        #[values(None, Some(1800))] max_duration_s: Option<u64>,
-        #[values(None, Some(1))] min_average_badge: Option<u8>,
-        #[values(None, Some(116))] max_average_badge: Option<u8>,
-        #[values(None, Some(10000))] min_match_id: Option<u64>,
-        #[values(None, Some(1000000))] max_match_id: Option<u64>,
-        #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
-        #[values(None, Some(true), Some(false))] same_party_filter: Option<bool>,
-        #[values(None, Some(18373975))] account_id: Option<u32>,
-        #[values(None, Some(10))] min_matches: Option<u64>,
-    ) {
+    #[test]
+    fn test_build_hero_synergy_stats_query_min_max_unix_timestamp() {
         let query = HeroSynergyStatsQuery {
-            min_unix_timestamp,
-            max_unix_timestamp,
-            min_duration_s,
-            max_duration_s,
-            min_average_badge,
-            max_average_badge,
-            min_match_id,
-            max_match_id,
-            same_lane_filter,
-            same_party_filter,
-            account_id,
-            min_matches,
+            min_unix_timestamp: Some(1672531200),
+            max_unix_timestamp: Some(1675209599),
+            ..Default::default()
         };
-        let query = build_hero_synergy_stats_query(&query);
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("start_time >= 1672531200"));
+        assert!(sql.contains("start_time <= 1675209599"));
+    }
 
-        if let Some(min_unix_timestamp) = min_unix_timestamp {
-            assert!(query.contains(&format!("start_time >= {min_unix_timestamp}")));
-        }
-        if let Some(max_unix_timestamp) = max_unix_timestamp {
-            assert!(query.contains(&format!("start_time <= {max_unix_timestamp}")));
-        }
-        if let Some(min_duration_s) = min_duration_s {
-            assert!(query.contains(&format!("duration_s >= {min_duration_s}")));
-        }
-        if let Some(max_duration_s) = max_duration_s {
-            assert!(query.contains(&format!("duration_s <= {max_duration_s}")));
-        }
-        if let Some(min_average_badge) = min_average_badge {
-            assert!(query.contains(&format!(
-                "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
-            )));
-        }
-        if let Some(max_average_badge) = max_average_badge {
-            assert!(query.contains(&format!(
-                "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
-            )));
-        }
-        if let Some(min_match_id) = min_match_id {
-            assert!(query.contains(&format!("match_id >= {min_match_id}")));
-        }
-        if let Some(max_match_id) = max_match_id {
-            assert!(query.contains(&format!("match_id <= {max_match_id}")));
-        }
-        if let Some(same_lane_filter) = same_lane_filter {
-            if same_lane_filter {
-                assert!(query.contains("p1.assigned_lane = p2.assigned_lane"));
-            } else {
-                assert!(!query.contains("p1.assigned_lane = p2.assigned_lane"));
-            }
-        }
-        if let Some(same_party_filter) = same_party_filter {
-            if same_party_filter {
-                assert!(query.contains("p1.party = p2.party AND p1.party > 0"));
-            } else {
-                assert!(!query.contains("p1.party = p2.party"));
-            }
-        }
-        if let Some(min_matches) = min_matches {
-            assert!(query.contains(&format!("matches_played >= {min_matches}")));
-        }
-        if let Some(account_id) = account_id {
-            assert!(query.contains(&format!("account_id = {account_id}")));
-        }
+    #[test]
+    fn test_build_hero_synergy_stats_query_min_max_duration() {
+        let query = HeroSynergyStatsQuery {
+            min_duration_s: Some(600),
+            max_duration_s: Some(1800),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("duration_s >= 600"));
+        assert!(sql.contains("duration_s <= 1800"));
+    }
+
+    #[test]
+    fn test_build_hero_synergy_stats_query_min_max_average_badge() {
+        let query = HeroSynergyStatsQuery {
+            min_average_badge: Some(1),
+            max_average_badge: Some(116),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
+        assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
+    }
+
+    #[test]
+    fn test_build_hero_synergy_stats_query_min_max_match_id() {
+        let query = HeroSynergyStatsQuery {
+            min_match_id: Some(10000),
+            max_match_id: Some(1000000),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("match_id >= 10000"));
+        assert!(sql.contains("match_id <= 1000000"));
+    }
+
+    #[test]
+    fn test_build_hero_synergy_stats_query_same_lane_filter() {
+        let mut query = HeroSynergyStatsQuery {
+            same_lane_filter: Some(true),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("p1.assigned_lane = p2.assigned_lane"));
+
+        query.same_lane_filter = Some(false);
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(!sql.contains("p1.assigned_lane = p2.assigned_lane"));
+    }
+
+    #[test]
+    fn test_build_hero_synergy_stats_query_same_party_filter() {
+        let mut query = HeroSynergyStatsQuery {
+            same_party_filter: Some(true),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("p1.party = p2.party AND p1.party > 0"));
+
+        query.same_party_filter = Some(false);
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(!sql.contains("p1.party = p2.party"));
+    }
+
+    #[test]
+    fn test_build_hero_synergy_stats_query_min_matches() {
+        let query = HeroSynergyStatsQuery {
+            min_matches: Some(10),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("matches_played >= 10"));
+    }
+
+    #[test]
+    fn test_build_hero_synergy_stats_query_account_id() {
+        let query = HeroSynergyStatsQuery {
+            account_id: Some(18373975),
+            ..Default::default()
+        };
+        let sql = build_hero_synergy_stats_query(&query);
+        assert!(sql.contains("account_id = 18373975"));
     }
 }
