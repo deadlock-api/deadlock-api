@@ -1,14 +1,13 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::query;
-use crate::routes::v1::builds::query::{BuildsSearchQuery, BuildsSearchQuerySortBy};
+use crate::routes::v1::builds::query::BuildsSearchQuery;
 use crate::routes::v1::builds::structs::Build;
 use crate::state::AppState;
-use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use itertools::Itertools;
 use sqlx::Row;
+use tracing::debug;
 
 #[utoipa::path(
     get,
@@ -29,6 +28,7 @@ pub async fn search_builds(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let query = query::sql_query(&params);
+    debug!(query);
     let builds = sqlx::query(&query)
         .fetch_all(&state.pg_client)
         .await
@@ -39,34 +39,5 @@ pub async fn search_builds(
         .iter()
         .map(|row| row.get::<sqlx::types::Json<Build>, &str>("builds"))
         .collect::<Vec<_>>();
-    let builds = if params.only_latest.unwrap_or(false) {
-        builds
-            .into_iter()
-            .sorted_by_key(|a| a.hero_build.version)
-            .rev()
-            .unique_by(|a| a.hero_build.hero_build_id)
-            .sorted_by_key(|build| {
-                let direction = if params.sort_direction == SortDirectionDesc::Desc {
-                    -1
-                } else {
-                    1
-                };
-                let key = match params.sort_by {
-                    BuildsSearchQuerySortBy::WeeklyFavorites => build.num_weekly_favorites,
-                    BuildsSearchQuerySortBy::Favorites => build.num_favorites,
-                    BuildsSearchQuerySortBy::Ignores => build.num_ignores,
-                    BuildsSearchQuerySortBy::Reports => build.num_reports,
-                    BuildsSearchQuerySortBy::Version => build.hero_build.version.into(),
-                    BuildsSearchQuerySortBy::UpdatedAt => {
-                        (build.hero_build.last_updated_timestamp as u32).into()
-                    }
-                }
-                .unwrap_or_default() as i64;
-                direction * key
-            })
-            .collect()
-    } else {
-        builds
-    };
     Ok(Json(builds))
 }
