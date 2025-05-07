@@ -1,5 +1,4 @@
 mod create;
-pub mod start;
 mod types;
 
 use crate::state::AppState;
@@ -16,7 +15,5 @@ This is a preview feature and is subject to change.
 pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(create::create_custom))
-        .routes(routes!(start::start_custom))
+    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(create::create_custom))
 }

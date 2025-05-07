@@ -46,13 +46,3 @@ pub struct CreateCustomResponse {
     pub party_id: u64,
     pub party_code: String,
 }
-
-#[derive(Deserialize, IntoParams)]
-pub struct PartyIdQuery {
-    pub party_id: u64,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct StartCustomResponse {
-    pub message: String,
-}
