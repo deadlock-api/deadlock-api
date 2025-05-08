@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS match_player
     ),
     death_details Nested (
         game_time_s UInt32,
+        time_to_kill_s Nullable(Float64),
         killer_player_slot UInt32,
         death_pos Tuple (Float32, Float32, Float32),
         killer_pos Tuple (Float32, Float32, Float32),

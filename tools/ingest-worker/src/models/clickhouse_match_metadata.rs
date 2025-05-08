@@ -165,6 +165,8 @@ pub struct ClickhouseMatchPlayer {
     pub book_reward_starting_xp: Vec<u32>,
     #[serde(rename = "death_details.game_time_s")]
     pub death_details_game_time_s: Vec<u32>,
+    #[serde(rename = "death_details.time_to_kill_s")]
+    pub death_details_time_to_kill_s: Vec<Option<f32>>,
     #[serde(rename = "death_details.killer_player_slot")]
     pub death_details_killer_player_slot: Vec<u32>,
     #[serde(rename = "death_details.death_pos")]
@@ -280,6 +282,11 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
                 .death_details
                 .iter()
                 .map(|v| v.game_time_s())
+                .collect(),
+            death_details_time_to_kill_s: value
+                .death_details
+                .iter()
+                .map(|v| v.time_to_kill_s)
                 .collect(),
             death_details_killer_player_slot: value
                 .death_details

@@ -1758,7 +1758,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tryhard",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos 0.0.0 (git+https://github.com/deadlock-api/valveprotos-rs.git?rev=837747825a529673e97b681ee0f70b82d13eb0eb)",
 ]
 
 [[package]]
