@@ -3,6 +3,7 @@ use axum::Json;
 use axum::response::IntoResponse;
 
 const BIG_PATCH_DAYS: &[&str] = &[
+    "2025-05-08T19:43:20Z",
     "2025-02-25T21:51:13Z",
     "2025-01-28T02:10:06Z",
     "2025-01-17T18:40:54Z",
