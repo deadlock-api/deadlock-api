@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 reqwest = { version = "0.12.15", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
-valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
-tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "837747825a529673e97b681ee0f70b82d13eb0eb", features = ["gc-client"] }
+tokio = { version = "1.45.0", features = ["rt-multi-thread", "macros"] }
 metrics = "0.24"
 tracing = "0.1.41"
 clickhouse = "0.13.2"
