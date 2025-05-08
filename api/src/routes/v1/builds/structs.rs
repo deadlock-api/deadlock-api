@@ -6,6 +6,9 @@ use utoipa::ToSchema;
 pub struct BuildHeroDetailsCategoryAbility {
     pub ability_id: u32,
     pub annotation: Option<String>,
+    pub required_flex_slots: Option<u32>,
+    pub sell_priority: Option<u32>,
+    pub imbue_target_ability_id: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -16,6 +19,7 @@ pub struct BuildHeroDetailsCategory {
     pub height: Option<f32>,
     pub description: Option<String>,
     pub mods: Option<Vec<BuildHeroDetailsCategoryAbility>>,
+    pub optional: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -52,6 +56,9 @@ pub struct BuildHero {
     pub language: u32,
     pub version: u32,
     pub origin_build_id: u32,
+    #[serde(default)]
+    pub tags: Vec<u32>,
+    pub development_build: Option<bool>,
     pub details: BuildHeroDetails,
 }
 
