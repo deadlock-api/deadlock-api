@@ -3,6 +3,6 @@ export interface AssetsItem {
   item_tier: number;
   disabled?: boolean;
   name: string;
-  image: string;
-  image_webp: string;
+  shop_image_small: string;
+  shop_image_small_webp: string;
 }
