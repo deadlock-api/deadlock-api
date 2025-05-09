@@ -319,8 +319,8 @@ pub async fn create_custom(
         &state,
         "create_custom",
         &[
-            RateLimitQuota::key_limit(10, Duration::from_secs(3600)),
-            RateLimitQuota::global_limit(100, Duration::from_secs(3600)),
+            RateLimitQuota::key_limit(100, Duration::from_secs(3600)),
+            RateLimitQuota::global_limit(1000, Duration::from_secs(3600)),
         ],
     )
     .await?;
