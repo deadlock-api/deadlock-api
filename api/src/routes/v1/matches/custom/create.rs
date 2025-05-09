@@ -348,8 +348,11 @@ pub async fn create_custom(
 
     let party_code = wait_for_party_code(&mut state.redis_client, party_id)
         .await
-        .map_err(|_| APIError::InternalError {
-            message: "Failed to retrieve party code".to_string(),
+        .map_err(|e| {
+            warn!("Failed to retrieve party code: {e}");
+            APIError::InternalError {
+                message: "Failed to retrieve party code".to_string(),
+            }
         })?;
     debug!("Retrieved party code: {party_code}");
 
@@ -364,24 +367,44 @@ pub async fn create_custom(
         message: "Failed to parse account id".to_string(),
     })?;
 
-    switch_to_spectator_slot(
+    match switch_to_spectator_slot(
         &state.config,
         &state.http_client,
         username.clone(),
         party_id,
         account_id,
     )
-    .await?;
-    debug!("Switched to spectator slot");
+    .await
+    {
+        Ok(_) => {
+            debug!("Switched to spectator slot");
+        }
+        Err(e) => {
+            warn!("Failed to switch to spectator slot: {e}");
+            return Err(APIError::InternalError {
+                message: "Failed to switch to spectator slot".to_string(),
+            });
+        }
+    }
 
-    make_ready(
+    match make_ready(
         &state.config,
         &state.http_client,
         username.clone(),
         party_id,
     )
-    .await?;
-    debug!("Made ready");
+    .await
+    {
+        Ok(_) => {
+            debug!("Made ready");
+        }
+        Err(e) => {
+            warn!("Failed to make ready: {e}");
+            return Err(APIError::InternalError {
+                message: "Failed to make ready".to_string(),
+            });
+        }
+    }
 
     let response = CreateCustomResponse {
         party_id,
