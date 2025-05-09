@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@base-ui-components/react": "1.0.0-alpha.8",
+    "@iconify/json": "^2.2.336",
+    "@iconify/tailwind4": "^1.0.6",
     "@react-router/fs-routes": "^7.5.3",
     "@react-router/node": "^7.5.3",
     "@tanstack/react-query": "^5.75.4",
@@ -22,7 +24,8 @@
     "react-datepicker": "^8.3.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.5.3",
-    "react-router-dom": "^7.5.3"
+    "react-router-dom": "^7.5.3",
+    "react-twc": "^1.4.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

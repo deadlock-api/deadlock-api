@@ -1,8 +1,9 @@
 import { Select } from "@base-ui-components/react/select";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import type React from "react";
 import { useMemo } from "react";
 import type { AssetsRank } from "~/types/assets_rank";
+import { twc } from "react-twc";
 
 // Utility function to get rankId from tier and subrank
 function getRankId(tier: number, subrank: number): number {
@@ -77,12 +78,52 @@ function CheckIcon(props: React.ComponentProps<"svg">) {
   );
 }
 
+const StyledPopup = twc(Select.Popup)`
+  group
+  [max-height:var(--available-height)]
+  origin-[var(--transform-origin)]
+  overflow-y-auto
+  rounded-md
+  bg-slate-900
+  py-1
+  text-slate-300
+  shadow-none
+  outline-1
+  outline-white/10
+  transition-[transform,scale,opacity]
+  data-[ending-style]:scale-100
+  data-[ending-style]:opacity-100
+  data-[ending-style]:transition-none
+  data-[starting-style]:scale-90
+  data-[starting-style]:opacity-0
+  data-[side=none]:data-[starting-style]:scale-100
+  data-[side=none]:data-[starting-style]:opacity-100
+  data-[side=none]:data-[starting-style]:transition-none
+`;
+
+const StyledItem = twc(Select.Item)`
+  grid min-w-[var(--anchor-width)] cursor-default grid-cols-[1.5rem_1fr] items-center gap-2 py-2 pr-4 pl-2.5 text-sm leading-4 outline-none select-none
+  group-data-[side=none]:min-w-[calc(var(--anchor-width)+1rem)]
+  group-data-[side=none]:pr-12
+  group-data-[side=none]:text-base
+  group-data-[side=none]:leading-4
+  data-[highlighted]:relative
+  data-[highlighted]:z-0
+  data-[highlighted]:text-gray-900
+  data-[highlighted]:before:absolute
+  data-[highlighted]:before:inset-x-1
+  data-[highlighted]:before:inset-y-0
+  data-[highlighted]:before:z-[-1]
+  data-[highlighted]:before:rounded-sm
+  data-[highlighted]:before:bg-gray-300
+`;
+
 export default function RankSelector({
   onRankSelected,
   selectedRank,
   label,
 }: { onRankSelected: (selectedRankId: number) => void; selectedRank?: number | null; label?: string }) {
-  const { data: ranksData } = useQuery<AssetsRank[]>({
+  const { data: ranksData } = useSuspenseQuery<AssetsRank[]>({
     queryKey: ["assets-ranks"],
     queryFn: () => fetch("https://assets.deadlock-api.com/v2/ranks").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
@@ -149,13 +190,9 @@ export default function RankSelector({
 
         <Select.Portal>
           <Select.Positioner className="z-50 outline-none" sideOffset={8}>
-            <Select.Popup className="group [max-height:var(--available-height)] origin-[var(--transform-origin)] overflow-y-auto rounded-md bg-slate-900 py-1 text-slate-300 shadow-none outline-1 outline-white/10 transition-[transform,scale,opacity] data-[ending-style]:scale-100 data-[ending-style]:opacity-100 data-[ending-style]:transition-none data-[starting-style]:scale-90 data-[starting-style]:opacity-0 data-[side=none]:data-[starting-style]:scale-100 data-[side=none]:data-[starting-style]:opacity-100 data-[side=none]:data-[starting-style]:transition-none">
+            <StyledPopup>
               {selectOptions.map((optionData) => (
-                <Select.Item
-                  key={optionData.value}
-                  value={optionData.value}
-                  className="grid min-w-[var(--anchor-width)] cursor-default grid-cols-[1.5rem_1fr] items-center gap-2 py-2 pr-4 pl-2.5 text-sm leading-4 outline-none select-none group-data-[side=none]:min-w-[calc(var(--anchor-width)+1rem)] group-data-[side=none]:pr-12 group-data-[side=none]:text-base group-data-[side=none]:leading-4 data-[highlighted]:relative data-[highlighted]:z-0 data-[highlighted]:text-gray-900 data-[highlighted]:before:absolute data-[highlighted]:before:inset-x-1 data-[highlighted]:before:inset-y-0 data-[highlighted]:before:z-[-1] data-[highlighted]:before:rounded-sm data-[highlighted]:before:bg-gray-300"
-                >
+                <StyledItem key={optionData.value} value={optionData.value}>
                   <Select.ItemIndicator className="col-start-1 flex justify-center">
                     <CheckIcon className="size-3" />
                   </Select.ItemIndicator>
@@ -167,9 +204,9 @@ export default function RankSelector({
                     />
                     <span className="truncate">{optionData.label}</span>
                   </Select.ItemText>
-                </Select.Item>
+                </StyledItem>
               ))}
-            </Select.Popup>
+            </StyledPopup>
           </Select.Positioner>
         </Select.Portal>
       </Select.Root>

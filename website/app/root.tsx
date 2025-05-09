@@ -73,7 +73,7 @@ export default function App() {
       <NavHeader />
 
       <main className="flex justify-center items-start">
-        <div className="my-6 w-full max-w-6xl bg-gray-900 rounded-lg shadow-lg p-8">
+        <div className="mt-2 sm:mt-4 w-full max-w-6xl bg-gray-900 rounded-lg shadow-lg py-8 px-4 sm:px-8">
           <Outlet />
         </div>
       </main>

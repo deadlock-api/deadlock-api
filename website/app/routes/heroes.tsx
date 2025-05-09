@@ -69,11 +69,11 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
       <p className="mb-4 text-gray-300 text-center text-sm italic">(Last 30 days)</p>
 
-      <div className="flex gap-4 justify-center items-center text-center p-4 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
-        <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-        <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
-
-        <hr className="bg-white h-12 w-0.25" />
+      <div className="flex flex-wrap gap-8 justify-center items-center text-center p-2 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2">
+          <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
+          <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+        </div>
 
         <div className="flex items-center gap-2.5">
           <div className="flex flex-col items-center justify-around h-full">
@@ -83,10 +83,9 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             </div>
           </div>
 
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" className="fill-white">
-            <title>Arrow Right</title>
-            <path d="M10 20A10 10 0 1 0 0 10a10 10 0 0 0 10 10zM8.711 4.3l5.7 5.766L8.7 15.711l-1.4-1.422 4.289-4.242-4.3-4.347z" />
-          </svg>
+          <div className="mt-8">
+            <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+          </div>
 
           <div className="flex flex-col items-center justify-around h-full">
             <p className="block mb-2 text-sm font-medium text-white">End Date</p>
