@@ -11,5 +11,7 @@ export default function ItemImage({ itemId }: { itemId: number }) {
 
   const item = useMemo(() => data?.find((item) => item.id === itemId), [data, itemId]);
 
-  return <img loading="lazy" src={item?.image_webp} alt={item?.name} title={item?.name} width={36} height={36} />;
+  return (
+    <img loading="lazy" src={item?.shop_image_small_webp} alt={item?.name} title={item?.name} width={36} height={36} />
+  );
 }
