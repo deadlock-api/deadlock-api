@@ -61,7 +61,13 @@ export default function ItemStatsTable({
   const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
   const maxMatches = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
   const filteredData = useMemo(
-    () => data?.filter((d) => assetsItems?.map((i) => i.id).includes(d.item_id)),
+    () =>
+      data?.filter((d) =>
+        assetsItems
+          ?.filter((i) => !i.disabled)
+          .map((i) => i.id)
+          .includes(d.item_id),
+      ),
     [data, assetsItems],
   );
   const sortedData = useMemo(
