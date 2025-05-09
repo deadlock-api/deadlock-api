@@ -3,8 +3,8 @@ import { Link } from "react-router";
 export default function NavHeader() {
   return (
     <header className="px-8 py-4 bg-gray-900 shadow">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-12">
+      <div className="max-w-6xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-12">
           <Link to="/" className="text-lg font-medium text-white">
             <span className="flex gap-2">
               <img src="favicon.webp" alt="Icon" width={36} height={36} />
