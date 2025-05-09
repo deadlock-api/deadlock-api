@@ -31,7 +31,7 @@ export default function Items() {
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Item Stats</h2>
       <p className="mb-4 text-gray-300 text-center text-sm italic">(Last 30 days)</p>
-      <div className="flex gap-4 justify-center items-center text-center p-4 mb-4 w-fit mx-auto rounded-lg bg-gray-100 dark:bg-gray-800">
+      <div className="flex gap-4 justify-center items-center text-center p-4 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
         <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
         <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
         <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
@@ -40,7 +40,7 @@ export default function Items() {
 
         <div className="flex items-center gap-2.5">
           <div className="flex flex-col items-center justify-around h-full">
-            <p className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Start Date</p>
+            <p className="block mb-2 text-sm font-medium text-white">Start Date</p>
             <div className="border text-sm rounded-lg block w-full py-1.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white">
               <DatePicker selected={startDate} onChange={(date) => setStartDate(date)} />
             </div>
@@ -52,7 +52,7 @@ export default function Items() {
           </svg>
 
           <div className="flex flex-col items-center justify-around h-full">
-            <p className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">End Date</p>
+            <p className="block mb-2 text-sm font-medium text-white">End Date</p>
             <div className="border text-sm rounded-lg block w-full py-1.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white">
               <DatePicker selected={endDate} onChange={(date) => setEndDate(date)} />
             </div>

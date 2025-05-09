@@ -69,7 +69,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
       <p className="mb-4 text-gray-300 text-center text-sm italic">(Last 30 days)</p>
 
-      <div className="flex gap-4 justify-center items-center text-center p-4 mb-4 w-fit mx-auto rounded-lg bg-gray-100 dark:bg-gray-800">
+      <div className="flex gap-4 justify-center items-center text-center p-4 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
         <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
         <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
 
@@ -77,7 +77,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
 
         <div className="flex items-center gap-2.5">
           <div className="flex flex-col items-center justify-around h-full">
-            <p className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Start Date</p>
+            <p className="block mb-2 text-sm font-medium text-white">Start Date</p>
             <div className="border text-sm rounded-lg block w-full py-1.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white">
               <DatePicker selected={startDate} onChange={(date) => setStartDate(date)} />
             </div>
@@ -89,14 +89,14 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           </svg>
 
           <div className="flex flex-col items-center justify-around h-full">
-            <p className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">End Date</p>
+            <p className="block mb-2 text-sm font-medium text-white">End Date</p>
             <div className="border text-sm rounded-lg block w-full py-1.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white">
               <DatePicker selected={endDate} onChange={(date) => setEndDate(date)} />
             </div>
           </div>
         </div>
       </div>
-      <div className="text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700 mb-4">
+      <div className="text-sm font-medium text-center border-b border-gray-600 text-gray-400 mb-4">
         <ul className="flex flex-wrap -mb-px">
           <li className="me-2">
             <button
@@ -105,8 +105,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               aria-current={tab === "general" ? "page" : undefined}
               className={
                 tab === "general"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
               }
             >
               General Stats
@@ -119,8 +119,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               aria-current={tab === "matchups" ? "page" : undefined}
               className={
                 tab === "matchups"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
               }
             >
               Hero Matchups
@@ -133,8 +133,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               aria-current={tab === "hero-combs" ? "page" : undefined}
               className={
                 tab === "hero-combs"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
               }
             >
               Hero Combinations
@@ -147,8 +147,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               aria-current={tab === "hero-details" ? "page" : undefined}
               className={
                 tab === "hero-details"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
               }
             >
               Hero Details

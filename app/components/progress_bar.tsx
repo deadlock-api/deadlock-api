@@ -6,7 +6,7 @@ export function ProgressBar({ value, min, max, color }: { value?: number; min?: 
   value = Math.min(value, max || 1);
 
   return (
-    <div className="w-full bg-gray-200 h-2.5 dark:bg-gray-700">
+    <div className="w-full h-2.5 bg-gray-700">
       <div
         className="h-2.5 transition-all duration-300 ease-in-out"
         style={{
@@ -29,7 +29,7 @@ export function ProgressBarWithLabel({
   return (
     <div className="flex flex-col gap-2  min-w-16">
       <ProgressBar value={value} min={min} max={max} color={color} />
-      <span className="text-sm text-gray-700 dark:text-gray-300 text-left">{label || `${percentage}%` || 0}</span>
+      <span className="text-sm text-gray-300 text-left">{label || `${percentage}%` || 0}</span>
     </div>
   );
 }
