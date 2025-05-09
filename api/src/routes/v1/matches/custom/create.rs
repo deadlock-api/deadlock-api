@@ -301,6 +301,7 @@ async fn leave_party(
     post,
     path = "/create",
     responses(
+        (status = 200, description = "Successfully fetched custom match id.", body = CreateCustomResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Creating custom match failed")
