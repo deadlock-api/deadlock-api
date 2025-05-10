@@ -328,7 +328,10 @@ pub async fn create_custom(
     let (created_party, username) = create_party(&state.config, &state.http_client).await?;
     debug!("Created party: {:?}", created_party);
     let Some(party_id) = created_party.party_id.filter(|&p| p > 0) else {
-        warn!("Failed to create party");
+        warn!(
+            "Failed to create party, created_party is {:?}",
+            created_party
+        );
         return Err(APIError::InternalError {
             message: "Failed to create party".to_string(),
         });
