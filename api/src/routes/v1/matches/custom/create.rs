@@ -16,7 +16,7 @@ use redis::{AsyncCommands, RedisResult};
 use serde::Serialize;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info};
 use utoipa::ToSchema;
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
@@ -78,7 +78,7 @@ async fn create_party(
         SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyCreate,
             msg,
-            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_all_groups: None,
             in_any_groups: None,
             cooldown_time: Duration::from_secs(2 * 60 * 60),
             request_timeout: Duration::from_secs(2),
@@ -86,8 +86,11 @@ async fn create_party(
         },
     )
     .await
-    .map_err(|e| APIError::InternalError {
-        message: format!("Failed to create party: {e}"),
+    .map_err(|e| {
+        error!("Failed to create party: {e}");
+        APIError::InternalError {
+            message: format!("Failed to create party: {e}"),
+        }
     })?;
     let raw_data = BASE64_STANDARD
         .decode(&result.data)
@@ -151,7 +154,7 @@ async fn switch_to_spectator_slot(
         SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyAction,
             msg,
-            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_all_groups: None,
             in_any_groups: None,
             cooldown_time: Duration::from_secs(0),
             request_timeout: Duration::from_secs(2),
@@ -204,7 +207,7 @@ async fn make_ready(
         SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartySetReadyState,
             msg,
-            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_all_groups: None,
             in_any_groups: None,
             cooldown_time: Duration::from_secs(0),
             request_timeout: Duration::from_secs(2),
@@ -235,7 +238,7 @@ async fn make_ready(
     if result.is_none_or(|r| {
         r != c_msg_client_to_gc_party_set_ready_state_response::EResponse::KESuccess as i32
     }) {
-        warn!("Failed to make ready: {username} {party_id} {result:?}");
+        error!("Failed to make ready: {username} {party_id} {result:?}");
         return Err(APIError::InternalError {
             message: format!("Failed to make ready: {result:?}"),
         });
@@ -258,7 +261,7 @@ async fn leave_party(
         SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
             msg,
-            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_all_groups: None,
             in_any_groups: None,
             cooldown_time: Duration::from_secs(0),
             request_timeout: Duration::from_secs(2),
@@ -289,7 +292,7 @@ async fn leave_party(
     if result
         .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
     {
-        warn!("Failed to leave party: {username} {party_id} {result:?}");
+        error!("Failed to leave party: {username} {party_id} {result:?}");
         return Err(APIError::InternalError {
             message: format!("Failed to leave party: {result:?}"),
         });
@@ -328,7 +331,7 @@ pub async fn create_custom(
     let (created_party, username) = create_party(&state.config, &state.http_client).await?;
     debug!("Created party: {:?}", created_party);
     let Some(party_id) = created_party.party_id.filter(|&p| p > 0) else {
-        warn!(
+        error!(
             "Failed to create party, created_party is {:?}",
             created_party
         );
@@ -346,14 +349,14 @@ pub async fn create_custom(
         let http_client = reqwest::Client::new();
         let result = leave_party(&config_clone, &http_client, username_clone, party_id).await;
         if let Err(e) = result {
-            warn!("Failed to leave party: {e}");
+            error!("Failed to leave party: {e}");
         };
     });
 
     let party_code = wait_for_party_code(&mut state.redis_client, party_id)
         .await
         .map_err(|e| {
-            warn!("Failed to retrieve party code: {e}");
+            error!("Failed to retrieve party code: {e}");
             APIError::InternalError {
                 message: "Failed to retrieve party code".to_string(),
             }
@@ -361,7 +364,7 @@ pub async fn create_custom(
     debug!("Retrieved party code: {party_code}");
 
     let Some((_, account_id, party_code)) = party_code.split(':').collect_tuple() else {
-        warn!("Failed to parse party code");
+        error!("Failed to parse party code");
         return Err(APIError::InternalError {
             message: "Failed to parse party code".to_string(),
         });
@@ -384,7 +387,7 @@ pub async fn create_custom(
             debug!("Switched to spectator slot");
         }
         Err(e) => {
-            warn!("Failed to switch to spectator slot: {e}");
+            error!("Failed to switch to spectator slot: {e}");
             return Err(APIError::InternalError {
                 message: "Failed to switch to spectator slot".to_string(),
             });
@@ -403,7 +406,7 @@ pub async fn create_custom(
             debug!("Made ready");
         }
         Err(e) => {
-            warn!("Failed to make ready: {e}");
+            error!("Failed to make ready: {e}");
             return Err(APIError::InternalError {
                 message: "Failed to make ready".to_string(),
             });
