@@ -19,12 +19,39 @@ export const HERO_STATS = [
   "losses",
   "matches",
   "players",
-  "total_kills",
-  "total_deaths",
-  "total_assists",
-  "total_net_worth",
-  "total_last_hits",
-  "total_denies",
+  "kills_per_match",
+  "deaths_per_match",
+  "assists_per_match",
+  "net_worth_per_match",
+  "last_hits_per_match",
+  "denies_per_match",
 ] as const;
+
+export function hero_stats_transform(heroStats: APIHeroStatsOverTime, heroStat: (typeof HERO_STATS)[number]) {
+  switch (heroStat) {
+    case "winrate":
+      return heroStats.wins / heroStats.matches;
+    case "wins":
+      return heroStats.wins;
+    case "losses":
+      return heroStats.losses;
+    case "matches":
+      return heroStats.matches;
+    case "players":
+      return heroStats.players;
+    case "kills_per_match":
+      return heroStats.total_kills / heroStats.matches;
+    case "deaths_per_match":
+      return heroStats.total_deaths / heroStats.matches;
+    case "assists_per_match":
+      return heroStats.total_assists / heroStats.matches;
+    case "net_worth_per_match":
+      return heroStats.total_net_worth / heroStats.matches;
+    case "last_hits_per_match":
+      return heroStats.total_last_hits / heroStats.matches;
+    case "denies_per_match":
+      return heroStats.total_denies / heroStats.matches;
+  }
+}
 
 export const TIME_INTERVALS = ["HOURLY", "DAY", "WEEK"] as const;
