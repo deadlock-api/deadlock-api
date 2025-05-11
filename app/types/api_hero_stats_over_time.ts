@@ -30,7 +30,7 @@ export const HERO_STATS = [
 export function hero_stats_transform(heroStats: APIHeroStatsOverTime, heroStat: (typeof HERO_STATS)[number]) {
   switch (heroStat) {
     case "winrate":
-      return heroStats.wins / heroStats.matches;
+      return (100 * heroStats.wins) / heroStats.matches;
     case "wins":
       return heroStats.wins;
     case "losses":
