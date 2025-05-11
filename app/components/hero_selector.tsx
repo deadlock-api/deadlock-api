@@ -119,19 +119,19 @@ export function HeroSelectorMultiple({
   return (
     <FormControl size="medium" variant="outlined" sx={{ minWidth: 170, maxWidth: 200 }}>
       <InputLabel id="hero-selector-label" sx={{ color: "white" }}>
-        {label || "Select Hero"}
+        {label || "Select Heroes"}
       </InputLabel>
       <Select
         labelId="hero-selector-label"
         id="hero-selector"
         value={selectedHeroes}
-        label={label || "Select Hero"}
+        label={label || "Select Heroes"}
         onChange={(event) => onHeroesSelected(event.target.value as number[])}
         multiple
         renderValue={(selected) => {
           const heroes = selected.map((id) => sortedHeroes.find((hero) => hero.id === id)).filter(Boolean);
           if (!heroes.length) {
-            return <span className="truncate">Select Hero...</span>;
+            return <span className="truncate">Select Heroes...</span>;
           }
           return (
             <div className="flex flex-wrap gap-2">
