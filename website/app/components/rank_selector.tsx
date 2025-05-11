@@ -1,9 +1,7 @@
-import { Select } from "@base-ui-components/react/select";
+import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type React from "react";
 import { useMemo } from "react";
 import type { AssetsRank } from "~/types/assets_rank";
-import { twc } from "react-twc";
 
 // Utility function to get rankId from tier and subrank
 function getRankId(tier: number, subrank: number): number {
@@ -51,46 +49,6 @@ function getRankImageUrl(
   return rank.images[key as keyof AssetsRank["images"]];
 }
 
-const StyledPopup = twc(Select.Popup)`
-  group
-  [max-height:var(--available-height)]
-  origin-[var(--transform-origin)]
-  overflow-y-auto
-  rounded-md
-  bg-slate-900
-  py-1
-  text-slate-300
-  shadow-none
-  outline-1
-  outline-white/10
-  transition-[transform,scale,opacity]
-  data-[ending-style]:scale-100
-  data-[ending-style]:opacity-100
-  data-[ending-style]:transition-none
-  data-[starting-style]:scale-90
-  data-[starting-style]:opacity-0
-  data-[side=none]:data-[starting-style]:scale-100
-  data-[side=none]:data-[starting-style]:opacity-100
-  data-[side=none]:data-[starting-style]:transition-none
-`;
-
-const StyledItem = twc(Select.Item)`
-  grid min-w-[var(--anchor-width)] cursor-default grid-cols-[1.5rem_1fr] items-center gap-2 py-2 pr-4 pl-2.5 text-sm leading-4 outline-none select-none
-  group-data-[side=none]:min-w-[calc(var(--anchor-width)+1rem)]
-  group-data-[side=none]:pr-12
-  group-data-[side=none]:text-base
-  group-data-[side=none]:leading-4
-  data-[highlighted]:relative
-  data-[highlighted]:z-0
-  data-[highlighted]:text-gray-900
-  data-[highlighted]:before:absolute
-  data-[highlighted]:before:inset-x-1
-  data-[highlighted]:before:inset-y-0
-  data-[highlighted]:before:z-[-1]
-  data-[highlighted]:before:rounded-sm
-  data-[highlighted]:before:bg-gray-300
-`;
-
 export default function RankSelector({
   onRankSelected,
   selectedRank,
@@ -130,59 +88,69 @@ export default function RankSelector({
   }, [sortedRanks]);
 
   return (
-    <div className="w-full max-w-xs">
-      <span className="block mb-2 text-sm font-medium text-white">{label || "Select Rank"}</span>
-      <Select.Root<number>
-        value={selectedRank ?? undefined} // Use undefined for uncontrolled without value?
-        onValueChange={handleSelect}
+    <FormControl fullWidth size="medium" variant="outlined" sx={{ minWidth: 170 }}>
+      <InputLabel id="rank-selector-label" sx={{ color: "white" }}>
+        {label || "Select Rank"}
+      </InputLabel>
+      <Select
+        labelId="rank-selector-label"
+        id="rank-selector"
+        value={selectedRank ?? ""}
+        label={label || "Select Rank"}
+        onChange={(event) => handleSelect(event.target.value)}
+        renderValue={(selected) => {
+          const currentSelectedDetails = selectOptions.find((opt) => opt.value === selected);
+          if (!currentSelectedDetails) {
+            return <span className="text-gray-400">Select Rank...</span>;
+          }
+          return (
+            <div className="flex items-center gap-2">
+              <img
+                src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
+                alt={currentSelectedDetails.label}
+                className="h-5 w-5 object-contain flex-shrink-0"
+              />
+              <span className="truncate">{currentSelectedDetails.label}</span>
+            </div>
+          );
+        }}
+        sx={{
+          backgroundColor: "#1e293b",
+          color: "white",
+          borderRadius: 1,
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#475569",
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: "#334155",
+          },
+          "& .MuiSelect-icon": {
+            color: "white",
+          },
+        }}
+        MenuProps={{
+          slotProps: {
+            paper: {
+              sx: {
+                maxHeight: 400,
+                bgcolor: "#0f172a",
+                color: "white",
+              },
+            },
+          },
+        }}
       >
-        <Select.Trigger className="flex h-10 min-w-42 items-center justify-between gap-3 rounded-md border border-gray-600 pr-3 pl-3.5 text-base text-gray-100 select-none hover:bg-gray-700 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 active:bg-gray-700 data-[popup-open]:bg-gray-700">
-          <Select.Value placeholder="Select Rank...">
-            {(_, value) => {
-              const currentSelectedDetails = selectOptions.find((opt) => opt.value === value);
-              const placeholder = "Select Rank...";
-              if (!currentSelectedDetails) {
-                return placeholder;
-              }
-              return (
-                <div className="flex items-center gap-2">
-                  <img
-                    src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
-                    alt={currentSelectedDetails.label}
-                    className="h-5 w-5 object-contain flex-shrink-0"
-                  />
-                  <span className="truncate">{currentSelectedDetails.label}</span>
-                </div>
-              );
-            }}
-          </Select.Value>
-          <Select.Icon className="flex">
-            <span className="icon-[material-symbols--unfold-more-rounded] text-lg" />
-          </Select.Icon>
-        </Select.Trigger>
-
-        <Select.Portal>
-          <Select.Positioner className="z-50 outline-none" sideOffset={8}>
-            <StyledPopup>
-              {selectOptions.map((optionData) => (
-                <StyledItem key={optionData.value} value={optionData.value}>
-                  <Select.ItemIndicator className="col-start-1 flex justify-center">
-                    <span className="icon-[material-symbols--check-rounded] size-3" />
-                  </Select.ItemIndicator>
-                  <Select.ItemText className="col-start-2 flex items-center gap-2">
-                    <img
-                      src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
-                      alt={optionData.label}
-                      className="h-5 w-5 object-contain flex-shrink-0"
-                    />
-                    <span className="truncate">{optionData.label}</span>
-                  </Select.ItemText>
-                </StyledItem>
-              ))}
-            </StyledPopup>
-          </Select.Positioner>
-        </Select.Portal>
-      </Select.Root>
-    </div>
+        {selectOptions.map((optionData) => (
+          <MenuItem key={optionData.value} value={optionData.value}>
+            <img
+              src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
+              alt={optionData.label}
+              className="h-5 w-5 object-contain flex-shrink-0 mr-2"
+            />
+            <span className="truncate">{optionData.label}</span>
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   );
 }

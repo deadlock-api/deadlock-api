@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { useNavigate } from "react-router";
 import HeroImage from "~/components/hero_image";
 import HeroName from "~/components/hero_name";
 import { ProgressBarWithLabel } from "~/components/progress_bar";
@@ -24,13 +24,11 @@ export default function HeroStatsTable({
   sortBy?: keyof APIHeroStats | "winrate";
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Date;
-  maxDate?: Date;
+  minDate?: Dayjs | null;
+  maxDate?: Dayjs | null;
 }) {
-  const navigate = useNavigate();
-
-  const minDateTimestamp = useMemo(() => (minDate ? Math.floor(minDate.getTime() / 1000) : null), [minDate]);
-  const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery<APIHeroStats[]>({
     queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
@@ -92,8 +90,7 @@ export default function HeroStatsTable({
           {limitedData?.map((row, index) => (
             <tr
               key={row.hero_id}
-              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
-              onClick={() => navigate(`/heroes?tab=hero-details&heroId=${row.hero_id}`)}
+              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
             >
               {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
               <td className="p-2 align-middle">
