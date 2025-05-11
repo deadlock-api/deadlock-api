@@ -126,7 +126,14 @@ export function HeroSelectorMultiple({
         id="hero-selector"
         value={selectedHeroes}
         label={label || "Select Heroes"}
-        onChange={(event) => onHeroesSelected(event.target.value as number[])}
+        onChange={(event) => {
+          const selected = event.target.value as number[];
+          if (selected.includes(-1)) {
+            onHeroesSelected(sortedHeroes.map((hero) => hero.id));
+          } else {
+            onHeroesSelected(selected);
+          }
+        }}
         multiple
         renderValue={(selected) => {
           const heroes = selected.map((id) => sortedHeroes.find((hero) => hero.id === id)).filter(Boolean);
@@ -134,7 +141,7 @@ export function HeroSelectorMultiple({
             return <span className="truncate">Select Heroes...</span>;
           }
           return (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 overflow-y-auto max-h-40">
               {heroes.map((hero) => (
                 <div key={hero?.id} className="flex items-center gap-2">
                   <img src={getHeroImageUrl(hero)} alt={hero?.name} className="h-5 w-5 object-contain flex-shrink-0" />
@@ -170,6 +177,9 @@ export function HeroSelectorMultiple({
           },
         }}
       >
+        <MenuItem key={-1} value={-1}>
+          <span className="truncate">Select all</span>
+        </MenuItem>
         {sortedHeroes.map((hero) => (
           <MenuItem key={hero.id} value={hero.id}>
             <Checkbox checked={selectedHeroes.includes(hero.id)} sx={{ color: "white" }} />
