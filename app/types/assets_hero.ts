@@ -5,4 +5,7 @@ export interface AssetsHero {
     minimap_image_webp: string;
     minimap_image: string;
   };
+  colors: {
+    ui: [number, number, number];
+  };
 }

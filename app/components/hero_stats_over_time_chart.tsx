@@ -158,10 +158,10 @@ export default function HeroStatsOverTimeChart({
     [isLoadingAssetsHeroes, heroQueries],
   );
 
-  const heroIdNameMap = useMemo(() => {
-    const map: Record<number, string> = {};
+  const heroIdMap = useMemo(() => {
+    const map: Record<number, { name: string; color: string }> = {};
     for (const hero of assetsHeroes || []) {
-      map[hero.id] = hero.name;
+      map[hero.id] = { name: hero.name, color: `rgb(${hero.colors.ui.join(",")})` };
     }
     return map;
   }, [assetsHeroes]);
@@ -204,7 +204,8 @@ export default function HeroStatsOverTimeChart({
         }}
         series={heroQueries.map((q, idx) => ({
           data: q.data.map(([, d]) => d),
-          label: heroIdNameMap[(heroIds || [])[idx]],
+          label: heroIdMap[(heroIds || [])[idx]].name,
+          color: heroIdMap[(heroIds || [])[idx]].color,
           showMark: false,
         }))}
         xAxis={[
