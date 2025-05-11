@@ -337,13 +337,7 @@ impl Variable {
                 .await
             }
             Self::HighestDeathCount => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.player_deaths)
@@ -352,13 +346,7 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player deaths"))
             }
             Self::HighestDenies => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.denies)
@@ -367,13 +355,7 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player denies"))
             }
             Self::HighestKillCount => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.player_kills)
@@ -382,13 +364,7 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player kills"))
             }
             Self::HighestLastHits => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.last_hits)
@@ -397,13 +373,7 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player last hits"))
             }
             Self::HighestNetWorth => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.net_worth)
@@ -412,13 +382,7 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("player net worth"))
             }
             Self::HoursPlayed => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let seconds_playtime: u32 = matches.iter().map(|m| m.match_duration_s).sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
@@ -475,13 +439,7 @@ impl Variable {
                 )
             }
             Self::MostPlayedHero => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let most_played_hero = matches
                     .iter()
                     .fold(HashMap::new(), |mut acc, m| {
@@ -499,13 +457,7 @@ impl Variable {
                     .ok_or(VariableResolveError::FailedToFetchData("hero name"))
             }
             Self::MostPlayedHeroCount => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let most_played_hero_count = matches
                     .iter()
                     .fold(HashMap::new(), |mut acc, m| {
@@ -517,26 +469,14 @@ impl Variable {
                 Ok(most_played_hero_count.unwrap_or(0).to_string())
             }
             Self::TotalKd => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let (kills, deaths) = matches.iter().fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
                 Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
             }
             Self::TotalKills => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 Ok(matches
                     .iter()
                     .map(|m| m.player_kills)
@@ -544,23 +484,11 @@ impl Variable {
                     .to_string())
             }
             Self::TotalMatches => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 Ok(matches.len().to_string())
             }
             Self::TotalWinrate => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -571,13 +499,7 @@ impl Variable {
                 ))
             }
             Self::TotalWins => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 Ok(matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -585,13 +507,7 @@ impl Variable {
                     .to_string())
             }
             Self::TotalLosses => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 Ok(matches
                     .iter()
                     .filter(|m| m.match_result as i8 != m.player_team)
@@ -599,13 +515,7 @@ impl Variable {
                     .to_string())
             }
             Self::TotalWinsLosses => {
-                let matches = Self::get_all_matches(
-                    &state.config,
-                    &state.ch_client,
-                    &state.http_client,
-                    steam_id,
-                )
-                .await?;
+                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
@@ -808,21 +718,14 @@ impl Variable {
     }
 
     async fn get_all_matches(
-        config: &Config,
         ch_client: &clickhouse::Client,
-        http_client: &reqwest::Client,
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let (steam_match_history, ch_match_history) = join(
-            fetch_steam_match_history(steam_id, config, http_client, false),
-            fetch_match_history_from_clickhouse(ch_client, steam_id),
-        )
-        .await;
-        let (steam_match_history, ch_match_history) = (
-            steam_match_history.unwrap_or_default(),
-            ch_match_history.map_err(|_| VariableResolveError::FailedToFetchData("matches"))?,
-        );
-        Ok(chain!(ch_match_history, steam_match_history)
+        let ch_match_history = fetch_match_history_from_clickhouse(ch_client, steam_id)
+            .await
+            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+
+        Ok(ch_match_history
             .filter(|e| {
                 e.match_mode == ECitadelMatchMode::KECitadelMatchModeUnranked as i8
                     || e.match_mode == ECitadelMatchMode::KECitadelMatchModeRanked as i8
@@ -849,7 +752,7 @@ impl Variable {
             .ok()
             .flatten()
             .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
-        Self::get_all_matches(config, ch_client, http_client, steam_id)
+        Self::get_all_matches(ch_client, steam_id)
             .await
             .map(|m| m.into_iter().filter(|m| m.hero_id == hero_id).collect())
             .map_err(|_| VariableResolveError::FailedToFetchData("matches"))
