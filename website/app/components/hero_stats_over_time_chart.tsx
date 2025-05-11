@@ -147,6 +147,8 @@ export default function HeroStatsOverTimeChart({
 
   const minStat = useMemo(() => Math.min(...statData.map(([, d]) => d)), [statData]);
   const maxStat = useMemo(() => Math.max(...statData.map(([, d]) => d)), [statData]);
+  const minDataDate = useMemo(() => statData[0]?.[0], [statData]);
+  const maxDataDate = useMemo(() => statData[statData.length - 1]?.[0], [statData]);
 
   if (isLoading) {
     return (
@@ -179,8 +181,8 @@ export default function HeroStatsOverTimeChart({
             data: statData?.map(([d]) => d) ?? [],
             scaleType: "time",
             label: "Date",
-            min: minDate?.toDate(),
-            max: maxDate?.toDate(),
+            min: minDataDate?.toDate(),
+            max: maxDataDate?.toDate(),
             labelStyle: { fill: "#fff" },
             tickLabelStyle: { fill: "#fff" },
           },
