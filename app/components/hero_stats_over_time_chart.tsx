@@ -20,30 +20,14 @@ export function HeroStatSelector({
   onChange: (val: (typeof HERO_STATS)[number]) => void;
 }) {
   return (
-    <FormControl size="medium" variant="outlined" sx={{ minWidth: 170, maxWidth: 200 }}>
-      <InputLabel id="hero-stat-select-label" sx={{ color: "white" }}>
-        Stat
-      </InputLabel>
+    <FormControl size="medium" variant="outlined">
+      <InputLabel id="hero-stat-select-label">Stat</InputLabel>
       <Select
         labelId="hero-stat-select-label"
         id="hero-stat-select"
         value={value}
         label="Stat"
         onChange={(e) => onChange(e.target.value as (typeof HERO_STATS)[number])}
-        sx={{
-          backgroundColor: "#1e293b",
-          color: "#f1f5f9",
-          borderRadius: 1,
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#475569",
-          },
-          "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#334155",
-          },
-          "& .MuiSelect-icon": {
-            color: "white",
-          },
-        }}
       >
         {HERO_STATS.map((key) => (
           <MenuItem key={key as string} value={key}>
@@ -63,30 +47,14 @@ export function HeroTimeIntervalSelector({
   onChange: (val: (typeof TIME_INTERVALS)[number]) => void;
 }) {
   return (
-    <FormControl size="medium" variant="outlined" sx={{ minWidth: 170, maxWidth: 200 }}>
-      <InputLabel id="hero-time-interval-select-label" sx={{ color: "white" }}>
-        Time Interval
-      </InputLabel>
+    <FormControl size="medium" variant="outlined" sx={{ minWidth: 160 }}>
+      <InputLabel id="hero-time-interval-select-label">Time Interval</InputLabel>
       <Select
         labelId="hero-time-interval-select-label"
         id="hero-time-interval-select"
         value={value}
         label="Time Interval"
         onChange={(e) => onChange(e.target.value as (typeof TIME_INTERVALS)[number])}
-        sx={{
-          backgroundColor: "#1e293b",
-          color: "#f1f5f9",
-          borderRadius: 1,
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#475569",
-          },
-          "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#334155",
-          },
-          "& .MuiSelect-icon": {
-            color: "white",
-          },
-        }}
       >
         {TIME_INTERVALS.map((key) => (
           <MenuItem key={key as string} value={key}>
@@ -195,13 +163,7 @@ export default function HeroStatsOverTimeChart({
     <div className="w-full">
       <LineChart
         height={700}
-        sx={{
-          backgroundColor: "#1e293b",
-          color: "#fff",
-          "& .MuiChartsLegend-root, & .MuiChartsLegend-label": {
-            color: "#fff",
-          },
-        }}
+        sx={{ backgroundColor: "#1e293b" }}
         series={heroQueries.map((q, idx) => ({
           data: q.data.map(([, d]) => d),
           label: heroIdMap[(heroIds || [])[idx]].name,
@@ -215,8 +177,6 @@ export default function HeroStatsOverTimeChart({
             label: "Date",
             min: minDataDate ? dayjs.unix(minDataDate).toDate() : undefined,
             max: maxDataDate ? dayjs.unix(maxDataDate).toDate() : undefined,
-            labelStyle: { fill: "#fff" },
-            tickLabelStyle: { fill: "#fff" },
           },
         ]}
         yAxis={[
@@ -224,8 +184,6 @@ export default function HeroStatsOverTimeChart({
             label: `${heroStat}`,
             min: minStat * 0.9,
             max: maxStat * 1.1,
-            labelStyle: { fill: "#fff" },
-            tickLabelStyle: { fill: "#fff" },
           },
         ]}
         grid={{ vertical: true, horizontal: true }}

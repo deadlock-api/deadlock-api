@@ -89,9 +89,7 @@ export default function RankSelector({
 
   return (
     <FormControl fullWidth size="medium" variant="outlined" sx={{ minWidth: 170 }}>
-      <InputLabel id="rank-selector-label" sx={{ color: "white" }}>
-        {label || "Select Rank"}
-      </InputLabel>
+      <InputLabel id="rank-selector-label">{label || "Select Rank"}</InputLabel>
       <Select
         labelId="rank-selector-label"
         id="rank-selector"
@@ -114,27 +112,11 @@ export default function RankSelector({
             </div>
           );
         }}
-        sx={{
-          backgroundColor: "#1e293b",
-          color: "white",
-          borderRadius: 1,
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#475569",
-          },
-          "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#334155",
-          },
-          "& .MuiSelect-icon": {
-            color: "white",
-          },
-        }}
         MenuProps={{
           slotProps: {
             paper: {
               sx: {
                 maxHeight: 400,
-                bgcolor: "#0f172a",
-                color: "white",
               },
             },
           },
