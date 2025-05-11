@@ -6,7 +6,7 @@ import DatePicker from "~/components/date_picker";
 import HeroCombStatsTable from "~/components/hero_combs_stats_table";
 import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/hero_matchup_stats_table";
 import HeroName from "~/components/hero_name";
-import HeroSelector from "~/components/hero_selector";
+import HeroSelector, { HeroSelectorMultiple } from "~/components/hero_selector";
 import HeroStatsOverTimeChart, {
   HeroStatSelector,
   HeroTimeIntervalSelector,
@@ -48,6 +48,13 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
     setHeroId(searchHeroId || 15);
 
+    const searchHeroIdsString = params?.get("heroIds");
+    const searchHeroIds = searchHeroIdsString
+      ?.split(",")
+      .map((i) => Number.parseInt(i, 10))
+      .filter(Number.isInteger);
+    setHeroIds(searchHeroIds || [15]);
+
     const searchHeroStat = params?.get("heroStat") || "winrate";
     if (searchHeroStat) {
       setHeroStat(searchHeroStat as (typeof HERO_STATS)[number]);
@@ -65,6 +72,12 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const searchHeroIdString = searchParams?.get("heroId");
   const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
   const [heroId, setHeroId] = useState(searchHeroId || 15);
+  const searchHeroIdsString = searchParams?.get("heroIds");
+  const searchHeroIds = searchHeroIdsString
+    ?.split(",")
+    .map((i) => Number.parseInt(i, 10))
+    .filter(Number.isInteger);
+  const [heroIds, setHeroIds] = useState(searchHeroIds || [15]);
   const [heroStat, setHeroStat] = useState<(typeof HERO_STATS)[number]>("winrate");
   const [heroTimeInterval, setHeroTimeInterval] = useState<(typeof TIME_INTERVALS)[number]>("DAY");
 
@@ -211,14 +224,14 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           </h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-              <HeroSelector
-                selectedHero={heroId}
-                onHeroSelected={(selectedHeroId) => {
-                  if (!selectedHeroId) return;
-                  setHeroId(selectedHeroId);
+              <HeroSelectorMultiple
+                selectedHeroes={heroIds}
+                onHeroesSelected={(selectedHeroIds) => {
+                  if (!selectedHeroIds) return;
+                  setHeroIds(selectedHeroIds);
                   if (typeof window !== "undefined") {
                     const url = new URL(window.location.href);
-                    url.searchParams.set("heroId", selectedHeroId.toString());
+                    url.searchParams.set("heroIds", selectedHeroIds.join(","));
                     window.history.pushState({}, "", url);
                   }
                 }}
@@ -227,7 +240,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               <HeroTimeIntervalSelector value={heroTimeInterval} onChange={handleHeroTimeIntervalChange} />
             </div>
             <HeroStatsOverTimeChart
-              heroId={heroId}
+              heroIds={heroIds}
               heroStat={heroStat}
               heroTimeInterval={heroTimeInterval}
               minRankId={minRankId}
