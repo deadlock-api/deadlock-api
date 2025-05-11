@@ -219,9 +219,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       )}
       {tab === "stats-over-time" && (
         <>
-          <h2 className="text-2xl font-bold text-center mb-2">
-            Hero Stats over time for <HeroName heroId={heroId} />
-          </h2>
+          <h2 className="text-2xl font-bold text-center mb-2">Hero Stats over time</h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
               <HeroSelectorMultiple
