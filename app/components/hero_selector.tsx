@@ -31,7 +31,7 @@ export default function HeroSelector({
   }
 
   return (
-    <FormControl size="medium" variant="outlined" sx={{ maxWidth: 200 }}>
+    <FormControl size="medium" variant="outlined" sx={{ minWidth: 170, maxWidth: 200 }}>
       <InputLabel id="hero-selector-label">{label || "Select Hero"}</InputLabel>
       <Select
         labelId="hero-selector-label"
