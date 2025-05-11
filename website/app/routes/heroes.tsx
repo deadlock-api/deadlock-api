@@ -18,7 +18,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "general" }) {
+export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
 
@@ -34,7 +34,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     const params = new URLSearchParams(location.search);
     setSearchParams(params);
 
-    const searchTab = params?.get("tab") || initialTab || "general";
+    const searchTab = params?.get("tab") || initialTab || "stats";
     if (searchTab) {
       setTab(searchTab);
     }
@@ -45,7 +45,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   }, [location.search, initialTab]);
 
   const searchTab = searchParams?.get("tab");
-  const [tab, setTab] = useState(searchTab || initialTab || "general");
+  const [tab, setTab] = useState(searchTab || initialTab || "stats");
 
   const searchHeroIdString = searchParams?.get("heroId");
   const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
@@ -87,15 +87,15 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           <li className="me-2">
             <button
               type="button"
-              onClick={() => handleTabChange("general")}
-              aria-current={tab === "general" ? "page" : undefined}
+              onClick={() => handleTabChange("stats")}
+              aria-current={tab === "stats" ? "page" : undefined}
               className={
-                tab === "general"
+                tab === "stats"
                   ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
                   : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
               }
             >
-              General Stats
+              Hero Stats
             </button>
           </li>
           <li className="me-2">
@@ -143,7 +143,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         </ul>
       </div>
 
-      {tab === "general" && (
+      {tab === "stats" && (
         <div className="flex flex-col gap-4">
           <HeroStatsTable
             columns={["winRate", "pickRate", "KDA", "totalMatches"]}
