@@ -115,6 +115,20 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           <li className="me-2">
             <button
               type="button"
+              onClick={() => handleTabChange("hero-matchup-details")}
+              aria-current={tab === "hero-matchup-details" ? "page" : undefined}
+              className={
+                tab === "hero-matchup-details"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
+              }
+            >
+              Hero Matchup Details
+            </button>
+          </li>
+          <li className="me-2">
+            <button
+              type="button"
               onClick={() => handleTabChange("hero-combs")}
               aria-current={tab === "hero-combs" ? "page" : undefined}
               className={
@@ -124,20 +138,6 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               }
             >
               Hero Combinations
-            </button>
-          </li>
-          <li className="me-2">
-            <button
-              type="button"
-              onClick={() => handleTabChange("hero-details")}
-              aria-current={tab === "hero-details" ? "page" : undefined}
-              className={
-                tab === "hero-details"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-              }
-            >
-              Hero Details
             </button>
           </li>
         </ul>
@@ -176,10 +176,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           />
         </div>
       )}
-      {tab === "hero-details" && (
+      {tab === "hero-matchup-details" && (
         <>
           <h2 className="text-2xl font-bold text-center mb-2">
-            Details for <HeroName heroId={heroId} />
+            Matchup Details for <HeroName heroId={heroId} />
           </h2>
           <div className="flex flex-col gap-4">
             <HeroSelector
