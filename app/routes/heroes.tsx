@@ -77,7 +77,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     ?.split(",")
     .map((i) => Number.parseInt(i, 10))
     .filter(Number.isInteger);
-  const [heroIds, setHeroIds] = useState(searchHeroIds || [15]);
+  const [heroIds, setHeroIds] = useState(searchHeroIds || [searchHeroId || 15]);
   const [heroStat, setHeroStat] = useState<(typeof HERO_STATS)[number]>("winrate");
   const [heroTimeInterval, setHeroTimeInterval] = useState<(typeof TIME_INTERVALS)[number]>("DAY");
 
