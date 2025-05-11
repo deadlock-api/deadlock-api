@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import ItemImage from "~/components/item_image";
 import ItemName from "~/components/item_name";
@@ -26,12 +27,12 @@ export default function ItemStatsTable({
   sortBy?: keyof APIItemStats | "winrate";
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Date;
-  maxDate?: Date;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
   hero?: number | null;
 }) {
-  const minDateTimestamp = useMemo(() => (minDate ? Math.floor(minDate.getTime() / 1000) : null), [minDate]);
-  const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],

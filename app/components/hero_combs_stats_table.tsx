@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import HeroImage from "~/components/hero_image";
@@ -21,15 +22,15 @@ export default function HeroCombStatsTable({
   hideIndex?: boolean;
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Date;
-  maxDate?: Date;
+  minDate?: Dayjs | null;
+  maxDate?: Dayjs | null;
 }) {
   const [minMatchesFilter, setMinMatchesFilter] = useState<number>(100);
   const [combSizeFilter, setCombSizeFilter] = useState<number>(2);
   const [combsToShow, setCombsToShow] = useState<number>(limit ?? 50);
 
-  const minDateTimestamp = useMemo(() => (minDate ? Math.floor(minDate.getTime() / 1000) : null), [minDate]);
-  const maxDateTimestamp = useMemo(() => (maxDate ? Math.floor(maxDate.getTime() / 1000) : null), [maxDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery<APIHeroCombStats[]>({
     queryKey: [
@@ -85,7 +86,7 @@ export default function HeroCombStatsTable({
               max={6}
               value={combSizeFilter}
               onChange={(e) => setCombSizeFilter(Number(e.target.value))}
-              className="w-full h-2 bg-gray-900 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-900 rounded-lg appearance-none"
             />
             <span>{combSizeFilter}</span>
           </div>
@@ -101,7 +102,7 @@ export default function HeroCombStatsTable({
             step={50}
             value={minMatchesFilter}
             onChange={(e) => setMinMatchesFilter(Number(e.target.value))}
-            className="min-w-24 text-center h-8 bg-gray-900 rounded-lg appearance-none cursor-pointer"
+            className="min-w-24 text-center h-8 bg-gray-900 rounded-lg appearance-none"
           />
         </div>
         <div className="flex flex-col items-center gap-2 min-w-36">
@@ -116,7 +117,7 @@ export default function HeroCombStatsTable({
               max={numCombs}
               value={combsToShow}
               onChange={(e) => setCombsToShow(Number(e.target.value))}
-              className="w-full h-2 bg-gray-900 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-gray-900 rounded-lg appearance-none"
             />
             <span>{combsToShow}</span>
           </div>
@@ -143,7 +144,7 @@ export default function HeroCombStatsTable({
             {limitedData?.map((row, index) => (
               <tr
                 key={row.hero_ids.join("-")}
-                className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center hover:cursor-pointer"
+                className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
               >
                 {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
                 <td className="p-2 align-middle">
