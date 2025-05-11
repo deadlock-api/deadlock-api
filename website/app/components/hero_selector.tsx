@@ -141,9 +141,9 @@ export function HeroSelectorMultiple({
             return <span className="truncate">Select Heroes...</span>;
           }
           return (
-            <div className="flex flex-wrap gap-2 overflow-y-auto max-h-40">
+            <div className="flex flex-col gap-2 overflow-y-auto max-h-40">
               {heroes.map((hero) => (
-                <div key={hero?.id} className="flex items-center gap-2">
+                <div key={hero?.id} className="flex items-center gap-2 mr-6">
                   <img src={getHeroImageUrl(hero)} alt={hero?.name} className="h-5 w-5 object-contain flex-shrink-0" />
                   <span className="truncate">{hero?.name}</span>
                 </div>
