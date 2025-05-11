@@ -54,4 +54,4 @@ export function hero_stats_transform(heroStats: APIHeroStatsOverTime, heroStat: 
   }
 }
 
-export const TIME_INTERVALS = ["HOURLY", "DAY", "WEEK"] as const;
+export const TIME_INTERVALS = ["HOUR", "DAY", "WEEK"] as const;
