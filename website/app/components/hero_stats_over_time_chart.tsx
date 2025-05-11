@@ -195,7 +195,6 @@ export default function HeroStatsOverTimeChart({
     <div className="w-full">
       <LineChart
         height={700}
-        // hideLegend={true}
         sx={{
           backgroundColor: "#1e293b",
           color: "#fff",
@@ -206,7 +205,6 @@ export default function HeroStatsOverTimeChart({
         series={heroQueries.map((q, idx) => ({
           data: q.data.map(([, d]) => d),
           label: heroIdNameMap[(heroIds || [])[idx]],
-          // color: undefined, // Let the chart auto-assign or customize as needed
           showMark: false,
         }))}
         xAxis={[
