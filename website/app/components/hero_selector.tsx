@@ -31,10 +31,8 @@ export default function HeroSelector({
   }
 
   return (
-    <FormControl size="medium" variant="outlined" sx={{ minWidth: 170, maxWidth: 200 }}>
-      <InputLabel id="hero-selector-label" sx={{ color: "white" }}>
-        {label || "Select Hero"}
-      </InputLabel>
+    <FormControl size="medium" variant="outlined" sx={{ maxWidth: 200 }}>
+      <InputLabel id="hero-selector-label">{label || "Select Hero"}</InputLabel>
       <Select
         labelId="hero-selector-label"
         id="hero-selector"
@@ -53,27 +51,11 @@ export default function HeroSelector({
             </div>
           );
         }}
-        sx={{
-          backgroundColor: "#1e293b",
-          color: "#f1f5f9",
-          borderRadius: 1,
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#475569",
-          },
-          "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#334155",
-          },
-          "& .MuiSelect-icon": {
-            color: "white",
-          },
-        }}
         MenuProps={{
           slotProps: {
             paper: {
               sx: {
                 maxHeight: 400,
-                bgcolor: "#0f172a",
-                color: "#cbd5e1",
               },
             },
           },
@@ -117,10 +99,8 @@ export function HeroSelectorMultiple({
   }
 
   return (
-    <FormControl size="medium" variant="outlined" sx={{ minWidth: 170, maxWidth: 200 }}>
-      <InputLabel id="hero-selector-label" sx={{ color: "white" }}>
-        {label || "Select Heroes"}
-      </InputLabel>
+    <FormControl size="medium" variant="outlined" sx={{ maxWidth: 200 }}>
+      <InputLabel id="hero-selector-label">{label || "Select Heroes"}</InputLabel>
       <Select
         labelId="hero-selector-label"
         id="hero-selector"
@@ -151,27 +131,11 @@ export function HeroSelectorMultiple({
             </div>
           );
         }}
-        sx={{
-          backgroundColor: "#1e293b",
-          color: "#f1f5f9",
-          borderRadius: 1,
-          "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#475569",
-          },
-          "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#334155",
-          },
-          "& .MuiSelect-icon": {
-            color: "white",
-          },
-        }}
         MenuProps={{
           slotProps: {
             paper: {
               sx: {
                 maxHeight: 400,
-                bgcolor: "#0f172a",
-                color: "#cbd5e1",
               },
             },
           },
@@ -182,7 +146,7 @@ export function HeroSelectorMultiple({
         </MenuItem>
         {sortedHeroes.map((hero) => (
           <MenuItem key={hero.id} value={hero.id}>
-            <Checkbox checked={selectedHeroes.includes(hero.id)} sx={{ color: "white" }} />
+            <Checkbox checked={selectedHeroes.includes(hero.id)} />
             <img src={getHeroImageUrl(hero)} alt={hero.name} className="h-5 w-5 object-contain flex-shrink-0 mr-2" />
             <span className="truncate">{hero.name}</span>
           </MenuItem>
