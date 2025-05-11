@@ -179,6 +179,8 @@ export default function HeroStatsOverTimeChart({
             data: statData?.map(([d]) => d) ?? [],
             scaleType: "time",
             label: "Date",
+            min: minDate?.toDate(),
+            max: maxDate?.toDate(),
             labelStyle: { fill: "#fff" },
             tickLabelStyle: { fill: "#fff" },
           },
