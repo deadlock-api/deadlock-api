@@ -16,6 +16,7 @@
     "@emotion/styled": "^11.14.0",
     "@fontsource/roboto": "^5.2.5",
     "@mui/material": "^7.1.0",
+    "@mui/x-charts": "^8.3.0",
     "@mui/x-date-pickers": "^8.3.0",
     "@react-router/fs-routes": "^7.6.0",
     "@react-router/node": "^7.6.0",
