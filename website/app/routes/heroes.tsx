@@ -7,9 +7,14 @@ import HeroCombStatsTable from "~/components/hero_combs_stats_table";
 import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/hero_matchup_stats_table";
 import HeroName from "~/components/hero_name";
 import HeroSelector from "~/components/hero_selector";
+import HeroStatsOverTimeChart, {
+  HeroStatSelector,
+  HeroTimeIntervalSelector,
+} from "~/components/hero_stats_over_time_chart";
 import HeroStatsTable from "~/components/hero_stats_table";
 import HeroesMatchupStatsTable from "~/components/heroes_matchup_stats_table";
 import RankSelector from "~/components/rank_selector";
+import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 
 export const meta: MetaFunction = () => {
   return [
@@ -50,6 +55,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const searchHeroIdString = searchParams?.get("heroId");
   const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
   const [heroId, setHeroId] = useState(searchHeroId || 15);
+  const [heroStat, setHeroStat] = useState<(typeof HERO_STATS)[number]>("winrate");
+  const [heroTimeInterval, setHeroTimeInterval] = useState<(typeof TIME_INTERVALS)[number]>("DAY");
 
   const handleTabChange = (newTab: string) => {
     setTab(newTab);
@@ -96,6 +103,20 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               }
             >
               Hero Stats
+            </button>
+          </li>
+          <li className="me-2">
+            <button
+              type="button"
+              onClick={() => handleTabChange("stats-over-time")}
+              aria-current={tab === "stats-over-time" ? "page" : undefined}
+              className={
+                tab === "stats-over-time"
+                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
+                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
+              }
+            >
+              Hero Stats Over Time
             </button>
           </li>
           <li className="me-2">
@@ -154,6 +175,40 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             maxDate={endDate || undefined}
           />
         </div>
+      )}
+      {tab === "stats-over-time" && (
+        <>
+          <h2 className="text-2xl font-bold text-center mb-2">
+            Hero Stats over time for <HeroName heroId={heroId} />
+          </h2>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+              <HeroSelector
+                selectedHero={heroId}
+                onHeroSelected={(selectedHeroId) => {
+                  if (!selectedHeroId) return;
+                  setHeroId(selectedHeroId);
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("heroId", selectedHeroId.toString());
+                    window.history.pushState({}, "", url);
+                  }
+                }}
+              />
+              <HeroStatSelector value={heroStat} onChange={setHeroStat} />
+              <HeroTimeIntervalSelector value={heroTimeInterval} onChange={setHeroTimeInterval} />
+            </div>
+            <HeroStatsOverTimeChart
+              heroId={heroId}
+              heroStat={heroStat}
+              heroTimeInterval={heroTimeInterval}
+              minRankId={minRankId}
+              maxRankId={maxRankId}
+              minDate={startDate || undefined}
+              maxDate={endDate || undefined}
+            />
+          </div>
+        </>
       )}
       {tab === "matchups" && (
         <div className="flex flex-col gap-4">
