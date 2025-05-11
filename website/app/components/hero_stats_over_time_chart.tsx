@@ -2,7 +2,12 @@ import { LineChart } from "@mui/x-charts";
 import { useQuery } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { type APIHeroStatsOverTime, HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
+import {
+  type APIHeroStatsOverTime,
+  HERO_STATS,
+  TIME_INTERVALS,
+  hero_stats_transform,
+} from "~/types/api_hero_stats_over_time";
 
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 
@@ -136,11 +141,7 @@ export default function HeroStatsOverTimeChart({
   });
 
   const statData: [Dayjs, number][] = useMemo(
-    () =>
-      heroData?.map((d) => [
-        dayjs.unix(d.date_time),
-        heroStat !== "winrate" ? d[heroStat] : (100 * d.wins) / d.matches,
-      ]) ?? [],
+    () => heroData?.map((d) => [dayjs.unix(d.date_time), hero_stats_transform(d, heroStat)]) ?? [],
     [heroData, heroStat],
   );
 
