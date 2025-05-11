@@ -1,3 +1,4 @@
+import { Button } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { MetaFunction } from "react-router";
@@ -88,7 +89,7 @@ export default function Index() {
       <hr className="my-8 border-gray-700" />
 
       <section className="grid gap-4 lg:grid-cols-3 sm:grid-cols-2">
-        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80 space-y-4">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="text-lg font-bold text-center">Popular Heroes</h3>
             <p className="text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -96,16 +97,11 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
           <Link to="/heroes">
-            <button
-              type="button"
-              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-            >
-              View All Heroes
-            </button>
+            <Button variant="contained">View All Heroes</Button>
           </Link>
         </div>
 
-        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80 space-y-4">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Best Heroes</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -113,16 +109,11 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
           <Link to="/heroes">
-            <button
-              type="button"
-              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-            >
-              View All Heroes
-            </button>
+            <Button variant="contained">View All Heroes</Button>
           </Link>
         </div>
 
-        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80 space-y-4">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Popular Items</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -130,16 +121,11 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
           <Link to="/items">
-            <button
-              type="button"
-              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-            >
-              View All Items
-            </button>
+            <Button variant="contained">View All Items</Button>
           </Link>
         </div>
 
-        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80">
+        <div className="bg-gray-800 rounded-2xl p-2 flex flex-col items-center shadow-2xl border-2 border-gray-700 min-w-80 space-y-4">
           <div className="flex justify-between my-2 items-center gap-2">
             <h3 className="block text-lg font-bold text-center">Best Items</h3>
             <p className="block text-gray-300 text-center text-sm">(Last 30 days)</p>
@@ -147,12 +133,7 @@ export default function Index() {
           <hr className="w-full border-gray-700 mb-2" />
           <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
           <Link to="/items">
-            <button
-              type="button"
-              className="my-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-            >
-              View All Items
-            </button>
+            <Button variant="contained">View All Items</Button>
           </Link>
         </div>
       </section>
