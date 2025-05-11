@@ -47,6 +47,16 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     const searchHeroIdString = params?.get("heroId");
     const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
     setHeroId(searchHeroId || 15);
+
+    const searchHeroStat = params?.get("heroStat") || "winrate";
+    if (searchHeroStat) {
+      setHeroStat(searchHeroStat as (typeof HERO_STATS)[number]);
+    }
+
+    const searchHeroTimeInterval = params?.get("heroTimeInterval") || "DAY";
+    if (searchHeroTimeInterval) {
+      setHeroTimeInterval(searchHeroTimeInterval as (typeof TIME_INTERVALS)[number]);
+    }
   }, [location.search, initialTab]);
 
   const searchTab = searchParams?.get("tab");
@@ -63,6 +73,24 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", newTab);
+      window.history.pushState({}, "", url);
+    }
+  };
+
+  const handleHeroStatChange = (newHeroStat: (typeof HERO_STATS)[number]) => {
+    setHeroStat(newHeroStat);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("heroStat", newHeroStat);
+      window.history.pushState({}, "", url);
+    }
+  };
+
+  const handleHeroTimeIntervalChange = (newHeroTimeInterval: (typeof TIME_INTERVALS)[number]) => {
+    setHeroTimeInterval(newHeroTimeInterval);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("heroTimeInterval", newHeroTimeInterval);
       window.history.pushState({}, "", url);
     }
   };
@@ -195,8 +223,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   }
                 }}
               />
-              <HeroStatSelector value={heroStat} onChange={setHeroStat} />
-              <HeroTimeIntervalSelector value={heroTimeInterval} onChange={setHeroTimeInterval} />
+              <HeroStatSelector value={heroStat} onChange={handleHeroStatChange} />
+              <HeroTimeIntervalSelector value={heroTimeInterval} onChange={handleHeroTimeIntervalChange} />
             </div>
             <HeroStatsOverTimeChart
               heroId={heroId}
