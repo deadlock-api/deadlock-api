@@ -1,13 +1,6 @@
+use crate::services::assets::types::{AssetsHero, AssetsRanks};
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use serde::Deserialize;
-use std::collections::HashMap;
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AssetsHero {
-    pub id: u32,
-    pub name: String,
-}
 
 #[cached(
     ty = "TimedCache<u8, Vec<AssetsHero>>",
@@ -22,13 +15,6 @@ pub async fn fetch_heroes(http_client: &reqwest::Client) -> reqwest::Result<Vec<
         .await?
         .json()
         .await
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AssetsRanks {
-    pub tier: u32,
-    pub name: String,
-    pub images: HashMap<String, String>,
 }
 
 #[cached(

@@ -1,9 +1,9 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
+use crate::services::steam::client;
+use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
-use crate::utils::steam;
-use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderMap;
@@ -48,7 +48,9 @@ async fn create_party(
                 ping_times: vec![20],
             }
             .into(),
-            client_version: steam::get_current_client_version(http_client).await?.into(),
+            client_version: client::get_current_client_version(http_client)
+                .await?
+                .into(),
             region_mode: None,
         }
         .into(),
@@ -72,7 +74,7 @@ async fn create_party(
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),
     };
-    let result = steam::call_steam_proxy(
+    let result = client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {
@@ -148,7 +150,7 @@ async fn switch_to_spectator_slot(
         uint_value: 31.into(),
         ..Default::default()
     };
-    let result = steam::call_steam_proxy(
+    let result = client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {
@@ -201,7 +203,7 @@ async fn make_ready(
         ready_state: true.into(),
         hero_roster: None,
     };
-    let result = steam::call_steam_proxy(
+    let result = client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {
@@ -255,7 +257,7 @@ async fn leave_party(
     let msg = CMsgClientToGcPartyLeave {
         party_id: party_id.into(),
     };
-    let result = steam::call_steam_proxy(
+    let result = client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {

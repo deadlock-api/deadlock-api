@@ -1,10 +1,10 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
+use crate::services::steam;
+use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils;
 use crate::utils::parse::parse_steam_id_option;
-use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -40,7 +40,7 @@ pub async fn fetch_active_matches_raw(
     config: &Config,
     http_client: &reqwest::Client,
 ) -> APIResult<Vec<u8>> {
-    utils::steam::call_steam_proxy(
+    steam::client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {

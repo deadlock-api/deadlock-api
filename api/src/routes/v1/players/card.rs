@@ -1,10 +1,10 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::types::AccountIdQuery;
+use crate::services::steam;
+use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
-use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
@@ -111,7 +111,7 @@ async fn fetch_player_card_raw(
         dev_access_hint: None,
         friend_access_hint: None,
     };
-    utils::steam::call_steam_proxy(
+    steam::client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {

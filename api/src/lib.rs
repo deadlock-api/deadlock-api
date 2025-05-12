@@ -9,6 +9,7 @@ mod config;
 mod error;
 mod middleware;
 pub mod routes;
+pub mod services;
 pub mod state;
 pub mod utils;
 

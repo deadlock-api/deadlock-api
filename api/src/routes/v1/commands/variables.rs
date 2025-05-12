@@ -7,15 +7,15 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::mmr_history::MMRHistory;
 use crate::routes::v1::players::types::PlayerMatchHistory;
+use crate::services::assets::client;
 use crate::state::AppState;
-use crate::utils::assets;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::http::HeaderMap;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;
 use futures::future::join;
-use itertools::{Itertools, chain};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
@@ -256,7 +256,7 @@ impl Variable {
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
-                let ranks = assets::fetch_ranks(&state.http_client)
+                let ranks = client::fetch_ranks(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
@@ -273,7 +273,7 @@ impl Variable {
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
-                let ranks = assets::fetch_ranks(&state.http_client)
+                let ranks = client::fetch_ranks(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
@@ -291,7 +291,7 @@ impl Variable {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
                 });
-                let heroes = assets::fetch_heroes(&state.http_client)
+                let heroes = client::fetch_heroes(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("heroes"))?;
                 let heroes = heroes
@@ -306,7 +306,7 @@ impl Variable {
                     .join(", "))
             }
             Self::HeroLeaderboardPlace => {
-                let hero_id = assets::fetch_hero_id_from_name(
+                let hero_id = client::fetch_hero_id_from_name(
                     &state.http_client,
                     extra_args
                         .get("hero_name")
@@ -450,7 +450,7 @@ impl Variable {
                     .max_by_key(|(_, count)| *count)
                     .map(|(hero_id, _)| hero_id)
                     .ok_or(VariableResolveError::FailedToFetchData("most played hero"))?;
-                assets::fetch_hero_name_from_id(&state.http_client, most_played_hero)
+                client::fetch_hero_name_from_id(&state.http_client, most_played_hero)
                     .await
                     .ok()
                     .flatten()
@@ -539,7 +539,6 @@ impl Variable {
                 .ok_or(VariableResolveError::FailedToFetchData("patch notes")),
             Self::HeroHoursPlayed => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.config,
                     &state.ch_client,
                     &state.http_client,
                     steam_id,
@@ -551,7 +550,6 @@ impl Variable {
             }
             Self::HeroKd => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.config,
                     &state.ch_client,
                     &state.http_client,
                     steam_id,
@@ -565,7 +563,6 @@ impl Variable {
             }
             Self::HeroKills => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.config,
                     &state.ch_client,
                     &state.http_client,
                     steam_id,
@@ -578,18 +575,13 @@ impl Variable {
                     .sum::<u32>()
                     .to_string())
             }
-            Self::HeroMatches => Self::get_hero_matches(
-                &state.config,
-                &state.ch_client,
-                &state.http_client,
-                steam_id,
-                extra_args,
-            )
-            .await
-            .map(|m| m.len().to_string()),
+            Self::HeroMatches => {
+                Self::get_hero_matches(&state.ch_client, &state.http_client, steam_id, extra_args)
+                    .await
+                    .map(|m| m.len().to_string())
+            }
             Self::HeroLosses => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.config,
                     &state.ch_client,
                     &state.http_client,
                     steam_id,
@@ -604,7 +596,6 @@ impl Variable {
             }
             Self::HeroWinrate => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.config,
                     &state.ch_client,
                     &state.http_client,
                     steam_id,
@@ -620,7 +611,6 @@ impl Variable {
             }
             Self::HeroWins => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.config,
                     &state.ch_client,
                     &state.http_client,
                     steam_id,
@@ -663,7 +653,7 @@ impl Variable {
                 let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("mmr history"))?;
-                let ranks = assets::fetch_ranks(&state.http_client)
+                let ranks = client::fetch_ranks(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 let rank_name = ranks
@@ -677,7 +667,7 @@ impl Variable {
                 let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("mmr history"))?;
-                let ranks = assets::fetch_ranks(&state.http_client)
+                let ranks = client::fetch_ranks(&state.http_client)
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 ranks
@@ -739,7 +729,6 @@ impl Variable {
     }
 
     async fn get_hero_matches(
-        config: &Config,
         ch_client: &clickhouse::Client,
         http_client: &reqwest::Client,
         steam_id: u32,
@@ -748,7 +737,7 @@ impl Variable {
         let hero_name = extra_args
             .get("hero_name")
             .ok_or(VariableResolveError::MissingArgument("hero name"))?;
-        let hero_id = assets::fetch_hero_id_from_name(http_client, hero_name)
+        let hero_id = client::fetch_hero_id_from_name(http_client, hero_name)
             .await
             .ok()
             .flatten()

@@ -1,32 +1,13 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use prost::Message;
-use serde::Deserialize;
 use serde_json::json;
-use std::time::Duration;
 use tracing::debug;
-use valveprotos::deadlock::EgcCitadelClientMessages;
-
-#[derive(Debug, Clone)]
-pub struct SteamProxyQuery<M: Message> {
-    pub msg_type: EgcCitadelClientMessages,
-    pub msg: M,
-    pub in_all_groups: Option<Vec<String>>,
-    pub in_any_groups: Option<Vec<String>>,
-    pub cooldown_time: Duration,
-    pub request_timeout: Duration,
-    pub username: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct SteamProxyResponse {
-    pub data: String,
-    pub username: String,
-}
 
 pub async fn call_steam_proxy(
     config: &Config,

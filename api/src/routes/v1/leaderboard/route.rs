@@ -1,10 +1,10 @@
 use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
+use crate::services::steam;
+use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils;
 use crate::utils::parse;
-use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -59,7 +59,7 @@ pub async fn fetch_leaderboard_raw(
         leaderboard_region: Some(region as i32),
         hero_id,
     };
-    utils::steam::call_steam_proxy(
+    steam::client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {

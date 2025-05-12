@@ -2,10 +2,10 @@ use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
+use crate::services::steam;
+use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
-use crate::utils::steam::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::HeaderMap;
@@ -123,7 +123,7 @@ pub async fn fetch_match_salts(
         metadata_salt: None,
         target_account_id: None,
     };
-    let response = utils::steam::call_steam_proxy(
+    let response = steam::client::call_steam_proxy(
         config,
         http_client,
         SteamProxyQuery {
