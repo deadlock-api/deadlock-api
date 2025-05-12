@@ -1,7 +1,7 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::services::steam::client::SteamClient;
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use async_compression::tokio::bufread::BzDecoder;
@@ -27,7 +27,7 @@ async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Resul
 }
 
 async fn fetch_match_metadata_raw(
-    config: &Config,
+    steam_client: &SteamClient,
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     s3: &impl ObjectStore,
@@ -69,7 +69,7 @@ async fn fetch_match_metadata_raw(
     }
 
     // If not in S3, fetch from Steam
-    let salts = fetch_match_salts(config, http_client, ch_client, match_id, false).await?;
+    let salts = fetch_match_salts(steam_client, ch_client, match_id, false).await?;
     http_client
         .get(format!(
             "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
@@ -155,7 +155,7 @@ pub async fn metadata_raw(
     .await?;
     match tryhard::retry_fn(|| {
         fetch_match_metadata_raw(
-            &state.config,
+            &state.steam_client,
             &state.http_client,
             &state.ch_client,
             &state.s3_client,
@@ -215,7 +215,7 @@ pub async fn metadata(
     .await?;
     match tryhard::retry_fn(|| async {
         let raw_data = fetch_match_metadata_raw(
-            &state.config,
+            &state.steam_client,
             &state.http_client,
             &state.ch_client,
             &state.s3_client,

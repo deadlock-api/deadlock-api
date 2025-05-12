@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use base64::Engine;
@@ -9,33 +8,48 @@ use prost::Message;
 use serde_json::json;
 use tracing::debug;
 
-pub async fn call_steam_proxy(
-    config: &Config,
-    http_client: &reqwest::Client,
-    query: SteamProxyQuery<impl Message>,
-) -> reqwest::Result<SteamProxyResponse> {
-    let serialized_message = query.msg.encode_to_vec();
-    let encoded_message = BASE64_STANDARD.encode(&serialized_message);
-    let body = json!({
-        "message_kind": query.msg_type as i32,
-        "job_cooldown_millis": query.cooldown_time.as_millis(),
-        "rate_limit_cooldown_millis": 2 * query.cooldown_time.as_millis(),
-        "bot_in_all_groups": query.in_all_groups,
-        "bot_in_any_groups": query.in_any_groups,
-        "data": encoded_message,
-        "bot_username": query.username,
-    });
-    debug!("Calling Steam Proxy with body: {:?}", body);
-    http_client
-        .post(&config.steam_proxy_url)
-        .bearer_auth(&config.steam_proxy_api_key)
-        .timeout(query.request_timeout)
-        .json(&body)
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await
+/// Client for interacting with the Steam API and proxy
+#[derive(Clone)]
+pub struct SteamClient {
+    pub http_client: reqwest::Client,
+    pub steam_proxy_url: String,
+    pub steam_proxy_api_key: String,
+}
+
+impl SteamClient {
+    /// Call the Steam proxy with the given query
+    pub async fn call_steam_proxy<M: Message>(
+        &self,
+        query: SteamProxyQuery<M>,
+    ) -> reqwest::Result<SteamProxyResponse> {
+        let serialized_message = query.msg.encode_to_vec();
+        let encoded_message = BASE64_STANDARD.encode(&serialized_message);
+        let body = json!({
+            "message_kind": query.msg_type as i32,
+            "job_cooldown_millis": query.cooldown_time.as_millis(),
+            "rate_limit_cooldown_millis": 2 * query.cooldown_time.as_millis(),
+            "bot_in_all_groups": query.in_all_groups,
+            "bot_in_any_groups": query.in_any_groups,
+            "data": encoded_message,
+            "bot_username": query.username,
+        });
+        debug!("Calling Steam Proxy with body: {:?}", body);
+        self.http_client
+            .post(&self.steam_proxy_url)
+            .bearer_auth(&self.steam_proxy_api_key)
+            .timeout(query.request_timeout)
+            .json(&body)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await
+    }
+
+    /// Get the current client version from the Steam Database
+    pub async fn get_current_client_version(&self) -> APIResult<u32> {
+        get_current_client_version(&self.http_client).await
+    }
 }
 
 #[cached(

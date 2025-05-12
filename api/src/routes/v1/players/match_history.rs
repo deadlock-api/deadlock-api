@@ -1,9 +1,8 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::types::{
     AccountIdQuery, PlayerMatchHistory, PlayerMatchHistoryEntry,
 };
-use crate::services::steam;
+use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
@@ -88,8 +87,7 @@ pub async fn fetch_match_history_from_clickhouse(
 }
 
 async fn fetch_match_history_raw(
-    config: &Config,
-    http_client: &reqwest::Client,
+    steam_client: &SteamClient,
     account_id: u32,
     continue_cursor: Option<u64>,
 ) -> APIResult<Vec<u8>> {
@@ -98,10 +96,8 @@ async fn fetch_match_history_raw(
         continue_cursor,
         ranked_interval: None,
     };
-    steam::client::call_steam_proxy(
-        config,
-        http_client,
-        SteamProxyQuery {
+    steam_client
+        .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
             msg,
             in_all_groups: Some(vec!["GetMatchHistory".to_string()]),
@@ -109,21 +105,20 @@ async fn fetch_match_history_raw(
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 20), // 200req/day
             request_timeout: Duration::from_secs(3),
             username: None,
-        },
-    )
-    .await
-    .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch player match history: {e}"),
-    })
-    .and_then(|r| {
-        debug!("Fetched player match history with: {}", r.username);
+        })
+        .await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch player match history: {e}"),
+        })
+        .and_then(|r| {
+            debug!("Fetched player match history with: {}", r.username);
 
-        BASE64_STANDARD
-            .decode(&r.data)
-            .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode player match history: {e}"),
-            })
-    })
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode player match history: {e}"),
+                })
+        })
 }
 
 async fn parse_match_history_raw(
@@ -170,9 +165,8 @@ async fn parse_match_history_raw(
     key = "(u32, bool)"
 )]
 pub async fn fetch_steam_match_history(
+    steam_client: &SteamClient,
     account_id: u32,
-    config: &Config,
-    http_client: &reqwest::Client,
     force_refetch: bool,
 ) -> APIResult<PlayerMatchHistory> {
     let mut continue_cursor = None;
@@ -182,7 +176,7 @@ pub async fn fetch_steam_match_history(
         iterations += 1;
         let result = tryhard::retry_fn(|| async {
             let raw_data =
-                fetch_match_history_raw(config, http_client, account_id, continue_cursor).await?;
+                fetch_match_history_raw(steam_client, account_id, continue_cursor).await?;
             parse_match_history_raw(account_id, &raw_data).await
         })
         .retries(10)
@@ -304,12 +298,7 @@ pub async fn match_history(
 
     // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
-        fetch_steam_match_history(
-            account_id,
-            &state.config,
-            &state.http_client,
-            query.force_refetch,
-        ),
+        fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch),
         fetch_match_history_from_clickhouse(&state.ch_client, account_id),
     )
     .await;

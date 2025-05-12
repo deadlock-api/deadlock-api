@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::error::LoadAppStateError;
+use crate::services::steam::client::SteamClient;
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
 use serde::Deserialize;
@@ -25,6 +26,7 @@ pub struct AppState {
     pub ch_client: clickhouse::Client,
     pub pg_client: Pool<Postgres>,
     pub feature_flags: FeatureFlags,
+    pub steam_client: SteamClient,
 }
 
 impl AppState {
@@ -132,6 +134,14 @@ impl AppState {
                 FeatureFlags::default()
             });
 
+        // Create a Steam client
+        debug!("Creating Steam client");
+        let steam_client = SteamClient {
+            http_client: http_client.clone(),
+            steam_proxy_url: config.steam_proxy_url.clone(),
+            steam_proxy_api_key: config.steam_proxy_api_key.clone(),
+        };
+
         Ok(Self {
             config,
             http_client,
@@ -141,6 +151,7 @@ impl AppState {
             ch_client,
             pg_client,
             feature_flags,
+            steam_client,
         })
     }
 }

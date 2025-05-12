@@ -1,7 +1,6 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
-use crate::services::steam;
+use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
 use crate::utils::parse;
@@ -50,8 +49,7 @@ pub struct LeaderboardHeroQuery {
     key = "(LeaderboardRegion, Option<u32>)"
 )]
 pub async fn fetch_leaderboard_raw(
-    config: &Config,
-    http_client: &reqwest::Client,
+    steam_client: &SteamClient,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
 ) -> APIResult<Vec<u8>> {
@@ -59,10 +57,8 @@ pub async fn fetch_leaderboard_raw(
         leaderboard_region: Some(region as i32),
         hero_id,
     };
-    steam::client::call_steam_proxy(
-        config,
-        http_client,
-        SteamProxyQuery {
+    steam_client
+        .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
             msg,
             in_all_groups: None,
@@ -70,19 +66,18 @@ pub async fn fetch_leaderboard_raw(
             cooldown_time: Duration::from_secs(60),
             request_timeout: Duration::from_secs(2),
             username: None,
-        },
-    )
-    .await
-    .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch leaderboard: {e}"),
-    })
-    .and_then(|r| {
-        BASE64_STANDARD
-            .decode(&r.data)
-            .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode leaderboard: {e}"),
-            })
-    })
+        })
+        .await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch leaderboard: {e}"),
+        })
+        .and_then(|r| {
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode leaderboard: {e}"),
+                })
+        })
 }
 
 pub async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
@@ -104,13 +99,12 @@ pub async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
 }
 
 pub async fn fetch_parse_leaderboard(
-    config: &Config,
-    http_client: &reqwest::Client,
+    steam_client: &SteamClient,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
 ) -> APIResult<Leaderboard> {
     tryhard::retry_fn(|| async {
-        let raw_data = fetch_leaderboard_raw(config, http_client, region, hero_id).await?;
+        let raw_data = fetch_leaderboard_raw(steam_client, region, hero_id).await?;
         parse_leaderboard_raw(&raw_data).await
     })
     .retries(3)
@@ -137,7 +131,7 @@ pub async fn leaderboard_raw(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
-    tryhard::retry_fn(|| fetch_leaderboard_raw(&state.config, &state.http_client, region, None))
+    tryhard::retry_fn(|| fetch_leaderboard_raw(&state.steam_client, region, None))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
         .await
@@ -168,12 +162,10 @@ pub async fn leaderboard_hero_raw(
             message: format!("Invalid hero_id: {hero_id}"),
         });
     }
-    tryhard::retry_fn(|| {
-        fetch_leaderboard_raw(&state.config, &state.http_client, region, Some(hero_id))
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await
+    tryhard::retry_fn(|| fetch_leaderboard_raw(&state.steam_client, region, Some(hero_id)))
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(10))
+        .await
 }
 
 #[utoipa::path(
@@ -195,7 +187,7 @@ pub async fn leaderboard(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
-    fetch_parse_leaderboard(&state.config, &state.http_client, region, None)
+    fetch_parse_leaderboard(&state.steam_client, region, None)
         .await
         .map(Json)
 }
@@ -225,7 +217,7 @@ pub async fn leaderboard_hero(
             message: format!("Invalid hero_id: {hero_id}"),
         });
     }
-    fetch_parse_leaderboard(&state.config, &state.http_client, region, Some(hero_id))
+    fetch_parse_leaderboard(&state.steam_client, region, Some(hero_id))
         .await
         .map(Json)
 }

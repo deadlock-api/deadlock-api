@@ -1,8 +1,7 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
-use crate::services::steam;
+use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
@@ -75,8 +74,7 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
     key = "(u64, bool)"
 )]
 pub async fn fetch_match_salts(
-    config: &Config,
-    http_client: &reqwest::Client,
+    steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
     match_id: u64,
     needs_demo: bool,
@@ -123,10 +121,8 @@ pub async fn fetch_match_salts(
         metadata_salt: None,
         target_account_id: None,
     };
-    let response = steam::client::call_steam_proxy(
-        config,
-        http_client,
-        SteamProxyQuery {
+    let response = steam_client
+        .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
             msg,
             in_all_groups: Some(vec!["GetMatchMetaData".to_string()]),
@@ -134,9 +130,8 @@ pub async fn fetch_match_salts(
             cooldown_time: Duration::from_secs(30 * 60),
             request_timeout: Duration::from_secs(2),
             username: None,
-        },
-    )
-    .await;
+        })
+        .await;
     match response {
         Err(e) => {
             warn!("Failed to fetch match salts from Steam: {e}");
@@ -217,13 +212,7 @@ pub async fn salts(
     )
     .await?;
     tryhard::retry_fn(|| {
-        fetch_match_salts(
-            &state.config,
-            &state.http_client,
-            &state.ch_client,
-            match_id,
-            needs_demo,
-        )
+        fetch_match_salts(&state.steam_client, &state.ch_client, match_id, needs_demo)
     })
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))

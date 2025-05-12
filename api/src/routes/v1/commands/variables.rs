@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::routes::v1::leaderboard::route::fetch_parse_leaderboard;
 use crate::routes::v1::leaderboard::types::{LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::patches::feed::fetch_patch_notes;
@@ -8,6 +7,7 @@ use crate::routes::v1::players::match_history::{
 use crate::routes::v1::players::mmr_history::MMRHistory;
 use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::services::assets::client;
+use crate::services::steam::client::SteamClient;
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::http::HeaderMap;
@@ -286,7 +286,7 @@ impl Variable {
             }
             Self::HeroesPlayedToday => {
                 let todays_matches =
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id).await?;
+                    Self::get_todays_matches(&state.steam_client, steam_id).await?;
                 let heroes_played = todays_matches.iter().fold(HashMap::new(), |mut acc, m| {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
@@ -387,8 +387,7 @@ impl Variable {
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::WinrateToday => {
-                let matches =
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id).await?;
+                let matches = Self::get_todays_matches(&state.steam_client, steam_id).await?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -399,8 +398,7 @@ impl Variable {
                 ))
             }
             Self::WinsLossesToday => {
-                let matches =
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id).await?;
+                let matches = Self::get_todays_matches(&state.steam_client, steam_id).await?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
@@ -410,34 +408,22 @@ impl Variable {
                 });
                 Ok(format!("{wins}-{losses}"))
             }
-            Self::MatchesToday => {
-                Ok(
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
-                        .await?
-                        .len()
-                        .to_string(),
-                )
-            }
-            Self::WinsToday => {
-                Ok(
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
-                        .await?
-                        .iter()
-                        .filter(|m| m.match_result as i8 == m.player_team)
-                        .count()
-                        .to_string(),
-                )
-            }
-            Self::LossesToday => {
-                Ok(
-                    Self::get_todays_matches(&state.config, &state.http_client, steam_id)
-                        .await?
-                        .iter()
-                        .filter(|m| m.match_result as i8 != m.player_team)
-                        .count()
-                        .to_string(),
-                )
-            }
+            Self::MatchesToday => Ok(Self::get_todays_matches(&state.steam_client, steam_id)
+                .await?
+                .len()
+                .to_string()),
+            Self::WinsToday => Ok(Self::get_todays_matches(&state.steam_client, steam_id)
+                .await?
+                .iter()
+                .filter(|m| m.match_result as i8 == m.player_team)
+                .count()
+                .to_string()),
+            Self::LossesToday => Ok(Self::get_todays_matches(&state.steam_client, steam_id)
+                .await?
+                .iter()
+                .filter(|m| m.match_result as i8 != m.player_team)
+                .count()
+                .to_string()),
             Self::MostPlayedHero => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
                 let most_played_hero = matches
@@ -749,11 +735,10 @@ impl Variable {
     }
 
     async fn get_todays_matches(
-        config: &Config,
-        http_client: &reqwest::Client,
+        steam_client: &SteamClient,
         steam_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let matches = fetch_steam_match_history(steam_id, config, http_client, false)
+        let matches = fetch_steam_match_history(steam_client, steam_id, false)
             .await
             .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
         let first_match = matches
@@ -785,7 +770,7 @@ impl Variable {
         hero_id: Option<u32>,
     ) -> Result<LeaderboardEntry, VariableResolveError> {
         let (leaderboard, steam_name) = join(
-            fetch_parse_leaderboard(&state.config, &state.http_client, region, hero_id),
+            fetch_parse_leaderboard(&state.steam_client, region, hero_id),
             get_steam_account_name(
                 headers,
                 state,

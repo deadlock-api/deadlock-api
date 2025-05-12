@@ -1,7 +1,5 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
-use crate::services::steam;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
 use crate::utils::parse::parse_steam_id_option;
@@ -36,14 +34,10 @@ pub struct ActiveMatchesQuery {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn fetch_active_matches_raw(
-    config: &Config,
-    http_client: &reqwest::Client,
-) -> APIResult<Vec<u8>> {
-    steam::client::call_steam_proxy(
-        config,
-        http_client,
-        SteamProxyQuery {
+pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
+    state
+        .steam_client
+        .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
             msg: CMsgClientToGcGetActiveMatches::default(),
             in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
@@ -51,19 +45,18 @@ pub async fn fetch_active_matches_raw(
             cooldown_time: Duration::from_secs(60),
             request_timeout: Duration::from_secs(2),
             username: None,
-        },
-    )
-    .await
-    .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch active matches: {e}"),
-    })
-    .and_then(|r| {
-        BASE64_STANDARD
-            .decode(&r.data)
-            .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode active matches: {e}"),
-            })
-    })
+        })
+        .await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch active matches: {e}"),
+        })
+        .and_then(|r| {
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode active matches: {e}"),
+                })
+        })
 }
 
 pub async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
@@ -106,7 +99,7 @@ Fetched from the watch tab in game, which is limited to the **top 200 matches**.
     "#
 )]
 pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
-    tryhard::retry_fn(|| fetch_active_matches_raw(&state.config, &state.http_client))
+    tryhard::retry_fn(|| fetch_active_matches_raw(&state))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
         .await
@@ -134,7 +127,7 @@ pub async fn active_matches(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let mut active_matches = tryhard::retry_fn(|| async {
-        let raw_data = fetch_active_matches_raw(&state.config, &state.http_client).await?;
+        let raw_data = fetch_active_matches_raw(&state).await?;
         parse_active_matches_raw(&raw_data).await
     })
     .retries(3)

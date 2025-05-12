@@ -1,7 +1,6 @@
-use crate::config::Config;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::types::AccountIdQuery;
-use crate::services::steam;
+use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
 use crate::utils::limiter::{RateLimitQuota, apply_limits};
@@ -101,20 +100,14 @@ impl From<CMsgCitadelProfileCard> for PlayerCard {
     sync_writes = "by_key",
     key = "u32"
 )]
-async fn fetch_player_card_raw(
-    config: &Config,
-    http_client: &reqwest::Client,
-    account_id: u32,
-) -> APIResult<Vec<u8>> {
+async fn fetch_player_card_raw(steam_client: &SteamClient, account_id: u32) -> APIResult<Vec<u8>> {
     let msg = CMsgClientToGcGetProfileCard {
         account_id: Some(account_id),
         dev_access_hint: None,
         friend_access_hint: None,
     };
-    steam::client::call_steam_proxy(
-        config,
-        http_client,
-        SteamProxyQuery {
+    steam_client
+        .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetProfileCard,
             msg,
             in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
@@ -122,19 +115,18 @@ async fn fetch_player_card_raw(
             cooldown_time: Duration::from_secs(10),
             request_timeout: Duration::from_secs(2),
             username: None,
-        },
-    )
-    .await
-    .map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch player card: {e}"),
-    })
-    .and_then(|r| {
-        BASE64_STANDARD
-            .decode(&r.data)
-            .map_err(|e| APIError::InternalError {
-                message: format!("Failed to decode player card: {e}"),
-            })
-    })
+        })
+        .await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch player card: {e}"),
+        })
+        .and_then(|r| {
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode player card: {e}"),
+                })
+        })
 }
 
 async fn parse_player_card_raw(raw_data: &[u8]) -> APIResult<PlayerCard> {
@@ -182,7 +174,7 @@ pub async fn card_raw(
         ],
     )
     .await?;
-    tryhard::retry_fn(|| fetch_player_card_raw(&state.config, &state.http_client, account_id))
+    tryhard::retry_fn(|| fetch_player_card_raw(&state.steam_client, account_id))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
         .await
@@ -226,7 +218,7 @@ pub async fn card(
     )
     .await?;
     tryhard::retry_fn(|| async {
-        let raw_data = fetch_player_card_raw(&state.config, &state.http_client, account_id).await?;
+        let raw_data = fetch_player_card_raw(&state.steam_client, account_id).await?;
         parse_player_card_raw(&raw_data).await.map(Json)
     })
     .retries(3)
