@@ -1,7 +1,7 @@
-import { LineChart } from "@mui/x-charts";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   type APIHeroStatsOverTime,
   HERO_STATS,
@@ -151,6 +151,32 @@ export default function HeroStatsOverTimeChart({
     [heroQueries],
   );
 
+  const formattedData = useMemo(() => {
+    if (!heroQueries.length || !heroQueries[0].data.length) return [];
+
+    return heroQueries[0].data.map(([date], index) => {
+      const dataPoint: { [key: string]: Date | number } = {
+        date: date.toDate(),
+      };
+
+      // Add data for each hero
+      heroQueries.forEach((query, heroIndex) => {
+        const heroId = (heroIds || [])[heroIndex];
+        const heroName = heroIdMap[heroId]?.name || `Hero ${heroId}`;
+        if (query.data[index]) {
+          dataPoint[heroName] = query.data[index][1];
+          if (dataPoint[heroName] < 100) {
+            dataPoint[heroName] = Math.round(dataPoint[heroName] * 100) / 100;
+          } else {
+            dataPoint[heroName] = Math.round(dataPoint[heroName]);
+          }
+        }
+      });
+      console.log(dataPoint);
+      return dataPoint;
+    });
+  }, [heroQueries, heroIds, heroIdMap]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center w-full h-full">
@@ -160,34 +186,46 @@ export default function HeroStatsOverTimeChart({
   }
 
   return (
-    <div className="w-full">
-      <LineChart
-        height={700}
-        sx={{ backgroundColor: "#1e293b" }}
-        series={heroQueries.map((q, idx) => ({
-          data: q.data.map(([, d]) => d),
-          label: heroIdMap[(heroIds || [])[idx]].name,
-          color: heroIdMap[(heroIds || [])[idx]].color,
-          showMark: false,
-        }))}
-        xAxis={[
-          {
-            data: heroQueries[0]?.data.map(([d]) => d.toDate()) ?? [],
-            scaleType: "time",
-            label: "Date",
-            min: minDataDate ? dayjs.unix(minDataDate).toDate() : undefined,
-            max: maxDataDate ? dayjs.unix(maxDataDate).toDate() : undefined,
-          },
-        ]}
-        yAxis={[
-          {
-            label: `${heroStat}`,
-            min: minStat * 0.9,
-            max: maxStat * 1.1,
-          },
-        ]}
-        grid={{ vertical: true, horizontal: true }}
-      />
-    </div>
+    <ResponsiveContainer width="100%" height={800} className="p-4 bg-gray-800">
+      <LineChart data={formattedData} margin={{ top: 20, bottom: 20 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+        <XAxis
+          dataKey="date"
+          type="number"
+          scale="time"
+          domain={[
+            minDataDate ? dayjs.unix(minDataDate).valueOf() : "auto",
+            maxDataDate ? dayjs.unix(maxDataDate).valueOf() : "auto",
+          ]}
+          tickFormatter={(timestamp) => dayjs(timestamp).format("MM/DD/YY")}
+          label={{ value: "Date", position: "insideBottom", offset: -15 }}
+          stroke="#9ca3af"
+        />
+        <YAxis
+          domain={[minStat * 0.9, maxStat * 1.1]}
+          label={{ value: heroStat, angle: -90, position: "insideLeft" }}
+          tickFormatter={(value) => Math.round(value).toLocaleString()}
+          minTickGap={2}
+          tickCount={10}
+          stroke="#9ca3af"
+        />
+        <Tooltip
+          labelFormatter={(label) => dayjs(label).format("YYYY-MM-DD")}
+          contentStyle={{ backgroundColor: "#1e293b", borderColor: "#4b5563" }}
+          itemStyle={{ color: "#e5e7eb" }}
+        />
+        {(heroIds || []).map((heroId) => (
+          <Line
+            key={heroId}
+            type="monotone"
+            dataKey={heroIdMap[heroId]?.name || `Hero ${heroId}`}
+            stroke={heroIdMap[heroId]?.color || "#ffffff"}
+            dot={false}
+            activeDot={{ r: 6 }}
+            strokeWidth={2}
+          />
+        ))}
+      </LineChart>
+    </ResponsiveContainer>
   );
 }
