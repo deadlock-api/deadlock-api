@@ -1,5 +1,5 @@
 use prost::Message;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
@@ -18,4 +18,19 @@ pub struct SteamProxyQuery<M: Message> {
 pub struct SteamProxyResponse {
     pub data: String,
     pub username: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GetPlayerSummariesResponse {
+    pub response: PlayerSummariesResponse,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PlayerSummariesResponse {
+    pub players: Vec<PlayerSummary>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PlayerSummary {
+    pub personaname: Option<String>,
 }

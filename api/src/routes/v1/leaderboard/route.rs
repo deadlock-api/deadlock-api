@@ -3,7 +3,6 @@ use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils::parse;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -156,7 +155,7 @@ pub async fn leaderboard_hero_raw(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
-    if !parse::validate_hero_id(&state.http_client, hero_id).await {
+    if !state.assets_client.validate_hero_id(hero_id).await {
         return Err(APIError::StatusMsg {
             status: StatusCode::BAD_REQUEST,
             message: format!("Invalid hero_id: {hero_id}"),
@@ -211,7 +210,7 @@ pub async fn leaderboard_hero(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
-    if !parse::validate_hero_id(&state.http_client, hero_id).await {
+    if !state.assets_client.validate_hero_id(hero_id).await {
         return Err(APIError::StatusMsg {
             status: StatusCode::BAD_REQUEST,
             message: format!("Invalid hero_id: {hero_id}"),

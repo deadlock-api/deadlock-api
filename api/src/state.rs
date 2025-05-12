@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::error::LoadAppStateError;
+use crate::services::assets::client::AssetsClient;
 use crate::services::steam::client::SteamClient;
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
@@ -27,6 +28,7 @@ pub struct AppState {
     pub pg_client: Pool<Postgres>,
     pub feature_flags: FeatureFlags,
     pub steam_client: SteamClient,
+    pub assets_client: AssetsClient,
 }
 
 impl AppState {
@@ -136,11 +138,16 @@ impl AppState {
 
         // Create a Steam client
         debug!("Creating Steam client");
-        let steam_client = SteamClient {
-            http_client: http_client.clone(),
-            steam_proxy_url: config.steam_proxy_url.clone(),
-            steam_proxy_api_key: config.steam_proxy_api_key.clone(),
-        };
+        let steam_client = SteamClient::new(
+            http_client.clone(),
+            config.steam_proxy_url.clone(),
+            config.steam_proxy_api_key.clone(),
+            config.steam_api_key.clone(),
+        );
+
+        // Create an Assets client
+        debug!("Creating Assets client");
+        let assets_client = AssetsClient::new(http_client.clone());
 
         Ok(Self {
             config,
@@ -152,6 +159,7 @@ impl AppState {
             pg_client,
             feature_flags,
             steam_client,
+            assets_client,
         })
     }
 }
