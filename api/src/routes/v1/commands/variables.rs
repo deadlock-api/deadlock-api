@@ -726,6 +726,7 @@ impl Variable {
             .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
 
         Ok(ch_match_history
+            .into_iter()
             .filter(|e| {
                 e.match_mode == ECitadelMatchMode::KECitadelMatchModeUnranked as i8
                     || e.match_mode == ECitadelMatchMode::KECitadelMatchModeRanked as i8
