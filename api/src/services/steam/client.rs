@@ -9,6 +9,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use derive_more::Constructor;
 use prost::Message;
 use serde_json::json;
 use std::time::Duration;
@@ -26,30 +27,15 @@ pub enum SteamAccountNameError {
 }
 
 /// Client for interacting with the Steam API and proxy
-#[derive(Clone)]
+#[derive(Constructor, Clone)]
 pub struct SteamClient {
-    pub http_client: reqwest::Client,
-    pub steam_proxy_url: String,
-    pub steam_proxy_api_key: String,
-    pub steam_api_key: String,
+    http_client: reqwest::Client,
+    steam_proxy_url: String,
+    steam_proxy_api_key: String,
+    steam_api_key: String,
 }
 
 impl SteamClient {
-    /// Create a new SteamClient with the given HTTP client and configuration
-    pub fn new(
-        http_client: reqwest::Client,
-        steam_proxy_url: String,
-        steam_proxy_api_key: String,
-        steam_api_key: String,
-    ) -> Self {
-        Self {
-            http_client,
-            steam_proxy_url,
-            steam_proxy_api_key,
-            steam_api_key,
-        }
-    }
-
     /// Call the Steam proxy with the given query
     pub async fn call_steam_proxy<M: Message>(
         &self,
