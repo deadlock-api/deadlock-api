@@ -271,7 +271,7 @@ pub async fn match_history(
     }
 
     // Apply rate limits based on the query parameters
-    if query.force_refetch {
+    let res = if query.force_refetch {
         apply_limits(
             &headers,
             &state,
@@ -281,7 +281,7 @@ pub async fn match_history(
                 RateLimitQuota::global_limit(10, Duration::from_secs(3600)),
             ],
         )
-        .await?;
+        .await
     } else {
         apply_limits(
             &headers,
@@ -293,8 +293,14 @@ pub async fn match_history(
                 RateLimitQuota::global_limit(400, Duration::from_secs(60)),
             ],
         )
-        .await?;
+        .await
     };
+    if let Err(e) = res {
+        warn!("Reached rate limits: {e:?}, falling back to only stored history");
+        return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
+            .await
+            .map(Json);
+    }
 
     // Fetch player match history from Steam and ClickHouse
     let (steam_match_history, ch_match_history) = join(
