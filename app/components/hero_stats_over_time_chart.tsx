@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   type APIHeroStatsOverTime,
   HERO_STATS,
@@ -188,6 +188,7 @@ export default function HeroStatsOverTimeChart({
   return (
     <ResponsiveContainer width="100%" height={800} className="p-4 bg-gray-800">
       <LineChart data={formattedData} margin={{ top: 20, bottom: 20 }}>
+        <Legend layout="vertical" align="right" verticalAlign="top" />
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
         <XAxis
           dataKey="date"
