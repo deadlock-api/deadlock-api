@@ -14,8 +14,11 @@ async fn test_info() {
         ("match_player", 1200),
     ];
     for (table, expected_rows) in expected_table_sizes {
-        let rows = info
+        let table_sizes = info
             .table_sizes
+            .as_ref()
+            .expect("Failed to find table sizes");
+        let rows = table_sizes
             .get(table)
             .and_then(|t| t.rows)
             .expect("Failed to find table size for {table}");

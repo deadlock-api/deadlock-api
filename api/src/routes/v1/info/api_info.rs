@@ -1,4 +1,3 @@
-use crate::error::APIError;
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::State;
