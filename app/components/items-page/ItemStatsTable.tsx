@@ -55,8 +55,6 @@ export default function ItemStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
-  const isLoading = useMemo(() => isLoadingItemStats || isLoadingItemAssets, [isLoadingItemStats, isLoadingItemAssets]);
-
   const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
   const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
@@ -84,7 +82,7 @@ export default function ItemStatsTable({
   );
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
-  if (isLoading) {
+  if (isLoadingItemStats || isLoadingItemAssets) {
     return (
       <div className="flex items-center justify-center w-full h-full">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
