@@ -1,16 +1,77 @@
-import { FormControl, InputLabel } from "@mui/material";
-import { DatePicker as MuiDatePicker } from "@mui/x-date-pickers/DatePicker";
+import * as React from "react";
+import { format, startOfDay, endOfDay } from "date-fns";
+import { Calendar } from "~/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Button } from "~/components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "~/lib/utils";
 import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 
 export default function DatePicker({
   onDateSelected,
   selectedDate,
   label,
-}: { onDateSelected: (selectedDate: Dayjs | null) => void; selectedDate?: Dayjs | null; label?: string }) {
+  type = "start",
+}: {
+  onDateSelected: (selectedDate: Dayjs | null) => void;
+  selectedDate?: Dayjs | null;
+  label?: string;
+  type?: "start" | "end";
+}) {
+  const handleDateSelect = React.useCallback(
+    (date: Date | undefined) => {
+      if (!date) {
+        onDateSelected(null);
+        return;
+      }
+
+      // Convert to dayjs, then adjust the time based on type
+      const adjustedDate = type === "start" 
+        ? dayjs(startOfDay(date))
+        : dayjs(endOfDay(date));
+      
+      onDateSelected(adjustedDate);
+    },
+    [type, onDateSelected]
+  );
+
+  const displayLabel = label || (type === "start" ? "Start Date" : "End Date");
+  const placeholder = type === "start" ? "Select start date..." : "Select end date...";
+  const timeNote = type === "start" ? "(12:00 AM)" : "(11:59 PM)";
+
   return (
-    <FormControl size="medium" variant="outlined">
-      <InputLabel shrink>{label || "Start Date"}</InputLabel>
-      <MuiDatePicker value={selectedDate} onChange={(date) => onDateSelected(date)} label={label || "Start Date"} />
-    </FormControl>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-baseline gap-2">
+        <span className="text-sm text-muted-foreground">{displayLabel}</span>
+        <span className="text-xs text-muted-foreground/70">{timeNote}</span>
+      </div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-[200px] justify-start text-left font-normal",
+              !selectedDate && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {selectedDate ? (
+              format(selectedDate.toDate(), "PPP")
+            ) : (
+              <span>{placeholder}</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate?.toDate()}
+            onSelect={handleDateSelect}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
