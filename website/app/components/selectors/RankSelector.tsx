@@ -12,11 +12,11 @@ function getRankId(tier: number, subrank: number): number {
   }
   // For tiers 1-11, subranks are 1-6
   // Tier 11 (Eternus) base is 110. Tier 1 base is 10.
-  // Adjusted: Eternus (tier 11) starts at 110. Tier 1 starts at 10.
+  // Adjusted: Eternus (tier 11) starts at 111. Tier 1 starts at 11.
   const baseId = tier * 10;
-  // Eternus (tier 11) should map 110-115
-  // Ascendant (tier 10) should map 100-105
-  // ... Initiate (tier 1) should map 10-15
+  // Eternus (tier 11) should map 111-116
+  // Ascendant (tier 10) should map 101-106
+  // ... Initiate (tier 1) should map 11-16
   return baseId + subrank;
 }
 

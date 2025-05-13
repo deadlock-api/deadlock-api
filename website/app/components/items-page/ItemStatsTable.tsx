@@ -94,67 +94,69 @@ export default function ItemStatsTable({
 
   return (
     <>
-      <table className="w-full border-separate border-spacing-y-1">
-        {!hideHeader && (
-          <thead>
-            <tr className="bg-gray-800 text-center">
-              {!hideIndex && <th className="p-2">#</th>}
-              <th className="p-2 text-left">Item</th>
-              <th className="p-2 text-left">Tier</th>
-              {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
-              {columns.includes("usage") && <th className="p-2">Usage</th>}
-            </tr>
-          </thead>
-        )}
-        <tbody>
-          {limitedData?.map((row, index) => (
-            <tr
-              key={row.item_id}
-              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
-            >
-              {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
-              <td className="p-2 align-middle">
-                <div className="flex items-center gap-2 text-left">
-                  <ItemImage itemId={row.item_id} />
-                  <ItemName itemId={row.item_id} />
-                </div>
-              </td>
-              {columns.includes("itemsTier") && (
+      <div className="overflow-x-auto">
+        <table className="w-full border-separate border-spacing-y-1 min-w-[600px]">
+          {!hideHeader && (
+            <thead>
+              <tr className="bg-gray-800 text-center">
+                {!hideIndex && <th className="p-2">#</th>}
+                <th className="p-2 text-left">Item</th>
+                <th className="p-2 text-left">Tier</th>
+                {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
+                {columns.includes("usage") && <th className="p-2">Usage</th>}
+              </tr>
+            </thead>
+          )}
+          <tbody>
+            {limitedData?.map((row, index) => (
+              <tr
+                key={row.item_id}
+                className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
+              >
+                {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
                 <td className="p-2 align-middle">
                   <div className="flex items-center gap-2 text-left">
-                    <ItemTier itemId={row.item_id} />
+                    <ItemImage itemId={row.item_id} />
+                    <ItemName itemId={row.item_id} />
                   </div>
                 </td>
-              )}
-              {columns.includes("winRate") && (
-                <td
-                  className="p-2 align-middle"
-                  title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                >
-                  <ProgressBarWithLabel
-                    min={minWinRate}
-                    max={maxWinRate}
-                    value={row.wins / row.matches}
-                    color={"#ff00ff"}
-                    label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                  />
-                </td>
-              )}
-              {columns.includes("usage") && (
-                <td className="p-2 align-middle" title={`${row.matches.toLocaleString()} matches`}>
-                  <ProgressBarWithLabel
-                    min={minMatches}
-                    max={maxMatches}
-                    value={row.matches}
-                    color={"#00ffff"}
-                    label={row.matches.toLocaleString()}
-                  />
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                {columns.includes("itemsTier") && (
+                  <td className="p-2 align-middle">
+                    <div className="flex items-center gap-2 text-left">
+                      <ItemTier itemId={row.item_id} />
+                    </div>
+                  </td>
+                )}
+                {columns.includes("winRate") && (
+                  <td
+                    className="p-2 align-middle"
+                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+                  >
+                    <ProgressBarWithLabel
+                      min={minWinRate}
+                      max={maxWinRate}
+                      value={row.wins / row.matches}
+                      color={"#ff00ff"}
+                      label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                    />
+                  </td>
+                )}
+                {columns.includes("usage") && (
+                  <td className="p-2 align-middle" title={`${row.matches.toLocaleString()} matches`}>
+                    <ProgressBarWithLabel
+                      min={minMatches}
+                      max={maxMatches}
+                      value={row.matches}
+                      color={"#00ffff"}
+                      label={row.matches.toLocaleString()}
+                    />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
