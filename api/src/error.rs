@@ -1,4 +1,4 @@
-use crate::middleware::rate_limiter::RateLimitStatus;
+use crate::services::rate_limiter::RateLimitStatus;
 use axum::body::Body;
 use axum::http::Response;
 use axum::response::IntoResponse;
@@ -128,7 +128,7 @@ impl IntoResponse for APIError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::middleware::rate_limiter::{RateLimitQuota, RateLimitStatus};
+    use crate::services::rate_limiter::{RateLimitQuota, RateLimitStatus};
     use axum::http::StatusCode;
     use std::time::Duration;
 

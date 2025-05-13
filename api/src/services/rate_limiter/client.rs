@@ -1,7 +1,7 @@
 use crate::error::APIError;
-use crate::middleware::rate_limiter::extractor::RateLimitKey;
-use crate::middleware::rate_limiter::types::RateLimitQuotaType;
-use crate::middleware::rate_limiter::{RateLimitQuota, RateLimitStatus};
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::types::RateLimitQuotaType;
+use crate::services::rate_limiter::{RateLimitQuota, RateLimitStatus};
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};

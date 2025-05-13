@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::error::LoadAppStateError;
-use crate::middleware::rate_limiter::RateLimitClient;
 use crate::services::assets::client::AssetsClient;
+use crate::services::rate_limiter::RateLimitClient;
 use crate::services::steam::client::SteamClient;
 use object_store::aws::AmazonS3Builder;
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};

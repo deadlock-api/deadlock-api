@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
-use crate::middleware::rate_limiter::RateLimitQuota;
-use crate::middleware::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::state::AppState;
 use crate::utils::parse::{comma_separated_num_deserialize, default_true};

@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
-use crate::middleware::rate_limiter::extractor::RateLimitKey;
 use crate::routes::v1::commands::variables::{Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::state::AppState;
 use crate::utils::parse::parse_steam_id;
 use axum::Json;

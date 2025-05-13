@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
-use crate::middleware::rate_limiter::RateLimitQuota;
-use crate::middleware::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
