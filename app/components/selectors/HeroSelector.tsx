@@ -156,17 +156,7 @@ export function HeroSelectorMultiple({
             </label>
           </div>
           {sortedHeroes.map((hero: AssetsHero) => (
-            <div
-              key={hero.id}
-              className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded cursor-pointer"
-              onClick={() => {
-                if (selectedHeroes.includes(hero.id)) {
-                  onHeroesSelected(selectedHeroes.filter((id: number) => id !== hero.id));
-                } else {
-                  onHeroesSelected([...selectedHeroes, hero.id]);
-                }
-              }}
-            >
+            <div key={hero.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded cursor-pointer">
               <Checkbox
                 checked={selectedHeroes.includes(hero.id)}
                 tabIndex={-1}
@@ -180,8 +170,11 @@ export function HeroSelectorMultiple({
                 }}
                 id={`hero-checkbox-${hero.id}`}
               />
-              <img src={getHeroImageUrl(hero)} alt={hero.name} className="h-5 w-5 object-contain flex-shrink-0" />
-              <label htmlFor={`hero-checkbox-${hero.id}`} className="truncate text-sm cursor-pointer">
+              <label
+                htmlFor={`hero-checkbox-${hero.id}`}
+                className="flex flex-nowrap items-center gap-2 w-full truncate text-sm cursor-pointer"
+              >
+                <img src={getHeroImageUrl(hero)} alt={hero.name} className="h-5 w-5 object-contain flex-shrink-0" />
                 {hero.name}
               </label>
             </div>
