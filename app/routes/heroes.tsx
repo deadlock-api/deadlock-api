@@ -4,7 +4,9 @@ import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
 import DatePicker from "~/components/primitives/DatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
-import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/heroes-page/HeroMatchupStatsTable";
+import HeroMatchupDetailsStatsTable, {
+  HeroMatchupDetailsStatsTableStat,
+} from "~/components/heroes-page/HeroMatchupDetailsStatsTable";
 import HeroName from "~/components/HeroName";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import HeroStatsOverTimeChart, {
@@ -12,7 +14,7 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import HeroesMatchupStatsTable from "~/components/heroes-page/HeroesMatchupStatsTable";
+import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
 import RankSelector from "~/components/selectors/RankSelector";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 
@@ -268,7 +270,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       )}
       {tab === "matchups" && (
         <div className="flex flex-col gap-4">
-          <HeroesMatchupStatsTable
+          <HeroMatchupStatsTable
             minRankId={minRankId}
             maxRankId={maxRankId}
             minDate={startDate || undefined}
@@ -306,17 +308,17 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               }}
             />
             <div className="grid grid-cols-2 gap-4">
-              <HeroMatchupStatsTable
+              <HeroMatchupDetailsStatsTable
                 heroId={heroId}
-                stat={HeroMatchupStatsTableStat.SYNERGY}
+                stat={HeroMatchupDetailsStatsTableStat.SYNERGY}
                 minRankId={minRankId}
                 maxRankId={maxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
               />
-              <HeroMatchupStatsTable
+              <HeroMatchupDetailsStatsTable
                 heroId={heroId}
-                stat={HeroMatchupStatsTableStat.COUNTER}
+                stat={HeroMatchupDetailsStatsTableStat.COUNTER}
                 minRankId={minRankId}
                 maxRankId={maxRankId}
                 minDate={startDate || undefined}

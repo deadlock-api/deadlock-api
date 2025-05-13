@@ -128,69 +128,71 @@ export default function HeroCombStatsTable({
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
         </div>
       ) : (
-        <table className="w-full border-separate border-spacing-y-1">
-          {!hideHeader && (
-            <thead>
-              <tr className="bg-gray-800 text-center">
-                {!hideIndex && <th className="p-2">#</th>}
-                <th className="p-2 text-left">Hero Combination</th>
-                {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
-                {columns.includes("pickRate") && <th className="p-2">Pick Rate</th>}
-                {columns.includes("totalMatches") && <th className="p-2">Total Matches</th>}
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {limitedData?.map((row, index) => (
-              <tr
-                key={row.hero_ids.join("-")}
-                className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
-              >
-                {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
-                <td className="p-2 align-middle">
-                  <div className="flex items-center gap-2">
-                    {row.hero_ids.map((heroId) => (
-                      <Link key={heroId} to={`/heroes?tab=hero-details&heroId=${heroId}`}>
-                        <HeroImage key={heroId} heroId={heroId} />
-                      </Link>
-                    ))}
-                  </div>
-                </td>
-                {columns.includes("winRate") && (
-                  <td
-                    className="p-2 align-middle"
-                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                  >
-                    <ProgressBarWithLabel
-                      min={minWinrate}
-                      max={maxWinrate}
-                      value={row.wins / row.matches}
-                      color={"#ff00ff"}
-                      label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                    />
+        <div className="overflow-x-auto">
+          <table className="w-full border-separate border-spacing-y-1 min-w-[600px]">
+            {!hideHeader && (
+              <thead>
+                <tr className="bg-gray-800 text-center">
+                  {!hideIndex && <th className="p-2">#</th>}
+                  <th className="p-2 text-left">Hero Combination</th>
+                  {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
+                  {columns.includes("pickRate") && <th className="p-2">Pick Rate</th>}
+                  {columns.includes("totalMatches") && <th className="p-2">Total Matches</th>}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {limitedData?.map((row, index) => (
+                <tr
+                  key={row.hero_ids.join("-")}
+                  className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
+                >
+                  {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
+                  <td className="p-2 align-middle">
+                    <div className="flex items-center gap-2">
+                      {row.hero_ids.map((heroId) => (
+                        <Link key={heroId} to={`/heroes?tab=hero-details&heroId=${heroId}`}>
+                          <HeroImage key={heroId} heroId={heroId} />
+                        </Link>
+                      ))}
+                    </div>
                   </td>
-                )}
-                {columns.includes("pickRate") && (
-                  <td
-                    className="p-2 align-middle"
-                    title={`${row.matches.toLocaleString()} / ${sumMatches.toLocaleString()} total matches`}
-                  >
-                    <ProgressBarWithLabel
-                      min={minMatches}
-                      max={maxMatches}
-                      value={row.matches}
-                      color={"#00ffff"}
-                      label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                    />
-                  </td>
-                )}
-                {columns.includes("totalMatches") && (
-                  <td className="p-2 align-middle">{row.matches.toLocaleString()}</td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  {columns.includes("winRate") && (
+                    <td
+                      className="p-2 align-middle"
+                      title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+                    >
+                      <ProgressBarWithLabel
+                        min={minWinrate}
+                        max={maxWinrate}
+                        value={row.wins / row.matches}
+                        color={"#ff00ff"}
+                        label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                      />
+                    </td>
+                  )}
+                  {columns.includes("pickRate") && (
+                    <td
+                      className="p-2 align-middle"
+                      title={`${row.matches.toLocaleString()} / ${sumMatches.toLocaleString()} total matches`}
+                    >
+                      <ProgressBarWithLabel
+                        min={minMatches}
+                        max={maxMatches}
+                        value={row.matches}
+                        color={"#00ffff"}
+                        label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                      />
+                    </td>
+                  )}
+                  {columns.includes("totalMatches") && (
+                    <td className="p-2 align-middle">{row.matches.toLocaleString()}</td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );
