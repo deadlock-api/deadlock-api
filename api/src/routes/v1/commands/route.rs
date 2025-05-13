@@ -1,11 +1,13 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::commands::variables::{Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
+use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::state::AppState;
 use crate::utils::parse::parse_steam_id;
 use axum::Json;
 use axum::extract::{Query, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -121,10 +123,25 @@ pub async fn command_resolve(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<CommandResolveQuery>,
-) -> String {
+) -> APIResult<String> {
     if query.account_id == 0 {
-        return "Invalid account ID".to_string();
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Invalid account ID".to_string(),
+        });
     }
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "command",
+            &[
+                RateLimitQuota::ip_limit(60, std::time::Duration::from_secs(60)),
+                RateLimitQuota::global_limit(300, std::time::Duration::from_secs(60)),
+            ],
+        )
+        .await?;
+
     let mut extra_args = HashMap::new();
     if let Some(hero_name) = query.hero_name {
         extra_args.insert("hero_name".to_string(), hero_name);
@@ -156,14 +173,13 @@ pub async fn command_resolve(
     .await;
 
     for result in results {
-        match result {
-            Ok((template_str, resolved_variable)) => {
-                resolved_template = resolved_template.replace(&template_str, &resolved_variable);
-            }
-            Err(e) => return e,
-        }
+        let Ok((template_str, resolved_variable)) = result else {
+            warn!("Failed to resolve variable: {:?}", result.err());
+            continue;
+        };
+        resolved_template = resolved_template.replace(&template_str, &resolved_variable)
     }
-    resolved_template
+    Ok(resolved_template)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
@@ -197,10 +213,25 @@ pub async fn variables_resolve(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<VariablesResolveQuery>,
-) -> Json<HashMap<String, String>> {
+) -> APIResult<Json<HashMap<String, String>>> {
     if query.account_id == 0 || query.variables.is_empty() {
-        return Json(HashMap::new());
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Invalid account ID or no variables provided".to_string(),
+        });
     }
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "command",
+            &[
+                RateLimitQuota::ip_limit(60, std::time::Duration::from_secs(60)),
+                RateLimitQuota::global_limit(300, std::time::Duration::from_secs(60)),
+            ],
+        )
+        .await?;
+
     let mut extra_args = HashMap::new();
     if let Some(hero_name) = query.hero_name {
         extra_args.insert("hero_name".to_string(), hero_name);
@@ -234,5 +265,5 @@ pub async fn variables_resolve(
     .flatten()
     .collect::<HashMap<_, _>>();
 
-    Json(results)
+    Ok(Json(results))
 }
