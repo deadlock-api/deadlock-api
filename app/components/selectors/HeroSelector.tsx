@@ -124,7 +124,10 @@ export function HeroSelectorMultiple({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-fit max-w-[250px] overflow-hidden max-h-20 min-h-9 h-min p-1 box-border">
+        <Button
+          variant="outline"
+          className="w-fit min-w-[150px] max-w-[250px] overflow-hidden max-h-20 min-h-9 h-min p-1 box-border"
+        >
           <div className="flex flex-wrap gap-2 items-center justify-start">
             {selectedHeroes.length === 0 ? (
               <span className="truncate text-muted-foreground">{label || "Select Heroes..."}</span>
