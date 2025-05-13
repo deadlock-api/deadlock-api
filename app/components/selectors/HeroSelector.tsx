@@ -124,19 +124,23 @@ export function HeroSelectorMultiple({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full max-w-[200px] justify-start">
-          <div className="flex flex-wrap gap-2 items-center min-h-5">
+        <Button variant="outline" className="w-fit max-w-[250px] overflow-hidden max-h-20 min-h-9 h-min p-1 box-border">
+          <div className="flex flex-wrap gap-2 items-center justify-start">
             {selectedHeroes.length === 0 ? (
               <span className="truncate text-muted-foreground">{label || "Select Heroes..."}</span>
             ) : (
               sortedHeroes
                 .filter((hero: AssetsHero) => selectedHeroes.includes(hero.id))
                 .map((hero: AssetsHero) => (
-                  <span key={hero.id} className="flex items-center gap-1 bg-muted rounded px-1 py-0.5">
+                  <span key={hero.id} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
                     <img src={getHeroImageUrl(hero)} alt={hero.name} className="h-4 w-4 object-contain flex-shrink-0" />
                     <span className="truncate text-xs">{hero.name}</span>
                   </span>
                 ))
+                .slice(0, 5)
+            )}
+            {selectedHeroes.length > 5 && (
+              <span className="truncate text-muted-foreground">+{selectedHeroes.length - 5}</span>
             )}
           </div>
         </Button>
