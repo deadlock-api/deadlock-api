@@ -127,25 +127,8 @@ export default function Index() {
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Popular Heroes</CardTitle>
-              <CardDescription>(Last 30 days)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
-            </CardContent>
-            <CardFooter>
-              <Link to="/heroes" className="w-full">
-                <Button variant="default" className="w-full">
-                  View All Heroes
-                </Button>
-              </Link>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Best Heroes</CardTitle>
-              <CardDescription>(Last 30 days)</CardDescription>
+              <CardDescription>(Last 7 days)</CardDescription>
             </CardHeader>
             <CardContent>
               <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
@@ -161,11 +144,28 @@ export default function Index() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Popular Items</CardTitle>
-              <CardDescription>(Last 30 days)</CardDescription>
+              <CardTitle>Popular Heroes</CardTitle>
+              <CardDescription>(Last 7 days)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
+              <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
+            </CardContent>
+            <CardFooter>
+              <Link to="/heroes" className="w-full">
+                <Button variant="default" className="w-full">
+                  View All Heroes
+                </Button>
+              </Link>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Best Items</CardTitle>
+              <CardDescription>(Last 7 days)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
             </CardContent>
             <CardFooter>
               <Link to="/items" className="w-full">
@@ -178,11 +178,11 @@ export default function Index() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Best Items</CardTitle>
-              <CardDescription>(Last 30 days)</CardDescription>
+              <CardTitle>Popular Items</CardTitle>
+              <CardDescription>(Last 7 days)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
+              <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
             </CardContent>
             <CardFooter>
               <Link to="/items" className="w-full">
