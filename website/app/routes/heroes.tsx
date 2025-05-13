@@ -2,23 +2,23 @@ import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
-import DatePicker from "~/components/primitives/DatePicker";
+import HeroName from "~/components/HeroName";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
 } from "~/components/heroes-page/HeroMatchupDetailsStatsTable";
 import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
-import HeroName from "~/components/HeroName";
-import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import HeroStatsOverTimeChart, {
   HeroStatSelector,
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import DatePicker from "~/components/primitives/DatePicker";
+import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
-import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 
 export const meta: MetaFunction = () => {
   return [

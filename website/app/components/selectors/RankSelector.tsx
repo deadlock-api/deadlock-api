@@ -1,6 +1,6 @@
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "~/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import type { AssetsRank } from "~/types/assets_rank";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";

@@ -11,12 +11,12 @@ import {
 
 import {
   Select,
-  SelectTrigger,
   SelectContent,
-  SelectItem,
-  SelectValue,
-  SelectLabel,
   SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
 } from "~/components/ui/select";
 import type { AssetsHero } from "~/types/assets_hero";
 

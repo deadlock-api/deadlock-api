@@ -1,9 +1,9 @@
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import type { MetaFunction } from "react-router";
+import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import DatePicker from "~/components/primitives/DatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
-import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 

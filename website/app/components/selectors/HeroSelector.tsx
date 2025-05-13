@@ -1,11 +1,11 @@
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "~/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { AssetsHero } from "~/types/assets_hero";
-import { Popover, PopoverTrigger, PopoverContent } from "~/components/ui/popover";
-import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
+import type { AssetsHero } from "~/types/assets_hero";
 
 function getHeroImageUrl(hero: AssetsHero | undefined): string | undefined {
   return hero?.images?.minimap_image_webp;
