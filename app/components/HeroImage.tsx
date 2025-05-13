@@ -18,7 +18,7 @@ export default function HeroImage({ heroId, className }: { heroId: number; class
       src={hero?.images?.minimap_image_webp}
       alt={hero?.name}
       title={hero?.name}
-      className={cn("size-6", className || "")}
+      className={cn("size-6", className)}
     />
   );
 }
