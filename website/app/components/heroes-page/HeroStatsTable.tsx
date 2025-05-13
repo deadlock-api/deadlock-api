@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import HeroImage from "~/components/hero_image";
-import HeroName from "~/components/hero_name";
-import { ProgressBarWithLabel } from "~/components/progress_bar";
+import HeroImage from "~/components/HeroImage";
+import HeroName from "~/components/HeroName";
+import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { APIHeroStats } from "~/types/api_hero_stats";
 
 export default function HeroStatsTable({

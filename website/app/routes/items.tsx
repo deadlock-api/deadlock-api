@@ -1,10 +1,10 @@
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import type { MetaFunction } from "react-router";
-import DatePicker from "~/components/date_picker";
-import HeroSelector from "~/components/hero_selector";
-import ItemStatsTable from "~/components/item_stats_table";
-import RankSelector from "~/components/rank_selector";
+import DatePicker from "~/components/primitives/DatePicker";
+import HeroSelector from "~/components/selectors/HeroSelector";
+import ItemStatsTable from "~/components/items-page/ItemStatsTable";
+import RankSelector from "~/components/selectors/RankSelector";
 
 export const meta: MetaFunction = () => {
   return [

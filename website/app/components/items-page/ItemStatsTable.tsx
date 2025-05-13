@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import { useMemo } from "react";
-import ItemImage from "~/components/item_image";
-import ItemName from "~/components/item_name";
-import ItemTier from "~/components/item_tier";
-import { ProgressBarWithLabel } from "~/components/progress_bar";
+import ItemImage from "~/components/ItemImage";
+import ItemName from "~/components/ItemName";
+import ItemTier from "~/components/ItemTier";
+import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 

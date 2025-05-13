@@ -2,18 +2,18 @@ import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
-import DatePicker from "~/components/date_picker";
+import DatePicker from "~/components/primitives/DatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/heroes-page/HeroMatchupStatsTable";
-import HeroName from "~/components/hero_name";
-import HeroSelector, { HeroSelectorMultiple } from "~/components/hero_selector";
+import HeroName from "~/components/HeroName";
+import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import HeroStatsOverTimeChart, {
   HeroStatSelector,
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import HeroesMatchupStatsTable from "~/components/heroes-page/HeroesMatchupStatsTable";
-import RankSelector from "~/components/rank_selector";
+import RankSelector from "~/components/selectors/RankSelector";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 
 export const meta: MetaFunction = () => {

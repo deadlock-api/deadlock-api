@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import HeroImage from "~/components/hero_image";
-import { ProgressBarWithLabel } from "~/components/progress_bar";
+import HeroImage from "~/components/HeroImage";
+import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
 
 export default function HeroCombStatsTable({
