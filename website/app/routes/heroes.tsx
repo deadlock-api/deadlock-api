@@ -224,20 +224,29 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           <h2 className="text-2xl font-bold text-center mb-2">Hero Stats over time</h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-              <HeroSelectorMultiple
-                selectedHeroes={heroIds}
-                onHeroesSelected={(selectedHeroIds) => {
-                  if (!selectedHeroIds) return;
-                  setHeroIds(selectedHeroIds);
-                  if (typeof window !== "undefined") {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("heroIds", selectedHeroIds.join(","));
-                    window.history.pushState({}, "", url);
-                  }
-                }}
-              />
-              <HeroStatSelector value={heroStat} onChange={handleHeroStatChange} />
-              <HeroTimeIntervalSelector value={heroTimeInterval} onChange={handleHeroTimeIntervalChange} />
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Heroes</span>
+                <HeroSelectorMultiple
+                  selectedHeroes={heroIds}
+                  onHeroesSelected={(selectedHeroIds) => {
+                    if (!selectedHeroIds) return;
+                    setHeroIds(selectedHeroIds);
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("heroIds", selectedHeroIds.join(","));
+                      window.history.pushState({}, "", url);
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Stat</span>
+                <HeroStatSelector value={heroStat} onChange={handleHeroStatChange} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Time Interval</span>
+                <HeroTimeIntervalSelector value={heroTimeInterval} onChange={handleHeroTimeIntervalChange} />
+              </div>
             </div>
             <HeroStatsOverTimeChart
               heroIds={heroIds}

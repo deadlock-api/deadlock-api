@@ -9,7 +9,15 @@ import {
   hero_stats_transform,
 } from "~/types/api_hero_stats_over_time";
 
-import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+  SelectLabel,
+  SelectGroup,
+} from "~/components/ui/select";
 import type { AssetsHero } from "~/types/assets_hero";
 
 export function HeroStatSelector({
@@ -20,22 +28,21 @@ export function HeroStatSelector({
   onChange: (val: (typeof HERO_STATS)[number]) => void;
 }) {
   return (
-    <FormControl size="medium" variant="outlined">
-      <InputLabel id="hero-stat-select-label">Stat</InputLabel>
-      <Select
-        labelId="hero-stat-select-label"
-        id="hero-stat-select"
-        value={value}
-        label="Stat"
-        onChange={(e) => onChange(e.target.value as (typeof HERO_STATS)[number])}
-      >
-        {HERO_STATS.map((key) => (
-          <MenuItem key={key as string} value={key}>
-            {key}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="min-w-[120px]">
+        <SelectValue placeholder="Stat" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Stat</SelectLabel>
+          {HERO_STATS.map((key) => (
+            <SelectItem key={key as string} value={key as string}>
+              {key}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -47,22 +54,21 @@ export function HeroTimeIntervalSelector({
   onChange: (val: (typeof TIME_INTERVALS)[number]) => void;
 }) {
   return (
-    <FormControl size="medium" variant="outlined" sx={{ minWidth: 160 }}>
-      <InputLabel id="hero-time-interval-select-label">Time Interval</InputLabel>
-      <Select
-        labelId="hero-time-interval-select-label"
-        id="hero-time-interval-select"
-        value={value}
-        label="Time Interval"
-        onChange={(e) => onChange(e.target.value as (typeof TIME_INTERVALS)[number])}
-      >
-        {TIME_INTERVALS.map((key) => (
-          <MenuItem key={key as string} value={key}>
-            {key}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="min-w-[160px]">
+        <SelectValue placeholder="Time Interval" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel>Time Interval</SelectLabel>
+          {TIME_INTERVALS.map((key) => (
+            <SelectItem key={key as string} value={key as string}>
+              {key}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -172,7 +178,6 @@ export default function HeroStatsOverTimeChart({
           }
         }
       });
-      console.log(dataPoint);
       return dataPoint;
     });
   }, [heroQueries, heroIds, heroIdMap]);
