@@ -1,6 +1,8 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
-use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
+use crate::utils::parse::{
+    comma_separated_num_deserialize, default_last_month_timestamp, parse_steam_id_option,
+};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -15,7 +17,7 @@ fn default_min_matches() -> Option<u32> {
     20.into()
 }
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub struct ItemStatsQuery {
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
@@ -41,6 +43,12 @@ pub struct ItemStatsQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
+    /// Comma separated list of item ids to include
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    pub include_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of item ids to exclude
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    pub exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
@@ -101,6 +109,26 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
     }
+    if let Some(include_item_ids) = &query.include_item_ids {
+        player_filters.push(format!(
+            "hasAll(items, [{}])",
+            include_item_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    if let Some(exclude_item_ids) = &query.exclude_item_ids {
+        player_filters.push(format!(
+            "not hasAny(items, [{}])",
+            exclude_item_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
     let player_filters = if player_filters.is_empty() {
         "".to_string()
     } else {
@@ -136,12 +164,12 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
 }
 
 #[cached(
-    ty = "TimedCache<ItemStatsQuery, Vec<ItemStats>>",
+    ty = "TimedCache<String, Vec<ItemStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = "{ query }",
+    convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
-    key = "ItemStatsQuery"
+    key = "String"
 )]
 pub async fn get_item_stats(
     ch_client: &clickhouse::Client,
