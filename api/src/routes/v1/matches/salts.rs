@@ -120,7 +120,7 @@ pub async fn fetch_match_salts(
 
     rate_limit_client
         .apply_limits(
-            &rate_limit_key,
+            rate_limit_key,
             "salts",
             &[
                 RateLimitQuota::ip_limit(5, Duration::from_secs(60)),

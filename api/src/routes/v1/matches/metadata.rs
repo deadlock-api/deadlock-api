@@ -27,6 +27,7 @@ async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Resul
         .map(|r| r.to_vec())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn fetch_match_metadata_raw(
     rate_limit_client: &RateLimitClient,
     rate_limit_key: &RateLimitKey,
@@ -39,7 +40,7 @@ async fn fetch_match_metadata_raw(
 ) -> APIResult<Vec<u8>> {
     rate_limit_client
         .apply_limits(
-            &rate_limit_key,
+            rate_limit_key,
             "match_metadata_s3_cache",
             &[
                 RateLimitQuota::ip_limit(10000, Duration::from_secs(10)),
@@ -67,7 +68,7 @@ async fn fetch_match_metadata_raw(
 
     rate_limit_client
         .apply_limits(
-            &rate_limit_key,
+            rate_limit_key,
             "match_metadata_s3",
             &[
                 RateLimitQuota::ip_limit(1000, Duration::from_secs(10)),
