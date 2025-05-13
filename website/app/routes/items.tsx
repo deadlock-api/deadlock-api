@@ -1,11 +1,13 @@
 import dayjs, { type Dayjs } from "dayjs";
-import { useState } from "react";
-import type { MetaFunction } from "react-router";
+import { useEffect, useState } from "react";
+import { type MetaFunction, useLocation } from "react-router";
+import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 export const meta: MetaFunction = () => {
   return [
@@ -14,7 +16,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Items() {
+export default function Items({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
   const [hero, setHero] = useState<number | null>(null);
@@ -24,6 +26,34 @@ export default function Items() {
 
   const [startDate, setStartDate] = useState<Dayjs | null>(initialStartDate);
   const [endDate, setEndDate] = useState<Dayjs | null>(initialEndDate);
+
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchParams(params);
+
+    const searchTab = params?.get("tab") || initialTab || "stats";
+    if (searchTab) {
+      setTab(searchTab);
+    }
+
+    const searchHeroIdString = params?.get("heroId");
+    const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
+    setHero(searchHeroId || 15);
+  }, [location.search, initialTab]);
+
+  const searchTab = searchParams?.get("tab");
+  const [tab, setTab] = useState(searchTab || initialTab || "stats");
+
+  const handleTabChange = (newTab: string) => {
+    setTab(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", newTab);
+      window.history.pushState({}, "", url);
+    }
+  };
 
   return (
     <>
@@ -50,15 +80,26 @@ export default function Items() {
         </CardContent>
       </Card>
 
-      <ItemStatsTable
-        columns={["itemsTier", "winRate", "usage"]}
-        sortBy="winrate"
-        minRankId={minRankId}
-        maxRankId={maxRankId}
-        minDate={startDate || undefined}
-        maxDate={endDate || undefined}
-        hero={hero}
-      />
+      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
+          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
+          <TabsTrigger value="item-combs">Item Combs</TabsTrigger>
+        </TabsList>
+        <TabsContent value="stats">
+          <ItemStatsTable
+            columns={["itemsTier", "winRate", "usage"]}
+            sortBy="winrate"
+            minRankId={minRankId}
+            maxRankId={maxRankId}
+            minDate={startDate || undefined}
+            maxDate={endDate || undefined}
+            hero={hero}
+          />
+        </TabsContent>
+        <TabsContent value="item-combs">
+          <ItemCombsExplore />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }
