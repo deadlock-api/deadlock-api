@@ -2,9 +2,8 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "~
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { AssetsRank } from "~/types/assets_rank";
-import { ImgWithSkeleton } from "./ImgWithSkeleton";
-import { sleep } from "../lib/utils";
-import { Skeleton } from "./ui/skeleton";
+import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
+import { Skeleton } from "../ui/skeleton";
 
 // Utility function to get rankId from tier and subrank
 function getRankId(tier: number, subrank: number): number {

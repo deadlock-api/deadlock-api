@@ -6,7 +6,6 @@ import { Popover, PopoverTrigger, PopoverContent } from "~/components/ui/popover
 import { Checkbox } from "~/components/ui/checkbox";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import { sleep } from "../lib/utils";
 
 function getHeroImageUrl(hero: AssetsHero | undefined): string | undefined {
   return hero?.images?.minimap_image_webp;

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import ItemStatsTable from "~/components/item_stats_table";
+import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import type { APIInfo } from "~/types/api_info";
 
 export const meta: MetaFunction = () => {

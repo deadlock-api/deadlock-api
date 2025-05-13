@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
-import { cn } from "../lib/utils";
+import { cn } from "~/lib/utils";
 
 export function ImgWithSkeleton(props: React.ImgHTMLAttributes<HTMLImageElement>) {
   const [loaded, setLoaded] = useState(false);
