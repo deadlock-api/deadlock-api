@@ -112,24 +112,30 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
 
-      <div className="flex flex-wrap gap-8 justify-center items-center text-center p-6 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
-        <div className="flex flex-wrap sm:flex-nowrap gap-2">
+      {/* Make container flex-col by default, md:flex-row for desktop, adjust gaps */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center p-6 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
+        <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
           <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
           <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="flex flex-col items-center justify-around h-full">
-            <DatePicker selectedDate={startDate} onDateSelected={(date) => setStartDate(date)} type="start" />
-          </div>
+        {/* Make date container flex-col by default, sm:flex-row for larger screens, adjust gaps */}
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
+          {/* Removed unnecessary wrapper div */}
+          <DatePicker
+            selectedDate={startDate}
+            onDateSelected={(date) => setStartDate(date)}
+            type="start"
+            label="Start Date"
+          />
 
-          <div className="mt-8">
+          {/* Hide arrow on mobile, show with margin on sm+ */}
+          <div className="hidden sm:block sm:mt-8">
             <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
           </div>
 
-          <div className="flex flex-col items-center justify-around h-full">
-            <DatePicker selectedDate={endDate} onDateSelected={(date) => setEndDate(date)} type="end" />
-          </div>
+          {/* Removed unnecessary wrapper div */}
+          <DatePicker selectedDate={endDate} onDateSelected={(date) => setEndDate(date)} type="end" label="End Date" />
         </div>
       </div>
       <div className="text-sm font-medium text-center border-b border-gray-600 text-gray-400 mb-4">

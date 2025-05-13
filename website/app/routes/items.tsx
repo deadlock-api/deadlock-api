@@ -27,16 +27,19 @@ export default function Items() {
   return (
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Item Stats</h2>
-      <div className="flex gap-4 justify-center items-center text-center p-6 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
+      {/* Make container flex-col by default, md:flex-row for desktop, adjust gaps */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center p-6 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
         <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
           <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
           <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
           <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
         </div>
 
-        <div className="flex items-center gap-2.5">
+        {/* Make date container flex-col by default, sm:flex-row for larger screens, adjust gaps */}
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
           <DatePicker onDateSelected={setStartDate} selectedDate={startDate} label="Start Date" type="start" />
-          <div className="mt-8">
+          {/* Adjust arrow margin to apply only on sm+ screens */}
+          <div className="hidden sm:block sm:mt-8">
             <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
           </div>
           <DatePicker onDateSelected={setEndDate} selectedDate={endDate} label="End Date" type="end" />
