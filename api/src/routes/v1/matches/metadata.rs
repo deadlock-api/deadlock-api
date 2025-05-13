@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{RateLimitClient, RateLimitQuota};
 
 use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::routes::v1::matches::types::MatchIdQuery;
@@ -28,6 +28,8 @@ async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Resul
 }
 
 async fn fetch_match_metadata_raw(
+    rate_limit_client: &RateLimitClient,
+    rate_limit_key: &RateLimitKey,
     steam_client: &SteamClient,
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
@@ -35,7 +37,18 @@ async fn fetch_match_metadata_raw(
     s3_cache: &impl ObjectStore,
     match_id: u64,
 ) -> APIResult<Vec<u8>> {
-    // Try to fetch from cache first
+    rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "match_metadata_s3_cache",
+            &[
+                RateLimitQuota::ip_limit(10000, Duration::from_secs(10)),
+                RateLimitQuota::global_limit(10000, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
+
+    // Try to fetch from the cache first
     let results = join(
         fetch_from_s3(s3_cache, &format!("{match_id}.meta.bz2")),
         fetch_from_s3(s3_cache, &format!("{match_id}.meta_hltv.bz2")),
@@ -51,6 +64,17 @@ async fn fetch_match_metadata_raw(
         counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
         return Ok(data);
     }
+
+    rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "match_metadata_s3",
+            &[
+                RateLimitQuota::ip_limit(1000, Duration::from_secs(10)),
+                RateLimitQuota::global_limit(700, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
 
     // If not in cache, fetch from S3
     let results = join(
@@ -70,7 +94,15 @@ async fn fetch_match_metadata_raw(
     }
 
     // If not in S3, fetch from Steam
-    let salts = fetch_match_salts(steam_client, ch_client, match_id, false).await?;
+    let salts = fetch_match_salts(
+        rate_limit_client,
+        rate_limit_key,
+        steam_client,
+        ch_client,
+        match_id,
+        false,
+    )
+    .await?;
     http_client
         .get(format!(
             "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
@@ -144,19 +176,10 @@ pub async fn metadata_raw(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "match_metadata",
-            &[
-                RateLimitQuota::ip_limit(4000, Duration::from_secs(10)),
-                RateLimitQuota::global_limit(700, Duration::from_secs(1)),
-            ],
-        )
-        .await?;
     match tryhard::retry_fn(|| {
         fetch_match_metadata_raw(
+            &state.rate_limit_client,
+            &rate_limit_key,
             &state.steam_client,
             &state.http_client,
             &state.ch_client,
@@ -205,19 +228,10 @@ pub async fn metadata(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "match_metadata",
-            &[
-                RateLimitQuota::ip_limit(4000, Duration::from_secs(10)),
-                RateLimitQuota::global_limit(700, Duration::from_secs(1)),
-            ],
-        )
-        .await?;
     match tryhard::retry_fn(|| async {
         let raw_data = fetch_match_metadata_raw(
+            &state.rate_limit_client,
+            &rate_limit_key,
             &state.steam_client,
             &state.http_client,
             &state.ch_client,

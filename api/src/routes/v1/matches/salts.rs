@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{RateLimitClient, RateLimitQuota};
 
 use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
@@ -75,12 +75,14 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
     key = "(u64, bool)"
 )]
 pub async fn fetch_match_salts(
+    rate_limit_client: &RateLimitClient,
+    rate_limit_key: &RateLimitKey,
     steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
     match_id: u64,
     needs_demo: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
-    // 30742540 is the first match from december, block older requests to avoid spamming
+    // 30742540 is the first match from December, block older requests to avoid spamming
     if match_id < 30742540 {
         return Err(APIError::StatusMsg {
             status: reqwest::StatusCode::NOT_FOUND,
@@ -115,6 +117,18 @@ pub async fn fetch_match_salts(
             message: format!("Match salts for match {match_id} not found"),
         });
     }
+
+    rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "salts",
+            &[
+                RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
+                RateLimitQuota::key_limit(100, Duration::from_secs(10)),
+                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
 
     // If not in Clickhouse, fetch from Steam
     let msg = CMsgClientToGcGetMatchMetaData {
@@ -205,16 +219,15 @@ pub async fn salts(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "salts",
-            &[RateLimitQuota::ip_limit(4000, Duration::from_secs(10))],
-        )
-        .await?;
     tryhard::retry_fn(|| {
-        fetch_match_salts(&state.steam_client, &state.ch_client, match_id, needs_demo)
+        fetch_match_salts(
+            &state.rate_limit_client,
+            &rate_limit_key,
+            &state.steam_client,
+            &state.ch_client,
+            match_id,
+            needs_demo,
+        )
     })
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))
