@@ -1,11 +1,11 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
 use crate::routes::v1::commands::variables::{Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
 use crate::state::AppState;
 use crate::utils::parse::parse_steam_id;
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -118,7 +118,7 @@ pub struct CommandResolveQuery {
     description = "Resolves a command and returns the resolved command."
 )]
 pub async fn command_resolve(
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<CommandResolveQuery>,
 ) -> String {
@@ -139,7 +139,7 @@ pub async fn command_resolve(
                 async {
                     match v
                         .resolve(
-                            &headers,
+                            &rate_limit_key,
                             &state,
                             query.account_id,
                             query.region,
@@ -194,7 +194,7 @@ pub struct VariablesResolveQuery {
     description = "Resolves variables and returns a map of variable name to resolved value."
 )]
 pub async fn variables_resolve(
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<VariablesResolveQuery>,
 ) -> Json<HashMap<String, String>> {
@@ -213,7 +213,7 @@ pub async fn variables_resolve(
             .map(|v| async {
                 match v
                     .resolve(
-                        &headers,
+                        &rate_limit_key,
                         &state,
                         query.account_id,
                         query.region,

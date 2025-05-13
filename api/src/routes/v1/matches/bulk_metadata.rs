@@ -1,11 +1,13 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use crate::utils::parse::{comma_separated_num_deserialize, default_true};
 use crate::utils::types::SortDirectionAsc;
 use axum::Json;
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
@@ -123,16 +125,17 @@ This endpoints lets you fetch multiple match metadata at once. The response is a
 )]
 pub async fn bulk_metadata(
     Query(query): Query<BulkMatchMetadataQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "match_metadata_bulk",
-        &[RateLimitQuota::ip_limit(10, Duration::from_secs(1))],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "match_metadata_bulk",
+            &[RateLimitQuota::ip_limit(10, Duration::from_secs(1))],
+        )
+        .await?;
     if query.limit > 10000 {
         return Err(APIError::StatusMsg {
             status: StatusCode::BAD_REQUEST,

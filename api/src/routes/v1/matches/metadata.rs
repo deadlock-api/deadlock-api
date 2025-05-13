@@ -1,13 +1,14 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::routes::v1::matches::types::MatchIdQuery;
 use crate::services::steam::client::SteamClient;
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use futures::future::join;
 use metrics::counter;
@@ -140,19 +141,20 @@ Relevant Protobuf Messages:
 )]
 pub async fn metadata_raw(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "match_metadata",
-        &[
-            RateLimitQuota::ip_limit(4000, Duration::from_secs(10)),
-            RateLimitQuota::global_limit(700, Duration::from_secs(1)),
-        ],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "match_metadata",
+            &[
+                RateLimitQuota::ip_limit(4000, Duration::from_secs(10)),
+                RateLimitQuota::global_limit(700, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
     match tryhard::retry_fn(|| {
         fetch_match_metadata_raw(
             &state.steam_client,
@@ -200,19 +202,20 @@ Relevant Protobuf Messages:
 )]
 pub async fn metadata(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "match_metadata",
-        &[
-            RateLimitQuota::ip_limit(4000, Duration::from_secs(10)),
-            RateLimitQuota::global_limit(700, Duration::from_secs(1)),
-        ],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "match_metadata",
+            &[
+                RateLimitQuota::ip_limit(4000, Duration::from_secs(10)),
+                RateLimitQuota::global_limit(700, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
     match tryhard::retry_fn(|| async {
         let raw_data = fetch_match_metadata_raw(
             &state.steam_client,

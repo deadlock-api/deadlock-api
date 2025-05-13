@@ -1,14 +1,16 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::routes::v1::players::types::{
     AccountIdQuery, PlayerMatchHistory, PlayerMatchHistoryEntry,
 };
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -252,7 +254,7 @@ Relevant Protobuf Messages:
 pub async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<MatchHistoryQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<Json<PlayerMatchHistory>> {
     if query.force_refetch && query.only_stored_history {
@@ -272,28 +274,30 @@ pub async fn match_history(
 
     // Apply rate limits based on the query parameters
     let res = if query.force_refetch {
-        apply_limits(
-            &headers,
-            &state,
-            "match_history_refetch",
-            &[
-                RateLimitQuota::ip_limit(5, Duration::from_secs(3600)),
-                RateLimitQuota::global_limit(10, Duration::from_secs(3600)),
-            ],
-        )
-        .await
+        state
+            .rate_limit_client
+            .apply_limits(
+                &rate_limit_key,
+                "match_history_refetch",
+                &[
+                    RateLimitQuota::ip_limit(5, Duration::from_secs(3600)),
+                    RateLimitQuota::global_limit(10, Duration::from_secs(3600)),
+                ],
+            )
+            .await
     } else {
-        apply_limits(
-            &headers,
-            &state,
-            "match_history",
-            &[
-                RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
-                RateLimitQuota::key_limit(30, Duration::from_secs(60)),
-                RateLimitQuota::global_limit(400, Duration::from_secs(60)),
-            ],
-        )
-        .await
+        state
+            .rate_limit_client
+            .apply_limits(
+                &rate_limit_key,
+                "match_history",
+                &[
+                    RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
+                    RateLimitQuota::key_limit(30, Duration::from_secs(60)),
+                    RateLimitQuota::global_limit(400, Duration::from_secs(60)),
+                ],
+            )
+            .await
     };
     if let Err(e) = res {
         warn!("Reached rate limits: {e:?}, falling back to only stored history");
@@ -350,10 +354,10 @@ pub async fn match_history(
 pub async fn match_history_v2(
     path: Path<AccountIdQuery>,
     query: Query<MatchHistoryQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     state: State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    match_history(path, query, headers, state)
+    match_history(path, query, rate_limit_key, state)
         .await
         .map(|r| Json(json!({"cursor": 0, "matches": r.0})))
 }

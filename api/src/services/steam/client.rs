@@ -1,10 +1,11 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::services::steam::types::{
     GetPlayerSummariesResponse, SteamProxyQuery, SteamProxyResponse,
 };
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
-use axum::http::HeaderMap;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
@@ -73,12 +74,12 @@ impl SteamClient {
     /// Fetch a Steam account name by Steam ID
     pub async fn fetch_steam_account_name(
         &self,
-        headers: &HeaderMap,
+        rate_limit_key: &RateLimitKey,
         state: &AppState,
         steam_id: u32,
     ) -> Result<String, SteamAccountNameError> {
         fetch_steam_account_name_cached(
-            headers,
+            rate_limit_key,
             state,
             &self.http_client,
             steam_id,
@@ -142,23 +143,24 @@ pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIRes
     key = "u32"
 )]
 async fn fetch_steam_account_name_cached(
-    headers: &HeaderMap,
+    rate_limit_key: &RateLimitKey,
     state: &AppState,
     http_client: &reqwest::Client,
     steam_id: u32,
     steam_api_key: &str,
 ) -> Result<String, SteamAccountNameError> {
-    apply_limits(
-        headers,
-        state,
-        "steam_account_name",
-        &[
-            RateLimitQuota::ip_limit(50, Duration::from_secs(60 * 60)),
-            RateLimitQuota::global_limit(500, Duration::from_secs(60 * 60)),
-        ],
-    )
-    .await
-    .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            rate_limit_key,
+            "steam_account_name",
+            &[
+                RateLimitQuota::ip_limit(50, Duration::from_secs(60 * 60)),
+                RateLimitQuota::global_limit(500, Duration::from_secs(60 * 60)),
+            ],
+        )
+        .await
+        .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
     let steamid64 = steam_id as u64 + 76561197960265728;
     let response = http_client
         .get(format!(

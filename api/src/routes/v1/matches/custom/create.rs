@@ -1,11 +1,12 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::State;
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
@@ -292,19 +293,20 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
     description = "This endpoint allows you to create a custom match."
 )]
 pub async fn create_custom(
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "create_custom",
-        &[
-            RateLimitQuota::key_limit(100, Duration::from_secs(3600)),
-            RateLimitQuota::global_limit(1000, Duration::from_secs(3600)),
-        ],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "create_custom",
+            &[
+                RateLimitQuota::key_limit(100, Duration::from_secs(3600)),
+                RateLimitQuota::global_limit(1000, Duration::from_secs(3600)),
+            ],
+        )
+        .await?;
 
     let (created_party, username) = tryhard::retry_fn(|| create_party(&state))
         .retries(5)

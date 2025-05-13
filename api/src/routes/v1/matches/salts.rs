@@ -1,13 +1,14 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -201,16 +202,17 @@ This endpoints returns salts that can be used to fetch metadata and demofile for
 pub async fn salts(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     Query(SaltsQuery { needs_demo }): Query<SaltsQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "salts",
-        &[RateLimitQuota::ip_limit(4000, Duration::from_secs(10))],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "salts",
+            &[RateLimitQuota::ip_limit(4000, Duration::from_secs(10))],
+        )
+        .await?;
     tryhard::retry_fn(|| {
         fetch_match_salts(&state.steam_client, &state.ch_client, match_id, needs_demo)
     })

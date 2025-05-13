@@ -1,12 +1,13 @@
 use crate::error::{APIError, APIResult};
+use crate::middleware::rate_limiter::RateLimitQuota;
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
+
 use crate::routes::v1::players::types::AccountIdQuery;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::state::AppState;
-use crate::utils::limiter::{RateLimitQuota, apply_limits};
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -161,19 +162,20 @@ Relevant Protobuf Messages:
 )]
 pub async fn card_raw(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "card",
-        &[
-            RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
-            RateLimitQuota::global_limit(100, Duration::from_secs(1)),
-        ],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "card",
+            &[
+                RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
+                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
     tryhard::retry_fn(|| fetch_player_card_raw(&state.steam_client, account_id))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
@@ -204,19 +206,20 @@ Relevant Protobuf Messages:
 )]
 pub async fn card(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    headers: HeaderMap,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    apply_limits(
-        &headers,
-        &state,
-        "card",
-        &[
-            RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
-            RateLimitQuota::global_limit(100, Duration::from_secs(1)),
-        ],
-    )
-    .await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "card",
+            &[
+                RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
+                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
     tryhard::retry_fn(|| async {
         let raw_data = fetch_player_card_raw(&state.steam_client, account_id).await?;
         parse_player_card_raw(&raw_data).await.map(Json)

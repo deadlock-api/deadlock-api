@@ -1,3 +1,4 @@
+use crate::middleware::rate_limiter::extractor::RateLimitKey;
 use crate::routes::v1::leaderboard::route::fetch_parse_leaderboard;
 use crate::routes::v1::leaderboard::types::{LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::patches::feed::fetch_patch_notes;
@@ -9,7 +10,6 @@ use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::services::assets::client::AssetsClient;
 use crate::services::steam::client::SteamClient;
 use crate::state::AppState;
-use axum::http::HeaderMap;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;
@@ -242,7 +242,7 @@ impl Variable {
 
     pub async fn resolve(
         &self,
-        headers: &HeaderMap,
+        rate_limit_key: &RateLimitKey,
         state: &AppState,
         steam_id: u32,
         region: LeaderboardRegion,
@@ -251,7 +251,8 @@ impl Variable {
         match self {
             Self::LeaderboardRankImg => {
                 let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, None).await?;
+                    Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
+                        .await?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -270,7 +271,8 @@ impl Variable {
             }
             Self::LeaderboardRank => {
                 let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, None).await?;
+                    Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
+                        .await?;
                 let badge_level = leaderboard_entry.badge_level.ok_or(
                     VariableResolveError::FailedToFetchData("leaderboard badge level"),
                 )?;
@@ -322,18 +324,24 @@ impl Variable {
                     .ok()
                     .flatten()
                     .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
-                let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, Some(hero_id))
-                        .await?;
+                let leaderboard_entry = Self::get_leaderboard_entry(
+                    rate_limit_key,
+                    state,
+                    steam_id,
+                    region,
+                    Some(hero_id),
+                )
+                .await?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardPlace => {
                 let leaderboard_entry =
-                    Self::get_leaderboard_entry(headers, state, steam_id, region, None).await?;
+                    Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
+                        .await?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::SteamAccountName => {
-                get_steam_account_name(headers, state, &state.pg_client, steam_id).await
+                get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id).await
             }
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -771,7 +779,7 @@ impl Variable {
     }
 
     async fn get_leaderboard_entry(
-        headers: &HeaderMap,
+        rate_limit_key: &RateLimitKey,
         state: &AppState,
         steam_id: u32,
         region: LeaderboardRegion,
@@ -779,7 +787,7 @@ impl Variable {
     ) -> Result<LeaderboardEntry, VariableResolveError> {
         let (leaderboard, steam_name) = join(
             fetch_parse_leaderboard(&state.steam_client, region, hero_id),
-            get_steam_account_name(headers, state, &state.pg_client, steam_id),
+            get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id),
         )
         .await;
         let leaderboard =
@@ -826,14 +834,14 @@ async fn get_last_mmr_history(
 }
 
 async fn get_steam_account_name(
-    headers: &HeaderMap,
+    rate_limit_key: &RateLimitKey,
     state: &AppState,
     pg_client: &Pool<Postgres>,
     steam_id: u32,
 ) -> Result<String, VariableResolveError> {
     match state
         .steam_client
-        .fetch_steam_account_name(headers, state, steam_id)
+        .fetch_steam_account_name(rate_limit_key, state, steam_id)
         .await
     {
         Ok(name) => Ok(name),

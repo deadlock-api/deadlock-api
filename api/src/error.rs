@@ -1,4 +1,4 @@
-use crate::utils::limiter::RateLimitStatus;
+use crate::middleware::rate_limiter::RateLimitStatus;
 use axum::body::Body;
 use axum::http::Response;
 use axum::response::IntoResponse;
@@ -128,6 +128,7 @@ impl IntoResponse for APIError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::middleware::rate_limiter::{RateLimitQuota, RateLimitStatus};
     use axum::http::StatusCode;
     use std::time::Duration;
 
@@ -171,7 +172,6 @@ mod tests {
 
     #[test]
     fn test_api_error_rate_limit_exceeded() {
-        use crate::utils::limiter::{RateLimitQuota, RateLimitStatus};
         use chrono::Utc;
 
         let quota = RateLimitQuota::ip_limit(100, Duration::from_secs(60));

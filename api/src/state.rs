@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::error::LoadAppStateError;
+use crate::middleware::rate_limiter::RateLimitClient;
 use crate::services::assets::client::AssetsClient;
 use crate::services::steam::client::SteamClient;
 use object_store::aws::AmazonS3Builder;
@@ -29,6 +30,7 @@ pub struct AppState {
     pub feature_flags: FeatureFlags,
     pub steam_client: SteamClient,
     pub assets_client: AssetsClient,
+    pub rate_limit_client: RateLimitClient,
 }
 
 impl AppState {
@@ -149,6 +151,14 @@ impl AppState {
         debug!("Creating Assets client");
         let assets_client = AssetsClient::new(http_client.clone());
 
+        // Create a Rate Limit client
+        debug!("Creating Rate Limit client");
+        let rate_limit_client = RateLimitClient::new(
+            redis_client.clone(),
+            pg_client.clone(),
+            config.emergency_mode,
+        );
+
         Ok(Self {
             config,
             http_client,
@@ -160,6 +170,7 @@ impl AppState {
             feature_flags,
             steam_client,
             assets_client,
+            rate_limit_client,
         })
     }
 }
