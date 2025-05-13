@@ -1,0 +1,1 @@
+This folder is used for shadcn and other "copy-paste" library components.

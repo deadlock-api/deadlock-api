@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
-import HeroStatsTable from "~/components/hero_stats_table";
+import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import ItemStatsTable from "~/components/item_stats_table";
 import type { APIInfo } from "~/types/api_info";
 
