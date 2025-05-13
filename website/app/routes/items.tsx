@@ -19,8 +19,8 @@ export default function Items() {
   const [maxRankId, setMaxRankId] = useState<number>(116);
   const [hero, setHero] = useState<number | null>(null);
 
-  const initialStartDate = dayjs().subtract(30, "day").startOf("day");
-  const initialEndDate = dayjs().subtract(1, "day").startOf("day");
+  const initialStartDate = dayjs().subtract(7, "day").startOf("day");
+  const initialEndDate = dayjs().startOf("day");
 
   const [startDate, setStartDate] = useState<Dayjs | null>(initialStartDate);
   const [endDate, setEndDate] = useState<Dayjs | null>(initialEndDate);
