@@ -13,7 +13,7 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import DatePicker from "~/components/primitives/DatePicker";
+import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -124,23 +124,14 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
-              <DatePicker
-                selectedDate={startDate}
-                onDateSelected={(date) => setStartDate(date)}
-                type="start"
-                label="Start Date"
-              />
-
-              <div className="hidden sm:block sm:mt-8">
-                <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
-              </div>
-
-              <DatePicker
-                selectedDate={endDate}
-                onDateSelected={(date) => setEndDate(date)}
-                type="end"
-                label="End Date"
+            <div className="flex items-center justify-center">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateRangeChange={({ startDate, endDate }) => {
+                  setStartDate(startDate);
+                  setEndDate(endDate);
+                }}
               />
             </div>
           </div>
