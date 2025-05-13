@@ -22,8 +22,8 @@ export default function Index() {
   const totalFetchedMatches = useMemo(() => data?.table_sizes?.match_info?.rows, [data]);
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-12">
-      <section className="text-center py-8">
+    <div className="container mx-auto space-y-12">
+      <section className="text-center">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">Deadlock API</h1>
         {data && (
           <p className="text-lg text-muted-foreground mb-6">
@@ -39,13 +39,13 @@ export default function Index() {
       </section>
 
       <section>
-        <h2 className="text-3xl font-semibold tracking-tight text-center mb-8">Our Services</h2>
+        <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Our Services</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Assets API</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
                 Provides static game assets such as static heroes/item data, images, icons, sounds.
               </p>
@@ -62,7 +62,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle>Game Data API</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
                 Offers game data including matches, players, and statistics.
               </p>
@@ -79,7 +79,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle>Database Dumps</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
                 Download up-to-date database snapshots for offline analysis or research.
               </p>
@@ -101,7 +101,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle>Stream Kit</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
                 Enhance your livestreams with real-time game data overlays and widgets.
               </p>
@@ -122,8 +122,8 @@ export default function Index() {
         </div>
       </section>
 
-      <section>
-        <h2 className="text-3xl font-semibold tracking-tight text-center mb-8">Game Statistics Snapshot</h2>
+      <section className="text-center">
+        <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Game Statistics Snapshot</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -195,7 +195,7 @@ export default function Index() {
         </div>
       </section>
 
-      <section className="text-center py-8">
+      <section className="text-center">
         <h2 className="text-3xl font-semibold tracking-tight mb-4">Our Sponsors</h2>
         <p className="mb-6 text-muted-foreground">
           We are grateful to our sponsors for their support. <br />
