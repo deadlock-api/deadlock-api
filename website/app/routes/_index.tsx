@@ -1,4 +1,3 @@
-import { Button as MuiButton } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { MetaFunction } from "react-router";

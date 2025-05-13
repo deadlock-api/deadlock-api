@@ -5,7 +5,7 @@ import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 
 export const meta: MetaFunction = () => {
   return [

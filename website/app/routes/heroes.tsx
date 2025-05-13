@@ -16,7 +16,7 @@ import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 
