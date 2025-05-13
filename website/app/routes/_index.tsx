@@ -28,7 +28,7 @@ export default function Index() {
         {data && (
           <p className="text-lg text-muted-foreground mb-6">
             Fetched Matches: {totalFetchedMatches?.toLocaleString()} (Last 24h:{" "}
-            {data?.fetched_matches_per_day?.toLocaleString()} Missed Matches: {data?.missed_matches?.toLocaleString()})
+            {data?.fetched_matches_per_day?.toLocaleString()})
           </p>
         )}
         <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
