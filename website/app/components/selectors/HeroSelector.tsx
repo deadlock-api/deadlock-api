@@ -24,14 +24,15 @@ export default function HeroSelector({
 }) {
   const { data, isLoading } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      return fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json());
-    },
+    queryFn: async () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const sortedHeroes = useMemo(
-    () => data?.sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
+    () =>
+      data
+        ?.filter((h) => h.in_development !== true)
+        .sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
     [data],
   );
 
@@ -105,7 +106,10 @@ export function HeroSelectorMultiple({
   });
 
   const sortedHeroes = useMemo(
-    () => data?.sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
+    () =>
+      data
+        ?.filter((h) => h.in_development !== true)
+        .sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
     [data],
   );
 
