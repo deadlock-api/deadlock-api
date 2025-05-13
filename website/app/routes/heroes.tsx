@@ -7,6 +7,7 @@ import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
 } from "~/components/heroes-page/HeroMatchupDetailsStatsTable";
+import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
 import HeroName from "~/components/HeroName";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import HeroStatsOverTimeChart, {
@@ -14,9 +15,10 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
 import RankSelector from "~/components/selectors/RankSelector";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
 export const meta: MetaFunction = () => {
   return [
@@ -114,121 +116,64 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
 
-      {/* Make container flex-col by default, md:flex-row for desktop, adjust gaps */}
-      <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center p-6 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
-        <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-          <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-          <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
-        </div>
+      <Card className="mb-8 w-fit mx-auto">
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center">
+            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+              <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
+              <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+            </div>
 
-        {/* Make date container flex-col by default, sm:flex-row for larger screens, adjust gaps */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
-          {/* Removed unnecessary wrapper div */}
-          <DatePicker
-            selectedDate={startDate}
-            onDateSelected={(date) => setStartDate(date)}
-            type="start"
-            label="Start Date"
-          />
+            {/* Make date container flex-col by default, sm:flex-row for larger screens, adjust gaps */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
+              {/* Removed unnecessary wrapper div */}
+              <DatePicker
+                selectedDate={startDate}
+                onDateSelected={(date) => setStartDate(date)}
+                type="start"
+                label="Start Date"
+              />
 
-          {/* Hide arrow on mobile, show with margin on sm+ */}
-          <div className="hidden sm:block sm:mt-8">
-            <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+              {/* Hide arrow on mobile, show with margin on sm+ */}
+              <div className="hidden sm:block sm:mt-8">
+                <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+              </div>
+
+              {/* Removed unnecessary wrapper div */}
+              <DatePicker
+                selectedDate={endDate}
+                onDateSelected={(date) => setEndDate(date)}
+                type="end"
+                label="End Date"
+              />
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Removed unnecessary wrapper div */}
-          <DatePicker selectedDate={endDate} onDateSelected={(date) => setEndDate(date)} type="end" label="End Date" />
-        </div>
-      </div>
-      <div className="text-sm font-medium text-center border-b border-gray-600 text-gray-400 mb-4">
-        <ul className="flex flex-wrap -mb-px">
-          <li className="me-2">
-            <button
-              type="button"
-              onClick={() => handleTabChange("stats")}
-              aria-current={tab === "stats" ? "page" : undefined}
-              className={
-                tab === "stats"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-              }
-            >
-              Hero Stats
-            </button>
-          </li>
-          <li className="me-2">
-            <button
-              type="button"
-              onClick={() => handleTabChange("stats-over-time")}
-              aria-current={tab === "stats-over-time" ? "page" : undefined}
-              className={
-                tab === "stats-over-time"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-              }
-            >
-              Hero Stats Over Time
-            </button>
-          </li>
-          <li className="me-2">
-            <button
-              type="button"
-              onClick={() => handleTabChange("matchups")}
-              aria-current={tab === "matchups" ? "page" : undefined}
-              className={
-                tab === "matchups"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-              }
-            >
-              Hero Matchups
-            </button>
-          </li>
-          <li className="me-2">
-            <button
-              type="button"
-              onClick={() => handleTabChange("hero-matchup-details")}
-              aria-current={tab === "hero-matchup-details" ? "page" : undefined}
-              className={
-                tab === "hero-matchup-details"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-              }
-            >
-              Hero Matchup Details
-            </button>
-          </li>
-          <li className="me-2">
-            <button
-              type="button"
-              onClick={() => handleTabChange("hero-combs")}
-              aria-current={tab === "hero-combs" ? "page" : undefined}
-              className={
-                tab === "hero-combs"
-                  ? "inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active"
-                  : "inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300"
-              }
-            >
-              Hero Combinations
-            </button>
-          </li>
-        </ul>
-      </div>
+      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
+          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
+          <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
+          <TabsTrigger value="matchups">Matchups</TabsTrigger>
+          <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
+          <TabsTrigger value="hero-matchup-details">Matchup Details</TabsTrigger>
+        </TabsList>
 
-      {tab === "stats" && (
-        <div className="flex flex-col gap-4">
-          <HeroStatsTable
-            columns={["winRate", "pickRate", "KDA", "totalMatches"]}
-            sortBy="winrate"
-            minRankId={minRankId}
-            maxRankId={maxRankId}
-            minDate={startDate || undefined}
-            maxDate={endDate || undefined}
-          />
-        </div>
-      )}
-      {tab === "stats-over-time" && (
-        <>
+        <TabsContent value="stats">
+          <div className="flex flex-col gap-4">
+            <HeroStatsTable
+              columns={["winRate", "pickRate", "KDA", "totalMatches"]}
+              sortBy="winrate"
+              minRankId={minRankId}
+              maxRankId={maxRankId}
+              minDate={startDate || undefined}
+              maxDate={endDate || undefined}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-over-time">
           <h2 className="text-2xl font-bold text-center mb-2">Hero Stats over time</h2>
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
@@ -266,31 +211,32 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               maxDate={endDate || undefined}
             />
           </div>
-        </>
-      )}
-      {tab === "matchups" && (
-        <div className="flex flex-col gap-4">
-          <HeroMatchupStatsTable
-            minRankId={minRankId}
-            maxRankId={maxRankId}
-            minDate={startDate || undefined}
-            maxDate={endDate || undefined}
-          />
-        </div>
-      )}
-      {tab === "hero-combs" && (
-        <div className="flex flex-col gap-4">
-          <HeroCombStatsTable
-            columns={["winRate", "pickRate", "totalMatches"]}
-            minRankId={minRankId}
-            maxRankId={maxRankId}
-            minDate={startDate || undefined}
-            maxDate={endDate || undefined}
-          />
-        </div>
-      )}
-      {tab === "hero-matchup-details" && (
-        <>
+        </TabsContent>
+
+        <TabsContent value="matchups">
+          <div className="flex flex-col gap-4">
+            <HeroMatchupStatsTable
+              minRankId={minRankId}
+              maxRankId={maxRankId}
+              minDate={startDate || undefined}
+              maxDate={endDate || undefined}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-combs">
+          <div className="flex flex-col gap-4">
+            <HeroCombStatsTable
+              columns={["winRate", "pickRate", "totalMatches"]}
+              minRankId={minRankId}
+              maxRankId={maxRankId}
+              minDate={startDate || undefined}
+              maxDate={endDate || undefined}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-matchup-details">
           <h2 className="text-2xl font-bold text-center mb-2">
             Matchup Details for <HeroName heroId={heroId} />
           </h2>
@@ -326,8 +272,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               />
             </div>
           </div>
-        </>
-      )}
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

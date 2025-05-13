@@ -27,13 +27,11 @@ export default function DatePicker({
       }
 
       // Convert to dayjs, then adjust the time based on type
-      const adjustedDate = type === "start" 
-        ? dayjs(startOfDay(date))
-        : dayjs(endOfDay(date));
-      
+      const adjustedDate = type === "start" ? dayjs(startOfDay(date)) : dayjs(endOfDay(date));
+
       onDateSelected(adjustedDate);
     },
-    [type, onDateSelected]
+    [type, onDateSelected],
   );
 
   const displayLabel = label || (type === "start" ? "Start Date" : "End Date");
@@ -43,33 +41,21 @@ export default function DatePicker({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-2">
-        <span className="text-sm text-muted-foreground">{displayLabel}</span>
-        <span className="text-xs text-muted-foreground/70">{timeNote}</span>
+        <span className="text-sm text-foreground">{displayLabel}</span>
+        <span className="text-xs text-muted-foreground">{timeNote}</span>
       </div>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn(
-              "w-[200px] justify-start text-left font-normal",
-              !selectedDate && "text-muted-foreground"
-            )}
+            className={cn("w-[200px] justify-start text-left font-normal", !selectedDate && "text-foreground")}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {selectedDate ? (
-              format(selectedDate.toDate(), "PPP")
-            ) : (
-              <span>{placeholder}</span>
-            )}
+            {selectedDate ? format(selectedDate.toDate(), "PPP") : <span>{placeholder}</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={selectedDate?.toDate()}
-            onSelect={handleDateSelect}
-            initialFocus
-          />
+          <Calendar mode="single" selected={selectedDate?.toDate()} onSelect={handleDateSelect} initialFocus />
         </PopoverContent>
       </Popover>
     </div>

@@ -5,6 +5,7 @@ import DatePicker from "~/components/primitives/DatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import RankSelector from "~/components/selectors/RankSelector";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
 export const meta: MetaFunction = () => {
   return [
@@ -26,25 +27,32 @@ export default function Items() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold text-center mb-2">Item Stats</h2>
-      {/* Make container flex-col by default, md:flex-row for desktop, adjust gaps */}
-      <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center p-6 mb-4 w-fit mx-auto rounded-lg bg-gray-800">
-        <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-          <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
-          <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-          <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
-        </div>
-
-        {/* Make date container flex-col by default, sm:flex-row for larger screens, adjust gaps */}
-        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
-          <DatePicker onDateSelected={setStartDate} selectedDate={startDate} label="Start Date" type="start" />
-          {/* Adjust arrow margin to apply only on sm+ screens */}
-          <div className="hidden sm:block sm:mt-8">
-            <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+      <h2 className="text-3xl font-bold text-center mb-4">Item Stats</h2>
+      {/* Filter Card */}
+      <Card className="mb-4 w-fit mx-auto">
+        <CardContent>
+          {/* Container for filters, similar layout to heroes */}
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center">
+            {/* Flex container for hero/rank selectors */}
+            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+              <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
+              <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
+              <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+            </div>
+            {/* Flex container for date pickers */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
+              <DatePicker onDateSelected={setStartDate} selectedDate={startDate} label="Start Date" type="start" />
+              {/* Arrow separator visible on sm+ */}
+              <div className="hidden sm:block sm:mt-8">
+                <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+              </div>
+              <DatePicker onDateSelected={setEndDate} selectedDate={endDate} label="End Date" type="end" />
+            </div>
           </div>
-          <DatePicker onDateSelected={setEndDate} selectedDate={endDate} label="End Date" type="end" />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Render ItemStatsTable directly without Tabs */}
       <ItemStatsTable
         columns={["itemsTier", "winRate", "usage"]}
         sortBy="winrate"
