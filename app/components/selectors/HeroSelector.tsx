@@ -1,15 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import HeroImage from "~/components/HeroImage";
+import HeroName from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { AssetsHero } from "~/types/assets_hero";
-
-function getHeroImageUrl(hero: AssetsHero | undefined): string | undefined {
-  return hero?.images?.minimap_image_webp;
-}
 
 export default function HeroSelector({
   onHeroSelected,
@@ -61,12 +59,8 @@ export default function HeroSelector({
             <SelectValue placeholder={"Select Hero..."}>
               {currentHero ? (
                 <div className="flex items-center gap-2">
-                  <img
-                    src={getHeroImageUrl(currentHero)}
-                    alt={currentHero.name}
-                    className="size-6 object-contain flex-shrink-0"
-                  />
-                  <span className="truncate">{currentHero.name}</span>
+                  <HeroImage heroId={currentHero.id} className="object-contain flex-shrink-0" />
+                  <HeroName heroId={currentHero.id} />
                 </div>
               ) : null}
             </SelectValue>
@@ -79,8 +73,8 @@ export default function HeroSelector({
             )}
             {sortedHeroes.map((hero: AssetsHero) => (
               <SelectItem key={hero.id} value={String(hero.id)}>
-                <img src={getHeroImageUrl(hero)} alt={hero.name} className="size-6 object-contain flex-shrink-0 mr-2" />
-                <span className="truncate">{hero.name}</span>
+                <HeroImage heroId={hero.id} className="object-contain flex-shrink-0 mr-2" />
+                <HeroName heroId={hero.id} />
               </SelectItem>
             ))}
           </SelectContent>
@@ -132,12 +126,11 @@ export function HeroSelectorMultiple({
             {selectedHeroes.length === 0 ? (
               <span className="truncate text-muted-foreground">{label || "Select Heroes..."}</span>
             ) : (
-              sortedHeroes
-                .filter((hero: AssetsHero) => selectedHeroes.includes(hero.id))
-                .map((hero: AssetsHero) => (
-                  <span key={hero.id} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
-                    <img src={getHeroImageUrl(hero)} alt={hero.name} className="h-4 w-4 object-contain flex-shrink-0" />
-                    <span className="truncate text-xs">{hero.name}</span>
+              selectedHeroes
+                .map((heroId) => (
+                  <span key={heroId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
+                    <HeroImage heroId={heroId} className="size-4 object-contain flex-shrink-0" />
+                    <HeroName heroId={heroId} className="truncate text-xs" />
                   </span>
                 ))
                 .slice(0, 5)
@@ -167,7 +160,7 @@ export function HeroSelectorMultiple({
             </label>
           </div>
           {sortedHeroes.map((hero: AssetsHero) => (
-            <div key={hero.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded cursor-pointer">
+            <div key={hero.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent cursor-pointer">
               <Checkbox
                 checked={selectedHeroes.includes(hero.id)}
                 tabIndex={-1}
@@ -185,8 +178,8 @@ export function HeroSelectorMultiple({
                 htmlFor={`hero-checkbox-${hero.id}`}
                 className="flex flex-nowrap items-center gap-2 w-full truncate text-sm cursor-pointer"
               >
-                <img src={getHeroImageUrl(hero)} alt={hero.name} className="h-5 w-5 object-contain flex-shrink-0" />
-                {hero.name}
+                <HeroImage heroId={hero.id} className="size-5 object-contain flex-shrink-0" />
+                <HeroName heroId={hero.id} className="truncate text-sm" />
               </label>
             </div>
           ))}
