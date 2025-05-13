@@ -25,9 +25,7 @@ export default function Index() {
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-12">
       <section className="text-center py-8">
-        <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">
-          Deadlock API
-        </h1>
+        <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">Deadlock API</h1>
         {data && (
           <p className="text-lg text-muted-foreground mb-6">
             Fetched Matches: {totalFetchedMatches?.toLocaleString()} (Last 24h:{" "}
@@ -55,7 +53,9 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <a href="https://assets.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button variant="outline" className="w-full">Visit Assets API</Button>
+                <Button variant="outline" className="w-full">
+                  Visit Assets API
+                </Button>
               </a>
             </CardFooter>
           </Card>
@@ -70,7 +70,9 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <a href="https://api.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button variant="outline" className="w-full">Visit Game Data API</Button>
+                <Button variant="outline" className="w-full">
+                  Visit Game Data API
+                </Button>
               </a>
             </CardFooter>
           </Card>
@@ -84,8 +86,15 @@ export default function Index() {
               </p>
             </CardContent>
             <CardFooter>
-              <a href="https://minio.deadlock-api.com/browser/db-snapshot/public%2F" target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button variant="outline" className="w-full">Access Database Dumps</Button>
+              <a
+                href="https://minio.deadlock-api.com/browser/db-snapshot/public%2F"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+              >
+                <Button variant="outline" className="w-full">
+                  Access Database Dumps
+                </Button>
               </a>
             </CardFooter>
           </Card>
@@ -99,8 +108,15 @@ export default function Index() {
               </p>
             </CardContent>
             <CardFooter>
-              <a href="https://streamkit.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button variant="outline" className="w-full">Explore Stream Kit</Button>
+              <a
+                href="https://streamkit.deadlock-api.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+              >
+                <Button variant="outline" className="w-full">
+                  Explore Stream Kit
+                </Button>
               </a>
             </CardFooter>
           </Card>
@@ -120,7 +136,9 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/heroes" className="w-full">
-                <Button variant="default" className="w-full">View All Heroes</Button>
+                <Button variant="default" className="w-full">
+                  View All Heroes
+                </Button>
               </Link>
             </CardFooter>
           </Card>
@@ -135,7 +153,9 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/heroes" className="w-full">
-                <Button variant="default" className="w-full">View All Heroes</Button>
+                <Button variant="default" className="w-full">
+                  View All Heroes
+                </Button>
               </Link>
             </CardFooter>
           </Card>
@@ -150,7 +170,9 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/items" className="w-full">
-                <Button variant="default" className="w-full">View All Items</Button>
+                <Button variant="default" className="w-full">
+                  View All Items
+                </Button>
               </Link>
             </CardFooter>
           </Card>
@@ -165,7 +187,9 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/items" className="w-full">
-                <Button variant="default" className="w-full">View All Items</Button>
+                <Button variant="default" className="w-full">
+                  View All Items
+                </Button>
               </Link>
             </CardFooter>
           </Card>
@@ -189,7 +213,13 @@ export default function Index() {
           .
         </p>
         <div className="flex justify-center items-center gap-8 mt-4">
-          <a href="https://deadlock.blast.tv/" title="Blast.TV" target="_blank" rel="noreferrer" className="max-w-[200px]">
+          <a
+            href="https://deadlock.blast.tv/"
+            title="Blast.TV"
+            target="_blank"
+            rel="noreferrer"
+            className="max-w-[200px]"
+          >
             <img src="/logo/blast.svg" alt="Blast.TV Logo" />
           </a>
         </div>
@@ -197,7 +227,11 @@ export default function Index() {
 
       <section className="text-center border-t pt-8 mt-8">
         <p className="text-sm text-muted-foreground text-balance">
-          <a href="https://deadlock-api.com/" title="Deadlock API" className="font-medium text-primary underline underline-offset-4">
+          <a
+            href="https://deadlock-api.com/"
+            title="Deadlock API"
+            className="font-medium text-primary underline underline-offset-4"
+          >
             deadlock-api.com
           </a>{" "}
           is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone officially involved in

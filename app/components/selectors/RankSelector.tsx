@@ -106,7 +106,7 @@ export default function RankSelector({
   return (
     <div className="flex flex-col gap-1.5 flex-shrink-0">
       <div className="flex items-baseline gap-2">
-        <span className="text-sm text-muted-foreground">{label || "Rank"}</span>
+        <span className="text-sm text-foreground">{label || "Rank"}</span>
       </div>
       {isLoading ? (
         <Skeleton className="h-10 w-32" />

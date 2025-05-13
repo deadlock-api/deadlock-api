@@ -50,7 +50,7 @@ export default function HeroSelector({
   return (
     <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
       <div className="flex items-baseline gap-2">
-        <span className="text-sm text-muted-foreground">{label || "Hero"}</span>
+        <span className="text-sm text-foreground">{label || "Hero"}</span>
       </div>
       {isLoading ? (
         <Skeleton className="h-10 w-32" />
