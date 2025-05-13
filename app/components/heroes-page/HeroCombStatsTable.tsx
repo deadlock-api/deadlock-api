@@ -3,6 +3,7 @@ import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import HeroImage from "~/components/HeroImage";
+import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
 
@@ -152,7 +153,10 @@ export default function HeroCombStatsTable({
                     <div className="flex items-center gap-2">
                       {row.hero_ids.map((heroId) => (
                         <Link key={heroId} to={`/heroes?tab=hero-details&heroId=${heroId}`}>
-                          <HeroImage key={heroId} heroId={heroId} />
+                          <div key={heroId} className="flex items-center gap-2">
+                            <HeroImage heroId={heroId} />
+                            <HeroName heroId={heroId} />
+                          </div>
                         </Link>
                       ))}
                     </div>
