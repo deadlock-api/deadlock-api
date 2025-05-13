@@ -93,21 +93,20 @@ impl From<TableSizeRow> for TableSize {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct APIInfo {
     /// The number of matches fetched in the last 24 hours.
-    pub fetched_matches_per_day: u64,
+    pub fetched_matches_per_day: Option<u64>,
     /// The number of matches that have not been fetched.
-    pub missed_matches: u64,
+    pub missed_matches: Option<u64>,
     /// The sizes of all tables in the database.
-    pub table_sizes: HashMap<String, TableSize>,
+    pub table_sizes: Option<HashMap<String, TableSize>>,
 }
 
 #[cached(
     ty = "TimedCache<u8, APIInfo>",
     create = "{ TimedCache::with_lifespan(5 * 60) }",
-    result = true,
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> clickhouse::error::Result<APIInfo> {
+pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     let (table_sizes, fetched_matches_per_day, missed_matches) = join3(
         ch_client
             .query(TABLE_SIZES_QUERY)
@@ -118,14 +117,15 @@ pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> clickhouse::error:
         ch_client.query(MISSED_MATCHES_QUERY).fetch_one::<u64>(),
     )
     .await;
-    Ok(APIInfo {
-        fetched_matches_per_day: fetched_matches_per_day?,
-        missed_matches: missed_matches?,
-        table_sizes: table_sizes?
-            .into_iter()
-            .map(|row| (row.table.clone(), row.into()))
-            .collect(),
-    })
+    APIInfo {
+        fetched_matches_per_day: fetched_matches_per_day.ok(),
+        missed_matches: missed_matches.ok(),
+        table_sizes: table_sizes.ok().map(|v| {
+            v.into_iter()
+                .map(|row| (row.table.clone(), row.into()))
+                .collect()
+        }),
+    }
 }
 
 #[utoipa::path(
@@ -140,10 +140,5 @@ pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> clickhouse::error:
     description = "Returns information about the API."
 )]
 pub async fn info(State(state): State<AppState>) -> impl IntoResponse {
-    fetch_ch_info(&state.ch_client)
-        .await
-        .map(Json)
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch API Info: {e}"),
-        })
+    Json(fetch_ch_info(&state.ch_client).await)
 }
