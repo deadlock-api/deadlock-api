@@ -1,9 +1,12 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIError;
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::State;
+use axum::response::IntoResponse;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use clickhouse::Row;
-use futures::future::join;
+use futures::future::join3;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
@@ -38,6 +41,16 @@ WITH fetched_matches AS (
 )
 SELECT COUNT() as fetched_matches_per_day
 FROM fetched_matches
+"#;
+
+const MISSED_MATCHES_QUERY: &str = r#"
+SELECT COUNT(DISTINCT match_id)
+FROM player_match_history
+WHERE toDateTime(start_time) BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
+    AND match_mode IN ('Ranked', 'Unranked')
+    AND game_mode = 'Normal'
+    AND match_id NOT IN (SELECT match_id FROM match_salts)
+    AND match_id NOT IN (SELECT match_id FROM match_info)
 "#;
 
 #[derive(Deserialize, Row)]
@@ -77,12 +90,42 @@ impl From<TableSizeRow> for TableSize {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct APIInfo {
     /// The number of matches fetched in the last 24 hours.
     pub fetched_matches_per_day: u64,
+    /// The number of matches that have not been fetched.
+    pub missed_matches: u64,
     /// The sizes of all tables in the database.
     pub table_sizes: HashMap<String, TableSize>,
+}
+
+#[cached(
+    ty = "TimedCache<u8, APIInfo>",
+    create = "{ TimedCache::with_lifespan(5 * 60) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> clickhouse::error::Result<APIInfo> {
+    let (table_sizes, fetched_matches_per_day, missed_matches) = join3(
+        ch_client
+            .query(TABLE_SIZES_QUERY)
+            .fetch_all::<TableSizeRow>(),
+        ch_client
+            .query(FETCHED_MATCHES_LAST_24H_QUERY)
+            .fetch_one::<u64>(),
+        ch_client.query(MISSED_MATCHES_QUERY).fetch_one::<u64>(),
+    )
+    .await;
+    Ok(APIInfo {
+        fetched_matches_per_day: fetched_matches_per_day?,
+        missed_matches: missed_matches?,
+        table_sizes: table_sizes?
+            .into_iter()
+            .map(|row| (row.table.clone(), row.into()))
+            .collect(),
+    })
 }
 
 #[utoipa::path(
@@ -96,33 +139,11 @@ pub struct APIInfo {
     summary = "API Info",
     description = "Returns information about the API."
 )]
-pub async fn info(State(state): State<AppState>) -> APIResult<Json<APIInfo>> {
-    let (table_sizes, fetched_matches_per_day) = join(
-        state
-            .ch_client
-            .query(TABLE_SIZES_QUERY)
-            .fetch_all::<TableSizeRow>(),
-        state
-            .ch_client
-            .query(FETCHED_MATCHES_LAST_24H_QUERY)
-            .fetch_one::<u64>(),
-    )
-    .await;
-
-    let table_sizes = table_sizes
+pub async fn info(State(state): State<AppState>) -> impl IntoResponse {
+    fetch_ch_info(&state.ch_client)
+        .await
+        .map(Json)
         .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch table sizes: {e}"),
-        })?
-        .into_iter()
-        .map(|row| (row.table.clone(), row.into()))
-        .collect();
-
-    let fetched_matches_per_day = fetched_matches_per_day.map_err(|e| APIError::InternalError {
-        message: format!("Failed to fetch fetched matches: {e}"),
-    })?;
-
-    Ok(Json(APIInfo {
-        fetched_matches_per_day,
-        table_sizes,
-    }))
+            message: format!("Failed to fetch API Info: {e}"),
+        })
 }
