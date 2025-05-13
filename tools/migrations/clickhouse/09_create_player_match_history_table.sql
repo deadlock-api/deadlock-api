@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS player_match_history
     match_id UInt32,
     hero_id UInt32,
     hero_level UInt32,
-    start_time UInt32,
+    start_time DateTime,
     game_mode Enum8 (
         'Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3
     ),
