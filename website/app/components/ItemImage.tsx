@@ -12,6 +12,14 @@ export default function ItemImage({ itemId, className }: { itemId: number; class
 
   const item = useMemo(() => data?.find((item) => item.id === itemId), [data, itemId]);
 
+  if (!item) {
+    return <div>ENOITEM</div>;
+  }
+
+  if (!item?.shop_image_small_webp) {
+    return <div>ENOIMG</div>;
+  }
+
   return (
     <picture>
       <source srcSet={item?.shop_image_small_webp} type="image/webp" />
