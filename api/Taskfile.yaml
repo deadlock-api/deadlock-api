@@ -63,12 +63,14 @@ tasks:
 
   import-test-data:
     desc: "Sets up the testing Docker environment."
+    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
     deps:
       - task: import-test-data-postgres
       - task: import-test-data-clickhouse
 
   setup-test-env:
     desc: "Sets up the testing Docker environment."
+    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
     deps:
       - task: teardown-test-env
     cmds:
