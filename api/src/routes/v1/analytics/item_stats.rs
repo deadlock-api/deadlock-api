@@ -12,7 +12,7 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u32> {
-    10.into()
+    20.into()
 }
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -43,7 +43,7 @@ pub struct ItemStatsQuery {
     pub max_match_id: Option<u64>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]
-    #[param(minimum = 1, default = 2)]
+    #[param(minimum = 1, default = 20)]
     pub min_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]

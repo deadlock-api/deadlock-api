@@ -14,7 +14,7 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u64> {
-    50.into()
+    20.into()
 }
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -54,7 +54,7 @@ pub struct HeroSynergyStatsQuery {
     pub account_id: Option<u32>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
-    #[param(minimum = 1, default = 50)]
+    #[param(minimum = 1, default = 20)]
     pub min_matches: Option<u64>,
 }
 

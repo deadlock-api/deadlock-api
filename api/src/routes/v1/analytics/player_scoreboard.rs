@@ -17,7 +17,7 @@ fn default_limit() -> Option<u32> {
 }
 
 fn default_min_matches() -> Option<u32> {
-    10.into()
+    20.into()
 }
 
 #[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
@@ -33,7 +33,7 @@ pub struct PlayerScoreboardQuery {
     pub hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
     #[serde(default = "default_min_matches")]
-    #[param(minimum = 1, default = 10)]
+    #[param(minimum = 1, default = 20)]
     pub min_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,

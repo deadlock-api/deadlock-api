@@ -19,7 +19,7 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u32> {
-    100.into()
+    20.into()
 }
 
 fn default_comb_size() -> Option<u8> {
@@ -61,7 +61,7 @@ pub struct HeroCombStatsQuery {
     pub exclude_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
-    #[param(minimum = 1, default = 2)]
+    #[param(minimum = 1, default = 20)]
     pub min_matches: Option<u32>,
     /// The combination size to return.
     #[serde(default = "default_comb_size")]
