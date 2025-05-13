@@ -63,7 +63,7 @@ export default function HeroSelector({
                   <img
                     src={getHeroImageUrl(currentHero)}
                     alt={currentHero.name}
-                    className="h-5 w-5 object-contain flex-shrink-0"
+                    className="size-6 object-contain flex-shrink-0"
                   />
                   <span className="truncate">{currentHero.name}</span>
                 </div>
@@ -78,11 +78,7 @@ export default function HeroSelector({
             )}
             {sortedHeroes.map((hero: AssetsHero) => (
               <SelectItem key={hero.id} value={String(hero.id)}>
-                <img
-                  src={getHeroImageUrl(hero)}
-                  alt={hero.name}
-                  className="h-5 w-5 object-contain flex-shrink-0 mr-2"
-                />
+                <img src={getHeroImageUrl(hero)} alt={hero.name} className="size-6 object-contain flex-shrink-0 mr-2" />
                 <span className="truncate">{hero.name}</span>
               </SelectItem>
             ))}
