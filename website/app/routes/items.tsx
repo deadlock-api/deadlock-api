@@ -2,7 +2,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import type { MetaFunction } from "react-router";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
-import DatePicker from "~/components/primitives/DatePicker";
+import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -36,12 +36,15 @@ export default function Items() {
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
-              <DatePicker onDateSelected={setStartDate} selectedDate={startDate} label="Start Date" type="start" />
-              <div className="hidden sm:block sm:mt-8">
-                <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
-              </div>
-              <DatePicker onDateSelected={setEndDate} selectedDate={endDate} label="End Date" type="end" />
+            <div className="flex items-center justify-center">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateRangeChange={({ startDate, endDate }) => {
+                  setStartDate(startDate);
+                  setEndDate(endDate);
+                }}
+              />
             </div>
           </div>
         </CardContent>
