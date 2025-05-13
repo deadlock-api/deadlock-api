@@ -19,7 +19,7 @@ export default function Index() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  const totalFetchedMatches = useMemo(() => data?.table_sizes.match_info?.rows, [data]);
+  const totalFetchedMatches = useMemo(() => data?.table_sizes?.match_info?.rows, [data]);
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-12">
@@ -28,7 +28,7 @@ export default function Index() {
         {data && (
           <p className="text-lg text-muted-foreground mb-6">
             Fetched Matches: {totalFetchedMatches?.toLocaleString()} (Last 24h:{" "}
-            {data?.fetched_matches_per_day.toLocaleString()})
+            {data?.fetched_matches_per_day?.toLocaleString()} Missed Matches: {data?.missed_matches?.toLocaleString()})
           </p>
         )}
         <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
