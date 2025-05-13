@@ -77,17 +77,6 @@ impl SteamClient {
         state: &AppState,
         steam_id: u32,
     ) -> Result<String, SteamAccountNameError> {
-        apply_limits(
-            headers,
-            state,
-            "steam_account_name",
-            &[
-                RateLimitQuota::ip_limit(50, Duration::from_secs(60 * 60)),
-                RateLimitQuota::global_limit(500, Duration::from_secs(60 * 60)),
-            ],
-        )
-        .await
-        .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
         fetch_steam_account_name_cached(&self.http_client, steam_id, &self.steam_api_key).await
     }
 }
@@ -150,6 +139,17 @@ async fn fetch_steam_account_name_cached(
     steam_id: u32,
     steam_api_key: &str,
 ) -> Result<String, SteamAccountNameError> {
+    apply_limits(
+        headers,
+        state,
+        "steam_account_name",
+        &[
+            RateLimitQuota::ip_limit(50, Duration::from_secs(60 * 60)),
+            RateLimitQuota::global_limit(500, Duration::from_secs(60 * 60)),
+        ],
+    )
+        .await
+        .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;p
     let steamid64 = steam_id as u64 + 76561197960265728;
     let response = http_client
         .get(format!(
