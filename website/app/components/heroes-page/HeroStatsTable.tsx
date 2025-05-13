@@ -96,7 +96,7 @@ export default function HeroStatsTable({
                 className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
               >
                 {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
-                <td className="py-2 align-middle">
+                <td className="p-2 align-middle">
                   <div className="flex items-center gap-2">
                     <HeroImage heroId={row.hero_id} />
                     <HeroName heroId={row.hero_id} />
