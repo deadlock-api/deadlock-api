@@ -3,16 +3,16 @@ import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
 import DatePicker from "~/components/date_picker";
-import HeroCombStatsTable from "~/components/hero_combs_stats_table";
-import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/hero_matchup_stats_table";
+import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
+import HeroMatchupStatsTable, { HeroMatchupStatsTableStat } from "~/components/heroes-page/HeroMatchupStatsTable";
 import HeroName from "~/components/hero_name";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/hero_selector";
 import HeroStatsOverTimeChart, {
   HeroStatSelector,
   HeroTimeIntervalSelector,
-} from "~/components/hero_stats_over_time_chart";
-import HeroStatsTable from "~/components/hero_stats_table";
-import HeroesMatchupStatsTable from "~/components/heroes_matchup_stats_table";
+} from "~/components/heroes-page/HeroStatsOverTimeChart";
+import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import HeroesMatchupStatsTable from "~/components/heroes-page/HeroesMatchupStatsTable";
 import RankSelector from "~/components/rank_selector";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 
