@@ -120,13 +120,15 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
 
         <div className="flex items-center gap-2.5">
           <div className="flex flex-col items-center justify-around h-full">
-            <DatePicker selectedDate={startDate} onDateSelected={(date) => setStartDate(date)} />
+            <DatePicker selectedDate={startDate} onDateSelected={(date) => setStartDate(date)} type="start" />
           </div>
 
-          <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+          <div className="mt-8">
+            <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
+          </div>
 
           <div className="flex flex-col items-center justify-around h-full">
-            <DatePicker selectedDate={endDate} onDateSelected={(date) => setEndDate(date)} />
+            <DatePicker selectedDate={endDate} onDateSelected={(date) => setEndDate(date)} type="end" />
           </div>
         </div>
       </div>

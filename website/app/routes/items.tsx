@@ -35,11 +35,11 @@ export default function Items() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <DatePicker onDateSelected={setStartDate} selectedDate={startDate} label="Start Date" />
-          <div>
+          <DatePicker onDateSelected={setStartDate} selectedDate={startDate} label="Start Date" type="start" />
+          <div className="mt-8">
             <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
           </div>
-          <DatePicker onDateSelected={setEndDate} selectedDate={endDate} label="End Date" />
+          <DatePicker onDateSelected={setEndDate} selectedDate={endDate} label="End Date" type="end" />
         </div>
       </div>
       <ItemStatsTable

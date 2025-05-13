@@ -50,7 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="bg-center bg-no-repeat bg-cover bg-fixed bg-[url('/background.svg')]">
+      <body className="bg-center bg-no-repeat bg-cover bg-fixed bg-[url('/background.svg')] dark">
         {children}
         <ScrollRestoration />
         <Scripts />
