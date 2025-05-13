@@ -5,6 +5,7 @@ import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { APIHeroStats } from "~/types/api_hero_stats";
+import { cn } from "../../lib/utils";
 
 export default function HeroStatsTable({
   columns,
@@ -16,6 +17,7 @@ export default function HeroStatsTable({
   maxRankId,
   minDate,
   maxDate,
+  fullWidth,
 }: {
   columns: string[];
   limit?: number;
@@ -26,6 +28,7 @@ export default function HeroStatsTable({
   maxRankId?: number;
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
+  fullWidth?: boolean;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -73,7 +76,7 @@ export default function HeroStatsTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-y-1 min-w-[600px]">
+        <table className={cn("w-full border-separate border-spacing-y-1", fullWidth ? "min-w-[600px]" : "min-w-fit")}>
           {!hideHeader && (
             <thead>
               <tr className="bg-gray-800 text-center">
@@ -93,7 +96,7 @@ export default function HeroStatsTable({
                 className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
               >
                 {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
-                <td className="p-2 align-middle">
+                <td className="py-2 align-middle">
                   <div className="flex items-center gap-2">
                     <HeroImage heroId={row.hero_id} />
                     <HeroName heroId={row.hero_id} />

@@ -95,7 +95,7 @@ export default function ItemStatsTable({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-y-1 min-w-[600px]">
+        <table className="w-full border-separate border-spacing-y-1 min-w-fit">
           {!hideHeader && (
             <thead>
               <tr className="bg-gray-800 text-center">

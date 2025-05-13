@@ -114,13 +114,12 @@ export default function RankSelector({
         <Select value={selectValue} onValueChange={handleValueChange}>
           <SelectTrigger className="focus-visible:ring-0">
             <SelectValue placeholder={"Select Rank..."}>
-              {/* Display selected rank details or nothing (for placeholder) */}
               {currentSelectedDetails ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <ImgWithSkeleton
                     src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
                     alt={currentSelectedDetails.label}
-                    className="size-5 object-contain flex-shrink-0 mb-1"
+                    className="size-6 object-contain flex-shrink-0 mb-1"
                   />
                   <span className="truncate">{currentSelectedDetails.label}</span>
                 </div>
@@ -128,13 +127,12 @@ export default function RankSelector({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {/* Map options to SelectItem */}
             {selectOptions.map((optionData) => (
               <SelectItem key={optionData.value} value={String(optionData.value)}>
                 <ImgWithSkeleton
                   src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
                   alt={optionData.label}
-                  className="size-5 object-contain flex-shrink-0 mr-2 mb-1"
+                  className="size-6 object-contain flex-shrink-0 mr-2 mb-1"
                 />
                 <span className="truncate">{optionData.label}</span>
               </SelectItem>

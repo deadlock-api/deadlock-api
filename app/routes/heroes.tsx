@@ -124,9 +124,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
 
-            {/* Make date container flex-col by default, sm:flex-row for larger screens, adjust gaps */}
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-2.5">
-              {/* Removed unnecessary wrapper div */}
               <DatePicker
                 selectedDate={startDate}
                 onDateSelected={(date) => setStartDate(date)}
@@ -134,12 +132,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 label="Start Date"
               />
 
-              {/* Hide arrow on mobile, show with margin on sm+ */}
               <div className="hidden sm:block sm:mt-8">
                 <span className="icon-[material-symbols--line-end-arrow-outline-rounded] text-gray-400 text-2xl" />
               </div>
 
-              {/* Removed unnecessary wrapper div */}
               <DatePicker
                 selectedDate={endDate}
                 onDateSelected={(date) => setEndDate(date)}
@@ -169,6 +165,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               maxRankId={maxRankId}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
+              fullWidth
             />
           </div>
         </TabsContent>
