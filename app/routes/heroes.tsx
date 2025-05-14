@@ -17,9 +17,9 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 import { PatchOrDatePicker } from "../components/PatchOrDatePicker";
-import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
   return [
