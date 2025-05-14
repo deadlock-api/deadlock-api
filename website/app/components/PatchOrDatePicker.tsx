@@ -76,51 +76,62 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center h-8">
-          <span className="text-sm text-foreground font-semibold">Date Range</span>
+    <>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center h-8">
+            <span className="text-sm text-foreground font-semibold">Date Range</span>
+          </div>
+          <Tabs
+            defaultValue={defaultTab}
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as "patch" | "custom")}
+          >
+            <TabsList className="flex h-8">
+              <TabsTrigger value="patch" className="text-xs flex items-center gap-1">
+                <ClockIcon className="h-3 w-3" />
+                Patch
+              </TabsTrigger>
+              <TabsTrigger value="custom" className="text-xs flex items-center gap-1">
+                <CalendarIcon className="h-3 w-3" />
+                Custom
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-        <Tabs
-          defaultValue={defaultTab}
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as "patch" | "custom")}
-        >
-          <TabsList className="flex h-8">
-            <TabsTrigger value="patch" className="text-xs flex items-center gap-1">
-              <ClockIcon className="h-3 w-3" />
-              Patch
-            </TabsTrigger>
-            <TabsTrigger value="custom" className="text-xs flex items-center gap-1">
-              <CalendarIcon className="h-3 w-3" />
-              Custom
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
 
-      <div>
-        {activeTab === "patch" ? (
-          <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-            <SelectTrigger id="patch-select" className="h-10 focus-visible:ring-0">
-              <SelectValue placeholder="Select a patch..." />
-            </SelectTrigger>
-            <SelectContent>
-              {patchDates.map((patch) => (
-                <SelectItem key={patch.id} value={patch.id}>
-                  {patch.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <DateRangePicker
-            startDate={value.startDate}
-            endDate={value.endDate}
-            onDateRangeChange={handleDateRangePickerChange}
-          />
-        )}
+        <div>
+          {activeTab === "patch" ? (
+            <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
+              <SelectTrigger id="patch-select" className="h-10 focus-visible:ring-0 min-w-full">
+                <SelectValue placeholder="Select a patch..." />
+              </SelectTrigger>
+              <SelectContent>
+                {patchDates.map((patch) => (
+                  <SelectItem key={patch.id} value={patch.id}>
+                    {patch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <DateRangePicker
+              startDate={value.startDate}
+              endDate={value.endDate}
+              onDateRangeChange={handleDateRangePickerChange}
+            />
+          )}
+        </div>
+        <div className="text-center">
+          {value.startDate && value.endDate && (
+            <span className="text-xs text-muted-foreground">
+              {value.endDate.startOf("day").isSame(dayjs().startOf("day"))
+                ? `${value.startDate.toDate().toLocaleDateString()} to Today`
+                : `${value.startDate.toDate().toLocaleDateString()} to ${value.endDate.toDate().toLocaleDateString()}`}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

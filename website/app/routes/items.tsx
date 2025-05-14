@@ -28,13 +28,13 @@ export default function Items() {
       <h2 className="text-3xl font-bold text-center mb-4">Item Stats</h2>
       <Card className="mb-4 w-fit mx-auto">
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center">
-            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start">
+            <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-center md:justify-start">
               <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
-            <div className="flex items-center justify-center">
+            <div className="flex justify-center md:justify-start">
               <PatchOrDatePicker
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
