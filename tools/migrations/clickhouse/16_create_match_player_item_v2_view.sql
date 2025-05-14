@@ -11,12 +11,11 @@ CREATE TABLE match_player_item_v2
  `won`                 Bool,
  `average_match_badge` UInt64,
 
- INDEX idx_start_time start_time TYPE minmax,
  INDEX idx_match_id match_id TYPE minmax
 )
  ENGINE = ReplacingMergeTree()
-  PARTITION BY hero_id
-  ORDER BY (account_id, item_id);
+  PARTITION BY (toStartOfMonth(start_time), hero_id)
+  ORDER BY (account_id, match_id, item_id);
 
 CREATE MATERIALIZED VIEW match_player_item_v2_mv
  TO match_player_item_v2
