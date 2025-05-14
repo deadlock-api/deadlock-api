@@ -13,12 +13,13 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
+import { PatchOrDatePicker } from "../components/PatchOrDatePicker";
 
 export const meta: MetaFunction = () => {
   return [
@@ -26,16 +27,12 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Detailed analytics about Heroes in Deadlock" },
   ];
 };
-
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
 
-  const initialStartDate = dayjs().subtract(30, "day").startOf("day");
-  const initialEndDate = dayjs().subtract(1, "day").startOf("day");
-
-  const [startDate, setStartDate] = useState<Dayjs | null>(initialStartDate);
-  const [endDate, setEndDate] = useState<Dayjs | null>(initialEndDate);
+  const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
+  const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
 
   const location = useLocation();
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
@@ -118,17 +115,17 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
 
       <Card className="mb-8 w-fit mx-auto">
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center items-center text-center">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start text-center">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
 
-            <div className="flex items-center justify-center">
-              <DateRangePicker
-                startDate={startDate}
-                endDate={endDate}
-                onDateRangeChange={({ startDate, endDate }) => {
+            <div className="flex justify-center md:justify-start">
+              <PatchOrDatePicker
+                patchDates={PATCHES}
+                value={{ startDate, endDate }}
+                onValueChange={({ startDate, endDate }) => {
                   setStartDate(startDate);
                   setEndDate(endDate);
                 }}
