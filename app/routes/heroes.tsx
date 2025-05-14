@@ -13,12 +13,13 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
+import { PatchOrDatePicker } from "../components/PatchOrDatePicker";
+import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
   return [
@@ -26,16 +27,12 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Detailed analytics about Heroes in Deadlock" },
   ];
 };
-
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
 
-  const initialStartDate = dayjs().subtract(7, "day").startOf("day");
-  const initialEndDate = dayjs().startOf("day");
-
-  const [startDate, setStartDate] = useState<Dayjs | null>(initialStartDate);
-  const [endDate, setEndDate] = useState<Dayjs | null>(initialEndDate);
+  const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
+  const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
 
   const location = useLocation();
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
@@ -125,10 +122,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             </div>
 
             <div className="flex items-center justify-center">
-              <DateRangePicker
-                startDate={startDate}
-                endDate={endDate}
-                onDateRangeChange={({ startDate, endDate }) => {
+              <PatchOrDatePicker
+                patchDates={PATCHES}
+                value={{ startDate, endDate }}
+                onValueChange={({ startDate, endDate }) => {
                   setStartDate(startDate);
                   setEndDate(endDate);
                 }}
