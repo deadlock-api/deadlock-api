@@ -1,10 +1,10 @@
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
-import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { useEffect, useState } from "react";
 import { CalendarIcon, ClockIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
   id: string; // Unique identifier for the patch
@@ -120,15 +120,6 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
               endDate={value.endDate}
               onDateRangeChange={handleDateRangePickerChange}
             />
-          )}
-        </div>
-        <div className="text-center">
-          {value.startDate && value.endDate && (
-            <span className="text-xs text-muted-foreground">
-              {value.endDate.startOf("day").isSame(dayjs().startOf("day"))
-                ? `${value.startDate.toDate().toLocaleDateString()} to Today`
-                : `${value.startDate.toDate().toLocaleDateString()} to ${value.endDate.toDate().toLocaleDateString()}`}
-            </span>
           )}
         </div>
       </div>
