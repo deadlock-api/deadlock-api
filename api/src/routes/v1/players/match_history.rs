@@ -300,10 +300,8 @@ pub async fn match_history(
             .await
     };
     if let Err(e) = res {
-        warn!("Reached rate limits: {e:?}, falling back to only stored history");
-        return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
-            .await
-            .map(Json);
+        warn!("Reached rate limits: {e:?}");
+        return Err(e);
     }
 
     // Fetch player match history from Steam and ClickHouse
