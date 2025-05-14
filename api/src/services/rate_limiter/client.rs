@@ -155,12 +155,15 @@ impl RateLimitClient {
     key = "Uuid"
 )]
 pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
-    sqlx::query!("SELECT COUNT(*) FROM api_keys WHERE key = $1", api_key)
-        .fetch_one(state)
-        .await
-        .ok()
-        .and_then(|row| row.count.map(|c| c > 0))
-        .unwrap_or(false)
+    sqlx::query!(
+        "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
+        api_key
+    )
+    .fetch_one(state)
+    .await
+    .ok()
+    .and_then(|row| row.count.map(|c| c > 0))
+    .unwrap_or(false)
 }
 
 #[cached(
