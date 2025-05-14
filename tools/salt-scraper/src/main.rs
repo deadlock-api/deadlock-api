@@ -40,8 +40,6 @@ async fn main() -> anyhow::Result<()> {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
         WITH matches AS (
-            SELECT match_id FROM finished_matches WHERE start_time BETWEEN '2024-12-01' AND now() - INTERVAL '2 hours'
-            UNION ALL
             SELECT match_id FROM player_match_history WHERE match_mode IN ('Ranked', 'Unranked') AND toDateTime(start_time) BETWEEN '2024-12-01' AND now() - INTERVAL '2 hours'
         )
         SELECT DISTINCT match_id
