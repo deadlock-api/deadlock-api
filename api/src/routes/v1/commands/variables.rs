@@ -282,12 +282,11 @@ impl Variable {
                     .await
                     .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
-                let rank_name = ranks
+                let rank = ranks
                     .iter()
                     .find(|r| r.tier == rank)
-                    .map(|r| r.name.clone())
                     .ok_or(VariableResolveError::FailedToFetchData("rank"))?;
-                Ok(format!("{rank_name} {subrank}"))
+                Ok(format!("{} {subrank}", rank.name))
             }
             Self::HeroesPlayedToday => {
                 let todays_matches =
