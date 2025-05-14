@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         LIMIT 100
         ";
         let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
-        let recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
+        let recent_matches: Vec<u32> = recent_matches.into_iter().map(|m| m.match_id).collect();
         if recent_matches.is_empty() {
             info!("No new matches to fetch, sleeping 60s...");
             tokio::time::sleep(Duration::from_secs(60)).await;
@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 #[instrument()]
-async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
+async fn fetch_match(match_id: u32) -> anyhow::Result<()> {
     // Fetch Salts
     let salts = tryhard::retry_fn(|| fetch_salts(match_id))
         .retries(30)
@@ -98,7 +98,7 @@ async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
     let (username, salts) = match salts {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
-            debug!("Fetched salts");
+            debug!("Fetched salts: {:?}", r.1);
             r
         }
         Err(e) => {
@@ -134,10 +134,10 @@ async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
 }
 
 async fn fetch_salts(
-    match_id: u64,
+    match_id: u32,
 ) -> reqwest::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
     let msg = CMsgClientToGcGetMatchMetaData {
-        match_id: Some(match_id),
+        match_id: Some(match_id as u64),
         ..Default::default()
     };
     common::call_steam_proxy(
@@ -153,7 +153,7 @@ async fn fetch_salts(
 }
 
 async fn ingest_salts(
-    match_id: u64,
+    match_id: u32,
     salts: CMsgClientToGcGetMatchMetaDataResponse,
     username: Option<String>,
 ) -> Result<Response, Error> {
