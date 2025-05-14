@@ -110,6 +110,7 @@ impl AppState {
             .with_option("output_format_json_quote_64bit_integers", "0")
             .with_option("output_format_json_named_tuples_as_objects", "1")
             .with_option("enable_json_type", "1")
+            .with_option("max_execution_time", "20")
             .with_option("enable_named_columns_in_function_tuple", "1");
         if let Err(e) = ch_client.query("SELECT 1").fetch_one::<u8>().await {
             return Err(LoadAppStateError::Clickhouse(e));
