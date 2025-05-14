@@ -108,7 +108,7 @@ async fn fetch_player_card_raw(steam_client: &SteamClient, account_id: u32) -> A
         friend_access_hint: None,
     };
     steam_client
-        .call_steam_proxy(SteamProxyQuery {
+        .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetProfileCard,
             msg,
             in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),

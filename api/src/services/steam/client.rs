@@ -3,7 +3,8 @@ use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::services::steam::types::{
-    GetPlayerSummariesResponse, SteamProxyQuery, SteamProxyResponse,
+    GetPlayerSummariesResponse, SteamAccountNameError, SteamProxyQuery, SteamProxyRawResponse,
+    SteamProxyResponse, SteamProxyResult,
 };
 use crate::state::AppState;
 use base64::Engine;
@@ -16,17 +17,6 @@ use serde_json::json;
 use std::time::Duration;
 use tracing::debug;
 
-/// Error type for Steam account name fetching
-#[derive(Debug, thiserror::Error)]
-pub enum SteamAccountNameError {
-    #[error("Failed to fetch steam name: {0}")]
-    FetchError(String),
-    #[error("Failed to parse steam name")]
-    ParseError,
-    #[error("Rate limit exceeded: {0}")]
-    RateLimitExceeded(String),
-}
-
 /// Client for interacting with the Steam API and proxy
 #[derive(Constructor, Clone)]
 pub struct SteamClient {
@@ -37,11 +27,17 @@ pub struct SteamClient {
 }
 
 impl SteamClient {
-    /// Call the Steam proxy with the given query
-    pub async fn call_steam_proxy<M: Message>(
+    pub async fn call_steam_proxy<M: Message, R: Message + Default>(
         &self,
         query: SteamProxyQuery<M>,
-    ) -> reqwest::Result<SteamProxyResponse> {
+    ) -> SteamProxyResult<SteamProxyResponse<R>> {
+        self.call_steam_proxy_raw(query).await?.try_into()
+    }
+
+    pub async fn call_steam_proxy_raw<M: Message>(
+        &self,
+        query: SteamProxyQuery<M>,
+    ) -> SteamProxyResult<SteamProxyRawResponse> {
         let serialized_message = query.msg.encode_to_vec();
         let encoded_message = BASE64_STANDARD.encode(&serialized_message);
         let body = json!({
@@ -54,7 +50,8 @@ impl SteamClient {
             "bot_username": query.username,
         });
         debug!("Calling Steam Proxy with body: {:?}", body);
-        self.http_client
+        Ok(self
+            .http_client
             .post(&self.steam_proxy_url)
             .bearer_auth(&self.steam_proxy_api_key)
             .timeout(query.request_timeout)
@@ -63,7 +60,7 @@ impl SteamClient {
             .await?
             .error_for_status()?
             .json()
-            .await
+            .await?)
     }
 
     /// Get the current client version from the Steam Database

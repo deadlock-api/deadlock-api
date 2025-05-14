@@ -10,11 +10,8 @@ use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{debug, warn};
@@ -136,7 +133,7 @@ pub async fn fetch_match_salts(
         metadata_salt: None,
         target_account_id: None,
     };
-    let response = steam_client
+    let salts: CMsgClientToGcGetMatchMetaDataResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
             msg,
@@ -146,48 +143,28 @@ pub async fn fetch_match_salts(
             request_timeout: Duration::from_secs(2),
             username: None,
         })
-        .await;
-    match response {
-        Err(e) => {
-            warn!("Failed to fetch match salts from Steam: {e}");
+        .await?
+        .msg;
+    if salts.result.is_none_or(|r| {
+        r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
+    }) {
+        return Err(APIError::StatusMsg {
+            status: reqwest::StatusCode::NOT_FOUND,
+            message: format!("Failed to fetch match salts for match {match_id}"),
+        });
+    }
+    if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
+        // Insert into Clickhouse
+        if let Err(e) = ingest_salts::insert_salts_to_clickhouse(
+            ch_client,
+            vec![(match_id, salts, Some("api".to_string()))],
+        )
+        .await
+        {
+            warn!("Failed to insert match salts into Clickhouse: {e}");
         }
-        Ok(r) => {
-            match BASE64_STANDARD.decode(&r.data) {
-                Err(e) => {
-                    warn!("Failed to decode match salts from Steam: {e}");
-                }
-                Ok(data) => {
-                    match CMsgClientToGcGetMatchMetaDataResponse::decode(data.as_slice()) {
-                        Err(e) => {
-                            warn!("Failed to parse match salts from Steam: {e}");
-                        }
-                        Ok(salts) => {
-                            if salts.result.is_none_or(|r| r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32){
-                                return Err(APIError::StatusMsg {
-                                    status: reqwest::StatusCode::NOT_FOUND,
-                                    message: format!("Failed to fetch match salts for match {match_id}"),
-                                });
-                            }
-                            if salts.replay_group_id.is_some()
-                                && salts.metadata_salt.unwrap_or_default() != 0
-                            {
-                                // Insert into Clickhouse
-                                if let Err(e) = ingest_salts::insert_salts_to_clickhouse(
-                                    ch_client,
-                                    vec![(match_id, salts, Some("api".to_string()))],
-                                )
-                                .await
-                                {
-                                    warn!("Failed to insert match salts into Clickhouse: {e}");
-                                }
-                                debug!("Match salts fetched from Steam");
-                                return Ok(salts);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        debug!("Match salts fetched from Steam");
+        return Ok(salts);
     }
     Err(APIError::StatusMsg {
         status: reqwest::StatusCode::NOT_FOUND,

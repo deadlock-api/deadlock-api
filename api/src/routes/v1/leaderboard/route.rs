@@ -57,7 +57,7 @@ pub async fn fetch_leaderboard_raw(
         hero_id,
     };
     steam_client
-        .call_steam_proxy(SteamProxyQuery {
+        .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
             msg,
             in_all_groups: None,

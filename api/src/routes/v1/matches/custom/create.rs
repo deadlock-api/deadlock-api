@@ -3,15 +3,12 @@ use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use itertools::Itertools;
-use prost::Message;
 use redis::{AsyncCommands, RedisResult};
 use serde::Serialize;
 use std::time::Duration;
@@ -36,7 +33,9 @@ pub struct CreateCustomResponse {
     pub party_code: String,
 }
 
-async fn create_party(state: &AppState) -> APIResult<(CMsgClientToGcPartyCreateResponse, String)> {
+async fn create_party(
+    state: &AppState,
+) -> APIResult<SteamProxyResponse<CMsgClientToGcPartyCreateResponse>> {
     let msg = CMsgClientToGcPartyCreate {
         party_mm_info: CMsgPartyMmInfo {
             platform: (EgcPlatform::KEGcPlatformPc as i32).into(),
@@ -73,7 +72,7 @@ async fn create_party(state: &AppState) -> APIResult<(CMsgClientToGcPartyCreateR
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),
     };
-    let result = state
+    let result: SteamProxyResponse<CMsgClientToGcPartyCreateResponse> = state
         .steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyCreate,
@@ -84,25 +83,8 @@ async fn create_party(state: &AppState) -> APIResult<(CMsgClientToGcPartyCreateR
             request_timeout: Duration::from_secs(2),
             username: None,
         })
-        .await
-        .map_err(|e| {
-            error!("Failed to create party: {e}");
-            APIError::InternalError {
-                message: format!("Failed to create party: {e}"),
-            }
-        })?;
-    let raw_data = BASE64_STANDARD
-        .decode(&result.data)
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to decode party create response: {e}"),
-        })?;
-    let decoded_message =
-        CMsgClientToGcPartyCreateResponse::decode(raw_data.as_ref()).map_err(|e| {
-            APIError::InternalError {
-                message: format!("Failed to parse party create response: {e}"),
-            }
-        })?;
-    Ok((decoded_message, result.username))
+        .await?;
+    Ok(result)
 }
 
 pub async fn get_party_code(
@@ -146,7 +128,7 @@ async fn switch_to_spectator_slot(
         uint_value: 31.into(),
         ..Default::default()
     };
-    let result = steam_client
+    let response: CMsgClientToGcPartyActionResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyAction,
             msg,
@@ -156,30 +138,14 @@ async fn switch_to_spectator_slot(
             request_timeout: Duration::from_secs(2),
             username: username.into(),
         })
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to switch to spectator slot in party: {e:?}"),
-        })
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode party action response: {e}"),
-                })
-        })
-        .and_then(|raw_data| {
-            CMsgClientToGcPartyActionResponse::decode(raw_data.as_ref()).map_err(|e| {
-                APIError::InternalError {
-                    message: format!("Failed to parse party action response: {e}"),
-                }
-            })
-        })?
-        .result;
-    if result
+        .await?
+        .msg;
+    if response
+        .result
         .is_none_or(|r| r != c_msg_client_to_gc_party_action_response::EResponse::KESuccess as i32)
     {
         return Err(APIError::InternalError {
-            message: format!("Failed to switch to spectator slot: {result:?}"),
+            message: format!("Failed to switch to spectator slot: {response:?}"),
         });
     }
     Ok(())
@@ -191,7 +157,7 @@ async fn make_ready(steam_client: &SteamClient, username: String, party_id: u64)
         ready_state: true.into(),
         hero_roster: None,
     };
-    let result = steam_client
+    let response: CMsgClientToGcPartySetReadyStateResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartySetReadyState,
             msg,
@@ -201,27 +167,11 @@ async fn make_ready(steam_client: &SteamClient, username: String, party_id: u64)
             request_timeout: Duration::from_secs(2),
             username: username.clone().into(),
         })
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to set ready: {e}"),
-        })
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode set ready response: {e}"),
-                })
-        })
-        .and_then(|raw_data| {
-            CMsgClientToGcPartySetReadyStateResponse::decode(raw_data.as_ref()).map_err(|e| {
-                APIError::InternalError {
-                    message: format!("Failed to parse set ready response: {e}"),
-                }
-            })
-        })?;
+        .await?
+        .msg;
 
-    info!("Made ready: {username} {party_id} {result:?}");
-    let result = result.result;
+    info!("Made ready: {username} {party_id} {response:?}");
+    let result = response.result;
     if result.is_none_or(|r| {
         r != c_msg_client_to_gc_party_set_ready_state_response::EResponse::KESuccess as i32
     }) {
@@ -237,7 +187,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
     let msg = CMsgClientToGcPartyLeave {
         party_id: party_id.into(),
     };
-    let result = steam_client
+    let response: CMsgClientToGcPartyLeaveResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
             msg,
@@ -247,27 +197,11 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
             request_timeout: Duration::from_secs(2),
             username: username.clone().into(),
         })
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to leave party: {e}"),
-        })
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode leave party response: {e}"),
-                })
-        })
-        .and_then(|raw_data| {
-            CMsgClientToGcPartyLeaveResponse::decode(raw_data.as_ref()).map_err(|e| {
-                APIError::InternalError {
-                    message: format!("Failed to parse leave party response: {e}"),
-                }
-            })
-        })?;
+        .await?
+        .msg;
 
-    info!("Left Party: {username} {party_id} {result:?}");
-    let result = result.result;
+    info!("Left Party: {username} {party_id} {response:?}");
+    let result = response.result;
     if result
         .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
     {
@@ -308,7 +242,10 @@ pub async fn create_custom(
         )
         .await?;
 
-    let (created_party, username) = tryhard::retry_fn(|| create_party(&state))
+    let SteamProxyResponse {
+        username,
+        msg: created_party,
+    } = tryhard::retry_fn(|| create_party(&state))
         .retries(5)
         .linear_backoff(Duration::from_millis(100))
         .await?;

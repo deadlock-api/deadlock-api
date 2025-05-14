@@ -37,7 +37,7 @@ pub struct ActiveMatchesQuery {
 pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
     state
         .steam_client
-        .call_steam_proxy(SteamProxyQuery {
+        .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
             msg: CMsgClientToGcGetActiveMatches::default(),
             in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),

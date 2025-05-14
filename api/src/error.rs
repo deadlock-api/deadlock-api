@@ -1,4 +1,5 @@
 use crate::services::rate_limiter::RateLimitStatus;
+use crate::services::steam::types::SteamProxyError;
 use axum::body::Body;
 use axum::http::Response;
 use axum::response::IntoResponse;
@@ -6,6 +7,7 @@ use reqwest::StatusCode;
 use serde_json::json;
 use std::io;
 use thiserror::Error;
+use tracing::warn;
 
 pub type ApplicationResult<T> = Result<T, ApplicationError>;
 pub type APIResult<T> = Result<T, APIError>;
@@ -39,7 +41,7 @@ pub enum LoadAppStateError {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error)]
 pub enum APIError {
     #[error("Status {status}")]
     Status { status: StatusCode },
@@ -54,6 +56,8 @@ pub enum APIError {
     RateLimitExceeded { status: RateLimitStatus },
     #[error("Internal server error: {message}")]
     InternalError { message: String },
+    #[error("Steam request error: {0}")]
+    SteamProxy(#[from] SteamProxyError),
 }
 
 impl IntoResponse for APIError {
@@ -121,6 +125,20 @@ impl IntoResponse for APIError {
                     .into(),
                 )
                 .unwrap_or_else(|_| "Internal server error".to_string().into_response()),
+            APIError::SteamProxy(e) => {
+                warn!("{e}");
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body(
+                        serde_json::to_string(&json!({
+                            "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                            "error": "Request to Steam failed.",
+                        }))
+                        .unwrap_or_else(|_| "Internal server error".to_string())
+                        .into(),
+                    )
+                    .unwrap_or_else(|_| "Internal server error".to_string().into_response())
+            }
         }
     }
 }

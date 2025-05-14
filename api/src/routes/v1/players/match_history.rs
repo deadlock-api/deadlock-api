@@ -12,17 +12,14 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use futures::future::join;
 use itertools::{Itertools, chain};
-use prost::Message;
 use serde::Deserialize;
 use serde_json::json;
 use std::time::Duration;
-use tracing::{debug, warn};
+use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
@@ -92,13 +89,13 @@ async fn fetch_match_history_raw(
     steam_client: &SteamClient,
     account_id: u32,
     continue_cursor: Option<u64>,
-) -> APIResult<Vec<u8>> {
+) -> APIResult<(PlayerMatchHistory, Option<u64>)> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: Some(account_id),
         continue_cursor,
         ranked_interval: None,
     };
-    steam_client
+    let response: CMsgClientToGcGetMatchHistoryResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
             msg,
@@ -108,40 +105,18 @@ async fn fetch_match_history_raw(
             request_timeout: Duration::from_secs(3),
             username: None,
         })
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch player match history: {e}"),
-        })
-        .and_then(|r| {
-            debug!("Fetched player match history with: {}", r.username);
-
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode player match history: {e}"),
-                })
-        })
-}
-
-async fn parse_match_history_raw(
-    account_id: u32,
-    raw_data: &[u8],
-) -> APIResult<(PlayerMatchHistory, Option<u64>)> {
-    let decoded_message = CMsgClientToGcGetMatchHistoryResponse::decode(raw_data).map_err(|e| {
-        APIError::InternalError {
-            message: format!("Failed to parse player match history: {e}"),
-        }
-    })?;
-    if decoded_message.result.is_none_or(|r| {
+        .await?
+        .msg;
+    if response.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess as i32
     }) {
-        println!("{decoded_message:?}");
+        println!("{response:?}");
         return Err(APIError::InternalError {
-            message: format!("Failed to fetch player match history: {decoded_message:?}"),
+            message: format!("Failed to fetch player match history: {response:?}"),
         });
     }
     Ok((
-        decoded_message
+        response
             .matches
             .into_iter()
             .flat_map(
@@ -154,7 +129,7 @@ async fn parse_match_history_raw(
                 },
             )
             .collect(),
-        decoded_message.continue_cursor,
+        response.continue_cursor,
     ))
 }
 
@@ -176,10 +151,8 @@ pub async fn fetch_steam_match_history(
     let mut iterations = 0;
     loop {
         iterations += 1;
-        let result = tryhard::retry_fn(|| async {
-            let raw_data =
-                fetch_match_history_raw(steam_client, account_id, continue_cursor).await?;
-            parse_match_history_raw(account_id, &raw_data).await
+        let result = tryhard::retry_fn(|| {
+            fetch_match_history_raw(steam_client, account_id, continue_cursor)
         })
         .retries(10)
         .fixed_backoff(Duration::from_millis(10))
