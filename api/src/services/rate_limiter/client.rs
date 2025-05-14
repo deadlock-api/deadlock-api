@@ -1,4 +1,4 @@
-use crate::error::APIError;
+use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::types::RateLimitQuotaType;
 use crate::services::rate_limiter::{RateLimitQuota, RateLimitStatus};
@@ -28,7 +28,7 @@ impl RateLimitClient {
         rate_limit_key: &RateLimitKey,
         key: &str,
         quotas: &[RateLimitQuota],
-    ) -> Result<Option<RateLimitStatus>, APIError> {
+    ) -> APIResult<Option<RateLimitStatus>> {
         if quotas.is_empty() {
             return Ok(None);
         }

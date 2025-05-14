@@ -1,4 +1,4 @@
-use crate::error::APIError;
+use crate::error::{APIError, APIResult};
 use axum::http::HeaderMap;
 use chrono::{DateTime, Utc};
 
@@ -87,7 +87,7 @@ impl RateLimitStatus {
         headers
     }
 
-    pub fn raise_if_exceeded(&self) -> Result<(), APIError> {
+    pub fn raise_if_exceeded(&self) -> APIResult<()> {
         if self.is_exceeded() {
             error!("Rate limit exceeded: {:?}", self);
             return Err(APIError::RateLimitExceeded {

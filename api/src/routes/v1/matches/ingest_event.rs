@@ -49,9 +49,7 @@ impl MatchCreatedWebhookPayload {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn get_webhook_urls(
-    pg_client: &Pool<Postgres>,
-) -> Result<Vec<(String, String)>, APIError> {
+pub async fn get_webhook_urls(pg_client: &Pool<Postgres>) -> APIResult<Vec<(String, String)>> {
     sqlx::query!("SELECT webhook_url, secret FROM webhooks")
         .fetch_all(pg_client)
         .await
