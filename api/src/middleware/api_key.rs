@@ -1,10 +1,10 @@
+use crate::utils::parse;
 use axum::http::HeaderValue;
 use axum::{extract::Request, middleware::Next, response::Response};
-use querystring::querify;
 
 pub async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
     let query_api_key = request.uri().query().and_then(|query| {
-        querify(query)
+        parse::querify(query)
             .into_iter()
             .find(|(key, _)| *key == "api_key")
             .map(|(_, value)| value.to_string())

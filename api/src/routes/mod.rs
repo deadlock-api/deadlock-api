@@ -1,9 +1,9 @@
 use crate::routes::v1::analytics::{hero_comb_stats, hero_stats, item_stats, player_scoreboard};
 use crate::routes::v1::players::match_history;
 use crate::state::AppState;
+use crate::utils::parse;
 use axum::extract::Request;
 use axum::routing::get;
-use querystring::querify;
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::{Level, span};
@@ -51,7 +51,7 @@ pub fn router() -> OpenApiRouter<AppState> {
                     let uri = request.uri().to_string();
                     let path = uri.split("?").next().unwrap_or(&uri);
 
-                    let mut query = querify(request.uri().query().unwrap_or_default());
+                    let mut query = parse::querify(request.uri().query().unwrap_or_default());
                     query.retain(|d| d.0 != "api_key"); // remove api_key from query
 
                     let ip = headers

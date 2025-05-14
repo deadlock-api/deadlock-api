@@ -127,6 +127,26 @@ pub fn default_true() -> bool {
     true
 }
 
+pub type QueryParam<'a> = (&'a str, &'a str);
+pub type QueryParams<'a> = Vec<QueryParam<'a>>;
+pub fn querify(string: &str) -> QueryParams {
+    let mut v = Vec::new();
+    for pair in string.split('&') {
+        let mut it = pair.split('=').take(2);
+        let kv = match (it.next(), it.next()) {
+            (Some(k), Some(v)) => (k, v),
+            _ => continue,
+        };
+        v.push(kv);
+    }
+    v
+}
+pub fn stringify(query: QueryParams) -> String {
+    query.iter().fold(String::new(), |acc, &tuple| {
+        acc + tuple.0 + "=" + tuple.1 + "&"
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

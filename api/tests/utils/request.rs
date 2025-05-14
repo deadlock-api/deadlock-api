@@ -1,4 +1,5 @@
 use crate::utils;
+use deadlock_api_rust::utils::parse;
 use reqwest::Response;
 
 pub async fn request_endpoint(
@@ -6,7 +7,7 @@ pub async fn request_endpoint(
     query_args: impl IntoIterator<Item = (&str, &str)>,
 ) -> Response {
     let mut url = format!("http://api:3000{endpoint}");
-    let query = querystring::stringify(query_args.into_iter().collect());
+    let query = parse::stringify(query_args.into_iter().collect());
     if !query.is_empty() {
         url = format!("{url}?{query}");
     }
