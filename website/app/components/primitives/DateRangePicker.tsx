@@ -72,9 +72,6 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
 
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <div className="flex items-baseline gap-2">
-        <span className="text-sm text-foreground">Date Range</span>
-      </div>
       <Popover>
         <PopoverTrigger asChild>
           <Button

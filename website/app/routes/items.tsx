@@ -1,11 +1,12 @@
-import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import type { MetaFunction } from "react-router";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
-import { DateRangePicker } from "~/components/primitives/DateRangePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
+import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { PATCHES } from "~/lib/constants";
+import type { Dayjs } from "dayjs";
 
 export const meta: MetaFunction = () => {
   return [
@@ -19,11 +20,8 @@ export default function Items() {
   const [maxRankId, setMaxRankId] = useState<number>(116);
   const [hero, setHero] = useState<number | null>(null);
 
-  const initialStartDate = dayjs().subtract(7, "day").startOf("day");
-  const initialEndDate = dayjs().startOf("day");
-
-  const [startDate, setStartDate] = useState<Dayjs | null>(initialStartDate);
-  const [endDate, setEndDate] = useState<Dayjs | null>(initialEndDate);
+  const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
+  const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
 
   return (
     <>
@@ -37,10 +35,10 @@ export default function Items() {
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
             <div className="flex items-center justify-center">
-              <DateRangePicker
-                startDate={startDate}
-                endDate={endDate}
-                onDateRangeChange={({ startDate, endDate }) => {
+              <PatchOrDatePicker
+                patchDates={PATCHES}
+                value={{ startDate, endDate }}
+                onValueChange={({ startDate, endDate }) => {
                   setStartDate(startDate);
                   setEndDate(endDate);
                 }}
