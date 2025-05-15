@@ -12,6 +12,7 @@ use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use derive_more::Constructor;
+use metrics::counter;
 use prost::Message;
 use serde_json::json;
 use std::time::Duration;
@@ -38,6 +39,7 @@ impl SteamClient {
         &self,
         query: SteamProxyQuery<M>,
     ) -> SteamProxyResult<SteamProxyRawResponse> {
+        counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name()).increment(1);
         let serialized_message = query.msg.encode_to_vec();
         let encoded_message = BASE64_STANDARD.encode(&serialized_message);
         let body = json!({
