@@ -1,12 +1,185 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
+
+type SortDirection = "asc" | "desc";
+type SortField = "winRate" | "usage";
+
+interface SortState {
+  field: SortField;
+  direction: SortDirection;
+}
+
+export interface ItemStatsTableDisplayProps {
+  data: APIItemStats[] | undefined;
+  isLoading: boolean;
+  columns: string[];
+  hideHeader?: boolean;
+  hideIndex?: boolean;
+  minWinRate: number;
+  maxWinRate: number;
+  minMatches: number;
+  maxMatches: number;
+  initialSort?: SortState;
+}
+
+export function ItemStatsTableDisplay({
+  data,
+  isLoading,
+  columns,
+  hideHeader = false,
+  hideIndex = false,
+  minWinRate,
+  maxWinRate,
+  minMatches,
+  maxMatches,
+  initialSort = { field: "winRate", direction: "desc" },
+}: ItemStatsTableDisplayProps) {
+  const [sort, setSort] = useState<SortState>(initialSort);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
+  const sortedData = useMemo(() => {
+    if (!data) return [];
+    return [...data].sort((a, b) => {
+      let aValue: number;
+      let bValue: number;
+
+      if (sort.field === "winRate") {
+        aValue = a.wins / a.matches;
+        bValue = b.wins / b.matches;
+      } else if (sort.field === "usage") {
+        aValue = a.matches;
+        bValue = b.matches;
+      } else {
+        return 0;
+      }
+
+      return sort.direction === "asc" ? aValue - bValue : bValue - aValue;
+    });
+  }, [data, sort]);
+
+  const toggleSort = (field: SortField) => {
+    setSort((prev) => {
+      if (prev.field === field) {
+        return {
+          ...prev,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+      return { field, direction: "desc" };
+    });
+  };
+
+  // Arrow indicator for sort direction
+  const getSortArrow = (field: SortField) => {
+    if (sort.field !== field) return null;
+    return sort.direction === "asc" ? (
+      <span className="ml-1 mb-0.5 icon-[material-symbols--arrow-upward]" />
+    ) : (
+      <span className="ml-1 mb-0.5 icon-[material-symbols--arrow-downward]" />
+    );
+  };
+
+  return (
+    <div className="overflow-x-auto w-full">
+      <Table className="w-full min-w-fit">
+        {!hideHeader && (
+          <TableHeader className="bg-gray-800">
+            <TableRow>
+              {!hideIndex && <TableHead className="text-center">#</TableHead>}
+              <TableHead>Item</TableHead>
+              {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
+              {columns.includes("winRate") && (
+                <TableHead
+                  className="text-center cursor-pointer hover:bg-gray-700 transition-colors"
+                  onClick={() => toggleSort("winRate")}
+                >
+                  <div className="flex items-center">
+                    <span>Win Rate</span>
+                    {getSortArrow("winRate")}
+                  </div>
+                </TableHead>
+              )}
+              {columns.includes("usage") && (
+                <TableHead
+                  className="text-center cursor-pointer hover:bg-gray-700 transition-colors"
+                  onClick={() => toggleSort("usage")}
+                >
+                  <div className="flex items-center">
+                    <span>Usage</span>
+                    {getSortArrow("usage")}
+                  </div>
+                </TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+        )}
+        <TableBody>
+          {sortedData.map((row, index) => (
+            <TableRow
+              key={row.item_id}
+              className="bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200"
+            >
+              {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <ItemImage itemId={row.item_id} />
+                  <ItemName itemId={row.item_id} />
+                </div>
+              </TableCell>
+              {columns.includes("itemsTier") && (
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <ItemTier itemId={row.item_id} />
+                  </div>
+                </TableCell>
+              )}
+              {columns.includes("winRate") && (
+                <TableCell
+                  className="text-center"
+                  title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+                >
+                  <ProgressBarWithLabel
+                    min={minWinRate}
+                    max={maxWinRate}
+                    value={row.wins / row.matches}
+                    color={"#ff00ff"}
+                    label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                  />
+                </TableCell>
+              )}
+              {columns.includes("usage") && (
+                <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
+                  <ProgressBarWithLabel
+                    min={minMatches}
+                    max={maxMatches}
+                    value={row.matches}
+                    color={"#00ffff"}
+                    label={row.matches.toLocaleString()}
+                  />
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
 
 export default function ItemStatsTable({
   columns,
@@ -69,92 +242,20 @@ export default function ItemStatsTable({
       ),
     [data, assetsItems],
   );
-  const sortedData = useMemo(
-    () =>
-      sortBy
-        ? [...(filteredData || [])].sort((a, b) => {
-            const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
-            const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
-            return b_score - a_score;
-          })
-        : filteredData,
-    [filteredData, sortBy],
-  );
-  const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
-
-  if (isLoadingItemStats || isLoadingItemAssets) {
-    return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
-      </div>
-    );
-  }
+  // Note: We're not sorting here anymore as the ItemStatsTableDisplay component handles sorting internally
+  const limitedData = useMemo(() => (limit ? filteredData?.slice(0, limit) : filteredData), [filteredData, limit]);
 
   return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-y-1 min-w-fit">
-          {!hideHeader && (
-            <thead>
-              <tr className="bg-gray-800 text-center">
-                {!hideIndex && <th className="p-2">#</th>}
-                <th className="p-2 text-left">Item</th>
-                <th className="p-2 text-left">Tier</th>
-                {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
-                {columns.includes("usage") && <th className="p-2">Usage</th>}
-              </tr>
-            </thead>
-          )}
-          <tbody>
-            {limitedData?.map((row, index) => (
-              <tr
-                key={row.item_id}
-                className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
-              >
-                {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
-                <td className="p-2 align-middle">
-                  <div className="flex items-center gap-2 text-left">
-                    <ItemImage itemId={row.item_id} />
-                    <ItemName itemId={row.item_id} />
-                  </div>
-                </td>
-                {columns.includes("itemsTier") && (
-                  <td className="p-2 align-middle">
-                    <div className="flex items-center gap-2 text-left">
-                      <ItemTier itemId={row.item_id} />
-                    </div>
-                  </td>
-                )}
-                {columns.includes("winRate") && (
-                  <td
-                    className="p-2 align-middle"
-                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                  >
-                    <ProgressBarWithLabel
-                      min={minWinRate}
-                      max={maxWinRate}
-                      value={row.wins / row.matches}
-                      color={"#ff00ff"}
-                      label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                    />
-                  </td>
-                )}
-                {columns.includes("usage") && (
-                  <td className="p-2 align-middle" title={`${row.matches.toLocaleString()} matches`}>
-                    <ProgressBarWithLabel
-                      min={minMatches}
-                      max={maxMatches}
-                      value={row.matches}
-                      color={"#00ffff"}
-                      label={row.matches.toLocaleString()}
-                    />
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+    <ItemStatsTableDisplay
+      data={limitedData}
+      isLoading={isLoadingItemStats || isLoadingItemAssets}
+      columns={columns}
+      hideHeader={hideHeader}
+      hideIndex={hideIndex}
+      minWinRate={minWinRate}
+      maxWinRate={maxWinRate}
+      minMatches={minMatches}
+      maxMatches={maxMatches}
+    />
   );
 }

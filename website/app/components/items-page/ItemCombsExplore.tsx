@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import * as React from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
-import ItemStatsTable from "~/components/items-page/ItemStatsTable";
+import { ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
@@ -15,13 +15,17 @@ export default function ItemCombsExplore({
   maxRankId,
   minDate,
   maxDate,
+  sortBy,
   hero,
+  limit,
 }: {
   minRankId?: number;
   maxRankId?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
   hero?: number | null;
+  sortBy?: keyof APIItemStats | "winrate";
+  limit?: number;
 }) {
   const [includeItems, setIncludeItems] = useState<Set<number>>(new Set());
   const [excludeItems, setExcludeItems] = useState<Set<number>>(new Set());
@@ -37,14 +41,23 @@ export default function ItemCombsExplore({
   });
 
   const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
-    queryKey: ["api-item-stats", hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryKey: [
+      "api-item-stats",
+      hero,
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      Array.from(includeItems),
+      Array.from(excludeItems),
+    ],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
       if (hero) url.searchParams.set("hero_id", hero.toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (includeItems.size > 0) url.searchParams.set("include_items", Array.from(includeItems).join(","));
-      if (excludeItems.size > 0) url.searchParams.set("exclude_items", Array.from(excludeItems).join(","));
+      if (includeItems.size > 0) url.searchParams.set("include_item_ids", Array.from(includeItems).join(","));
+      if (excludeItems.size > 0) url.searchParams.set("exclude_item_ids", Array.from(excludeItems).join(","));
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       const res = await fetch(url);
@@ -68,7 +81,21 @@ export default function ItemCombsExplore({
     [data, assetsItems],
   );
 
-  if (isLoadingItemStats || isLoadingItemAssets) {
+  const sortedData = useMemo(
+    () =>
+      sortBy
+        ? [...(filteredData || [])].sort((a, b) => {
+            const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
+            const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
+            return b_score - a_score;
+          })
+        : filteredData,
+    [filteredData, sortBy],
+  );
+
+  const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
+
+  if (isLoadingItemAssets) {
     return (
       <div className="flex items-center justify-center w-full h-full">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
@@ -77,15 +104,19 @@ export default function ItemCombsExplore({
   }
 
   return (
-    <>
+    <div>
       <div className="grid grid-cols-2 text-center mt-4 rounded bg-gray-800 p-4 min-h-32">
         <div className="border-r-1">
           <h2 className="text-center text-xl p-2">Included Items</h2>
           <div className="flex flex-wrap items-center justify-center p-2 gap-2">
             {Array.from(includeItems)?.map((item) => (
-              <Button key={item} variant="outline">
+              <Button
+                key={item}
+                variant="outline"
+                onClick={() => setIncludeItems(new Set([...includeItems].filter((i) => i !== item)))}
+              >
                 <div className="flex items-center justify-start w-full gap-2">
-                  <ItemImage itemId={item} className="w-4 h-4" />
+                  <ItemImage itemId={item} className="size-6" />
                   <ItemName itemId={item} />
                 </div>
               </Button>
@@ -96,9 +127,13 @@ export default function ItemCombsExplore({
           <h2 className="text-center text-xl p-2">Excluded Items</h2>
           <div className="flex flex-wrap items-center justify-center p-2 gap-2">
             {Array.from(excludeItems)?.map((item) => (
-              <Button key={item} variant="outline">
+              <Button
+                key={item}
+                variant="outline"
+                onClick={() => setExcludeItems(new Set([...excludeItems].filter((i) => i !== item)))}
+              >
                 <div className="flex items-center justify-start w-full gap-2">
-                  <ItemImage itemId={item} className="w-4 h-4" />
+                  <ItemImage itemId={item} className="size-6" />
                   <ItemName itemId={item} />
                 </div>
               </Button>
@@ -117,11 +152,9 @@ export default function ItemCombsExplore({
           </TabsList>
           <TabsContent value={tab}>
             {[1, 2, 3, 4].map((tier) => (
-              <>
-                <h3 key={tier} className="text-center text-lg p-2 mt-4">
-                  Tier {tier}
-                </h3>
-                <div key={tier} className="grid grid-cols-4 gap-x-8 gap-y-2">
+              <div key={tier}>
+                <h3 className="text-center text-lg p-2 mt-4">Tier {tier}</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-2">
                   {assetsItems
                     ?.filter(
                       (i) => !i.disabled && i.shop_image_small_webp && i.item_slot_type === tab && i.item_tier === tier,
@@ -129,8 +162,8 @@ export default function ItemCombsExplore({
                     .map((item) => (
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">
                         <div className="flex items-center gap-2">
-                          <ItemImage itemId={item.id} className="w-4 h-4" />
-                          <ItemName itemId={item.id} />
+                          <ItemImage itemId={item.id} className="size-10" />
+                          <ItemName itemId={item.id} className="text-md" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -161,11 +194,27 @@ export default function ItemCombsExplore({
                       </div>
                     ))}
                 </div>
-              </>
+              </div>
             ))}
           </TabsContent>
         </Tabs>
       </div>
-    </>
+
+      {/* Display the filtered data using ItemStatsTableDisplay */}
+      <div className="mt-4 rounded bg-gray-800 p-4">
+        <h2 className="text-center text-xl p-2">Items Stats</h2>
+        <ItemStatsTableDisplay
+          data={limitedData}
+          isLoading={isLoadingItemStats || isLoadingItemAssets}
+          columns={["winRate", "usage", "itemsTier"]}
+          hideHeader={false}
+          hideIndex={true}
+          minWinRate={minWinRate}
+          maxWinRate={maxWinRate}
+          minMatches={minMatches}
+          maxMatches={maxMatches}
+        />
+      </div>
+    </div>
   );
 }
