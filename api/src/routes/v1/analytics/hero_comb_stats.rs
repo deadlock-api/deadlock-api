@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::parse::{
-    comma_separated_num_deserialize, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 use axum::Json;
 use axum::extract::State;
@@ -54,10 +54,10 @@ pub struct HeroCombStatsQuery {
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
     /// Comma separated list of hero ids to include
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     pub include_hero_ids: Option<Vec<u32>>,
     /// Comma separated list of hero ids to exclude
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     pub exclude_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]

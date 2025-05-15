@@ -3,7 +3,7 @@ use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::state::AppState;
-use crate::utils::parse::{comma_separated_num_deserialize, default_true};
+use crate::utils::parse::{comma_separated_num_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 use axum::Json;
 use axum::extract::State;
@@ -63,7 +63,7 @@ pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
-    #[serde(deserialize_with = "comma_separated_num_deserialize")]
+    #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
     pub match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
     pub min_unix_timestamp: Option<u64>,

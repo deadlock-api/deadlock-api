@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::parse::{
-    comma_separated_num_deserialize, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 use axum::Json;
 use axum::extract::{Query, State};
@@ -44,10 +44,10 @@ pub struct ItemStatsQuery {
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
     /// Comma separated list of item ids to include
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     pub include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     pub exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]

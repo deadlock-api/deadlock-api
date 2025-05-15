@@ -66,7 +66,7 @@ where
     List(Vec<T>),
 }
 
-pub fn comma_separated_num_deserialize<'de, D, T>(
+pub fn comma_separated_num_deserialize_option<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<Vec<T>>, D::Error>
 where
@@ -110,6 +110,14 @@ where
             }
         }
     })
+}
+
+pub fn comma_separated_num_deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: FromStr + Deserialize<'de> + std::fmt::Debug,
+{
+    comma_separated_num_deserialize_option(deserializer).map(|v| v.unwrap_or_default())
 }
 
 pub fn default_last_month_timestamp() -> Option<u64> {
@@ -202,7 +210,7 @@ mod tests {
 
     #[derive(Deserialize, Debug)]
     struct CommaSeparatedTestStruct {
-        #[serde(deserialize_with = "comma_separated_num_deserialize")]
+        #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
         ids: Option<Vec<u32>>,
     }
 
@@ -213,7 +221,7 @@ mod tests {
     #[case("{\"ids\": [\"1\", \"2\", \"3\"]}", Some(vec![1, 2, 3]))] // String array
     #[case("{\"ids\": null}", None)] // Null
     #[case("{\"ids\": \"[1,2,3]\"}", Some(vec![1, 2, 3]))] // Brackets
-    fn test_comma_separated_num_deserialize(
+    fn test_comma_separated_num_deserialize_option(
         #[case] json: &str,
         #[case] expected: Option<Vec<u32>>,
     ) {
