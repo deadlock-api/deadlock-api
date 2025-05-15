@@ -7,6 +7,8 @@ import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 
@@ -21,6 +23,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
   const [hero, setHero] = useState<number | null>(null);
+  const [minMatches, setMinMatches] = useState<number>(10);
 
   const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
   const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
@@ -61,6 +64,19 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
           <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start">
             <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-center md:justify-start">
               <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
+              <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
+                <Label htmlFor="minMatches" className="h-8">
+                  Min Matches
+                </Label>
+                <Input
+                  type="number"
+                  id="minMatches"
+                  min={0}
+                  step={10}
+                  value={minMatches}
+                  onChange={(e) => setMinMatches(Number(e.target.value))}
+                />
+              </div>
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
@@ -92,6 +108,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
             hero={hero}
+            minMatches={minMatches}
           />
         </TabsContent>
         <TabsContent value="item-combs">
@@ -102,6 +119,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
             hero={hero}
+            minMatches={minMatches}
           />
         </TabsContent>
       </Tabs>
