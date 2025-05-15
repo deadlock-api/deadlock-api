@@ -1,5 +1,6 @@
-use crate::routes::v1::leaderboard::route::fetch_parse_leaderboard;
-use crate::routes::v1::leaderboard::types::{LeaderboardEntry, LeaderboardRegion};
+use crate::error::APIResult;
+use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
+use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::patches::feed::fetch_patch_notes;
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
@@ -9,6 +10,7 @@ use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::SteamProxyResponse;
 use crate::state::AppState;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -22,7 +24,9 @@ use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
 use tracing::{error, warn};
 use utoipa::ToSchema;
-use valveprotos::deadlock::{ECitadelGameMode, ECitadelMatchMode};
+use valveprotos::deadlock::{
+    CMsgClientToGcGetLeaderboardResponse, ECitadelGameMode, ECitadelMatchMode,
+};
 
 #[derive(Debug, Clone, Error)]
 pub enum VariableResolveError {
@@ -785,7 +789,14 @@ impl Variable {
         hero_id: Option<u32>,
     ) -> Result<LeaderboardEntry, VariableResolveError> {
         let (leaderboard, steam_name) = join(
-            fetch_parse_leaderboard(&state.steam_client, region, hero_id),
+            async {
+                let raw_leaderboard =
+                    fetch_leaderboard_raw(&state.steam_client, region, hero_id).await?;
+                let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
+                    raw_leaderboard.try_into()?;
+                let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+                leaderboard
+            },
             get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id),
         )
         .await;

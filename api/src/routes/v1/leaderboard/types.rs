@@ -1,3 +1,4 @@
+use crate::error::APIError;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -53,10 +54,19 @@ pub struct Leaderboard {
     pub entries: Vec<LeaderboardEntry>,
 }
 
-impl From<CMsgClientToGcGetLeaderboardResponse> for Leaderboard {
-    fn from(value: CMsgClientToGcGetLeaderboardResponse) -> Self {
-        Self {
-            entries: value.entries.into_iter().map_into().collect(),
+impl TryFrom<CMsgClientToGcGetLeaderboardResponse> for Leaderboard {
+    type Error = APIError;
+
+    fn try_from(value: CMsgClientToGcGetLeaderboardResponse) -> Result<Self, Self::Error> {
+        if value.result.is_none_or(|r| {
+            r != c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32
+        }) {
+            return Err(APIError::InternalError {
+                message: format!("Failed to fetch leaderboard: {value:?}"),
+            });
         }
+        Ok(Self {
+            entries: value.entries.into_iter().map_into().collect(),
+        })
     }
 }

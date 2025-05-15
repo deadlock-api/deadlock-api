@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse};
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -11,14 +11,11 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use prost::Message;
 use serde::Deserialize;
 use std::time::Duration;
 use utoipa::IntoParams;
-use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess;
 use valveprotos::deadlock::{
     CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse, EgcCitadelClientMessages,
-    c_msg_client_to_gc_get_leaderboard_response,
 };
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -40,7 +37,7 @@ pub struct LeaderboardHeroQuery {
 }
 
 #[cached(
-    ty = "TimedCache<(LeaderboardRegion, Option<u32>), Vec<u8>>",
+    ty = "TimedCache<(LeaderboardRegion, Option<u32>), SteamProxyRawResponse>",
     create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = "{ (region, hero_id) }",
@@ -51,7 +48,7 @@ pub async fn fetch_leaderboard_raw(
     steam_client: &SteamClient,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
-) -> APIResult<Vec<u8>> {
+) -> APIResult<SteamProxyRawResponse> {
     let msg = CMsgClientToGcGetLeaderboard {
         leaderboard_region: Some(region as i32),
         hero_id,
@@ -70,45 +67,6 @@ pub async fn fetch_leaderboard_raw(
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to fetch leaderboard: {e}"),
         })
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode leaderboard: {e}"),
-                })
-        })
-}
-
-pub async fn parse_leaderboard_raw(raw_data: &[u8]) -> APIResult<Leaderboard> {
-    let decoded_message = CMsgClientToGcGetLeaderboardResponse::decode(raw_data).map_err(|e| {
-        APIError::InternalError {
-            message: format!("Failed to parse leaderboard: {e}"),
-        }
-    })?;
-
-    if decoded_message
-        .result
-        .is_none_or(|r| r != c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32)
-    {
-        return Err(APIError::InternalError {
-            message: format!("Failed to fetch leaderbaord: {KEResultSuccess:?}"),
-        });
-    }
-    Ok(decoded_message.into())
-}
-
-pub async fn fetch_parse_leaderboard(
-    steam_client: &SteamClient,
-    region: LeaderboardRegion,
-    hero_id: Option<u32>,
-) -> APIResult<Leaderboard> {
-    tryhard::retry_fn(|| async {
-        let raw_data = fetch_leaderboard_raw(steam_client, region, hero_id).await?;
-        parse_leaderboard_raw(&raw_data).await
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await
 }
 
 #[utoipa::path(
@@ -134,6 +92,13 @@ pub async fn leaderboard_raw(
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
         .await
+        .and_then(|r| {
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode leaderboard: {e}"),
+                })
+        })
 }
 
 #[utoipa::path(
@@ -165,6 +130,13 @@ pub async fn leaderboard_hero_raw(
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
         .await
+        .and_then(|r| {
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode leaderboard: {e}"),
+                })
+        })
 }
 
 #[utoipa::path(
@@ -186,9 +158,11 @@ pub async fn leaderboard(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
-    fetch_parse_leaderboard(&state.steam_client, region, None)
-        .await
-        .map(Json)
+    let raw_leaderboard = fetch_leaderboard_raw(&state.steam_client, region, None).await?;
+    let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
+        raw_leaderboard.try_into()?;
+    let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+    leaderboard.map(Json)
 }
 
 #[utoipa::path(
@@ -216,7 +190,10 @@ pub async fn leaderboard_hero(
             message: format!("Invalid hero_id: {hero_id}"),
         });
     }
-    fetch_parse_leaderboard(&state.steam_client, region, Some(hero_id))
-        .await
-        .map(Json)
+    let raw_leaderboard =
+        fetch_leaderboard_raw(&state.steam_client, region, hero_id.into()).await?;
+    let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
+        raw_leaderboard.try_into()?;
+    let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+    leaderboard.map(Json)
 }
