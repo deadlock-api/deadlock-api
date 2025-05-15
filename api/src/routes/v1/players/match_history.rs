@@ -200,7 +200,7 @@ pub async fn fetch_steam_match_history(
         .collect_vec())
 }
 
-async fn exists_newer_match_than(
+pub async fn exists_newer_match_than(
     ch_client: &clickhouse::Client,
     account_id: u32,
     match_id: u32,
