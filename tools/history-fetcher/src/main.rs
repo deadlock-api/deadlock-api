@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let limiter = RateLimiter::new(100, Duration::from_secs(10 * 60));
+    let limiter = RateLimiter::new(10, Duration::from_secs(60));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
