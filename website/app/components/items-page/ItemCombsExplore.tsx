@@ -209,6 +209,7 @@ export default function ItemCombsExplore({
           columns={["winRate", "usage", "itemsTier"]}
           hideHeader={false}
           hideIndex={true}
+          hideItemTierFilter={false}
           minWinRate={minWinRate}
           maxWinRate={maxWinRate}
           minMatches={minMatches}

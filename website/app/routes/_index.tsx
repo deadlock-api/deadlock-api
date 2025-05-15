@@ -165,7 +165,14 @@ export default function Index() {
               <CardDescription>(Last 7 days)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
+              <ItemStatsTable
+                hideIndex={true}
+                hideHeader={true}
+                hideItemTierFilter={true}
+                limit={5}
+                columns={["winRate"]}
+                initialSort={{ field: "winRate", direction: "desc" }}
+              />
             </CardContent>
             <CardFooter>
               <Link to="/items" className="w-full">
@@ -182,7 +189,14 @@ export default function Index() {
               <CardDescription>(Last 7 days)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ItemStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["usage"]} sortBy="matches" />
+              <ItemStatsTable
+                hideIndex={true}
+                hideHeader={true}
+                hideItemTierFilter={true}
+                limit={5}
+                columns={["usage"]}
+                initialSort={{ field: "usage", direction: "desc" }}
+              />
             </CardContent>
             <CardFooter>
               <Link to="/items" className="w-full">
