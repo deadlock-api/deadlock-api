@@ -16,7 +16,7 @@ use metrics::counter;
 use prost::Message;
 use serde_json::json;
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, error};
 
 /// Client for interacting with the Steam API and proxy
 #[derive(Constructor, Clone)]
@@ -39,7 +39,6 @@ impl SteamClient {
         &self,
         query: SteamProxyQuery<M>,
     ) -> SteamProxyResult<SteamProxyRawResponse> {
-        counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name()).increment(1);
         let serialized_message = query.msg.encode_to_vec();
         let encoded_message = BASE64_STANDARD.encode(&serialized_message);
         let body = json!({
@@ -51,9 +50,26 @@ impl SteamClient {
             "data": encoded_message,
             "bot_username": query.username,
         });
-        debug!("Calling Steam Proxy with body: {:?}", body);
-        Ok(self
-            .http_client
+        match self._call_proxy(&query, &body).await {
+            Ok(r) => {
+                debug!("Successfully called Steam proxy for {query:?}");
+                counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "false").increment(1);
+                Ok(r)
+            }
+            Err(e) => {
+                error!("Failed to call Steam proxy: {e}");
+                counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "true").increment(1);
+                Err(e.into())
+            }
+        }
+    }
+
+    async fn _call_proxy<M: Message, T: serde::Serialize + ?Sized>(
+        &self,
+        query: &SteamProxyQuery<M>,
+        body: &T,
+    ) -> reqwest::Result<SteamProxyRawResponse> {
+        self.http_client
             .post(&self.steam_proxy_url)
             .bearer_auth(&self.steam_proxy_api_key)
             .timeout(query.request_timeout)
@@ -62,7 +78,7 @@ impl SteamClient {
             .await?
             .error_for_status()?
             .json()
-            .await?)
+            .await
     }
 
     /// Get the current client version from the Steam Database
