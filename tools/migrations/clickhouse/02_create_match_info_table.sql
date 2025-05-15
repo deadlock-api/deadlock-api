@@ -78,5 +78,6 @@ CREATE TABLE IF NOT EXISTS match_info
     average_badge_team0 Nullable (UInt32),
     average_badge_team1 Nullable (UInt32),
     created_at timestamp DEFAULT current_timestamp()
-) ENGINE = ReplacingMergeTree ORDER BY match_id
-PRIMARY KEY match_id;
+) ENGINE = ReplacingMergeTree
+      PARTITION BY toStartOfMonth(start_time)
+      ORDER BY (toStartOfMonth(start_time), match_mode, match_id);
