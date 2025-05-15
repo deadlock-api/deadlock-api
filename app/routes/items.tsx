@@ -38,7 +38,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
 
     const searchHeroIdString = params?.get("heroId");
     const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-    setHero(searchHeroId || 15);
+    if (searchHeroId) setHero(searchHeroId);
   }, [location.search, initialTab]);
 
   const searchTab = searchParams?.get("tab");
