@@ -112,7 +112,6 @@ FROM match_player AS mp
 INNER ANY JOIN match_info AS mi ON mp.match_id = mi.match_id
 WHERE mi.start_time > now() - INTERVAL 2 DAY
     AND account_id > 0
-    AND match_outcome = 'TeamWin'
     AND match_mode IN ('Ranked', 'Unranked')
     AND game_mode = 'Normal'
 ORDER BY rand()
@@ -125,8 +124,7 @@ FROM match_player AS mp
 WHERE mp.account_id > 0
   AND match_id IN (SELECT match_id
                    FROM match_info
-                   WHERE match_outcome = 'TeamWin'
-                     AND match_mode IN ('Ranked', 'Unranked')
+                   WHERE match_mode IN ('Ranked', 'Unranked')
                      AND game_mode = 'Normal'
                      AND start_time BETWEEN '2024-08-01' AND now() - INTERVAL 2 DAY)
   AND (mp.match_id, mp.account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
