@@ -17,6 +17,7 @@ export default function ItemCombsExplore({
   maxDate,
   sortBy,
   hero,
+  minMatches,
   limit,
 }: {
   minRankId?: number;
@@ -25,6 +26,7 @@ export default function ItemCombsExplore({
   maxDate?: Dayjs;
   hero?: number | null;
   sortBy?: keyof APIItemStats | "winrate";
+  minMatches?: number | null;
   limit?: number;
 }) {
   const [includeItems, setIncludeItems] = useState<Set<number>>(new Set());
@@ -43,6 +45,7 @@ export default function ItemCombsExplore({
   const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
     queryKey: [
       "api-item-stats",
+      minMatches,
       hero,
       minRankId,
       maxRankId,
@@ -60,6 +63,7 @@ export default function ItemCombsExplore({
       if (excludeItems.size > 0) url.searchParams.set("exclude_item_ids", Array.from(excludeItems).join(","));
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
       const res = await fetch(url);
       return await res.json();
     },
@@ -68,8 +72,8 @@ export default function ItemCombsExplore({
 
   const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
-  const maxMatches = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
+  const minUsage = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
+  const maxUsage = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
   const filteredData = useMemo(
     () =>
       data?.filter((d) =>
@@ -212,8 +216,8 @@ export default function ItemCombsExplore({
           hideItemTierFilter={false}
           minWinRate={minWinRate}
           maxWinRate={maxWinRate}
-          minMatches={minMatches}
-          maxMatches={maxMatches}
+          minUsage={minUsage}
+          maxUsage={maxUsage}
           onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
           onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
         />

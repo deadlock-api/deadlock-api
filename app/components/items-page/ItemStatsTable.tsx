@@ -29,8 +29,8 @@ export interface ItemStatsTableDisplayProps {
   hideItemTierFilter?: boolean;
   minWinRate: number;
   maxWinRate: number;
-  minMatches: number;
-  maxMatches: number;
+  minUsage: number;
+  maxUsage: number;
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
   initialSort?: SortState;
@@ -45,8 +45,8 @@ export function ItemStatsTableDisplay({
   hideItemTierFilter = false,
   minWinRate,
   maxWinRate,
-  minMatches,
-  maxMatches,
+  minUsage,
+  maxUsage,
   onItemInclude,
   onItemExclude,
   initialSort = { field: "winRate", direction: "desc" },
@@ -198,8 +198,8 @@ export function ItemStatsTableDisplay({
               {columns.includes("usage") && (
                 <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
                   <ProgressBarWithLabel
-                    min={minMatches}
-                    max={maxMatches}
+                    min={minUsage}
+                    max={maxUsage}
                     value={row.matches}
                     color={"#00ffff"}
                     label={row.matches.toLocaleString()}
@@ -246,6 +246,7 @@ export default function ItemStatsTable({
   minDate,
   maxDate,
   hero,
+  minMatches,
 }: {
   columns: string[];
   limit?: number;
@@ -258,6 +259,7 @@ export default function ItemStatsTable({
   minDate?: Dayjs;
   maxDate?: Dayjs;
   hero?: number | null;
+  minMatches?: number | null;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -269,7 +271,7 @@ export default function ItemStatsTable({
   });
 
   const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
-    queryKey: ["api-item-stats", hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-item-stats", minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, [], []],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
       if (hero) url.searchParams.set("hero_id", hero.toString());
@@ -277,6 +279,7 @@ export default function ItemStatsTable({
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
       const res = await fetch(url);
       return await res.json();
     },
@@ -285,8 +288,8 @@ export default function ItemStatsTable({
 
   const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const minMatches = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
-  const maxMatches = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
+  const minUsage = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
+  const maxUsage = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
   const filteredData = useMemo(
     () =>
       data?.filter((d) =>
@@ -311,8 +314,8 @@ export default function ItemStatsTable({
       hideItemTierFilter={hideItemTierFilter}
       minWinRate={minWinRate}
       maxWinRate={maxWinRate}
-      minMatches={minMatches}
-      maxMatches={maxMatches}
+      minUsage={minUsage}
+      maxUsage={maxUsage}
     />
   );
 }
