@@ -113,7 +113,6 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         SELECT match_id
         FROM match_info
         WHERE match_mode IN ('Ranked', 'Unranked')
-            AND game_mode = 'Normal'
             {info_filters}
         )
     SELECT

@@ -164,8 +164,7 @@ WITH hero_combinations AS (
         any(won) AS won
     FROM match_player FINAL
     INNER JOIN match_info mi USING (match_id)
-    WHERE mi.match_mode IN ('Ranked', 'Unranked')
-      AND mi.game_mode = 'Normal' {}
+    WHERE mi.match_mode IN ('Ranked', 'Unranked') {}
     GROUP BY match_id, team
     HAVING length(hero_ids) = 6
 )

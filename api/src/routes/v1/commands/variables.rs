@@ -24,9 +24,7 @@ use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
 use tracing::{error, warn};
 use utoipa::ToSchema;
-use valveprotos::deadlock::{
-    CMsgClientToGcGetLeaderboardResponse, ECitadelGameMode, ECitadelMatchMode,
-};
+use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchMode};
 
 #[derive(Debug, Clone, Error)]
 pub enum VariableResolveError {
@@ -714,8 +712,7 @@ impl Variable {
                 FROM match_player
                     JOIN match_info USING match_id
                 WHERE
-                    game_mode = 'Normal'
-                    AND match_mode IN ('Ranked', 'Unranked')
+                    match_mode IN ('Ranked', 'Unranked')
                     AND account_id=?
                 "#,
             )
@@ -739,7 +736,6 @@ impl Variable {
                 e.match_mode == ECitadelMatchMode::KECitadelMatchModeUnranked as i8
                     || e.match_mode == ECitadelMatchMode::KECitadelMatchModeRanked as i8
             })
-            .filter(|e| e.game_mode == ECitadelGameMode::KECitadelGameModeNormal as i8)
             .sorted_by_key(|e| e.match_id)
             .rev()
             .unique_by(|e| e.match_id)

@@ -62,7 +62,6 @@ pub struct HeroScoreboardEntry {
 fn build_hero_scoreboard_query(query: &HeroScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
-    info_filters.push("game_mode = 'Normal'".to_string());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }

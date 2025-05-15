@@ -123,7 +123,7 @@ fn build_hero_stats_query(account_id: u32, query: &HeroStatsQuery) -> String {
     FROM match_player mp FINAL
         INNER ANY JOIN match_info mi USING (match_id)
     PREWHERE {account_filter}
-    WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {filters}
+    WHERE match_mode IN ('Ranked', 'Unranked') {filters}
     GROUP BY hero_id
     ORDER BY hero_id
     "#

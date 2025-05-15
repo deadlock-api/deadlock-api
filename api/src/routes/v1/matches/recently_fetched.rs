@@ -39,7 +39,7 @@ async fn get_recently_fetched_match_ids(
         average_badge_team0,
         average_badge_team1
     FROM match_info FINAL
-    WHERE created_at > now() - 600 AND match_info.match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal'
+    WHERE created_at > now() - 600 AND match_info.match_mode IN ('Ranked', 'Unranked')
     ORDER BY created_at DESC
     "#;
     ch_client

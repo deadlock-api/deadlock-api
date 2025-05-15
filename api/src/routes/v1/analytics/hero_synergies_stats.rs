@@ -156,8 +156,7 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
         r#"
     WITH matches AS (SELECT match_id
                  FROM match_info
-                 WHERE match_mode IN ('Ranked', 'Unranked')
-                   AND game_mode = 'Normal' {})
+                 WHERE match_mode IN ('Ranked', 'Unranked') {})
     SELECT p1.hero_id  AS hero_id1,
            p2.hero_id  AS hero_id2,
            SUM(p1.won) AS wins,

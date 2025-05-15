@@ -142,8 +142,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
         r#"
     WITH matches AS (SELECT match_id
             FROM match_info
-            WHERE match_mode IN ('Ranked', 'Unranked')
-            AND game_mode = 'Normal' {info_filters}),
+            WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
         players AS (SELECT account_id, items.item_id as items, won
             FROM match_player
             WHERE match_id IN (SELECT match_id FROM matches) {player_filters})
