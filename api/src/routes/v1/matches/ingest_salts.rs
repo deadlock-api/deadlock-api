@@ -83,7 +83,7 @@ pub async fn ingest_salts(
 
     // Check if the salts are valid if not sent by the internal tools
     let match_salts: Vec<ClickhouseSalts> = if !bypass_check {
-        let mut valid_salts = Vec::new();
+        let mut valid_salts = Vec::with_capacity(match_salts.len());
         for salt in match_salts.into_iter() {
             if check_salt(&state.http_client, &salt).await {
                 valid_salts.push(salt);
