@@ -6,6 +6,7 @@ import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { APIItemStats } from "~/types/api_item_stats";
@@ -25,6 +26,7 @@ export interface ItemStatsTableDisplayProps {
   columns: string[];
   hideHeader?: boolean;
   hideIndex?: boolean;
+  hideItemTierFilter?: boolean;
   minWinRate: number;
   maxWinRate: number;
   minMatches: number;
@@ -40,6 +42,7 @@ export function ItemStatsTableDisplay({
   columns,
   hideHeader = false,
   hideIndex = false,
+  hideItemTierFilter = false,
   minWinRate,
   maxWinRate,
   minMatches,
@@ -49,10 +52,30 @@ export function ItemStatsTableDisplay({
   initialSort = { field: "winRate", direction: "desc" },
 }: ItemStatsTableDisplayProps) {
   const [sort, setSort] = useState<SortState>(initialSort);
+  const [itemTiers, setItemTiers] = useState<number[]>([1, 2, 3, 4]);
+
+  const { data: assetsItems } = useQuery<AssetsItem[]>({
+    queryKey: ["assets-items-upgrades"],
+    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const itemTierMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const item of assetsItems || []) {
+      map[item.id] = item.item_tier;
+    }
+    return map;
+  }, [assetsItems]);
+
+  const filteredData = useMemo(() => {
+    if (!data) return [];
+    return data.filter((d) => itemTiers.includes(itemTierMap[d.item_id]));
+  }, [data, itemTiers, itemTierMap]);
 
   const sortedData = useMemo(() => {
-    if (!data) return [];
-    return [...data].sort((a, b) => {
+    if (!filteredData) return [];
+    return [...filteredData].sort((a, b) => {
       let aValue: number;
       let bValue: number;
 
@@ -68,7 +91,7 @@ export function ItemStatsTableDisplay({
 
       return sort.direction === "asc" ? aValue - bValue : bValue - aValue;
     });
-  }, [data, sort]);
+  }, [filteredData, sort]);
 
   const toggleSort = (field: SortField) => {
     setSort((prev) => {
@@ -102,6 +125,9 @@ export function ItemStatsTableDisplay({
 
   return (
     <div className="overflow-x-auto w-full">
+      <div className="flex justify-center my-4">
+        {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
+      </div>
       <Table className="w-full min-w-fit">
         {!hideHeader && (
           <TableHeader className="bg-gray-800">
@@ -213,7 +239,8 @@ export default function ItemStatsTable({
   limit,
   hideHeader,
   hideIndex,
-  sortBy,
+  hideItemTierFilter,
+  initialSort,
   minRankId,
   maxRankId,
   minDate,
@@ -224,7 +251,8 @@ export default function ItemStatsTable({
   limit?: number;
   hideHeader?: boolean;
   hideIndex?: boolean;
-  sortBy?: keyof APIItemStats | "winrate";
+  hideItemTierFilter?: boolean;
+  initialSort?: SortState;
   minRankId?: number;
   maxRankId?: number;
   minDate?: Dayjs;
@@ -277,8 +305,10 @@ export default function ItemStatsTable({
       data={limitedData}
       isLoading={isLoadingItemStats || isLoadingItemAssets}
       columns={columns}
+      initialSort={initialSort}
       hideHeader={hideHeader}
       hideIndex={hideIndex}
+      hideItemTierFilter={hideItemTierFilter}
       minWinRate={minWinRate}
       maxWinRate={maxWinRate}
       minMatches={minMatches}
