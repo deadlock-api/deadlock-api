@@ -109,7 +109,7 @@ export default function ItemCombsExplore({
 
   return (
     <div>
-      <div className="grid grid-cols-2 text-center mt-4 rounded bg-gray-800 p-4 min-h-32">
+      <div className="grid grid-cols-2 text-center mt-2 rounded bg-gray-800 p-4 min-h-24">
         <div className="border-r-1">
           <h2 className="text-center text-xl p-2">Included Items</h2>
           <div className="flex flex-wrap items-center justify-center p-2 gap-2">
@@ -146,7 +146,7 @@ export default function ItemCombsExplore({
         </div>
       </div>
 
-      <div className="mt-4 rounded bg-gray-800 p-4">
+      <div className="mt-4 rounded bg-gray-800 px-4 py-2">
         <h2 className="text-center text-xl p-2">Select Items</h2>
         <Tabs value={tab} onValueChange={(i) => setTab(i as "weapon" | "vitality" | "spirit")} className="w-full">
           <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
@@ -157,8 +157,8 @@ export default function ItemCombsExplore({
           <TabsContent value={tab}>
             {[1, 2, 3, 4].map((tier) => (
               <div key={tier}>
-                <h3 className="text-center text-lg p-2 mt-4">Tier {tier}</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-2">
+                <h3 className="text-center text-lg p-2 mt-2">Tier {tier}</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
                   {assetsItems
                     ?.filter(
                       (i) => !i.disabled && i.shop_image_small_webp && i.item_slot_type === tab && i.item_tier === tier,
@@ -166,8 +166,8 @@ export default function ItemCombsExplore({
                     .map((item) => (
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">
                         <div className="flex items-center gap-2">
-                          <ItemImage itemId={item.id} className="size-10" />
-                          <ItemName itemId={item.id} className="text-md" />
+                          <ItemImage itemId={item.id} className="size-8 min-w-8 min-h-8" />
+                          <ItemName itemId={item.id} className="text-sm" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
