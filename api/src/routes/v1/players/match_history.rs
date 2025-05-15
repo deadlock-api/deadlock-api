@@ -200,34 +200,26 @@ pub async fn fetch_steam_match_history(
         .collect_vec())
 }
 
-async fn is_last_match_older_than_30min(ch_client: &clickhouse::Client, account_id: u32) -> bool {
+async fn needs_update(ch_client: &clickhouse::Client, account_id: u32) -> bool {
     let query = format!(
         r#"
-    SELECT match_id
-    FROM player_match_history
-    WHERE account_id = {account_id} AND start_time < now() - INTERVAL 30 MINUTE
-    ORDER BY match_id DESC
-    LIMIT 1
+    WITH last_history AS (SELECT match_id, start_time
+                          FROM player_match_history
+                          WHERE account_id = {account_id}
+                          ORDER BY match_id DESC
+                          LIMIT 1),
+         last_player AS (SELECT match_id
+                         FROM match_player
+                         WHERE account_id = {account_id}
+                         ORDER BY match_id DESC
+                         LIMIT 1)
+    SELECT
+        last_history.start_time < now() - INTERVAL 30 MINUTE || last_history.match_id < last_player.match_id
+    FROM last_history,
+         last_player
     "#
     );
-    ch_client.query(&query).fetch_one().await.is_ok()
-}
-
-async fn exists_newer_match_than_last_history(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-) -> bool {
-    let query = format!(
-        r#"
-    SELECT match_id
-    FROM match_player
-    WHERE account_id = {account_id}
-        AND match_id > (SELECT match_id FROM player_match_history WHERE account_id = {account_id} ORDER BY match_id DESC LIMIT 1)
-    ORDER BY match_id DESC
-    LIMIT 1
-    "#
-    );
-    ch_client.query(&query).fetch_one().await.is_ok()
+    ch_client.query(&query).fetch_one().await.unwrap_or(true) // If the query fails, we assume that we need to update
 }
 
 #[utoipa::path(
@@ -275,13 +267,7 @@ pub async fn match_history(
             .map(Json);
     }
 
-    let (is_older, exists_newer) = join(
-        is_last_match_older_than_30min(&state.ch_client, account_id),
-        exists_newer_match_than_last_history(&state.ch_client, account_id),
-    )
-    .await;
-    if !is_older && !exists_newer {
-        // If the last match is less than 30 minutes old and there are no newer matches in ClickHouse, we can just return the ClickHouse data.
+    if !needs_update(&state.ch_client, account_id).await {
         return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
             .await
             .map(Json);
