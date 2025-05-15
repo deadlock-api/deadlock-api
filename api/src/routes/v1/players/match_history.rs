@@ -200,6 +200,19 @@ pub async fn fetch_steam_match_history(
         .collect_vec())
 }
 
+async fn is_last_match_older_than_30min(ch_client: &clickhouse::Client, account_id: u32) -> bool {
+    let query = format!(
+        r#"
+    SELECT match_id
+    FROM player_match_history
+    WHERE account_id = {account_id} AND start_time < now() - INTERVAL 30 MINUTE
+    ORDER BY match_id DESC
+    LIMIT 1
+    "#
+    );
+    ch_client.query(&query).fetch_one().await.is_ok()
+}
+
 #[utoipa::path(
     get,
     path = "/{account_id}/match-history",
@@ -240,6 +253,14 @@ pub async fn match_history(
 
     // If only stored history is requested, we can just fetch from ClickHouse
     if query.only_stored_history {
+        return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
+            .await
+            .map(Json);
+    }
+
+    if !is_last_match_older_than_30min(&state.ch_client, account_id).await {
+        // If the last match is less than 30 minutes old, we can assume that the player is still in a match
+        // and we can just return the match history from ClickHouse
         return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
             .await
             .map(Json);
