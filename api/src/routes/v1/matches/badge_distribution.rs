@@ -56,7 +56,7 @@ fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
         COUNT() as total_matches
     FROM match_info
         ARRAY JOIN [average_badge_team0, average_badge_team1] AS t_badge_level
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' AND badge_level > 0 {filters}
+    WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' AND badge_level > 0 {filters}
     GROUP BY badge_level
     ORDER BY badge_level
     "#

@@ -715,7 +715,6 @@ impl Variable {
                     JOIN match_info USING match_id
                 WHERE
                     game_mode = 'Normal'
-                    AND match_outcome = 'TeamWin'
                     AND match_mode IN ('Ranked', 'Unranked')
                     AND account_id=?
                 "#,

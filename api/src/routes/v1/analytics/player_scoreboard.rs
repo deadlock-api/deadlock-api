@@ -73,7 +73,6 @@ pub struct PlayerScoreboardEntry {
 
 fn build_player_scoreboard_query(query: &PlayerScoreboardQuery) -> String {
     let mut info_filters = vec![];
-    info_filters.push("match_outcome = 'TeamWin'".to_string());
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
     info_filters.push("game_mode = 'Normal'".to_string());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {

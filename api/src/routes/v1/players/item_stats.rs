@@ -86,7 +86,7 @@ fn build_item_stats_query(account_id: u32, query: &ItemStatsQuery) -> String {
     FROM match_player FINAL
         INNER ANY JOIN match_info AS mi USING (match_id)
         ARRAY JOIN items.item_id
-    WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {filters}
+    WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal' {filters}
     GROUP BY hero_id, item_id
     ORDER BY hero_id, item_id
     "#

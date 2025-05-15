@@ -130,8 +130,7 @@ fn build_hero_stats_over_time_query(hero_id: u32, query: &HeroStatsOverTimeQuery
     WITH t_matches AS (
         SELECT match_id, start_time
         FROM match_info
-        WHERE match_outcome = 'TeamWin'
-            AND match_mode IN ('Ranked', 'Unranked')
+        WHERE match_mode IN ('Ranked', 'Unranked')
             AND game_mode = 'Normal'
             {info_filters}
         )

@@ -149,8 +149,7 @@ fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
         r#"
     WITH matches AS (SELECT match_id
                  FROM match_info
-                 WHERE match_outcome = 'TeamWin'
-                   AND match_mode IN ('Ranked', 'Unranked')
+                 WHERE match_mode IN ('Ranked', 'Unranked')
                    AND game_mode = 'Normal' {})
     SELECT p1.hero_id  AS hero_id,
            p2.hero_id  AS enemy_hero_id,
