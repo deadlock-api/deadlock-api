@@ -80,15 +80,11 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayText}
-            <Button
-              variant="ghost"
-              size="icon"
+            <span
               onClick={() => onDateRangeChange({ startDate: null, endDate: null })}
               aria-label="Reset date range"
-              className="hover:text-red-500 font-bold text-lg"
-            >
-              <span className="icon-[mdi--close]" />
-            </Button>
+              className="hover:text-red-500 font-bold text-lg align-middle icon-[mdi--close]"
+            />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="start">
