@@ -134,7 +134,7 @@ async fn fetch_match_history_raw(
 
 #[cached(
     ty = "TimedCache<(u32, bool), PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(5 * 60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = "{ (account_id, force_refetch) }",
     sync_writes = "by_key",
@@ -265,6 +265,7 @@ pub async fn match_history(
 
     let last_match = ch_match_history.iter().max_by_key(|h| h.match_id);
 
+    let mut force_update = false;
     if let Some(last_match) = last_match {
         // if newer than 30 min, check if there is a newer match, otherwise return the clickhouse data
         let is_newer_than_30_min = last_match.start_time
@@ -274,6 +275,8 @@ pub async fn match_history(
                 exists_newer_match_than(&state.ch_client, account_id, last_match.match_id).await;
             if !exists_newer_match {
                 return Ok(Json(ch_match_history));
+            } else {
+                force_update = true; // force update if there is a newer match
             }
         }
     }
@@ -312,8 +315,12 @@ pub async fn match_history(
     }
 
     // Fetch player match history from Steam and ClickHouse
-    let steam_match_history =
-        fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch).await;
+    let steam_match_history = if force_update {
+        fetch_steam_match_history_no_cache(&state.steam_client, account_id, query.force_refetch)
+            .await
+    } else {
+        fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch).await
+    };
     let steam_match_history = match steam_match_history {
         Ok(r) => r,
         Err(e) => {
