@@ -154,8 +154,8 @@ pub async fn fetch_steam_match_history(
         let result = tryhard::retry_fn(|| {
             fetch_match_history_raw(steam_client, account_id, continue_cursor)
         })
-        .retries(10)
-        .fixed_backoff(Duration::from_millis(10))
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(100))
         .await?;
 
         // Check if the result is empty, in which case we can stop
