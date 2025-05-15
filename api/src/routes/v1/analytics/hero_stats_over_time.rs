@@ -70,6 +70,8 @@ pub struct HeroStatsOverTime {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
+    /// The total number of matches played at the given time, including matches where the hero did not play.
+    pub total_matches: u64,
     pub players: u64,
     pub total_kills: u64,
     pub total_deaths: u64,
@@ -128,30 +130,54 @@ fn build_hero_stats_over_time_query(hero_id: u32, query: &HeroStatsOverTimeQuery
     format!(
         r#"
     WITH t_matches AS (
-        SELECT match_id, start_time
-        FROM match_info
-        WHERE match_mode IN ('Ranked', 'Unranked')
-            {info_filters}
+            SELECT match_id, start_time
+            FROM match_info
+            WHERE match_mode IN ('Ranked', 'Unranked')
+                {info_filters}
+        ),
+        matches_per_dt AS (
+            SELECT toUnixTimestamp(toStartOfInterval(start_time, INTERVAL 1 {time_interval})) AS date_time, count() AS matches
+            FROM t_matches
+            GROUP BY date_time
+        ),
+        hero_stats_per_dt AS (
+            SELECT
+                hero_id,
+                toUnixTimestamp(toStartOfInterval(start_time, INTERVAL 1 {time_interval})) AS date_time,
+                sum(won) AS wins,
+                sum(not won) AS losses,
+                wins + losses AS matches,
+                count(DISTINCT account_id) AS players,
+                sum(kills) AS total_kills,
+                sum(deaths) AS total_deaths,
+                sum(assists) AS total_assists,
+                sum(net_worth) AS total_net_worth,
+                sum(last_hits) AS total_last_hits,
+                sum(denies) AS total_denies
+            FROM match_player FINAL
+            INNER JOIN t_matches USING (match_id)
+            {player_filters}
+            GROUP BY hero_id, date_time
+            HAVING COUNT() > 1
+            ORDER BY hero_id, date_time
         )
     SELECT
         hero_id,
-        toUnixTimestamp(toStartOfInterval(start_time, INTERVAL 1 {time_interval})) AS date_time,
-        sum(won) AS wins,
-        sum(not won) AS losses,
-        wins + losses AS matches,
-        count(DISTINCT account_id) AS players,
-        sum(kills) AS total_kills,
-        sum(deaths) AS total_deaths,
-        sum(assists) AS total_assists,
-        sum(net_worth) AS total_net_worth,
-        sum(last_hits) AS total_last_hits,
-        sum(denies) AS total_denies
-    FROM match_player FINAL
-    INNER JOIN t_matches USING (match_id)
-    {player_filters}
-    GROUP BY hero_id, date_time
-    HAVING COUNT() > 1
-    ORDER BY hero_id, date_time
+        date_time,
+        wins,
+        losses,
+        matches,
+        m.matches AS total_matches,
+        players,
+        total_kills,
+        total_deaths,
+        total_assists,
+        total_net_worth,
+        total_last_hits,
+        total_denies
+        FROM hero_stats_per_dt hs
+        INNER JOIN matches_per_dt m ON hs.date_time = m.date_time
+        ORDER BY date_time DESC
     "#
     )
 }
