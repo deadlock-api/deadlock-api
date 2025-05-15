@@ -213,6 +213,23 @@ async fn is_last_match_older_than_30min(ch_client: &clickhouse::Client, account_
     ch_client.query(&query).fetch_one().await.is_ok()
 }
 
+async fn exists_newer_match_than_last_history(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+) -> bool {
+    let query = format!(
+        r#"
+    SELECT match_id
+    FROM match_player
+    WHERE account_id = {account_id}
+        AND match_id > (SELECT match_id FROM player_match_history WHERE account_id = {account_id} ORDER BY match_id DESC LIMIT 1)
+    ORDER BY match_id DESC
+    LIMIT 1
+    "#
+    );
+    ch_client.query(&query).fetch_one().await.is_ok()
+}
+
 #[utoipa::path(
     get,
     path = "/{account_id}/match-history",
@@ -258,9 +275,10 @@ pub async fn match_history(
             .map(Json);
     }
 
-    if !is_last_match_older_than_30min(&state.ch_client, account_id).await {
-        // If the last match is less than 30 minutes old, we can assume that the player is still in a match
-        // and we can just return the match history from ClickHouse
+    if !is_last_match_older_than_30min(&state.ch_client, account_id).await
+        && !exists_newer_match_than_last_history(&state.ch_client, account_id).await
+    {
+        // If the last match is less than 30 minutes old and there are no newer matches in ClickHouse, we can just return the ClickHouse data.
         return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
             .await
             .map(Json);
