@@ -86,7 +86,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
         <TabsContent value="stats">
           <ItemStatsTable
             columns={["itemsTier", "winRate", "usage"]}
-            sortBy="winrate"
+            initialSort={{ field: "winRate", direction: "desc" }}
             minRankId={minRankId}
             maxRankId={maxRankId}
             minDate={startDate || undefined}
