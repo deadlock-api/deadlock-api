@@ -172,7 +172,7 @@ export default function ItemCombsExplore({
                         <div className="flex items-center gap-2">
                           <Button
                             variant="secondary"
-                            className="bg-green-700 hover:bg-green-500 text-lg p-2"
+                            className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6"
                             onClick={() => {
                               setIncludeItems(new Set([...includeItems, item.id]));
                               if (excludeItems.has(item.id)) {
@@ -184,7 +184,7 @@ export default function ItemCombsExplore({
                           </Button>
                           <Button
                             variant="destructive"
-                            className="bg-red-700 hover:bg-red-500 p-2"
+                            className="bg-red-700 hover:bg-red-500 px-1 h-6"
                             onClick={() => {
                               setExcludeItems(new Set([...excludeItems, item.id]));
                               if (includeItems.has(item.id)) {

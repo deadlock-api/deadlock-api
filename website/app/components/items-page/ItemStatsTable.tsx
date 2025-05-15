@@ -211,14 +211,14 @@ export function ItemStatsTableDisplay({
                   <div className="flex items-center justify-center gap-2">
                     <Button
                       variant="secondary"
-                      className="bg-green-700 hover:bg-green-500 text-lg p-2"
+                      className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6"
                       onClick={() => onItemInclude?.(row.item_id)}
                     >
                       <span className="icon-[mdi--plus]" />
                     </Button>
                     <Button
                       variant="destructive"
-                      className="bg-red-700 hover:bg-red-500 p-2"
+                      className="bg-red-700 hover:bg-red-500 px-1 h-6"
                       onClick={() => onItemExclude?.(row.item_id)}
                     >
                       <span className="icon-[mdi--minus] text-lg" />
