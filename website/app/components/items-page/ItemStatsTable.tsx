@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
+import * as React from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
 import type { APIItemStats } from "~/types/api_item_stats";
@@ -28,7 +30,8 @@ export interface ItemStatsTableDisplayProps {
   maxWinRate: number;
   minMatches: number;
   maxMatches: number;
-  onItemSelected?: (item: number) => void;
+  onItemInclude?: (item: number) => void;
+  onItemExclude?: (item: number) => void;
   initialSort?: SortState;
 }
 
@@ -42,7 +45,8 @@ export function ItemStatsTableDisplay({
   maxWinRate,
   minMatches,
   maxMatches,
-  onItemSelected,
+  onItemInclude,
+  onItemExclude,
   initialSort = { field: "winRate", direction: "desc" },
 }: ItemStatsTableDisplayProps) {
   const [sort, setSort] = useState<SortState>(initialSort);
@@ -128,6 +132,7 @@ export function ItemStatsTableDisplay({
                   </div>
                 </TableHead>
               )}
+              {(onItemInclude || onItemExclude) && <TableHead className="text-center">Include / Exclude</TableHead>}
             </TableRow>
           </TableHeader>
         )}
@@ -135,10 +140,10 @@ export function ItemStatsTableDisplay({
           {sortedData.map((row, index) => (
             <TableRow
               key={row.item_id}
-              onClick={() => onItemSelected?.(row.item_id)}
+              onClick={() => onItemInclude?.(row.item_id)}
               className={cn(
                 "bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200",
-                onItemSelected && "cursor-pointer",
+                onItemInclude && "cursor-pointer",
               )}
             >
               {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
@@ -180,6 +185,24 @@ export function ItemStatsTableDisplay({
                   />
                 </TableCell>
               )}
+              <TableCell width={130}>
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="secondary"
+                    className="bg-green-700 hover:bg-green-500 text-lg p-2"
+                    onClick={() => onItemInclude?.(row.item_id)}
+                  >
+                    <span className="icon-[mdi--plus]" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="bg-red-700 hover:bg-red-500 p-2"
+                    onClick={() => onItemExclude?.(row.item_id)}
+                  >
+                    <span className="icon-[mdi--minus] text-lg" />
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
