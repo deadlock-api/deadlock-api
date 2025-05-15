@@ -44,14 +44,6 @@ export function ItemStatsTableDisplay({
 }: ItemStatsTableDisplayProps) {
   const [sort, setSort] = useState<SortState>(initialSort);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
-      </div>
-    );
-  }
-
   const sortedData = useMemo(() => {
     if (!data) return [];
     return [...data].sort((a, b) => {
@@ -93,6 +85,14 @@ export function ItemStatsTableDisplay({
       <span className="ml-1 mb-0.5 icon-[material-symbols--arrow-downward]" />
     );
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto w-full">
