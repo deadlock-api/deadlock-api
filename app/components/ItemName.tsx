@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { AssetsItem } from "~/types/assets_item";
 
-export default function ItemName({ itemId }: { itemId: number }) {
+export default function ItemName({ itemId, className }: { itemId: number; className?: string }) {
   const { data } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
     queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
@@ -11,5 +11,5 @@ export default function ItemName({ itemId }: { itemId: number }) {
 
   const item = useMemo(() => data?.find((item) => item.id === itemId), [data, itemId]);
 
-  return <>{item?.name}</>;
+  return <span className={className}>{item?.name}</span>;
 }
