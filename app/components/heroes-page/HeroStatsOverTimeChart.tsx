@@ -92,45 +92,44 @@ export default function HeroStatsOverTimeChart({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const heroQueries: { data: [Dayjs, number][]; isLoading: boolean }[] = useQueries({
-    queries: (heroIds || []).map((id) => ({
-      queryKey: [
-        "api-hero-stats-over-time",
-        id,
-        minRankId,
-        maxRankId,
-        minDateTimestamp,
-        maxDateTimestamp,
-        heroTimeInterval,
-      ],
-      queryFn: async () => {
-        const url = new URL(`https://api.deadlock-api.com/v1/analytics/hero-stats/${id}/over-time`);
-        url.searchParams.set("time_interval", heroTimeInterval);
-        url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
-        url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-        if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
-        if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
-        const res = await fetch(url);
-        return await res.json();
-      },
-      staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    })),
-  }).map((query) => ({
-    data:
-      query.data?.map((d: APIHeroStatsOverTime) => [dayjs.unix(d.date_time), hero_stats_transform(d, heroStat)]) ?? [],
-    isLoading: query.isLoading,
-  }));
+  const { data: heroData, isLoading: isLoadingHeroStats } = useQuery<APIHeroStatsOverTime[]>({
+    queryKey: [
+      "api-hero-stats-over-time",
+      heroIds,
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      heroTimeInterval,
+    ],
+    queryFn: async () => {
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats/over-time");
+      url.searchParams.set("hero_ids", heroIds?.join(",") || "");
+      url.searchParams.set("time_interval", heroTimeInterval);
+      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
+      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
+      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
+      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
+      const res = await fetch(url);
+      return await res.json();
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+  });
+
+  const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {
+    const map: Record<number, [number, number][]> = {};
+    for (const hero of heroData || []) {
+      if (!map[hero.date_time]) map[hero.date_time] = [];
+      map[hero.date_time].push([hero.hero_id, hero_stats_transform(hero, heroStat)]);
+    }
+    return map;
+  }, [heroStat, heroData]);
 
   const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
     queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
-
-  const isLoading = useMemo(
-    () => isLoadingAssetsHeroes || heroQueries.some((q) => q.isLoading),
-    [isLoadingAssetsHeroes, heroQueries],
-  );
 
   const heroIdMap = useMemo(() => {
     const map: Record<number, { name: string; color: string }> = {};
@@ -141,48 +140,42 @@ export default function HeroStatsOverTimeChart({
   }, [assetsHeroes]);
 
   const minStat = useMemo(
-    () => Math.min(...heroQueries.map((q) => Math.min(...q.data.map(([, d]) => d))).filter(Boolean)),
-    [heroQueries],
+    () => Math.min(...Object.values(heroStatMap).map((q) => Math.min(...q.map(([, d]) => d)))),
+    [heroStatMap],
   );
   const maxStat = useMemo(
-    () => Math.max(...heroQueries.map((q) => Math.max(...q.data.map(([, d]) => d))).filter(Boolean)),
-    [heroQueries],
+    () => Math.max(...Object.values(heroStatMap).map((q) => Math.max(...q.map(([, d]) => d)))),
+    [heroStatMap],
   );
   const minDataDate = useMemo(
-    () => Math.min(...heroQueries.map((q) => Math.min(...q.data.map(([d]) => d.unix()))).filter(Boolean)),
-    [heroQueries],
+    () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d))),
+    [heroStatMap],
   );
   const maxDataDate = useMemo(
-    () => Math.max(...heroQueries.map((q) => Math.max(...q.data.map(([d]) => d.unix()))).filter(Boolean)),
-    [heroQueries],
+    () => Math.max(...Object.keys(heroStatMap).map((d) => Number.parseInt(d))),
+    [heroStatMap],
   );
 
   const formattedData = useMemo(() => {
-    if (!heroQueries.length || !heroQueries[0].data.length) return [];
+    if (!heroStatMap) return [];
 
-    return heroQueries[0].data.map(([date], index) => {
-      const dataPoint: { [key: string]: Date | number } = {
-        date: date.toDate(),
+    const data: { [key: string]: Date | number }[] = [];
+
+    for (const [date, stats] of Object.entries(heroStatMap)) {
+      const dateObj = dayjs.unix(Number.parseInt(date, 10));
+      const obj = {
+        date: dateObj.toDate(),
       };
+      for (const [heroId, stat] of stats) {
+        Object.assign(obj, { [heroId]: stat });
+      }
+      data.push(obj);
+    }
 
-      // Add data for each hero
-      heroQueries.forEach((query, heroIndex) => {
-        const heroId = (heroIds || [])[heroIndex];
-        const heroName = heroIdMap[heroId]?.name || `Hero ${heroId}`;
-        if (query.data[index]) {
-          dataPoint[heroName] = query.data[index][1];
-          if (dataPoint[heroName] < 100) {
-            dataPoint[heroName] = Math.round(dataPoint[heroName] * 100) / 100;
-          } else {
-            dataPoint[heroName] = Math.round(dataPoint[heroName]);
-          }
-        }
-      });
-      return dataPoint;
-    });
-  }, [heroQueries, heroIds, heroIdMap]);
+    return data;
+  }, [heroStatMap]);
 
-  if (isLoading) {
+  if (isLoadingHeroStats || isLoadingAssetsHeroes) {
     return (
       <div className="flex items-center justify-center w-full h-full">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
@@ -224,7 +217,7 @@ export default function HeroStatsOverTimeChart({
           <Line
             key={heroId}
             type="monotone"
-            dataKey={heroIdMap[heroId]?.name || `Hero ${heroId}`}
+            dataKey={heroId}
             stroke={heroIdMap[heroId]?.color || "#ffffff"}
             dot={false}
             activeDot={{ r: 6 }}
