@@ -81,7 +81,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
       <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
-          <TabsTrigger value="item-combs">Item Combs</TabsTrigger>
+          <TabsTrigger value="item-combs">Item Combination Stats</TabsTrigger>
         </TabsList>
         <TabsContent value="stats">
           <ItemStatsTable
@@ -95,7 +95,14 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
           />
         </TabsContent>
         <TabsContent value="item-combs">
-          <ItemCombsExplore />
+          <ItemCombsExplore
+            sortBy="winrate"
+            minRankId={minRankId}
+            maxRankId={maxRankId}
+            minDate={startDate || undefined}
+            maxDate={endDate || undefined}
+            hero={hero}
+          />
         </TabsContent>
       </Tabs>
     </>
