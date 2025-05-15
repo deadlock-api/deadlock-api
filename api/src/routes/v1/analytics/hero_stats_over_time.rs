@@ -1,6 +1,8 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
-use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
+use crate::utils::parse::{
+    comma_separated_num_deserialize, default_last_month_timestamp, parse_steam_id_option,
+};
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -8,6 +10,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use derive_more::Display;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
@@ -30,8 +33,11 @@ pub enum HeroStatsOverTimeQueryTimeInterval {
     WEEK,
 }
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub struct HeroStatsOverTimeQuery {
+    /// Comma separated list of hero ids to include
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
+    pub hero_ids: Vec<u32>,
     /// Time Interval for the stats. **Default:** HOUR.
     #[param(inline)]
     #[serde(default)]
@@ -81,7 +87,7 @@ pub struct HeroStatsOverTime {
     pub total_denies: u64,
 }
 
-fn build_hero_stats_over_time_query(hero_id: u32, query: &HeroStatsOverTimeQuery) -> String {
+fn build_hero_stats_over_time_query(query: &HeroStatsOverTimeQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -117,7 +123,10 @@ fn build_hero_stats_over_time_query(hero_id: u32, query: &HeroStatsOverTimeQuery
         format!(" AND {}", info_filters.join(" AND "))
     };
     let mut player_filters = vec![];
-    player_filters.push(format!("hero_id = {hero_id}"));
+    player_filters.push(format!(
+        "has([{}], hero_id)",
+        query.hero_ids.iter().map(|i| i.to_string()).join(", ")
+    ));
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
     }
@@ -183,19 +192,18 @@ fn build_hero_stats_over_time_query(hero_id: u32, query: &HeroStatsOverTimeQuery
 }
 
 #[cached(
-    ty = "TimedCache<(u32, HeroStatsOverTimeQuery), Vec<HeroStatsOverTime>>",
+    ty = "TimedCache<String, Vec<HeroStatsOverTime>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = "{ (hero_id, query) }",
+    convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
-    key = "(u32, HeroStatsOverTimeQuery)"
+    key = "String"
 )]
 pub async fn get_hero_stats_over_time(
     ch_client: &clickhouse::Client,
-    hero_id: u32,
     query: HeroStatsOverTimeQuery,
 ) -> APIResult<Vec<HeroStatsOverTime>> {
-    let query = build_hero_stats_over_time_query(hero_id, &query);
+    let query = build_hero_stats_over_time_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch hero stats over time: {}", e);
@@ -207,23 +215,33 @@ pub async fn get_hero_stats_over_time(
 
 #[utoipa::path(
     get,
-    path = "/hero-stats/{hero_id}/over-time",
-    params(HeroIdQuery, HeroStatsOverTimeQuery),
+    path = "/hero-stats/over-time",
+    params(HeroStatsOverTimeQuery),
     responses(
-        (status = OK, description = "Hero Stats Over Time", body = [HeroStatsOverTime]),
+        (status = OK, description = "Heroes Stats Over Time", body = [HeroStatsOverTime]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero stats over time")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch heroes stats over time")
     ),
     tags = ["Analytics"],
     summary = "Hero Stats Over Time",
     description = "Retrieves performance statistics for each hero based on historical match data over time."
 )]
-pub async fn hero_stats_over_time(
-    Path(HeroIdQuery { hero_id }): Path<HeroIdQuery>,
+pub async fn heroes_stats_over_time(
     Query(query): Query<HeroStatsOverTimeQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_stats_over_time(&state.ch_client, hero_id, query)
+    get_hero_stats_over_time(&state.ch_client, query)
+        .await
+        .map(Json)
+}
+
+pub async fn hero_stats_over_time(
+    Path(HeroIdQuery { hero_id }): Path<HeroIdQuery>,
+    Query(mut query): Query<HeroStatsOverTimeQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    query.hero_ids = vec![hero_id];
+    get_hero_stats_over_time(&state.ch_client, query)
         .await
         .map(Json)
 }

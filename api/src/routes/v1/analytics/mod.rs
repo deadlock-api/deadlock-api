@@ -23,7 +23,7 @@ pub struct ApiDoc;
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(hero_stats::hero_stats))
-        .routes(routes!(hero_stats_over_time::hero_stats_over_time))
+        .routes(routes!(hero_stats_over_time::heroes_stats_over_time))
         .routes(routes!(item_stats::item_stats))
         .routes(routes!(hero_counters_stats::hero_counters_stats))
         .routes(routes!(hero_synergies_stats::hero_synergies_stats))
