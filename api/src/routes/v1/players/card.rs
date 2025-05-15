@@ -4,7 +4,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::routes::v1::players::types::AccountIdQuery;
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse};
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -14,7 +14,6 @@ use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use itertools::Itertools;
-use prost::Message;
 use serde::Serialize;
 use std::time::Duration;
 use utoipa::ToSchema;
@@ -94,14 +93,17 @@ impl From<CMsgCitadelProfileCard> for PlayerCard {
 }
 
 #[cached(
-    ty = "TimedCache<u32, Vec<u8>>",
+    ty = "TimedCache<u32, SteamProxyRawResponse>",
     create = "{ TimedCache::with_lifespan(5 * 60) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
     key = "u32"
 )]
-async fn fetch_player_card_raw(steam_client: &SteamClient, account_id: u32) -> APIResult<Vec<u8>> {
+async fn fetch_player_card_raw(
+    steam_client: &SteamClient,
+    account_id: u32,
+) -> APIResult<SteamProxyRawResponse> {
     let msg = CMsgClientToGcGetProfileCard {
         account_id: Some(account_id),
         dev_access_hint: None,
@@ -121,21 +123,6 @@ async fn fetch_player_card_raw(steam_client: &SteamClient, account_id: u32) -> A
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to fetch player card: {e}"),
         })
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode player card: {e}"),
-                })
-        })
-}
-
-async fn parse_player_card_raw(raw_data: &[u8]) -> APIResult<PlayerCard> {
-    let decoded_message =
-        CMsgCitadelProfileCard::decode(raw_data).map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse player card: {e}"),
-        })?;
-    Ok(decoded_message.into())
 }
 
 #[utoipa::path(
@@ -180,6 +167,13 @@ pub async fn card_raw(
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
         .await
+        .and_then(|r| {
+            BASE64_STANDARD
+                .decode(&r.data)
+                .map_err(|e| APIError::InternalError {
+                    message: format!("Failed to decode player card: {e}"),
+                })
+        })
 }
 
 #[utoipa::path(
@@ -220,11 +214,11 @@ pub async fn card(
             ],
         )
         .await?;
-    tryhard::retry_fn(|| async {
-        let raw_data = fetch_player_card_raw(&state.steam_client, account_id).await?;
-        parse_player_card_raw(&raw_data).await.map(Json)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await
+    let raw_data = tryhard::retry_fn(|| fetch_player_card_raw(&state.steam_client, account_id))
+        .retries(3)
+        .fixed_backoff(Duration::from_millis(10))
+        .await?;
+    let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
+    let player_card: PlayerCard = proto_player_card.msg.into();
+    Ok(Json(player_card))
 }
