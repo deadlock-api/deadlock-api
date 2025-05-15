@@ -213,6 +213,7 @@ export default function ItemCombsExplore({
           maxWinRate={maxWinRate}
           minMatches={minMatches}
           maxMatches={maxMatches}
+          onItemSelected={(i) => setIncludeItems(new Set([...includeItems, i]))}
         />
       </div>
     </div>
