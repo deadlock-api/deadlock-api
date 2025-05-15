@@ -6,6 +6,7 @@ import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { cn } from "~/lib/utils";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 
@@ -27,6 +28,7 @@ export interface ItemStatsTableDisplayProps {
   maxWinRate: number;
   minMatches: number;
   maxMatches: number;
+  onItemSelected?: (item: number) => void;
   initialSort?: SortState;
 }
 
@@ -40,6 +42,7 @@ export function ItemStatsTableDisplay({
   maxWinRate,
   minMatches,
   maxMatches,
+  onItemSelected,
   initialSort = { field: "winRate", direction: "desc" },
 }: ItemStatsTableDisplayProps) {
   const [sort, setSort] = useState<SortState>(initialSort);
@@ -132,7 +135,11 @@ export function ItemStatsTableDisplay({
           {sortedData.map((row, index) => (
             <TableRow
               key={row.item_id}
-              className="bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200"
+              onClick={() => onItemSelected?.(row.item_id)}
+              className={cn(
+                "bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200",
+                onItemSelected && "cursor-pointer",
+              )}
             >
               {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
               <TableCell>
