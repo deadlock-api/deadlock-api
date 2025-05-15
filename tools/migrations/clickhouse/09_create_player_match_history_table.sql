@@ -20,6 +20,10 @@ create table if not exists player_match_history
     match_result          UInt32 comment 'the winning team id',
     objectives_mask_team0 UInt32,
     objectives_mask_team1 UInt32,
-    created_at            Nullable(DateTime) default now()
+    created_at            Nullable(DateTime) default now(),
+
+    INDEX idx_match_id match_id TYPE minmax
 )
-    engine = ReplacingMergeTree ORDER BY (account_id, match_id);
+    engine = ReplacingMergeTree
+      PARTITION BY toStartOfMonth(start_time)
+      ORDER BY (account_id, match_id);
