@@ -14,12 +14,11 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use futures::future::join;
 use itertools::{Itertools, chain};
 use serde::Deserialize;
 use serde_json::json;
 use std::time::Duration;
-use tracing::warn;
+use tracing::{debug, warn};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
@@ -146,6 +145,7 @@ pub async fn fetch_steam_match_history(
     account_id: u32,
     force_refetch: bool,
 ) -> APIResult<PlayerMatchHistory> {
+    debug!("Fetching match history from Steam for account_id {account_id}");
     let mut continue_cursor = None;
     let mut all_matches = vec![];
     let mut iterations = 0;
@@ -200,26 +200,21 @@ pub async fn fetch_steam_match_history(
         .collect_vec())
 }
 
-async fn needs_update(ch_client: &clickhouse::Client, account_id: u32) -> bool {
+async fn exists_newer_match_than(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    match_id: u32,
+) -> bool {
     let query = format!(
         r#"
-    WITH last_history AS (SELECT match_id, start_time
-                          FROM player_match_history
-                          WHERE account_id = {account_id}
-                          ORDER BY match_id DESC
-                          LIMIT 1),
-         last_player AS (SELECT match_id
-                         FROM match_player
-                         WHERE account_id = {account_id}
-                         ORDER BY match_id DESC
-                         LIMIT 1)
-    SELECT
-        last_history.start_time < now() - INTERVAL 30 MINUTE || last_history.match_id < last_player.match_id
-    FROM last_history,
-         last_player
+    SELECT match_id
+    FROM match_player
+    WHERE account_id = {account_id} AND match_id > {match_id}
+    ORDER BY match_id DESC
+    LIMIT 1
     "#
     );
-    ch_client.query(&query).fetch_one().await.unwrap_or(true) // If the query fails, we assume that we need to update
+    ch_client.query(&query).fetch_one::<u32>().await.is_ok()
 }
 
 #[utoipa::path(
@@ -260,17 +255,27 @@ pub async fn match_history(
         });
     }
 
-    // If only stored history is requested, we can just fetch from ClickHouse
+    let ch_match_history =
+        fetch_match_history_from_clickhouse(&state.ch_client, account_id).await?;
+
+    // If only stored history is requested, we can just return the data from ClickHouse
     if query.only_stored_history {
-        return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
-            .await
-            .map(Json);
+        return Ok(Json(ch_match_history));
     }
 
-    if !needs_update(&state.ch_client, account_id).await {
-        return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
-            .await
-            .map(Json);
+    let last_match = ch_match_history.iter().max_by_key(|h| h.match_id);
+
+    if let Some(last_match) = last_match {
+        // if newer than 30 min, check if there is a newer match, otherwise return the clickhouse data
+        let is_newer_than_30_min = last_match.start_time
+            >= (chrono::Utc::now() - chrono::Duration::minutes(30)).timestamp() as u32;
+        if is_newer_than_30_min {
+            let exists_newer_match =
+                exists_newer_match_than(&state.ch_client, account_id, last_match.match_id).await;
+            if !exists_newer_match {
+                return Ok(Json(ch_match_history));
+            }
+        }
     }
 
     // Apply rate limits based on the query parameters
@@ -307,11 +312,8 @@ pub async fn match_history(
     }
 
     // Fetch player match history from Steam and ClickHouse
-    let (steam_match_history, ch_match_history) = join(
-        fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch),
-        fetch_match_history_from_clickhouse(&state.ch_client, account_id),
-    )
-    .await;
+    let steam_match_history =
+        fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch).await;
     let steam_match_history = match steam_match_history {
         Ok(r) => r,
         Err(e) => {
@@ -319,7 +321,6 @@ pub async fn match_history(
             vec![]
         }
     };
-    let ch_match_history = ch_match_history?;
 
     // Insert missing entries to ClickHouse
     let ch_match_ids = ch_match_history.iter().map(|e| e.match_id).collect_vec();
