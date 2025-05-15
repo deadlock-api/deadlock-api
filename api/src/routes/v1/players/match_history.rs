@@ -275,9 +275,12 @@ pub async fn match_history(
             .map(Json);
     }
 
-    if !is_last_match_older_than_30min(&state.ch_client, account_id).await
-        && !exists_newer_match_than_last_history(&state.ch_client, account_id).await
-    {
+    let (is_older, exists_newer) = join(
+        is_last_match_older_than_30min(&state.ch_client, account_id),
+        exists_newer_match_than_last_history(&state.ch_client, account_id),
+    )
+    .await;
+    if !is_older && !exists_newer {
         // If the last match is less than 30 minutes old and there are no newer matches in ClickHouse, we can just return the ClickHouse data.
         return fetch_match_history_from_clickhouse(&state.ch_client, account_id)
             .await
