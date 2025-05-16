@@ -5,17 +5,17 @@ export default function NavHeader() {
     <header className="px-8 py-4 bg-gray-900 shadow">
       <div className="max-w-6xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between">
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-12">
-          <Link to="/" className="text-lg font-medium text-white">
+          <Link to="/" prefetch="intent" className="text-lg font-medium text-white">
             <span className="flex gap-2">
               <img src="favicon.webp" alt="Icon" width={36} height={36} />
               <h1 className="text-3xl font-bold tracking-tight">Deadlock API</h1>
             </span>
           </Link>
           <nav className="flex items-center gap-6">
-            <Link to="/heroes" className="text-lg font-medium hover:underline">
+            <Link to="/heroes" prefetch="intent" className="text-lg font-medium hover:underline">
               Heroes
             </Link>
-            <Link to="/items" className="text-lg font-medium hover:underline">
+            <Link to="/items" prefetch="intent" className="text-lg font-medium hover:underline">
               Items
             </Link>
             <a
