@@ -71,7 +71,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                 <Input
                   type="number"
                   id="minMatches"
-                  min={0}
+                  min={1}
                   step={10}
                   value={minMatches}
                   onChange={(e) => setMinMatches(Number(e.target.value))}
