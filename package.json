@@ -12,8 +12,6 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
     "@fontsource/roboto": "^5.2.5",
     "@iconify/json": "^2.2.338",
     "@iconify/tailwind4": "^1.0.6",
