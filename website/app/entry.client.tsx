@@ -11,26 +11,12 @@ import "@fontsource/roboto/300.css";
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-  },
-});
 
 startTransition(() => {
   hydrateRoot(
     document,
     <StrictMode>
-      <ThemeProvider theme={darkTheme}>
-        <CssBaseline />
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <HydratedRouter />
-        </LocalizationProvider>
-      </ThemeProvider>
+      <HydratedRouter />
     </StrictMode>,
   );
 });
