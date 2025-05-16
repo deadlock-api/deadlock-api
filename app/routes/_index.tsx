@@ -52,9 +52,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <a href="https://assets.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button variant="outline" className="w-full">
-                  Visit Assets API
-                </Button>
+                <Button className="w-full">Visit Assets API</Button>
               </a>
             </CardFooter>
           </Card>
@@ -69,9 +67,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <a href="https://api.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button variant="outline" className="w-full">
-                  Visit Game Data API
-                </Button>
+                <Button className="w-full">Visit Game Data API</Button>
               </a>
             </CardFooter>
           </Card>
@@ -91,9 +87,7 @@ export default function Index() {
                 rel="noopener noreferrer"
                 className="w-full"
               >
-                <Button variant="outline" className="w-full">
-                  Access Database Dumps
-                </Button>
+                <Button className="w-full">Access Database Dumps</Button>
               </a>
             </CardFooter>
           </Card>
@@ -113,9 +107,7 @@ export default function Index() {
                 rel="noopener noreferrer"
                 className="w-full"
               >
-                <Button variant="outline" className="w-full">
-                  Explore Stream Kit
-                </Button>
+                <Button className="w-full">Explore Stream Kit</Button>
               </a>
             </CardFooter>
           </Card>
@@ -135,9 +127,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/heroes" prefetch="intent" className="w-full">
-                <Button variant="default" className="w-full">
-                  View All Heroes
-                </Button>
+                <Button className="w-full">View All Heroes</Button>
               </Link>
             </CardFooter>
           </Card>
@@ -152,9 +142,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/heroes" prefetch="intent" className="w-full">
-                <Button variant="default" className="w-full">
-                  View All Heroes
-                </Button>
+                <Button className="w-full">View All Heroes</Button>
               </Link>
             </CardFooter>
           </Card>
@@ -176,9 +164,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/items" prefetch="intent" className="w-full">
-                <Button variant="default" className="w-full">
-                  View All Items
-                </Button>
+                <Button className="w-full">View All Items</Button>
               </Link>
             </CardFooter>
           </Card>
@@ -200,9 +186,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <Link to="/items" prefetch="intent" className="w-full">
-                <Button variant="default" className="w-full">
-                  View All Items
-                </Button>
+                <Button className="w-full">View All Items</Button>
               </Link>
             </CardFooter>
           </Card>
