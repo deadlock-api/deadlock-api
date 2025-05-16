@@ -246,6 +246,15 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 maxRankId={maxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
+                onHeroSelected={(selectedHeroId) => {
+                  if (!selectedHeroId) return;
+                  setHeroId(selectedHeroId);
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("heroId", selectedHeroId.toString());
+                    window.history.pushState({}, "", url);
+                  }
+                }}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -254,6 +263,15 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 maxRankId={maxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
+                onHeroSelected={(selectedHeroId) => {
+                  if (!selectedHeroId) return;
+                  setHeroId(selectedHeroId);
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("heroId", selectedHeroId.toString());
+                    window.history.pushState({}, "", url);
+                  }
+                }}
               />
             </div>
           </div>

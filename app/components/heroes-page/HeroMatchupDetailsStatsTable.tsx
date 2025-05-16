@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import { cn } from "~/lib/utils";
 import type { APIHeroCounterStats } from "~/types/api_hero_counter_stats";
 import type { APIHeroStats } from "~/types/api_hero_stats";
 import type { APIHeroSynergyStats } from "~/types/api_hero_synergy_stats";
@@ -20,6 +21,7 @@ export default function HeroMatchupDetailsStatsTable({
   maxRankId,
   minDate,
   maxDate,
+  onHeroSelected,
 }: {
   heroId: number;
   stat: HeroMatchupDetailsStatsTableStat;
@@ -27,6 +29,7 @@ export default function HeroMatchupDetailsStatsTable({
   maxRankId?: number;
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
+  onHeroSelected?: (heroId: number) => void;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -190,7 +193,15 @@ export default function HeroMatchupDetailsStatsTable({
             {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
               <tr
                 key={stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id}
-                className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
+                className={cn(
+                  "bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center",
+                  onHeroSelected && "cursor-pointer",
+                )}
+                onClick={() =>
+                  onHeroSelected?.(
+                    stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id,
+                  )
+                }
               >
                 <td className="p-2">{index + 1}</td>
                 <td className="p-2">
