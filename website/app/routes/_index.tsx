@@ -134,7 +134,7 @@ export default function Index() {
               <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
             </CardContent>
             <CardFooter>
-              <Link to="/heroes" className="w-full">
+              <Link to="/heroes" prefetch="intent" className="w-full">
                 <Button variant="default" className="w-full">
                   View All Heroes
                 </Button>
@@ -151,7 +151,7 @@ export default function Index() {
               <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
             </CardContent>
             <CardFooter>
-              <Link to="/heroes" className="w-full">
+              <Link to="/heroes" prefetch="intent" className="w-full">
                 <Button variant="default" className="w-full">
                   View All Heroes
                 </Button>
@@ -175,7 +175,7 @@ export default function Index() {
               />
             </CardContent>
             <CardFooter>
-              <Link to="/items" className="w-full">
+              <Link to="/items" prefetch="intent" className="w-full">
                 <Button variant="default" className="w-full">
                   View All Items
                 </Button>
@@ -199,7 +199,7 @@ export default function Index() {
               />
             </CardContent>
             <CardFooter>
-              <Link to="/items" className="w-full">
+              <Link to="/items" prefetch="intent" className="w-full">
                 <Button variant="default" className="w-full">
                   View All Items
                 </Button>
