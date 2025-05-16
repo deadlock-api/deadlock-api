@@ -35,6 +35,10 @@ pub struct HeroStatsQuery {
     pub min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     pub max_match_id: Option<u64>,
+    /// Filter players based on the number of matches they have played with a specific hero.
+    pub min_hero_matches: Option<u64>,
+    /// Filter players based on the number of matches they have played with a specific hero.
+    pub max_hero_matches: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
@@ -105,16 +109,29 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     let player_filters = if player_filters.is_empty() {
         "".to_string()
     } else {
-        format!(" PREWHERE {}", player_filters.join(" AND "))
+        format!(" AND {}", player_filters.join(" AND "))
+    };
+    let mut player_hero_filters = vec![];
+    if let Some(min_hero_matches) = query.min_hero_matches {
+        player_hero_filters.push(format!("COUNT(DISTINCT match_id) >= {min_hero_matches}"));
+    }
+    if let Some(max_hero_matches) = query.max_hero_matches {
+        player_hero_filters.push(format!("COUNT(DISTINCT match_id) <= {max_hero_matches}"));
+    }
+    let player_hero_filters = if player_hero_filters.is_empty() {
+        "TRUE".to_string()
+    } else {
+        player_hero_filters.join(" AND ")
     };
     format!(
         r#"
     WITH t_matches AS (
-        SELECT match_id
-        FROM match_info
-        WHERE match_mode IN ('Ranked', 'Unranked')
-            {info_filters}
+            SELECT match_id
+            FROM match_info
+            WHERE match_mode IN ('Ranked', 'Unranked')
+                {info_filters}
         )
+        {}
     SELECT
         hero_id,
         sum(won) AS wins,
@@ -136,12 +153,33 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         sum(arrayMax(stats.shots_hit)) AS total_shots_hit,
         sum(arrayMax(stats.shots_missed)) AS total_shots_missed
     FROM match_player FINAL
-    {player_filters}
     WHERE match_id IN t_matches
+        {player_filters}
+        {}
     GROUP BY hero_id
     HAVING COUNT() > 1
     ORDER BY hero_id
-    "#
+    "#,
+        if query.min_hero_matches.or(query.max_hero_matches).is_some() {
+            format!(
+                r#",
+        t_players AS (
+            SELECT account_id, hero_id
+            FROM match_player
+            WHERE match_id IN t_matches
+                {player_filters}
+            GROUP BY account_id, hero_id
+            HAVING {player_hero_filters}
+        )"#
+            )
+        } else {
+            "".to_string()
+        },
+        if query.min_hero_matches.or(query.max_hero_matches).is_some() {
+            "AND (account_id, hero_id) IN t_players"
+        } else {
+            ""
+        }
     )
 }
 
