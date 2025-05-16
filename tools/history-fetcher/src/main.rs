@@ -107,28 +107,26 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     ch_client
         .query(
             r#"
-SELECT DISTINCT mp.account_id AS id, NULL AS max_match_id
-FROM match_player AS mp
-INNER ANY JOIN match_info AS mi ON mp.match_id = mi.match_id
-WHERE mi.start_time > now() - INTERVAL 2 DAY
-    AND account_id > 0
-    AND match_mode IN ('Ranked', 'Unranked')
+WITH players AS (SELECT DISTINCT account_id
+                 FROM match_player
+                 ORDER BY match_id DESC
+                 LIMIT 10000)
+SELECT account_id as id, NULL AS max_match_id
+FROM players
 ORDER BY rand()
-LIMIT 1000
+LIMIT 100
 
 UNION ALL
 
-SELECT mp.account_id AS id, toNullable(max(mp.match_id)) AS max_match_id
-FROM match_player AS mp
-WHERE mp.account_id > 0
-  AND match_id IN (SELECT match_id
-                   FROM match_info
-                   WHERE match_mode IN ('Ranked', 'Unranked')
-                     AND start_time BETWEEN '2024-08-01' AND now() - INTERVAL 2 DAY)
-  AND (mp.match_id, mp.account_id) NOT IN (SELECT match_id, account_id FROM player_match_history)
-GROUP BY mp.account_id
-ORDER BY COUNT(DISTINCT mp.match_id) DESC
-LIMIT 100
+SELECT account_id AS id, toNullable(max(match_id)) AS max_match_id
+FROM match_player
+WHERE account_id > 0
+  AND match_id > 31247321
+  AND (match_id, account_id) NOT IN (SELECT match_id, account_id FROM player_match_history WHERE match_id > 31247321)
+GROUP BY account_id
+HAVING COUNT(DISTINCT match_id) > 50
+ORDER BY COUNT(DISTINCT match_id) DESC
+LIMIT 10
     "#,
         )
         .fetch_all()
