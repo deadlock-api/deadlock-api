@@ -66,22 +66,15 @@ pub async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
     account_id: u32,
 ) -> APIResult<PlayerMatchHistory> {
-    tryhard::retry_fn(||
-            async {
-                ch_client.query(
-                    "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? ORDER BY match_id DESC"
-                )
-                    .bind(account_id)
-                    .fetch_all()
-                    .await
-                    .map_err(|e| APIError::InternalError {
-                        message: format!("Failed to fetch player match history from ClickHouse: {e}"),
-                    })
-            }
-        )
-        .retries(3)
-        .fixed_backoff(Duration::from_millis(10))
+    ch_client.query(
+        "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? ORDER BY match_id DESC"
+    )
+        .bind(account_id)
+        .fetch_all()
         .await
+        .map_err(|e| APIError::InternalError {
+            message: format!("Failed to fetch player match history from ClickHouse: {e}"),
+        })
 }
 
 async fn fetch_match_history_raw(
@@ -109,7 +102,6 @@ async fn fetch_match_history_raw(
     if response.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess as i32
     }) {
-        println!("{response:?}");
         return Err(APIError::InternalError {
             message: format!("Failed to fetch player match history: {response:?}"),
         });
@@ -151,12 +143,7 @@ pub async fn fetch_steam_match_history(
     let mut iterations = 0;
     loop {
         iterations += 1;
-        let result = tryhard::retry_fn(|| {
-            fetch_match_history_raw(steam_client, account_id, continue_cursor)
-        })
-        .retries(3)
-        .fixed_backoff(Duration::from_millis(100))
-        .await?;
+        let result = fetch_match_history_raw(steam_client, account_id, continue_cursor).await?;
 
         // Check if the result is empty, in which case we can stop
         if result.0.is_empty() {

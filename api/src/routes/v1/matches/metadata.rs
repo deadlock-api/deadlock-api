@@ -16,7 +16,7 @@ use object_store::ObjectStore;
 use prost::Message;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
-use tracing::{debug, error};
+use tracing::debug;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
 async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Result<Vec<u8>> {
@@ -177,28 +177,17 @@ pub async fn metadata_raw(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    match tryhard::retry_fn(|| {
-        fetch_match_metadata_raw(
-            &state.rate_limit_client,
-            &rate_limit_key,
-            &state.steam_client,
-            &state.http_client,
-            &state.ch_client,
-            &state.s3_client,
-            &state.s3_cache_client,
-            match_id,
-        )
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
+    fetch_match_metadata_raw(
+        &state.rate_limit_client,
+        &rate_limit_key,
+        &state.steam_client,
+        &state.http_client,
+        &state.ch_client,
+        &state.s3_client,
+        &state.s3_cache_client,
+        match_id,
+    )
     .await
-    {
-        Ok(r) => Ok(r),
-        Err(e) => {
-            error!("Failed to fetch match metadata: {e}");
-            Err(e)
-        }
-    }
 }
 
 #[utoipa::path(
@@ -229,28 +218,16 @@ pub async fn metadata(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    match tryhard::retry_fn(|| async {
-        let raw_data = fetch_match_metadata_raw(
-            &state.rate_limit_client,
-            &rate_limit_key,
-            &state.steam_client,
-            &state.http_client,
-            &state.ch_client,
-            &state.s3_client,
-            &state.s3_cache_client,
-            match_id,
-        )
-        .await?;
-        parse_match_metadata_raw(&raw_data).await.map(Json)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await
-    {
-        Ok(r) => Ok(r),
-        Err(e) => {
-            error!("Failed to fetch match metadata: {e}");
-            Err(e)
-        }
-    }
+    let raw_data = fetch_match_metadata_raw(
+        &state.rate_limit_client,
+        &rate_limit_key,
+        &state.steam_client,
+        &state.http_client,
+        &state.ch_client,
+        &state.s3_client,
+        &state.s3_cache_client,
+        match_id,
+    )
+    .await?;
+    parse_match_metadata_raw(&raw_data).await.map(Json)
 }
