@@ -98,7 +98,7 @@ export default function HeroCombStatsTable({
           <input
             type="number"
             id="min-matches"
-            min={0}
+            min={1}
             step={50}
             value={minMatchesFilter}
             onChange={(e) => setMinMatchesFilter(Number(e.target.value))}
