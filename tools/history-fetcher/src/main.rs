@@ -114,7 +114,7 @@ WITH players AS (SELECT DISTINCT account_id
 SELECT account_id as id, NULL AS max_match_id
 FROM players
 ORDER BY rand()
-LIMIT 100
+LIMIT 1000
 
 UNION ALL
 
@@ -126,7 +126,7 @@ WHERE account_id > 0
 GROUP BY account_id
 HAVING COUNT(DISTINCT match_id) > 50
 ORDER BY COUNT(DISTINCT match_id) DESC
-LIMIT 10
+LIMIT 100
     "#,
         )
         .fetch_all()
