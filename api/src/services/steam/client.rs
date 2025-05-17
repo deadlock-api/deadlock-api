@@ -111,7 +111,7 @@ impl SteamClient {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-async fn get_current_client_version_internal(http_client: &reqwest::Client) -> APIResult<u32> {
+pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
     let steam_info = http_client
         .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
         .send()
@@ -136,17 +136,6 @@ async fn get_current_client_version_internal(http_client: &reqwest::Client) -> A
     Err(APIError::InternalError {
         message: "Failed to fetch client version".to_string(),
     })
-}
-
-#[cached(
-    ty = "TimedCache<u8, u32>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
-pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
-    get_current_client_version_internal(http_client).await
 }
 
 #[cached(
