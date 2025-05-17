@@ -22,18 +22,26 @@ pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(hero_stats::hero_stats))
-        .routes(routes!(hero_stats_over_time::heroes_stats_over_time))
-        .routes(routes!(item_stats::item_stats))
-        .routes(routes!(hero_counters_stats::hero_counters_stats))
-        .routes(routes!(hero_synergies_stats::hero_synergies_stats))
-        .routes(routes!(hero_comb_stats::hero_comb_stats))
-        .routes(routes!(build_item_stats::build_item_stats))
-        .nest(
-            "/scoreboards",
-            OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .merge(
+            OpenApiRouter::new()
                 .routes(routes!(player_scoreboard::player_scoreboard))
-                .routes(routes!(hero_scoreboard::hero_scoreboard)),
+                .layer(CacheControlMiddleware::new(Duration::from_secs(5 * 60))),
         )
-        .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60)))
+        .merge(
+            OpenApiRouter::new()
+                .routes(routes!(hero_stats::hero_stats))
+                .routes(routes!(hero_stats_over_time::heroes_stats_over_time))
+                .routes(routes!(item_stats::item_stats))
+                .routes(routes!(hero_counters_stats::hero_counters_stats))
+                .routes(routes!(hero_synergies_stats::hero_synergies_stats))
+                .routes(routes!(hero_comb_stats::hero_comb_stats))
+                .routes(routes!(build_item_stats::build_item_stats))
+                .nest(
+                    "/scoreboards",
+                    OpenApiRouter::with_openapi(ApiDoc::openapi())
+                        .routes(routes!(player_scoreboard::player_scoreboard))
+                        .routes(routes!(hero_scoreboard::hero_scoreboard)),
+                )
+                .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
+        )
 }

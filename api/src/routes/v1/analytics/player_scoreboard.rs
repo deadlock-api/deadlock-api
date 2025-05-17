@@ -162,7 +162,7 @@ LIMIT {} OFFSET {}
 
 #[cached(
     ty = "TimedCache<String, Vec<PlayerScoreboardEntry>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
