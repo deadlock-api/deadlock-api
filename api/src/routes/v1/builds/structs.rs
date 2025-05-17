@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHeroDetailsCategoryAbility {
     pub ability_id: u32,
@@ -11,7 +11,7 @@ pub struct BuildHeroDetailsCategoryAbility {
     pub imbue_target_ability_id: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHeroDetailsCategory {
     pub name: String,
@@ -22,7 +22,7 @@ pub struct BuildHeroDetailsCategory {
     pub optional: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHeroDetailsAbilityOrderCurrencyChange {
     pub ability_id: u32,
@@ -31,20 +31,20 @@ pub struct BuildHeroDetailsAbilityOrderCurrencyChange {
     pub annotation: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHeroDetailsAbilityOrder {
     pub currency_changes: Option<Vec<BuildHeroDetailsAbilityOrderCurrencyChange>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHeroDetails {
     pub mod_categories: Vec<BuildHeroDetailsCategory>,
     pub ability_order: Option<BuildHeroDetailsAbilityOrder>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHero {
     pub hero_id: u32,
@@ -62,7 +62,7 @@ pub struct BuildHero {
     pub details: BuildHeroDetails,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Build {
     pub hero_build: BuildHero,

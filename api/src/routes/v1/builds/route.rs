@@ -6,8 +6,32 @@ use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use sqlx::Row;
 use tracing::debug;
+
+#[cached(
+    ty = "TimedCache<String, Vec<Build>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = r#"{ format!("{:?}", query) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn fetch_builds(
+    pg_client: &sqlx::Pool<sqlx::Postgres>,
+    query: &BuildsSearchQuery,
+) -> sqlx::Result<Vec<Build>> {
+    let query = query::sql_query(query);
+    debug!(query);
+    Ok(sqlx::query(&query)
+        .fetch_all(pg_client)
+        .await?
+        .iter()
+        .map(|row| row.get::<sqlx::types::Json<_>, &str>("builds").0)
+        .collect())
+}
 
 #[utoipa::path(
     get,
@@ -27,17 +51,10 @@ pub async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let query = query::sql_query(&params);
-    debug!(query);
-    let builds = sqlx::query(&query)
-        .fetch_all(&state.pg_client)
+    fetch_builds(&state.pg_client, &params)
         .await
+        .map(Json)
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to fetch builds: {e}"),
-        })?;
-    let builds = builds
-        .iter()
-        .map(|row| row.get::<sqlx::types::Json<Build>, &str>("builds"))
-        .collect::<Vec<_>>();
-    Ok(Json(builds))
+        })
 }
