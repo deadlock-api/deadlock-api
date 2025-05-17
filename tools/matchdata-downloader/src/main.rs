@@ -51,7 +51,6 @@ async fn main() -> anyhow::Result<()> {
                 match download_match(&store, &cache_store, salts).await {
                     Ok(_) => {
                         gauge!("matchdata_downloader.matches_to_download").decrement(1);
-                        info!("Match downloaded");
                         Ok(())
                     }
                     Err(e) => {
@@ -101,6 +100,7 @@ async fn download_match(
     delete_object(bucket, &outdated_hltv_meta_key).await?;
     delete_object(cache_bucket, &outdated_hltv_meta_key).await?;
 
+    info!("Match downloaded");
     Ok(())
 }
 
