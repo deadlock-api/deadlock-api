@@ -5,7 +5,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use futures::future::join;
+use futures::future::join3;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
@@ -40,6 +40,22 @@ WITH fetched_matches AS (
 )
 SELECT COUNT() as fetched_matches_per_day
 FROM fetched_matches
+"#;
+
+const MISSED_MATCHES_QUERY: &str = r#"
+SELECT COUNT(DISTINCT match_id)
+FROM player_match_history
+WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
+    AND match_mode IN ('Ranked', 'Unranked')
+    AND match_id NOT IN (
+        SELECT match_id
+        FROM match_salts
+        WHERE created_at > now() - INTERVAL 1 WEEK
+        UNION ALL
+        SELECT match_id
+        FROM match_info
+        WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
+    )
 "#;
 
 #[derive(Deserialize, Row)]
@@ -83,6 +99,8 @@ impl From<TableSizeRow> for TableSize {
 pub struct APIInfo {
     /// The number of matches fetched in the last 24 hours.
     pub fetched_matches_per_day: Option<u64>,
+    /// The number of matches that have not been fetched.
+    pub missed_matches: Option<u64>,
     /// The sizes of all tables in the database.
     pub table_sizes: Option<HashMap<String, TableSize>>,
 }
@@ -94,17 +112,19 @@ pub struct APIInfo {
     sync_writes = "default"
 )]
 pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
-    let (table_sizes, fetched_matches_per_day) = join(
+    let (table_sizes, fetched_matches_per_day, missed_matches) = join3(
         ch_client
             .query(TABLE_SIZES_QUERY)
             .fetch_all::<TableSizeRow>(),
         ch_client
             .query(FETCHED_MATCHES_LAST_24H_QUERY)
             .fetch_one::<u64>(),
+        ch_client.query(MISSED_MATCHES_QUERY).fetch_one::<u64>(),
     )
     .await;
     APIInfo {
         fetched_matches_per_day: fetched_matches_per_day.ok(),
+        missed_matches: missed_matches.ok(),
         table_sizes: table_sizes.ok().map(|v| {
             v.into_iter()
                 .map(|row| (row.table.clone(), row.into()))
