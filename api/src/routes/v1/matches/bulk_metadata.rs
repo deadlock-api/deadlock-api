@@ -291,7 +291,7 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         "".to_owned()
     };
     let order_by: &str = query.order_by.into();
-    let order = format!(" ORDER BY {} {} ", order_by, query.order_direction);
+    let order = format!(" ORDER BY {order_by} {} ", query.order_direction);
     let limit = format!(" LIMIT {} ", query.limit);
 
     let mut query = String::new();

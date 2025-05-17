@@ -146,16 +146,14 @@ fn build_player_scoreboard_query(query: &PlayerScoreboardQuery) -> String {
         r#"
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
-{}
+{player_filters}
 GROUP BY account_id
-{}
+{player_having}
 ORDER BY value {}
 LIMIT {} OFFSET {}
     "#,
         query.start.unwrap_or_default() + 1,
         query.sort_by.get_select_clause(),
-        player_filters,
-        player_having,
         query.sort_direction,
         query.limit.unwrap_or_default(),
         query.start.unwrap_or_default() + 1,
@@ -177,7 +175,7 @@ async fn get_player_scoreboard(
     let query = build_player_scoreboard_query(query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch scoreboard: {}", e);
+        warn!("Failed to fetch scoreboard: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch scoreboard: {e}"),
         }

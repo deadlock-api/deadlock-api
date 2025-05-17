@@ -111,7 +111,7 @@ async fn get_party_stats(
     let query = build_party_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch party stats: {}", e);
+        warn!("Failed to fetch party stats: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch party stats: {e}"),
         }

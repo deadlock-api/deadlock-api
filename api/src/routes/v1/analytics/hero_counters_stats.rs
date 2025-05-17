@@ -149,7 +149,7 @@ fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
         r#"
     WITH matches AS (SELECT match_id
                  FROM match_info
-                 WHERE match_mode IN ('Ranked', 'Unranked') {})
+                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
     SELECT p1.hero_id  AS hero_id,
            p2.hero_id  AS enemy_hero_id,
            SUM(p1.won) AS wins,
@@ -174,13 +174,11 @@ fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
              INNER JOIN match_player p2 USING (match_id)
     WHERE match_id IN matches
       AND p1.team != p2.team
-      {}
+      {player_filters}
     GROUP BY p1.hero_id, p2.hero_id
     HAVING matches_played >= {}
     ORDER BY p1.hero_id, p2.hero_id
     "#,
-        info_filters,
-        player_filters,
         query
             .min_matches
             .or(default_min_matches())
@@ -203,7 +201,7 @@ async fn get_hero_counter_stats(
     let query = build_hero_counter_stats_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero counter stats: {}", e);
+        warn!("Failed to fetch hero counter stats: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch hero counter stats: {e}"),
         }

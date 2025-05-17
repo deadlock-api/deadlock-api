@@ -91,19 +91,16 @@ fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
             r#"
             WITH matches AS (SELECT DISTINCT match_id, team, party
                              FROM match_player
-                             WHERE account_id = {} AND party != 0 {}),
+                             WHERE account_id = {account_id} AND party != 0 {filters}),
                  mates AS (SELECT DISTINCT match_id, won, account_id
                            FROM match_player
-                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches) AND account_id != {})
+                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches) AND account_id != {account_id})
             SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
             HAVING matches_played > {}
             ORDER BY matches_played DESC
             "#,
-            account_id,
-            filters,
-            account_id,
             query.min_matches_played.unwrap_or_default()
         )
     } else {
@@ -111,19 +108,16 @@ fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
             r#"
             WITH matches AS (SELECT DISTINCT match_id, team
                              FROM match_player
-                             WHERE account_id = {} {}),
+                             WHERE account_id = {account_id} {filters}),
                  mates AS (SELECT DISTINCT match_id, won, account_id
                            FROM match_player
-                           WHERE (match_id, team) IN (SELECT match_id, team FROM matches) AND account_id != {})
+                           WHERE (match_id, team) IN (SELECT match_id, team FROM matches) AND account_id != {account_id})
             SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
             HAVING matches_played > {}
             ORDER BY matches_played DESC
             "#,
-            account_id,
-            filters,
-            account_id,
             query.min_matches_played.unwrap_or_default()
         )
     }
@@ -145,7 +139,7 @@ async fn get_mate_stats(
     let query = build_mate_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch mate stats: {}", e);
+        warn!("Failed to fetch mate stats: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch mate stats: {e}"),
         }

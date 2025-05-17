@@ -25,7 +25,7 @@ impl AssetsClient {
 
     /// Find a hero ID by name
     pub async fn fetch_hero_id_from_name(&self, hero_name: &str) -> reqwest::Result<Option<u32>> {
-        debug!("Finding hero ID for name: {}", hero_name);
+        debug!("Finding hero ID for name: {hero_name}");
         self.fetch_heroes().await.map(|heroes| {
             heroes
                 .iter()
@@ -36,7 +36,7 @@ impl AssetsClient {
 
     /// Find a hero name by ID
     pub async fn fetch_hero_name_from_id(&self, hero_id: u32) -> reqwest::Result<Option<String>> {
-        debug!("Finding hero name for ID: {}", hero_id);
+        debug!("Finding hero name for ID: {hero_id}");
         self.fetch_heroes()
             .await
             .map(|heroes| heroes.into_iter().find(|h| h.id == hero_id).map(|h| h.name))

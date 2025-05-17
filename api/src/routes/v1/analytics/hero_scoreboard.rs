@@ -122,14 +122,12 @@ fn build_hero_scoreboard_query(query: &HeroScoreboardQuery) -> String {
         r#"
 SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
-{}
+{player_filters}
 GROUP BY hero_id
-{}
+{player_having}
 ORDER BY value {}
     "#,
         query.sort_by.get_select_clause(),
-        player_filters,
-        player_having,
         query.sort_direction,
     )
 }
@@ -149,7 +147,7 @@ async fn get_hero_scoreboard(
     let query = build_hero_scoreboard_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch scoreboard: {}", e);
+        warn!("Failed to fetch scoreboard: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch scoreboard: {e}"),
         }

@@ -84,7 +84,7 @@ fn build_enemy_stats_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         r#"
     WITH matches AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
                      FROM match_player
-                     WHERE team IN ('Team0', 'Team1') AND account_id = {} {}),
+                     WHERE team IN ('Team0', 'Team1') AND account_id = {account_id} {filters}),
          enemies AS (SELECT DISTINCT match_id, won, account_id
                    FROM match_player
                    WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM matches))
@@ -94,8 +94,6 @@ fn build_enemy_stats_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     HAVING matches_played > {}
     ORDER BY matches_played DESC
     "#,
-        account_id,
-        filters,
         query.min_matches_played.unwrap_or_default()
     )
 }
@@ -116,7 +114,7 @@ async fn get_enemy_stats(
     let query = build_enemy_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch enemy stats: {}", e);
+        warn!("Failed to fetch enemy stats: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch enemy stats: {e}"),
         }

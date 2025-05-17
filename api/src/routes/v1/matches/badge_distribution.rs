@@ -78,7 +78,7 @@ pub async fn get_badge_distribution(
     let query = build_badge_distribution_query(&query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch badge distribution: {}", e);
+        warn!("Failed to fetch badge distribution: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch badge distribution: {e}"),
         }

@@ -20,8 +20,8 @@ async fn check_salt(http_client: &reqwest::Client, salts: &ClickhouseSalts) -> b
     tryhard::retry_fn(|| async {
         http_client
             .head(format!(
-                "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-                cluster_id, salts.match_id, metadata_salt
+                "http://replay{cluster_id}.valve.net/1422450/{}_{metadata_salt}.meta.bz2",
+                salts.match_id,
             ))
             .timeout(Duration::from_secs(5))
             .send()

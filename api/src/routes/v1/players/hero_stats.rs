@@ -146,7 +146,7 @@ async fn get_hero_stats(
     let query = build_hero_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero stats: {}", e);
+        warn!("Failed to fetch hero stats: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch hero stats: {e}"),
         }

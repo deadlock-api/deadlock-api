@@ -164,7 +164,7 @@ WITH hero_combinations AS (
         any(won) AS won
     FROM match_player FINAL
     INNER JOIN match_info mi USING (match_id)
-    WHERE mi.match_mode IN ('Ranked', 'Unranked') {}
+    WHERE mi.match_mode IN ('Ranked', 'Unranked') {info_filters}
     GROUP BY match_id, team
     HAVING length(hero_ids) = 6
 )
@@ -174,14 +174,11 @@ SELECT
     sum(not won) AS losses,
     wins + losses AS matches
 FROM hero_combinations
-WHERE true {} {}
+WHERE true {player_filters} {hero_filters}
 GROUP BY hero_ids
 HAVING matches >= {}
 ORDER BY wins / greatest(1, matches) DESC
     "#,
-        info_filters,
-        player_filters,
-        hero_filters,
         if query.comb_size.or(default_comb_size()).unwrap_or_default() == 6 {
             query
                 .min_matches
@@ -209,7 +206,7 @@ pub async fn get_comb_stats(
     debug!(?query);
     let comb_stats: Vec<HeroCombStats> =
         ch_client.query(&ch_query).fetch_all().await.map_err(|e| {
-            warn!("Failed to fetch hero comb stats: {}", e);
+            warn!("Failed to fetch hero comb stats: {e}");
             APIError::InternalError {
                 message: format!("Failed to fetch hero comb stats: {e}"),
             }

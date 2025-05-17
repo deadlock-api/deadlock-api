@@ -310,7 +310,7 @@ impl Variable {
                 Ok(heroes_played
                     .into_iter()
                     .filter_map(|(hero_id, count)| {
-                        format!("{} ({})", heroes.get(&hero_id)?, count).into()
+                        format!("{} ({count})", heroes.get(&hero_id)?).into()
                     })
                     .join(", "))
             }

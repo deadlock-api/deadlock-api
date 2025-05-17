@@ -109,7 +109,7 @@ async fn get_item_stats(
     let query = build_item_stats_query(account_id, &query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch item stats: {}", e);
+        warn!("Failed to fetch item stats: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch item stats: {e}"),
         }

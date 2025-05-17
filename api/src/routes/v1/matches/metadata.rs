@@ -106,9 +106,8 @@ async fn fetch_match_metadata_raw(
     .await?;
     http_client
         .get(format!(
-            "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
+            "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
             salts.replay_group_id.unwrap_or_default(),
-            match_id,
             salts.metadata_salt.unwrap_or_default()
         ))
         .send()

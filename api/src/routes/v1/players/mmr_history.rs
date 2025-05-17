@@ -72,7 +72,7 @@ async fn get_mmr_history(
     let query = build_mmr_history_query(account_id);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch mmr history: {}", e);
+        warn!("Failed to fetch mmr history: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch mmr history: {e}"),
         }
@@ -95,7 +95,7 @@ async fn get_hero_mmr_history(
     let query = build_hero_mmr_history_query(account_id, hero_id);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero mmr history: {}", e);
+        warn!("Failed to fetch hero mmr history: {e}");
         APIError::InternalError {
             message: format!("Failed to fetch hero mmr history: {e}"),
         }

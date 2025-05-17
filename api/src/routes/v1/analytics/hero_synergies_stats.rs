@@ -156,7 +156,7 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
         r#"
     WITH matches AS (SELECT match_id
                  FROM match_info
-                 WHERE match_mode IN ('Ranked', 'Unranked') {})
+                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
     SELECT p1.hero_id  AS hero_id1,
            p2.hero_id  AS hero_id2,
            SUM(p1.won) AS wins,
@@ -182,13 +182,11 @@ fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
     WHERE match_id IN matches
       AND p1.team = p2.team
       AND p1.hero_id < p2.hero_id
-      {}
+      {player_filters}
     GROUP BY p1.hero_id, p2.hero_id
     HAVING matches_played >= {}
     ORDER BY p1.hero_id, p2.hero_id
     "#,
-        info_filters,
-        player_filters,
         query
             .min_matches
             .or(default_min_matches())
