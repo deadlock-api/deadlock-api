@@ -1,6 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::state::AppState;
+use crate::utils::parse::comma_separated_num_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
@@ -8,6 +9,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
@@ -20,7 +22,7 @@ fn default_min_matches() -> Option<u32> {
     20.into()
 }
 
-#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
+#[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
 pub struct PlayerScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]
@@ -61,6 +63,9 @@ pub struct PlayerScoreboardQuery {
     #[serde(default = "default_limit")]
     #[param(inline, default = "100", maximum = 10000, minimum = 1)]
     pub limit: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    pub account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -117,6 +122,12 @@ fn build_player_scoreboard_query(query: &PlayerScoreboardQuery) -> String {
         player_filters.push(format!("hero_id = {hero_id}"));
     }
     player_filters.push("account_id > 0".to_string());
+    if let Some(account_ids) = &query.account_ids {
+        player_filters.push(format!(
+            "has([{}], account_id)",
+            account_ids.iter().map(|i| (*i).to_string()).join(", ")
+        ));
+    }
     let player_filters = if !player_filters.is_empty() {
         format!(" WHERE {} ", player_filters.join(" AND "))
     } else {
@@ -152,18 +163,18 @@ LIMIT {} OFFSET {}
 }
 
 #[cached(
-    ty = "TimedCache<PlayerScoreboardQuery, Vec<PlayerScoreboardEntry>>",
+    ty = "TimedCache<String, Vec<PlayerScoreboardEntry>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = "{ query }",
+    convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
-    key = "PlayerScoreboardQuery"
+    key = "String"
 )]
 async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
-    query: PlayerScoreboardQuery,
+    query: &PlayerScoreboardQuery,
 ) -> APIResult<Vec<PlayerScoreboardEntry>> {
-    let query = build_player_scoreboard_query(&query);
+    let query = build_player_scoreboard_query(query);
     debug!(?query);
     ch_client.query(&query).fetch_all().await.map_err(|e| {
         warn!("Failed to fetch scoreboard: {}", e);
@@ -190,7 +201,7 @@ pub async fn player_scoreboard(
     Query(query): Query<PlayerScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_player_scoreboard(&state.ch_client, query)
+    get_player_scoreboard(&state.ch_client, &query)
         .await
         .map(Json)
 }
