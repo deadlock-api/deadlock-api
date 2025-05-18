@@ -39,9 +39,6 @@ pub struct BulkMatchMetadataQuery {
     #[serde(default = "default_true")]
     #[param(inline, default = "true")]
     pub include_info: bool,
-    /// Include damage matrix in the response.
-    #[serde(default)]
-    pub include_damage_matrix: bool,
     /// Include objectives in the response.
     #[serde(default)]
     pub include_objectives: bool,
@@ -177,10 +174,6 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(average_badge_team1) as average_badge_team1".to_owned(),
             "any(game_mode_version) as game_mode_version".to_owned(),
         ]);
-    }
-    if query.include_damage_matrix {
-        select_fields
-            .push("(any(sample_time_s) as sample_time_s, any(stat_type) as stat_type, any(source_name) as source_name)::JSON as damage_matrix".to_owned());
     }
     if query.include_mid_boss {
         select_fields.push("any(mid_boss) as mid_boss".to_owned());
