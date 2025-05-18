@@ -153,7 +153,7 @@ pub async fn live_url(
             Err(APIError::InternalError {
                 message: format!(
                     "Failed to spectate match: {:?}",
-                    result.map(|r| r.as_str_name())
+                    result.map(|r| r.as_str_name()).unwrap_or("Unknown")
                 ),
             })
         }
