@@ -1,4 +1,4 @@
-import dayjs, { type Dayjs } from "dayjs";
+import type { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
@@ -16,6 +16,7 @@ import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
@@ -30,6 +31,7 @@ export const meta: MetaFunction = () => {
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
+  const [sameLaneFilter, setSameLaneFilter] = useState<boolean>(true);
 
   const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
   const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
@@ -198,13 +200,24 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         </TabsContent>
 
         <TabsContent value="matchups">
-          <div className="flex flex-col gap-4">
-            <HeroMatchupStatsTable
-              minRankId={minRankId}
-              maxRankId={maxRankId}
-              minDate={startDate || undefined}
-              maxDate={endDate || undefined}
-            />
+          <div className="flex flex-col gap-4 mt-4">
+            <div className="flex flex-wrap justify-center items-center sm:flex-nowrap gap-8">
+              <div className="flex items-center gap-2">
+                <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                  Same Lane Filter
+                </label>
+                <Checkbox id="same-lane-filter" checked={sameLaneFilter} onCheckedChange={setSameLaneFilter} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-4">
+              <HeroMatchupStatsTable
+                minRankId={minRankId}
+                maxRankId={maxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                sameLaneFilter={sameLaneFilter}
+              />
+            </div>
           </div>
         </TabsContent>
 
@@ -225,18 +238,26 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             Matchup Details for <HeroName heroId={heroId} />
           </h2>
           <div className="flex flex-col gap-4">
-            <HeroSelector
-              selectedHero={heroId}
-              onHeroSelected={(selectedHeroId) => {
-                if (!selectedHeroId) return;
-                setHeroId(selectedHeroId);
-                if (typeof window !== "undefined") {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("heroId", selectedHeroId.toString());
-                  window.history.pushState({}, "", url);
-                }
-              }}
-            />
+            <div className="flex flex-wrap justify-center items-center sm:flex-nowrap gap-8">
+              <HeroSelector
+                selectedHero={heroId}
+                onHeroSelected={(selectedHeroId) => {
+                  if (!selectedHeroId) return;
+                  setHeroId(selectedHeroId);
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("heroId", selectedHeroId.toString());
+                    window.history.pushState({}, "", url);
+                  }
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                  Same Lane Filter
+                </label>
+                <Checkbox id="same-lane-filter" checked={sameLaneFilter} onCheckedChange={setSameLaneFilter} />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -254,6 +275,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                     window.history.pushState({}, "", url);
                   }
                 }}
+                sameLaneFilter={sameLaneFilter}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -271,6 +293,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                     window.history.pushState({}, "", url);
                   }
                 }}
+                sameLaneFilter={sameLaneFilter}
               />
             </div>
           </div>
