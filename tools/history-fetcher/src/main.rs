@@ -1,7 +1,6 @@
 mod types;
 
 use crate::types::{PlayerMatchHistory, PlayerMatchHistoryEntry};
-use arl::RateLimiter;
 use clickhouse::Row;
 use metrics::{counter, gauge};
 use serde::Deserialize;
@@ -26,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let limiter = RateLimiter::new(10, Duration::from_secs(60));
+    let mut interval = tokio::time::interval(Duration::from_secs(10));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
@@ -44,12 +43,11 @@ async fn main() -> anyhow::Result<()> {
                 continue;
             }
         };
-        futures::future::join_all(
-            accounts
-                .iter()
-                .map(|account| update_account_limited(&limiter, &ch_client, &http_client, account)),
-        )
-        .await;
+        for account in &accounts {
+            interval.tick().await;
+            update_account(&ch_client, &http_client, account).await;
+            gauge!("history_fetcher.fetched_accounts").decrement(1);
+        }
     }
 }
 
@@ -163,18 +161,4 @@ async fn insert_match_history(
         inserter.write(entry).await?;
     }
     inserter.end().await
-}
-
-async fn update_account_limited(
-    limiter: &RateLimiter,
-    ch_client: &clickhouse::Client,
-    http_client: &reqwest::Client,
-    account: &Account,
-) {
-    if account.id == 0 {
-        return;
-    }
-    limiter.wait().await;
-    update_account(ch_client, http_client, account).await;
-    gauge!("history_fetcher.fetched_accounts").decrement(1);
 }

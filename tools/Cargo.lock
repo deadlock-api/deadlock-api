@@ -1396,10 +1396,8 @@ name = "history-fetcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arl",
  "clickhouse",
  "common",
- "futures",
  "metrics",
  "reqwest",
  "serde",
