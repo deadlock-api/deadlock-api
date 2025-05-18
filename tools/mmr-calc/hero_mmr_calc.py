@@ -114,9 +114,7 @@ def get_matches_starting_from(client, start_id: int = 28626948) -> list[Match]:
            any(winning_team)                        as winning_team
     FROM match_player FINAL
         INNER JOIN match_info mi FINAL USING (match_id)
-    WHERE match_outcome = 'TeamWin'
-      AND match_mode IN ('Ranked', 'Unranked')
-      AND game_mode = 'Normal'
+    WHERE match_mode IN ('Ranked', 'Unranked')
       AND average_badge_team0 IS NOT NULL
       AND average_badge_team1 IS NOT NULL
       AND match_id > {start_id}
