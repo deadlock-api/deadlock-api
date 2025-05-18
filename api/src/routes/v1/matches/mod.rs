@@ -4,6 +4,7 @@ pub mod bulk_metadata;
 pub mod custom;
 pub mod ingest_event;
 pub mod ingest_salts;
+pub mod live_url;
 pub mod metadata;
 pub mod recently_fetched;
 pub mod salts;
@@ -33,6 +34,7 @@ pub fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(metadata::metadata))
                 .routes(routes!(metadata::metadata_raw))
                 .routes(routes!(salts::salts))
+                .routes(routes!(live_url::live_url))
                 .routes(routes!(badge_distribution::badge_distribution))
                 .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
         )
