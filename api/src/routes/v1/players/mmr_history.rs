@@ -26,7 +26,7 @@ pub struct HeroMMRHistoryQuery {
 pub struct MMRHistory {
     pub match_id: u64,
     /// Player Score is the index for the rank array (internally used for the rank regression)
-    pub player_score: f64,
+    pub player_score: f32,
     /// The Player Rank
     pub rank: u32,
     /// Extracted from the rank the division (rank // 10)
