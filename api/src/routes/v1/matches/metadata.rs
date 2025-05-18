@@ -104,7 +104,7 @@ async fn fetch_match_metadata_raw(
         false,
     )
     .await?;
-    http_client
+    Ok(http_client
         .get(format!(
             "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
             salts.replay_group_id.unwrap_or_default(),
@@ -112,16 +112,10 @@ async fn fetch_match_metadata_raw(
         ))
         .send()
         .await
-        .and_then(|resp| resp.error_for_status())
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch match metadata: {e}"),
-        })?
+        .and_then(|resp| resp.error_for_status())?
         .bytes()
         .await
-        .map(|r| r.to_vec())
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch match metadata: {e}"),
-        })
+        .map(|r| r.to_vec())?)
 }
 
 async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDataContents> {
@@ -133,17 +127,12 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to decompress match metadata: {e}"),
         })?;
-    let match_data = CMsgMatchMetaData::decode(buf.as_slice())
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to parse match metadata: {e}"),
-        })?
+    let match_data = CMsgMatchMetaData::decode(buf.as_slice())?
         .match_details
         .ok_or_else(|| APIError::InternalError {
             message: "Failed to parse match metadata: No data".to_string(),
         })?;
-    CMsgMatchMetaDataContents::decode(match_data.as_slice()).map_err(|e| APIError::InternalError {
-        message: format!("Failed to parse match metadata contents: {e}"),
-    })
+    Ok(CMsgMatchMetaDataContents::decode(match_data.as_slice())?)
 }
 
 #[utoipa::path(

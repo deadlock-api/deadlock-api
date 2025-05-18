@@ -784,11 +784,14 @@ impl Variable {
             .await
             .is_ok();
         let matches = if last_match_newer_than_30min {
-            fetch_match_history_from_clickhouse(ch_client, account_id).await
+            fetch_match_history_from_clickhouse(ch_client, account_id)
+                .await
+                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?
         } else {
-            fetch_steam_match_history(steam_client, account_id, false).await
-        }
-        .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+            fetch_steam_match_history(steam_client, account_id, false)
+                .await
+                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?
+        };
 
         let first_match = matches
             .first()

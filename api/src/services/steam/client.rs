@@ -116,14 +116,8 @@ pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIRes
         .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
         .send()
         .await
-        .and_then(|resp| resp.error_for_status())
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch steam info: {e}"),
-        })?
-        .text().await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch steam info: {e}"),
-        })?;
+        .and_then(|resp| resp.error_for_status())?
+        .text().await?;
     for line in steam_info.lines() {
         if line.starts_with("ClientVersion=") {
             return line.split('=').nth(1).and_then(|v| v.parse().ok()).ok_or(

@@ -272,14 +272,7 @@ pub async fn create_custom(
         };
     });
 
-    let party_code = wait_for_party_code(&mut state.redis_client, party_id)
-        .await
-        .map_err(|e| {
-            error!("Failed to retrieve party code: {e}");
-            APIError::InternalError {
-                message: "Failed to retrieve party code".to_string(),
-            }
-        })?;
+    let party_code = wait_for_party_code(&mut state.redis_client, party_id).await?;
     debug!("Retrieved party code: {party_code}");
 
     let Some((_, account_id, party_code)) = party_code.split(':').collect_tuple() else {

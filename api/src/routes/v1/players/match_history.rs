@@ -65,16 +65,13 @@ pub async fn insert_match_history_to_ch(
 pub async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
     account_id: u32,
-) -> APIResult<PlayerMatchHistory> {
+) -> clickhouse::error::Result<PlayerMatchHistory> {
     ch_client.query(
         "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? ORDER BY match_id DESC"
     )
         .bind(account_id)
         .fetch_all()
         .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch player match history from ClickHouse: {e}"),
-        })
 }
 
 async fn fetch_match_history_raw(

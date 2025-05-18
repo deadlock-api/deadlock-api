@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Query, State};
@@ -7,7 +7,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -77,12 +77,7 @@ pub async fn get_badge_distribution(
 ) -> APIResult<Vec<BadgeDistribution>> {
     let query = build_badge_distribution_query(&query);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch badge distribution: {e}");
-        APIError::InternalError {
-            message: format!("Failed to fetch badge distribution: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(

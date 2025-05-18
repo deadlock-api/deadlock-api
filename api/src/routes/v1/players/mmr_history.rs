@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::players::types::AccountIdQuery;
 use crate::state::AppState;
 use crate::utils::parse::parse_steam_id;
@@ -9,7 +9,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, IntoParams, Default)]
@@ -71,12 +71,7 @@ async fn get_mmr_history(
 ) -> APIResult<Vec<MMRHistory>> {
     let query = build_mmr_history_query(account_id);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch mmr history: {e}");
-        APIError::InternalError {
-            message: format!("Failed to fetch mmr history: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[cached(
@@ -94,12 +89,7 @@ async fn get_hero_mmr_history(
 ) -> APIResult<Vec<MMRHistory>> {
     let query = build_hero_mmr_history_query(account_id, hero_id);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero mmr history: {e}");
-        APIError::InternalError {
-            message: format!("Failed to fetch hero mmr history: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(

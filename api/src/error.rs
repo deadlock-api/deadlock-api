@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 use serde_json::json;
 use std::io;
 use thiserror::Error;
-use tracing::warn;
+use tracing::error;
 
 pub type ApplicationResult<T> = Result<T, ApplicationError>;
 pub type APIResult<T> = Result<T, APIError>;
@@ -56,8 +56,69 @@ pub enum APIError {
     RateLimitExceeded { status: RateLimitStatus },
     #[error("Internal server error: {message}")]
     InternalError { message: String },
-    #[error("Steam request error: {0}")]
-    SteamProxy(#[from] SteamProxyError),
+}
+
+impl From<SteamProxyError> for APIError {
+    fn from(e: SteamProxyError) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "Request to Steam failed.".to_string(),
+        }
+    }
+}
+
+impl From<clickhouse::error::Error> for APIError {
+    fn from(e: clickhouse::error::Error) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "Clickhouse error".to_string(),
+        }
+    }
+}
+
+impl From<sqlx::Error> for APIError {
+    fn from(e: sqlx::Error) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "PostgreSQL error".to_string(),
+        }
+    }
+}
+
+impl From<redis::RedisError> for APIError {
+    fn from(e: redis::RedisError) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "Redis error".to_string(),
+        }
+    }
+}
+
+impl From<reqwest::Error> for APIError {
+    fn from(e: reqwest::Error) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "Request to external service failed".to_string(),
+        }
+    }
+}
+
+impl From<base64::DecodeError> for APIError {
+    fn from(e: base64::DecodeError) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "Failed to decode base64 data".to_string(),
+        }
+    }
+}
+
+impl From<prost::DecodeError> for APIError {
+    fn from(e: prost::DecodeError) -> Self {
+        error!("{e}");
+        Self::InternalError {
+            message: "Failed to decode protobuf message".to_string(),
+        }
+    }
 }
 
 impl IntoResponse for APIError {
@@ -125,20 +186,6 @@ impl IntoResponse for APIError {
                     .into(),
                 )
                 .unwrap_or_else(|_| "Internal server error".to_string().into_response()),
-            APIError::SteamProxy(e) => {
-                warn!("{e}");
-                Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(
-                        serde_json::to_string(&json!({
-                            "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-                            "error": "Request to Steam failed.",
-                        }))
-                        .unwrap_or_else(|_| "Internal server error".to_string())
-                        .into(),
-                    )
-                    .unwrap_or_else(|_| "Internal server error".to_string().into_response())
-            }
         }
     }
 }

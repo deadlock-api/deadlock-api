@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::state::AppState;
 use crate::utils::parse::{
     comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
@@ -10,7 +10,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u32> {
@@ -175,12 +175,7 @@ pub async fn get_item_stats(
 ) -> APIResult<Vec<ItemStats>> {
     let query = build_item_stats_query(&query);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch item stats: {e}");
-        APIError::InternalError {
-            message: format!("Failed to fetch item stats: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(

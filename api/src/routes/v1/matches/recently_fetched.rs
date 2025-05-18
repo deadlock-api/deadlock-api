@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::State;
@@ -30,7 +30,7 @@ pub struct ClickhouseMatchInfo {
 )]
 async fn get_recently_fetched_match_ids(
     ch_client: &clickhouse::Client,
-) -> APIResult<Vec<ClickhouseMatchInfo>> {
+) -> clickhouse::error::Result<Vec<ClickhouseMatchInfo>> {
     let query = r#"
     SELECT match_id,
         start_time,
@@ -42,13 +42,7 @@ async fn get_recently_fetched_match_ids(
     WHERE created_at > now() - 600 AND match_info.match_mode IN ('Ranked', 'Unranked')
     ORDER BY created_at DESC
     "#;
-    ch_client
-        .query(query)
-        .fetch_all()
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch recently fetched matches: {e}"),
-        })
+    ch_client.query(query).fetch_all().await
 }
 
 #[utoipa::path(
@@ -63,7 +57,7 @@ async fn get_recently_fetched_match_ids(
     description = "This endpoint returns a list of match ids that have been fetched within the last 10 minutes."
 )]
 pub async fn recently_fetched(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
-    get_recently_fetched_match_ids(&state.ch_client)
-        .await
-        .map(Json)
+    Ok(Json(
+        get_recently_fetched_match_ids(&state.ch_client).await?,
+    ))
 }

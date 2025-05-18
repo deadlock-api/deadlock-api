@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::builds::query;
 use crate::routes::v1::builds::query::BuildsSearchQuery;
 use crate::routes::v1::builds::structs::Build;
@@ -51,10 +51,5 @@ pub async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    fetch_builds(&state.pg_client, &params)
-        .await
-        .map(Json)
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch builds: {e}"),
-        })
+    Ok(Json(fetch_builds(&state.pg_client, &params).await?))
 }

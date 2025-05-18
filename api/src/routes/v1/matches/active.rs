@@ -35,7 +35,7 @@ pub struct ActiveMatchesQuery {
     sync_writes = "default"
 )]
 pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
-    state
+    let steam_response = state
         .steam_client
         .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
@@ -46,17 +46,8 @@ pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
             request_timeout: Duration::from_secs(2),
             username: None,
         })
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch active matches: {e}"),
-        })
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode active matches: {e}"),
-                })
-        })
+        .await?;
+    Ok(BASE64_STANDARD.decode(&steam_response.data)?)
 }
 
 pub async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
@@ -70,12 +61,8 @@ pub async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMa
         .map_err(|e| APIError::InternalError {
             message: format!("Failed to decompress active matches: {e}"),
         })?;
-    let decoded_message = CMsgClientToGcGetActiveMatchesResponse::decode(
-        decompressed_data.as_ref(),
-    )
-    .map_err(|e| APIError::InternalError {
-        message: format!("Failed to parse active matches: {e}"),
-    })?;
+    let decoded_message =
+        CMsgClientToGcGetActiveMatchesResponse::decode(decompressed_data.as_ref())?;
     Ok(decoded_message
         .active_matches
         .into_iter()

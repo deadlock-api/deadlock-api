@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::players::types::AccountIdQuery;
 use crate::state::AppState;
 use axum::Json;
@@ -8,7 +8,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -113,12 +113,7 @@ async fn get_enemy_stats(
 ) -> APIResult<Vec<EnemyStats>> {
     let query = build_enemy_stats_query(account_id, &query);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch enemy stats: {e}");
-        APIError::InternalError {
-            message: format!("Failed to fetch enemy stats: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(

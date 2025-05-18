@@ -1,10 +1,12 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::routes::v1::players::types::AccountIdQuery;
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::{SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse};
+use crate::services::steam::types::{
+    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+};
 use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Path, State};
@@ -103,7 +105,7 @@ impl From<CMsgCitadelProfileCard> for PlayerCard {
 async fn fetch_player_card_raw(
     steam_client: &SteamClient,
     account_id: u32,
-) -> APIResult<SteamProxyRawResponse> {
+) -> SteamProxyResult<SteamProxyRawResponse> {
     let msg = CMsgClientToGcGetProfileCard {
         account_id: Some(account_id),
         dev_access_hint: None,
@@ -120,9 +122,6 @@ async fn fetch_player_card_raw(
             username: None,
         })
         .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch player card: {e}"),
-        })
 }
 
 #[utoipa::path(
@@ -163,17 +162,12 @@ pub async fn card_raw(
             ],
         )
         .await?;
-    tryhard::retry_fn(|| fetch_player_card_raw(&state.steam_client, account_id))
-        .retries(3)
-        .fixed_backoff(Duration::from_millis(10))
-        .await
-        .and_then(|r| {
-            BASE64_STANDARD
-                .decode(&r.data)
-                .map_err(|e| APIError::InternalError {
-                    message: format!("Failed to decode player card: {e}"),
-                })
-        })
+    let steam_response =
+        tryhard::retry_fn(|| fetch_player_card_raw(&state.steam_client, account_id))
+            .retries(3)
+            .fixed_backoff(Duration::from_millis(10))
+            .await?;
+    Ok(BASE64_STANDARD.decode(&steam_response.data)?)
 }
 
 #[utoipa::path(

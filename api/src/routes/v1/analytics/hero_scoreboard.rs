@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::state::AppState;
 use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
@@ -10,7 +10,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
@@ -146,12 +146,7 @@ async fn get_hero_scoreboard(
 ) -> APIResult<Vec<HeroScoreboardEntry>> {
     let query = build_hero_scoreboard_query(&query);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch scoreboard: {e}");
-        APIError::InternalError {
-            message: format!("Failed to fetch scoreboard: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(

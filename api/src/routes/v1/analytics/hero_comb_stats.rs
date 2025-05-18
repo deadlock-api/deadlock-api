@@ -15,7 +15,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::AddAssign;
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u32> {
@@ -204,13 +204,7 @@ pub async fn get_comb_stats(
 ) -> APIResult<Vec<HeroCombStats>> {
     let ch_query = build_comb_hero_query(&query);
     debug!(?query);
-    let comb_stats: Vec<HeroCombStats> =
-        ch_client.query(&ch_query).fetch_all().await.map_err(|e| {
-            warn!("Failed to fetch hero comb stats: {e}");
-            APIError::InternalError {
-                message: format!("Failed to fetch hero comb stats: {e}"),
-            }
-        })?;
+    let comb_stats: Vec<HeroCombStats> = ch_client.query(&ch_query).fetch_all().await?;
     let comb_size = match query.comb_size {
         Some(6) => return Ok(comb_stats),
         Some(x) if !(2..=6).contains(&x) => {

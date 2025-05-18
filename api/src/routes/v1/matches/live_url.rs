@@ -107,10 +107,7 @@ pub async fn live_url(
         .ch_client
         .query("SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 2 HOUR ORDER BY match_id DESC LIMIT 1")
         .fetch_one::<u64>()
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch match id from Clickhouse: {e}"),
-        })?;
+        .await?;
 
     if match_id < match_id_2_hours_ago {
         return Err(APIError::StatusMsg {

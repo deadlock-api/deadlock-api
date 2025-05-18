@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::state::AppState;
 use crate::utils::parse::{
     comma_separated_num_deserialize, default_last_month_timestamp, parse_steam_id_option,
@@ -12,7 +12,7 @@ use clickhouse::Row;
 use derive_more::Display;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, warn};
+use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, IntoParams)]
@@ -241,12 +241,7 @@ pub async fn get_hero_stats_over_time(
 ) -> APIResult<Vec<HeroStatsOverTime>> {
     let query = build_hero_stats_over_time_query(&query);
     debug!(?query);
-    ch_client.query(&query).fetch_all().await.map_err(|e| {
-        warn!("Failed to fetch hero stats over time: {}", e);
-        APIError::InternalError {
-            message: format!("Failed to fetch hero stats over time: {e}"),
-        }
-    })
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(

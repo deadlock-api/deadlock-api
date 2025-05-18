@@ -101,11 +101,7 @@ pub async fn ingest_salts(
         });
     }
 
-    insert_salts_to_clickhouse(&state.ch_client, match_salts)
-        .await
-        .map_err(|e| APIError::InternalError {
-            message: format!("Ingest failed: {e}"),
-        })?;
+    insert_salts_to_clickhouse(&state.ch_client, match_salts).await?;
 
     Ok(Json(json!({ "status": "success" })))
 }

@@ -1,4 +1,4 @@
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::state::AppState;
 use crate::utils::parse::default_last_month_timestamp;
 use axum::Json;
@@ -69,20 +69,14 @@ pub async fn get_build_item_stats(
 ) -> APIResult<Vec<BuildItemStats>> {
     let query = build_build_item_stats_query(&query);
     debug!(?query);
-    sqlx::query(&query)
-        .fetch_all(pg_client)
-        .await
-        .map(|rows| {
-            rows.into_iter()
-                .map(|row| BuildItemStats {
-                    item_id: row.get(0),
-                    builds: row.get(1),
-                })
-                .collect::<Vec<_>>()
-        })
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to fetch builds: {e}"),
-        })
+    Ok(sqlx::query(&query).fetch_all(pg_client).await.map(|rows| {
+        rows.into_iter()
+            .map(|row| BuildItemStats {
+                item_id: row.get(0),
+                builds: row.get(1),
+            })
+            .collect::<Vec<_>>()
+    })?)
 }
 
 #[utoipa::path(
