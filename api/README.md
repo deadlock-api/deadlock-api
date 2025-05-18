@@ -1,6 +1,7 @@
 # Deadlock API
 
 [![Rust CI/CD](https://github.com/deadlock-api/deadlock-api-rust/actions/workflows/rust.yml/badge.svg)](https://github.com/deadlock-api/deadlock-api-rust/actions/workflows/rust.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/deadlock-api/deadlock-api-rust)
 
 **Live API Documentation**: [https://api.deadlock-api.com/docs](https://api.deadlock-api.com/docs)
 
