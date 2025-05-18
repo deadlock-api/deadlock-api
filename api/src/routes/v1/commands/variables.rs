@@ -746,12 +746,12 @@ impl Variable {
         steam_client: &SteamClient,
         account_id: u32,
     ) -> Result<PlayerMatchHistory, &'static str> {
-        let last_match_newer_than_30min = ch_client
+        let last_match_newer_than_40min = ch_client
             .query(
                 r#"
                 SELECT match_id
                 FROM match_player
-                WHERE account_id = ? AND start_time >= now() - INTERVAL 30 MINUTE
+                WHERE account_id = ? AND start_time >= now() - INTERVAL 40 MINUTE
                 LIMIT 1
                 "#,
             )
@@ -759,14 +759,17 @@ impl Variable {
             .fetch_one::<u32>()
             .await
             .is_ok();
-        let matches = if last_match_newer_than_30min {
+        let matches = if last_match_newer_than_40min {
             fetch_match_history_from_clickhouse(ch_client, account_id)
                 .await
                 .map_err(|_| "matches")?
         } else {
-            fetch_steam_match_history(steam_client, account_id, false)
-                .await
-                .map_err(|_| "matches")?
+            match fetch_steam_match_history(steam_client, account_id, false).await {
+                Ok(m) => m,
+                Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id)
+                    .await
+                    .map_err(|_| "matches")?,
+            }
         };
 
         let first_match = matches.first().ok_or("matches")?;
