@@ -14,12 +14,14 @@ export default function HeroMatchupStatsTable({
   maxRankId,
   minDate,
   maxDate,
+  sameLaneFilter,
 }: {
   hideHeader?: boolean;
   minRankId?: number;
   maxRankId?: number;
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
+  sameLaneFilter?: boolean;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -39,9 +41,10 @@ export default function HeroMatchupStatsTable({
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
-    queryKey: ["api-hero-synergy-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-synergy-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, sameLaneFilter],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats?same_lane_filter=true");
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats");
+      url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
@@ -53,9 +56,10 @@ export default function HeroMatchupStatsTable({
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
-    queryKey: ["api-hero-counter-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-counter-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, sameLaneFilter],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true");
+      url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
