@@ -21,22 +21,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
-use thiserror::Error;
-use tracing::{error, warn};
+use tracing::warn;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchMode};
-
-#[derive(Debug, Clone, Error)]
-pub enum VariableResolveError {
-    #[error("Failed to fetch data: {0}")]
-    FailedToFetchData(&'static str),
-    #[error("Failed to fetch steam name: {0}")]
-    FailedToFetchSteamName(String),
-    #[error("Player not found in leaderboard")]
-    PlayerNotFoundInLeaderboard,
-    #[error("Missing argument: {0}")]
-    MissingArgument(&'static str),
-}
 
 #[derive(Debug, Serialize, Clone, Copy, ToSchema)]
 pub enum VariableCategory {
@@ -249,45 +236,42 @@ impl Variable {
         steam_id: u32,
         region: LeaderboardRegion,
         extra_args: &HashMap<String, String>,
-    ) -> Result<String, VariableResolveError> {
+    ) -> Result<String, &'static str> {
         match self {
             Self::LeaderboardRankImg => {
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
                         .await?;
-                let badge_level = leaderboard_entry.badge_level.ok_or(
-                    VariableResolveError::FailedToFetchData("leaderboard badge level"),
-                )?;
+                let badge_level = leaderboard_entry
+                    .badge_level
+                    .ok_or("leaderboard badge level")?;
                 let ranks = state
                     .assets_client
                     .fetch_ranks()
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
+                    .map_err(|_| "ranks")?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
                 ranks
                     .iter()
                     .find(|r| r.tier == rank)
                     .and_then(|r| r.images.get(&format!("small_subrank{subrank}")))
                     .cloned()
-                    .ok_or(VariableResolveError::FailedToFetchData("rank"))
+                    .ok_or("rank")
             }
             Self::LeaderboardRank => {
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
                         .await?;
-                let badge_level = leaderboard_entry.badge_level.ok_or(
-                    VariableResolveError::FailedToFetchData("leaderboard badge level"),
-                )?;
+                let badge_level = leaderboard_entry
+                    .badge_level
+                    .ok_or("leaderboard badge level")?;
                 let ranks = state
                     .assets_client
                     .fetch_ranks()
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
+                    .map_err(|_| "ranks")?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
-                let rank = ranks
-                    .iter()
-                    .find(|r| r.tier == rank)
-                    .ok_or(VariableResolveError::FailedToFetchData("rank"))?;
+                let rank = ranks.iter().find(|r| r.tier == rank).ok_or("rank")?;
                 Ok(format!("{} {subrank}", rank.name))
             }
             Self::HeroesPlayedToday => {
@@ -302,7 +286,7 @@ impl Variable {
                     .assets_client
                     .fetch_heroes()
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("heroes"))?;
+                    .map_err(|_| "heroes")?;
                 let heroes = heroes
                     .into_iter()
                     .map(|h| (h.id, h.name))
@@ -317,15 +301,11 @@ impl Variable {
             Self::HeroLeaderboardPlace => {
                 let hero_id = state
                     .assets_client
-                    .fetch_hero_id_from_name(
-                        extra_args
-                            .get("hero_name")
-                            .ok_or(VariableResolveError::MissingArgument("hero name"))?,
-                    )
+                    .fetch_hero_id_from_name(extra_args.get("hero_name").ok_or("hero name")?)
                     .await
                     .ok()
                     .flatten()
-                    .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
+                    .ok_or("hero id")?;
                 let leaderboard_entry = Self::get_leaderboard_entry(
                     rate_limit_key,
                     state,
@@ -352,7 +332,7 @@ impl Variable {
                     .map(|m| m.player_deaths)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::FailedToFetchData("player deaths"))
+                    .ok_or("player deaths")
             }
             Self::HighestDenies => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -361,7 +341,7 @@ impl Variable {
                     .map(|m| m.denies)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::FailedToFetchData("player denies"))
+                    .ok_or("player denies")
             }
             Self::HighestKillCount => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -370,7 +350,7 @@ impl Variable {
                     .map(|m| m.player_kills)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::FailedToFetchData("player kills"))
+                    .ok_or("player kills")
             }
             Self::HighestLastHits => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -379,7 +359,7 @@ impl Variable {
                     .map(|m| m.last_hits)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::FailedToFetchData("player last hits"))
+                    .ok_or("player last hits")
             }
             Self::HighestNetWorth => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -388,7 +368,7 @@ impl Variable {
                     .map(|m| m.net_worth)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::FailedToFetchData("player net worth"))
+                    .ok_or("player net worth")
             }
             Self::HoursPlayed => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -460,14 +440,14 @@ impl Variable {
                     .into_iter()
                     .max_by_key(|(_, count)| *count)
                     .map(|(hero_id, _)| hero_id)
-                    .ok_or(VariableResolveError::FailedToFetchData("most played hero"))?;
+                    .ok_or("most played hero")?;
                 state
                     .assets_client
                     .fetch_hero_name_from_id(most_played_hero)
                     .await
                     .ok()
                     .flatten()
-                    .ok_or(VariableResolveError::FailedToFetchData("hero name"))
+                    .ok_or("hero name")
             }
             Self::MostPlayedHeroCount => {
                 let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
@@ -540,16 +520,16 @@ impl Variable {
             }
             Self::LatestPatchnotesTitle => fetch_patch_notes(&state.http_client)
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("patch notes"))?
+                .map_err(|_| "patch notes")?
                 .first()
                 .map(|patch_notes| patch_notes.title.clone())
-                .ok_or(VariableResolveError::FailedToFetchData("patch notes")),
+                .ok_or("patch notes"),
             Self::LatestPatchnotesLink => fetch_patch_notes(&state.http_client)
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("patch notes"))?
+                .map_err(|_| "patch notes")?
                 .first()
                 .map(|patch_notes| patch_notes.link.clone())
-                .ok_or(VariableResolveError::FailedToFetchData("patch notes")),
+                .ok_or("patch notes"),
             Self::HeroHoursPlayed => {
                 let hero_matches = Self::get_hero_matches(
                     &state.ch_client,
@@ -640,53 +620,51 @@ impl Variable {
                 Self::get_max_ability_stat(&state.ch_client, steam_id, 2521902222)
                     .await
                     .map(|b| b.to_string())
-                    .map_err(|_| VariableResolveError::FailedToFetchData("max bomb stacks"))
+                    .map_err(|_| "max bomb stacks")
             }
             Self::MaxSpiritSnareStacks => {
                 Self::get_max_ability_stat(&state.ch_client, steam_id, 512733154)
                     .await
                     .map(|b| b.to_string())
-                    .map_err(|_| VariableResolveError::FailedToFetchData("max spirit snare stacks"))
+                    .map_err(|_| "max spirit snare stacks")
             }
             Self::MaxBonusHealthPerKill => {
                 Self::get_max_ability_stat(&state.ch_client, steam_id, 1917840730)
                     .await
                     .map(|b| b.to_string())
-                    .map_err(|_| {
-                        VariableResolveError::FailedToFetchData("max bonus health per kill")
-                    })
+                    .map_err(|_| "max bonus health per kill")
             }
             Self::MaxGuidedOwlStacks => {
                 Self::get_max_ability_stat(&state.ch_client, steam_id, 3242902780)
                     .await
                     .map(|b| b.to_string())
-                    .map_err(|_| VariableResolveError::FailedToFetchData("max guided owl"))
+                    .map_err(|_| "max guided owl")
             }
             Self::MMRHistoryRank => {
                 let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("mmr history"))?;
+                    .map_err(|_| "mmr history")?;
                 let ranks = state
                     .assets_client
                     .fetch_ranks()
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
+                    .map_err(|_| "ranks")?;
                 let rank_name = ranks
                     .iter()
                     .find(|r| r.tier == mmr_history.division)
                     .map(|r| r.name.clone())
-                    .ok_or(VariableResolveError::FailedToFetchData("rank"))?;
+                    .ok_or("rank")?;
                 Ok(format!("{rank_name} {}", mmr_history.division_tier))
             }
             Self::MMRHistoryRankImg => {
                 let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("mmr history"))?;
+                    .map_err(|_| "mmr history")?;
                 let ranks = state
                     .assets_client
                     .fetch_ranks()
                     .await
-                    .map_err(|_| VariableResolveError::FailedToFetchData("ranks"))?;
+                    .map_err(|_| "ranks")?;
                 ranks
                     .iter()
                     .find(|r| r.tier == mmr_history.division)
@@ -695,7 +673,7 @@ impl Variable {
                             .get(&format!("small_subrank{}", mmr_history.division_tier))
                     })
                     .cloned()
-                    .ok_or(VariableResolveError::FailedToFetchData("rank"))
+                    .ok_or("rank")
             }
         }
     }
@@ -725,10 +703,10 @@ impl Variable {
     async fn get_all_matches(
         ch_client: &clickhouse::Client,
         steam_id: u32,
-    ) -> Result<PlayerMatchHistory, VariableResolveError> {
+    ) -> Result<PlayerMatchHistory, &'static str> {
         let ch_match_history = fetch_match_history_from_clickhouse(ch_client, steam_id)
             .await
-            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?;
+            .map_err(|_| "matches")?;
 
         Ok(ch_match_history
             .into_iter()
@@ -747,10 +725,8 @@ impl Variable {
         assets_client: &AssetsClient,
         steam_id: u32,
         extra_args: &HashMap<String, String>,
-    ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let hero_name = extra_args
-            .get("hero_name")
-            .ok_or(VariableResolveError::MissingArgument("hero name"))?;
+    ) -> Result<PlayerMatchHistory, &'static str> {
+        let hero_name = extra_args.get("hero_name").ok_or("hero name")?;
 
         // Create a temporary AssetsClient
         let hero_id = assets_client
@@ -758,18 +734,18 @@ impl Variable {
             .await
             .ok()
             .flatten()
-            .ok_or(VariableResolveError::FailedToFetchData("hero id"))?;
+            .ok_or("hero id")?;
         Self::get_all_matches(ch_client, steam_id)
             .await
             .map(|m| m.into_iter().filter(|m| m.hero_id == hero_id).collect())
-            .map_err(|_| VariableResolveError::FailedToFetchData("matches"))
+            .map_err(|_| "matches")
     }
 
     async fn get_todays_matches(
         ch_client: &clickhouse::Client,
         steam_client: &SteamClient,
         account_id: u32,
-    ) -> Result<PlayerMatchHistory, VariableResolveError> {
+    ) -> Result<PlayerMatchHistory, &'static str> {
         let last_match_newer_than_30min = ch_client
             .query(
                 r#"
@@ -786,16 +762,14 @@ impl Variable {
         let matches = if last_match_newer_than_30min {
             fetch_match_history_from_clickhouse(ch_client, account_id)
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?
+                .map_err(|_| "matches")?
         } else {
             fetch_steam_match_history(steam_client, account_id, false)
                 .await
-                .map_err(|_| VariableResolveError::FailedToFetchData("matches"))?
+                .map_err(|_| "matches")?
         };
 
-        let first_match = matches
-            .first()
-            .ok_or(VariableResolveError::FailedToFetchData("matches"))?;
+        let first_match = matches.first().ok_or("matches")?;
 
         // If the first match is older than 8 hours ago, we can assume that the player has no matches today
         if first_match.start_time < (chrono::Utc::now() - Duration::hours(8)).timestamp() as u32 {
@@ -820,7 +794,7 @@ impl Variable {
         steam_id: u32,
         region: LeaderboardRegion,
         hero_id: Option<u32>,
-    ) -> Result<LeaderboardEntry, VariableResolveError> {
+    ) -> Result<LeaderboardEntry, &'static str> {
         let (leaderboard, steam_name) = join(
             async {
                 let raw_leaderboard =
@@ -833,8 +807,7 @@ impl Variable {
             get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id),
         )
         .await;
-        let leaderboard =
-            leaderboard.map_err(|_| VariableResolveError::FailedToFetchData("leaderboard"))?;
+        let leaderboard = leaderboard.map_err(|_| "leaderboard")?;
         let steam_name = steam_name?;
         leaderboard
             .entries
@@ -845,7 +818,7 @@ impl Variable {
                     .as_ref()
                     .is_some_and(|n| n == &steam_name)
             })
-            .ok_or(VariableResolveError::PlayerNotFoundInLeaderboard)
+            .ok_or("leaderboard entry")
     }
 }
 
@@ -881,7 +854,7 @@ async fn get_steam_account_name(
     state: &AppState,
     pg_client: &Pool<Postgres>,
     steam_id: u32,
-) -> Result<String, VariableResolveError> {
+) -> Result<String, &'static str> {
     match state
         .steam_client
         .fetch_steam_account_name(rate_limit_key, state, steam_id)
@@ -900,9 +873,7 @@ async fn get_steam_account_name(
             .await
             .ok()
             .and_then(|row| row.personaname)
-            .ok_or(VariableResolveError::FailedToFetchSteamName(
-                "Failed to fetch steam name from database".to_string(),
-            ))
+            .ok_or("Failed to fetch steam name from database")
         }
     }
 }
