@@ -93,12 +93,11 @@ pub async fn fetch_match_salts(
         .bind(match_id)
         .fetch_one::<ClickhouseSalts>()
         .await;
-    if let Ok(salts) = salts
-        && salts.has_metadata_salt()
-        && (!needs_demo || salts.has_replay_salt())
-    {
-        debug!("Match salts found in Clickhouse");
-        return Ok(salts.into());
+    if let Ok(salts) = salts {
+        if salts.has_metadata_salt() && (!needs_demo || salts.has_replay_salt()) {
+            debug!("Match salts found in Clickhouse");
+            return Ok(salts.into());
+        }
     }
 
     let has_metadata = ch_client

@@ -246,13 +246,13 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if let Some(max_match_id) = query.max_match_id {
         info_filters.push(format!("match_id <= {max_match_id}"));
     }
-    if let Some(match_ids) = query.match_ids
-        && !match_ids.is_empty()
-    {
-        info_filters.push(format!(
-            "match_id IN ({})",
-            match_ids.iter().map(|m| m.to_string()).join(",")
-        ));
+    if let Some(match_ids) = query.match_ids {
+        if !match_ids.is_empty() {
+            info_filters.push(format!(
+                "match_id IN ({})",
+                match_ids.iter().map(|m| m.to_string()).join(",")
+            ));
+        }
     }
     if let Some(min_duration_s) = query.min_duration_s {
         info_filters.push(format!("duration_s >= {min_duration_s}"));

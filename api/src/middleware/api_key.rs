@@ -9,10 +9,10 @@ pub async fn write_api_key_to_header(mut request: Request, next: Next) -> Respon
             .find(|(key, _)| *key == "api_key")
             .map(|(_, value)| value.to_string())
     });
-    if let Some(api_key) = query_api_key
-        && let Ok(api_key) = api_key.parse::<HeaderValue>()
-    {
-        request.headers_mut().insert("x-api-key", api_key);
+    if let Some(api_key) = query_api_key {
+        if let Ok(api_key) = api_key.parse::<HeaderValue>() {
+            request.headers_mut().insert("x-api-key", api_key);
+        }
     }
 
     next.run(request).await
