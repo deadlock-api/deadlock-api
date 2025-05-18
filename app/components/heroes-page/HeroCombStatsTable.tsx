@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import { Slider } from "~/components/ui/slider";
 import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
 
 export default function HeroCombStatsTable({
@@ -26,8 +27,11 @@ export default function HeroCombStatsTable({
   maxDate?: Dayjs | null;
 }) {
   const [minMatchesFilter, setMinMatchesFilter] = useState<number>(100);
+  const [minMatchesFilterT, setMinMatchesFilterT] = useState<number>(100);
   const [combSizeFilter, setCombSizeFilter] = useState<number>(2);
+  const [combSizeFilterT, setCombSizeFilterT] = useState<number>(2);
   const [combsToShow, setCombsToShow] = useState<number>(limit ?? 50);
+  const [combsToShowT, setCombsToShowT] = useState<number>(limit ?? 50);
 
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -73,53 +77,61 @@ export default function HeroCombStatsTable({
 
   return (
     <>
-      <div className="flex justify-start items-center gap-4 mb-2 bg-gray-800 rounded-lg p-4 text-center w-fit">
-        <div className="flex flex-col items-center gap-2 min-w-36">
-          <label htmlFor="comb-size" className="text-nowrap">
+      <div className="grid grid-cols-1 md:grid-cols-3 mx-auto gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="comb-size" className="text-nowrap text-sm text-muted-foreground">
             Combination Size
           </label>
           <div className="flex items-center gap-2">
-            <input
-              type="range"
+            <Slider
               id="comb-size"
               min={2}
               max={6}
-              value={combSizeFilter}
-              onChange={(e) => setCombSizeFilter(Number(e.target.value))}
-              className="w-full h-2 bg-gray-900 rounded-lg appearance-none"
+              value={[combSizeFilterT]}
+              defaultValue={[combSizeFilter]}
+              onValueCommit={([val]) => setCombSizeFilter(val)}
+              onValueChange={([val]) => setCombSizeFilterT(val)}
+              className="w-full"
             />
-            <span>{combSizeFilter}</span>
+            <span className="ml-2 ">{combSizeFilterT}</span>
           </div>
         </div>
-        <div className="flex flex-col items-center gap-2 min-w-36">
-          <label htmlFor="min-matches" className="text-nowrap">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="min-matches" className="text-nowrap text-sm text-muted-foreground">
             Min Matches
           </label>
-          <input
-            type="number"
-            id="min-matches"
-            min={1}
-            step={50}
-            value={minMatchesFilter}
-            onChange={(e) => setMinMatchesFilter(Number(e.target.value))}
-            className="min-w-24 text-center h-8 bg-gray-900 rounded-lg appearance-none"
-          />
+          <div className="flex items-center gap-2">
+            <Slider
+              id="min-matches"
+              min={1}
+              step={10}
+              max={1000}
+              value={[minMatchesFilterT]}
+              defaultValue={[minMatchesFilter]}
+              onValueCommit={([val]) => setMinMatchesFilter(val)}
+              onValueChange={([val]) => setMinMatchesFilterT(val)}
+              className="w-full"
+            />
+            <span className="ml-2">{minMatchesFilterT}</span>
+          </div>
         </div>
-        <div className="flex flex-col items-center gap-2 min-w-36">
-          <label htmlFor="combs-to-show" className="text-nowrap">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="combs-to-show" className="text-nowrap text-sm text-muted-foreground">
             Combinations to Show
           </label>
           <div className="flex items-center gap-2">
-            <input
-              type="range"
+            <Slider
               id="combs-to-show"
-              min={100}
-              max={numCombs}
-              value={combsToShow}
-              onChange={(e) => setCombsToShow(Number(e.target.value))}
-              className="w-full h-2 bg-gray-900 rounded-lg appearance-none"
+              min={0}
+              step={100}
+              max={Math.min(500, numCombs)}
+              value={[combsToShowT]}
+              defaultValue={[combsToShow]}
+              onValueCommit={([val]) => setCombsToShow(val)}
+              onValueChange={([val]) => setCombsToShowT(val)}
+              className="w-full"
             />
-            <span>{combsToShow}</span>
+            <span className="ml-2">{combsToShowT}</span>
           </div>
         </div>
       </div>
