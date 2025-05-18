@@ -72,6 +72,7 @@ async fn fetch_match_metadata_raw(
             "match_metadata_s3",
             &[
                 RateLimitQuota::ip_limit(1000, Duration::from_secs(10)),
+                RateLimitQuota::key_limit(5000, Duration::from_secs(10)),
                 RateLimitQuota::global_limit(700, Duration::from_secs(1)),
             ],
         )
