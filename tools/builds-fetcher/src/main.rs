@@ -1,4 +1,3 @@
-use arl::RateLimiter;
 use itertools::Itertools;
 use metrics::counter;
 use once_cell::sync::Lazy;
@@ -60,17 +59,17 @@ async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgre
     };
     heroes.shuffle(&mut rng());
 
-    let limiter = RateLimiter::new(10, Duration::from_secs(10 * *UPDATE_INTERVAL));
+    let mut interval = tokio::time::interval(Duration::from_secs(*UPDATE_INTERVAL));
     for hero_id in heroes {
         for langs in ALL_LANGS.chunks(2) {
             if langs.contains(&0) {
                 for search in ASCII_LOWER.iter().cartesian_product(ASCII_LOWER.iter()) {
-                    limiter.wait().await;
+                    interval.tick().await;
                     let search = format!("{}{}", search.0, search.1);
                     update_builds(http_client, pg_client, hero_id, langs, Some(search)).await;
                 }
             } else {
-                limiter.wait().await;
+                interval.tick().await;
                 update_builds(http_client, pg_client, hero_id, langs, None).await;
             }
         }

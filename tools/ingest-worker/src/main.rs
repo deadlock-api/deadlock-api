@@ -10,7 +10,7 @@ use object_store::path::Path;
 use object_store::{GetResult, ObjectStore};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
-use tokio::time::{sleep, timeout};
+use tokio::time::timeout;
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
@@ -25,8 +25,10 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
     let store = common::get_store()?;
+    let mut interval = tokio::time::interval(Duration::from_secs(10));
 
     loop {
+        interval.tick().await;
         let objs_to_ingest = match list_ingest_objects(&store).await {
             Ok(value) => {
                 counter!("ingest_worker.list_ingest_objects.success").increment(1);
@@ -35,8 +37,7 @@ async fn main() -> anyhow::Result<()> {
             }
             Err(e) => {
                 counter!("ingest_worker.list_ingest_objects.failure").increment(1);
-                error!("Error listing objects: {:?}, sleeping for 10s", e);
-                sleep(Duration::from_secs(10)).await;
+                error!("Error listing objects: {:?}", e);
                 continue;
             }
         };
@@ -44,8 +45,7 @@ async fn main() -> anyhow::Result<()> {
         gauge!("ingest_worker.objs_to_ingest").set(objs_to_ingest.len() as f64);
 
         if objs_to_ingest.is_empty() {
-            info!("No files to fetch, waiting 60s ...");
-            sleep(Duration::from_secs(60)).await;
+            info!("No files to fetch");
             continue;
         }
 
@@ -75,9 +75,7 @@ async fn main() -> anyhow::Result<()> {
             .buffer_unordered(10)
             .collect::<Vec<_>>()
             .await;
-
-        info!("Ingested all objects, waiting 10s ...");
-        sleep(Duration::from_secs(10)).await;
+        info!("Ingested all objects");
     }
 }
 

@@ -5,7 +5,6 @@ use delay_map::HashSetDelay;
 use metrics::{counter, gauge};
 use std::sync::LazyLock;
 use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{debug, error, info, instrument};
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
@@ -21,10 +20,11 @@ async fn main() -> anyhow::Result<()> {
     let ch_client = common::get_ch_client()?;
 
     let mut delay_set = HashSetDelay::new(Duration::from_secs(2 * 60));
+    let mut interval = tokio::time::interval(Duration::from_secs(61));
 
     loop {
+        interval.tick().await;
         fetch_insert_active_matches(&http_client, &ch_client, &mut delay_set).await;
-        sleep(Duration::from_secs(61)).await;
     }
 }
 

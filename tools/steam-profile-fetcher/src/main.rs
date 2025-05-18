@@ -10,7 +10,7 @@ use sqlx::{Error, PgPool};
 use std::env;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{debug, error, info, instrument};
+use tracing::{error, info, instrument};
 mod models;
 mod steam_api;
 
@@ -52,8 +52,9 @@ async fn main() -> Result<()> {
     let pg_client = common::get_pg_client().await?;
 
     let limiter = RateLimiter::new(*REQUESTS_PER_10_MINUTES, Duration::from_secs(10 * 60));
-
+    let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     loop {
+        interval.tick().await;
         match fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &limiter).await {
             Ok(_) => info!("Updated Steam profiles"),
             Err(e) => {
@@ -61,9 +62,6 @@ async fn main() -> Result<()> {
                 continue;
             }
         }
-
-        debug!("Sleeping for {:?} before next update", *FETCH_INTERVAL);
-        sleep(*FETCH_INTERVAL).await;
     }
 }
 
