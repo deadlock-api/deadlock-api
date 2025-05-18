@@ -163,12 +163,11 @@ pub async fn fetch_steam_match_history(
         }
 
         // Check if the new continue cursor is bigger than the previous one, in which case we stop fetching more matches
-        if let Some(prev_cursor) = continue_cursor {
-            if let Some(new_cursor) = result.1 {
-                if new_cursor >= prev_cursor {
-                    break;
-                }
-            }
+        if let Some(prev_cursor) = continue_cursor
+            && let Some(new_cursor) = result.1
+            && new_cursor >= prev_cursor
+        {
+            break;
         }
 
         // Check if we have reached the maximum number of iterations, in which case we stop fetching more matches
