@@ -206,7 +206,11 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
                   Same Lane Filter
                 </label>
-                <Checkbox id="same-lane-filter" checked={sameLaneFilter} onCheckedChange={setSameLaneFilter} />
+                <Checkbox
+                  id="same-lane-filter"
+                  checked={sameLaneFilter}
+                  onCheckedChange={(i) => setSameLaneFilter(i === true)}
+                />
               </div>
             </div>
             <div className="flex flex-col gap-4">
@@ -255,7 +259,11 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
                   Same Lane Filter
                 </label>
-                <Checkbox id="same-lane-filter" checked={sameLaneFilter} onCheckedChange={setSameLaneFilter} />
+                <Checkbox
+                  id="same-lane-filter"
+                  checked={sameLaneFilter}
+                  onCheckedChange={(i) => setSameLaneFilter(i === true)}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
