@@ -13,12 +13,16 @@ export default function HeroImage({ heroId, className }: { heroId: number; class
   const hero = useMemo(() => data?.find((hero) => hero.id === heroId), [data, heroId]);
 
   return (
-    <img
-      loading="lazy"
-      src={hero?.images?.minimap_image_webp}
-      alt={hero?.name}
-      title={hero?.name}
-      className={cn("size-8", className)}
-    />
+    <picture>
+      <source srcSet={hero?.images?.minimap_image_webp} type="image/webp" />
+      <source srcSet={hero?.images?.minimap_image} type="image/png" />
+      <img
+        loading="lazy"
+        src={hero?.images?.minimap_image_webp}
+        alt={hero?.name}
+        title={hero?.name}
+        className={cn("size-8", className)}
+      />
+    </picture>
   );
 }
