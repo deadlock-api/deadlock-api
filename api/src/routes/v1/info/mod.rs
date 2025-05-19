@@ -1,5 +1,5 @@
-pub mod api_info;
 pub mod health;
+pub mod route;
 
 use crate::state::AppState;
 use utoipa::OpenApi;
@@ -13,5 +13,5 @@ pub struct ApiDoc;
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::health_check))
-        .routes(routes!(api_info::info))
+        .routes(routes!(route::info))
 }

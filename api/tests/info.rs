@@ -1,7 +1,7 @@
 mod utils;
 
-use deadlock_api_rust::routes::v1::info::api_info::APIInfo;
 use deadlock_api_rust::routes::v1::info::health::Status;
+use deadlock_api_rust::routes::v1::info::route::APIInfo;
 
 #[tokio::test]
 async fn test_info() {
