@@ -3,6 +3,12 @@ services:
     image: ${IMAGE:-deadlock-api-rust:latest}
     build: .
     env_file: .env.testing
+    environment:
+      REDIS_URL: redis://default:sdfdsmplvmdfs@redis:6379/0
+      CLICKHOUSE_HOST: clickhouse
+      POSTGRES_HOST: postgres
+      S3_ENDPOINT: http://minio:9000
+      S3_CACHE_ENDPOINT: http://minio:9000
     ports:
       - "3000:3000"
     healthcheck:

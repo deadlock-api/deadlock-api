@@ -82,5 +82,5 @@ tasks:
     deps:
       - task: setup-test-env
     cmds:
-      - cargo test --all-features
+      - cargo test
       - task: teardown-test-env

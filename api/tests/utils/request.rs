@@ -6,7 +6,7 @@ pub async fn request_endpoint(
     endpoint: &str,
     query_args: impl IntoIterator<Item = (&str, &str)>,
 ) -> Response {
-    let mut url = format!("http://api:3000{endpoint}");
+    let mut url = format!("http://localhost:3000{endpoint}");
     let query = parse::stringify(query_args.into_iter().collect());
     if !query.is_empty() {
         url = format!("{url}?{query}");
