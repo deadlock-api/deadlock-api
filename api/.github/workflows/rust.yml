@@ -56,6 +56,12 @@ jobs:
       - name: Setup go-task
         run: curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin
 
+      - name: Install Protocol Buffers compiler
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler libprotobuf-dev
+          version: 1.0
+
       - name: Setup Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
