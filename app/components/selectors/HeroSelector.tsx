@@ -59,7 +59,7 @@ export default function HeroSelector({
             <SelectValue placeholder={"Select Hero..."}>
               {currentHero ? (
                 <div className="flex items-center gap-2">
-                  <HeroImage heroId={currentHero.id} className="object-contain flex-shrink-0" />
+                  <HeroImage heroId={currentHero.id} className="size-4 object-contain flex-shrink-0" />
                   <HeroName heroId={currentHero.id} />
                 </div>
               ) : null}
@@ -73,7 +73,7 @@ export default function HeroSelector({
             )}
             {sortedHeroes.map((hero: AssetsHero) => (
               <SelectItem key={hero.id} value={String(hero.id)}>
-                <HeroImage heroId={hero.id} className="object-contain flex-shrink-0 mr-2" />
+                <HeroImage heroId={hero.id} className="size-5 object-contain flex-shrink-0" />
                 <HeroName heroId={hero.id} />
               </SelectItem>
             ))}
