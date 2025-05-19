@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
 use crate::utils::parse::{
-    comma_separated_num_deserialize, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 use axum::Json;
 use axum::extract::{Query, State};
@@ -15,11 +15,18 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+fn default_comb_size() -> Option<u8> {
+    2.into()
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub struct ItemPermutationStatsQuery {
     /// Comma separated list of item ids
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
-    pub item_ids: Vec<u32>,
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    pub item_ids: Option<Vec<u32>>,
+    /// The combination size to return.
+    #[param(minimum = 2, maximum = 12, default = 2)]
+    pub comb_size: Option<u8>,
     /// Filter matches based on the hero ID.
     pub hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -105,29 +112,59 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let items_list = format!(
-        "[{}]",
-        query.item_ids.iter().map(|i| i.to_string()).join(", ")
-    );
-    format!(
-        r#"
-    WITH t_matches AS (SELECT match_id
-            FROM match_info
-            WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
-    SELECT
-        arrayIntersect(items.item_id, {items_list}) AS item_ids,
-        sum(won)      AS wins,
-        sum(not won)  AS losses,
-        wins + losses AS matches,
-        COUNT(DISTINCT account_id) AS players
-    FROM match_player FINAL
-    WHERE hasAll(items.item_id, {items_list})
-        AND match_id IN t_matches
-        {player_filters}
-    GROUP BY item_ids
-    ORDER BY matches DESC
-    "#
-    )
+    if let Some(item_ids) = &query.item_ids {
+        if item_ids.len() < 2 {
+            return "".to_string();
+        }
+        let items_list = format!("[{}]", item_ids.iter().map(|i| i.to_string()).join(", "));
+        format!(
+            r#"
+        WITH t_matches AS (SELECT match_id
+                FROM match_info
+                WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
+        SELECT
+            arrayIntersect(items.item_id, {items_list}) AS item_ids,
+            sum(won)      AS wins,
+            sum(not won)  AS losses,
+            wins + losses AS matches,
+            COUNT(DISTINCT account_id) AS players
+        FROM match_player FINAL
+        WHERE hasAll(items.item_id, {items_list})
+            AND match_id IN t_matches
+            {player_filters}
+        GROUP BY item_ids
+        ORDER BY matches DESC
+        "#
+        )
+    } else {
+        let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
+        let joins = (0..comb_size)
+            .map(|i| format!(" ARRAY JOIN items.item_id AS i{i} "))
+            .join("\n");
+        let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
+        let filters = (0..comb_size)
+            .tuple_windows()
+            .map(|(i, j)| format!("i{i} != i{j}"))
+            .join(" AND ");
+        format!(
+            r#"
+        WITH t_matches AS (SELECT match_id
+                FROM match_info
+                WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
+        SELECT arrayIntersect(match_player.items.item_id, [{intersect_array}]) AS item_ids,
+               sum(won)      AS wins,
+               sum(not won)  AS losses,
+               wins + losses AS matches,
+               COUNT(DISTINCT account_id) AS players
+        FROM match_player
+            {joins}
+        WHERE match_id IN t_matches AND {filters}
+            {player_filters}
+        GROUP BY item_ids
+        ORDER BY matches DESC
+        "#
+        )
+    }
 }
 
 #[cached(
@@ -168,7 +205,13 @@ pub async fn item_permutation_stats(
     Query(query): Query<ItemPermutationStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if query.item_ids.is_empty() {
+    if query.comb_size.is_some() && query.item_ids.is_some() {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot specify both comb_size and item_ids".to_string(),
+        });
+    }
+    if query.item_ids.as_ref().is_some_and(|i| i.is_empty()) {
         return Err(APIError::StatusMsg {
             status: StatusCode::BAD_REQUEST,
             message: "No item ids provided".to_string(),
