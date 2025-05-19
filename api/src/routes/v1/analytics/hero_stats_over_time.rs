@@ -162,14 +162,14 @@ fn build_hero_stats_over_time_query(query: &HeroStatsOverTimeQuery) -> String {
         ),
         {}
         matches_per_dt AS (
-            SELECT toUnixTimestamp(toStartOfInterval(start_time, INTERVAL 1 {time_interval})) AS date_time, count() AS matches
+            SELECT toStartOfInterval(start_time, INTERVAL 1 {time_interval}) AS date_time, count() AS matches
             FROM t_matches
             GROUP BY date_time
         ),
         hero_stats_per_dt AS (
             SELECT
                 hero_id,
-                toUnixTimestamp(toStartOfInterval(start_time, INTERVAL 1 {time_interval})) AS date_time,
+                toStartOfInterval(start_time, INTERVAL 1 {time_interval}) AS date_time,
                 sum(won) AS wins,
                 sum(not won) AS losses,
                 wins + losses AS matches,
