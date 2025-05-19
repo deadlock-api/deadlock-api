@@ -3,6 +3,8 @@ services:
     image: ${IMAGE:-deadlock-api-rust:latest}
     build: .
     env_file: .env.testing
+    ports:
+      - "3000:3000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/v1/info/health" ]
       interval: 10s
@@ -17,19 +19,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-  tests:
-    image: ${TESTING_IMAGE:-deadlock-api-rust:testing}
-    build:
-      context: .
-      target: tester
-    env_file: .env.testing
-    profiles:
-      - test
-    depends_on:
-      api:
-        condition: service_healthy
   postgres:
     image: postgres:17
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: postgres
@@ -41,6 +34,8 @@ services:
       retries: 5
   redis:
     image: redis:alpine
+    ports:
+      - "6379:6379"
     command: redis-server --requirepass sdfdsmplvmdfs
     healthcheck:
       test: [ "CMD", "redis-cli", "-a", "sdfdsmplvmdfs", "ping" ]
@@ -49,6 +44,9 @@ services:
       retries: 5
   clickhouse:
     image: clickhouse/clickhouse-server:25.3
+    ports:
+      - "8123:8123"
+      - "9000:9000"
     env_file: .env.testing
     environment:
       CLICKHOUSE_USER: default
@@ -61,6 +59,8 @@ services:
       retries: 5
   minio:
     image: minio/minio
+    ports:
+      - "9001:9000"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin

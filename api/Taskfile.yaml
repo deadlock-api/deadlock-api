@@ -32,7 +32,6 @@ tasks:
     env:
       NO_BUILD: 0
       IMAGE: deadlock-api-rust:latest
-      TESTING_IMAGE: deadlock-api-rust:testing
     cmds:
       - "if [[ $NO_BUILD = 1 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans; fi"
       - "if [[ $NO_BUILD = 0 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans --build; fi"
@@ -83,5 +82,5 @@ tasks:
     deps:
       - task: setup-test-env
     cmds:
-      - docker compose -f docker-compose.testing.yaml run --rm tests
+      - cargo test --all-features
       - task: teardown-test-env

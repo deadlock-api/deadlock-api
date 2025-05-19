@@ -15,7 +15,6 @@ on:
 env:
   RUST_TOOLCHAIN: stable
   CARGO_TERM_COLOR: always
-  DEPOT_PROJECT_ID: k7kl7zsmcs
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   CARGO_INCREMENTAL: 0
 
@@ -57,38 +56,45 @@ jobs:
       - name: Setup go-task
         run: curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin
 
-      - name: Setup Depot
-        uses: depot/setup-action@v1
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          override: true
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-cache"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       ###############################
       ##           Build           ##
       ###############################
-      - name: Build and Load Docker image
-        uses: depot/build-push-action@v1
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
         with:
-          project: ${{ env.DEPOT_PROJECT_ID }}
-          platforms: linux/arm64
           context: .
+          platforms: linux/arm64
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
           load: true
-          push: false
-
-      - name: Build and Load Docker Testing image
-        uses: depot/build-push-action@v1
-        with:
-          project: ${{ env.DEPOT_PROJECT_ID }}
-          platforms: linux/arm64
-          context: .
-          tags: ${{ env.IMAGE_NAME }}:testing
-          load: true
-          target: tester
           push: false
 
       ###############################
       ##         Test Code         ##
       ###############################
       - name: Test Docker image
-        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} TESTING_IMAGE=${{ env.IMAGE_NAME }}:testing task test
+        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
 
       ###############################
       ##        Deploy Code        ##

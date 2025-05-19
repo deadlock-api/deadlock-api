@@ -26,21 +26,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
     cargo build --release --bin ${EXE_NAME}
 
-FROM chef AS tester
-ARG EXE_NAME
-WORKDIR /app
-COPY --from=planner /app/recipe.json recipe.json
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo chef cook --tests --recipe-path recipe.json
-COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo build --tests --bin ${EXE_NAME}
-ENTRYPOINT ["cargo", "test"]
-
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
 ARG EXE_NAME
