@@ -46,48 +46,48 @@ pub struct EnemyStats {
 }
 
 fn build_enemy_stats_query(account_id: u32, query: &EnemyStatsQuery) -> String {
-    let mut filters = vec![];
+    let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
+        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
+        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
+        info_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
+        info_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_badge_level) = query.min_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
         ));
     }
     if let Some(max_badge_level) = query.max_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
         ));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        filters.push(format!("duration_s >= {min_duration_s}"));
+        info_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("duration_s <= {max_duration_s}"));
+        info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
-    let filters = if filters.is_empty() {
+    let info_filters = if info_filters.is_empty() {
         "".to_string()
     } else {
-        format!(" AND {}", filters.join(" AND "))
+        format!(" AND {}", info_filters.join(" AND "))
     };
     format!(
         r#"
-    WITH matches AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
+    WITH players AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
                      FROM match_player
-                     WHERE team IN ('Team0', 'Team1') AND account_id = {account_id} {filters}),
+                     WHERE team IN ('Team0', 'Team1') AND account_id = {account_id}  AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
          enemies AS (SELECT DISTINCT match_id, won, account_id
                    FROM match_player
-                   WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM matches))
+                   WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM players))
     SELECT account_id as enemy_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
     FROM enemies
     GROUP BY enemy_id
