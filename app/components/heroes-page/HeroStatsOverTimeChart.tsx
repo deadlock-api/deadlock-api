@@ -167,7 +167,7 @@ export default function HeroStatsOverTimeChart({
         date: dateObj.toDate(),
       };
       for (const [heroId, stat] of stats) {
-        Object.assign(obj, { [heroId]: stat });
+        Object.assign(obj, { [heroId]: stat > 100 ? Math.round(stat) : (Math.round(stat * 100) / 100).toFixed(2) });
       }
       data.push(obj);
     }
