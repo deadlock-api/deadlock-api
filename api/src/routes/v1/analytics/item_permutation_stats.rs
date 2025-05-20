@@ -62,7 +62,6 @@ pub struct ItemPermutationStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
-    pub players: u64,
 }
 
 fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> String {
@@ -126,8 +125,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
             arrayIntersect(items.item_id, {items_list}) AS item_ids,
             sum(won)      AS wins,
             sum(not won)  AS losses,
-            wins + losses AS matches,
-            COUNT(DISTINCT account_id) AS players
+            wins + losses AS matches
         FROM match_player FINAL
         WHERE hasAll(items.item_id, {items_list})
             AND match_id IN t_matches
@@ -139,7 +137,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
     } else {
         let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
         let joins = (0..comb_size)
-            .map(|i| format!(" ARRAY JOIN arrayDistinct(items.item_id) AS i{i} "))
+            .map(|i| format!(" ARRAY JOIN p_items AS i{i} "))
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
         let filters_distinct = (0..comb_size)
@@ -154,16 +152,16 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
         WITH t_matches AS (SELECT match_id
                 FROM match_info
                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
-            t_items AS (SELECT id from items)
-        SELECT arrayIntersect(match_player.items.item_id, [{intersect_array}]) AS item_ids,
+            t_items AS (SELECT id from items),
+            t_players AS (SELECT arrayDistinct(items.item_id) as p_items, won
+                FROM match_player
+                WHERE match_id IN t_matches {player_filters})
+        SELECT arrayIntersect(p_items, [{intersect_array}]) AS item_ids,
                sum(won)      AS wins,
                sum(not won)  AS losses,
-               wins + losses AS matches,
-               COUNT(DISTINCT account_id) AS players
-        FROM match_player
-            {joins}
-        WHERE match_id IN t_matches AND {filters_distinct} AND {filters_upgrade}
-            {player_filters}
+               wins + losses AS matches
+        FROM t_players {joins}
+        WHERE {filters_distinct} AND {filters_upgrade}
         GROUP BY item_ids
         ORDER BY matches DESC
         "#
