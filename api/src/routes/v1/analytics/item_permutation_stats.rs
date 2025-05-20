@@ -144,16 +144,13 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
             .tuple_windows()
             .map(|(i, j)| format!("i{i} != i{j}"))
             .join(" AND ");
-        let filters_upgrade = (0..comb_size)
-            .map(|i| format!("i{i} IN t_items"))
-            .join(" AND ");
         format!(
             r#"
         WITH t_matches AS (SELECT match_id
                 FROM match_info
                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
             t_items AS (SELECT id from items),
-            t_players AS (SELECT arrayDistinct(items.item_id) as p_items, won
+            t_players AS (SELECT arrayFilter(x -> x IN t_items, arrayDistinct(items.item_id)) as p_items, won
                 FROM match_player
                 WHERE match_id IN t_matches {player_filters})
         SELECT arrayIntersect(p_items, [{intersect_array}]) AS item_ids,
@@ -161,7 +158,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
                sum(not won)  AS losses,
                wins + losses AS matches
         FROM t_players {joins}
-        WHERE {filters_distinct} AND {filters_upgrade}
+        WHERE {filters_distinct}
         GROUP BY item_ids
         ORDER BY matches DESC
         "#
