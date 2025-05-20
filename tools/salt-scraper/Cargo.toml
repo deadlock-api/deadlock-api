@@ -13,5 +13,5 @@ tracing = "0.1.41"
 clickhouse = "0.13.2"
 tryhard = "0.5.1"
 anyhow = "1.0.98"
-common = { version = "0.1.0", path = "../common", features = ["steam-proxy", "clickhouse"] }
+common = { version = "0.1.0", path = "../common" }
 futures = "0.3.31"

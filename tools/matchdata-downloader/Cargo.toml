@@ -16,4 +16,4 @@ tracing = "0.1.41"
 anyhow = "1.0.98"
 itertools = "0.14.0"
 object_store = { version = "0.12.1", features = ["aws"] }
-common = { version = "0.1.0", path = "../common", features = ["object-store", "clickhouse"] }
+common = { version = "0.1.0", path = "../common" }

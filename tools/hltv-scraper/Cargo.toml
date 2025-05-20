@@ -26,4 +26,4 @@ tracing = "0.1.41"
 valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
 thiserror = "2.0.12"
 async-compression = { version = "0.4.23", features = ["tokio", "bzip2", "zstd"] }
-common = { version = "0.1.0", path = "../common", features = ["object-store", "redis"] }
+common = { version = "0.1.0", path = "../common" }

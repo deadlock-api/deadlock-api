@@ -17,5 +17,5 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 metrics = "0.24"
 tracing = "0.1.41"
 tryhard = "0.5.1"
-common = { version = "0.1.0", path = "../common", features = ["steam-proxy", "object-store", "clickhouse"] }
+common = { version = "0.1.0", path = "../common" }
 anyhow = "1.0.98"
