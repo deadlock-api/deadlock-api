@@ -10,5 +10,8 @@ use utoipa_axum::routes;
 pub struct ApiDoc;
 
 pub fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(route::sql))
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(route::sql))
+        .routes(routes!(route::list_tables))
+        .routes(routes!(route::table_schema))
 }
