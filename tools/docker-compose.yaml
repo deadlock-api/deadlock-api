@@ -68,6 +68,15 @@ services:
     environment:
       RUST_LOG: info
 
+  update-assets-tables:
+    build:
+      args:
+        EXE_NAME: update-assets-tables
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
   hltv-spectator:
     build:
       args:
