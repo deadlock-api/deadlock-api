@@ -139,7 +139,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
     } else {
         let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
         let joins = (0..comb_size)
-            .map(|i| format!(" ARRAY JOIN items.item_id AS i{i} "))
+            .map(|i| format!(" ARRAY JOIN arrayDistinct(items.item_id) AS i{i} "))
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
         let filters = (0..comb_size)
