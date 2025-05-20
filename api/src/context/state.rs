@@ -43,7 +43,6 @@ pub struct AppState {
     pub http_client: reqwest::Client,
     pub s3_client: object_store::aws::AmazonS3,
     pub s3_cache_client: object_store::aws::AmazonS3,
-    pub s3_db_snapshot_client: object_store::aws::AmazonS3,
     pub redis_client: redis::aio::MultiplexedConnection,
     pub ch_client: clickhouse::Client,
     pub pg_client: Pool<Postgres>,
@@ -86,7 +85,7 @@ impl AppState {
             })
             .build()?;
 
-        // Create an S3 cache file-cache client
+        // Create an S3 cache client
         debug!("Creating S3 cache client");
         let s3_cache_client = AmazonS3Builder::new()
             .with_region(&config.s3_cache_region)
@@ -94,31 +93,6 @@ impl AppState {
             .with_access_key_id(&config.s3_cache_access_key_id)
             .with_secret_access_key(&config.s3_cache_secret_access_key)
             .with_endpoint(&config.s3_cache_endpoint)
-            .with_allow_http(true)
-            .with_client_options(
-                ClientOptions::default()
-                    .with_allow_http2()
-                    .with_timeout(Duration::from_secs(5)),
-            )
-            .with_retry(RetryConfig {
-                backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(10),
-                    max_backoff: Duration::from_secs(3),
-                    base: 2.,
-                },
-                max_retries: 3,
-                retry_timeout: Duration::from_secs(5),
-            })
-            .build()?;
-
-        // Create an S3 db-snapshot client
-        debug!("Creating S3 db-snapshot client");
-        let s3_db_snapshot_client = AmazonS3Builder::new()
-            .with_region(&config.s3_db_snapshot_region)
-            .with_bucket_name(&config.s3_db_snapshot_bucket)
-            .with_access_key_id(&config.s3_db_snapshot_access_key_id)
-            .with_secret_access_key(&config.s3_db_snapshot_secret_access_key)
-            .with_endpoint(&config.s3_db_snapshot_endpoint)
             .with_allow_http(true)
             .with_client_options(
                 ClientOptions::default()
@@ -210,7 +184,6 @@ impl AppState {
             http_client,
             s3_client,
             s3_cache_client,
-            s3_db_snapshot_client,
             redis_client,
             ch_client,
             pg_client,

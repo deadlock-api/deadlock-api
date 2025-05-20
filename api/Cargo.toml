@@ -48,8 +48,6 @@ hex = "0.4.3"
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.2"
 thiserror = "2.0.12"
-duckdb = { version = "1.2.2", features = ["bundled"] }
-arrow = { version = "=54.2.1", features = ["chrono-tz", "csv", "json"] }
 
 [dev-dependencies]
 rstest = "0.25.0"
