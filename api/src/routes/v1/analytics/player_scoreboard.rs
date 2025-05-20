@@ -1,6 +1,6 @@
+use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::state::AppState;
 use crate::utils::parse::comma_separated_num_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
 use axum::Json;

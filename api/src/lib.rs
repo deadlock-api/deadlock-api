@@ -5,19 +5,17 @@
 #![deny(clippy::redundant_clone)]
 
 mod api_doc;
-mod config;
+mod context;
 mod error;
 mod middleware;
 pub mod routes;
 pub mod services;
-pub mod state;
 pub mod utils;
 
 use crate::api_doc::ApiDoc;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
-use crate::state::AppState;
 use crate::utils::tracing::init_tracing;
 use axum::extract::Request;
 use axum::http::{HeaderMap, header};
@@ -26,6 +24,7 @@ use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Json, Router, ServiceExt};
 use axum_prometheus::PrometheusMetricLayer;
+use context::state::AppState;
 use error::*;
 use middleware::fallback;
 use std::net::{Ipv4Addr, SocketAddr};

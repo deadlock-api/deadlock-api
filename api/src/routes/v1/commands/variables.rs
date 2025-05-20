@@ -1,3 +1,4 @@
+use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
@@ -11,7 +12,6 @@ use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyResponse;
-use crate::state::AppState;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;

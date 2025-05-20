@@ -1,10 +1,10 @@
+use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
     SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
-use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;

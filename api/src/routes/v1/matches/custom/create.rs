@@ -2,9 +2,9 @@ use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
+use crate::context::AppState;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
-use crate::state::AppState;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;

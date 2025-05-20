@@ -10,8 +10,8 @@ pub mod item_stats;
 pub mod player_scoreboard;
 pub mod scoreboard_types;
 
+use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
-use crate::state::AppState;
 use std::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;

@@ -2,8 +2,8 @@ pub mod query;
 pub mod route;
 pub mod structs;
 
+use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
-use crate::state::AppState;
 use std::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;

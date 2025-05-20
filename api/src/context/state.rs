@@ -1,5 +1,4 @@
-use crate::config::Config;
-use crate::error::LoadAppStateError;
+use crate::context::config::Config;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::steam::client::SteamClient;
@@ -10,8 +9,28 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
 use std::fs::File;
+use std::io;
 use std::time::Duration;
+use thiserror::Error;
 use tracing::{debug, warn};
+
+#[derive(Debug, Error)]
+pub enum AppStateError {
+    #[error("Redis error: {0}")]
+    Redis(#[from] redis::RedisError),
+    #[error("Object store error: {0}")]
+    ObjectStore(#[from] object_store::Error),
+    #[error("Clickhouse error: {0}")]
+    Clickhouse(#[from] clickhouse::error::Error),
+    #[error("PostgreSQL error: {0}")]
+    PostgreSQL(#[from] sqlx::Error),
+    #[error("Parsing error: {0}")]
+    ParsingConfig(#[from] envy::Error),
+    #[error("Parsing Json error: {0}")]
+    ParsingJson(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] io::Error),
+}
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct FeatureFlags {
@@ -34,7 +53,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn from_env() -> Result<AppState, LoadAppStateError> {
+    pub async fn from_env() -> Result<AppState, AppStateError> {
         let config: Config = envy::from_env()?;
 
         // Create an HTTP client
@@ -113,7 +132,7 @@ impl AppState {
             .with_option("max_execution_time", "20")
             .with_option("enable_named_columns_in_function_tuple", "1");
         if let Err(e) = ch_client.query("SELECT 1").fetch_one::<u8>().await {
-            return Err(LoadAppStateError::Clickhouse(e));
+            return Err(AppStateError::Clickhouse(e));
         }
 
         // Create a Postgres connection pool
@@ -131,9 +150,9 @@ impl AppState {
 
         // Load feature flags
         debug!("Loading feature flags");
-        let feature_flags = File::open("feature_flags.json")
-            .map_err(LoadAppStateError::from)
-            .and_then(|f| serde_json::from_reader(f).map_err(LoadAppStateError::from))
+        let feature_flags = File::open("../../feature_flags.json")
+            .map_err(AppStateError::from)
+            .and_then(|f| serde_json::from_reader(f).map_err(AppStateError::from))
             .unwrap_or_else(|e| {
                 warn!("Failed to load feature flags: {e}");
                 FeatureFlags::default()

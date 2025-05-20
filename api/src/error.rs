@@ -1,3 +1,4 @@
+use crate::context::AppStateError;
 use crate::services::rate_limiter::RateLimitStatus;
 use crate::services::steam::types::SteamProxyError;
 use axum::body::Body;
@@ -9,35 +10,17 @@ use std::io;
 use thiserror::Error;
 use tracing::error;
 
-pub type ApplicationResult<T> = Result<T, ApplicationError>;
+pub type ApplicationResult<T> = Result<T, StartupError>;
 pub type APIResult<T> = Result<T, APIError>;
 
 #[derive(Debug, Error)]
-pub enum ApplicationError {
+pub enum StartupError {
     #[error("Server error: {0}")]
     Server(#[from] axum::Error),
     #[error("IO error: {0}")]
     IO(#[from] io::Error),
     #[error("Load app state error: {0}")]
-    LoadAppState(#[from] LoadAppStateError),
-}
-
-#[derive(Debug, Error)]
-pub enum LoadAppStateError {
-    #[error("Redis error: {0}")]
-    Redis(#[from] redis::RedisError),
-    #[error("Object store error: {0}")]
-    ObjectStore(#[from] object_store::Error),
-    #[error("Clickhouse error: {0}")]
-    Clickhouse(#[from] clickhouse::error::Error),
-    #[error("PostgreSQL error: {0}")]
-    PostgreSQL(#[from] sqlx::Error),
-    #[error("Parsing error: {0}")]
-    ParsingConfig(#[from] envy::Error),
-    #[error("Parsing Json error: {0}")]
-    ParsingJson(#[from] serde_json::Error),
-    #[error("IO error: {0}")]
-    Io(#[from] io::Error),
+    AppState(#[from] AppStateError),
 }
 
 #[allow(dead_code)]
