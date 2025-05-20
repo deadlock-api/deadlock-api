@@ -9,6 +9,7 @@ pub mod leaderboard;
 pub mod matches;
 pub mod patches;
 pub mod players;
+pub mod sql;
 
 pub fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
@@ -20,4 +21,5 @@ pub fn router() -> OpenApiRouter<AppState> {
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())
         .nest("/info", info::router())
+        .nest("/sql", sql::router())
 }

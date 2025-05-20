@@ -78,6 +78,12 @@ pub struct Config {
     pub s3_cache_secret_access_key: String,
     pub s3_cache_endpoint: String,
 
+    pub s3_db_snapshot_region: String,
+    pub s3_db_snapshot_bucket: String,
+    pub s3_db_snapshot_access_key_id: String,
+    pub s3_db_snapshot_secret_access_key: String,
+    pub s3_db_snapshot_endpoint: String,
+
     #[serde(default = "default_clickhouse_host")]
     pub clickhouse_host: String,
     #[serde(default = "default_clickhouse_http_port")]
