@@ -37,6 +37,10 @@ pub enum BuildsSearchQuerySortBy {
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildsSearchQuery {
+    /// Filter builds based on their last_updated time (Unix timestamp).
+    pub min_unix_timestamp: Option<u64>,
+    /// Filter builds based on their last_updated time (Unix timestamp).
+    pub max_unix_timestamp: Option<u64>,
     /// The field to sort the builds by.
     #[serde(default)]
     #[param(inline)]
@@ -88,6 +92,8 @@ impl Default for BuildsSearchQuery {
             hero_id: None,
             rollup_category: None,
             author_id: None,
+            min_unix_timestamp: None,
+            max_unix_timestamp: None,
         }
     }
 }
@@ -128,6 +134,14 @@ pub fn sql_query(params: &BuildsSearchQuery) -> String {
     if let Some(rollup_category) = params.rollup_category {
         query_builder.push(" AND rollup_category = ");
         query_builder.push(rollup_category.to_string());
+    }
+    if let Some(min_unix_timestamp) = params.min_unix_timestamp {
+        query_builder.push(" AND updated_at >= ");
+        query_builder.push(format!("to_timestamp({})", min_unix_timestamp));
+    }
+    if let Some(max_unix_timestamp) = params.max_unix_timestamp {
+        query_builder.push(" AND updated_at <= ");
+        query_builder.push(format!("to_timestamp({})", max_unix_timestamp));
     }
     if params.only_latest.unwrap_or_default() {
         query_builder.push(" ) SELECT builds FROM hero_builds WHERE rn = 1");
