@@ -51,50 +51,50 @@ pub struct MateStats {
 }
 
 fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
-    let mut filters = vec![];
+    let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
+        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
+        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
+        info_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
+        info_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_badge_level) = query.min_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
         ));
     }
     if let Some(max_badge_level) = query.max_average_badge {
-        filters.push(format!(
+        info_filters.push(format!(
             "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
         ));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        filters.push(format!("duration_s >= {min_duration_s}"));
+        info_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("duration_s <= {max_duration_s}"));
+        info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
-    let filters = if filters.is_empty() {
+    let info_filters = if info_filters.is_empty() {
         "".to_string()
     } else {
-        format!(" AND {}", filters.join(" AND "))
+        format!(" AND {}", info_filters.join(" AND "))
     };
 
     if query.same_party {
         format!(
             r#"
-            WITH matches AS (SELECT DISTINCT match_id, team, party
+            WITH players AS (SELECT DISTINCT match_id, team, party
                              FROM match_player
-                             WHERE account_id = {account_id} AND party != 0 {filters}),
+                             WHERE account_id = {account_id} AND party != 0 AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
                  mates AS (SELECT DISTINCT match_id, won, account_id
                            FROM match_player
-                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM matches) AND account_id != {account_id})
+                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM players) AND account_id != {account_id})
             SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
@@ -106,12 +106,12 @@ fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
     } else {
         format!(
             r#"
-            WITH matches AS (SELECT DISTINCT match_id, team
+            WITH players AS (SELECT DISTINCT match_id, team
                              FROM match_player
-                             WHERE account_id = {account_id} {filters}),
+                             WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
                  mates AS (SELECT DISTINCT match_id, won, account_id
                            FROM match_player
-                           WHERE (match_id, team) IN (SELECT match_id, team FROM matches) AND account_id != {account_id})
+                           WHERE (match_id, team) IN (SELECT match_id, team FROM players) AND account_id != {account_id})
             SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
