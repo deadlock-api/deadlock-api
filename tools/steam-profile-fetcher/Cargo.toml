@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.98"
 arl = "0.2.0"
 clickhouse = "0.13.2"
-common = { path = "../common" }
+common = { path = "../common", features = ["postgres", "clickhouse"] }
 itertools = "0.14.0"
 metrics = "0.24.2"
 once_cell = "1.21.3"

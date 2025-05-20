@@ -12,5 +12,5 @@ reqwest = { version = "0.12.15", features = ["json"] }
 delay_map = "0.4.1"
 metrics = "0.24"
 tracing = "0.1.41"
-common = { version = "0.1.0", path = "../common" }
+common = { version = "0.1.0", path = "../common", features = ["clickhouse"] }
 anyhow = "1.0.98"

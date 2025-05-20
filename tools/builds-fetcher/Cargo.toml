@@ -15,5 +15,5 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 time = "0.3.41"
 metrics = "0.24"
 tracing = "0.1.41"
-common = { version = "0.1.0", path = "../common" }
+common = { version = "0.1.0", path = "../common", features = ["steam-proxy", "postgres"] }
 rand = "0.9.1"
