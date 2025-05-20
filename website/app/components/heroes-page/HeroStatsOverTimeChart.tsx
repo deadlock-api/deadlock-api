@@ -222,6 +222,7 @@ export default function HeroStatsOverTimeChart({
             dot={false}
             activeDot={{ r: 6 }}
             strokeWidth={2}
+            name={heroIdMap[heroId]?.name}
           />
         ))}
       </LineChart>
