@@ -137,12 +137,12 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
     } else {
         let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
         let joins = (0..comb_size)
-            .map(|i| format!(" ARRAY JOIN p_items AS i{i} "))
+            .map(|i| format!(" ARRAY JOIN p_items AS i{i}, arrayEnumerate(p_items) AS i{i}_index "))
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
         let filters_distinct = (0..comb_size)
             .tuple_windows()
-            .map(|(i, j)| format!("i{i} != i{j}"))
+            .map(|(i, j)| format!("i{i}_index < i{j}_index"))
             .join(" AND ");
         format!(
             r#"
@@ -153,7 +153,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
             t_players AS (SELECT arrayFilter(x -> x IN t_items, arrayDistinct(items.item_id)) as p_items, won
                 FROM match_player
                 WHERE match_id IN t_matches {player_filters})
-        SELECT arrayIntersect(p_items, [{intersect_array}]) AS item_ids,
+        SELECT [{intersect_array}] AS item_ids,
                sum(won)      AS wins,
                sum(not won)  AS losses,
                wins + losses AS matches
