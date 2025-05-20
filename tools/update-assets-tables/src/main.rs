@@ -43,10 +43,18 @@ async fn update_heroes(
         .error_for_status()?
         .json()
         .await?;
+
+    // Truncate table
+    ch_client.query("TRUNCATE TABLE heroes").execute().await?;
+
     let mut insert = ch_client.insert("heroes")?;
     for hero in heroes {
         if hero.disabled.is_some_and(|d| d) {
             debug!("Hero {} is disabled, skipping", hero.name);
+            continue;
+        }
+        if hero.in_development.is_some_and(|d| d) {
+            debug!("Hero {} is in development, skipping", hero.name);
             continue;
         }
         debug!("Inserting hero {}", hero.name);
@@ -72,6 +80,10 @@ async fn update_items(
         .error_for_status()?
         .json()
         .await?;
+
+    // Truncate table
+    ch_client.query("TRUNCATE TABLE items").execute().await?;
+
     let mut insert = ch_client.insert("items")?;
     for item in items {
         if item.shopable.is_none_or(|s| !s) {

@@ -31,6 +31,7 @@ pub struct Hero {
     pub id: u16,
     pub name: String,
     pub disabled: Option<bool>,
+    pub in_development: Option<bool>,
 }
 
 #[derive(Serialize, Row)]
