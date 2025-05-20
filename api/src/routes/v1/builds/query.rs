@@ -482,4 +482,32 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST"
         );
     }
+
+    #[test]
+    fn test_min_unix_timestamp() {
+        let query = BuildsSearchQuery {
+            min_unix_timestamp: Some(1672531200),
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert_eq!(
+            sql,
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+        );
+    }
+
+    #[test]
+    fn test_max_unix_timestamp() {
+        let query = BuildsSearchQuery {
+            max_unix_timestamp: Some(1675209599),
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert_eq!(
+            sql,
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+        );
+    }
 }

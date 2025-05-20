@@ -21,6 +21,8 @@ async fn test_builds(
     #[values(None, Some(16))] version: Option<u32>,
     #[values(None, Some(15))] hero_id: Option<u32>,
     #[values(None, Some(18373975))] author_id: Option<u32>,
+    #[values(None, Some(1747743170))] min_unix_timestamp: Option<u64>,
+    #[values(None, Some(1747763170))] max_unix_timestamp: Option<u64>,
 ) {
     let mut queries = vec![];
     if let Some(limit) = limit {
@@ -49,6 +51,12 @@ async fn test_builds(
     }
     if let Some(version) = version {
         queries.push(("version", version.to_string()));
+    }
+    if let Some(min_unix_timestamp) = min_unix_timestamp {
+        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
+    }
+    if let Some(max_unix_timestamp) = max_unix_timestamp {
+        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
     }
     let queries = queries
         .iter()
@@ -118,6 +126,12 @@ async fn test_builds(
                     .to_lowercase()
                     .contains(&search_name.to_lowercase())
             );
+        }
+        if let Some(min_unix_timestamp) = min_unix_timestamp {
+            assert!(hero_build.last_updated_timestamp as u64 >= min_unix_timestamp);
+        }
+        if let Some(max_unix_timestamp) = max_unix_timestamp {
+            assert!(hero_build.last_updated_timestamp as u64 <= max_unix_timestamp);
         }
     }
 }
