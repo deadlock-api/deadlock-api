@@ -25,6 +25,8 @@ pub struct HeroMMRHistoryQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct MMRHistory {
     pub match_id: u64,
+    /// Start time of the match
+    pub start_time: u32,
     /// Player Score is the index for the rank array (internally used for the rank regression)
     pub player_score: f32,
     /// The Player Rank
@@ -38,8 +40,9 @@ pub struct MMRHistory {
 fn build_mmr_history_query(account_id: u32) -> String {
     format!(
         r#"
-    SELECT match_id, player_score, rank, division, division_tier
+    SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
     FROM mmr_history FINAL
+    JOIN match_info mi USING (match_id)
     WHERE account_id = {account_id}
     ORDER BY match_id
     "#
@@ -49,8 +52,9 @@ fn build_mmr_history_query(account_id: u32) -> String {
 fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     format!(
         r#"
-    SELECT match_id, player_score, rank, division, division_tier
+    SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
     FROM hero_mmr_history FINAL
+    JOIN match_info mi USING (match_id)
     WHERE account_id = {account_id} AND hero_id = {hero_id}
     ORDER BY match_id
     "#
