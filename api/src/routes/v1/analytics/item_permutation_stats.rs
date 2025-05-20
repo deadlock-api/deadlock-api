@@ -142,15 +142,19 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
             .map(|i| format!(" ARRAY JOIN arrayDistinct(items.item_id) AS i{i} "))
             .join("\n");
         let intersect_array = (0..comb_size).map(|i| format!("i{i}")).join(", ");
-        let filters = (0..comb_size)
+        let filters_distinct = (0..comb_size)
             .tuple_windows()
             .map(|(i, j)| format!("i{i} != i{j}"))
+            .join(" AND ");
+        let filters_upgrade = (0..comb_size)
+            .map(|i| format!("i{i} IN t_items"))
             .join(" AND ");
         format!(
             r#"
         WITH t_matches AS (SELECT match_id
                 FROM match_info
-                WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
+                WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
+            t_items AS (SELECT id from items)
         SELECT arrayIntersect(match_player.items.item_id, [{intersect_array}]) AS item_ids,
                sum(won)      AS wins,
                sum(not won)  AS losses,
@@ -158,7 +162,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
                COUNT(DISTINCT account_id) AS players
         FROM match_player
             {joins}
-        WHERE match_id IN t_matches AND {filters}
+        WHERE match_id IN t_matches AND {filters_distinct} AND {filters_upgrade}
             {player_filters}
         GROUP BY item_ids
         ORDER BY matches DESC
