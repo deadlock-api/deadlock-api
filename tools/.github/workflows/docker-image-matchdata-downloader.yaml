@@ -22,12 +22,16 @@ concurrency:
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: '0'
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
       with:
@@ -35,11 +39,11 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: depot/setup-action@v1
-    - uses: depot/build-push-action@v1
+    - uses: docker/build-push-action@v6
       with:
         platforms: linux/arm64
         push: true
         tags: ghcr.io/${{ github.repository }}/matchdata-downloader:latest
-        project: k7kl7zsmcs
         build-args: EXE_NAME=matchdata-downloader
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
