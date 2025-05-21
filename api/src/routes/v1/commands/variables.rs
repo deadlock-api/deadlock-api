@@ -3,11 +3,11 @@ use crate::error::APIResult;
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::patches::feed::fetch_patch_notes;
+use crate::routes::v1::players::match_history::PlayerMatchHistory;
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
 };
 use crate::routes::v1::players::mmr_history::MMRHistory;
-use crate::routes::v1::players::types::PlayerMatchHistory;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
