@@ -2,6 +2,7 @@ use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::types::RateLimitQuotaType;
 use crate::services::rate_limiter::{RateLimitQuota, RateLimitStatus};
+use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
@@ -44,18 +45,18 @@ impl RateLimitClient {
             && !quotas.iter().any(|q| q.rate_limit_quota_type.is_ip())
             && quotas.iter().any(|q| q.rate_limit_quota_type.is_key())
         {
-            return Err(APIError::StatusMsg {
-                status: axum::http::StatusCode::FORBIDDEN,
-                message: "API key is required for this endpoint".to_string(),
-            });
+            return Err(APIError::status_msg(
+                StatusCode::FORBIDDEN,
+                "API key is required for this endpoint",
+            ));
         }
 
         // If the service is in emergency mode, only requests with an API key are allowed
         if self.emergency_mode && api_key.is_none() {
-            return Err(APIError::StatusMsg {
-                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
-                message: "Service is in emergency mode".to_string(),
-            });
+            return Err(APIError::status_msg(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Service is in emergency mode",
+            ));
         }
 
         let prefix = api_key

@@ -67,23 +67,25 @@ pub struct PatchCategory {
     sync_writes = "default"
 )]
 pub async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
-    let response = http_client
-        .get(RSS_ENDPOINT)
-        .send()
-        .await
-        .map_err(|e| APIError::StatusMsg {
-            status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            message: format!("Failed to fetch patch notes: {e}"),
-        })?;
-    let rss = response.text().await.map_err(|e| APIError::StatusMsg {
-        status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-        message: format!("Failed to read patch notes: {e}"),
+    let response = http_client.get(RSS_ENDPOINT).send().await.map_err(|e| {
+        APIError::status_msg(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to fetch patch notes: {e}"),
+        )
+    })?;
+    let rss = response.text().await.map_err(|e| {
+        APIError::status_msg(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to read patch notes: {e}"),
+        )
     })?;
     serde_xml_rs::from_str::<Rss>(&rss)
         .map(|rss| rss.channel.patch_notes)
-        .map_err(|e| APIError::StatusMsg {
-            status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            message: format!("Failed to parse patch notes: {e}"),
+        .map_err(|e| {
+            APIError::status_msg(
+                reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to parse patch notes: {e}"),
+            )
         })
 }
 

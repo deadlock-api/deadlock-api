@@ -121,10 +121,10 @@ pub async fn command_resolve(
     Query(query): Query<CommandResolveQuery>,
 ) -> APIResult<String> {
     if query.account_id == 0 {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Invalid account ID".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Invalid account ID",
+        ));
     }
     state
         .rate_limit_client
@@ -211,10 +211,10 @@ pub async fn variables_resolve(
     Query(query): Query<VariablesResolveQuery>,
 ) -> APIResult<Json<HashMap<String, String>>> {
     if query.account_id == 0 || query.variables.is_empty() {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Invalid account ID or no variables provided".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Invalid account ID or no variables provided",
+        ));
     }
     state
         .rate_limit_client

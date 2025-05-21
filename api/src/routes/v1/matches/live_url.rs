@@ -110,10 +110,10 @@ pub async fn live_url(
         .await?;
 
     if match_id < match_id_2_hours_ago {
-        return Err(APIError::StatusMsg {
-            status: reqwest::StatusCode::BAD_REQUEST,
-            message: format!("Match {match_id} cannot be live"),
-        });
+        return Err(APIError::status_msg(
+            reqwest::StatusCode::BAD_REQUEST,
+            format!("Match {match_id} cannot be live"),
+        ));
     }
 
     let spectate_response = tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id))

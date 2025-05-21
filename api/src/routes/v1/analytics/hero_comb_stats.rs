@@ -208,10 +208,10 @@ pub async fn get_comb_stats(
     let comb_size = match query.comb_size {
         Some(6) => return Ok(comb_stats),
         Some(x) if !(2..=6).contains(&x) => {
-            return Err(APIError::StatusMsg {
-                status: StatusCode::BAD_REQUEST,
-                message: "Combination size must be between 2 and 6".to_string(),
-            });
+            return Err(APIError::status_msg(
+                StatusCode::BAD_REQUEST,
+                "Combination size must be between 2 and 6".to_string(),
+            ));
         }
         Some(x) => x,
         None => return Ok(comb_stats),

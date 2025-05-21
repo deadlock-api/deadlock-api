@@ -42,6 +42,13 @@ pub enum APIError {
 }
 
 impl APIError {
+    pub fn status_msg(status: StatusCode, message: impl Into<String>) -> Self {
+        Self::StatusMsg {
+            status,
+            message: message.into(),
+        }
+    }
+
     pub fn internal(message: impl Into<String>) -> Self {
         Self::InternalError {
             message: message.into(),
@@ -178,10 +185,7 @@ mod tests {
 
     #[test]
     fn test_api_error_status_msg() {
-        let error = APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Invalid input".to_string(),
-        };
+        let error = APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid input");
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
@@ -190,7 +194,7 @@ mod tests {
     fn test_api_error_status_msg_json() {
         let error = APIError::StatusMsgJson {
             status: StatusCode::BAD_REQUEST,
-            message: serde_json::json!({"field": "username", "reason": "too short"}),
+            message: json!({"field": "username", "reason": "too short"}),
         };
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);

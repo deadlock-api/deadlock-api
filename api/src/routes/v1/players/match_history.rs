@@ -287,11 +287,10 @@ pub async fn match_history(
     State(state): State<AppState>,
 ) -> APIResult<Json<PlayerMatchHistory>> {
     if query.force_refetch && query.only_stored_history {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Cannot use both force_refetch and only_stored_history at the same time"
-                .to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Cannot use both force_refetch and only_stored_history at the same time".to_string(),
+        ));
     }
 
     let ch_match_history =

@@ -130,10 +130,7 @@ pub async fn ingest_event(
         .get("X-API-Key")
         .and_then(|key| key.to_str().ok().map(|key| key.to_string()))
         .map(|key| key == state.config.internal_api_key)
-        .ok_or_else(|| APIError::StatusMsg {
-            status: reqwest::StatusCode::UNAUTHORIZED,
-            message: "Unauthorized".to_string(),
-        })?;
+        .ok_or_else(|| APIError::status_msg(reqwest::StatusCode::UNAUTHORIZED, "Unauthorized"))?;
 
     let payload = MatchCreatedWebhookPayload::new(match_id);
     let webhook_urls: Vec<(String, String)> = get_webhook_urls(&state.pg_client).await?;

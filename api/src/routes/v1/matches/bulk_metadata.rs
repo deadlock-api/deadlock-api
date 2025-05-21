@@ -134,10 +134,10 @@ pub async fn bulk_metadata(
         )
         .await?;
     if query.limit > 10000 {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Limit is too high".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Limit is too high".to_string(),
+        ));
     }
     debug!(?query);
     let query = build_ch_query(query)?;
@@ -146,10 +146,10 @@ pub async fn bulk_metadata(
         .await
         .map_err(|_| APIError::internal("Failed to parse match metadata".to_string()))?;
     if parsed_result.is_empty() {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::NOT_FOUND,
-            message: "No matches found".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "No matches found".to_string(),
+        ));
     }
     Ok(Json(parsed_result))
 }
@@ -218,10 +218,10 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     }
 
     if select_fields.is_empty() {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "No fields selected".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "No fields selected",
+        ));
     }
 
     let mut info_filters = vec![];

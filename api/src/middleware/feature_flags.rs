@@ -15,10 +15,10 @@ pub async fn feature_flags(
 
     let route_enabled = feature_flags.routes.get(&matched_path).unwrap_or(&true);
     if !route_enabled {
-        return APIError::StatusMsg {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Route {matched_path} is disabled"),
-        }
+        return APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            format!("Route {matched_path} is disabled"),
+        )
         .into_response();
     }
 

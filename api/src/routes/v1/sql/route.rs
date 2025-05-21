@@ -108,10 +108,10 @@ pub async fn sql(
     State(state): State<AppState>,
 ) -> APIResult<String> {
     let Some(duckdb_url) = state.config.duckdb_url else {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::SERVICE_UNAVAILABLE,
-            message: "DuckDB is not enabled".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "DuckDB is not enabled",
+        ));
     };
 
     state
@@ -147,10 +147,10 @@ pub async fn sql(
 )]
 pub async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     let Some(duckdb_url) = state.config.duckdb_url else {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::SERVICE_UNAVAILABLE,
-            message: "DuckDB is not enabled".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "DuckDB is not enabled",
+        ));
     };
 
     fetch_list_tables(&state.http_client, duckdb_url)
@@ -179,10 +179,10 @@ pub async fn table_schema(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let Some(duckdb_url) = state.config.duckdb_url else {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::SERVICE_UNAVAILABLE,
-            message: "DuckDB is not enabled".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "DuckDB is not enabled",
+        ));
     };
 
     fetch_table_schema(&state.http_client, duckdb_url, &table)

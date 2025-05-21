@@ -115,10 +115,10 @@ pub async fn leaderboard_hero_raw(
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
     if !state.assets_client.validate_hero_id(hero_id).await {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Invalid hero_id: {hero_id}"),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Invalid hero_id: {hero_id}"),
+        ));
     }
     let steam_response =
         tryhard::retry_fn(|| fetch_leaderboard_raw(&state.steam_client, region, Some(hero_id)))
@@ -174,10 +174,10 @@ pub async fn leaderboard_hero(
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
     if !state.assets_client.validate_hero_id(hero_id).await {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Invalid hero_id: {hero_id}"),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Invalid hero_id: {hero_id}"),
+        ));
     }
     let raw_leaderboard =
         fetch_leaderboard_raw(&state.steam_client, region, hero_id.into()).await?;

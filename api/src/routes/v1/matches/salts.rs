@@ -81,10 +81,10 @@ pub async fn fetch_match_salts(
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     // 30742540 is the first match from December, block older requests to avoid spamming
     if match_id < 30742540 {
-        return Err(APIError::StatusMsg {
-            status: reqwest::StatusCode::NOT_FOUND,
-            message: format!("Match salts for match {match_id} cannot be fetched"),
-        });
+        return Err(APIError::status_msg(
+            reqwest::StatusCode::NOT_FOUND,
+            format!("Match salts for match {match_id} cannot be fetched"),
+        ));
     }
 
     // Try fetch from Clickhouse DB
@@ -109,10 +109,10 @@ pub async fn fetch_match_salts(
 
     if has_metadata {
         warn!("Blocking request for match salts for match {match_id} with metadata");
-        return Err(APIError::StatusMsg {
-            status: reqwest::StatusCode::NOT_FOUND,
-            message: format!("Match salts for match {match_id} not found"),
-        });
+        return Err(APIError::status_msg(
+            reqwest::StatusCode::NOT_FOUND,
+            format!("Match salts for match {match_id} not found"),
+        ));
     }
 
     rate_limit_client
@@ -148,10 +148,10 @@ pub async fn fetch_match_salts(
     if salts.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
     }) {
-        return Err(APIError::StatusMsg {
-            status: reqwest::StatusCode::NOT_FOUND,
-            message: format!("Failed to fetch match salts for match {match_id}"),
-        });
+        return Err(APIError::status_msg(
+            reqwest::StatusCode::NOT_FOUND,
+            format!("Failed to fetch match salts for match {match_id}"),
+        ));
     }
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
         // Insert into Clickhouse
@@ -166,10 +166,10 @@ pub async fn fetch_match_salts(
         debug!("Match salts fetched from Steam");
         return Ok(salts);
     }
-    Err(APIError::StatusMsg {
-        status: reqwest::StatusCode::NOT_FOUND,
-        message: format!("Match salts for match {match_id} not found"),
-    })
+    Err(APIError::status_msg(
+        reqwest::StatusCode::NOT_FOUND,
+        format!("Match salts for match {match_id} not found"),
+    ))
 }
 
 #[utoipa::path(

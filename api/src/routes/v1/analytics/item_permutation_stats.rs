@@ -205,16 +205,16 @@ pub async fn item_permutation_stats(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if query.comb_size.is_some() && query.item_ids.is_some() {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "Cannot specify both comb_size and item_ids".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Cannot specify both comb_size and item_ids",
+        ));
     }
     if query.item_ids.as_ref().is_some_and(|i| i.is_empty()) {
-        return Err(APIError::StatusMsg {
-            status: StatusCode::BAD_REQUEST,
-            message: "No item ids provided".to_string(),
-        });
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "No item ids provided",
+        ));
     }
     get_item_permutation_stats(&state.ch_client, query)
         .await
