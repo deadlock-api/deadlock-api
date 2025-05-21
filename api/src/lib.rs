@@ -16,14 +16,13 @@ use crate::api_doc::ApiDoc;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
-use axum::http::{HeaderMap, header};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 use context::state::AppState;
-use middleware::fallback;
 use std::time::Duration;
 use tower_http::compression::{CompressionLayer, DefaultPredicate};
 use tower_http::cors::CorsLayer;
@@ -73,7 +72,12 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         )))
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::<DefaultPredicate>::default())
-        .fallback(fallback::fallback)
+        .fallback(|uri: axum::http::Uri| async move {
+            APIResult::<()>::Err(APIError::status_msg(
+                StatusCode::NOT_FOUND,
+                format!("No route found for {uri}"),
+            ))
+        })
         .split_for_parts();
 
     let server_url = match cfg!(debug_assertions) {
