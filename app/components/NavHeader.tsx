@@ -18,6 +18,9 @@ export default function NavHeader() {
             <Link to="/items" prefetch="intent" className="text-lg font-medium hover:underline">
               Items
             </Link>
+            <Link to="/player" prefetch="intent" className="text-lg font-medium hover:underline">
+              Player
+            </Link>
             <a
               href="https://assets.deadlock-api.com/"
               target="_blank"
