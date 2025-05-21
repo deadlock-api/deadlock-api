@@ -9,7 +9,6 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
-import { useDelayedState } from "~/lib/utils";
 
 export const meta: MetaFunction = () => {
   return [
@@ -19,7 +18,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Player({ initialTab }: { initialTab?: string } = { initialTab: "mmr" }) {
-  const [steamId, setSteamIdAfter] = useDelayedState<number | null>(null);
+  const [steamId, setSteamId] = useState<number | null>(null);
   const [hero, setHero] = useState<number | null>(null);
   const [startDate, setStartDate] = useState<Dayjs | null>(null);
   const [endDate, setEndDate] = useState<Dayjs | null>(null);
@@ -27,7 +26,6 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
   const location = useLocation();
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setSteamIdAfter is a function
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setSearchParams(params);
@@ -43,7 +41,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
 
     const searchSteamIdString = params?.get("steamId");
     const searchSteamId = searchSteamIdString ? Number.parseInt(searchSteamIdString) : null;
-    if (searchSteamId) setSteamIdAfter(searchSteamId, 400);
+    if (searchSteamId) setSteamId(searchSteamId);
   }, [location.search, initialTab]);
 
   const searchTab = searchParams?.get("tab");
@@ -81,7 +79,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                     url.searchParams.set("steamId", e.target.value);
                     window.history.pushState({}, "", url);
                   }
-                  setSteamIdAfter(Number(e.target.value), 400);
+                  setSteamId(Number(e.target.value));
                 }}
                 placeholder="Steam ID3 (required)"
               />
