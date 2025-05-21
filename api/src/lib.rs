@@ -16,7 +16,6 @@ use crate::api_doc::ApiDoc;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
-use crate::utils::tracing::init_tracing;
 use axum::extract::Request;
 use axum::http::{HeaderMap, header};
 use axum::middleware::{from_fn, from_fn_with_state};
@@ -92,8 +91,6 @@ async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
 }
 
 pub async fn run_api(port: u16) -> ApplicationResult<()> {
-    init_tracing();
-
     let router = get_router(port).await?;
     let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, port));
     let listener = tokio::net::TcpListener::bind(&address).await?;
