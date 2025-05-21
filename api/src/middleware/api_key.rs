@@ -3,6 +3,12 @@ use axum::http::HeaderValue;
 use axum::{extract::Request, middleware::Next, response::Response};
 
 pub async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
+    // Check if API-Key is already set
+    if request.headers().contains_key("x-api-key") {
+        return next.run(request).await;
+    }
+
+    // Check if API-Key is in query parameters
     let query_api_key = request.uri().query().and_then(|query| {
         parse::querify(query)
             .into_iter()
@@ -12,6 +18,21 @@ pub async fn write_api_key_to_header(mut request: Request, next: Next) -> Respon
     if let Some(api_key) = query_api_key {
         if let Ok(api_key) = api_key.parse::<HeaderValue>() {
             request.headers_mut().insert("x-api-key", api_key);
+            return next.run(request).await;
+        }
+    }
+
+    // Check if API-Key is set as a bearer token
+    if let Some(api_key) = request.headers().get("authorization") {
+        if let Some(api_key) = api_key
+            .to_str()
+            .ok()
+            .and_then(|s| s.strip_prefix("Bearer "))
+        {
+            if let Ok(api_key) = api_key.parse::<HeaderValue>() {
+                request.headers_mut().insert("x-api-key", api_key);
+                return next.run(request).await;
+            }
         }
     }
 
