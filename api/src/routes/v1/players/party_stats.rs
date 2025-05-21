@@ -1,6 +1,6 @@
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::types::AccountIdQuery;
+use crate::routes::v1::players::AccountIdQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;

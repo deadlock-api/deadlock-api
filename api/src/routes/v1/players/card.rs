@@ -3,7 +3,7 @@ use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::context::AppState;
-use crate::routes::v1::players::types::AccountIdQuery;
+use crate::routes::v1::players::AccountIdQuery;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
     SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,

@@ -6,14 +6,23 @@ pub mod match_history;
 pub mod mate_stats;
 pub mod mmr_history;
 pub mod party_stats;
-pub mod types;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
+use crate::utils::parse::parse_steam_id;
+use serde::Deserialize;
 use std::time::Duration;
-use utoipa::OpenApi;
+use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+#[derive(Deserialize, IntoParams, Default)]
+pub struct AccountIdQuery {
+    /// The players SteamID3
+    #[serde(default)]
+    #[serde(deserialize_with = "parse_steam_id")]
+    pub account_id: u32,
+}
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Players", description = "Player related endpoints")))]
