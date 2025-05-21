@@ -10,7 +10,6 @@ use std::io;
 use thiserror::Error;
 use tracing::error;
 
-pub type ApplicationResult<T> = Result<T, StartupError>;
 pub type APIResult<T> = Result<T, APIError>;
 
 #[derive(Debug, Error)]

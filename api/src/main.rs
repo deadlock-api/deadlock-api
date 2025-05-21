@@ -1,7 +1,14 @@
-use deadlock_api_rust::run_api;
+use axum::ServiceExt;
+use axum::extract::Request;
+use deadlock_api_rust::StartupError;
+use deadlock_api_rust::router;
+use std::net::{Ipv4Addr, SocketAddr};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+
+const PORT: u16 = 3000;
 
 pub fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
@@ -16,7 +23,14 @@ pub fn init_tracing() {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), StartupError> {
     init_tracing();
-    run_api(3000).await.expect("Failed to run api server");
+
+    let router = router(PORT).await?;
+    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, PORT));
+    let listener = tokio::net::TcpListener::bind(&address).await?;
+
+    info!("Listening on http://{address}");
+    axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?;
+    Ok(())
 }

@@ -16,26 +16,25 @@ use crate::api_doc::ApiDoc;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
-use axum::extract::Request;
 use axum::http::{HeaderMap, header};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
-use axum::{Json, Router, ServiceExt};
+use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 use context::state::AppState;
-use error::*;
 use middleware::fallback;
-use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use tower_http::compression::{CompressionLayer, DefaultPredicate};
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_layer::Layer;
-use tracing::{debug, info};
+use tracing::debug;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
+
+pub use error::*;
 
 const DEFAULT_CACHE_TIME: u64 = 60;
 
@@ -48,7 +47,7 @@ async fn favicon() -> impl IntoResponse {
     (headers, favicon)
 }
 
-async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
+pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     debug!("Loading application state");
     let state = AppState::from_env().await?;
     debug!("Application state loaded");
@@ -90,19 +89,9 @@ async fn get_router(port: u16) -> ApplicationResult<NormalizePath<Router>> {
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))
 }
 
-pub async fn run_api(port: u16) -> ApplicationResult<()> {
-    let router = get_router(port).await?;
-    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, port));
-    let listener = tokio::net::TcpListener::bind(&address).await?;
-    info!("Listening on http://{address}");
-    axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?;
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::get_router;
+    use crate::router;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use tower::ServiceExt;
@@ -110,7 +99,7 @@ mod tests {
     #[ignore]
     #[tokio::test]
     async fn test_router() {
-        let router = get_router(3000).await.expect("Router");
+        let router = router(3000).await.expect("Router");
 
         {
             // Test docs redirect from root
