@@ -1,6 +1,8 @@
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
+use crate::utils::parse::{
+    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -11,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -42,6 +44,12 @@ pub struct HeroStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     pub account_id: Option<u32>,
+    /// Comma separated list of item ids to include (only heroes who have purchased these items)
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    pub include_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of item ids to exclude (only heroes who have not purchased these items)
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    pub exclude_item_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -105,6 +113,26 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     let mut player_filters = vec![];
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
+    }
+    if let Some(include_item_ids) = &query.include_item_ids {
+        player_filters.push(format!(
+            "hasAll(items, [{}])",
+            include_item_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+    if let Some(exclude_item_ids) = &query.exclude_item_ids {
+        player_filters.push(format!(
+            "not hasAny(items, [{}])",
+            exclude_item_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
     }
     let player_filters = if player_filters.is_empty() {
         "".to_string()
@@ -184,20 +212,20 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
 }
 
 #[cached(
-    ty = "TimedCache<HeroStatsQuery, Vec<AnalyticsHeroStats>>",
+    ty = "TimedCache<String, Vec<AnalyticsHeroStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = "{ query }",
+    convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
-    key = "HeroStatsQuery"
+    key = "String"
 )]
 pub async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     query: HeroStatsQuery,
 ) -> APIResult<Vec<AnalyticsHeroStats>> {
-    let query = build_hero_stats_query(&query);
-    debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    let query_str = build_hero_stats_query(&query);
+    debug!(?query_str);
+    Ok(ch_client.query(&query_str).fetch_all().await?)
 }
 
 #[utoipa::path(
@@ -313,5 +341,37 @@ mod test {
         };
         let sql = build_hero_stats_query(&query);
         assert!(sql.contains("account_id = 18373975"));
+    }
+
+    #[test]
+    fn test_build_hero_stats_query_include_item_ids() {
+        let query = HeroStatsQuery {
+            include_item_ids: Some(vec![1, 2, 3]),
+            ..Default::default()
+        };
+        let sql = build_hero_stats_query(&query);
+        assert!(sql.contains("hasAll(items, [1, 2, 3])"));
+    }
+
+    #[test]
+    fn test_build_hero_stats_query_exclude_item_ids() {
+        let query = HeroStatsQuery {
+            exclude_item_ids: Some(vec![4, 5, 6]),
+            ..Default::default()
+        };
+        let sql = build_hero_stats_query(&query);
+        assert!(sql.contains("not hasAny(items, [4, 5, 6])"));
+    }
+
+    #[test]
+    fn test_build_hero_stats_query_include_and_exclude_item_ids() {
+        let query = HeroStatsQuery {
+            include_item_ids: Some(vec![1, 2, 3]),
+            exclude_item_ids: Some(vec![4, 5, 6]),
+            ..Default::default()
+        };
+        let sql = build_hero_stats_query(&query);
+        assert!(sql.contains("hasAll(items, [1, 2, 3])"));
+        assert!(sql.contains("not hasAny(items, [4, 5, 6])"));
     }
 }
