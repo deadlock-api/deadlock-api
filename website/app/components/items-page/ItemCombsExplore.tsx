@@ -121,7 +121,7 @@ export default function ItemCombsExplore({
               >
                 <div className="flex items-center justify-start w-full gap-2">
                   <ItemImage itemId={item} className="size-6" />
-                  <ItemName itemId={item} />
+                  <ItemName itemId={item} className="text-sm text-pretty" />
                 </div>
               </Button>
             ))}
@@ -138,7 +138,7 @@ export default function ItemCombsExplore({
               >
                 <div className="flex items-center justify-start w-full gap-2">
                   <ItemImage itemId={item} className="size-6" />
-                  <ItemName itemId={item} />
+                  <ItemName itemId={item} className="text-sm text-pretty" />
                 </div>
               </Button>
             ))}
@@ -158,7 +158,7 @@ export default function ItemCombsExplore({
             {[1, 2, 3, 4].map((tier) => (
               <div key={tier}>
                 <h3 className="text-center text-lg p-2 mt-2">Tier {tier}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-2">
                   {assetsItems
                     ?.filter(
                       (i) => !i.disabled && i.shop_image_small_webp && i.item_slot_type === tab && i.item_tier === tier,
@@ -167,7 +167,7 @@ export default function ItemCombsExplore({
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">
                         <div className="flex items-center gap-2">
                           <ItemImage itemId={item.id} className="size-8 min-w-8 min-h-8" />
-                          <ItemName itemId={item.id} className="text-sm" />
+                          <ItemName itemId={item.id} className="text-sm text-pretty" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Button

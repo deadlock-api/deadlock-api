@@ -135,7 +135,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                       </a>
                     </span>
                   </h3>
-                  <div className="grid gap-6 text-balance mx-auto w-fit">
+                  <div className="grid gap-6 text-pretty mx-auto w-fit">
                     <div>
                       <h4 className="font-bold text-lg">Context</h4>
                       <p className="ml-4 w-fit max-w-72">

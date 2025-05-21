@@ -223,7 +223,7 @@ export default function Index() {
       </section>
 
       <section className="text-center border-t pt-8 mt-8">
-        <p className="text-sm text-muted-foreground text-balance">
+        <p className="text-sm text-muted-foreground text-pretty">
           <a
             href="https://deadlock-api.com/"
             title="Deadlock API"
