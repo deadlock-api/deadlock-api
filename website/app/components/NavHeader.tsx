@@ -3,29 +3,41 @@ import { Link } from "react-router";
 export default function NavHeader() {
   return (
     <header className="px-8 py-4 bg-gray-900 shadow">
-      <div className="max-w-6xl mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-6">
+      <div className="mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-6">
+        <Link to="/" prefetch="intent" className="text-lg font-medium text-white">
+          <span className="flex gap-2 items-center">
+            <img src="favicon.webp" alt="Icon" width={36} height={36} className="aspect-square object-contain" />
+            <h1 className="lg:text-3xl font-bold tracking-tight text-lg">Deadlock API</h1>
+          </span>
+        </Link>
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-6 gap-y-12">
-          <Link to="/" prefetch="intent" className="text-lg font-medium text-white">
-            <span className="flex gap-2 items-center">
-              <img src="favicon.webp" alt="Icon" width={36} height={36} className="aspect-square object-contain" />
-              <h1 className="lg:text-3xl font-bold tracking-tight text-lg">Deadlock API</h1>
-            </span>
-          </Link>
           <nav className="flex items-center gap-6 flex-wrap">
-            <Link to="/heroes" prefetch="intent" className="text-lg font-medium hover:underline">
+            <Link
+              to="/heroes"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+            >
               Heroes
             </Link>
-            <Link to="/items" prefetch="intent" className="text-lg font-medium hover:underline">
+            <Link
+              to="/items"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+            >
               Items
             </Link>
-            <Link to="/player" prefetch="intent" className="text-lg font-medium hover:underline">
+            <Link
+              to="/player"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+            >
               Player
             </Link>
             <a
               href="https://assets.deadlock-api.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1"
+              className="text-lg font-medium hover:underline flex items-center gap-1 hover:text-primary transition-colors duration-100"
               title="Assets API (external)"
             >
               Assets API
@@ -46,7 +58,7 @@ export default function NavHeader() {
               href="https://api.deadlock-api.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1"
+              className="text-lg font-medium hover:underline flex items-center gap-1 hover:text-primary transition-colors duration-100"
               title="Game API (external)"
             >
               Game API
@@ -67,7 +79,7 @@ export default function NavHeader() {
               href="https://www.patreon.com/user?u=68961896"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1 text-primary"
+              className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
               title="Support us (external)"
             >
               Support us
