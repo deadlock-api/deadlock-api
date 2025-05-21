@@ -21,8 +21,8 @@ export const meta: MetaFunction = () => {
 export default function Player({ initialTab }: { initialTab?: string } = { initialTab: "mmr" }) {
   const [steamId, setSteamIdAfter] = useDelayedState<number | null>(null);
   const [hero, setHero] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
-  const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
+  const [startDate, setStartDate] = useState<Dayjs | null>(null);
+  const [endDate, setEndDate] = useState<Dayjs | null>(null);
 
   const location = useLocation();
   const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
@@ -91,6 +91,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
               <PatchOrDatePicker
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
+                defaultTab="custom"
                 onValueChange={({ startDate, endDate }) => {
                   setStartDate(startDate);
                   setEndDate(endDate);
