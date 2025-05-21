@@ -7,12 +7,12 @@ import type { AssetsRank } from "~/types/assets_rank";
 
 export default function MMRChart({
   steamId,
-  heroId,
+  hero,
   minDate,
   maxDate,
 }: {
   steamId: number;
-  heroId?: number;
+  hero?: number | null;
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
 }) {
@@ -23,10 +23,10 @@ export default function MMRChart({
   });
 
   const { data: mmrData, isLoading: isLoadingMMR } = useQuery<APIPlayerMMRHistory[]>({
-    queryKey: ["api-mmr", steamId, heroId],
+    queryKey: ["api-mmr", steamId, hero],
     queryFn: async () => {
-      const url = heroId
-        ? new URL(`https://api.deadlock-api.com/v1/players/${steamId}/mmr-history/${heroId}`)
+      const url = hero
+        ? new URL(`https://api.deadlock-api.com/v1/players/${steamId}/mmr-history/${hero}`)
         : new URL(`https://api.deadlock-api.com/v1/players/${steamId}/mmr-history`);
       const res = await fetch(url);
       return await res.json();
