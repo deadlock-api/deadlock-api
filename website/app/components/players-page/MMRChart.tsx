@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Card, CardContent } from "~/components/ui/card";
 import type { APIPlayerMMRHistory } from "~/types/api_player_mmr_history";
 import type { AssetsRank } from "~/types/assets_rank";
 
@@ -77,6 +78,16 @@ export default function MMRChart({
       <div className="flex items-center justify-center w-full h-full">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
       </div>
+    );
+  }
+
+  if (!formattedData || formattedData.length === 0) {
+    return (
+      <Card className="w-fit mx-auto border-red-600">
+        <CardContent>
+          <p className="text-sm text-red-600 font-bold">No MMR data available for this player</p>
+        </CardContent>
+      </Card>
     );
   }
 
