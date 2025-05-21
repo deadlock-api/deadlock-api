@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { type MetaFunction, useLocation } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import MMRChart from "~/components/players-page/MMRChart";
+import HeroSelector from "~/components/selectors/HeroSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -85,6 +86,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                 placeholder="Steam ID3 (required)"
               />
             </div>
+            <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
             <div className="flex justify-center md:justify-start">
               <PatchOrDatePicker
                 patchDates={PATCHES}
@@ -104,7 +106,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
           <TabsTrigger value="mmr">MMR</TabsTrigger>
         </TabsList>
         <TabsContent value="mmr" className="space-y-4">
-          {steamId > 0 && (
+          {steamId && steamId > 0 && (
             <>
               <MMRChart steamId={steamId} minDate={startDate} maxDate={endDate} hero={hero} />
               <Card className="w-fit mx-auto">
