@@ -41,66 +41,53 @@ pub enum APIError {
     InternalError { message: String },
 }
 
-impl From<SteamProxyError> for APIError {
-    fn from(e: SteamProxyError) -> Self {
-        error!("{e}");
+impl APIError {
+    pub fn internal(message: impl Into<String>) -> Self {
         Self::InternalError {
-            message: "Request to Steam failed.".to_string(),
+            message: message.into(),
         }
+    }
+}
+
+impl From<SteamProxyError> for APIError {
+    fn from(_e: SteamProxyError) -> Self {
+        Self::internal("Request to Steam failed.")
     }
 }
 
 impl From<clickhouse::error::Error> for APIError {
-    fn from(e: clickhouse::error::Error) -> Self {
-        error!("{e}");
-        Self::InternalError {
-            message: "Clickhouse error".to_string(),
-        }
+    fn from(_e: clickhouse::error::Error) -> Self {
+        Self::internal("Clickhouse error")
     }
 }
 
 impl From<sqlx::Error> for APIError {
-    fn from(e: sqlx::Error) -> Self {
-        error!("{e}");
-        Self::InternalError {
-            message: "PostgreSQL error".to_string(),
-        }
+    fn from(_e: sqlx::Error) -> Self {
+        Self::internal("PostgreSQL error")
     }
 }
 
 impl From<redis::RedisError> for APIError {
-    fn from(e: redis::RedisError) -> Self {
-        error!("{e}");
-        Self::InternalError {
-            message: "Redis error".to_string(),
-        }
+    fn from(_e: redis::RedisError) -> Self {
+        Self::internal("Redis error")
     }
 }
 
 impl From<reqwest::Error> for APIError {
-    fn from(e: reqwest::Error) -> Self {
-        error!("{e}");
-        Self::InternalError {
-            message: "Request to external service failed".to_string(),
-        }
+    fn from(_e: reqwest::Error) -> Self {
+        Self::internal("Request to external service failed")
     }
 }
 
 impl From<base64::DecodeError> for APIError {
-    fn from(e: base64::DecodeError) -> Self {
-        error!("{e}");
-        Self::InternalError {
-            message: "Failed to decode base64 data".to_string(),
-        }
+    fn from(_e: base64::DecodeError) -> Self {
+        Self::internal("Failed to decode base64 data")
     }
 }
 
 impl From<prost::DecodeError> for APIError {
-    fn from(e: prost::DecodeError) -> Self {
-        error!("{e}");
-        Self::InternalError {
-            message: "Failed to decode protobuf message".to_string(),
-        }
+    fn from(_e: prost::DecodeError) -> Self {
+        Self::internal("Failed to decode protobuf message")
     }
 }
 
@@ -211,9 +198,7 @@ mod tests {
 
     #[test]
     fn test_api_error_internal_error() {
-        let error = APIError::InternalError {
-            message: "Database connection failed".to_string(),
-        };
+        let error = APIError::internal("Database connection failed");
         let response = error.into_response();
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }

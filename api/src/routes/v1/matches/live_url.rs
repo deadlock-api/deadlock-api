@@ -122,14 +122,10 @@ pub async fn live_url(
         .await;
 
     let Ok(spectate_response) = spectate_response else {
-        return Err(APIError::InternalError {
-            message: "Failed to spectate match".to_string(),
-        });
+        return Err(APIError::internal("Failed to spectate match"));
     };
     let Some(spectate_response) = spectate_response.result else {
-        return Err(APIError::InternalError {
-            message: "Failed to spectate match".to_string(),
-        });
+        return Err(APIError::internal("Failed to spectate match"));
     };
 
     match spectate_response {
@@ -147,12 +143,10 @@ pub async fn live_url(
         failed => {
             let result: Option<c_msg_client_to_gc_spectate_user_response::EResponse> =
                 failed.result.and_then(|r| r.try_into().ok());
-            Err(APIError::InternalError {
-                message: format!(
-                    "Failed to spectate match: {:?}",
-                    result.map(|r| r.as_str_name()).unwrap_or("Unknown")
-                ),
-            })
+            Err(APIError::internal(format!(
+                "Failed to spectate match: {:?}",
+                result.map(|r| r.as_str_name()).unwrap_or("Unknown")
+            )))
         }
     }
 }

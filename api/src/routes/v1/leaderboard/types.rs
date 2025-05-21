@@ -61,9 +61,9 @@ impl TryFrom<CMsgClientToGcGetLeaderboardResponse> for Leaderboard {
         if value.result.is_none_or(|r| {
             r != c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32
         }) {
-            return Err(APIError::InternalError {
-                message: format!("Failed to fetch leaderboard: {value:?}"),
-            });
+            return Err(APIError::internal(format!(
+                "Failed to fetch leaderboard: {value:?}"
+            )));
         }
         Ok(Self {
             entries: value.entries.into_iter().map_into().collect(),

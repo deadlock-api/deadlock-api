@@ -52,15 +52,11 @@ pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
 
 pub async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     if raw_data.len() < 7 {
-        return Err(APIError::InternalError {
-            message: "Invalid active matches data".to_string(),
-        });
+        return Err(APIError::internal("Invalid active matches data"));
     }
     let decompressed_data = snap::raw::Decoder::new()
         .decompress_vec(&raw_data[7..])
-        .map_err(|e| APIError::InternalError {
-            message: format!("Failed to decompress active matches: {e}"),
-        })?;
+        .map_err(|e| APIError::internal(format!("Failed to decompress active matches: {e}")))?;
     let decoded_message =
         CMsgClientToGcGetActiveMatchesResponse::decode(decompressed_data.as_ref())?;
     Ok(decoded_message

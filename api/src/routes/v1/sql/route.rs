@@ -130,9 +130,7 @@ pub async fn sql(
         .await
         .map_err(|e| {
             error!("Failed to execute query: {e}");
-            APIError::InternalError {
-                message: format!("Failed to execute query: {e}"),
-            }
+            APIError::internal(format!("Failed to execute query: {e}"))
         })
 }
 
@@ -159,9 +157,7 @@ pub async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoRe
         .await
         .map_err(|e| {
             error!("Failed to list tables: {e}");
-            APIError::InternalError {
-                message: format!("Failed to list tables: {e}"),
-            }
+            APIError::internal(format!("Failed to list tables: {e}"))
         })
         .map(Json)
 }
@@ -193,9 +189,7 @@ pub async fn table_schema(
         .await
         .map_err(|e| {
             error!("Failed to get table schema: {e}");
-            APIError::InternalError {
-                message: format!("Failed to get table schema: {e}"),
-            }
+            APIError::internal(format!("Failed to get table schema: {e}"))
         })
         .map(Json)
 }

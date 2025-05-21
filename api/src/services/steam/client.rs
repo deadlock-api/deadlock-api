@@ -120,16 +120,18 @@ pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIRes
         .text().await?;
     for line in steam_info.lines() {
         if line.starts_with("ClientVersion=") {
-            return line.split('=').nth(1).and_then(|v| v.parse().ok()).ok_or(
-                APIError::InternalError {
-                    message: "Failed to parse client version".to_string(),
-                },
-            );
+            return line
+                .split('=')
+                .nth(1)
+                .and_then(|v| v.parse().ok())
+                .ok_or(APIError::internal(
+                    "Failed to parse client version".to_string(),
+                ));
         }
     }
-    Err(APIError::InternalError {
-        message: "Failed to fetch client version".to_string(),
-    })
+    Err(APIError::internal(
+        "Failed to fetch client version".to_string(),
+    ))
 }
 
 #[cached(

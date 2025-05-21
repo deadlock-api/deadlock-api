@@ -154,9 +154,9 @@ async fn fetch_match_history_raw(
     if response.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_history_response::EResult::KEResultSuccess as i32
     }) {
-        return Err(APIError::InternalError {
-            message: format!("Failed to fetch player match history: {response:?}"),
-        });
+        return Err(APIError::internal(format!(
+            "Failed to fetch player match history: {response:?}"
+        )));
     }
     Ok((
         response

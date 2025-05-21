@@ -144,9 +144,9 @@ async fn switch_to_spectator_slot(
         .result
         .is_none_or(|r| r != c_msg_client_to_gc_party_action_response::EResponse::KESuccess as i32)
     {
-        return Err(APIError::InternalError {
-            message: format!("Failed to switch to spectator slot: {response:?}"),
-        });
+        return Err(APIError::internal(format!(
+            "Failed to switch to spectator slot: {response:?}"
+        )));
     }
     Ok(())
 }
@@ -176,9 +176,9 @@ async fn make_ready(steam_client: &SteamClient, username: String, party_id: u64)
         r != c_msg_client_to_gc_party_set_ready_state_response::EResponse::KESuccess as i32
     }) {
         error!("Failed to make ready: {username} {party_id} {result:?}");
-        return Err(APIError::InternalError {
-            message: format!("Failed to make ready: {result:?}"),
-        });
+        return Err(APIError::internal(format!(
+            "Failed to make ready: {result:?}"
+        )));
     }
     Ok(())
 }
@@ -206,9 +206,9 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
         .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
     {
         error!("Failed to leave party: {username} {party_id} {result:?}");
-        return Err(APIError::InternalError {
-            message: format!("Failed to leave party: {result:?}"),
-        });
+        return Err(APIError::internal(format!(
+            "Failed to leave party: {result:?}"
+        )));
     }
     Ok(())
 }
@@ -255,9 +255,7 @@ pub async fn create_custom(
             "Failed to create party, created_party is {:?}",
             created_party
         );
-        return Err(APIError::InternalError {
-            message: "Failed to create party".to_string(),
-        });
+        return Err(APIError::internal("Failed to create party"));
     };
 
     let steam_client = state.steam_client.clone();
@@ -277,14 +275,12 @@ pub async fn create_custom(
 
     let Some((_, account_id, party_code)) = party_code.split(':').collect_tuple() else {
         error!("Failed to parse party code");
-        return Err(APIError::InternalError {
-            message: "Failed to parse party code".to_string(),
-        });
+        return Err(APIError::internal("Failed to parse party code"));
     };
 
-    let account_id = account_id.parse().map_err(|_| APIError::InternalError {
-        message: "Failed to parse account id".to_string(),
-    })?;
+    let account_id = account_id
+        .parse()
+        .map_err(|_| APIError::internal("Failed to parse account id".to_string()))?;
 
     match switch_to_spectator_slot(&state.steam_client, username.clone(), party_id, account_id)
         .await
@@ -294,9 +290,7 @@ pub async fn create_custom(
         }
         Err(e) => {
             error!("Failed to switch to spectator slot: {e}");
-            return Err(APIError::InternalError {
-                message: "Failed to switch to spectator slot".to_string(),
-            });
+            return Err(APIError::internal("Failed to switch to spectator slot"));
         }
     }
 
@@ -306,9 +300,7 @@ pub async fn create_custom(
         }
         Err(e) => {
             error!("Failed to make ready: {e}");
-            return Err(APIError::InternalError {
-                message: "Failed to make ready".to_string(),
-            });
+            return Err(APIError::internal("Failed to make ready"));
         }
     }
 

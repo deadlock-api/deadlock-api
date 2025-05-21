@@ -144,9 +144,7 @@ pub async fn bulk_metadata(
     let lines = fetch_lines(&state.ch_client, &query).await?;
     let parsed_result = parse_lines(lines)
         .await
-        .map_err(|_| APIError::InternalError {
-            message: "Failed to parse match metadata".to_string(),
-        })?;
+        .map_err(|_| APIError::internal("Failed to parse match metadata".to_string()))?;
     if parsed_result.is_empty() {
         return Err(APIError::StatusMsg {
             status: StatusCode::NOT_FOUND,
