@@ -7,8 +7,8 @@ import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import type { APIMatchMetadata } from "~/types/api_match_metadata";
 import type { APIMatchHistory } from "~/types/api_match_history";
+import type { APIMatchMetadata } from "~/types/api_match_metadata";
 import type { AssetsHero } from "~/types/assets_hero";
 import type { AssetsItem } from "~/types/assets_item";
 
