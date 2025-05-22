@@ -1,9 +1,8 @@
-import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { type Dayjs, day } from "~/dayjs";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
@@ -22,7 +21,7 @@ export interface PatchOrDatePickerProps {
 }
 
 const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
-  return endDate === "NOW" ? dayjs().endOf("day") : endDate;
+  return endDate === "NOW" ? day().endOf("day") : endDate;
 };
 
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {

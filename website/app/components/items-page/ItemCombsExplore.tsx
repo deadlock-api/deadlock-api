@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import * as React from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import { ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import type { Dayjs } from "~/dayjs";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
