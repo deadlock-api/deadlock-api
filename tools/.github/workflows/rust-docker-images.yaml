@@ -40,7 +40,7 @@ jobs:
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/rust-base.tar
       - name: Upload Base Image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rust-base-image
           path: /tmp/rust-base.tar
