@@ -72,23 +72,20 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            common: [ 'common/**' ]
-            cargo: [ 'Cargo.toml', 'Cargo.lock' ]
-            dockerfile: [ 'Dockerfile' ]
-            salt-scraper: [ 'salt-scraper/**' ]
-            hltv-scraper: [ 'hltv-scraper/**' ]
-            ingest-worker: [ 'ingest-worker/**' ]
-            matchdata-downloader: [ 'matchdata-downloader/**' ]
-            active-matches-scraper: [ 'active-matches-scraper/**' ]
-            builds-fetcher: [ 'builds-fetcher/**' ]
-            history-fetcher: [ 'history-fetcher/**' ]
-            steam-profile-fetcher: [ 'steam-profile-fetcher/**' ]
-            update-assets-tables: [ 'update-assets-tables/**' ]
+            salt-scraper: [ 'salt-scraper/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            hltv-scraper: [ 'hltv-scraper/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            ingest-worker: [ 'ingest-worker/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            matchdata-downloader: [ 'matchdata-downloader/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            active-matches-scraper: [ 'active-matches-scraper/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            builds-fetcher: [ 'builds-fetcher/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            history-fetcher: [ 'history-fetcher/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            steam-profile-fetcher: [ 'steam-profile-fetcher/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            update-assets-tables: [ 'update-assets-tables/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
 
       - name: Check if component should build
         id: should_build
         run: |
-          if [[ "${{ steps.changes.outputs.common }}" == "true" || "${{ steps.changes.outputs.cargo }}" == "true" || "${{ steps.changes.outputs.dockerfile }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs[matrix.component] }}" == "true" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs[matrix.component] }}" == "true" ]]; then
             echo "build=true" >> $GITHUB_OUTPUT
           else
             echo "build=false" >> $GITHUB_OUTPUT
