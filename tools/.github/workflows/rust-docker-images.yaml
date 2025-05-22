@@ -16,8 +16,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  build-and-push:
+  build-base:
     runs-on: ubuntu-24.04-arm
+    outputs:
+      image-id: ${{ steps.build-base.outputs.imageid }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,16 +28,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Build the base image with all binaries (without pushing)
       - name: Build Base Image
+        id: build-base
         uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
@@ -44,21 +38,96 @@ jobs:
           tags: ghcr.io/${{ github.repository }}/rust-base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/rust-base.tar
+      - name: Upload Base Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: rust-base-image
+          path: /tmp/rust-base.tar
+          retention-days: 1
 
-      # Build and push all components
-      - name: Build and Push All Components
+  build-and-push-components:
+    runs-on: ubuntu-24.04-arm
+    needs: build-base
+    strategy:
+      matrix:
+        component:
+          - salt-scraper
+          - hltv-scraper
+          - ingest-worker
+          - matchdata-downloader
+          - active-matches-scraper
+          - builds-fetcher
+          - history-fetcher
+          - steam-profile-fetcher
+          - update-assets-tables
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
+      - name: Filter changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            common: [ 'common/**' ]
+            cargo: [ 'Cargo.toml', 'Cargo.lock' ]
+            dockerfile: [ 'Dockerfile' ]
+            salt-scraper: [ 'salt-scraper/**' ]
+            hltv-scraper: [ 'hltv-scraper/**' ]
+            ingest-worker: [ 'ingest-worker/**' ]
+            matchdata-downloader: [ 'matchdata-downloader/**' ]
+            active-matches-scraper: [ 'active-matches-scraper/**' ]
+            builds-fetcher: [ 'builds-fetcher/**' ]
+            history-fetcher: [ 'history-fetcher/**' ]
+            steam-profile-fetcher: [ 'steam-profile-fetcher/**' ]
+            update-assets-tables: [ 'update-assets-tables/**' ]
+
+      - name: Check if component should build
+        id: should_build
         run: |
-          # List of all components
-          COMPONENTS=("salt-scraper" "hltv-scraper" "ingest-worker" "matchdata-downloader" "active-matches-scraper" "builds-fetcher" "history-fetcher" "steam-profile-fetcher" "update-assets-tables")
+          if [[ "${{ steps.changes.outputs.common }}" == "true" || "${{ steps.changes.outputs.cargo }}" == "true" || "${{ steps.changes.outputs.dockerfile }}" == "true" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs[matrix.component] }}" == "true" ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+          fi
 
-          for component in "${COMPONENTS[@]}"; do
-            echo "Building and pushing $component..."
-            docker buildx build \
-              --platform linux/arm64 \
-              --push \
-              --build-arg EXE_NAME=$component \
-              --tag ghcr.io/${{ github.repository }}/$component:latest \
-              --cache-from type=gha \
-              --cache-to type=gha,mode=max \
-              .
-          done
+      - name: Set up Docker Buildx
+        if: steps.should_build.outputs.build == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        if: steps.should_build.outputs.build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Base Image
+        if: steps.should_build.outputs.build == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: rust-base-image
+          path: /tmp
+
+      - name: Load Base Image
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          docker load --input /tmp/rust-base.tar
+
+      - name: Build and Push Component
+        if: steps.should_build.outputs.build == 'true'
+        run: |
+          echo "Building and pushing ${{ matrix.component }}"
+          docker buildx build \
+            --platform linux/arm64 \
+            --target runtime \
+            --build-arg EXE_NAME=${{ matrix.component }} \
+            --tag ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            .
