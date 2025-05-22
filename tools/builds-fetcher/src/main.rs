@@ -81,7 +81,7 @@ async fn update_builds(
         Ok(builds) => {
             counter!("builds_fetcher.fetch_builds.success", "hero_id" => hero_id.to_string())
                 .increment(1);
-            info!("Fetched {} builds", builds.len());
+            debug!("Fetched {} builds", builds.len());
             builds
         }
         Err(e) => {
