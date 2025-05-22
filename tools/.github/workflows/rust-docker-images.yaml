@@ -40,7 +40,7 @@ jobs:
         with:
           platforms: linux/arm64
           push: false
-          target: runtime-base
+          target: builder-base
           tags: ghcr.io/${{ github.repository }}/rust-base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
