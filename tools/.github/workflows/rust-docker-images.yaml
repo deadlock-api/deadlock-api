@@ -5,6 +5,20 @@ on:
   push:
     branches:
       - 'master'
+    paths:
+      - 'Dockerfile'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'common/**'
+      - 'salt-scraper/**'
+      - 'hltv-scraper/**'
+      - 'ingest-worker/**'
+      - 'matchdata-downloader/**'
+      - 'active-matches-scraper/**'
+      - 'builds-fetcher/**'
+      - 'history-fetcher/**'
+      - 'steam-profile-fetcher/**'
+      - 'update-assets-tables/**'
 
 permissions:
   contents: read
