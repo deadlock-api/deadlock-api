@@ -13,10 +13,10 @@ fn default_limit() -> Option<u32> {
 #[serde(rename_all = "snake_case")]
 pub enum BuildsSearchQuerySortBy {
     /// Sort by the number of weekly favorites.
-    #[default]
     #[display("weekly_favorites")]
     WeeklyFavorites,
     /// Sort by the number of all-time favorites.
+    #[default]
     #[display("favorites")]
     Favorites,
     /// Sort by the number of weekly ignores. (currently always 0)
