@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 import type { AssetsItem } from "~/types/assets_item";
 import { cn } from "../lib/utils";
-import { Skeleton } from "~/components/ui/skeleton";
 
 export default function ItemImage({ itemId, className }: { itemId: number; className?: string }) {
   const { data, isLoading } = useQuery<AssetsItem[]>({
