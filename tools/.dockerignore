@@ -1,4 +1,5 @@
 .env
+venv/
 volumes/
 
 # Created by https://www.toptal.com/developers/gitignore/api/jetbrains+all,visualstudiocode,vim,visualstudio,rust
