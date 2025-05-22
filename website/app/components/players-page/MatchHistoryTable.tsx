@@ -25,7 +25,7 @@ export default function MatchHistoryTable({
 }) {
   const { data: heroesData, isLoading: isLoadingHeroes } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes").then((res) => res.json()),
+    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 

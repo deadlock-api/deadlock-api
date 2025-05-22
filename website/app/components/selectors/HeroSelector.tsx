@@ -22,7 +22,7 @@ export default function HeroSelector({
 }) {
   const { data, isLoading } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: async () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
+    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
