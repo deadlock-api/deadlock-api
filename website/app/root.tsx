@@ -2,6 +2,7 @@ import type { LinksFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 import "./tailwind.css";
+import "./dayjs.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import NavHeader from "~/components/NavHeader";
 
