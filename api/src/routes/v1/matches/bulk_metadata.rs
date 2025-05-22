@@ -32,7 +32,7 @@ pub enum SortKey {
     StartTime,
 }
 
-#[derive(Debug, Clone, Deserialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Default)]
 pub struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.
@@ -88,6 +88,10 @@ pub struct BulkMatchMetadataQuery {
     pub is_low_pri_pool: Option<bool>,
     /// Filter matches based on whether they are in the new player pool.
     pub is_new_player_pool: Option<bool>,
+    /// Filter matches by account IDs of players that participated in the match.
+    #[serde(default)]
+    #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
+    pub account_ids: Option<Vec<u32>>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
     #[serde(default)]
@@ -271,6 +275,25 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
     }
 
+    // Player filters - conditions that require subqueries on match_player
+    let mut player_filters = vec![];
+    if let Some(account_ids) = query.account_ids {
+        if !account_ids.is_empty() {
+            player_filters.push(format!(
+                "account_id IN ({})",
+                account_ids.iter().map(|id| id.to_string()).join(",")
+            ));
+        }
+    }
+
+    // Add player filter subquery if any player filters exist
+    if !player_filters.is_empty() {
+        info_filters.push(format!(
+            "match_id IN (SELECT match_id FROM match_player WHERE {})",
+            player_filters.join(" AND ")
+        ));
+    }
+
     let info_filters = if !info_filters.is_empty() {
         format!(" WHERE {} ", info_filters.join(" AND "))
     } else {
@@ -327,4 +350,93 @@ async fn parse_lines(mut lines: Lines<BytesCursor>) -> serde_json::Result<Vec<se
         parsed_result.push(value);
     }
     Ok(parsed_result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn normalize_whitespace(s: &str) -> String {
+        s.replace(['\n', '\t'], " ")
+            .split_whitespace()
+            .collect::<Vec<&str>>()
+            .join(" ")
+    }
+
+    #[test]
+    fn test_build_ch_query_with_account_ids() {
+        let query = BulkMatchMetadataQuery {
+            include_info: true,
+            account_ids: Some(vec![12345, 67890]),
+            limit: 10,
+            ..Default::default()
+        };
+
+        let result = build_ch_query(query).unwrap();
+        let normalized = normalize_whitespace(&result);
+
+        // Should contain the player filter subquery
+        assert!(normalized.contains(
+            "match_id IN (SELECT match_id FROM match_player WHERE account_id IN (12345,67890))"
+        ));
+        // Should still have the basic structure
+        assert!(normalized.contains("t_matches AS (SELECT * FROM match_info FINAL"));
+        assert!(normalized.contains("WHERE"));
+        assert!(normalized.contains("LIMIT 10"));
+    }
+
+    #[test]
+    fn test_build_ch_query_with_empty_account_ids() {
+        let query = BulkMatchMetadataQuery {
+            include_info: true,
+            account_ids: Some(vec![]),
+            limit: 10,
+            ..Default::default()
+        };
+
+        let result = build_ch_query(query).unwrap();
+        let normalized = normalize_whitespace(&result);
+
+        // Should not contain player filter when account_ids is empty
+        assert!(!normalized.contains("match_id IN (SELECT match_id FROM match_player"));
+    }
+
+    #[test]
+    fn test_build_ch_query_without_account_ids() {
+        let query = BulkMatchMetadataQuery {
+            include_info: true,
+            account_ids: None,
+            limit: 10,
+            ..Default::default()
+        };
+
+        let result = build_ch_query(query).unwrap();
+        let normalized = normalize_whitespace(&result);
+
+        // Should not contain player filter when account_ids is None
+        assert!(!normalized.contains("match_id IN (SELECT match_id FROM match_player"));
+    }
+
+    #[test]
+    fn test_build_ch_query_account_ids_with_other_filters() {
+        let query = BulkMatchMetadataQuery {
+            include_info: true,
+            account_ids: Some(vec![12345]),
+            min_unix_timestamp: Some(1640995200), // 2022-01-01
+            max_duration_s: Some(3600),
+            limit: 5,
+            ..Default::default()
+        };
+
+        let result = build_ch_query(query).unwrap();
+        let normalized = normalize_whitespace(&result);
+
+        // Should contain all filters
+        assert!(normalized.contains(
+            "match_id IN (SELECT match_id FROM match_player WHERE account_id IN (12345))"
+        ));
+        assert!(normalized.contains("start_time >= 1640995200"));
+        assert!(normalized.contains("duration_s <= 3600"));
+        assert!(normalized.contains("LIMIT 5"));
+    }
 }
