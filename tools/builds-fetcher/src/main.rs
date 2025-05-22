@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use metrics::counter;
-use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use rand::rng;
+use reqwest::StatusCode;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
 use sqlx::{Pool, Postgres, QueryBuilder};
@@ -23,13 +23,6 @@ const ASCII_LOWER: [char; 26] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
     't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
-
-static UPDATE_INTERVAL: Lazy<u64> = Lazy::new(|| {
-    std::env::var("UPDATE_INTERVAL")
-        .ok()
-        .and_then(|interval| interval.parse().ok())
-        .unwrap_or(3)
-});
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -59,17 +52,14 @@ async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgre
     };
     heroes.shuffle(&mut rng());
 
-    let mut interval = tokio::time::interval(Duration::from_secs(*UPDATE_INTERVAL));
     for hero_id in heroes {
         for langs in ALL_LANGS.chunks(2) {
             if langs.contains(&0) {
                 for search in ASCII_LOWER.iter().cartesian_product(ASCII_LOWER.iter()) {
-                    interval.tick().await;
                     let search = format!("{}{}", search.0, search.1);
                     update_builds(http_client, pg_client, hero_id, langs, Some(search)).await;
                 }
             } else {
-                interval.tick().await;
                 update_builds(http_client, pg_client, hero_id, langs, None).await;
             }
         }
@@ -172,14 +162,29 @@ async fn fetch_builds(
         search_text: search.clone(),
         ..Default::default()
     };
-    common::call_steam_proxy(
-        http_client,
-        EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
-        msg,
-        None,
-        None,
-        Duration::from_secs(10 * 60),
-        Duration::from_secs(5),
-    )
-    .await
+    loop {
+        let result = common::call_steam_proxy(
+            http_client,
+            EgcCitadelClientMessages::KEMsgClientToGcFindHeroBuilds,
+            &msg,
+            None,
+            None,
+            Duration::from_secs(240),
+            Duration::from_secs(5),
+        )
+        .await;
+
+        match result {
+            Ok(r) => return Ok(r),
+            Err(e) => match e.status() {
+                Some(status) if status == StatusCode::TOO_MANY_REQUESTS => {
+                    warn!("Got proxy rate limit, waiting 10s before retrying");
+                    sleep(Duration::from_secs(10)).await;
+                }
+                _ => {
+                    return Err(e);
+                }
+            },
+        }
+    }
 }

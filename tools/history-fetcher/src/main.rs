@@ -143,7 +143,7 @@ async fn fetch_account_match_history(
     common::call_steam_proxy(
         http_client,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
-        msg,
+        &msg,
         Some(&["GetMatchHistory"]),
         None,
         Duration::from_secs(24 * 60 * 60 / 100), // 100 requests per day

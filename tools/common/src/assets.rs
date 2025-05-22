@@ -13,5 +13,9 @@ pub async fn fetch_hero_ids(http_client: &reqwest::Client) -> reqwest::Result<Ve
         .await?
         .json()
         .await?;
-    Ok(heroes.iter().filter(|h| h.in_development.is_none_or(|d | !d)).map(|h| h.id).collect())
+    Ok(heroes
+        .iter()
+        .filter(|h| h.in_development.is_none_or(|d| !d))
+        .map(|h| h.id)
+        .collect())
 }

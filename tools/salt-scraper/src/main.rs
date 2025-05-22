@@ -143,7 +143,7 @@ async fn fetch_salts(
     common::call_steam_proxy(
         &HTTP_CLIENT,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
-        msg,
+        &msg,
         Some(&["GetMatchMetaData"]),
         None,
         Duration::from_millis(*SALTS_COOLDOWN_MILLIS),

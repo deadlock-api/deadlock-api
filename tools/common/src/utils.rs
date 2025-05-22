@@ -24,7 +24,7 @@ pub struct SteamProxyResponse {
 pub async fn call_steam_proxy<T: Message + Default>(
     http_client: &reqwest::Client,
     msg_type: EgcCitadelClientMessages,
-    msg: impl Message,
+    msg: &impl Message,
     in_all_groups: Option<&[&str]>,
     in_any_groups: Option<&[&str]>,
     cooldown_time: Duration,
