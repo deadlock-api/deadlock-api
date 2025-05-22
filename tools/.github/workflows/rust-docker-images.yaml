@@ -108,7 +108,7 @@ jobs:
 
       - name: Download Base Image
         if: steps.should_build.outputs.build == 'true'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: rust-base-image
           path: /tmp
