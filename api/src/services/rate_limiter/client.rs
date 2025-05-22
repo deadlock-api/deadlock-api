@@ -36,16 +36,14 @@ impl RateLimitClient {
 
         // Validate the API key if it is present
         let api_key = match rate_limit_key.api_key {
-            Some(key) => match is_api_key_valid(&self.pg_client, key).await.then_some(key) {
-                Some(a) => Some(a),
-                None => {
-                    error!("Invalid API key: {key}");
-                    return Err(APIError::status_msg(
-                        StatusCode::FORBIDDEN,
-                        "Invalid API key",
-                    ));
-                }
-            },
+            Some(key) => is_api_key_valid(&self.pg_client, key)
+                .await
+                .then_some(key)
+                .ok_or_else(|| {
+                    error!("Failed to validate API key: {key}");
+                    APIError::status_msg(StatusCode::FORBIDDEN, "Invalid API key")
+                })?
+                .into(),
             None => None,
         };
 
