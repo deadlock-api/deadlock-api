@@ -86,20 +86,12 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            salt-scraper: [ 'salt-scraper/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            hltv-scraper: [ 'hltv-scraper/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            ingest-worker: [ 'ingest-worker/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            matchdata-downloader: [ 'matchdata-downloader/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            active-matches-scraper: [ 'active-matches-scraper/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            builds-fetcher: [ 'builds-fetcher/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            history-fetcher: [ 'history-fetcher/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            steam-profile-fetcher: [ 'steam-profile-fetcher/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-            update-assets-tables: [ 'update-assets-tables/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            change: [ '${{ matrix.component }}/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
 
       - name: Check if component should build
         id: should_build
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs[matrix.component] }}" == "true" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs['change'] }}" == "true" ]]; then
             echo "build=true" >> $GITHUB_OUTPUT
           else
             echo "build=false" >> $GITHUB_OUTPUT
