@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import * as React from "react";
 import ItemImage from "~/components/ItemImage";
@@ -9,6 +8,7 @@ import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import type { Dayjs } from "~/dayjs";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 

@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent } from "~/components/ui/card";
+import { type Dayjs, day } from "~/dayjs";
 import type { APIPlayerMMRHistory } from "~/types/api_player_mmr_history";
 import type { AssetsRank } from "~/types/assets_rank";
 
@@ -52,7 +52,7 @@ export default function MMRChart({
         ?.filter((d) => !minDate || d.start_time >= minDate.unix())
         .filter((d) => !maxDate || d.start_time <= maxDate.unix())
         .map((d) => ({
-          date: dayjs.unix(d.start_time).toDate(),
+          date: day.unix(d.start_time).toDate(),
           match: d.match_id,
           mmr: (d.player_score * 116) / 66,
           rank: rankNames?.[d.rank] || "",
@@ -98,7 +98,7 @@ export default function MMRChart({
         <XAxis
           dataKey="date"
           scale="time"
-          tickFormatter={(timestamp) => dayjs(timestamp).format("MM/DD/YY")}
+          tickFormatter={(timestamp) => day(timestamp).format("MM/DD/YY")}
           label={{ value: "Date", position: "insideBottom", offset: -15 }}
           stroke="#9ca3af"
         />
@@ -111,7 +111,7 @@ export default function MMRChart({
           stroke="#9ca3af"
         />
         <Tooltip
-          labelFormatter={(label) => dayjs(label).format("YYYY-MM-DD")}
+          labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
           contentStyle={{ backgroundColor: "#1e293b", borderColor: "#4b5563" }}
           itemStyle={{ color: "#e5e7eb" }}
         />

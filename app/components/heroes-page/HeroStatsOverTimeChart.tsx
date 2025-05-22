@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { type Dayjs, day } from "~/dayjs";
 import {
   type APIHeroStatsOverTime,
   HERO_STATS,
@@ -162,7 +162,7 @@ export default function HeroStatsOverTimeChart({
     const data: { [key: string]: Date | number }[] = [];
 
     for (const [date, stats] of Object.entries(heroStatMap)) {
-      const dateObj = dayjs.unix(Number.parseInt(date, 10));
+      const dateObj = day.unix(Number.parseInt(date, 10));
       const obj = {
         date: dateObj.toDate(),
       };
@@ -193,10 +193,10 @@ export default function HeroStatsOverTimeChart({
           type="number"
           scale="time"
           domain={[
-            minDataDate ? dayjs.unix(minDataDate).valueOf() : "auto",
-            maxDataDate ? dayjs.unix(maxDataDate).valueOf() : "auto",
+            minDataDate ? day.unix(minDataDate).valueOf() : "auto",
+            maxDataDate ? day.unix(maxDataDate).valueOf() : "auto",
           ]}
-          tickFormatter={(timestamp) => dayjs(timestamp).format("MM/DD/YY")}
+          tickFormatter={(timestamp) => day(timestamp).format("MM/DD/YY")}
           label={{ value: "Date", position: "insideBottom", offset: -15 }}
           stroke="#9ca3af"
         />
@@ -209,7 +209,7 @@ export default function HeroStatsOverTimeChart({
           stroke="#9ca3af"
         />
         <Tooltip
-          labelFormatter={(label) => dayjs(label).format("YYYY-MM-DD")}
+          labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
           contentStyle={{ backgroundColor: "#1e293b", borderColor: "#4b5563" }}
           itemStyle={{ color: "#e5e7eb" }}
         />

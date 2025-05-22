@@ -1,6 +1,4 @@
 import { format } from "date-fns";
-import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
 import { CalendarIcon } from "lucide-react";
 import * as React from "react";
 import { useCallback, useMemo } from "react";
@@ -8,6 +6,8 @@ import type { DateRange } from "react-day-picker";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import type { Dayjs } from "~/dayjs";
+import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 
 export interface DateRangePickerProps {
@@ -39,8 +39,8 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
       }
 
       // Convert Date objects to dayjs with appropriate time adjustments
-      const newStartDate = range.from ? dayjs(range.from).startOf("day") : null;
-      const newEndDate = range.to ? dayjs(range.to).endOf("day") : null;
+      const newStartDate = range.from ? day(range.from).startOf("day") : null;
+      const newEndDate = range.to ? day(range.to).endOf("day") : null;
 
       onDateRangeChange({ startDate: newStartDate, endDate: newEndDate });
     },
@@ -65,8 +65,8 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
   }, [startDate, endDate]);
 
   function selectLastDays(days: number) {
-    const startDate = dayjs().subtract(days, "day").startOf("day");
-    const endDate = dayjs().startOf("day");
+    const startDate = day().subtract(days, "day").startOf("day");
+    const endDate = day().startOf("day");
     onDateRangeChange({ startDate, endDate });
   }
 

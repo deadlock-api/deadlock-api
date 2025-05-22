@@ -1,4 +1,3 @@
-import type { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
@@ -18,6 +17,7 @@ import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
 import { PatchOrDatePicker } from "../components/PatchOrDatePicker";

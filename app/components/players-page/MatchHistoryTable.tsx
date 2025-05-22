@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import dayjs, { type Dayjs } from "dayjs";
 import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
@@ -7,6 +6,7 @@ import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { type Dayjs, day } from "~/dayjs";
 import type { APIMatchHistory } from "~/types/api_match_history";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
 import type { AssetsHero } from "~/types/assets_hero";
@@ -60,7 +60,7 @@ export default function MatchHistoryTable({
     // Apply date filters
     if (minDate || maxDate) {
       filtered = filtered.filter((match) => {
-        const matchTime = dayjs.unix(match.start_time);
+        const matchTime = day.unix(match.start_time);
         const afterMin = !minDate || matchTime.isAfter(minDate);
         const beforeMax = !maxDate || matchTime.isBefore(maxDate);
         return afterMin && beforeMax;
@@ -149,7 +149,7 @@ export default function MatchHistoryTable({
             .slice(0, 6);
 
           return {
-            match: { ...metadata, start_time: dayjs.utc(metadata.start_time).local() },
+            match: { ...metadata, start_time: day.utc(metadata.start_time).local() },
             player,
             isWin,
             kda,
@@ -168,7 +168,7 @@ export default function MatchHistoryTable({
         return {
           match: {
             match_id: historyMatch.match_id,
-            start_time: dayjs.unix(historyMatch.start_time),
+            start_time: day.unix(historyMatch.start_time),
             duration_s: historyMatch.match_duration_s,
             winning_team: historyMatch.player_team, // Use player_team
           },
