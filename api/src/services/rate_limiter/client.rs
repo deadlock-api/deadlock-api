@@ -39,6 +39,7 @@ impl RateLimitClient {
             Some(key) => match is_api_key_valid(&self.pg_client, key).await.then_some(key) {
                 Some(a) => Some(a),
                 None => {
+                    error!("Invalid API key: {key}");
                     return Err(APIError::status_msg(
                         StatusCode::FORBIDDEN,
                         "Invalid API key",
