@@ -30,8 +30,8 @@ export default function MatchHistoryTable({
   });
 
   const { data: itemsData, isLoading: isLoadingItems } = useQuery<AssetsItem[]>({
-    queryKey: ["assets-items"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items").then((res) => res.json()),
+    queryKey: ["assets-items-upgrades"],
+    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -111,10 +111,10 @@ export default function MatchHistoryTable({
   }, [itemsData]);
 
   const upgradeItemIds = useMemo(() => {
-    return new Set(itemsData?.filter((item) => item.item_tier !== undefined).map((item) => item.id) ?? []);
+    return new Set(itemsData?.map((item) => item.id) ?? []);
   }, [itemsData]);
 
-  // Intelligently merge match history with metadata
+  // Combine match history with metadata using pre-filtered match ids
   const playerMatches = useMemo(() => {
     if (!matchHistoryData || !steamId) return [];
 
@@ -126,26 +126,10 @@ export default function MatchHistoryTable({
       }
     }
 
-    // Process filtered match history
-    let filtered = matchHistoryData;
+    // Get filtered matches based on filteredMatchIds (already filtered)
+    const filteredMatches = matchHistoryData.filter((match) => filteredMatchIds.includes(match.match_id));
 
-    // Apply hero filter
-    if (hero) {
-      filtered = filtered.filter((match) => match.hero_id === hero);
-    }
-
-    // Apply date filters
-    if (minDate || maxDate) {
-      filtered = filtered.filter((match) => {
-        const matchTime = dayjs.unix(match.start_time);
-        const afterMin = !minDate || matchTime.isAfter(minDate);
-        const beforeMax = !maxDate || matchTime.isBefore(maxDate);
-        return afterMin && beforeMax;
-      });
-    }
-
-    return filtered
-      .slice(0, 20) // Limit to 20 matches
+    return filteredMatches
       .map((historyMatch) => {
         const metadata = metadataMap.get(historyMatch.match_id);
 
@@ -165,7 +149,7 @@ export default function MatchHistoryTable({
             .slice(0, 6);
 
           return {
-            match: metadata,
+            match: { ...metadata, start_time: dayjs.utc(metadata.start_time).local() },
             player,
             isWin,
             kda,
@@ -175,26 +159,26 @@ export default function MatchHistoryTable({
           };
         }
         // Fall back to history data only
-        const isWin = historyMatch.winning_team === historyMatch.team;
+        const isWin = historyMatch.match_result === 1; // Use match_result instead
         const kda =
-          historyMatch.deaths > 0
-            ? (historyMatch.kills + historyMatch.assists) / historyMatch.deaths
-            : historyMatch.kills + historyMatch.assists;
+          historyMatch.player_deaths > 0
+            ? (historyMatch.player_kills + historyMatch.player_assists) / historyMatch.player_deaths
+            : historyMatch.player_kills + historyMatch.player_assists;
 
         return {
           match: {
             match_id: historyMatch.match_id,
-            start_time: historyMatch.start_time,
-            duration_s: historyMatch.duration_s,
-            winning_team: historyMatch.winning_team,
+            start_time: dayjs.unix(historyMatch.start_time),
+            duration_s: historyMatch.match_duration_s,
+            winning_team: historyMatch.player_team, // Use player_team
           },
           player: {
             account_id: steamId,
             hero_id: historyMatch.hero_id,
-            kills: historyMatch.kills,
-            deaths: historyMatch.deaths,
-            assists: historyMatch.assists,
-            team: historyMatch.team,
+            kills: historyMatch.player_kills,
+            deaths: historyMatch.player_deaths,
+            assists: historyMatch.player_assists,
+            team: historyMatch.player_team,
             items: [], // No items available from history endpoint
           },
           isWin,
@@ -205,7 +189,7 @@ export default function MatchHistoryTable({
         };
       })
       .filter(Boolean);
-  }, [matchHistoryData, matchesData, steamId, heroesMap, upgradeItemIds, hero, minDate, maxDate]);
+  }, [matchHistoryData, matchesData, steamId, heroesMap, upgradeItemIds, filteredMatchIds]);
 
   if (isLoadingMatchHistory || isLoadingHeroes || isLoadingItems) {
     return (
@@ -274,11 +258,12 @@ export default function MatchHistoryTable({
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {Math.floor(match.duration_s / 60)}:{(match.duration_s % 60).toString().padStart(2, "0")}
+                      {Math.floor((match.duration_s || 0) / 60)}:
+                      {((match.duration_s || 0) % 60).toString().padStart(2, "0")}
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{dayjs(match.start_time).format("MM/DD/YY HH:mm")}</span>
+                    <span className="text-sm">{match.start_time.format("MM/DD/YY HH:mm")}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
