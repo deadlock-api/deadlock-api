@@ -14,7 +14,7 @@ redis = { version = "0.31.0", features = ["tokio-comp"], default-features = fals
 envy = "0.4.2"
 clickhouse = "0.13.2"
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
-uuid = { version = "1.16.0", features = ["v4"] }
+uuid = { version = "1.17.0", features = ["v4"] }
 cached = { version = "0.55.1", features = ["async", "serde", "tokio"] }
 axum = { version = "0.8.4", features = ["http2"] }
 utoipa-axum = "0.2.0"
