@@ -56,43 +56,50 @@ impl APIError {
 }
 
 impl From<SteamProxyError> for APIError {
-    fn from(_e: SteamProxyError) -> Self {
+    fn from(e: SteamProxyError) -> Self {
+        error!("Failed to call Steam proxy: {e}");
         Self::internal("Request to Steam failed.")
     }
 }
 
 impl From<clickhouse::error::Error> for APIError {
-    fn from(_e: clickhouse::error::Error) -> Self {
+    fn from(e: clickhouse::error::Error) -> Self {
+        error!("Failed to query Clickhouse: {e}");
         Self::internal("Clickhouse error")
     }
 }
 
 impl From<sqlx::Error> for APIError {
-    fn from(_e: sqlx::Error) -> Self {
+    fn from(e: sqlx::Error) -> Self {
+        error!("Failed to query PostgreSQL: {e}");
         Self::internal("PostgreSQL error")
     }
 }
 
 impl From<redis::RedisError> for APIError {
-    fn from(_e: redis::RedisError) -> Self {
+    fn from(e: redis::RedisError) -> Self {
+        error!("Failed to query Redis: {e}");
         Self::internal("Redis error")
     }
 }
 
 impl From<reqwest::Error> for APIError {
-    fn from(_e: reqwest::Error) -> Self {
+    fn from(e: reqwest::Error) -> Self {
+        error!("Failed to call external service: {e}");
         Self::internal("Request to external service failed")
     }
 }
 
 impl From<base64::DecodeError> for APIError {
-    fn from(_e: base64::DecodeError) -> Self {
+    fn from(e: base64::DecodeError) -> Self {
+        error!("Failed to decode base64 data: {e}");
         Self::internal("Failed to decode base64 data")
     }
 }
 
 impl From<prost::DecodeError> for APIError {
-    fn from(_e: prost::DecodeError) -> Self {
+    fn from(e: prost::DecodeError) -> Self {
+        error!("Failed to decode protobuf message: {e}");
         Self::internal("Failed to decode protobuf message")
     }
 }
@@ -151,20 +158,17 @@ impl IntoResponse for APIError {
                     )
                     .unwrap_or_else(|_| "Internal server error".to_string().into_response())
             }
-            APIError::InternalError { message } => {
-                error!("Internal server error: {message}");
-                Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(
-                        serde_json::to_string(&json!({
-                            "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-                            "error": format!("Internal server error: {message}"),
-                        }))
-                        .unwrap_or_else(|_| "Internal server error".to_string())
-                        .into(),
-                    )
-                    .unwrap_or_else(|_| "Internal server error".to_string().into_response())
-            }
+            APIError::InternalError { message } => Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(
+                    serde_json::to_string(&json!({
+                        "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                        "error": format!("Internal server error: {message}"),
+                    }))
+                    .unwrap_or_else(|_| "Internal server error".to_string())
+                    .into(),
+                )
+                .unwrap_or_else(|_| "Internal server error".to_string().into_response()),
         }
     }
 }
