@@ -151,17 +151,20 @@ impl IntoResponse for APIError {
                     )
                     .unwrap_or_else(|_| "Internal server error".to_string().into_response())
             }
-            APIError::InternalError { message } => Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(
-                    serde_json::to_string(&json!({
-                        "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-                        "error": format!("Internal server error: {message}"),
-                    }))
-                    .unwrap_or_else(|_| "Internal server error".to_string())
-                    .into(),
-                )
-                .unwrap_or_else(|_| "Internal server error".to_string().into_response()),
+            APIError::InternalError { message } => {
+                error!("Internal server error: {message}");
+                Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body(
+                        serde_json::to_string(&json!({
+                            "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                            "error": format!("Internal server error: {message}"),
+                        }))
+                        .unwrap_or_else(|_| "Internal server error".to_string())
+                        .into(),
+                    )
+                    .unwrap_or_else(|_| "Internal server error".to_string().into_response())
+            }
         }
     }
 }
