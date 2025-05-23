@@ -150,7 +150,7 @@ impl AppState {
 
         // Load feature flags
         debug!("Loading feature flags");
-        let feature_flags = File::open("../../feature_flags.json")
+        let feature_flags = File::open("feature_flags.json")
             .map_err(AppStateError::from)
             .and_then(|f| serde_json::from_reader(f).map_err(AppStateError::from))
             .unwrap_or_else(|e| {
