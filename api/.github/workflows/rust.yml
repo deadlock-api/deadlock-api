@@ -59,7 +59,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Pull Docker Images (in Background)
+      - name: Start API Dependency Docker Images (in Background)
         run: nohup task start-test-env-api-deps > pull.log 2>&1 &
 
       - name: Install Protocol Buffers compiler
