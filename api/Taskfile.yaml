@@ -27,12 +27,22 @@ tasks:
     cmds:
       - docker compose -f $TESTING_DOCKER_COMPOSE down
 
+  start-test-env-api-deps:
+    desc: "Starts the API dependencies for testing."
+    env:
+      NO_BUILD: 0
+      IMAGE: deadlock-api-rust:latest
+    cmds:
+      - "if [[ $NO_BUILD = 1 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans clickhouse minio postgres redis; fi"
+      - "if [[ $NO_BUILD = 0 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans --build clickhouse minio postgres redis; fi"
+
   start-test-env:
     desc: "Starts the testing Docker environment."
     env:
       NO_BUILD: 0
       IMAGE: deadlock-api-rust:latest
     cmds:
+      - task: start-test-env-api-deps
       - "if [[ $NO_BUILD = 1 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans; fi"
       - "if [[ $NO_BUILD = 0 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans --build; fi"
 

@@ -56,6 +56,12 @@ jobs:
       - name: Setup go-task
         run: curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull Docker Images (in Background)
+        run: nohup task start-test-env-api-deps > pull.log 2>&1 &
+
       - name: Install Protocol Buffers compiler
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
@@ -74,12 +80,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Pull Docker Images (in Background)
-        run: docker compose -f docker-compose.testing.yaml pull --ignore-pull-failures &
 
       ###############################
       ##           Build           ##
