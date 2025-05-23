@@ -118,9 +118,11 @@ export default function HeroStatsOverTimeChart({
 
   const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {
     const map: Record<number, [number, number][]> = {};
-    for (const hero of heroData || []) {
-      if (!map[hero.date_time]) map[hero.date_time] = [];
-      map[hero.date_time].push([hero.hero_id, hero_stats_transform(hero, heroStat)]);
+    if (heroData) {
+      for (const hero of heroData) {
+        if (!map[hero.date_time]) map[hero.date_time] = [];
+        map[hero.date_time].push([hero.hero_id, hero_stats_transform(hero, heroStat)]);
+      }
     }
     return map;
   }, [heroStat, heroData]);
