@@ -80,8 +80,6 @@ tasks:
   setup-test-env:
     desc: "Sets up the testing Docker environment."
     dotenv: [ '{{.TESTING_ENV_FILE}}' ]
-    deps:
-      - task: teardown-test-env
     cmds:
       - task: start-test-env
       - task: import-test-data
