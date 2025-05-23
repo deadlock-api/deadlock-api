@@ -307,16 +307,16 @@ fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     // WITH
     query.push_str("WITH ");
     query.push_str(&format!(
-        "t_matches AS (SELECT * FROM match_info FINAL {info_filters} {order} {limit})"
+        "t_matches AS (SELECT match_id FROM match_info FINAL {info_filters} {order} {limit})"
     ));
 
     // SELECT
     query.push_str("SELECT ");
     query.push_str(&select_fields.join(", "));
     if has_player_fields {
-        query.push_str(" FROM match_player INNER JOIN t_matches USING (match_id) ");
+        query.push_str(" FROM match_player INNER JOIN match_info USING (match_id) WHERE match_id IN t_matches ");
     } else {
-        query.push_str(" FROM t_matches ");
+        query.push_str(" FROM match_info WHERE match_id IN t_matches ");
     }
     // GROUP By
     query.push_str(" GROUP BY match_id ");
