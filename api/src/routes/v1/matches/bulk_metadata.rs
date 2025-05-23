@@ -375,7 +375,7 @@ mod tests {
             "match_id IN (SELECT match_id FROM match_player WHERE account_id IN (12345,67890))"
         ));
         // Should still have the basic structure
-        assert!(normalized.contains("t_matches AS (SELECT * FROM match_info FINAL"));
+        assert!(normalized.contains("t_matches AS (SELECT match_id FROM match_info FINAL"));
         assert!(normalized.contains("WHERE"));
         assert!(normalized.contains("LIMIT 10"));
     }
