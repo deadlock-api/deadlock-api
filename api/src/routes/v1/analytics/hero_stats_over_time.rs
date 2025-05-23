@@ -29,8 +29,6 @@ pub enum HeroStatsOverTimeQueryTimeInterval {
     HOUR,
     #[display("DAY")]
     DAY,
-    #[display("WEEK")]
-    WEEK,
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
