@@ -2,7 +2,7 @@ use crate::utils::parse;
 use axum::http::HeaderValue;
 use axum::{extract::Request, middleware::Next, response::Response};
 
-pub async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
+pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
     // Check if API-Key is already set
     if request.headers().contains_key("x-api-key") {
         return next.run(request).await;

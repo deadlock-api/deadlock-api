@@ -12,7 +12,7 @@ use tower_service::Service;
 
 /// A layer that adds a `Cache-Control` header to the response.
 #[derive(Constructor, Debug, Clone)]
-pub struct CacheControlMiddleware {
+pub(crate) struct CacheControlMiddleware {
     max_age: Duration,
 }
 
@@ -26,7 +26,7 @@ impl CacheControlMiddleware {
 }
 
 #[derive(Clone, Debug)]
-pub struct CacheControlLayer<S> {
+pub(crate) struct CacheControlLayer<S> {
     pub(crate) inner: S,
     pub(crate) layer: CacheControlMiddleware,
 }

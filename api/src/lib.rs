@@ -3,6 +3,7 @@
 #![deny(clippy::expect_used)]
 #![deny(clippy::lossy_float_literal)]
 #![deny(clippy::redundant_clone)]
+#![deny(unreachable_pub)]
 
 mod api_doc;
 mod context;

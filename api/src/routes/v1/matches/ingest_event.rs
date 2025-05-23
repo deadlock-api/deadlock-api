@@ -70,7 +70,7 @@ impl Signature {
     const SIGNATURE_PART_ASSIGNATOR: &'static str = "=";
     const SIGNATURE_PART_SEPARATOR: &'static str = ",";
 
-    pub fn new(
+    pub(crate) fn new(
         secret: &str,
         payload: &[u8],
         signed_at: DateTime<Utc>,
@@ -89,7 +89,7 @@ impl Signature {
         Ok(Self { timestamp, v0 })
     }
 
-    pub fn value(&self) -> String {
+    pub(crate) fn value(&self) -> String {
         let timestamp_str = self.timestamp.to_string();
         let parts = &[("t", timestamp_str.as_str()), ("v0", self.v0.as_str())];
 
@@ -102,7 +102,7 @@ impl Signature {
         .collect::<String>()
     }
 
-    pub fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
+    pub(crate) fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         HeaderValue::from_str(&self.value())
     }
 }

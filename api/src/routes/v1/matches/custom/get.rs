@@ -10,16 +10,16 @@ use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema)]
-pub struct GetCustomMatchIdResponse {
+pub(super) struct GetCustomMatchIdResponse {
     pub match_id: u64,
 }
 
 #[derive(Deserialize, IntoParams)]
-pub struct PartyIdQuery {
+pub(super) struct PartyIdQuery {
     pub party_id: u64,
 }
 
-pub async fn get_party_match_id(
+pub(super) async fn get_party_match_id(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> APIResult<u64> {
@@ -50,7 +50,7 @@ pub async fn get_party_match_id(
     summary = "Get Custom Match ID",
     description = "This endpoint allows you to get the match id of a custom match."
 )]
-pub async fn get_custom(
+pub(super) async fn get_custom(
     Path(PartyIdQuery { party_id }): Path<PartyIdQuery>,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

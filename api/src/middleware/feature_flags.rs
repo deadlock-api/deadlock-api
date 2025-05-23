@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
-pub async fn feature_flags(
+pub(crate) async fn feature_flags(
     State(AppState { feature_flags, .. }): State<AppState>,
     matched_path: MatchedPath,
     request: Request,

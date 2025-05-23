@@ -28,7 +28,7 @@ use valveprotos::deadlock::{
 use valveprotos::gcsdk::EgcPlatform;
 
 #[derive(Serialize, ToSchema)]
-pub struct CreateCustomResponse {
+pub(super) struct CreateCustomResponse {
     pub party_id: u64,
     pub party_code: String,
 }
@@ -87,14 +87,14 @@ async fn create_party(
     Ok(result)
 }
 
-pub async fn get_party_code(
+pub(super) async fn get_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> RedisResult<String> {
     redis_client.get(party_id.to_string()).await
 }
 
-pub async fn wait_for_party_code(
+pub(super) async fn wait_for_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> RedisResult<String> {
@@ -226,7 +226,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
     summary = "Create Custom Match",
     description = "This endpoint allows you to create a custom match."
 )]
-pub async fn create_custom(
+pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

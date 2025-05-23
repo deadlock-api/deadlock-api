@@ -1,5 +1,5 @@
 mod config;
-pub mod state;
+pub(crate) mod state;
 
-pub use state::AppState;
-pub use state::AppStateError;
+pub(crate) use state::AppState;
+pub(crate) use state::AppStateError;
