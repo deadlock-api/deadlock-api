@@ -89,6 +89,9 @@ importers:
       tailwind-merge:
         specifier: ^3.3.0
         version: 3.3.0
+      zod:
+        specifier: ^3.25.28
+        version: 3.25.28
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -2843,6 +2846,9 @@ packages:
   zod@3.25.16:
     resolution: {integrity: sha512-3lOav31WLa1MstEvkM0QlcsFjKmJ2TI9IFYlIVpLE3upguhaeiRfPOzqqtisS/Hetk4ri2fLLC3OtW15lS5jxQ==}
 
+  zod@3.25.28:
+    resolution: {integrity: sha512-/nt/67WYKnr5by3YS7LroZJbtcCBurDKKPBPWWzaxvVCGuG/NOsiKkrjoOhI8mJ+SQUXEbUzeB3S+6XDUEEj7Q==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -5507,3 +5513,5 @@ snapshots:
       zod: 3.25.16
 
   zod@3.25.16: {}
+
+  zod@3.25.28: {}
