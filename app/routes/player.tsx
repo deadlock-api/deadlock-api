@@ -73,13 +73,17 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                 id="steamId"
                 min={1}
                 max={4294967295}
-                value={steamId || undefined}
+                value={steamId ?? ""}
                 onChange={(e) => {
+                  if (!e.target.value) {
+                    return;
+                  }
                   if (typeof window !== "undefined") {
                     const url = new URL(window.location.href);
                     url.searchParams.set("steamId", e.target.value);
                     window.history.pushState({}, "", url);
                   }
+
                   setSteamId(Number(e.target.value));
                 }}
                 placeholder="Steam ID3 (required)"

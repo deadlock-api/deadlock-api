@@ -1,16 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import HeroImage from "~/components/HeroImage";
-import ItemImage from "~/components/ItemImage";
-import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Skeleton } from "~/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { type Dayjs, day } from "~/dayjs";
-import type { APIMatchHistory } from "~/types/api_match_history";
+import { MatchHistory, type $MatchHistory } from "~/types/api_match_history";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
 import type { AssetsHero } from "~/types/assets_hero";
 import type { AssetsItem } from "~/types/assets_item";
+import MatchCard, { type MatchDisplayData } from "./MatchCard";
+import z from "zod/v4";
+import { mergeMatchData } from "./matchDataUtils"; // Import the new helper function
+import { APIMatchMetadataSchema } from "~/types/api_match_metadata"; // Import the metadata schema
 
 export default function MatchHistoryTable({
   steamId,
@@ -36,12 +35,13 @@ export default function MatchHistoryTable({
   });
 
   // Fetch match history (simpler data, more comprehensive)
-  const { data: matchHistoryData, isLoading: isLoadingMatchHistory } = useQuery<APIMatchHistory[]>({
+  const { data: matchHistoryData, isLoading: isLoadingMatchHistory } = useQuery<$MatchHistory[]>({
     queryKey: ["api-match-history", steamId],
     queryFn: async () => {
       const url = new URL(`https://api.deadlock-api.com/v1/players/${steamId}/match-history`);
       const res = await fetch(url);
-      return await res.json();
+      const data = await res.json();
+      return z.array(MatchHistory.schema).parse(data);
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -60,7 +60,8 @@ export default function MatchHistoryTable({
     // Apply date filters
     if (minDate || maxDate) {
       filtered = filtered.filter((match) => {
-        const matchTime = day.unix(match.start_time);
+        // match.start_time is already a Dayjs object from the schema transform
+        const matchTime = match.start_time;
         const afterMin = !minDate || matchTime.isAfter(minDate);
         const beforeMax = !maxDate || matchTime.isBefore(maxDate);
         return afterMin && beforeMax;
@@ -84,9 +85,13 @@ export default function MatchHistoryTable({
       url.searchParams.set("match_ids", filteredMatchIds.join(","));
 
       const res = await fetch(url);
-      return await res.json();
+      const data = await res.json();
+
+      const resParsed = z.array(APIMatchMetadataSchema).parse(data);
+      return resParsed;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    throwOnError: true,
+    staleTime: 20 * 60 * 1000, // 5 minutes
     enabled: filteredMatchIds.length > 0,
   });
 
@@ -110,86 +115,22 @@ export default function MatchHistoryTable({
     );
   }, [itemsData]);
 
-  const upgradeItemIds = useMemo(() => {
-    return new Set(itemsData?.map((item) => item.id) ?? []);
+  const upgradeItems = useMemo(() => {
+    return itemsData ? Object.fromEntries(itemsData.map((item) => [item.id, item])) : undefined;
   }, [itemsData]);
 
-  // Combine match history with metadata using pre-filtered match ids
+  // Combine match history with metadata using the new helper function
   const playerMatches = useMemo(() => {
-    if (!matchHistoryData || !steamId) return [];
-
-    // Create a map of metadata by match ID for quick lookup
-    const metadataMap = new Map<number, APIMatchMetadata>();
-    if (matchesData) {
-      for (const match of matchesData) {
-        metadataMap.set(match.match_id, match);
-      }
-    }
-
-    // Get filtered matches based on filteredMatchIds (already filtered)
-    const filteredMatches = matchHistoryData.filter((match) => filteredMatchIds.includes(match.match_id));
-
-    return filteredMatches
-      .map((historyMatch) => {
-        const metadata = metadataMap.get(historyMatch.match_id);
-
-        if (metadata) {
-          // Use full metadata when available
-          const player = metadata.players.find((p) => p.account_id === steamId);
-          if (!player) return null;
-
-          const isWin = metadata.winning_team === player.team;
-          const kda =
-            player.deaths > 0 ? (player.kills + player.assists) / player.deaths : player.kills + player.assists;
-
-          // Get final items from metadata
-          const finalItems = player.items
-            .filter((item) => item.sold_time_s === 0 && upgradeItemIds.has(item.item_id))
-            .sort((a, b) => b.game_time_s - a.game_time_s)
-            .slice(0, 6);
-
-          return {
-            match: { ...metadata, start_time: day.utc(metadata.start_time).local() },
-            player,
-            isWin,
-            kda,
-            finalItems,
-            hero: heroesMap?.[player.hero_id],
-            hasFullData: true,
-          };
-        }
-        // Fall back to history data only
-        const isWin = historyMatch.match_result === 1; // Use match_result instead
-        const kda =
-          historyMatch.player_deaths > 0
-            ? (historyMatch.player_kills + historyMatch.player_assists) / historyMatch.player_deaths
-            : historyMatch.player_kills + historyMatch.player_assists;
-
-        return {
-          match: {
-            match_id: historyMatch.match_id,
-            start_time: day.unix(historyMatch.start_time),
-            duration_s: historyMatch.match_duration_s,
-            winning_team: historyMatch.player_team, // Use player_team
-          },
-          player: {
-            account_id: steamId,
-            hero_id: historyMatch.hero_id,
-            kills: historyMatch.player_kills,
-            deaths: historyMatch.player_deaths,
-            assists: historyMatch.player_assists,
-            team: historyMatch.player_team,
-            items: [], // No items available from history endpoint
-          },
-          isWin,
-          kda,
-          finalItems: [],
-          hero: heroesMap?.[historyMatch.hero_id],
-          hasFullData: false,
-        };
-      })
-      .filter(Boolean);
-  }, [matchHistoryData, matchesData, steamId, heroesMap, upgradeItemIds, filteredMatchIds]);
+    const matches = mergeMatchData({
+      matchHistoryData,
+      matchesData,
+      steamId,
+      heroesMap,
+      upgradeItems,
+      filteredMatchIds,
+    });
+    return matches;
+  }, [matchHistoryData, matchesData, steamId, heroesMap, upgradeItems, filteredMatchIds]);
 
   if (isLoadingMatchHistory || isLoadingHeroes || isLoadingItems) {
     return (
@@ -211,84 +152,20 @@ export default function MatchHistoryTable({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recent Matches</CardTitle>
-      </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Result</TableHead>
-              <TableHead>Hero</TableHead>
-              <TableHead>K/D/A</TableHead>
-              <TableHead>KDA Ratio</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Final Items</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {playerMatches.map((matchData) => {
-              if (!matchData) return null;
-              const { match, player, isWin, kda, finalItems, hero } = matchData;
-
-              return (
-                <TableRow key={match.match_id}>
-                  <TableCell>
-                    <Badge
-                      variant={isWin ? "default" : "destructive"}
-                      className={isWin ? "bg-green-700 hover:bg-green-700 " : ""}
-                    >
-                      {isWin ? "Win" : "Loss"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {hero && <HeroImage heroId={hero.id} className="size-6" />}
-                      <span className="text-sm">{hero?.name || "Unknown"}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm">
-                      {player.kills}/{player.deaths}/{player.assists}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-sm">{kda.toFixed(2)}</span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">
-                      {Math.floor((match.duration_s || 0) / 60)}:
-                      {((match.duration_s || 0) % 60).toString().padStart(2, "0")}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{match.start_time.format("MM/DD/YY HH:mm")}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {finalItems.length > 0
-                        ? finalItems.map((item) => {
-                            const itemData = itemsMap?.[item.item_id];
-                            return itemData ? (
-                              <ItemImage
-                                key={`${item.item_id}-${item.game_time_s}`}
-                                itemId={item.item_id}
-                                className="size-6"
-                              />
-                            ) : null;
-                          })
-                        : matchData.hasFullData === false
-                          ? // biome-ignore lint/suspicious/noArrayIndexKey: this is an appropriate use of index key for a bunch of uniform items
-                            Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="size-6 rounded" />)
-                          : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <div className="mt-4 space-y-3">
+          {playerMatches.map((matchData) => {
+            if (!matchData) return null;
+            return (
+              <MatchCard
+                key={matchData.match.match_id}
+                matchData={matchData}
+                itemsMap={itemsMap}
+                heroesMap={heroesMap}
+              />
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
