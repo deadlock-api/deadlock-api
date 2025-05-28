@@ -169,7 +169,7 @@ async fn fetch_builds(
             &msg,
             None,
             None,
-            Duration::from_secs(600),
+            Duration::from_secs(1200),
             Duration::from_secs(5),
         )
         .await;
