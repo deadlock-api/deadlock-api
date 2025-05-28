@@ -7,9 +7,9 @@ edition = "2024"
 cached = { version = "0.55.1", features = ["async", "tokio"] }
 clickhouse = { version = "0.13.2", features = ["time", "test-util"] }
 futures = "0.3.31"
-reqwest = { version = "0.12.15", features = ["stream"] }
+reqwest = { version = "0.12.16", features = ["stream"] }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.45.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = { version = "0.7.15", features = ["io"] }
 metrics = "0.24"
 tracing = "0.1.41"

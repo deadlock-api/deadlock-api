@@ -8,11 +8,11 @@ async-compression = { version = "0.4.23", features = ["tokio", "bzip2"] }
 clickhouse = { version = "0.13.2", features = ["test-util", "time"] }
 futures = "0.3.31"
 prost = "0.13.5"
-reqwest = "0.12.15"
+reqwest = "0.12.16"
 object_store = { version = "0.12.1", features = ["aws"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_repr = "0.1.20"
-tokio = { version = "1.45.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "837747825a529673e97b681ee0f70b82d13eb0eb", features = ["gc-client"] }
 metrics = "0.24"
 tracing = "0.1.41"
