@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
 import * as React from "react";
+import { useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import { ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";

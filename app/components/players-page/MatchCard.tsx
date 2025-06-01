@@ -1,12 +1,11 @@
-import type { Dayjs } from "~/dayjs";
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
-import { Badge } from "~/components/ui/badge";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
+import type { Dayjs } from "~/dayjs";
+import type { APIMatchPlayer } from "~/types/api_match_metadata";
 import type { AssetsHero } from "~/types/assets_hero";
 import type { AssetsItem } from "~/types/assets_item";
-import type { APIMatchPlayer } from "~/types/api_match_metadata";
 import { cn } from "../../lib/utils";
 import RankImage from "../RankImage";
 
