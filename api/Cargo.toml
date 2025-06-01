@@ -7,12 +7,12 @@ repository = "https://github.com/deadlock-api/deadlock-api-rust"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.12.16", features = ["json"] }
+reqwest = { version = "0.12.18", features = ["json"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 redis = { version = "0.31.0", features = ["tokio-comp"], default-features = false }
 envy = "0.4.2"
-clickhouse = "0.13.2"
+clickhouse = "0.13.3"
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.17.0", features = ["v4"] }
 cached = { version = "0.55.1", features = ["async", "serde", "tokio"] }
@@ -30,7 +30,7 @@ tower-service = "0.3.3"
 tower-http = { version = "0.6.4", features = ["compression-zstd", "compression-gzip", "cors", "decompression-zstd", "decompression-gzip", "normalize-path", "trace"] }
 tracing = "0.1.41"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-serde-xml-rs = "0.8.0"
+serde-xml-rs = "0.8.1"
 axum-prometheus = "0.8.0"
 itertools = "0.14.0"
 futures = "0.3.31"
