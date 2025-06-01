@@ -1,7 +1,8 @@
-pub mod client;
-pub mod extractor;
-pub mod types;
 
-pub use client::RateLimitClient;
-pub use types::RateLimitQuota;
-pub use types::RateLimitStatus;
+mod client;
+pub(crate) mod extractor;
+mod types;
+
+pub(crate) use client::RateLimitClient;
+pub(crate) use types::RateLimitQuota;
+pub(crate) use types::RateLimitStatus;

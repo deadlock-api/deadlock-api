@@ -15,14 +15,14 @@ pub enum RateLimitQuotaType {
 
 #[derive(Debug, Clone, Copy)]
 pub struct RateLimitQuota {
-    pub limit: u32,
-    pub period: Duration,
+    pub(crate) limit: u32,
+    pub(crate) period: Duration,
     pub rate_limit_quota_type: RateLimitQuotaType,
 }
 
 impl RateLimitQuota {
     #[allow(dead_code)]
-    pub fn ip_limit(limit: u32, period: Duration) -> Self {
+    pub(crate) fn ip_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -31,7 +31,7 @@ impl RateLimitQuota {
     }
 
     #[allow(dead_code)]
-    pub fn key_limit(limit: u32, period: Duration) -> Self {
+    pub(crate) fn key_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -40,7 +40,7 @@ impl RateLimitQuota {
     }
 
     #[allow(dead_code)]
-    pub fn global_limit(limit: u32, period: Duration) -> Self {
+    pub(crate) fn global_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -52,20 +52,20 @@ impl RateLimitQuota {
 #[derive(Debug, Clone)]
 pub struct RateLimitStatus {
     pub quota: RateLimitQuota,
-    pub requests: u32,
-    pub oldest_request: DateTime<Utc>,
+    pub(crate) requests: u32,
+    pub(crate) oldest_request: DateTime<Utc>,
 }
 
 impl RateLimitStatus {
-    pub fn remaining(&self) -> u32 {
+    pub(crate) fn remaining(&self) -> u32 {
         self.quota.limit.saturating_sub(self.requests)
     }
 
-    pub fn is_exceeded(&self) -> bool {
+    fn is_exceeded(&self) -> bool {
         self.remaining() == 0
     }
 
-    pub fn next_request_in(&self) -> Duration {
+    fn next_request_in(&self) -> Duration {
         // If the quota is not exceeded, then there is no need to wait
         if !self.is_exceeded() {
             return Duration::from_millis(0);
@@ -77,7 +77,7 @@ impl RateLimitStatus {
             .unwrap_or_default()
     }
 
-    pub fn response_headers(&self) -> HeaderMap {
+    pub(crate) fn response_headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
         headers.append("RateLimit-Limit", self.quota.limit.into());
         headers.append("RateLimit-Period", self.quota.period.as_secs().into());
@@ -87,7 +87,7 @@ impl RateLimitStatus {
         headers
     }
 
-    pub fn raise_if_exceeded(&self) -> APIResult<()> {
+    pub(super) fn raise_if_exceeded(&self) -> APIResult<()> {
         if self.is_exceeded() {
             error!("Rate limit exceeded: {:?}", self);
             return Err(APIError::RateLimitExceeded {

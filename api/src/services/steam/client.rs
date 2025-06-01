@@ -28,14 +28,14 @@ pub struct SteamClient {
 }
 
 impl SteamClient {
-    pub async fn call_steam_proxy<M: Message, R: Message + Default>(
+    pub(crate) async fn call_steam_proxy<M: Message, R: Message + Default>(
         &self,
         query: SteamProxyQuery<M>,
     ) -> SteamProxyResult<SteamProxyResponse<R>> {
         self.call_steam_proxy_raw(query).await?.try_into()
     }
 
-    pub async fn call_steam_proxy_raw<M: Message>(
+    pub(crate) async fn call_steam_proxy_raw<M: Message>(
         &self,
         query: SteamProxyQuery<M>,
     ) -> SteamProxyResult<SteamProxyRawResponse> {
@@ -82,12 +82,12 @@ impl SteamClient {
     }
 
     /// Get the current client version from the Steam Database
-    pub async fn get_current_client_version(&self) -> APIResult<u32> {
+    pub(crate) async fn get_current_client_version(&self) -> APIResult<u32> {
         get_current_client_version(&self.http_client).await
     }
 
     /// Fetch a Steam account name by Steam ID
-    pub async fn fetch_steam_account_name(
+    pub(crate) async fn fetch_steam_account_name(
         &self,
         rate_limit_key: &RateLimitKey,
         state: &AppState,
@@ -111,7 +111,7 @@ impl SteamClient {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
+async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
     let steam_info = http_client
         .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
         .send()

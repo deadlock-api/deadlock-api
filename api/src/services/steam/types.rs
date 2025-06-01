@@ -7,26 +7,26 @@ use thiserror::Error;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
 #[derive(Debug, Clone)]
-pub struct SteamProxyQuery<M: Message> {
-    pub msg_type: EgcCitadelClientMessages,
-    pub msg: M,
-    pub in_all_groups: Option<Vec<String>>,
-    pub in_any_groups: Option<Vec<String>>,
-    pub cooldown_time: Duration,
-    pub request_timeout: Duration,
-    pub username: Option<String>,
+pub(crate) struct SteamProxyQuery<M: Message> {
+    pub(crate) msg_type: EgcCitadelClientMessages,
+    pub(crate) msg: M,
+    pub(crate) in_all_groups: Option<Vec<String>>,
+    pub(crate) in_any_groups: Option<Vec<String>>,
+    pub(crate) cooldown_time: Duration,
+    pub(crate) request_timeout: Duration,
+    pub(crate) username: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SteamProxyRawResponse {
-    pub data: String,
-    pub username: String,
+    pub(crate) data: String,
+    username: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct SteamProxyResponse<R: Message> {
-    pub msg: R,
-    pub username: String,
+pub(crate) struct SteamProxyResponse<R: Message> {
+    pub(crate) msg: R,
+    pub(crate) username: String,
 }
 
 impl<R: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse<R> {
@@ -42,21 +42,21 @@ impl<R: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct GetPlayerSummariesResponse {
-    pub response: PlayerSummariesResponse,
+pub(super) struct GetPlayerSummariesResponse {
+    pub(super) response: PlayerSummariesResponse,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct PlayerSummariesResponse {
-    pub players: Vec<PlayerSummary>,
+pub(super) struct PlayerSummariesResponse {
+    pub(super) players: Vec<PlayerSummary>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct PlayerSummary {
-    pub personaname: Option<String>,
+pub(super) struct PlayerSummary {
+    pub(super) personaname: Option<String>,
 }
 
-pub type SteamProxyResult<T> = Result<T, SteamProxyError>;
+pub(crate) type SteamProxyResult<T> = Result<T, SteamProxyError>;
 
 /// Error type for Steam proxy calls
 #[derive(Debug, Error)]
@@ -71,7 +71,7 @@ pub enum SteamProxyError {
 
 /// Error type for Steam account name fetching
 #[derive(Debug, Error)]
-pub enum SteamAccountNameError {
+pub(crate) enum SteamAccountNameError {
     #[error("Failed to fetch steam name: {0}")]
     FetchError(String),
     #[error("Failed to parse steam name")]

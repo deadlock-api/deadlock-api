@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 #[derive(Constructor, Debug, Clone)]
 pub struct RateLimitKey {
-    pub api_key: Option<Uuid>,
-    pub ip: String,
+    pub(super) api_key: Option<Uuid>,
+    pub(super) ip: String,
 }
 
 impl<S> FromRequestParts<S> for RateLimitKey

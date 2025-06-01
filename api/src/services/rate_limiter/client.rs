@@ -24,7 +24,7 @@ pub struct RateLimitClient {
 }
 
 impl RateLimitClient {
-    pub async fn apply_limits(
+    pub(crate) async fn apply_limits(
         &self,
         rate_limit_key: &RateLimitKey,
         key: &str,
@@ -162,7 +162,7 @@ impl RateLimitClient {
     sync_writes = "by_key",
     key = "Uuid"
 )]
-pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
+async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
     sqlx::query!(
         "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
         api_key
@@ -181,7 +181,7 @@ pub async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_custom_quotas(
+async fn get_custom_quotas(
     pg_client: &Pool<Postgres>,
     api_key: Uuid,
     path: &str,

@@ -24,7 +24,10 @@ impl AssetsClient {
     }
 
     /// Find a hero ID by name
-    pub async fn fetch_hero_id_from_name(&self, hero_name: &str) -> reqwest::Result<Option<u32>> {
+    pub(crate) async fn fetch_hero_id_from_name(
+        &self,
+        hero_name: &str,
+    ) -> reqwest::Result<Option<u32>> {
         debug!("Finding hero ID for name: {hero_name}");
         self.fetch_heroes().await.map(|heroes| {
             heroes
@@ -35,7 +38,10 @@ impl AssetsClient {
     }
 
     /// Find a hero name by ID
-    pub async fn fetch_hero_name_from_id(&self, hero_id: u32) -> reqwest::Result<Option<String>> {
+    pub(crate) async fn fetch_hero_name_from_id(
+        &self,
+        hero_id: u32,
+    ) -> reqwest::Result<Option<String>> {
         debug!("Finding hero name for ID: {hero_id}");
         self.fetch_heroes()
             .await
@@ -43,7 +49,7 @@ impl AssetsClient {
     }
 
     /// Validate if a hero ID exists
-    pub async fn validate_hero_id(&self, hero_id: u32) -> bool {
+    pub(crate) async fn validate_hero_id(&self, hero_id: u32) -> bool {
         match self.fetch_heroes().await {
             Ok(heroes) => heroes.iter().any(|h| h.id == hero_id),
             Err(_) => false,
