@@ -34,7 +34,7 @@ export default function ItemImage({ itemId, className }: { itemId: number; class
         src={item?.shop_image_small} // Fallback for browsers that don't support <picture> or neither format
         alt={item?.name}
         title={item?.name}
-        className={cn("size-8 min-w-8 min-h-8", className)}
+        className={cn("size-8 aspect-square", className)}
       />
     </picture>
   );
