@@ -27,8 +27,8 @@ impl CacheControlMiddleware {
 
 #[derive(Clone, Debug)]
 pub(crate) struct CacheControlLayer<S> {
-    pub(crate) inner: S,
-    pub(crate) layer: CacheControlMiddleware,
+    inner: S,
+    layer: CacheControlMiddleware,
 }
 
 impl<S> tower_layer::Layer<S> for CacheControlMiddleware {
