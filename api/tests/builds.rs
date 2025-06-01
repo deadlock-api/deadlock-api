@@ -23,6 +23,8 @@ async fn test_builds(
     #[values(None, Some(18373975))] author_id: Option<u32>,
     #[values(None, Some(1747743170))] min_unix_timestamp: Option<u64>,
     #[values(None, Some(1747763170))] max_unix_timestamp: Option<u64>,
+    #[values(None, Some(1747743170))] min_published_unix_timestamp: Option<u64>,
+    #[values(None, Some(1747763170))] max_published_unix_timestamp: Option<u64>,
 ) {
     let mut queries = vec![];
     if let Some(limit) = limit {
@@ -57,6 +59,18 @@ async fn test_builds(
     }
     if let Some(max_unix_timestamp) = max_unix_timestamp {
         queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
+    }
+    if let Some(min_published_unix_timestamp) = min_published_unix_timestamp {
+        queries.push((
+            "min_published_unix_timestamp",
+            min_published_unix_timestamp.to_string(),
+        ));
+    }
+    if let Some(max_published_unix_timestamp) = max_published_unix_timestamp {
+        queries.push((
+            "max_published_unix_timestamp",
+            max_published_unix_timestamp.to_string(),
+        ));
     }
     let queries = queries
         .iter()
