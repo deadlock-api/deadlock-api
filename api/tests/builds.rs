@@ -83,6 +83,9 @@ async fn test_builds(
             BuildsSearchQuerySortBy::UpdatedAt => {
                 (build.hero_build.last_updated_timestamp as u32).into()
             }
+            BuildsSearchQuerySortBy::PublishedAt => {
+                (build.hero_build.publish_timestamp as u32).into()
+            }
         }
         .unwrap_or_default()
     }

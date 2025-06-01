@@ -28,6 +28,9 @@ pub enum BuildsSearchQuerySortBy {
     /// Sort by the last time the build was updated.
     #[display("updated_at")]
     UpdatedAt,
+    /// Sort by the time the build was published.
+    #[display("published_at")]
+    PublishedAt,
     /// Sort by the build version.
     #[display("version")]
     Version,
@@ -41,6 +44,10 @@ pub struct BuildsSearchQuery {
     pub min_unix_timestamp: Option<u64>,
     /// Filter builds based on their last_updated time (Unix timestamp).
     pub max_unix_timestamp: Option<u64>,
+    /// Filter builds based on their published time (Unix timestamp).
+    pub min_published_unix_timestamp: Option<u64>,
+    /// Filter builds based on their published time (Unix timestamp).
+    pub max_published_unix_timestamp: Option<u64>,
     /// The field to sort the builds by.
     #[serde(default)]
     #[param(inline)]
@@ -94,6 +101,8 @@ impl Default for BuildsSearchQuery {
             author_id: None,
             min_unix_timestamp: None,
             max_unix_timestamp: None,
+            min_published_unix_timestamp: None,
+            max_published_unix_timestamp: None,
         }
     }
 }
@@ -142,6 +151,14 @@ pub fn sql_query(params: &BuildsSearchQuery) -> String {
     if let Some(max_unix_timestamp) = params.max_unix_timestamp {
         query_builder.push(" AND updated_at <= ");
         query_builder.push(format!("to_timestamp({})", max_unix_timestamp));
+    }
+    if let Some(min_published_unix_timestamp) = params.min_published_unix_timestamp {
+        query_builder.push(" AND published_at >= ");
+        query_builder.push(format!("to_timestamp({})", min_published_unix_timestamp));
+    }
+    if let Some(max_published_unix_timestamp) = params.max_published_unix_timestamp {
+        query_builder.push(" AND published_at <= ");
+        query_builder.push(format!("to_timestamp({})", max_published_unix_timestamp));
     }
     if params.only_latest.unwrap_or_default() {
         query_builder.push(" ) SELECT builds FROM hero_builds WHERE rn = 1");
@@ -366,6 +383,20 @@ mod tests {
     }
 
     #[test]
+    fn test_sort_by_published_at() {
+        let query = BuildsSearchQuery {
+            sort_by: BuildsSearchQuerySortBy::PublishedAt,
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert_eq!(
+            sql,
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY published_at desc NULLS LAST LIMIT 100"
+        );
+    }
+
+    #[test]
     fn test_sort_by_version() {
         let query = BuildsSearchQuery {
             sort_by: BuildsSearchQuerySortBy::Version,
@@ -508,6 +539,34 @@ mod tests {
         assert_eq!(
             sql,
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+        );
+    }
+
+    #[test]
+    fn test_min_published_unix_timestamp() {
+        let query = BuildsSearchQuery {
+            min_published_unix_timestamp: Some(1672531200),
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert_eq!(
+            sql,
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+        );
+    }
+
+    #[test]
+    fn test_max_published_unix_timestamp() {
+        let query = BuildsSearchQuery {
+            max_published_unix_timestamp: Some(1675209599),
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert_eq!(
+            sql,
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 }

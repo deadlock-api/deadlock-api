@@ -51,6 +51,7 @@ pub struct BuildHero {
     pub hero_build_id: u32,
     pub author_account_id: u32,
     pub last_updated_timestamp: i64,
+    pub publish_timestamp: i64,
     pub name: String,
     pub description: Option<String>,
     pub language: u32,
