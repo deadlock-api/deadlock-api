@@ -1,7 +1,7 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 

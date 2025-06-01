@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { type Dayjs, day } from "~/dayjs";
-import { MatchHistory, type $MatchHistory } from "~/types/api_match_history";
+import z from "zod/v4";
+import { Card, CardContent } from "~/components/ui/card";
+import type { Dayjs } from "~/dayjs";
+import { type $MatchHistory, MatchHistory } from "~/types/api_match_history";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
+import { APIMatchMetadataSchema } from "~/types/api_match_metadata"; // Import the metadata schema
 import type { AssetsHero } from "~/types/assets_hero";
 import type { AssetsItem } from "~/types/assets_item";
-import MatchCard, { type MatchDisplayData } from "./MatchCard";
-import z from "zod/v4";
+import MatchCard from "./MatchCard";
 import { mergeMatchData } from "./matchDataUtils"; // Import the new helper function
-import { APIMatchMetadataSchema } from "~/types/api_match_metadata"; // Import the metadata schema
 
 export default function MatchHistoryTable({
   steamId,

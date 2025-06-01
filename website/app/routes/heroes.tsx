@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useLocation } from "react-router";
-import HeroName from "~/components/HeroName";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,

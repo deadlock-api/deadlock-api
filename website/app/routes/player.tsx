@@ -4,7 +4,7 @@ import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import MMRChart from "~/components/players-page/MMRChart";
 import MatchHistoryTable from "~/components/players-page/MatchHistoryTable";
 import HeroSelector from "~/components/selectors/HeroSelector";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";

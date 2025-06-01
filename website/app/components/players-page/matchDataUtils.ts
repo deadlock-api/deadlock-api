@@ -1,8 +1,8 @@
 import type { $MatchHistory } from "~/types/api_match_history";
-import type { APIMatchMetadata, APIMatchPlayer } from "~/types/api_match_metadata";
+import type { APIMatchMetadata } from "~/types/api_match_metadata";
 import type { AssetsHero } from "~/types/assets_hero";
-import type { MatchDisplayData } from "./MatchCard";
 import type { AssetsItem } from "../../types/assets_item";
+import type { MatchDisplayData } from "./MatchCard";
 
 interface MergeMatchDataParams {
   matchHistoryData: $MatchHistory[] | undefined;
