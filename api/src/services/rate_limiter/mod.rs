@@ -1,4 +1,3 @@
-
 mod client;
 pub(crate) mod extractor;
 mod types;

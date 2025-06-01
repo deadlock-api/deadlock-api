@@ -15,12 +15,12 @@ async fn test_builds(
         BuildsSearchQuerySortBy,
     >,
     #[values(None, Some(SortDirectionDesc::Asc))] sort_direction: Option<SortDirectionDesc>,
-    #[values(None, Some("Lash"))] search_name: Option<&str>,
+    #[values(None, Some("Paradox"))] search_name: Option<&str>,
     #[values(None, Some(true))] only_latest: Option<bool>,
-    #[values(None, Some(132494))] build_id: Option<u32>,
-    #[values(None, Some(16))] version: Option<u32>,
-    #[values(None, Some(15))] hero_id: Option<u32>,
-    #[values(None, Some(18373975))] author_id: Option<u32>,
+    #[values(None, Some(252377))] build_id: Option<u32>,
+    #[values(None, Some(10))] version: Option<u32>,
+    #[values(None, Some(10))] hero_id: Option<u32>,
+    #[values(None, Some(157250480))] author_id: Option<u32>,
     #[values(None, Some(1747743170))] min_unix_timestamp: Option<u64>,
     #[values(None, Some(1747763170))] max_unix_timestamp: Option<u64>,
     #[values(None, Some(1747743170))] min_published_unix_timestamp: Option<u64>,
@@ -95,10 +95,10 @@ async fn test_builds(
             BuildsSearchQuerySortBy::Reports => build.num_reports,
             BuildsSearchQuerySortBy::Version => build.hero_build.version.into(),
             BuildsSearchQuerySortBy::UpdatedAt => {
-                (build.hero_build.last_updated_timestamp as u32).into()
+                build.hero_build.last_updated_timestamp.map(|t| t as u32)
             }
             BuildsSearchQuerySortBy::PublishedAt => {
-                (build.hero_build.publish_timestamp as u32).into()
+                build.hero_build.publish_timestamp.map(|t| t as u32)
             }
         }
         .unwrap_or_default()
@@ -145,16 +145,32 @@ async fn test_builds(
             );
         }
         if let Some(min_unix_timestamp) = min_unix_timestamp {
-            assert!(hero_build.last_updated_timestamp as u64 >= min_unix_timestamp);
+            assert!(
+                hero_build
+                    .last_updated_timestamp
+                    .is_some_and(|t| t as u64 >= min_unix_timestamp)
+            );
         }
         if let Some(max_unix_timestamp) = max_unix_timestamp {
-            assert!(hero_build.last_updated_timestamp as u64 <= max_unix_timestamp);
+            assert!(
+                hero_build
+                    .last_updated_timestamp
+                    .is_some_and(|t| t as u64 <= max_unix_timestamp)
+            );
         }
         if let Some(min_published_unix_timestamp) = min_published_unix_timestamp {
-            assert!(hero_build.publish_timestamp as u64 >= min_published_unix_timestamp);
+            assert!(
+                hero_build
+                    .publish_timestamp
+                    .is_some_and(|t| t as u64 >= min_published_unix_timestamp)
+            );
         }
         if let Some(max_published_unix_timestamp) = max_published_unix_timestamp {
-            assert!(hero_build.publish_timestamp as u64 <= max_published_unix_timestamp);
+            assert!(
+                hero_build
+                    .publish_timestamp
+                    .is_some_and(|t| t as u64 <= max_published_unix_timestamp)
+            );
         }
     }
 }
