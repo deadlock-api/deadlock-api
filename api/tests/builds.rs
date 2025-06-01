@@ -150,5 +150,11 @@ async fn test_builds(
         if let Some(max_unix_timestamp) = max_unix_timestamp {
             assert!(hero_build.last_updated_timestamp as u64 <= max_unix_timestamp);
         }
+        if let Some(min_published_unix_timestamp) = min_published_unix_timestamp {
+            assert!(hero_build.publish_timestamp as u64 >= min_published_unix_timestamp);
+        }
+        if let Some(max_published_unix_timestamp) = max_published_unix_timestamp {
+            assert!(hero_build.publish_timestamp as u64 <= max_published_unix_timestamp);
+        }
     }
 }
