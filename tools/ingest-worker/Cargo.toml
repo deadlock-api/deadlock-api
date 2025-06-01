@@ -5,10 +5,10 @@ edition = "2024"
 
 [dependencies]
 async-compression = { version = "0.4.23", features = ["tokio", "bzip2"] }
-clickhouse = { version = "0.13.2", features = ["test-util", "time"] }
+clickhouse = { version = "0.13.3", features = ["test-util", "time"] }
 futures = "0.3.31"
 prost = "0.13.5"
-reqwest = "0.12.16"
+reqwest = "0.12.18"
 object_store = { version = "0.12.1", features = ["aws"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_repr = "0.1.20"
