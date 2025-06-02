@@ -4,7 +4,9 @@ use std::str::FromStr;
 
 const STEAM_ID_64_IDENT: u64 = 76561197960265728;
 
-pub fn parse_rfc2822_datetime<'de, D>(deserializer: D) -> Result<DateTime<FixedOffset>, D::Error>
+pub(crate) fn parse_rfc2822_datetime<'de, D>(
+    deserializer: D,
+) -> Result<DateTime<FixedOffset>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -13,7 +15,7 @@ where
         .and_then(|s| DateTime::parse_from_rfc2822(&s).map_err(serde::de::Error::custom))
 }
 
-pub fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
+pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -35,7 +37,7 @@ where
         })
 }
 
-pub fn parse_steam_id_option<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+pub(crate) fn parse_steam_id_option<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -66,7 +68,7 @@ where
     List(Vec<T>),
 }
 
-pub fn comma_separated_num_deserialize_option<'de, D, T>(
+pub(crate) fn comma_separated_num_deserialize_option<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<Vec<T>>, D::Error>
 where
@@ -112,7 +114,9 @@ where
     })
 }
 
-pub fn comma_separated_num_deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+pub(crate) fn comma_separated_num_deserialize<'de, D, T>(
+    deserializer: D,
+) -> Result<Vec<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: FromStr + Deserialize<'de> + std::fmt::Debug,
@@ -120,24 +124,24 @@ where
     comma_separated_num_deserialize_option(deserializer).map(|v| v.unwrap_or_default())
 }
 
-pub fn default_last_month_timestamp() -> Option<u64> {
+pub(crate) fn default_last_month_timestamp() -> Option<u64> {
     let now = chrono::Utc::now().date_naive();
     let last_month = now - chrono::Duration::days(30);
     let last_month = last_month.and_hms_opt(0, 0, 0)?;
     Some(last_month.and_utc().timestamp() as u64)
 }
 
-pub fn default_true_option() -> Option<bool> {
+pub(crate) fn default_true_option() -> Option<bool> {
     true.into()
 }
 
-pub fn default_true() -> bool {
+pub(crate) fn default_true() -> bool {
     true
 }
 
-pub type QueryParam<'a> = (&'a str, &'a str);
-pub type QueryParams<'a> = Vec<QueryParam<'a>>;
-pub fn querify(string: &str) -> QueryParams {
+type QueryParam<'a> = (&'a str, &'a str);
+type QueryParams<'a> = Vec<QueryParam<'a>>;
+pub(crate) fn querify(string: &str) -> QueryParams {
     let mut v = Vec::new();
     for pair in string.split('&') {
         let mut it = pair.split('=').take(2);
