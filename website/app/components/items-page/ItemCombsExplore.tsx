@@ -3,7 +3,7 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
-import { ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
+import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import type { APIItemStats } from "~/types/api_item_stats";
@@ -98,6 +98,7 @@ export default function ItemCombsExplore({
   );
 
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
+  const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
 
   if (isLoadingItemAssets) {
     return (
@@ -208,9 +209,9 @@ export default function ItemCombsExplore({
       <div className="mt-4 rounded bg-gray-800 p-4">
         <h2 className="text-center text-xl p-2">Items Stats</h2>
         <ItemStatsTableDisplay
-          data={limitedData}
+          data={displayData}
           isLoading={isLoadingItemStats || isLoadingItemAssets}
-          columns={["winRate", "usage", "itemsTier"]}
+          columns={["winRate", "usage", "itemsTier", "confidence"]}
           hideHeader={false}
           hideIndex={true}
           hideItemTierFilter={false}
@@ -218,6 +219,8 @@ export default function ItemCombsExplore({
           maxWinRate={maxWinRate}
           minUsage={minUsage}
           maxUsage={maxUsage}
+          includedItemIds={Array.from(includeItems)}
+          excludedItemIds={Array.from(excludeItems)}
           onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
           onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
         />

@@ -77,7 +77,9 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                   >
                     -
                   </button>
-                  <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>{minMatches}</span>
+                  <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>
+                    {minMatches}
+                  </span>
                   <button
                     type="button"
                     aria-label="Increase min matches"

@@ -7,6 +7,8 @@ import ItemTier from "~/components/ItemTier";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
+import { Label } from "~/components/ui/label";
+import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import type { APIItemStats } from "~/types/api_item_stats";
@@ -21,7 +23,7 @@ interface SortState {
 }
 
 export interface ItemStatsTableDisplayProps {
-  data: APIItemStats[] | undefined;
+  data: DisplayItemStats[] | undefined;
   isLoading: boolean;
   columns: string[];
   hideHeader?: boolean;
@@ -31,9 +33,129 @@ export interface ItemStatsTableDisplayProps {
   maxWinRate: number;
   minUsage: number;
   maxUsage: number;
+  includedItemIds: number[];
+  excludedItemIds: number[];
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
   initialSort?: SortState;
+}
+
+export interface DisplayItemStats {
+  item_id: number;
+  wins: number;
+  losses: number;
+  matches: number;
+  players: number;
+  winRate: number;
+  itemTier: number;
+  confidenceTier: number;
+  confidenceWidth: number;
+  confidenceBaselineWidth: number;
+  confidenceBaselineLower: number;
+  confidenceBaselineUpper: number;
+  confidenceUpper: number;
+  confidenceLower: number;
+}
+
+function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {
+  if (matches === 0) return [0, 0];
+
+  // Pre-calculate frequently used values
+  const phat = wins / matches;
+  const zSquared = z * z;
+  const zSquaredOverMatches = zSquared / matches;
+  const denominator = 1 + zSquaredOverMatches;
+
+  // Combine operations where possible
+  const center = phat + zSquaredOverMatches * 0.5;
+  const margin = z * Math.sqrt((phat * (1 - phat) + zSquaredOverMatches * 0.25) / matches);
+
+  // Return directly without intermediate variables
+  return [(center - margin) / denominator, (center + margin) / denominator];
+}
+
+export function getDisplayItemStats(data: APIItemStats[] | undefined, assetsItems: AssetsItem[]): DisplayItemStats[] {
+  if (!data || data.length === 0) return [];
+  const baselineRow = data.reduce((max, d) => (d.matches > max.matches ? d : max), data[0]);
+  const [baselineLower, baselineUpper] = wilsonScoreInterval(baselineRow.wins, baselineRow.matches);
+  const baselineWidth = baselineUpper - baselineLower;
+
+  return data.map((d): DisplayItemStats => {
+    const item = assetsItems.find((i) => i.id === d.item_id);
+    const [lower, upper] = wilsonScoreInterval(d.wins, d.matches);
+
+    const width = upper - lower;
+    const widthDiff = width - baselineWidth;
+    let confidenceTier = 5;
+
+    if (widthDiff > 0.15) confidenceTier = 1;
+    else if (widthDiff > 0.1) confidenceTier = 2;
+    else if (widthDiff > 0.07) confidenceTier = 3;
+    else if (widthDiff > 0.02) confidenceTier = 4;
+
+    return {
+      ...d,
+      winRate: d.wins / d.matches,
+      itemTier: item?.item_tier || 0,
+      confidenceTier: confidenceTier,
+      confidenceWidth: width,
+      confidenceBaselineWidth: baselineWidth,
+      confidenceBaselineLower: baselineLower,
+      confidenceBaselineUpper: baselineUpper,
+      confidenceUpper: upper,
+      confidenceLower: lower,
+    };
+  });
+}
+
+// Confidence tier is 1-5
+// 1 is the worst, 5 is the best, from "Very low" to "Very high"
+function ConfidenceTierBadge({ tier }: { tier: number }) {
+  const getConfidenceLabel = (tier: number) => {
+    switch (tier) {
+      case 1:
+        // Big warning, something more extreme than alert
+        return <span className="icon-[mdi--alert-circle] h-4 w-4" />;
+      case 3:
+        // Question
+        return <span className="icon-[mdi--help-circle] h-4 w-4" />;
+      case 4:
+        // Check
+        return <span className="icon-[material-symbols--star-rounded] h-4 w-4" />;
+      case 5:
+        // Big check
+        return (
+          <div className="flex items-center gap-0.5">
+            <span className="icon-[material-symbols--star-rounded] h-4 w-4" />
+            <span className="icon-[material-symbols--star-rounded] h-4 w-4" />
+          </div>
+        );
+      default:
+        return <span className="icon-[mdi--help-circle] h-4 w-4" />;
+    }
+  };
+
+  const getConfidenceColor = (tier: number) => {
+    switch (tier) {
+      case 1:
+        return "bg-red-500/30 border-red-500 text-red-400";
+      case 2:
+      case 3:
+        return "bg-yellow-500/30 border-yellow-500 text-yellow-400";
+      case 4:
+        return "bg-emerald-500/30 border-emerald-500 text-emerald-400";
+      case 5:
+        return "bg-emerald-500/30 border-emerald-500 text-emerald-400";
+      default:
+        return "bg-gray-500/30 border-gray-500 text-gray-400";
+    }
+  };
+
+  return (
+    <div className={`rounded-full px-3 py-1 text-xs font-semibold border ${getConfidenceColor(tier)}`}>
+      {getConfidenceLabel(tier)}
+    </div>
+  );
 }
 
 export function ItemStatsTableDisplay({
@@ -47,35 +169,19 @@ export function ItemStatsTableDisplay({
   maxWinRate,
   minUsage,
   maxUsage,
+  includedItemIds,
+  excludedItemIds,
   onItemInclude,
   onItemExclude,
   initialSort = { field: "winRate", direction: "desc" },
 }: ItemStatsTableDisplayProps) {
   const [sort, setSort] = useState<SortState>(initialSort);
   const [itemTiers, setItemTiers] = useState<number[]>([1, 2, 3, 4]);
+  const [dimLowConfidence, setDimLowConfidence] = useState(false);
 
-  const { data: assetsItems } = useQuery<AssetsItem[]>({
-    queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  const itemTierMap = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const item of assetsItems || []) {
-      map[item.id] = item.item_tier;
-    }
-    return map;
-  }, [assetsItems]);
-
-  const filteredData = useMemo(() => {
+  const processedData = useMemo(() => {
     if (!data) return [];
-    return data.filter((d) => itemTiers.includes(itemTierMap[d.item_id]));
-  }, [data, itemTiers, itemTierMap]);
-
-  const sortedData = useMemo(() => {
-    if (!filteredData) return [];
-    return [...filteredData].sort((a, b) => {
+    return [...data].sort((a, b) => {
       let aValue: number;
       let bValue: number;
 
@@ -91,7 +197,7 @@ export function ItemStatsTableDisplay({
 
       return sort.direction === "asc" ? aValue - bValue : bValue - aValue;
     });
-  }, [filteredData, sort]);
+  }, [data, sort]);
 
   const toggleSort = (field: SortField) => {
     setSort((prev) => {
@@ -125,8 +231,16 @@ export function ItemStatsTableDisplay({
 
   return (
     <div className="overflow-x-auto w-full">
-      <div className="flex justify-center my-4">
+      <div className="flex justify-center items-center gap-6 my-4">
         {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
+        {columns.includes("confidence") && (
+          <div className="flex items-center gap-2">
+            <Switch id="dim-low-confidence" checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
+            <Label htmlFor="dim-low-confidence" className="text-sm font-medium cursor-pointer">
+              Highlight overperforming items
+            </Label>
+          </div>
+        )}
       </div>
       <Table className="w-full min-w-fit">
         {!hideHeader && (
@@ -157,77 +271,92 @@ export function ItemStatsTableDisplay({
                   </div>
                 </TableHead>
               )}
+              {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
               {(onItemInclude || onItemExclude) && <TableHead className="text-center">Include / Exclude</TableHead>}
             </TableRow>
           </TableHeader>
         )}
         <TableBody>
-          {sortedData.map((row, index) => (
-            <TableRow
-              key={row.item_id}
-              className={"bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200"}
-            >
-              {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <ItemImage itemId={row.item_id} />
-                  <ItemName itemId={row.item_id} />
-                </div>
-              </TableCell>
-              {columns.includes("itemsTier") && (
+          {processedData.map((row, index) => {
+            const shouldDim = dimLowConfidence && row.confidenceLower < row.confidenceBaselineLower;
+            return (
+              <TableRow
+                key={row.item_id}
+                className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 ${
+                  shouldDim ? "brightness-60" : ""
+                }`}
+              >
+                {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <ItemTier itemId={row.item_id} />
+                    <ItemImage itemId={row.item_id} />
+                    <ItemName itemId={row.item_id} />
                   </div>
                 </TableCell>
-              )}
-              {columns.includes("winRate") && (
-                <TableCell
-                  className="text-center"
-                  title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                >
-                  <ProgressBarWithLabel
-                    min={minWinRate}
-                    max={maxWinRate}
-                    value={row.wins / row.matches}
-                    color={"#ff00ff"}
-                    label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                  />
-                </TableCell>
-              )}
-              {columns.includes("usage") && (
-                <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
-                  <ProgressBarWithLabel
-                    min={minUsage}
-                    max={maxUsage}
-                    value={row.matches}
-                    color={"#00ffff"}
-                    label={row.matches.toLocaleString()}
-                  />
-                </TableCell>
-              )}
-              {(onItemInclude || onItemExclude) && (
-                <TableCell width={130}>
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      variant="secondary"
-                      className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6"
-                      onClick={() => onItemInclude?.(row.item_id)}
-                    >
-                      <span className="icon-[mdi--plus]" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="bg-red-700 hover:bg-red-500 px-1 h-6"
-                      onClick={() => onItemExclude?.(row.item_id)}
-                    >
-                      <span className="icon-[mdi--minus] text-lg" />
-                    </Button>
-                  </div>
-                </TableCell>
-              )}
-            </TableRow>
-          ))}
+                {columns.includes("itemsTier") && (
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <ItemTier itemId={row.item_id} />
+                    </div>
+                  </TableCell>
+                )}
+                {columns.includes("winRate") && (
+                  <TableCell
+                    className="text-center"
+                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+                  >
+                    <ProgressBarWithLabel
+                      min={minWinRate}
+                      max={maxWinRate}
+                      value={row.wins / row.matches}
+                      color={"#ff00ff"}
+                      label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                    />
+                  </TableCell>
+                )}
+                {columns.includes("usage") && (
+                  <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
+                    <ProgressBarWithLabel
+                      min={minUsage}
+                      max={maxUsage}
+                      value={row.matches}
+                      color={"#00ffff"}
+                      label={row.matches.toLocaleString()}
+                    />
+                  </TableCell>
+                )}
+                {columns.includes("confidence") && (
+                  <TableCell className="text-center">
+                    <div className="inline-flex">
+                      <ConfidenceTierBadge tier={row.confidenceTier} />
+                    </div>
+                  </TableCell>
+                )}
+                {(onItemInclude || onItemExclude) && (
+                  <TableCell width={130}>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={includedItemIds.includes(row.item_id)}
+                        className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-gray-500"
+                        onClick={() => onItemInclude?.(row.item_id)}
+                      >
+                        <span className="icon-[mdi--plus]" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        disabled={excludedItemIds.includes(row.item_id)}
+                        className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-gray-500"
+                        onClick={() => onItemExclude?.(row.item_id)}
+                      >
+                        <span className="icon-[mdi--minus] text-lg" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
@@ -302,10 +431,11 @@ export default function ItemStatsTable({
   );
   // Note: We're not sorting here anymore as the ItemStatsTableDisplay component handles sorting internally
   const limitedData = useMemo(() => (limit ? filteredData?.slice(0, limit) : filteredData), [filteredData, limit]);
+  const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
 
   return (
     <ItemStatsTableDisplay
-      data={limitedData}
+      data={displayData}
       isLoading={isLoadingItemStats || isLoadingItemAssets}
       columns={columns}
       initialSort={initialSort}
@@ -316,6 +446,8 @@ export default function ItemStatsTable({
       maxWinRate={maxWinRate}
       minUsage={minUsage}
       maxUsage={maxUsage}
+      includedItemIds={[]}
+      excludedItemIds={[]}
     />
   );
 }
