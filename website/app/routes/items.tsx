@@ -23,7 +23,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
   const [minRankId, setMinRankId] = useState<number>(0);
   const [maxRankId, setMaxRankId] = useState<number>(116);
   const [hero, setHero] = useState<number | null>(null);
-  const [minMatches, setMinMatches] = useState<number>(10);
+  const [minMatches, setMinMatches] = useState<number>(20);
 
   const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
   const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
@@ -68,14 +68,25 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                 <Label htmlFor="minMatches" className="h-8">
                   Min Matches
                 </Label>
-                <Input
-                  type="number"
-                  id="minMatches"
-                  min={1}
-                  step={10}
-                  value={minMatches}
-                  onChange={(e) => setMinMatches(Number(e.target.value))}
-                />
+                <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
+                  <button
+                    type="button"
+                    aria-label="Decrease min matches"
+                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
+                    onClick={() => setMinMatches((m) => Math.max(1, m - 10))}
+                  >
+                    -
+                  </button>
+                  <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>{minMatches}</span>
+                  <button
+                    type="button"
+                    aria-label="Increase min matches"
+                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
+                    onClick={() => setMinMatches((m) => m + 10)}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
@@ -101,7 +112,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
         </TabsList>
         <TabsContent value="stats">
           <ItemStatsTable
-            columns={["itemsTier", "winRate", "usage"]}
+            columns={["itemsTier", "winRate", "usage", "confidence"]}
             initialSort={{ field: "winRate", direction: "desc" }}
             minRankId={minRankId}
             maxRankId={maxRankId}
