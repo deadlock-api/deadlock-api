@@ -8,9 +8,9 @@ use utoipa_axum::routes;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Info", description = "General information endpoints")))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::health_check))
         .routes(routes!(route::info))

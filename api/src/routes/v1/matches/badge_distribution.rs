@@ -11,23 +11,23 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub struct BadgeDistributionQuery {
+pub(super) struct BadgeDistributionQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct BadgeDistribution {
+struct BadgeDistribution {
     /// The badge level.
-    pub badge_level: u32,
+    badge_level: u32,
     /// The total number of matches.
-    pub total_matches: u64,
+    total_matches: u64,
 }
 
 fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
@@ -71,7 +71,7 @@ fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
     sync_writes = "by_key",
     key = "BadgeDistributionQuery"
 )]
-pub async fn get_badge_distribution(
+async fn get_badge_distribution(
     ch_client: &clickhouse::Client,
     query: BadgeDistributionQuery,
 ) -> APIResult<Vec<BadgeDistribution>> {
@@ -93,7 +93,7 @@ pub async fn get_badge_distribution(
     summary = "Badge Distribution",
     description = "This endpoint returns the player badge distribution."
 )]
-pub async fn badge_distribution(
+pub(super) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

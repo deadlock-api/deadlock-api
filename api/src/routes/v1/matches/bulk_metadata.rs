@@ -26,85 +26,85 @@ fn default_limit() -> u32 {
 #[derive(Debug, Clone, Deserialize, ToSchema, Default, IntoStaticStr)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum SortKey {
+enum SortKey {
     #[default]
     MatchId,
     StartTime,
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
-pub struct BulkMatchMetadataQuery {
+pub(super) struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.
     #[serde(default = "default_true")]
     #[param(inline, default = "true")]
-    pub include_info: bool,
+    include_info: bool,
     /// Include objectives in the response.
     #[serde(default)]
-    pub include_objectives: bool,
+    include_objectives: bool,
     /// Include midboss in the response.
     #[serde(default)]
-    pub include_mid_boss: bool,
+    include_mid_boss: bool,
     /// Include player info in the response.
     #[serde(default)]
-    pub include_player_info: bool,
+    include_player_info: bool,
     /// Include player items in the response.
     #[serde(default)]
-    pub include_player_items: bool,
+    include_player_items: bool,
     /// Include player stats in the response.
     #[serde(default)]
-    pub include_player_stats: bool,
+    include_player_stats: bool,
     /// Include player death details in the response.
     #[serde(default)]
-    pub include_player_death_details: bool,
+    include_player_death_details: bool,
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
     #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
-    pub match_ids: Option<Vec<u64>>,
+    match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Filter matches based on whether they are in the high skill range.
-    pub is_high_skill_range_parties: Option<bool>,
+    is_high_skill_range_parties: Option<bool>,
     /// Filter matches based on whether they are in the low priority pool.
-    pub is_low_pri_pool: Option<bool>,
+    is_low_pri_pool: Option<bool>,
     /// Filter matches based on whether they are in the new player pool.
-    pub is_new_player_pool: Option<bool>,
+    is_new_player_pool: Option<bool>,
     /// Filter matches by account IDs of players that participated in the match.
     #[serde(default)]
     #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
-    pub account_ids: Option<Vec<u32>>,
+    account_ids: Option<Vec<u32>>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
     #[serde(default)]
     #[param(inline)]
-    pub order_by: SortKey,
+    order_by: SortKey,
     /// The direction to order the results by.
     #[serde(default)]
     #[param(inline)]
-    pub order_direction: SortDirectionAsc,
+    order_direction: SortDirectionAsc,
     /// The maximum number of matches to return.
     #[serde(default = "default_limit")]
     #[param(minimum = 1, maximum = 10000, default = 1000)]
-    pub limit: u32,
+    limit: u32,
 }
 
 #[utoipa::path(
@@ -124,7 +124,7 @@ pub struct BulkMatchMetadataQuery {
 This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
     "#
 )]
-pub async fn bulk_metadata(
+pub(super) async fn bulk_metadata(
     Query(query): Query<BulkMatchMetadataQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,

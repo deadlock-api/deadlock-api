@@ -3,15 +3,15 @@ use utoipa_axum::router::OpenApiRouter;
 
 pub mod analytics;
 pub mod builds;
-pub mod commands;
+mod commands;
 pub mod info;
-pub mod leaderboard;
-pub mod matches;
-pub mod patches;
-pub mod players;
-pub mod sql;
+mod leaderboard;
+mod matches;
+mod patches;
+pub(super) mod players;
+mod sql;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .nest("/matches", matches::router())
         .nest("/players", players::router())

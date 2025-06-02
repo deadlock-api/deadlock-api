@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 pub mod v1;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         // V2 Match History Endpoint for Backwards Compatibility with data.deadlock-api.com
         .route(

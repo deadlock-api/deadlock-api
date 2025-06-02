@@ -201,7 +201,7 @@ pub enum ScoreboardQuerySortBy {
 }
 
 impl ScoreboardQuerySortBy {
-    pub fn get_select_clause(&self) -> &'static str {
+    pub(super) fn get_select_clause(&self) -> &'static str {
         match self {
             Self::Matches => "count(distinct match_id)",
             Self::Wins => "sum(won)",

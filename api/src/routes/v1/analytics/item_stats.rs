@@ -18,44 +18,44 @@ fn default_min_matches() -> Option<u32> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub struct ItemStatsQuery {
+pub(crate) struct ItemStatsQuery {
     /// Filter matches based on the hero ID.
-    pub hero_id: Option<u32>,
+    hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Comma separated list of item ids to include
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub include_item_ids: Option<Vec<u32>>,
+    include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub exclude_item_ids: Option<Vec<u32>>,
+    exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
-    pub min_matches: Option<u32>,
+    min_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -64,7 +64,7 @@ pub struct ItemStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
-    pub players: u64,
+    players: u64,
 }
 
 fn build_item_stats_query(query: &ItemStatsQuery) -> String {
@@ -169,7 +169,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_item_stats(
+async fn get_item_stats(
     ch_client: &clickhouse::Client,
     query: ItemStatsQuery,
 ) -> APIResult<Vec<ItemStats>> {
@@ -195,7 +195,7 @@ Retrieves item statistics based on historical match data.
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn item_stats(
+pub(crate) async fn item_stats(
     Query(query): Query<ItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

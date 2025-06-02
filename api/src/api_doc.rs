@@ -32,7 +32,7 @@ _deadlock-api.com is not endorsed by Valve and does not reflect the views or opi
         url = "https://github.com/deadlock-api/deadlock-api-rust"
     )
 )]
-pub(crate) struct ApiDoc;
+pub(super) struct ApiDoc;
 
 struct SecurityAddon;
 

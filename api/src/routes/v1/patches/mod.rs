@@ -1,5 +1,5 @@
-pub mod big_patch_days;
-pub mod feed;
+mod big_patch_days;
+pub(super) mod feed;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
@@ -13,9 +13,9 @@ use utoipa_axum::routes;
     name = "Patches",
     description = "Endpoints that return data about game patches."
 )))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(big_patch_days::big_patch_days))
         .routes(routes!(feed::feed))

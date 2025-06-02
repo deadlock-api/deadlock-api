@@ -59,29 +59,29 @@ WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
 "#;
 
 #[derive(Deserialize, Row)]
-pub struct TableSizeRow {
+struct TableSizeRow {
     /// Name of the table.
-    pub table: String,
+    table: String,
     /// Whether the table is a view.
-    pub is_view: bool,
+    is_view: bool,
     /// Number of rows in the table.
-    pub rows: Option<u64>,
+    rows: Option<u64>,
     /// Compressed size of the table in bytes.
-    pub data_compressed_bytes: Option<u64>,
+    data_compressed_bytes: Option<u64>,
     /// Uncompressed size of the table in bytes.
-    pub data_uncompressed_bytes: Option<u64>,
+    data_uncompressed_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
 pub struct TableSize {
     /// Whether the table is a view.
-    pub is_view: bool,
+    is_view: bool,
     /// Number of rows in the table.
     pub rows: Option<u64>,
     /// Compressed size of the table in bytes.
-    pub data_compressed_bytes: Option<u64>,
+    data_compressed_bytes: Option<u64>,
     /// Uncompressed size of the table in bytes.
-    pub data_uncompressed_bytes: Option<u64>,
+    data_uncompressed_bytes: Option<u64>,
 }
 
 impl From<TableSizeRow> for TableSize {
@@ -98,9 +98,9 @@ impl From<TableSizeRow> for TableSize {
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct APIInfo {
     /// The number of matches fetched in the last 24 hours.
-    pub fetched_matches_per_day: Option<u64>,
+    fetched_matches_per_day: Option<u64>,
     /// The number of matches that have not been fetched.
-    pub missed_matches: Option<u64>,
+    missed_matches: Option<u64>,
     /// The sizes of all tables in the database.
     pub table_sizes: Option<HashMap<String, TableSize>>,
 }
@@ -111,7 +111,7 @@ pub struct APIInfo {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
+async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     let (table_sizes, fetched_matches_per_day, missed_matches) = join3(
         ch_client
             .query(TABLE_SIZES_QUERY)
@@ -144,6 +144,6 @@ pub async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     summary = "API Info",
     description = "Returns information about the API."
 )]
-pub async fn info(State(state): State<AppState>) -> impl IntoResponse {
+pub(super) async fn info(State(state): State<AppState>) -> impl IntoResponse {
     Json(fetch_ch_info(&state.ch_client).await)
 }

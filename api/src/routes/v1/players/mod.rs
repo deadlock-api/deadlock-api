@@ -1,11 +1,11 @@
-pub mod card;
-pub mod enemy_stats;
-pub mod hero_stats;
-pub mod item_stats;
-pub mod match_history;
-pub mod mate_stats;
-pub mod mmr_history;
-pub mod party_stats;
+mod card;
+mod enemy_stats;
+mod hero_stats;
+mod item_stats;
+pub(crate) mod match_history;
+mod mate_stats;
+pub(super) mod mmr_history;
+mod party_stats;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
@@ -17,18 +17,18 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(Deserialize, IntoParams, Default)]
-pub struct AccountIdQuery {
+pub(crate) struct AccountIdQuery {
     /// The players SteamID3
     #[serde(default)]
     #[serde(deserialize_with = "parse_steam_id")]
-    pub account_id: u32,
+    account_id: u32,
 }
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Players", description = "Player related endpoints")))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(
             OpenApiRouter::new()

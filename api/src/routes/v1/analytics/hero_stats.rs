@@ -14,42 +14,42 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub struct HeroStatsQuery {
+pub(crate) struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
-    pub min_hero_matches: Option<u64>,
+    min_hero_matches: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
-    pub max_hero_matches: Option<u64>,
+    max_hero_matches: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
     /// Comma separated list of item ids to include (only heroes who have purchased these items)
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub include_item_ids: Option<Vec<u32>>,
+    include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude (only heroes who have not purchased these items)
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub exclude_item_ids: Option<Vec<u32>>,
+    exclude_item_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -58,21 +58,21 @@ pub struct AnalyticsHeroStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
-    pub players: u64,
+    players: u64,
     pub total_kills: u64,
     pub total_deaths: u64,
     pub total_assists: u64,
-    pub total_net_worth: u64,
-    pub total_last_hits: u64,
-    pub total_denies: u64,
-    pub total_player_damage: u64,
-    pub total_player_damage_taken: u64,
-    pub total_boss_damage: u64,
-    pub total_creep_damage: u64,
-    pub total_neutral_damage: u64,
-    pub total_max_health: u64,
-    pub total_shots_hit: u64,
-    pub total_shots_missed: u64,
+    total_net_worth: u64,
+    total_last_hits: u64,
+    total_denies: u64,
+    total_player_damage: u64,
+    total_player_damage_taken: u64,
+    total_boss_damage: u64,
+    total_creep_damage: u64,
+    total_neutral_damage: u64,
+    total_max_health: u64,
+    total_shots_hit: u64,
+    total_shots_missed: u64,
 }
 
 fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
@@ -219,7 +219,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_hero_stats(
+async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     query: HeroStatsQuery,
 ) -> APIResult<Vec<AnalyticsHeroStats>> {
@@ -241,7 +241,7 @@ pub async fn get_hero_stats(
     summary = "Hero Stats",
     description = "Retrieves performance statistics for each hero based on historical match data."
 )]
-pub async fn hero_stats(
+pub(crate) async fn hero_stats(
     Query(query): Query<HeroStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

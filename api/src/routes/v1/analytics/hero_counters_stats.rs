@@ -18,40 +18,40 @@ fn default_min_matches() -> Option<u64> {
 }
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub struct HeroCounterStatsQuery {
+pub(super) struct HeroCounterStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// When `true`, only considers matchups where both `hero_id` and `enemy_hero_id` were assigned to the same lane (e.g., both Mid Lane). When `false`, considers all matchups regardless of assigned lane.
     #[serde(default = "default_true_option")]
     #[param(default = true)]
-    pub same_lane_filter: Option<bool>,
+    same_lane_filter: Option<bool>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
-    pub min_matches: Option<u64>,
+    min_matches: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -65,37 +65,37 @@ pub struct HeroCounterStats {
     /// The total number of matches played between `hero_id` and `enemy_hero_id` that meet the filter criteria.
     pub matches_played: u64,
     /// The number of kills by `hero_id` when facing `enemy_hero_id`.
-    pub kills: u64,
+    kills: u64,
     /// The number of kills by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_kills: u64,
+    enemy_kills: u64,
     /// The number of deaths by `hero_id` when facing `enemy_hero_id`.
-    pub deaths: u64,
+    deaths: u64,
     /// The number of deaths by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_deaths: u64,
+    enemy_deaths: u64,
     /// The number of assists by `hero_id` when facing `enemy_hero_id`.
-    pub assists: u64,
+    assists: u64,
     /// The number of assists by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_assists: u64,
+    enemy_assists: u64,
     /// The number of denies by `hero_id` when facing `enemy_hero_id`.
-    pub denies: u64,
+    denies: u64,
     /// The number of denies by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_denies: u64,
+    enemy_denies: u64,
     /// The number of last hits by `hero_id` when facing `enemy_hero_id`.
-    pub last_hits: u64,
+    last_hits: u64,
     /// The number of last hits by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_last_hits: u64,
+    enemy_last_hits: u64,
     /// The net worth of `hero_id` when facing `enemy_hero_id`.
-    pub networth: u64,
+    networth: u64,
     /// The net worth of `enemy_hero_id` when facing `hero_id`.
-    pub enemy_networth: u64,
+    enemy_networth: u64,
     /// The amount of objective damage dealt by `hero_id` when facing `enemy_hero_id`.
-    pub obj_damage: u64,
+    obj_damage: u64,
     /// The amount of objective damage dealt by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_obj_damage: u64,
+    enemy_obj_damage: u64,
     /// The number of creeps killed by `hero_id` when facing `enemy_hero_id`.
-    pub creeps: u64,
+    creeps: u64,
     /// The number of creeps killed by `enemy_hero_id` when facing `hero_id`.
-    pub enemy_creeps: u64,
+    enemy_creeps: u64,
 }
 
 fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
@@ -222,7 +222,7 @@ This endpoint analyzes completed matches to calculate how often a specific hero 
 Results are cached for **1 hour** based on the combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn hero_counters_stats(
+pub(super) async fn hero_counters_stats(
     Query(query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

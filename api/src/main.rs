@@ -10,7 +10,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 const PORT: u16 = 3000;
 
-pub fn init_tracing() {
+fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
         "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn",
     ));

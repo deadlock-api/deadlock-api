@@ -21,10 +21,10 @@ use valveprotos::deadlock::{
 };
 
 #[derive(Deserialize, IntoParams)]
-pub struct ActiveMatchesQuery {
+pub(super) struct ActiveMatchesQuery {
     /// The account ID to filter active matches by (SteamID3)
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
 }
 
 #[cached(
@@ -34,7 +34,7 @@ pub struct ActiveMatchesQuery {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
+async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
     let steam_response = state
         .steam_client
         .call_steam_proxy_raw(SteamProxyQuery {
@@ -50,7 +50,7 @@ pub async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
     Ok(BASE64_STANDARD.decode(&steam_response.data)?)
 }
 
-pub async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
+async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     if raw_data.len() < 7 {
         return Err(APIError::internal("Invalid active matches data"));
     }
@@ -81,7 +81,9 @@ Returns active matches that are currently being played, serialized as protobuf m
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
     "#
 )]
-pub async fn active_matches_raw(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
+pub(super) async fn active_matches_raw(
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
     tryhard::retry_fn(|| fetch_active_matches_raw(&state))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
@@ -105,7 +107,7 @@ Returns active matches that are currently being played.
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
     "#
 )]
-pub async fn active_matches(
+pub(super) async fn active_matches(
     Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

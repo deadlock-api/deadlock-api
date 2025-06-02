@@ -16,77 +16,78 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, IntoParams)]
-pub struct HeroIdQuery {
-    pub hero_id: u32,
+pub(crate) struct HeroIdQuery {
+    hero_id: u32,
 }
 
 #[derive(
     Copy, Debug, Display, Clone, Serialize, Deserialize, ToSchema, Eq, PartialEq, Hash, Default,
 )]
-pub enum HeroStatsOverTimeQueryTimeInterval {
+#[serde(rename_all = "UPPERCASE")]
+enum HeroStatsOverTimeQueryTimeInterval {
     #[default]
     #[display("HOUR")]
-    HOUR,
+    Hour,
     #[display("DAY")]
-    DAY,
+    Day,
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub struct HeroStatsOverTimeQuery {
+pub(crate) struct HeroStatsOverTimeQuery {
     /// Comma separated list of hero ids to include
     #[serde(default, deserialize_with = "comma_separated_num_deserialize")]
-    pub hero_ids: Vec<u32>,
+    hero_ids: Vec<u32>,
     /// Time Interval for the stats. **Default:** HOUR.
     #[param(inline)]
     #[serde(default)]
-    pub time_interval: HeroStatsOverTimeQueryTimeInterval,
+    time_interval: HeroStatsOverTimeQueryTimeInterval,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
-    pub min_hero_matches: Option<u64>,
+    min_hero_matches: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
-    pub max_hero_matches: Option<u64>,
+    max_hero_matches: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct HeroStatsOverTime {
-    pub hero_id: u32,
-    pub date_time: u32,
-    pub wins: u64,
-    pub losses: u64,
-    pub matches: u64,
+struct HeroStatsOverTime {
+    hero_id: u32,
+    date_time: u32,
+    wins: u64,
+    losses: u64,
+    matches: u64,
     /// The total number of matches played at the given time, including matches where the hero did not play.
-    pub total_matches: u64,
-    pub players: u64,
-    pub total_kills: u64,
-    pub total_deaths: u64,
-    pub total_assists: u64,
-    pub total_net_worth: u64,
-    pub total_last_hits: u64,
-    pub total_denies: u64,
+    total_matches: u64,
+    players: u64,
+    total_kills: u64,
+    total_deaths: u64,
+    total_assists: u64,
+    total_net_worth: u64,
+    total_last_hits: u64,
+    total_denies: u64,
 }
 
 fn build_hero_stats_over_time_query(query: &HeroStatsOverTimeQuery) -> String {
@@ -233,7 +234,7 @@ fn build_hero_stats_over_time_query(query: &HeroStatsOverTimeQuery) -> String {
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_hero_stats_over_time(
+async fn get_hero_stats_over_time(
     ch_client: &clickhouse::Client,
     query: HeroStatsOverTimeQuery,
 ) -> APIResult<Vec<HeroStatsOverTime>> {
@@ -255,7 +256,7 @@ pub async fn get_hero_stats_over_time(
     summary = "Hero Stats Over Time",
     description = "Retrieves performance statistics for each hero based on historical match data over time."
 )]
-pub async fn heroes_stats_over_time(
+pub(super) async fn heroes_stats_over_time(
     Query(query): Query<HeroStatsOverTimeQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -264,7 +265,7 @@ pub async fn heroes_stats_over_time(
         .map(Json)
 }
 
-pub async fn hero_stats_over_time(
+pub(crate) async fn hero_stats_over_time(
     Path(HeroIdQuery { hero_id }): Path<HeroIdQuery>,
     Query(mut query): Query<HeroStatsOverTimeQuery>,
     State(state): State<AppState>,

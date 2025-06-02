@@ -26,34 +26,34 @@ use valveprotos::deadlock::{
 
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 
-pub type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
+pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Row, Eq, PartialEq, Hash)]
-pub struct PlayerMatchHistoryEntry {
-    pub account_id: u32,
-    pub match_id: u32,
-    pub hero_id: u32,
-    pub hero_level: u32,
-    pub start_time: u32,
-    pub game_mode: i8,
-    pub match_mode: i8,
-    pub player_team: i8,
-    pub player_kills: u32,
-    pub player_deaths: u32,
-    pub player_assists: u32,
-    pub denies: u32,
-    pub net_worth: u32,
-    pub last_hits: u32,
-    pub team_abandoned: Option<bool>,
-    pub abandoned_time_s: Option<u32>,
-    pub match_duration_s: u32,
-    pub match_result: u32,
-    pub objectives_mask_team0: u32,
-    pub objectives_mask_team1: u32,
+pub(crate) struct PlayerMatchHistoryEntry {
+    account_id: u32,
+    pub(crate) match_id: u32,
+    pub(crate) hero_id: u32,
+    hero_level: u32,
+    pub(crate) start_time: u32,
+    game_mode: i8,
+    pub(crate) match_mode: i8,
+    pub(crate) player_team: i8,
+    pub(crate) player_kills: u32,
+    pub(crate) player_deaths: u32,
+    player_assists: u32,
+    pub(crate) denies: u32,
+    pub(crate) net_worth: u32,
+    pub(crate) last_hits: u32,
+    team_abandoned: Option<bool>,
+    abandoned_time_s: Option<u32>,
+    pub(crate) match_duration_s: u32,
+    pub(crate) match_result: u32,
+    objectives_mask_team0: u32,
+    objectives_mask_team1: u32,
 }
 
 impl PlayerMatchHistoryEntry {
-    pub fn from_protobuf(
+    fn from_protobuf(
         account_id: u32,
         entry: c_msg_client_to_gc_get_match_history_response::Match,
     ) -> Option<Self> {
@@ -83,22 +83,22 @@ impl PlayerMatchHistoryEntry {
 }
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub struct MatchHistoryQuery {
+pub(crate) struct MatchHistoryQuery {
     /// Refetch the match history from Steam, even if it is already cached in ClickHouse.
     /// Only use this if you are sure that the data in ClickHouse is outdated.
     /// Enabling this flag results in a strict rate limit.
     #[serde(default)]
     #[param(default)]
-    pub force_refetch: bool,
+    force_refetch: bool,
     /// Return only the already stored match history from ClickHouse.
     /// There is no rate limit for this option, so if you need a lot of data, you can use this option.
     /// This option is not compatible with `force_refetch`.
     #[serde(default)]
     #[param(default)]
-    pub only_stored_history: bool,
+    only_stored_history: bool,
 }
 
-pub async fn insert_match_history_to_ch(
+async fn insert_match_history_to_ch(
     ch_client: &clickhouse::Client,
     match_history: &[PlayerMatchHistoryEntry],
 ) -> clickhouse::error::Result<()> {
@@ -117,7 +117,7 @@ pub async fn insert_match_history_to_ch(
     sync_writes = "by_key",
     key = "u32"
 )]
-pub async fn fetch_match_history_from_clickhouse(
+pub(crate) async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
     account_id: u32,
 ) -> clickhouse::error::Result<PlayerMatchHistory> {
@@ -184,7 +184,7 @@ async fn fetch_match_history_raw(
     sync_writes = "by_key",
     key = "(u32, bool)"
 )]
-pub async fn fetch_steam_match_history(
+pub(crate) async fn fetch_steam_match_history(
     steam_client: &SteamClient,
     account_id: u32,
     force_refetch: bool,
@@ -239,7 +239,7 @@ pub async fn fetch_steam_match_history(
         .collect_vec())
 }
 
-pub async fn exists_newer_match_than(
+async fn exists_newer_match_than(
     ch_client: &clickhouse::Client,
     account_id: u32,
     match_id: u32,
@@ -280,7 +280,7 @@ Relevant Protobuf Messages:
 - CMsgClientToGcGetMatchHistoryResponse
     "#
 )]
-pub async fn match_history(
+pub(super) async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<MatchHistoryQuery>,
     rate_limit_key: RateLimitKey,
@@ -397,7 +397,7 @@ pub async fn match_history(
     Ok(Json(combined_match_history))
 }
 
-pub async fn match_history_v2(
+pub(crate) async fn match_history_v2(
     path: Path<AccountIdQuery>,
     query: Query<MatchHistoryQuery>,
     rate_limit_key: RateLimitKey,

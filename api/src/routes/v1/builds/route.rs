@@ -47,7 +47,7 @@ async fn fetch_builds(
     summary = "Search for builds",
     description = "Search for builds based on various criteria."
 )]
-pub async fn search_builds(
+pub(super) async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

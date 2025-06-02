@@ -23,55 +23,55 @@ fn default_min_matches() -> Option<u32> {
 }
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
-pub struct PlayerScoreboardQuery {
+pub(crate) struct PlayerScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]
-    pub sort_by: ScoreboardQuerySortBy,
+    sort_by: ScoreboardQuerySortBy,
     /// The direction to sort players in.
     #[serde(default)]
     #[param(inline)]
-    pub sort_direction: SortDirectionDesc,
+    sort_direction: SortDirectionDesc,
     /// Filter matches based on the hero ID.
-    pub hero_id: Option<u32>,
+    hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
-    pub min_matches: Option<u32>,
+    min_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// The offset to start fetching players from.
-    pub start: Option<u32>,
+    start: Option<u32>,
     /// The maximum number of players to fetch.
     #[serde(default = "default_limit")]
     #[param(inline, default = "100", maximum = 10000, minimum = 1)]
-    pub limit: Option<u32>,
+    limit: Option<u32>,
     /// Comma separated list of account ids to include
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub account_ids: Option<Vec<u32>>,
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerScoreboardEntry {
-    pub rank: u64,
-    pub account_id: u32,
+    rank: u64,
+    account_id: u32,
     pub value: f64,
     pub matches: u64,
 }
@@ -190,7 +190,7 @@ async fn get_player_scoreboard(
     summary = "Player Scoreboard",
     description = "This endpoint returns the player scoreboard."
 )]
-pub async fn player_scoreboard(
+pub(crate) async fn player_scoreboard(
     Query(query): Query<PlayerScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

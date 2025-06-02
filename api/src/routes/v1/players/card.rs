@@ -25,9 +25,9 @@ use valveprotos::deadlock::{
 };
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct PlayerCardSlotStat {
-    pub stat_id: Option<i32>,
-    pub stat_score: Option<u32>,
+struct PlayerCardSlotStat {
+    stat_id: Option<i32>,
+    stat_score: Option<u32>,
 }
 
 impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
@@ -40,10 +40,10 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct PlayerCardSlotHero {
-    pub hero_id: Option<u32>,
-    pub hero_kills: Option<u32>,
-    pub hero_wins: Option<u32>,
+struct PlayerCardSlotHero {
+    hero_id: Option<u32>,
+    hero_kills: Option<u32>,
+    hero_wins: Option<u32>,
 }
 
 impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
@@ -57,10 +57,10 @@ impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct PlayerCardSlot {
-    pub slot_id: Option<u32>,
-    pub hero: Option<PlayerCardSlotHero>,
-    pub stat: Option<PlayerCardSlotStat>,
+struct PlayerCardSlot {
+    slot_id: Option<u32>,
+    hero: Option<PlayerCardSlotHero>,
+    stat: Option<PlayerCardSlotStat>,
 }
 
 impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
@@ -74,12 +74,12 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct PlayerCard {
-    pub account_id: Option<u32>,
-    pub ranked_badge_level: Option<u32>,
-    pub ranked_rank: Option<u32>,
-    pub ranked_subrank: Option<u32>,
-    pub slots: Vec<PlayerCardSlot>,
+struct PlayerCard {
+    account_id: Option<u32>,
+    ranked_badge_level: Option<u32>,
+    ranked_rank: Option<u32>,
+    ranked_subrank: Option<u32>,
+    slots: Vec<PlayerCardSlot>,
 }
 
 impl From<CMsgCitadelProfileCard> for PlayerCard {
@@ -146,7 +146,7 @@ Relevant Protobuf Messages:
 - CMsgCitadelProfileCard
     "#
 )]
-pub async fn card_raw(
+pub(super) async fn card_raw(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
@@ -192,7 +192,7 @@ Relevant Protobuf Messages:
 - CMsgCitadelProfileCard
     "#
 )]
-pub async fn card(
+pub(super) async fn card(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,

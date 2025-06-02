@@ -20,7 +20,7 @@ impl CacheControlMiddleware {
     fn header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         let mut header_value = String::new();
         write!(&mut header_value, "max-age={}", self.max_age.as_secs()).ok();
-        write!(&mut header_value, ", public").ok();
+        write!(&mut header_value, ", lic").ok();
         HeaderValue::from_str(&header_value)
     }
 }
@@ -108,7 +108,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, public"
+            "max-age=60, lic"
         );
     }
 }

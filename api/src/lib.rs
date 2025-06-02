@@ -10,7 +10,7 @@ mod context;
 mod error;
 mod middleware;
 pub mod routes;
-pub mod services;
+mod services;
 pub mod utils;
 
 use crate::api_doc::ApiDoc;

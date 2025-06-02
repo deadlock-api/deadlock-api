@@ -7,17 +7,17 @@ use std::time::Duration;
 use tracing::error;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, IsVariant)]
-pub enum RateLimitQuotaType {
+pub(super) enum RateLimitQuotaType {
     IP,
     Key,
     Global,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct RateLimitQuota {
+pub(crate) struct RateLimitQuota {
     pub(crate) limit: u32,
     pub(crate) period: Duration,
-    pub rate_limit_quota_type: RateLimitQuotaType,
+    pub(super) rate_limit_quota_type: RateLimitQuotaType,
 }
 
 impl RateLimitQuota {
@@ -50,8 +50,8 @@ impl RateLimitQuota {
 }
 
 #[derive(Debug, Clone)]
-pub struct RateLimitStatus {
-    pub quota: RateLimitQuota,
+pub(crate) struct RateLimitStatus {
+    pub(crate) quota: RateLimitQuota,
     pub(crate) requests: u32,
     pub(crate) oldest_request: DateTime<Utc>,
 }

@@ -1,14 +1,14 @@
-pub mod active;
-pub mod badge_distribution;
-pub mod bulk_metadata;
-pub mod custom;
-pub mod ingest_event;
-pub mod ingest_salts;
-pub mod live_url;
-pub mod metadata;
-pub mod recently_fetched;
-pub mod salts;
-pub mod types;
+mod active;
+mod badge_distribution;
+mod bulk_metadata;
+mod custom;
+mod ingest_event;
+mod ingest_salts;
+mod live_url;
+mod metadata;
+mod recently_fetched;
+mod salts;
+mod types;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
@@ -19,9 +19,9 @@ use utoipa_axum::routes;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Matches", description = "Match related endpoints")))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(active::active_matches))
         .routes(routes!(active::active_matches_raw))

@@ -6,19 +6,19 @@ use tracing::debug;
 
 /// Client for interacting with the Deadlock assets API
 #[derive(Constructor, Clone)]
-pub struct AssetsClient {
+pub(crate) struct AssetsClient {
     http_client: reqwest::Client,
 }
 
 impl AssetsClient {
     /// Fetch heroes from the assets API
-    pub async fn fetch_heroes(&self) -> reqwest::Result<Vec<AssetsHero>> {
+    pub(crate) async fn fetch_heroes(&self) -> reqwest::Result<Vec<AssetsHero>> {
         debug!("Fetching heroes from assets API");
         fetch_heroes_cached(&self.http_client).await
     }
 
     /// Fetch ranks from the assets API
-    pub async fn fetch_ranks(&self) -> reqwest::Result<Vec<AssetsRanks>> {
+    pub(crate) async fn fetch_ranks(&self) -> reqwest::Result<Vec<AssetsRanks>> {
         debug!("Fetching ranks from assets API");
         fetch_ranks_cached(&self.http_client).await
     }

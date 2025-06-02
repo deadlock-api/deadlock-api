@@ -13,21 +13,21 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub struct BuildItemStatsQuery {
+pub(super) struct BuildItemStatsQuery {
     /// Filter builds based on the hero ID.
-    pub hero_id: Option<u32>,
+    hero_id: Option<u32>,
     /// Filter builds based on their last updated time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_last_updated_unix_timestamp: Option<u64>,
+    min_last_updated_unix_timestamp: Option<u64>,
     /// Filter builds based on their last updated time (Unix timestamp).
-    pub max_last_updated_unix_timestamp: Option<u64>,
+    max_last_updated_unix_timestamp: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, ToSchema, Eq, PartialEq, Hash)]
-pub struct BuildItemStats {
-    pub item_id: i64,
-    pub builds: i64,
+struct BuildItemStats {
+    item_id: i64,
+    builds: i64,
 }
 
 fn build_build_item_stats_query(query: &BuildItemStatsQuery) -> String {
@@ -63,7 +63,7 @@ fn build_build_item_stats_query(query: &BuildItemStatsQuery) -> String {
     sync_writes = "by_key",
     key = "BuildItemStatsQuery"
 )]
-pub async fn get_build_item_stats(
+async fn get_build_item_stats(
     pg_client: &Pool<Postgres>,
     query: BuildItemStatsQuery,
 ) -> APIResult<Vec<BuildItemStats>> {
@@ -96,7 +96,7 @@ Retrieves item statistics from hero builds.
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn build_item_stats(
+pub(super) async fn build_item_stats(
     Query(query): Query<BuildItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

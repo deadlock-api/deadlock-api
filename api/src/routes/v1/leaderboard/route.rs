@@ -21,21 +21,21 @@ use valveprotos::deadlock::{
 };
 
 #[derive(Debug, Deserialize, IntoParams)]
-pub struct LeaderboardQuery {
+pub(super) struct LeaderboardQuery {
     /// The region to fetch the leaderboard for.
     #[serde(default)]
     #[param(inline)]
-    pub region: LeaderboardRegion,
+    region: LeaderboardRegion,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
-pub struct LeaderboardHeroQuery {
+pub(super) struct LeaderboardHeroQuery {
     /// The region to fetch the leaderboard for.
     #[serde(default)]
     #[param(inline)]
-    pub region: LeaderboardRegion,
+    region: LeaderboardRegion,
     /// The hero ID to fetch the leaderboard for.
-    pub hero_id: u32,
+    hero_id: u32,
 }
 
 #[cached(
@@ -46,7 +46,7 @@ pub struct LeaderboardHeroQuery {
     sync_writes = "by_key",
     key = "(LeaderboardRegion, Option<u32>)"
 )]
-pub async fn fetch_leaderboard_raw(
+pub(crate) async fn fetch_leaderboard_raw(
     steam_client: &SteamClient,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
@@ -83,7 +83,7 @@ pub async fn fetch_leaderboard_raw(
 Returns the leaderboard, serialized as protobuf message.
     "#
 )]
-pub async fn leaderboard_raw(
+pub(super) async fn leaderboard_raw(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
@@ -110,7 +110,7 @@ pub async fn leaderboard_raw(
 Returns the leaderboard for a specific hero, serialized as protobuf message.
     "#
 )]
-pub async fn leaderboard_hero_raw(
+pub(super) async fn leaderboard_hero_raw(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {
@@ -143,7 +143,7 @@ pub async fn leaderboard_hero_raw(
 Returns the leaderboard.
     "#
 )]
-pub async fn leaderboard(
+pub(super) async fn leaderboard(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
@@ -169,7 +169,7 @@ pub async fn leaderboard(
 Returns the leaderboard for a specific hero.
     "#
 )]
-pub async fn leaderboard_hero(
+pub(super) async fn leaderboard_hero(
     State(state): State<AppState>,
     Path(LeaderboardHeroQuery { region, hero_id }): Path<LeaderboardHeroQuery>,
 ) -> APIResult<impl IntoResponse> {

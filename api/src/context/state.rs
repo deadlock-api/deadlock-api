@@ -33,27 +33,27 @@ pub enum AppStateError {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-pub struct FeatureFlags {
-    pub routes: HashMap<String, bool>,
+pub(crate) struct FeatureFlags {
+    pub(crate) routes: HashMap<String, bool>,
 }
 
 #[derive(Clone)]
-pub struct AppState {
-    pub config: Config,
-    pub http_client: reqwest::Client,
-    pub s3_client: object_store::aws::AmazonS3,
-    pub s3_cache_client: object_store::aws::AmazonS3,
-    pub redis_client: redis::aio::MultiplexedConnection,
-    pub ch_client: clickhouse::Client,
-    pub pg_client: Pool<Postgres>,
-    pub feature_flags: FeatureFlags,
-    pub steam_client: SteamClient,
-    pub assets_client: AssetsClient,
-    pub rate_limit_client: RateLimitClient,
+pub(crate) struct AppState {
+    pub(crate) config: Config,
+    pub(crate) http_client: reqwest::Client,
+    pub(crate) s3_client: object_store::aws::AmazonS3,
+    pub(crate) s3_cache_client: object_store::aws::AmazonS3,
+    pub(crate) redis_client: redis::aio::MultiplexedConnection,
+    pub(crate) ch_client: clickhouse::Client,
+    pub(crate) pg_client: Pool<Postgres>,
+    pub(crate) feature_flags: FeatureFlags,
+    pub(crate) steam_client: SteamClient,
+    pub(crate) assets_client: AssetsClient,
+    pub(crate) rate_limit_client: RateLimitClient,
 }
 
 impl AppState {
-    pub async fn from_env() -> Result<AppState, AppStateError> {
+    pub(crate) async fn from_env() -> Result<AppState, AppStateError> {
         let config: Config = envy::from_env()?;
 
         // Create an HTTP client

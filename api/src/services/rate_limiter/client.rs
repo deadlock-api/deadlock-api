@@ -17,7 +17,7 @@ use uuid::Uuid;
 const MAX_TTL_SECONDS: isize = 60 * 60;
 
 #[derive(Constructor, Clone)]
-pub struct RateLimitClient {
+pub(crate) struct RateLimitClient {
     redis_client: MultiplexedConnection,
     pg_client: Pool<Postgres>,
     emergency_mode: bool,

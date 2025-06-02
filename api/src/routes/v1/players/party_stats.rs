@@ -12,35 +12,35 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub struct PartyStatsQuery {
+pub(super) struct PartyStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct PartyStats {
-    pub party_size: u64,
-    pub wins: u64,
-    pub matches_played: u64,
-    pub matches: Vec<u64>,
+struct PartyStats {
+    party_size: u64,
+    wins: u64,
+    matches_played: u64,
+    matches: Vec<u64>,
 }
 
 fn build_party_stats_query(account_id: u32, query: &PartyStatsQuery) -> String {
@@ -126,7 +126,7 @@ async fn get_party_stats(
     summary = "Party Stats",
     description = "This endpoint returns the party stats."
 )]
-pub async fn party_stats(
+pub(super) async fn party_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<PartyStatsQuery>,
     State(state): State<AppState>,

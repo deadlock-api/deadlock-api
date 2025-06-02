@@ -10,16 +10,16 @@ use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Serialize, ToSchema)]
-pub(super) struct GetCustomMatchIdResponse {
-    pub match_id: u64,
+struct GetCustomMatchIdResponse {
+    match_id: u64,
 }
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct PartyIdQuery {
-    pub party_id: u64,
+    party_id: u64,
 }
 
-pub(super) async fn get_party_match_id(
+async fn get_party_match_id(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> APIResult<u64> {

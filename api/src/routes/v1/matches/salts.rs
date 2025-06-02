@@ -22,22 +22,22 @@ use valveprotos::deadlock::{
 };
 
 #[derive(Deserialize, IntoParams, Default)]
-pub struct SaltsQuery {
+pub(super) struct SaltsQuery {
     /// Whether the match needs a demo file or not
     ///
     /// Does not work for old matches, where Valve does not provide this information
     #[serde(default)]
-    pub needs_demo: bool,
+    needs_demo: bool,
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct MatchSaltsResponse {
-    pub match_id: u64,
-    pub cluster_id: Option<u32>,
-    pub metadata_salt: Option<u32>,
-    pub replay_salt: Option<u32>,
-    pub metadata_url: Option<String>,
-    pub demo_url: Option<String>,
+struct MatchSaltsResponse {
+    match_id: u64,
+    cluster_id: Option<u32>,
+    metadata_salt: Option<u32>,
+    replay_salt: Option<u32>,
+    metadata_url: Option<String>,
+    demo_url: Option<String>,
 }
 
 impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse {
@@ -71,7 +71,7 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
     sync_writes = "by_key",
     key = "(u64, bool)"
 )]
-pub async fn fetch_match_salts(
+pub(super) async fn fetch_match_salts(
     rate_limit_client: &RateLimitClient,
     rate_limit_key: &RateLimitKey,
     steam_client: &SteamClient,
@@ -190,7 +190,7 @@ This endpoints returns salts that can be used to fetch metadata and demofile for
 **Note:** We currently fetch many matches without salts, so for these matches we do not have salts stored.
     "#
 )]
-pub async fn salts(
+pub(super) async fn salts(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     Query(SaltsQuery { needs_demo }): Query<SaltsQuery>,
     rate_limit_key: RateLimitKey,

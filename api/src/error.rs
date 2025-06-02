@@ -10,7 +10,7 @@ use std::io;
 use thiserror::Error;
 use tracing::error;
 
-pub type APIResult<T> = Result<T, APIError>;
+pub(super) type APIResult<T> = Result<T, APIError>;
 
 #[derive(Debug, Error)]
 pub enum StartupError {
@@ -24,7 +24,7 @@ pub enum StartupError {
 
 #[allow(dead_code)]
 #[derive(Debug, Error)]
-pub enum APIError {
+pub(super) enum APIError {
     #[error("Status {status}")]
     Status { status: StatusCode },
     #[error("{message}")]
@@ -41,14 +41,14 @@ pub enum APIError {
 }
 
 impl APIError {
-    pub fn status_msg(status: StatusCode, message: impl Into<String>) -> Self {
+    pub(super) fn status_msg(status: StatusCode, message: impl Into<String>) -> Self {
         Self::StatusMsg {
             status,
             message: message.into(),
         }
     }
 
-    pub fn internal(message: impl Into<String>) -> Self {
+    pub(super) fn internal(message: impl Into<String>) -> Self {
         Self::InternalError {
             message: message.into(),
         }

@@ -12,9 +12,9 @@ Custom Match related endpoints
 
 This is a preview feature and is subject to change.
 "#)))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(create::create_custom))
         .routes(routes!(get::get_custom))

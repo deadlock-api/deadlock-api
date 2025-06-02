@@ -1,2 +1,2 @@
 pub(crate) mod client;
-pub mod types;
+pub(crate) mod types;

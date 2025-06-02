@@ -20,48 +20,48 @@ fn default_comb_size() -> Option<u8> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub struct ItemPermutationStatsQuery {
+pub(super) struct ItemPermutationStatsQuery {
     /// Comma separated list of item ids
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub item_ids: Option<Vec<u32>>,
+    item_ids: Option<Vec<u32>>,
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
-    pub comb_size: Option<u8>,
+    comb_size: Option<u8>,
     /// Filter matches based on the hero ID.
-    pub hero_id: Option<u32>,
+    hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct ItemPermutationStats {
-    pub item_ids: Vec<u32>,
-    pub wins: u64,
-    pub losses: u64,
-    pub matches: u64,
+struct ItemPermutationStats {
+    item_ids: Vec<u32>,
+    wins: u64,
+    losses: u64,
+    matches: u64,
 }
 
 fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> String {
@@ -174,7 +174,7 @@ fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> Stri
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_item_permutation_stats(
+async fn get_item_permutation_stats(
     ch_client: &clickhouse::Client,
     query: ItemPermutationStatsQuery,
 ) -> APIResult<Vec<ItemPermutationStats>> {
@@ -200,7 +200,7 @@ Retrieves item permutation statistics based on historical match data.
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
     "#
 )]
-pub async fn item_permutation_stats(
+pub(super) async fn item_permutation_stats(
     Query(query): Query<ItemPermutationStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

@@ -28,9 +28,9 @@ use valveprotos::deadlock::{
 use valveprotos::gcsdk::EgcPlatform;
 
 #[derive(Serialize, ToSchema)]
-pub(super) struct CreateCustomResponse {
-    pub party_id: u64,
-    pub party_code: String,
+struct CreateCustomResponse {
+    party_id: u64,
+    party_code: String,
 }
 
 async fn create_party(
@@ -87,14 +87,14 @@ async fn create_party(
     Ok(result)
 }
 
-pub(super) async fn get_party_code(
+async fn get_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> RedisResult<String> {
     redis_client.get(party_id.to_string()).await
 }
 
-pub(super) async fn wait_for_party_code(
+async fn wait_for_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
 ) -> RedisResult<String> {

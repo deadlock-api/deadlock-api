@@ -14,11 +14,11 @@ use utoipa::ToSchema;
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct StatusServices {
     /// Whether Clickhouse is reachable.
-    pub clickhouse: bool,
+    clickhouse: bool,
     /// Whether Postgres is reachable.
-    pub postgres: bool,
+    postgres: bool,
     /// Whether Redis is reachable.
-    pub redis: bool,
+    redis: bool,
 }
 
 impl StatusServices {
@@ -79,7 +79,7 @@ async fn check_health(
     summary = "Health Check",
     description = "Checks the health of the services."
 )]
-pub async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
+pub(super) async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
     check_health(state.ch_client, state.pg_client, &mut state.redis_client)
         .await
         .map(Json)

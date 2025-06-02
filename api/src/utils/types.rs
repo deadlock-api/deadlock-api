@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 
 #[derive(Copy, Clone, Debug, Deserialize, ToSchema, Default, Display, Eq, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
-pub enum SortDirectionAsc {
+pub(crate) enum SortDirectionAsc {
     /// Sort in descending order.
     #[display("desc")]
     Desc,

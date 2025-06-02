@@ -26,7 +26,7 @@ use utoipa::ToSchema;
 use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchMode};
 
 #[derive(Debug, Serialize, Clone, Copy, ToSchema)]
-pub enum VariableCategory {
+pub(super) enum VariableCategory {
     General,
     Daily,
     Hero,
@@ -93,11 +93,11 @@ pub enum Variable {
 }
 
 impl Variable {
-    pub fn get_name(&self) -> &str {
+    pub(super) fn get_name(&self) -> &str {
         self.into()
     }
 
-    pub fn get_category(&self) -> VariableCategory {
+    pub(super) fn get_category(&self) -> VariableCategory {
         match self {
             Self::LatestPatchnotesLink
             | Self::LatestPatchnotesTitle
@@ -147,7 +147,7 @@ impl Variable {
         }
     }
 
-    pub fn get_description(&self) -> &str {
+    pub(super) fn get_description(&self) -> &str {
         match self {
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
@@ -197,7 +197,7 @@ impl Variable {
         }
     }
 
-    pub fn get_default_label(&self) -> Option<&str> {
+    pub(super) fn get_default_label(&self) -> Option<&str> {
         match self {
             Self::HeroHoursPlayed => Some("{hero_name} Hours Played"),
             Self::HeroKd => Some("{hero_name} Kd"),
@@ -215,7 +215,7 @@ impl Variable {
         }
     }
 
-    pub fn extra_args(&self) -> Vec<String> {
+    pub(super) fn extra_args(&self) -> Vec<String> {
         match self {
             Self::HeroHoursPlayed
             | Self::HeroKd
@@ -229,7 +229,7 @@ impl Variable {
         }
     }
 
-    pub async fn resolve(
+    pub(super) async fn resolve(
         &self,
         rate_limit_key: &RateLimitKey,
         state: &AppState,

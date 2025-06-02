@@ -22,15 +22,15 @@ use tracing::warn;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
-pub struct MatchCreatedWebhookPayload {
-    pub match_id: u64,
-    pub salts_url: String,
-    pub metadata_url: String,
-    pub raw_metadata_url: String,
+struct MatchCreatedWebhookPayload {
+    match_id: u64,
+    salts_url: String,
+    metadata_url: String,
+    raw_metadata_url: String,
 }
 
 impl MatchCreatedWebhookPayload {
-    pub fn new(match_id: u64) -> Self {
+    fn new(match_id: u64) -> Self {
         Self {
             match_id,
             salts_url: format!("https://api.deadlock-api.com/v1/matches/{match_id}/salts"),
@@ -49,7 +49,7 @@ impl MatchCreatedWebhookPayload {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub async fn get_webhook_urls(pg_client: &Pool<Postgres>) -> sqlx::Result<Vec<(String, String)>> {
+async fn get_webhook_urls(pg_client: &Pool<Postgres>) -> sqlx::Result<Vec<(String, String)>> {
     sqlx::query!("SELECT webhook_url, secret FROM webhooks")
         .fetch_all(pg_client)
         .await
@@ -61,8 +61,8 @@ pub async fn get_webhook_urls(pg_client: &Pool<Postgres>) -> sqlx::Result<Vec<(S
 }
 
 struct Signature {
-    pub timestamp: i64,
-    pub v0: String,
+    timestamp: i64,
+    v0: String,
 }
 
 impl Signature {
@@ -70,11 +70,7 @@ impl Signature {
     const SIGNATURE_PART_ASSIGNATOR: &'static str = "=";
     const SIGNATURE_PART_SEPARATOR: &'static str = ",";
 
-    pub(crate) fn new(
-        secret: &str,
-        payload: &[u8],
-        signed_at: DateTime<Utc>,
-    ) -> Result<Self, InvalidLength> {
+    fn new(secret: &str, payload: &[u8], signed_at: DateTime<Utc>) -> Result<Self, InvalidLength> {
         let timestamp = signed_at.timestamp();
         let timestamp_str = timestamp.to_string();
         let timestamp_str_bytes = timestamp_str.as_bytes();
@@ -89,7 +85,7 @@ impl Signature {
         Ok(Self { timestamp, v0 })
     }
 
-    pub(crate) fn value(&self) -> String {
+    fn value(&self) -> String {
         let timestamp_str = self.timestamp.to_string();
         let parts = &[("t", timestamp_str.as_str()), ("v0", self.v0.as_str())];
 
@@ -102,7 +98,7 @@ impl Signature {
         .collect::<String>()
     }
 
-    pub(crate) fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
+    fn to_header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         HeaderValue::from_str(&self.value())
     }
 }
@@ -121,7 +117,7 @@ impl Signature {
     summary = "Match Ingest Event",
     description = "This endpoint is used internally to send a match ingest event to webhook subcribers."
 )]
-pub async fn ingest_event(
+pub(super) async fn ingest_event(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,

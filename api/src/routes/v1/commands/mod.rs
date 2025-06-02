@@ -1,5 +1,5 @@
-pub mod route;
-pub mod variables;
+mod route;
+mod variables;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
@@ -13,9 +13,9 @@ use utoipa_axum::routes;
     name = "Commands",
     description = "Endpoints to resolve commands and variables for the [Deadlock Streamkit](https://streamkit.deadlock-api.com/)."
 )))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::command_resolve))
         .routes(routes!(route::variables_resolve))

@@ -18,7 +18,7 @@ pub(crate) struct SteamProxyQuery<M: Message> {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct SteamProxyRawResponse {
+pub(crate) struct SteamProxyRawResponse {
     pub(crate) data: String,
     username: String,
 }
@@ -60,13 +60,13 @@ pub(crate) type SteamProxyResult<T> = Result<T, SteamProxyError>;
 
 /// Error type for Steam proxy calls
 #[derive(Debug, Error)]
-pub enum SteamProxyError {
+pub(crate) enum SteamProxyError {
     #[error("Failed to call Steam proxy: {0}")]
-    RequestError(#[from] reqwest::Error),
+    Request(#[from] reqwest::Error),
     #[error("Failed to decode base64 data: {0}")]
-    Base64Error(#[from] base64::DecodeError),
+    Base64(#[from] base64::DecodeError),
     #[error("Failed to parse protobuf message: {0}")]
-    ProtobufError(#[from] prost::DecodeError),
+    Protobuf(#[from] prost::DecodeError),
 }
 
 /// Error type for Steam account name fetching

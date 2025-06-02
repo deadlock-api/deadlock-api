@@ -1,11 +1,11 @@
-pub mod build_item_stats;
+mod build_item_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
 pub mod hero_scoreboard;
 pub mod hero_stats;
-pub mod hero_stats_over_time;
+pub(crate) mod hero_stats_over_time;
 pub mod hero_synergies_stats;
-pub mod item_permutation_stats;
+mod item_permutation_stats;
 pub mod item_stats;
 pub mod player_scoreboard;
 pub mod scoreboard_types;
@@ -19,9 +19,9 @@ use utoipa_axum::routes;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Analytics", description = "Analytics related endpoints")))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(
             OpenApiRouter::new()

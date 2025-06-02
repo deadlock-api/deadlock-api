@@ -13,41 +13,41 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub struct MateStatsQuery {
+pub(super) struct MateStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Filter based on the number of matches played.
-    pub min_matches_played: Option<u64>,
+    min_matches_played: Option<u64>,
     /// Filter based on the number of matches played.
     #[serde(default = "default_true")]
     #[param(default = true)]
-    pub same_party: bool,
+    same_party: bool,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct MateStats {
-    pub mate_id: u32,
-    pub wins: u64,
-    pub matches_played: u64,
-    pub matches: Vec<u64>,
+struct MateStats {
+    mate_id: u32,
+    wins: u64,
+    matches_played: u64,
+    matches: Vec<u64>,
 }
 
 fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
@@ -154,7 +154,7 @@ async fn get_mate_stats(
     summary = "Mate Stats",
     description = "This endpoint returns the mate stats."
 )]
-pub async fn mate_stats(
+pub(super) async fn mate_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<MateStatsQuery>,
     State(state): State<AppState>,

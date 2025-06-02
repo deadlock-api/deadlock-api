@@ -28,8 +28,8 @@ pub enum BuildsSearchQuerySortBy {
     /// Sort by the last time the build was updated.
     #[display("updated_at")]
     UpdatedAt,
-    /// Sort by the time the build was published.
-    #[display("published_at")]
+    /// Sort by the time the build was lished.
+    #[display("lished_at")]
     PublishedAt,
     /// Sort by the build version.
     #[display("version")]
@@ -39,48 +39,48 @@ pub enum BuildsSearchQuerySortBy {
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
-pub struct BuildsSearchQuery {
+pub(super) struct BuildsSearchQuery {
     /// Filter builds based on their last_updated time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter builds based on their last_updated time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
-    /// Filter builds based on their published time (Unix timestamp).
-    pub min_published_unix_timestamp: Option<u64>,
-    /// Filter builds based on their published time (Unix timestamp).
-    pub max_published_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
+    /// Filter builds based on their lished time (Unix timestamp).
+    min_published_unix_timestamp: Option<u64>,
+    /// Filter builds based on their lished time (Unix timestamp).
+    max_published_unix_timestamp: Option<u64>,
     /// The field to sort the builds by.
     #[serde(default)]
     #[param(inline)]
-    pub sort_by: BuildsSearchQuerySortBy,
+    sort_by: BuildsSearchQuerySortBy,
     /// The index of the first build to return.
-    pub start: Option<u32>,
+    start: Option<u32>,
     /// The maximum number of builds to return.
     #[serde(default = "default_limit")]
     #[param(inline, default = "100")]
-    pub limit: Option<u32>,
+    limit: Option<u32>,
     /// The direction to sort the builds in.
     #[serde(default)]
     #[param(inline)]
-    pub sort_direction: SortDirectionDesc,
+    sort_direction: SortDirectionDesc,
     /// Search for builds with a name containing this string.
-    pub search_name: Option<String>,
+    search_name: Option<String>,
     /// Search for builds with a description containing this string.
-    pub search_description: Option<String>,
+    search_description: Option<String>,
     /// Only return the latest version of each build.
-    pub only_latest: Option<bool>,
+    only_latest: Option<bool>,
     /// Filter builds by language.
-    pub language: Option<u32>,
+    language: Option<u32>,
     /// Filter builds by ID.
-    pub build_id: Option<u32>,
+    build_id: Option<u32>,
     /// Filter builds by version.
-    pub version: Option<u32>,
+    version: Option<u32>,
     /// Filter builds by hero ID.
-    pub hero_id: Option<u32>,
+    hero_id: Option<u32>,
     /// Filter builds by rollup category.
-    pub rollup_category: Option<u32>,
+    rollup_category: Option<u32>,
     /// The author's SteamID3
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub author_id: Option<u32>,
+    author_id: Option<u32>,
 }
 
 impl Default for BuildsSearchQuery {
@@ -107,7 +107,7 @@ impl Default for BuildsSearchQuery {
     }
 }
 
-pub fn sql_query(params: &BuildsSearchQuery) -> String {
+pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
     query_builder.push(" WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE");
     if let Some(search_name) = &params.search_name {
@@ -153,11 +153,11 @@ pub fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push(format!("to_timestamp({})", max_unix_timestamp));
     }
     if let Some(min_published_unix_timestamp) = params.min_published_unix_timestamp {
-        query_builder.push(" AND published_at >= ");
+        query_builder.push(" AND lished_at >= ");
         query_builder.push(format!("to_timestamp({})", min_published_unix_timestamp));
     }
     if let Some(max_published_unix_timestamp) = params.max_published_unix_timestamp {
-        query_builder.push(" AND published_at <= ");
+        query_builder.push(" AND lished_at <= ");
         query_builder.push(format!("to_timestamp({})", max_published_unix_timestamp));
     }
     if params.only_latest.unwrap_or_default() {
@@ -392,7 +392,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY published_at desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY lished_at desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -552,7 +552,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lished_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -566,7 +566,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lished_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 }

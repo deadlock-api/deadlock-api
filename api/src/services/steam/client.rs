@@ -20,7 +20,7 @@ use tracing::{debug, error};
 
 /// Client for interacting with the Steam API and proxy
 #[derive(Constructor, Clone)]
-pub struct SteamClient {
+pub(crate) struct SteamClient {
     http_client: reqwest::Client,
     steam_proxy_url: String,
     steam_proxy_api_key: String,

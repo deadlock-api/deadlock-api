@@ -13,28 +13,28 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, IntoParams, Default)]
-pub struct HeroMMRHistoryQuery {
+pub(super) struct HeroMMRHistoryQuery {
     /// The players SteamID3
     #[serde(default)]
     #[serde(deserialize_with = "parse_steam_id")]
-    pub account_id: u32,
+    account_id: u32,
     /// The hero ID to fetch the MMR history for.
-    pub hero_id: u8,
+    hero_id: u8,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct MMRHistory {
-    pub match_id: u64,
+pub(crate) struct MMRHistory {
+    match_id: u64,
     /// Start time of the match
-    pub start_time: u32,
+    start_time: u32,
     /// Player Score is the index for the rank array (internally used for the rank regression)
-    pub player_score: f32,
+    player_score: f32,
     /// The Player Rank
-    pub rank: u32,
+    rank: u32,
     /// Extracted from the rank the division (rank // 10)
-    pub division: u32,
+    pub(crate) division: u32,
     /// Extracted from the rank the division tier (rank % 10)
-    pub division_tier: u32,
+    pub(crate) division_tier: u32,
 }
 
 fn build_mmr_history_query(account_id: u32) -> String {
@@ -134,7 +134,7 @@ So to get the rank we get the closest index from the player score.
 - Player Score: 7.2 -> Index 7 -> Rank 21
 "#,
 )]
-pub async fn mmr_history(
+pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -181,7 +181,7 @@ So to get the rank we get the closest index from the player score.
 - Player Score: 7.2 -> Index 7 -> Rank 21
 "#,
 )]
-pub async fn hero_mmr_history(
+pub(super) async fn hero_mmr_history(
     Path(path): Path<HeroMMRHistoryQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

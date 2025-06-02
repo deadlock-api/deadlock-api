@@ -12,52 +12,52 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub struct HeroStatsQuery {
+pub(super) struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct HeroStats {
-    pub hero_id: u32,
-    pub matches_played: u64,
-    pub wins: u64,
-    pub ending_level: f64,
-    pub kills: u64,
-    pub deaths: u64,
-    pub assists: u64,
-    pub denies_per_match: f64,
-    pub kills_per_min: f64,
-    pub deaths_per_min: f64,
-    pub assists_per_min: f64,
-    pub denies_per_min: f64,
-    pub networth_per_min: f64,
-    pub last_hits_per_min: f64,
-    pub damage_mitigated_per_min: f64,
-    pub damage_taken_per_min: f64,
-    pub creeps_per_min: f64,
-    pub obj_damage_per_min: f64,
-    pub accuracy: f64,
-    pub crit_shot_rate: f64,
-    pub matches: Vec<u64>,
+struct HeroStats {
+    hero_id: u32,
+    matches_played: u64,
+    wins: u64,
+    ending_level: f64,
+    kills: u64,
+    deaths: u64,
+    assists: u64,
+    denies_per_match: f64,
+    kills_per_min: f64,
+    deaths_per_min: f64,
+    assists_per_min: f64,
+    denies_per_min: f64,
+    networth_per_min: f64,
+    last_hits_per_min: f64,
+    damage_mitigated_per_min: f64,
+    damage_taken_per_min: f64,
+    creeps_per_min: f64,
+    obj_damage_per_min: f64,
+    accuracy: f64,
+    crit_shot_rate: f64,
+    matches: Vec<u64>,
 }
 
 fn build_hero_stats_query(account_id: u32, query: &HeroStatsQuery) -> String {
@@ -161,7 +161,7 @@ async fn get_hero_stats(
     summary = "Hero Stats",
     description = "This endpoint returns statistics for each hero played by a given player account."
 )]
-pub async fn hero_stats(
+pub(super) async fn hero_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<HeroStatsQuery>,
     State(state): State<AppState>,

@@ -7,7 +7,7 @@ use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatch
 
 #[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
-pub enum ActiveMatchTeam {
+enum ActiveMatchTeam {
     #[default]
     Team0 = 0,
     Team1 = 1,
@@ -27,7 +27,7 @@ impl From<i32> for ActiveMatchTeam {
 
 #[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
-pub enum ActiveMatchMode {
+enum ActiveMatchMode {
     #[default]
     Invalid = 0,
     Unranked = 1,
@@ -56,7 +56,7 @@ impl From<i32> for ActiveMatchMode {
 
 #[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
-pub enum ActiveMatchGameMode {
+enum ActiveMatchGameMode {
     #[default]
     KECitadelGameModeInvalid = 0,
     KECitadelGameModeNormal = 1,
@@ -78,7 +78,7 @@ impl From<i32> for ActiveMatchGameMode {
 
 #[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
-pub enum ActiveMatchRegionMode {
+enum ActiveMatchRegionMode {
     #[default]
     Row = 0,
     Europe = 1,
@@ -103,12 +103,12 @@ impl From<i32> for ActiveMatchRegionMode {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, ToSchema)]
-pub struct ActiveMatchPlayer {
-    pub account_id: Option<u32>,
-    pub team: Option<i32>,
-    pub team_parsed: Option<ActiveMatchTeam>,
-    pub abandoned: Option<bool>,
-    pub hero_id: Option<u32>,
+pub(super) struct ActiveMatchPlayer {
+    pub(super) account_id: Option<u32>,
+    team: Option<i32>,
+    team_parsed: Option<ActiveMatchTeam>,
+    abandoned: Option<bool>,
+    hero_id: Option<u32>,
 }
 
 impl From<MatchPlayer> for ActiveMatchPlayer {
@@ -125,28 +125,28 @@ impl From<MatchPlayer> for ActiveMatchPlayer {
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
-pub struct ActiveMatch {
-    pub start_time: Option<u32>,
-    pub winning_team: Option<i32>,
-    pub winning_team_parsed: Option<ActiveMatchTeam>,
-    pub match_id: Option<u64>,
-    pub players: Vec<ActiveMatchPlayer>,
-    pub lobby_id: Option<u64>,
-    pub game_mode_version: Option<u32>,
-    pub net_worth_team_0: Option<u32>,
-    pub net_worth_team_1: Option<u32>,
-    pub duration_s: Option<u32>,
-    pub spectators: Option<u32>,
-    pub open_spectator_slots: Option<u32>,
-    pub objectives_mask_team0: Option<u64>,
-    pub objectives_mask_team1: Option<u64>,
-    pub match_mode: Option<i32>,
-    pub match_mode_parsed: Option<ActiveMatchMode>,
-    pub game_mode: Option<i32>,
-    pub match_score: Option<u32>,
-    pub region_mode: Option<i32>,
-    pub region_mode_parsed: Option<ActiveMatchRegionMode>,
-    pub compat_version: Option<u32>,
+pub(super) struct ActiveMatch {
+    start_time: Option<u32>,
+    winning_team: Option<i32>,
+    winning_team_parsed: Option<ActiveMatchTeam>,
+    match_id: Option<u64>,
+    pub(super) players: Vec<ActiveMatchPlayer>,
+    lobby_id: Option<u64>,
+    game_mode_version: Option<u32>,
+    net_worth_team_0: Option<u32>,
+    net_worth_team_1: Option<u32>,
+    duration_s: Option<u32>,
+    spectators: Option<u32>,
+    open_spectator_slots: Option<u32>,
+    objectives_mask_team0: Option<u64>,
+    objectives_mask_team1: Option<u64>,
+    match_mode: Option<i32>,
+    match_mode_parsed: Option<ActiveMatchMode>,
+    game_mode: Option<i32>,
+    match_score: Option<u32>,
+    region_mode: Option<i32>,
+    region_mode_parsed: Option<ActiveMatchRegionMode>,
+    compat_version: Option<u32>,
 }
 
 impl From<CMsgDevMatchInfo> for ActiveMatch {
@@ -178,24 +178,24 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
 }
 
 #[derive(Deserialize, IntoParams)]
-pub struct MatchIdQuery {
-    pub match_id: u64,
+pub(super) struct MatchIdQuery {
+    pub(super) match_id: u64,
 }
 
 #[derive(Debug, Clone, IntoParams, ToSchema, Row, Serialize, Deserialize)]
-pub struct ClickhouseSalts {
-    pub match_id: u64,
-    pub metadata_salt: Option<u32>,
-    pub replay_salt: Option<u32>,
-    pub cluster_id: Option<u32>,
-    pub username: Option<String>,
+pub(super) struct ClickhouseSalts {
+    pub(super) match_id: u64,
+    pub(super) metadata_salt: Option<u32>,
+    replay_salt: Option<u32>,
+    pub(super) cluster_id: Option<u32>,
+    username: Option<String>,
 }
 
 impl ClickhouseSalts {
-    pub fn has_metadata_salt(&self) -> bool {
+    pub(super) fn has_metadata_salt(&self) -> bool {
         self.cluster_id.is_some() && self.metadata_salt.unwrap_or_default() != 0
     }
-    pub fn has_replay_salt(&self) -> bool {
+    pub(super) fn has_replay_salt(&self) -> bool {
         self.cluster_id.is_some() && self.replay_salt.unwrap_or_default() != 0
     }
 }

@@ -1,5 +1,5 @@
 pub mod query;
-pub mod route;
+mod route;
 pub mod structs;
 
 use crate::context::AppState;
@@ -14,9 +14,9 @@ use utoipa_axum::routes;
     name = "Builds",
     description = "Endpoints to get all data about ingame hero builds."
 )))]
-pub struct ApiDoc;
+struct ApiDoc;
 
-pub fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::search_builds))
         .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60)))

@@ -5,7 +5,7 @@ use derive_more::Constructor;
 use uuid::Uuid;
 
 #[derive(Constructor, Debug, Clone)]
-pub struct RateLimitKey {
+pub(crate) struct RateLimitKey {
     pub(super) api_key: Option<Uuid>,
     pub(super) ip: String,
 }

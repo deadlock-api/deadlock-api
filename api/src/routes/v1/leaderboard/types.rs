@@ -8,7 +8,7 @@ use valveprotos::deadlock::{
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Eq, PartialEq, Hash)]
 #[repr(i32)]
-pub enum LeaderboardRegion {
+pub(crate) enum LeaderboardRegion {
     #[default]
     Europe = 1,
     Asia = 2,
@@ -18,20 +18,20 @@ pub enum LeaderboardRegion {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct LeaderboardEntry {
+pub(crate) struct LeaderboardEntry {
     /// The account name of the player.
-    pub account_name: Option<String>,
+    pub(crate) account_name: Option<String>,
     /// The rank of the player.
-    pub rank: Option<u32>,
+    pub(crate) rank: Option<u32>,
     /// The top hero IDs of the player.
     #[serde(default)]
-    pub top_hero_ids: Vec<u32>,
+    top_hero_ids: Vec<u32>,
     /// The badge level of the player.
-    pub badge_level: Option<u32>,
+    pub(crate) badge_level: Option<u32>,
     /// The ranked rank of the player.
-    pub ranked_rank: Option<u32>,
+    ranked_rank: Option<u32>,
     /// The ranked subrank of the player.
-    pub ranked_subrank: Option<u32>,
+    ranked_subrank: Option<u32>,
 }
 
 impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for LeaderboardEntry {
@@ -49,9 +49,9 @@ impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for Lea
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 #[serde(rename_all(deserialize = "camelCase"))]
-pub struct Leaderboard {
+pub(crate) struct Leaderboard {
     /// The leaderboard entries.
-    pub entries: Vec<LeaderboardEntry>,
+    pub(crate) entries: Vec<LeaderboardEntry>,
 }
 
 impl TryFrom<CMsgClientToGcGetLeaderboardResponse> for Leaderboard {

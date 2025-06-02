@@ -34,7 +34,7 @@ async fn check_salt(http_client: &reqwest::Client, salts: &ClickhouseSalts) -> b
     .is_ok()
 }
 
-pub async fn insert_salts_to_clickhouse(
+pub(super) async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,
     salts: Vec<impl Into<ClickhouseSalts>>,
 ) -> clickhouse::error::Result<()> {
@@ -69,7 +69,7 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 - `username`: The username of the person who submitted the match
     "#
 )]
-pub async fn ingest_salts(
+pub(super) async fn ingest_salts(
     headers: HeaderMap,
     State(state): State<AppState>,
     Json(match_salts): Json<Vec<ClickhouseSalts>>,

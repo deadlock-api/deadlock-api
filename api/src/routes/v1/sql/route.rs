@@ -15,13 +15,13 @@ use tracing::error;
 use utoipa::IntoParams;
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
-pub struct SQLQuery {
-    pub query: String,
+pub(super) struct SQLQuery {
+    query: String,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
-pub struct TableQuery {
-    pub table: String,
+pub(super) struct TableQuery {
+    table: String,
 }
 
 #[cached(
@@ -102,7 +102,7 @@ async fn fetch_table_schema(
     summary = "SQL Query",
     description = "Executes a SQL query on the database."
 )]
-pub async fn sql(
+pub(super) async fn sql(
     rate_limit_key: RateLimitKey,
     Query(query): Query<SQLQuery>,
     State(state): State<AppState>,
@@ -145,7 +145,7 @@ pub async fn sql(
     summary = "List Tables",
     description = "Lists all tables in the database."
 )]
-pub async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
+pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     let Some(duckdb_url) = state.config.duckdb_url else {
         return Err(APIError::status_msg(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -174,7 +174,7 @@ pub async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoRe
     summary = "Table Schema",
     description = "Returns the schema of a table."
 )]
-pub async fn table_schema(
+pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

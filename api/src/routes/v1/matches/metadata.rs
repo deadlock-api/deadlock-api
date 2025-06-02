@@ -157,7 +157,7 @@ Relevant Protobuf Messages:
 - CMsgMatchMetaDataContents
     "#
 )]
-pub async fn metadata_raw(
+pub(super) async fn metadata_raw(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
@@ -198,7 +198,7 @@ Relevant Protobuf Messages:
 - CMsgMatchMetaDataContents
     "#
 )]
-pub async fn metadata(
+pub(super) async fn metadata(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,

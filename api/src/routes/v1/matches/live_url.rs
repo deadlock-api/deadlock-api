@@ -22,7 +22,7 @@ use valveprotos::deadlock::{
 use valveprotos::gcsdk::EgcPlatform;
 
 #[derive(Serialize, ToSchema)]
-pub struct MatchSpectateResponse {
+struct MatchSpectateResponse {
     broadcast_url: String,
     lobby_id: Option<u64>,
 }
@@ -35,7 +35,7 @@ pub struct MatchSpectateResponse {
     sync_writes = "by_key",
     key = "u64"
 )]
-pub async fn spectate_match(
+async fn spectate_match(
     steam_client: &SteamClient,
     match_id: u64,
 ) -> APIResult<CMsgClientToGcSpectateLobbyResponse> {
@@ -84,7 +84,7 @@ Example Parsers:
 - [Haste](https://github.com/blukai/haste/)
     "#
 )]
-pub async fn live_url(
+pub(super) async fn live_url(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,

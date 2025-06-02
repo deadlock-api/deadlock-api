@@ -10,15 +10,15 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct ClickhouseMatchInfo {
-    pub match_id: u64,
-    pub start_time: u32,
-    pub duration_s: u32,
-    pub match_mode: i8,
+struct ClickhouseMatchInfo {
+    match_id: u64,
+    start_time: u32,
+    duration_s: u32,
+    match_mode: i8,
     #[serde(default)]
-    pub average_badge_team0: Option<u32>,
+    average_badge_team0: Option<u32>,
     #[serde(default)]
-    pub average_badge_team1: Option<u32>,
+    average_badge_team1: Option<u32>,
 }
 
 #[cached(
@@ -56,7 +56,9 @@ async fn get_recently_fetched_match_ids(
     summary = "Recently Fetched Matches",
     description = "This endpoint returns a list of match ids that have been fetched within the last 10 minutes."
 )]
-pub async fn recently_fetched(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
+pub(super) async fn recently_fetched(
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
     Ok(Json(
         get_recently_fetched_match_ids(&state.ch_client).await?,
     ))

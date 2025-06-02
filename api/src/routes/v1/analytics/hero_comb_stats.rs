@@ -27,46 +27,46 @@ fn default_comb_size() -> Option<u8> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
-pub struct HeroCombStatsQuery {
+pub(crate) struct HeroCombStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    pub min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
-    pub max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub min_duration_s: Option<u64>,
+    min_duration_s: Option<u64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
-    pub max_duration_s: Option<u64>,
+    max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub min_average_badge: Option<u8>,
+    min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved.
     #[param(minimum = 0, maximum = 116)]
-    pub max_average_badge: Option<u8>,
+    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
-    pub min_match_id: Option<u64>,
+    min_match_id: Option<u64>,
     /// Filter matches based on their ID.
-    pub max_match_id: Option<u64>,
+    max_match_id: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
-    pub account_id: Option<u32>,
+    account_id: Option<u32>,
     /// Comma separated list of hero ids to include
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub include_hero_ids: Option<Vec<u32>>,
+    include_hero_ids: Option<Vec<u32>>,
     /// Comma separated list of hero ids to exclude
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
-    pub exclude_hero_ids: Option<Vec<u32>>,
+    exclude_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
-    pub min_matches: Option<u32>,
+    min_matches: Option<u32>,
     /// The combination size to return.
     #[serde(default = "default_comb_size")]
     #[param(minimum = 2, maximum = 6, default = 6)]
-    pub comb_size: Option<u8>,
+    comb_size: Option<u8>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -198,7 +198,7 @@ ORDER BY wins / greatest(1, matches) DESC
     sync_writes = "by_key",
     key = "String"
 )]
-pub async fn get_comb_stats(
+async fn get_comb_stats(
     ch_client: &clickhouse::Client,
     query: HeroCombStatsQuery,
 ) -> APIResult<Vec<HeroCombStats>> {
@@ -260,7 +260,7 @@ Retrieves overall statistics for each hero combination.
 Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
     "#
 )]
-pub async fn hero_comb_stats(
+pub(crate) async fn hero_comb_stats(
     Query(query): Query<HeroCombStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

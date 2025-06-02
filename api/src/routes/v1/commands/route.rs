@@ -17,17 +17,17 @@ use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct VariableDescription {
+struct VariableDescription {
     /// The name of the variable.
-    pub name: String,
+    name: String,
     /// The description of the variable.
-    pub description: String,
+    description: String,
     /// The default label for the variable.
-    pub default_label: Option<String>,
+    default_label: Option<String>,
     /// Extra arguments that can be passed to the variable.
-    pub extra_args: Vec<String>,
+    extra_args: Vec<String>,
     /// The category of the variable.
-    pub category: VariableCategory,
+    category: VariableCategory,
 }
 
 impl From<Variable> for VariableDescription {
@@ -53,7 +53,7 @@ impl From<Variable> for VariableDescription {
     summary = "Available Variables",
     description = "Returns a list of available variables that can be used in the command endpoint."
 )]
-pub async fn available_variables() -> APIResult<impl IntoResponse> {
+pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     let variable_descriptions = Variable::VARIANTS
         .iter()
         .copied()
@@ -73,7 +73,7 @@ pub async fn available_variables() -> APIResult<impl IntoResponse> {
     summary = "Widget Versions",
     description = "Returns a map of str->int of widget versions."
 )]
-pub async fn widget_versions() -> APIResult<impl IntoResponse> {
+pub(super) async fn widget_versions() -> APIResult<impl IntoResponse> {
     let widget_versions_file = std::fs::File::open("widget_versions.json").map_err(|e| {
         warn!("Failed to open widget_versions.json: {e}");
         APIError::internal(format!("Failed to open widget_versions.json: {e}"))
@@ -87,20 +87,20 @@ pub async fn widget_versions() -> APIResult<impl IntoResponse> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
-pub struct CommandResolveQuery {
+pub(super) struct CommandResolveQuery {
     /// The players region
     #[serde(default)]
     #[param(inline)]
-    pub region: LeaderboardRegion,
+    region: LeaderboardRegion,
     /// The players SteamID3
     #[serde(deserialize_with = "parse_steam_id")]
-    pub account_id: u32,
+    account_id: u32,
     /// The command template to resolve
     #[serde(default)]
-    pub template: String,
+    template: String,
     /// Hero name to check for hero specific stats
     #[serde(default)]
-    pub hero_name: Option<String>,
+    hero_name: Option<String>,
 }
 
 #[utoipa::path(
@@ -115,7 +115,7 @@ pub struct CommandResolveQuery {
     summary = "Resolve Command",
     description = "Resolves a command and returns the resolved command."
 )]
-pub async fn command_resolve(
+pub(super) async fn command_resolve(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<CommandResolveQuery>,
@@ -179,18 +179,18 @@ pub async fn command_resolve(
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
-pub struct VariablesResolveQuery {
+pub(super) struct VariablesResolveQuery {
     #[serde(default)]
     #[param(inline)]
-    pub region: LeaderboardRegion,
+    region: LeaderboardRegion,
     #[serde(deserialize_with = "parse_steam_id")]
-    pub account_id: u32,
+    account_id: u32,
     /// Variables to resolve, separated by commas.
     #[serde(default)]
-    pub variables: String,
+    variables: String,
     /// Hero name to check for hero specific stats
     #[serde(default)]
-    pub hero_name: Option<String>,
+    hero_name: Option<String>,
 }
 
 #[utoipa::path(
@@ -205,7 +205,7 @@ pub struct VariablesResolveQuery {
     summary = "Resolve Variables",
     description = "Resolves variables and returns a map of variable name to resolved value."
 )]
-pub async fn variables_resolve(
+pub(super) async fn variables_resolve(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<VariablesResolveQuery>,
