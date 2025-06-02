@@ -16,11 +16,13 @@ export default function MatchHistoryTable({
   hero,
   minDate,
   maxDate,
+  setSteamId,
 }: {
   steamId: number;
   hero?: number | null;
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
+  setSteamId?: (steamId: number) => void;
 }) {
   const { data: heroesData, isLoading: isLoadingHeroes } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
@@ -162,6 +164,7 @@ export default function MatchHistoryTable({
                 matchData={matchData}
                 itemsMap={itemsMap}
                 heroesMap={heroesMap}
+                setSteamId={setSteamId}
               />
             );
           })}

@@ -184,7 +184,13 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
         </TabsContent>
         <TabsContent value="matches">
           {steamId && steamId > 0 && (
-            <MatchHistoryTable steamId={steamId} minDate={startDate} maxDate={endDate} hero={hero} />
+            <MatchHistoryTable
+              steamId={steamId}
+              minDate={startDate}
+              maxDate={endDate}
+              hero={hero}
+              setSteamId={setSteamId}
+            />
           )}
         </TabsContent>
       </Tabs>
