@@ -11,19 +11,19 @@ cached = { version = "0.55", features = ["async", "async_tokio_rt_multi_thread"]
 clap = { version = "4.5.39", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
-haste = { git = "https://github.com/johnpyp/haste.git", rev = "d7fae1be70afbad95bb5c6a62100d9fbe4610723", features = ["deadlock", "broadcast"] }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "b1ca28ba63389f11a00f08d5b60df49b00f7c800"}
 itertools = "0.14.0"
 jiff = { version = "0.2.14", features = ["serde"] }
 lru = "0.14.0"
 metrics = "0.24"
 object_store = { version = "0.12.1", features = ["aws"] }
 prost = "0.13.5"
-reqwest = { version = "0.12.18", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
+reqwest = { version = "0.12.19", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"
-valveprotos = { git = "https://github.com/johnpyp/valveprotos-rs.git", rev = "ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c", features = ["deadlock"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8618612dfc39e29b895c8cb726a98963ade5a557", features = ["user-msgs"] }
 thiserror = "2.0.12"
 async-compression = { version = "0.4.23", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }

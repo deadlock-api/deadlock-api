@@ -364,7 +364,7 @@ dependencies = [
  "time",
  "tokio",
  "tracing",
- "valveprotos 0.0.0 (git+https://github.com/deadlock-api/valveprotos-rs.git?rev=97e1d2fe9eab73af062cf144c9d57361f9ca53de)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -624,7 +624,7 @@ dependencies = [
  "sqlx",
  "tracing",
  "tracing-subscriber",
- "valveprotos 0.0.0 (git+https://github.com/deadlock-api/valveprotos-rs.git?rev=97e1d2fe9eab73af062cf144c9d57361f9ca53de)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1326,7 +1326,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=d7fae1be70afbad95bb5c6a62100d9fbe4610723#d7fae1be70afbad95bb5c6a62100d9fbe4610723"
+source = "git+https://github.com/deadlock-api/haste.git?rev=b1ca28ba63389f11a00f08d5b60df49b00f7c800#b1ca28ba63389f11a00f08d5b60df49b00f7c800"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1335,48 +1335,47 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=d7fae1be70afbad95bb5c6a62100d9fbe4610723#d7fae1be70afbad95bb5c6a62100d9fbe4610723"
+source = "git+https://github.com/deadlock-api/haste.git?rev=b1ca28ba63389f11a00f08d5b60df49b00f7c800#b1ca28ba63389f11a00f08d5b60df49b00f7c800"
 dependencies = [
  "anyhow",
  "bytes",
  "haste_core",
  "http",
  "log",
- "pollster",
  "prost",
  "reqwest",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tokio",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=d7fae1be70afbad95bb5c6a62100d9fbe4610723#d7fae1be70afbad95bb5c6a62100d9fbe4610723"
+source = "git+https://github.com/deadlock-api/haste.git?rev=b1ca28ba63389f11a00f08d5b60df49b00f7c800#b1ca28ba63389f11a00f08d5b60df49b00f7c800"
 dependencies = [
  "anyhow",
  "dungers",
  "dyn-clone",
- "hashbrown 0.14.5",
+ "hashbrown 0.15.3",
  "haste_vartype",
  "lazy_static",
  "nohash",
  "prost",
  "snap",
- "thiserror 1.0.69",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "thiserror 2.0.12",
+ "valveprotos",
 ]
 
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/johnpyp/haste.git?rev=d7fae1be70afbad95bb5c6a62100d9fbe4610723#d7fae1be70afbad95bb5c6a62100d9fbe4610723"
+source = "git+https://github.com/deadlock-api/haste.git?rev=b1ca28ba63389f11a00f08d5b60df49b00f7c800#b1ca28ba63389f11a00f08d5b60df49b00f7c800"
 dependencies = [
  "dungers",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -1403,7 +1402,7 @@ dependencies = [
  "serde",
  "tokio",
  "tracing",
- "valveprotos 0.0.0 (git+https://github.com/deadlock-api/valveprotos-rs.git?rev=97e1d2fe9eab73af062cf144c9d57361f9ca53de)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1441,7 +1440,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tracing",
- "valveprotos 0.0.0 (git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -1760,7 +1759,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tryhard",
- "valveprotos 0.0.0 (git+https://github.com/deadlock-api/valveprotos-rs.git?rev=97e1d2fe9eab73af062cf144c9d57361f9ca53de)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -2419,12 +2418,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
-name = "pollster"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22686f4785f02a4fcc856d3b3bb19bf6c8160d103f7a99cc258bddd0251dc7f2"
-
-[[package]]
 name = "portable-atomic"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2843,9 +2836,9 @@ checksum = "51743d3e274e2b18df81c4dc6caf8a5b8e15dbe799e0dca05c7617380094e884"
 
 [[package]]
 name = "reqwest"
-version = "0.12.18"
+version = "0.12.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e98ff6b0dbbe4d5a37318f433d4fc82babd21631f194d370409ceb2e40b2f0b5"
+checksum = "a2f8e5513d63f2e5b386eb5106dc67eaf3f84e95258e210489136b8b92ad6119"
 dependencies = [
  "async-compression",
  "base64",
@@ -3048,7 +3041,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tryhard",
- "valveprotos 0.0.0 (git+https://github.com/deadlock-api/valveprotos-rs.git?rev=97e1d2fe9eab73af062cf144c9d57361f9ca53de)",
+ "valveprotos",
 ]
 
 [[package]]
@@ -4050,7 +4043,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=97e1d2fe9eab73af062cf144c9d57361f9ca53de#97e1d2fe9eab73af062cf144c9d57361f9ca53de"
+source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=8618612dfc39e29b895c8cb726a98963ade5a557#8618612dfc39e29b895c8cb726a98963ade5a557"
 dependencies = [
  "heck",
  "prost",
@@ -4060,17 +4053,6 @@ dependencies = [
  "prost-wkt-build",
  "prost-wkt-types",
  "serde",
-]
-
-[[package]]
-name = "valveprotos"
-version = "0.0.0"
-source = "git+https://github.com/johnpyp/valveprotos-rs.git?rev=ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c#ed35f6e38bf0e8ec59a7f02d30edddc6f7a5127c"
-dependencies = [
- "heck",
- "prost",
- "prost-build",
- "prost-types",
 ]
 
 [[package]]

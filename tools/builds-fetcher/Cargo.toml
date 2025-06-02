@@ -5,13 +5,13 @@ edition = "2024"
 
 [dependencies]
 once_cell = "1.21.3"
-reqwest = { version = "0.12.18", features = ["json"] }
+reqwest = { version = "0.12.19", features = ["json"] }
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "time"] }
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0.98"
 itertools = "0.14.0"
 serde_json = "1.0.140"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "97e1d2fe9eab73af062cf144c9d57361f9ca53de", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8618612dfc39e29b895c8cb726a98963ade5a557", features = ["gc-client", "serde"] }
 time = "0.3.41"
 metrics = "0.24"
 tracing = "0.1.41"
