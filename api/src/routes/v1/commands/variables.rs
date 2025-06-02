@@ -7,7 +7,6 @@ use crate::routes::v1::players::match_history::PlayerMatchHistory;
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
 };
-use crate::routes::v1::players::mmr_history::MMRHistory;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -15,6 +14,7 @@ use crate::services::steam::types::SteamProxyResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;
+use clickhouse::Row;
 use futures::future::join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -825,8 +825,16 @@ impl Variable {
     }
 }
 
+#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+struct MMRHistoryEntry {
+    /// Extracted from the rank the division (rank // 10)
+    division: u32,
+    /// Extracted from the rank the division tier (rank % 10)
+    division_tier: u32,
+}
+
 #[cached(
-    ty = "TimedCache<u32, MMRHistory>",
+    ty = "TimedCache<u32, MMRHistoryEntry>",
     create = "{ TimedCache::with_lifespan(60) }",
     result = true,
     convert = "{ steam_id }",
@@ -836,7 +844,7 @@ impl Variable {
 async fn get_last_mmr_history(
     ch_client: &clickhouse::Client,
     steam_id: u32,
-) -> clickhouse::error::Result<MMRHistory> {
+) -> clickhouse::error::Result<MMRHistoryEntry> {
     ch_client
         .query(
             r#"
