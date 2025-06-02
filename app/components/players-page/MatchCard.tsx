@@ -53,6 +53,7 @@ interface MatchCardProps {
   matchData: MatchDisplayData;
   itemsMap?: Record<number, AssetsItem>;
   heroesMap?: Record<number, AssetsHero>;
+  setSteamId?: (steamId: number) => void;
 }
 
 const formatSouls = (souls: number) => {
@@ -64,7 +65,6 @@ const formatSouls = (souls: number) => {
 };
 
 const HIDE_SKILL_PRIORITY = true;
-const HIDE_RANK_CARD = false;
 
 // All ranks are a multiple of 10 + 1-6, so 90 is invalid, and 87 is also invalid. 81-86, 91-96 are valid, etc.
 const clampRankId = (rankId: number) => {
@@ -79,20 +79,18 @@ const clampRankId = (rankId: number) => {
   return rankId;
 };
 
-export default function MatchCard({ matchData, itemsMap, heroesMap }: MatchCardProps) {
+export default function MatchCard({ matchData, itemsMap, heroesMap, setSteamId }: MatchCardProps) {
   const { match, player, isWin, kda, finalItems, hero, hasFullData, players } = matchData;
   const durationMinutes = Math.floor((match.duration_s || 0) / 60);
   const durationSeconds = ((match.duration_s || 0) % 60).toString().padStart(2, "0");
   const formattedDuration = `${durationMinutes}:${durationSeconds}`;
 
-  const team0Players = players?.filter((p) => p.team === "Team0") || [];
-  const team1Players = players?.filter((p) => p.team === "Team1") || [];
   const displayItems = finalItems.slice(0, 12);
   const paddedDisplayItems = hasFullData
     ? displayItems
     : Array.from({ length: 12 })
         .fill(null)
-        .map((x) => null);
+        .map((_) => null);
 
   const rankToDisplay =
     matchData.match.average_rank_team0 && matchData.match.average_rank_team1
@@ -202,14 +200,19 @@ export default function MatchCard({ matchData, itemsMap, heroesMap }: MatchCardP
           {/* Right section: player list, grid 2 columns */}
           <div className="bg-muted flex items-start">
             <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 w-full">
-              {(players || []).map((p, idx) => (
+              {(players || []).map((p) => (
                 <div key={p.account_id} className="flex items-center gap-2">
                   {heroesMap?.[p.hero_id] ? (
                     <HeroImage heroId={p.hero_id} className="w-5 h-5 rounded-full border border-border" />
                   ) : (
                     <div className="w-5 h-5 bg-border rounded-full" />
                   )}
-                  <span className="truncate text-muted-foreground text-xs">Player {p.account_id}</span>
+                  <span
+                    className="truncate text-muted-foreground text-xs hover:underline hover:cursor-pointer"
+                    onClick={() => setSteamId?.(p.account_id)}
+                  >
+                    Player {p.account_id}
+                  </span>
                 </div>
               ))}
             </div>
