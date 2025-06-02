@@ -11,7 +11,8 @@ from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
-LEARNING_RATE = 3.9971  # Optimized with Hyperparameter Optimization
+ERROR_MULTIPLIER = 2.589460066530842 # Optimized with Hyperparameter Optimization
+ERROR_BIAS = 0.3782959123298705 # Optimized with Hyperparameter Optimization
 UPDATE_INTERVAL = 2 * 60
 
 ch_client = Client(
@@ -223,7 +224,10 @@ def run_regression(
 
         # Calculate the error and update the MMR of each player in the team
         error = (avg_team_rank_true - avg_team_rank_pred) / len(team_ranks)
-        mmr_update = max(-3.0, min(3.0, LEARNING_RATE * error))
+        if team.won:
+            mmr_update = error * ERROR_MULTIPLIER + ERROR_BIAS
+        else:
+            mmr_update = error * ERROR_MULTIPLIER - ERROR_BIAS
 
         updates.update({p_id: p_mmr + mmr_update for p_id, p_mmr in team_ranks.items()})
 
