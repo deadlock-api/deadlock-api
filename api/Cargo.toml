@@ -6,6 +6,11 @@ description = "API for Deadlock game data"
 repository = "https://github.com/deadlock-api/deadlock-api-rust"
 license = "MIT"
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+
 [dependencies]
 reqwest = { version = "0.12.18", features = ["json"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
