@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import time
 from time import sleep
@@ -10,9 +11,8 @@ from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
-LEARNING_RATE = 0.9
+LEARNING_RATE = 3.9971  # Optimized with Hyperparameter Optimization
 UPDATE_INTERVAL = 2 * 60
-ERROR_ADJUSTMENT = 0.2
 
 ch_client = Client(
     host=os.getenv("CLICKHOUSE_HOST", "localhost"),
@@ -210,7 +210,7 @@ def run_regression(
     match: Match, all_player_mmrs: dict[int, float]
 ) -> (dict[int, float], float):
     updates = {}
-    sum_errors = 0
+    squared_errors = 0
     for team in match.teams:
         # Get the average MMR of the team
         avg_team_rank_true = RANKS.index(team.average_badge_team)
@@ -223,24 +223,16 @@ def run_regression(
 
         # Calculate the error and update the MMR of each player in the team
         error = (avg_team_rank_true - avg_team_rank_pred) / len(team_ranks)
+        mmr_update = max(-3.0, min(3.0, LEARNING_RATE * error))
 
-        if team.won:
-            error += ERROR_ADJUSTMENT
-        else:
-            error -= ERROR_ADJUSTMENT
-
-        # gamma = max(2, abs(avg_team_rank_true - 6)) / 2
-        # lr = LEARNING_RATE / gamma
-        updates.update(
-            {p_id: p_mmr + LEARNING_RATE * error for p_id, p_mmr in team_ranks.items()}
-        )
+        updates.update({p_id: p_mmr + mmr_update for p_id, p_mmr in team_ranks.items()})
 
         LOGGER.info(
             f"Match {match.match_id}: Team {avg_team_rank_true} - "
             f"Average MMR {avg_team_rank_pred} - Error {error}"
         )
-        sum_errors += abs(error)
-    return updates, sum_errors
+        squared_errors += error * error
+    return updates, squared_errors
 
 
 def main(client):
@@ -261,9 +253,8 @@ def main(client):
             set_player_mmr(client, updates)
             updates = []
     set_player_mmr(client, updates)
-    errors = errors[-1000:]
     LOGGER.info(
-        f"Processed {len(matches)} matches, Average error: {sum(errors) / max(1, len(errors))}"
+        f"Processed {len(matches)} matches, RMSE: {math.sqrt(sum(errors) / max(1, len(errors)))}"
     )
 
 

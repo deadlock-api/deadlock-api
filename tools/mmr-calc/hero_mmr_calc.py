@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import time
 from time import sleep
@@ -10,9 +11,8 @@ from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger(__name__)
-LEARNING_RATE = 0.9
+LEARNING_RATE = 5.1716  # Optimized with Hyperparameter Optimization
 UPDATE_INTERVAL = 2 * 60
-ERROR_ADJUSTMENT = 0.2
 
 ch_client = Client(
     host=os.getenv("CLICKHOUSE_HOST", "localhost"),
@@ -193,7 +193,12 @@ def set_player_mmr(client, data: list[tuple[int, dict[tuple[int, int], float]]])
         VALUES
         """,
         [
-            {"account_id": account_id, "hero_id": hero_id, "match_id": match_id, "player_score": mmr}
+            {
+                "account_id": account_id,
+                "hero_id": hero_id,
+                "match_id": match_id,
+                "player_score": mmr,
+            }
             for match_id, player_mmr in data
             for (account_id, hero_id), mmr in player_mmr.items()
         ],
@@ -210,37 +215,34 @@ def run_regression(
     match: Match, all_player_mmrs: dict[tuple[int, int], float]
 ) -> (dict[tuple[int, int], float], float):
     updates = {}
-    sum_errors = 0
+    squared_errors = 0
     for team in match.teams:
         # Get the average MMR of the team
         avg_team_rank_true = RANKS.index(team.average_badge_team)
 
         # Get the predicted average MMR of the players in the team
         team_ranks = {
-            (p_id, p_hero): all_player_mmrs.get((p_id, p_hero), avg_team_rank_true) for p_id, p_hero in team.players
+            (p_id, p_hero): all_player_mmrs.get((p_id, p_hero), avg_team_rank_true)
+            for p_id, p_hero in team.players
         }
         avg_team_rank_pred = sum(team_ranks.values()) / len(team_ranks)
 
         # Calculate the error and update the MMR of each player in the team
         error = (avg_team_rank_true - avg_team_rank_pred) / len(team_ranks)
-
-        if team.won:
-            error += ERROR_ADJUSTMENT
-        else:
-            error -= ERROR_ADJUSTMENT
-
-        # gamma = max(2, abs(avg_team_rank_true - 6)) / 2
-        # lr = LEARNING_RATE / gamma
+        mmr_update = max(-3.0, min(3.0, LEARNING_RATE * error))
         updates.update(
-            {(p_id, p_hero): p_mmr + LEARNING_RATE * error for (p_id, p_hero), p_mmr in team_ranks.items()}
+            {
+                (p_id, p_hero): p_mmr + mmr_update
+                for (p_id, p_hero), p_mmr in team_ranks.items()
+            }
         )
 
         LOGGER.info(
             f"Match {match.match_id}: Team {avg_team_rank_true} - "
             f"Average MMR {avg_team_rank_pred} - Error {error}"
         )
-        sum_errors += abs(error)
-    return updates, sum_errors
+        squared_errors += error * error
+    return updates, squared_errors
 
 
 def main(client):
@@ -261,9 +263,8 @@ def main(client):
             set_player_mmr(client, updates)
             updates = []
     set_player_mmr(client, updates)
-    errors = errors[-1000:]
     LOGGER.info(
-        f"Processed {len(matches)} matches, Average error: {sum(errors) / max(1, len(errors))}"
+        f"Processed {len(matches)} matches, RMSE: {math.sqrt(sum(errors) / max(1, len(errors)))}"
     )
 
 
