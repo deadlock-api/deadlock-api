@@ -1,11 +1,15 @@
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::matches::live_url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
 use async_stream::try_stream;
 use axum::body::Body;
-use axum::extract::Path;
+use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures::Stream;
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
+use std::time::Duration;
 use tracing::{error, info};
 
 async fn demo_stream(
@@ -45,7 +49,26 @@ async fn demo_stream(
 )]
 pub(super) async fn live_demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-) -> impl IntoResponse {
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    spectate_match(&state.steam_client, match_id).await?;
+
+    // Wait for the demo to be available
+    tryhard::retry_fn(|| async {
+        state
+            .http_client
+            .head(format!(
+                "https://dist1-ord1.steamcontent.com/tv/{}/sync",
+                match_id
+            ))
+            .send()
+            .await
+            .and_then(|resp| resp.error_for_status())
+    })
+    .retries(20)
+    .fixed_backoff(Duration::from_millis(200))
+    .await?;
+
     let stream = demo_stream(match_id).await;
-    Body::from_stream(stream)
+    Ok(Body::from_stream(stream))
 }

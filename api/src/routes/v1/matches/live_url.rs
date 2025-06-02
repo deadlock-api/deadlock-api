@@ -35,7 +35,7 @@ struct MatchSpectateResponse {
     sync_writes = "by_key",
     key = "u64"
 )]
-async fn spectate_match(
+pub(super) async fn spectate_match(
     steam_client: &SteamClient,
     match_id: u64,
 ) -> APIResult<CMsgClientToGcSpectateLobbyResponse> {
