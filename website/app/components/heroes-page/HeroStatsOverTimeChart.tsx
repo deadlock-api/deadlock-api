@@ -137,14 +137,20 @@ export default function HeroStatsOverTimeChart({
     return map;
   }, [assetsHeroes]);
 
-  const minStat = useMemo(
-    () => Math.min(...Object.values(heroStatMap).map((q) => Math.min(...q.map(([, d]) => d)))),
-    [heroStatMap],
-  );
-  const maxStat = useMemo(
-    () => Math.max(...Object.values(heroStatMap).map((q) => Math.max(...q.map(([, d]) => d)))),
-    [heroStatMap],
-  );
+  const sortedStats = useMemo(() => {
+    const out: number[] = [];
+    for (const stats of Object.values(heroStatMap)) {
+      for (const [, stat] of stats) {
+        out.push(stat);
+      }
+    }
+    out.sort((a, b) => a - b);
+    return out;
+  }, [heroStatMap]);
+
+  const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)], [sortedStats]);
+  const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)], [sortedStats]);
+
   const minDataDate = useMemo(
     () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d))),
     [heroStatMap],
