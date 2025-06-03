@@ -90,5 +90,5 @@ tasks:
     deps:
       - task: setup-test-env
     cmds:
-      - cargo test
+      - cargo nextest run
       - task: teardown-test-env
