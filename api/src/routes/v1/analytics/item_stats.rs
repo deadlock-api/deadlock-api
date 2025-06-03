@@ -9,12 +9,48 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 fn default_min_matches() -> Option<u32> {
     20.into()
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum BucketByTimeQuery {
+    /// No Bucketing
+    #[display("no_bucket")]
+    #[default]
+    NoBucket,
+    /// Bucket Item Stats By Start Time (Hour)
+    #[display("start_time_hour")]
+    StartTimeHour,
+    /// Bucket Item Stats By Start Time (Day)
+    #[display("start_time_day")]
+    StartTimeDay,
+    /// Bucket Item Stats by Game Time (Minutes)
+    #[display("game_time_min")]
+    GameTimeMin,
+    /// Bucket Item Stats by Game Time Normalized
+    #[display("game_time_normalized_percentage")]
+    GameTimeNormalizedPercentage,
+}
+
+impl BucketByTimeQuery {
+    pub fn get_select_clause(&self) -> String {
+        match self {
+            Self::NoBucket => "NULL".to_string(),
+            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
+            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
+            Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))".to_string(),
+            Self::GameTimeNormalizedPercentage => {
+                "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))".to_string()
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -56,11 +92,16 @@ pub(crate) struct ItemStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
+    /// Bucket the stats.
+    #[serde(default)]
+    #[param(inline)]
+    bucket_by_time: BucketByTimeQuery,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct ItemStats {
     pub item_id: u32,
+    pub bucket: Option<u32>,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
@@ -134,29 +175,35 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
+    let bucket = query.bucket_by_time.get_select_clause();
     let min_matches = query
         .min_matches
         .or(default_min_matches())
         .unwrap_or_default();
     format!(
         r#"
-    WITH matches AS (SELECT match_id
-            FROM match_info
+    WITH t_matches AS (SELECT match_id, start_time, duration_s
+            FROM match_info FINAL
             WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
-        players AS (SELECT account_id, items.item_id as items, won
-            FROM match_player
-            WHERE match_id IN (SELECT match_id FROM matches) {player_filters})
+        t_players AS (SELECT match_id, account_id, items.item_id AS item_id, items.game_time_s as buy_time, won
+            FROM match_player FINAL
+                ARRAY JOIN items
+            WHERE match_id IN (SELECT match_id FROM t_matches)
+                     AND items.item_id IN (SELECT id FROM items)
+                     AND items.game_time_s > 0
+                     {player_filters})
     SELECT
         item_id,
+        {bucket}          AS bucket,
         sum(won)      AS wins,
         sum(not won)  AS losses,
         wins + losses AS matches,
         COUNT(DISTINCT account_id) AS players
-    FROM players
-        ARRAY JOIN items as item_id
-    GROUP BY item_id
+    FROM t_players
+        INNER JOIN t_matches USING (match_id)
+    GROUP BY item_id, bucket
     HAVING matches >= {min_matches}
-    ORDER BY item_id
+    ORDER BY item_id, bucket
     "#
     )
 }
