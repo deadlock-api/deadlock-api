@@ -152,7 +152,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     }
     if let Some(include_item_ids) = &query.include_item_ids {
         player_filters.push(format!(
-            "hasAll(items, [{}])",
+            "hasAll(items.item_id, [{}])",
             include_item_ids
                 .iter()
                 .map(|id| id.to_string())
@@ -162,7 +162,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     }
     if let Some(exclude_item_ids) = &query.exclude_item_ids {
         player_filters.push(format!(
-            "not hasAny(items, [{}])",
+            "not hasAny(items.item_id, [{}])",
             exclude_item_ids
                 .iter()
                 .map(|id| id.to_string())
@@ -185,13 +185,13 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     WITH t_matches AS (SELECT match_id, start_time, duration_s
             FROM match_info FINAL
             WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
+        t_players_filters AS (SELECT match_id FROM match_player FINAL
+            WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}),
         t_players AS (SELECT match_id, account_id, items.item_id AS item_id, items.game_time_s as buy_time, won
             FROM match_player FINAL
-                ARRAY JOIN items
-            WHERE match_id IN (SELECT match_id FROM t_matches)
-                     AND items.item_id IN (SELECT id FROM items)
-                     AND items.game_time_s > 0
-                     {player_filters})
+            ARRAY JOIN items
+            WHERE items.item_id IN (SELECT id FROM items) AND match_id IN (SELECT match_id FROM t_players_filters)
+            AND items.game_time_s > 0)
     SELECT
         item_id,
         {bucket}      AS bucket,
