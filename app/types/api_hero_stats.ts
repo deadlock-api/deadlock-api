@@ -15,7 +15,6 @@ export interface APIHeroStats {
 
 export const HERO_STATS = [
   "winrate",
-  "pickrate",
   "wins",
   "losses",
   "matches",
@@ -28,16 +27,10 @@ export const HERO_STATS = [
   "denies_per_match",
 ] as const;
 
-export function hero_stats_transform(
-  heroStats: APIHeroStats,
-  heroStat: (typeof HERO_STATS)[number],
-  totalMatches: number,
-) {
+export function hero_stats_transform(heroStats: APIHeroStats, heroStat: (typeof HERO_STATS)[number]) {
   switch (heroStat) {
     case "winrate":
       return (100 * heroStats.wins) / heroStats.matches;
-    case "pickrate":
-      return (100 * heroStats.matches) / totalMatches;
     case "wins":
       return heroStats.wins;
     case "losses":

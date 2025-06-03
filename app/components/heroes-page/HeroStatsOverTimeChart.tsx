@@ -115,10 +115,9 @@ export default function HeroStatsOverTimeChart({
   const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {
     const map: Record<number, [number, number][]> = {};
     if (heroData) {
-      const totalMatches = heroData.reduce((acc, row) => acc + row.matches, 0);
       for (const hero of heroData) {
         if (!map[hero.bucket]) map[hero.bucket] = [];
-        map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat, totalMatches)]);
+        map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat)]);
       }
     }
     return map;
