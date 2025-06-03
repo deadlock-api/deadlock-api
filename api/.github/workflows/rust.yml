@@ -13,7 +13,6 @@ on:
         type: string
 
 env:
-  RUST_TOOLCHAIN: stable
   CARGO_TERM_COLOR: always
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   CARGO_INCREMENTAL: 0
@@ -70,11 +69,8 @@ jobs:
           version: 1.0
 
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-          override: true
           components: rustfmt, clippy
 
       - name: Run sccache-cache
