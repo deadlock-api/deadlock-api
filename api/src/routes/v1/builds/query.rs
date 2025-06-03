@@ -28,8 +28,8 @@ pub enum BuildsSearchQuerySortBy {
     /// Sort by the last time the build was updated.
     #[display("updated_at")]
     UpdatedAt,
-    /// Sort by the time the build was lished.
-    #[display("lished_at")]
+    /// Sort by the time the build was published.
+    #[display("published_at")]
     PublishedAt,
     /// Sort by the build version.
     #[display("version")]
