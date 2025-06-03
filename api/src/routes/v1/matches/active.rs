@@ -42,7 +42,7 @@ async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
             msg: CMsgClientToGcGetActiveMatches::default(),
             in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(60),
+            cooldown_time: Duration::from_secs(600),
             request_timeout: Duration::from_secs(2),
             username: None,
         })
