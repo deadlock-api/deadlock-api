@@ -206,7 +206,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         sum(denies) AS total_denies
     FROM match_player FINAL
     INNER JOIN t_matches USING (match_id)
-    INNER JOIN t_matches_per_bucket m ON m.bucket = {bucket}
+    INNER JOIN t_matches_per_bucket m ON {}
     WHERE TRUE {player_filters}
         {}
     GROUP BY hero_id, bucket
@@ -227,6 +227,10 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
             )
         } else {
             "".to_string()
+        },
+        match query.bucket {
+            BucketQuery::NoBucket => "TRUE".to_string(),
+            _ => format!("m.bucket = {bucket}"),
         },
         if query.min_hero_matches.or(query.max_hero_matches).is_some() {
             "AND (account_id, hero_id) IN t_players"
