@@ -16,7 +16,7 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum BucketByTimeQuery {
+pub(super) enum BucketQuery {
     /// No Bucketing
     #[display("no_bucket")]
     #[default]
@@ -29,7 +29,7 @@ pub(super) enum BucketByTimeQuery {
     StartTimeDay,
 }
 
-impl BucketByTimeQuery {
+impl BucketQuery {
     pub(super) fn get_select_clause(&self) -> String {
         match self {
             Self::NoBucket => "NULL".to_string(),
@@ -79,7 +79,7 @@ pub(crate) struct HeroStatsQuery {
     /// Bucket the stats.
     #[serde(default)]
     #[param(inline)]
-    bucket_by_time: BucketByTimeQuery,
+    bucket: BucketQuery,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -174,7 +174,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     } else {
         player_hero_filters.join(" AND ")
     };
-    let bucket = query.bucket_by_time.get_select_clause();
+    let bucket = query.bucket.get_select_clause();
     format!(
         r#"
     WITH t_matches AS (

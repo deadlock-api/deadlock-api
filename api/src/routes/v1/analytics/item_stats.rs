@@ -20,7 +20,7 @@ fn default_min_matches() -> Option<u32> {
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum BucketByTimeQuery {
+pub(super) enum BucketQuery {
     /// No Bucketing
     #[display("no_bucket")]
     #[default]
@@ -39,7 +39,7 @@ pub(super) enum BucketByTimeQuery {
     GameTimeNormalizedPercentage,
 }
 
-impl BucketByTimeQuery {
+impl BucketQuery {
     pub(super) fn get_select_clause(&self) -> String {
         match self {
             Self::NoBucket => "NULL".to_string(),
@@ -95,7 +95,7 @@ pub(crate) struct ItemStatsQuery {
     /// Bucket the stats.
     #[serde(default)]
     #[param(inline)]
-    bucket_by_time: BucketByTimeQuery,
+    bucket: BucketQuery,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -175,7 +175,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let bucket = query.bucket_by_time.get_select_clause();
+    let bucket = query.bucket.get_select_clause();
     let min_matches = query
         .min_matches
         .or(default_min_matches())
