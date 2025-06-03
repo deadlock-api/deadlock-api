@@ -47,7 +47,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const [heroId, setHeroId] = useQueryState("hero-id", 15);
   const [heroIds, setHeroIds] = useQueryState("hero-ids", [15]);
   const [heroStat, setHeroStat] = useQueryState<(typeof HERO_STATS)[number]>("hero-stat", "winrate");
-  const [heroTimeInterval, setHeroTimeInterval] = useQueryState<string>("time-interval", "start_time_hour");
+  const [heroTimeInterval, setHeroTimeInterval] = useQueryState<string>("time-interval", "start_time_day");
 
   return (
     <>
