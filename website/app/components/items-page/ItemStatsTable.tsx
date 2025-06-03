@@ -279,86 +279,88 @@ export function ItemStatsTableDisplay({
           </TableHeader>
         )}
         <TableBody>
-          {processedData.map((row, index) => {
-            const shouldDim = dimLowConfidence && row.confidenceLower < row.confidenceBaselineLower;
-            return (
-              <TableRow
-                key={row.item_id}
-                className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 ${
-                  shouldDim ? "brightness-60" : ""
-                }`}
-              >
-                {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <ItemImage itemId={row.item_id} />
-                    <ItemName itemId={row.item_id} />
-                  </div>
-                </TableCell>
-                {columns.includes("itemsTier") && (
+          {processedData
+            .filter((row) => itemTiers.includes(row.itemTier))
+            .map((row, index) => {
+              const shouldDim = dimLowConfidence && row.confidenceLower < row.confidenceBaselineLower;
+              return (
+                <TableRow
+                  key={row.item_id}
+                  className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 ${
+                    shouldDim ? "brightness-60" : ""
+                  }`}
+                >
+                  {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <ItemTier itemId={row.item_id} />
+                      <ItemImage itemId={row.item_id} />
+                      <ItemName itemId={row.item_id} />
                     </div>
                   </TableCell>
-                )}
-                {columns.includes("winRate") && (
-                  <TableCell
-                    className="text-center"
-                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                  >
-                    <ProgressBarWithLabel
-                      min={minWinRate}
-                      max={maxWinRate}
-                      value={row.wins / row.matches}
-                      color={"#ff00ff"}
-                      label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                    />
-                  </TableCell>
-                )}
-                {columns.includes("usage") && (
-                  <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
-                    <ProgressBarWithLabel
-                      min={minUsage}
-                      max={maxUsage}
-                      value={row.matches}
-                      color={"#00ffff"}
-                      label={row.matches.toLocaleString()}
-                    />
-                  </TableCell>
-                )}
-                {columns.includes("confidence") && (
-                  <TableCell className="text-center">
-                    <div className="inline-flex">
-                      <ConfidenceTierBadge tier={row.confidenceTier} />
-                    </div>
-                  </TableCell>
-                )}
-                {(onItemInclude || onItemExclude) && (
-                  <TableCell width={130}>
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="secondary"
-                        disabled={includedItemIds.includes(row.item_id)}
-                        className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-gray-500"
-                        onClick={() => onItemInclude?.(row.item_id)}
-                      >
-                        <span className="icon-[mdi--plus]" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        disabled={excludedItemIds.includes(row.item_id)}
-                        className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-gray-500"
-                        onClick={() => onItemExclude?.(row.item_id)}
-                      >
-                        <span className="icon-[mdi--minus] text-lg" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                )}
-              </TableRow>
-            );
-          })}
+                  {columns.includes("itemsTier") && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <ItemTier itemId={row.item_id} />
+                      </div>
+                    </TableCell>
+                  )}
+                  {columns.includes("winRate") && (
+                    <TableCell
+                      className="text-center"
+                      title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+                    >
+                      <ProgressBarWithLabel
+                        min={minWinRate}
+                        max={maxWinRate}
+                        value={row.wins / row.matches}
+                        color={"#ff00ff"}
+                        label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                      />
+                    </TableCell>
+                  )}
+                  {columns.includes("usage") && (
+                    <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
+                      <ProgressBarWithLabel
+                        min={minUsage}
+                        max={maxUsage}
+                        value={row.matches}
+                        color={"#00ffff"}
+                        label={row.matches.toLocaleString()}
+                      />
+                    </TableCell>
+                  )}
+                  {columns.includes("confidence") && (
+                    <TableCell className="text-center">
+                      <div className="inline-flex">
+                        <ConfidenceTierBadge tier={row.confidenceTier} />
+                      </div>
+                    </TableCell>
+                  )}
+                  {(onItemInclude || onItemExclude) && (
+                    <TableCell width={130}>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="secondary"
+                          disabled={includedItemIds.includes(row.item_id)}
+                          className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-gray-500"
+                          onClick={() => onItemInclude?.(row.item_id)}
+                        >
+                          <span className="icon-[mdi--plus]" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          disabled={excludedItemIds.includes(row.item_id)}
+                          className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-gray-500"
+                          onClick={() => onItemExclude?.(row.item_id)}
+                        >
+                          <span className="icon-[mdi--minus] text-lg" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
         </TableBody>
       </Table>
     </div>
