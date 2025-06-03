@@ -21,7 +21,6 @@ env:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 concurrency:
   cancel-in-progress: true
