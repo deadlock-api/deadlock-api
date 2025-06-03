@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
@@ -11,6 +11,7 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
+import useQueryState from "~/hooks/useQueryState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 
@@ -175,9 +176,9 @@ export function ItemStatsTableDisplay({
   onItemExclude,
   initialSort = { field: "winRate", direction: "desc" },
 }: ItemStatsTableDisplayProps) {
-  const [sort, setSort] = useState<SortState>(initialSort);
-  const [itemTiers, setItemTiers] = useState<number[]>([1, 2, 3, 4]);
-  const [dimLowConfidence, setDimLowConfidence] = useState(false);
+  const [sort, setSort] = useQueryState<SortState>("item-sort", initialSort);
+  const [itemTiers, setItemTiers] = useQueryState<number[]>("item-tiers", [1, 2, 3, 4]);
+  const [dimLowConfidence, setDimLowConfidence] = useQueryState("dim-low-confidence", false);
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -200,15 +201,16 @@ export function ItemStatsTableDisplay({
   }, [data, sort]);
 
   const toggleSort = (field: SortField) => {
-    setSort((prev) => {
-      if (prev.field === field) {
-        return {
-          ...prev,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      return { field, direction: "desc" };
-    });
+    let newSort: SortState;
+    if (sort.field === field) {
+      newSort = {
+        ...sort,
+        direction: sort.direction === "asc" ? "desc" : "asc",
+      };
+    } else {
+      newSort = { field, direction: "desc" };
+    }
+    setSort(newSort);
   };
 
   // Arrow indicator for sort direction

@@ -1,8 +1,9 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
+import useQueryState from "~/hooks/useQueryState";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
@@ -25,7 +26,7 @@ const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
 };
 
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
-  const [activeTab, setActiveTab] = useState<"patch" | "custom">(defaultTab);
+  const [tab, setTab] = useQueryState<"patch" | "custom">("pd-picker-tab", defaultTab);
 
   const matchingPatch = patchDates.find((patch) => {
     if (!value.startDate || !value.endDate) return false;
@@ -37,19 +38,19 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
   // biome-ignore lint/correctness/useExhaustiveDependencies: Meant to only run on start
   useEffect(() => {
     if (matchingPatch) {
-      if (activeTab !== "patch") {
-        setActiveTab("patch");
+      if (tab !== "patch") {
+        setTab("patch");
       }
     } else if (value.startDate || value.endDate) {
       // If dates are set but don't match a patch, switch to custom
       // Only switch if not already on custom to avoid loops if defaultTab was custom
-      if (activeTab !== "custom") {
-        setActiveTab("custom");
+      if (tab !== "custom") {
+        setTab("custom");
       }
     } else {
       // If no dates are set, revert to defaultTab or stay if already there
-      if (activeTab !== defaultTab) {
-        setActiveTab(defaultTab);
+      if (tab !== defaultTab) {
+        setTab(defaultTab);
       }
     }
   }, []);
@@ -81,11 +82,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
           <div className="flex items-center h-8">
             <span className="text-sm text-foreground font-semibold">Date Range</span>
           </div>
-          <Tabs
-            defaultValue={defaultTab}
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as "patch" | "custom")}
-          >
+          <Tabs defaultValue={defaultTab} value={tab} onValueChange={(value) => setTab(value as "patch" | "custom")}>
             <TabsList className="flex h-8">
               <TabsTrigger value="patch" className="text-xs flex items-center gap-1">
                 <ClockIcon className="h-3 w-3" />
@@ -100,7 +97,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
         </div>
 
         <div>
-          {activeTab === "patch" ? (
+          {tab === "patch" ? (
             <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
               <SelectTrigger id="patch-select" className="h-10 focus-visible:ring-0 min-w-full">
                 <SelectValue placeholder="Select a patch..." />

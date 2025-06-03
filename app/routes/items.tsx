@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { type MetaFunction, useLocation } from "react-router";
+import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
@@ -9,6 +8,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
+import useQueryState from "~/hooks/useQueryState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
@@ -19,41 +19,13 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Items({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useState<number>(0);
-  const [maxRankId, setMaxRankId] = useState<number>(116);
-  const [hero, setHero] = useState<number | null>(null);
-  const [minMatches, setMinMatches] = useState<number>(20);
-
-  const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
-  const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
-
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setSearchParams(params);
-
-    const searchTab = params?.get("tab") || initialTab || "stats";
-    if (searchTab) {
-      setTab(searchTab);
-    }
-
-    const searchHeroIdString = params?.get("heroId");
-    const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-    if (searchHeroId) setHero(searchHeroId);
-  }, [location.search, initialTab]);
-
-  const searchTab = searchParams?.get("tab");
-  const [tab, setTab] = useState(searchTab || initialTab || "stats");
-
-  const handleTabChange = (newTab: string) => {
-    setTab(newTab);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("tab", newTab);
-      window.history.pushState({}, "", url);
-    }
-  };
+  const [minRankId, setMinRankId] = useQueryState<number>("min-rank", 0);
+  const [maxRankId, setMaxRankId] = useQueryState<number>("max-rank", 116);
+  const [hero, setHero] = useQueryState<number | null>("hero", null);
+  const [minMatches, setMinMatches] = useQueryState<number>("min-matches", 20);
+  const [startDate, setStartDate] = useQueryState<Dayjs | null>("start-date", PATCHES[0].startDate);
+  const [endDate, setEndDate] = useQueryState<Dayjs | null>("end-date", PATCHES[0].endDate);
+  const [tab, setTab] = useQueryState("tab", initialTab || "stats");
 
   return (
     <>
@@ -72,7 +44,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                     type="button"
                     aria-label="Decrease min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches((m) => Math.max(1, m - 10))}
+                    onClick={() => setMinMatches(Math.max(1, minMatches - 10))}
                   >
                     -
                   </button>
@@ -83,7 +55,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                     type="button"
                     aria-label="Increase min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches((m) => m + 10)}
+                    onClick={() => setMinMatches(minMatches + 10)}
                   >
                     +
                   </button>
@@ -106,7 +78,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
           <TabsTrigger value="item-combs">Item Combination Stats</TabsTrigger>
