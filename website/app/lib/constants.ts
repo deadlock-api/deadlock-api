@@ -5,13 +5,13 @@ export const PATCHES = [
     id: "2025-05-27",
     name: "Latest Patch (2025-05-27)",
     startDate: day("2025-05-27T23:47:06Z"),
-    endDate: day().endOf("day"),
+    endDate: day().startOf("day"),
   },
   {
     id: "2025-05-08",
     name: "Major Item Rework (2025-05-08)",
     startDate: day("2025-05-08T19:43:20Z"),
-    endDate: day().endOf("day"),
+    endDate: day().startOf("day"),
   },
   {
     id: "2025-02-25",
