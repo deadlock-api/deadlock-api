@@ -44,9 +44,9 @@ pub(super) struct BuildsSearchQuery {
     min_unix_timestamp: Option<u64>,
     /// Filter builds based on their last_updated time (Unix timestamp).
     max_unix_timestamp: Option<u64>,
-    /// Filter builds based on their lished time (Unix timestamp).
+    /// Filter builds based on their published time (Unix timestamp).
     min_published_unix_timestamp: Option<u64>,
-    /// Filter builds based on their lished time (Unix timestamp).
+    /// Filter builds based on their published time (Unix timestamp).
     max_published_unix_timestamp: Option<u64>,
     /// The field to sort the builds by.
     #[serde(default)]

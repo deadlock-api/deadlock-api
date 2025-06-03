@@ -23,7 +23,7 @@ const BIG_PATCH_DAYS: &[&str] = &[
     summary = "Big Patch Days",
     description = r#"
 Returns a list of dates where Deadlock's "big" patch days were, usually bi-weekly.
-The exact date is the time when the announcement forum post was lished.
+The exact date is the time when the announcement forum post was published.
 
 This list is manually maintained, and so new patch dates may be delayed by a few hours.
     "#,
