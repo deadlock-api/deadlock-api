@@ -108,11 +108,10 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
 WITH players AS (SELECT DISTINCT account_id
                  FROM match_player
                  ORDER BY match_id DESC
-                 LIMIT 10000)
+                 LIMIT 5000)
 SELECT account_id as id, NULL AS max_match_id
 FROM players
 ORDER BY rand()
-LIMIT 1000
 
 UNION ALL
 
@@ -124,7 +123,7 @@ WHERE account_id > 0
 GROUP BY account_id
 HAVING COUNT(DISTINCT match_id) > 50
 ORDER BY COUNT(DISTINCT match_id) DESC
-LIMIT 100
+LIMIT 1000
     "#,
         )
         .fetch_all()
