@@ -96,14 +96,6 @@ pub struct AnalyticsHeroStats {
     total_net_worth: u64,
     total_last_hits: u64,
     total_denies: u64,
-    total_player_damage: u64,
-    total_player_damage_taken: u64,
-    total_boss_damage: u64,
-    total_creep_damage: u64,
-    total_neutral_damage: u64,
-    total_max_health: u64,
-    total_shots_hit: u64,
-    total_shots_missed: u64,
 }
 
 fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
@@ -204,15 +196,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         sum(assists) AS total_assists,
         sum(net_worth) AS total_net_worth,
         sum(last_hits) AS total_last_hits,
-        sum(denies) AS total_denies,
-        sum(arrayMax(stats.player_damage)) AS total_player_damage,
-        sum(arrayMax(stats.player_damage_taken)) AS total_player_damage_taken,
-        sum(arrayMax(stats.boss_damage)) AS total_boss_damage,
-        sum(arrayMax(stats.creep_damage)) AS total_creep_damage,
-        sum(arrayMax(stats.neutral_damage)) AS total_neutral_damage,
-        sum(arrayMax(stats.max_health)) AS total_max_health,
-        sum(arrayMax(stats.shots_hit)) AS total_shots_hit,
-        sum(arrayMax(stats.shots_missed)) AS total_shots_missed
+        sum(denies) AS total_denies
     FROM match_player FINAL
     INNER JOIN t_matches USING (match_id)
     WHERE TRUE {player_filters}
