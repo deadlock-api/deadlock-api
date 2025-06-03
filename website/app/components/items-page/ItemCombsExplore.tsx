@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
+import useQueryState from "~/hooks/useQueryState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
@@ -29,9 +30,19 @@ export default function ItemCombsExplore({
   minMatches?: number | null;
   limit?: number;
 }) {
-  const [includeItems, setIncludeItems] = useState<Set<number>>(new Set());
-  const [excludeItems, setExcludeItems] = useState<Set<number>>(new Set());
-  const [tab, setTab] = useState<"weapon" | "vitality" | "spirit">("weapon");
+  const [includeItems, setIncludeItems] = useQueryState<Set<number>>(
+    "include-items",
+    new Set(),
+    (value) => new Set(JSON.parse(value)),
+    (value) => JSON.stringify(Array.from(value)),
+  );
+  const [excludeItems, setExcludeItems] = useQueryState<Set<number>>(
+    "exclude-items",
+    new Set(),
+    (value) => new Set(JSON.parse(value)),
+    (value) => JSON.stringify(Array.from(value)),
+  );
+  const [slot, setSlot] = useQueryState<"weapon" | "vitality" | "spirit">("item-slot", "weapon");
 
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -149,20 +160,21 @@ export default function ItemCombsExplore({
 
       <div className="mt-4 rounded bg-gray-800 px-4 py-2">
         <h2 className="text-center text-xl p-2">Select Items</h2>
-        <Tabs value={tab} onValueChange={(i) => setTab(i as "weapon" | "vitality" | "spirit")} className="w-full">
+        <Tabs value={slot} onValueChange={(i) => setSlot(i as "weapon" | "vitality" | "spirit")} className="w-full">
           <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
             <TabsTrigger value="weapon">Weapon</TabsTrigger>
             <TabsTrigger value="vitality">Vitality</TabsTrigger>
             <TabsTrigger value="spirit">Spirit</TabsTrigger>
           </TabsList>
-          <TabsContent value={tab}>
+          <TabsContent value={slot}>
             {[1, 2, 3, 4].map((tier) => (
               <div key={tier}>
                 <h3 className="text-center text-lg p-2 mt-2">Tier {tier}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-2">
                   {assetsItems
                     ?.filter(
-                      (i) => !i.disabled && i.shop_image_small_webp && i.item_slot_type === tab && i.item_tier === tier,
+                      (i) =>
+                        !i.disabled && i.shop_image_small_webp && i.item_slot_type === slot && i.item_tier === tier,
                     )
                     .map((item) => (
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">

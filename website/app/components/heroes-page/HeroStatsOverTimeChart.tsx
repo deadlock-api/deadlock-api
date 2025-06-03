@@ -2,12 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { type Dayjs, day } from "~/dayjs";
-import {
-  type APIHeroStatsOverTime,
-  HERO_STATS,
-  TIME_INTERVALS,
-  hero_stats_transform,
-} from "~/types/api_hero_stats_over_time";
+import { type APIHeroStats, HERO_STATS, TIME_INTERVALS, hero_stats_transform } from "~/types/api_hero_stats";
 
 import {
   Select,
@@ -50,8 +45,8 @@ export function HeroTimeIntervalSelector({
   value,
   onChange,
 }: {
-  value: (typeof TIME_INTERVALS)[number];
-  onChange: (val: (typeof TIME_INTERVALS)[number]) => void;
+  value: string;
+  onChange: (val: string) => void;
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
@@ -62,8 +57,8 @@ export function HeroTimeIntervalSelector({
         <SelectGroup>
           <SelectLabel>Time Interval</SelectLabel>
           {TIME_INTERVALS.map((key) => (
-            <SelectItem key={key as string} value={key as string}>
-              {key}
+            <SelectItem key={key.label} value={key.query}>
+              {key.label}
             </SelectItem>
           ))}
         </SelectGroup>
@@ -83,7 +78,7 @@ export default function HeroStatsOverTimeChart({
 }: {
   heroIds?: number[];
   heroStat: (typeof HERO_STATS)[number];
-  heroTimeInterval: (typeof TIME_INTERVALS)[number];
+  heroTimeInterval: string;
   minRankId?: number;
   maxRankId?: number;
   minDate?: Dayjs | null;
@@ -92,7 +87,7 @@ export default function HeroStatsOverTimeChart({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: heroData, isLoading: isLoadingHeroStats } = useQuery<APIHeroStatsOverTime[]>({
+  const { data: heroData, isLoading: isLoadingHeroStats } = useQuery<APIHeroStats[]>({
     queryKey: [
       "api-hero-stats-over-time",
       heroIds,
@@ -103,8 +98,9 @@ export default function HeroStatsOverTimeChart({
       heroTimeInterval,
     ],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats/over-time");
+      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
       url.searchParams.set("hero_ids", heroIds?.join(",") || "");
+      if (heroTimeInterval) url.searchParams.set("bucket", heroTimeInterval);
       url.searchParams.set("time_interval", heroTimeInterval);
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
@@ -119,9 +115,10 @@ export default function HeroStatsOverTimeChart({
   const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {
     const map: Record<number, [number, number][]> = {};
     if (heroData) {
+      const totalMatches = heroData.reduce((acc, row) => acc + row.matches, 0);
       for (const hero of heroData) {
-        if (!map[hero.date_time]) map[hero.date_time] = [];
-        map[hero.date_time].push([hero.hero_id, hero_stats_transform(hero, heroStat)]);
+        if (!map[hero.bucket]) map[hero.bucket] = [];
+        map[hero.bucket].push([hero.hero_id, hero_stats_transform(hero, heroStat, totalMatches)]);
       }
     }
     return map;

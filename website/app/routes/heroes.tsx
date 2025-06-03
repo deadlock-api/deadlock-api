@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 import type { MetaFunction } from "react-router";
-import { useLocation } from "react-router";
+import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -17,9 +17,9 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
+import useQueryState from "~/hooks/useQueryState";
 import { PATCHES } from "~/lib/constants";
-import type { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats_over_time";
-import { PatchOrDatePicker } from "../components/PatchOrDatePicker";
+import type { HERO_STATS } from "~/types/api_hero_stats";
 
 export const meta: MetaFunction = () => {
   return [
@@ -28,87 +28,26 @@ export const meta: MetaFunction = () => {
   ];
 };
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useState<number>(0);
-  const [maxRankId, setMaxRankId] = useState<number>(116);
-  const [sameLaneFilter, setSameLaneFilter] = useState<boolean>(true);
-
-  const [startDate, setStartDate] = useState<Dayjs | null>(PATCHES[0].startDate);
-  const [endDate, setEndDate] = useState<Dayjs | null>(PATCHES[0].endDate);
-
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setSearchParams(params);
-
-    const searchTab = params?.get("tab") || initialTab || "stats";
-    if (searchTab) {
-      setTab(searchTab);
-    }
-
-    const searchHeroIdString = params?.get("heroId");
-    const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-    setHeroId(searchHeroId || 15);
-
-    const searchHeroIdsString = params?.get("heroIds");
-    const searchHeroIds = searchHeroIdsString
-      ?.split(",")
-      .map((i) => Number.parseInt(i, 10))
-      .filter(Number.isInteger);
-    setHeroIds(searchHeroIds || [15]);
-
-    const searchHeroStat = params?.get("heroStat") || "winrate";
-    if (searchHeroStat) {
-      setHeroStat(searchHeroStat as (typeof HERO_STATS)[number]);
-    }
-
-    const searchHeroTimeInterval = params?.get("heroTimeInterval") || "DAY";
-    if (searchHeroTimeInterval) {
-      setHeroTimeInterval(searchHeroTimeInterval as (typeof TIME_INTERVALS)[number]);
-    }
-  }, [location.search, initialTab]);
-
-  const searchTab = searchParams?.get("tab");
-  const [tab, setTab] = useState(searchTab || initialTab || "stats");
-
-  const searchHeroIdString = searchParams?.get("heroId");
-  const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-  const [heroId, setHeroId] = useState(searchHeroId || 15);
-  const searchHeroIdsString = searchParams?.get("heroIds");
-  const searchHeroIds = searchHeroIdsString
-    ?.split(",")
-    .map((i) => Number.parseInt(i, 10))
-    .filter(Number.isInteger);
-  const [heroIds, setHeroIds] = useState(searchHeroIds || [searchHeroId || 15]);
-  const [heroStat, setHeroStat] = useState<(typeof HERO_STATS)[number]>("winrate");
-  const [heroTimeInterval, setHeroTimeInterval] = useState<(typeof TIME_INTERVALS)[number]>("DAY");
-
-  const handleTabChange = (newTab: string) => {
-    setTab(newTab);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("tab", newTab);
-      window.history.pushState({}, "", url);
-    }
-  };
-
-  const handleHeroStatChange = (newHeroStat: (typeof HERO_STATS)[number]) => {
-    setHeroStat(newHeroStat);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("heroStat", newHeroStat);
-      window.history.pushState({}, "", url);
-    }
-  };
-
-  const handleHeroTimeIntervalChange = (newHeroTimeInterval: (typeof TIME_INTERVALS)[number]) => {
-    setHeroTimeInterval(newHeroTimeInterval);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("heroTimeInterval", newHeroTimeInterval);
-      window.history.pushState({}, "", url);
-    }
-  };
+  const [minRankId, setMinRankId] = useQueryState<number>("min-rank", 0);
+  const [maxRankId, setMaxRankId] = useQueryState<number>("max-rank", 116);
+  const [sameLaneFilter, setSameLaneFilter] = useQueryState<boolean>("same-lane", true);
+  const [startDate, setStartDate] = useQueryState<Dayjs | null>(
+    "start-date",
+    PATCHES[0].startDate,
+    (value) => (value ? dayjs(value) : null),
+    (value) => (value ? value.toISOString() : "null"),
+  );
+  const [endDate, setEndDate] = useQueryState<Dayjs | null>(
+    "end-date",
+    PATCHES[0].endDate,
+    (value) => (value ? dayjs(value) : null),
+    (value) => (value ? value.toISOString() : "null"),
+  );
+  const [tab, setTab] = useQueryState("tab", initialTab || "stats");
+  const [heroId, setHeroId] = useQueryState("hero-id", 15);
+  const [heroIds, setHeroIds] = useQueryState("hero-ids", [15]);
+  const [heroStat, setHeroStat] = useQueryState<(typeof HERO_STATS)[number]>("hero-stat", "winrate");
+  const [heroTimeInterval, setHeroTimeInterval] = useQueryState<string>("time-interval", "start_time_hour");
 
   return (
     <>
@@ -136,7 +75,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
           <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
@@ -179,11 +118,11 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
-                <HeroStatSelector value={heroStat} onChange={handleHeroStatChange} />
+                <HeroStatSelector value={heroStat} onChange={setHeroStat} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Time Interval</span>
-                <HeroTimeIntervalSelector value={heroTimeInterval} onChange={handleHeroTimeIntervalChange} />
+                <HeroTimeIntervalSelector value={heroTimeInterval} onChange={setHeroTimeInterval} />
               </div>
             </div>
             <HeroStatsOverTimeChart

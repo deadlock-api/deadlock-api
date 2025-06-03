@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { type MetaFunction, useLocation } from "react-router";
+import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import MMRChart from "~/components/players-page/MMRChart";
 import MatchHistoryTable from "~/components/players-page/MatchHistoryTable";
@@ -9,6 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
+import useQueryState from "~/hooks/useQueryState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
@@ -19,43 +19,11 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Player({ initialTab }: { initialTab?: string } = { initialTab: "mmr" }) {
-  const [steamId, setSteamId] = useState<number | null>(null);
-  const [hero, setHero] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState<Dayjs | null>(null);
-  const [endDate, setEndDate] = useState<Dayjs | null>(null);
-
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(new URLSearchParams(location.search));
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setSearchParams(params);
-
-    const searchTab = params?.get("tab") || initialTab || "matches";
-    if (searchTab) {
-      setTab(searchTab);
-    }
-
-    const searchHeroIdString = params?.get("heroId");
-    const searchHeroId = searchHeroIdString ? Number.parseInt(searchHeroIdString) : null;
-    if (searchHeroId) setHero(searchHeroId);
-
-    const searchSteamIdString = params?.get("steamId");
-    const searchSteamId = searchSteamIdString ? Number.parseInt(searchSteamIdString) : null;
-    if (searchSteamId) setSteamId(searchSteamId);
-  }, [location.search, initialTab]);
-
-  const searchTab = searchParams?.get("tab");
-  const [tab, setTab] = useState(searchTab || initialTab || "mmr");
-
-  const handleTabChange = (newTab: string) => {
-    setTab(newTab);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("tab", newTab);
-      window.history.pushState({}, "", url);
-    }
-  };
+  const [steamId, setSteamId] = useQueryState<number | null>("steam-id", null);
+  const [hero, setHero] = useQueryState<number | null>("hero", null);
+  const [startDate, setStartDate] = useQueryState<Dayjs | null>("start-date", null);
+  const [endDate, setEndDate] = useQueryState<Dayjs | null>("end-date", null);
+  const [tab, setTab] = useQueryState("tab", initialTab || "mmr");
 
   return (
     <>
@@ -105,7 +73,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger value="matches">Match History</TabsTrigger>
           <TabsTrigger value="mmr">MMR</TabsTrigger>
