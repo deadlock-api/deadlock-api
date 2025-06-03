@@ -3,13 +3,6 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 use valveprotos::deadlock::ECitadelTeamObjective;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ScrapePriority {
-    rank: u32,
-    objectives: u32,
-    duration_s: i64,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct ActiveMatch {
     pub start_time: Option<u64>,
