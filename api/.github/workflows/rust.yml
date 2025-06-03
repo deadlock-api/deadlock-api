@@ -80,8 +80,9 @@ jobs:
         with:
           shared-key: "build-cache"
 
-      - name: Cargo Install cargo-nextest
-        run: cargo install cargo-nextest
+      - uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: cargo-nextest
 
       ###############################
       ##           Build           ##
