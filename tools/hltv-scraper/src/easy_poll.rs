@@ -1,31 +1,10 @@
 use reqwest::Client;
-use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::{
     task::AbortHandle,
     time::{Duration, interval},
 };
-
-/// Starts polling a given URL at a specified interval, updating the shared state with the latest decoded JSON response.
-///
-/// # Arguments
-///
-/// * `url` - The URL to poll.
-/// * `interval` - The interval duration to wait between polls.
-///
-/// # Returns
-///
-/// * `Arc<RwLock<T>>` - An atomic reference-counted pointer to the JSON response data wrapped in a tokio read-write lock.
-pub async fn start_polling_json<T>(url: String, interval: Duration) -> (AbortHandle, Arc<RwLock<T>>)
-where
-    T: DeserializeOwned + Send + Sync + 'static,
-{
-    start_polling_core(url, interval, |response| async move {
-        response.json::<T>().await.ok()
-    })
-    .await
-}
 
 /// Starts polling a given URL at a specified interval, updating the shared state with the latest plaintext response.
 ///

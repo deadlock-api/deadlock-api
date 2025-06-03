@@ -47,17 +47,16 @@ fn extract_meta_from_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<Op
 
                 let mut shared_msg_vec: Vec<u8> = vec![0u8; 2097152];
                 while br.num_bits_left() > 8 {
-                    let msg_type = br.read_ubitvar();
+                    let msg_type = br.read_ubitvar()?;
 
-                    let size = br.read_uvarint32() as usize;
+                    let size = br.read_uvarint32()? as usize;
 
                     if msg_type == 0 {
                         continue;
                     }
 
                     let msg_buf = &mut shared_msg_vec[..size];
-                    br.read_bytes(msg_buf);
-                    br.is_overflowed()?;
+                    br.read_bytes(msg_buf)?;
                     if msg_type == CitadelUserMessageIds::KEUserMsgPostMatchDetails as u32 {
                         let meta_content = process_post_match(msg_buf)?;
                         return Ok(Some(meta_content));

@@ -11,7 +11,7 @@ cached = { version = "0.55", features = ["async", "async_tokio_rt_multi_thread"]
 clap = { version = "4.5.39", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "b1ca28ba63389f11a00f08d5b60df49b00f7c800"}
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "563c7c72a133dccdec36b1ae4fc75553edd4c4de" }
 itertools = "0.14.0"
 jiff = { version = "0.2.14", features = ["serde"] }
 lru = "0.14.0"
