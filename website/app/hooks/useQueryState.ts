@@ -17,7 +17,11 @@ export default function useQueryState<T>(
     if (decodeFn) {
       return decodeFn(value);
     }
-    return JSON.parse(value) as T;
+    try {
+      return JSON.parse(value) as T;
+    } catch (e) {
+      return value as T;
+    }
   });
 
   const updateValue = useCallback(
@@ -30,6 +34,8 @@ export default function useQueryState<T>(
           if (encodedValue !== null) {
             url.searchParams.set(key, encodedValue);
           }
+        } else if (typeof newValue === "string") {
+          url.searchParams.set(key, newValue);
         } else {
           url.searchParams.set(key, JSON.stringify(newValue));
         }
