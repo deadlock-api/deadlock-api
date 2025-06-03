@@ -114,16 +114,6 @@ where
     })
 }
 
-pub(crate) fn comma_separated_num_deserialize<'de, D, T>(
-    deserializer: D,
-) -> Result<Vec<T>, D::Error>
-where
-    D: Deserializer<'de>,
-    T: FromStr + Deserialize<'de> + std::fmt::Debug,
-{
-    comma_separated_num_deserialize_option(deserializer).map(|v| v.unwrap_or_default())
-}
-
 pub(crate) fn default_last_month_timestamp() -> Option<u64> {
     let now = chrono::Utc::now().date_naive();
     let last_month = now - chrono::Duration::days(30);
