@@ -11,6 +11,17 @@ lto = "fat"
 codegen-units = 1
 opt-level = 3
 
+[profile.dev]
+opt-level = 0
+debug = 1
+incremental = true
+
+[profile.ci]
+inherits = "dev"
+debug = 0
+incremental = false
+codegen-units = 256
+
 [dependencies]
 reqwest = { version = "0.12.19", features = ["json"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }

@@ -91,7 +91,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --tests -- -D warnings
+        run: cargo clippy --tests --profile ci -- -D warnings
 
       - name: Build Docker image
         uses: docker/build-push-action@v6
@@ -108,7 +108,7 @@ jobs:
       ##         Test Code         ##
       ###############################
       - name: Test Docker image
-        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
+        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} CARGO_PROFILE=ci task test
 
       ###############################
       ##        Deploy Code        ##
