@@ -89,6 +89,7 @@ pub struct AnalyticsHeroStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
+    pub matches_per_bucket: u64,
     players: u64,
     pub total_kills: u64,
     pub total_deaths: u64,
@@ -178,10 +179,15 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     format!(
         r#"
     WITH t_matches AS (
-            SELECT match_id, duration_s, start_time
+            SELECT match_id, start_time
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
+        ),
+        t_matches_per_bucket AS (
+            SELECT {bucket} AS bucket, count() AS matches_per_bucket
+            FROM t_matches
+            GROUP BY bucket
         )
         {}
     SELECT
@@ -190,6 +196,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         sum(won) AS wins,
         sum(not won) AS losses,
         wins + losses AS matches,
+        any(m.matches_per_bucket) AS matches_per_bucket,
         count(DISTINCT account_id) AS players,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
@@ -199,6 +206,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         sum(denies) AS total_denies
     FROM match_player FINAL
     INNER JOIN t_matches USING (match_id)
+    INNER JOIN t_matches_per_bucket m ON m.bucket = {bucket}
     WHERE TRUE {player_filters}
         {}
     GROUP BY hero_id, bucket
