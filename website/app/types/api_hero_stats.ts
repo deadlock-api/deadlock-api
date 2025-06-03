@@ -34,7 +34,7 @@ export function hero_stats_transform(heroStats: APIHeroStats, heroStat: (typeof 
     case "winrate":
       return (100 * heroStats.wins) / heroStats.matches;
     case "pickrate":
-      return (12 * 100 * heroStats.matches) / heroStats.matches_per_bucket;
+      return (100 * heroStats.matches) / heroStats.matches_per_bucket;
     case "wins":
       return heroStats.wins;
     case "losses":
