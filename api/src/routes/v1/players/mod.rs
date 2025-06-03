@@ -1,7 +1,6 @@
 mod card;
 mod enemy_stats;
 mod hero_stats;
-mod item_stats;
 pub(crate) mod match_history;
 mod mate_stats;
 pub(super) mod mmr_history;
@@ -44,7 +43,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(mate_stats::mate_stats))
                 .routes(routes!(enemy_stats::enemy_stats))
                 .routes(routes!(party_stats::party_stats))
-                .routes(routes!(item_stats::item_stats))
                 .routes(routes!(hero_stats::hero_stats))
                 .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
         )
