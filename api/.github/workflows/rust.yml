@@ -17,6 +17,8 @@ env:
   CARGO_TERM_COLOR: always
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   CARGO_INCREMENTAL: 0
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
 
 permissions:
   contents: read
@@ -75,10 +77,8 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-cache"
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.8
 
       - uses: taiki-e/cache-cargo-install-action@v2
         with:
