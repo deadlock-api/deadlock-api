@@ -20,7 +20,7 @@ fn default_min_matches() -> Option<u32> {
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
-pub enum BucketByTimeQuery {
+pub(super) enum BucketByTimeQuery {
     /// No Bucketing
     #[display("no_bucket")]
     #[default]
@@ -40,7 +40,7 @@ pub enum BucketByTimeQuery {
 }
 
 impl BucketByTimeQuery {
-    pub fn get_select_clause(&self) -> String {
+    pub(super) fn get_select_clause(&self) -> String {
         match self {
             Self::NoBucket => "NULL".to_string(),
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
@@ -194,7 +194,7 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
                      {player_filters})
     SELECT
         item_id,
-        {bucket}          AS bucket,
+        {bucket}      AS bucket,
         sum(won)      AS wins,
         sum(not won)  AS losses,
         wins + losses AS matches,

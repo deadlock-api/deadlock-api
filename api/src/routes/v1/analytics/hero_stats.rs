@@ -9,9 +9,35 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum BucketByTimeQuery {
+    /// No Bucketing
+    #[display("no_bucket")]
+    #[default]
+    NoBucket,
+    /// Bucket Item Stats By Start Time (Hour)
+    #[display("start_time_hour")]
+    StartTimeHour,
+    /// Bucket Item Stats By Start Time (Day)
+    #[display("start_time_day")]
+    StartTimeDay,
+}
+
+impl BucketByTimeQuery {
+    pub(super) fn get_select_clause(&self) -> String {
+        match self {
+            Self::NoBucket => "NULL".to_string(),
+            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
+            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct HeroStatsQuery {
@@ -41,20 +67,25 @@ pub(crate) struct HeroStatsQuery {
     min_hero_matches: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
     max_hero_matches: Option<u64>,
-    /// Filter for matches with a specific player account ID.
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
-    account_id: Option<u32>,
     /// Comma separated list of item ids to include (only heroes who have purchased these items)
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude (only heroes who have not purchased these items)
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
+    /// Filter for matches with a specific player account ID.
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    account_id: Option<u32>,
+    /// Bucket the stats.
+    #[serde(default)]
+    #[param(inline)]
+    bucket_by_time: BucketByTimeQuery,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct AnalyticsHeroStats {
     pub hero_id: u32,
+    pub bucket: Option<u32>,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
@@ -151,10 +182,11 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
     } else {
         player_hero_filters.join(" AND ")
     };
+    let bucket = query.bucket_by_time.get_select_clause();
     format!(
         r#"
     WITH t_matches AS (
-            SELECT match_id
+            SELECT match_id, duration_s, start_time
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
@@ -162,6 +194,7 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         {}
     SELECT
         hero_id,
+        {bucket} AS bucket,
         sum(won) AS wins,
         sum(not won) AS losses,
         wins + losses AS matches,
@@ -181,12 +214,12 @@ fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
         sum(arrayMax(stats.shots_hit)) AS total_shots_hit,
         sum(arrayMax(stats.shots_missed)) AS total_shots_missed
     FROM match_player FINAL
-    WHERE match_id IN t_matches
-        {player_filters}
+    INNER JOIN t_matches USING (match_id)
+    WHERE TRUE {player_filters}
         {}
-    GROUP BY hero_id
+    GROUP BY hero_id, bucket
     HAVING COUNT() > 1
-    ORDER BY hero_id
+    ORDER BY hero_id, bucket
     "#,
         if query.min_hero_matches.or(query.max_hero_matches).is_some() {
             format!(
