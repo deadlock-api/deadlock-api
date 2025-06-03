@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router";
 
 export default function useQueryState<T>(
   key: string,
@@ -23,6 +24,26 @@ export default function useQueryState<T>(
       return value as T;
     }
   });
+
+  const location = useLocation();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchString = params?.get(key);
+    if (searchString === null) {
+      setValue(initialValue);
+      return;
+    }
+    if (decodeFn) {
+      setValue(decodeFn(searchString));
+      return;
+    }
+    try {
+      setValue(JSON.parse(searchString) as T);
+    } catch (e) {
+      setValue(searchString as T);
+    }
+  }, [location.search]);
 
   const updateValue = useCallback(
     (newValue: T) => {
