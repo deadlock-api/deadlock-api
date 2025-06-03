@@ -153,11 +153,11 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push(format!("to_timestamp({})", max_unix_timestamp));
     }
     if let Some(min_published_unix_timestamp) = params.min_published_unix_timestamp {
-        query_builder.push(" AND lished_at >= ");
+        query_builder.push(" AND published_at >= ");
         query_builder.push(format!("to_timestamp({})", min_published_unix_timestamp));
     }
     if let Some(max_published_unix_timestamp) = params.max_published_unix_timestamp {
-        query_builder.push(" AND lished_at <= ");
+        query_builder.push(" AND published_at <= ");
         query_builder.push(format!("to_timestamp({})", max_published_unix_timestamp));
     }
     if params.only_latest.unwrap_or_default() {
@@ -392,7 +392,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY lished_at desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY published_at desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -552,7 +552,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lished_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -566,7 +566,7 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lished_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 }
