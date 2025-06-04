@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent } from "~/components/ui/card";
 import { type Dayjs, day } from "~/dayjs";
+import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import type { APIPlayerMMRHistory } from "~/types/api_player_mmr_history";
 import type { AssetsRank } from "~/types/assets_rank";
 
@@ -19,7 +20,7 @@ export default function MMRChart({
 }) {
   const { data: ranksData, isLoading: isLoadingAssetsRanks } = useQuery<AssetsRank[]>({
     queryKey: ["assets-ranks"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/ranks").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/ranks", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -27,8 +28,8 @@ export default function MMRChart({
     queryKey: ["api-mmr", steamId, hero],
     queryFn: async () => {
       const url = hero
-        ? new URL(`https://api.deadlock-api.com/v1/players/${steamId}/mmr-history/${hero}`)
-        : new URL(`https://api.deadlock-api.com/v1/players/${steamId}/mmr-history`);
+        ? new URL(`/v1/players/${steamId}/mmr-history/${hero}`, API_ORIGIN)
+        : new URL(`/v1/players/${steamId}/mmr-history`, API_ORIGIN);
       const res = await fetch(url);
       return await res.json();
     },

@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
+import { ASSETS_ORIGIN } from "~/lib/constants";
 import type { AssetsItem } from "~/types/assets_item";
 import { cn } from "../lib/utils";
 
 export default function ItemImage({ itemId, className }: { itemId: number; className?: string }) {
   const { data, isLoading } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 

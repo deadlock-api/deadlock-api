@@ -6,6 +6,7 @@ import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
+import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import type { APIInfo } from "~/types/api_info";
 
 export const meta: MetaFunction = () => {
@@ -15,7 +16,7 @@ export const meta: MetaFunction = () => {
 export default function Index() {
   const { data } = useQuery<APIInfo>({
     queryKey: ["api-info"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/info").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v1/info", API_ORIGIN)).then((res) => res.json()),
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
@@ -51,7 +52,7 @@ export default function Index() {
               </p>
             </CardContent>
             <CardFooter>
-              <a href="https://assets.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
+              <a href={ASSETS_ORIGIN} target="_blank" rel="noopener noreferrer" className="w-full">
                 <Button className="w-full">Visit Assets API</Button>
               </a>
             </CardFooter>
@@ -66,7 +67,7 @@ export default function Index() {
               </p>
             </CardContent>
             <CardFooter>
-              <a href="https://api.deadlock-api.com/" target="_blank" rel="noopener noreferrer" className="w-full">
+              <a href={API_ORIGIN} target="_blank" rel="noopener noreferrer" className="w-full">
                 <Button className="w-full">Visit Game Data API</Button>
               </a>
             </CardFooter>

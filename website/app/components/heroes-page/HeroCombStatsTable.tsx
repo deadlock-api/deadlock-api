@@ -6,6 +6,7 @@ import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Slider } from "~/components/ui/slider";
 import type { Dayjs } from "~/dayjs";
 import { useQSNumber } from "~/hooks/useQSState";
+import { API_ORIGIN } from "~/lib/constants";
 import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
 
 export default function HeroCombStatsTable({
@@ -48,7 +49,7 @@ export default function HeroCombStatsTable({
       combSizeFilter,
     ],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-comb-stats");
+      const url = new URL("/v1/analytics/hero-comb-stats", API_ORIGIN);
       url.searchParams.set("comb_size", combSizeFilter.toString());
       url.searchParams.set("min_matches", (minMatchesFilter ?? 100).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());

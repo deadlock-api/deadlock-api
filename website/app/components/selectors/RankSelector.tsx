@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { ASSETS_ORIGIN } from "~/lib/constants";
 import type { AssetsRank } from "~/types/assets_rank";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";
@@ -58,7 +59,7 @@ export default function RankSelector({
 }: { onRankSelected: (selectedRankId: number) => void; selectedRank?: number | null; label?: string }) {
   const { data: ranksData, isLoading } = useQuery<AssetsRank[]>({
     queryKey: ["assets-ranks"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/ranks").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/ranks", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 

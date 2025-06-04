@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { API_ORIGIN } from "~/lib/constants";
 import type { APIItemStats } from "~/types/api_item_stats";
 
 export interface ItemStatsQueryParams {
@@ -10,7 +11,12 @@ export interface ItemStatsQueryParams {
   maxDateTimestamp?: number;
   includeItems: Set<number>;
   excludeItems: Set<number>;
-  bucket?: "start_time_hour" | "start_time_day" | "game_time_min" | "game_time_normalized_percentage";
+  bucket?:
+    | "start_time_hour"
+    | "start_time_day"
+    | "game_time_min"
+    | "game_time_normalized_percentage"
+    | "net_worth_thousands";
 }
 
 export function itemStatsQueryOptions({
@@ -38,7 +44,7 @@ export function itemStatsQueryOptions({
       Array.from(excludeItems),
     ],
     queryFn: async (): Promise<APIItemStats[]> => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
+      const url = new URL("/v1/analytics/item-stats", API_ORIGIN);
       if (hero) url.searchParams.set("hero_id", hero.toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());

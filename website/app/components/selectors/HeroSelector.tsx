@@ -7,6 +7,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
+import { ASSETS_ORIGIN } from "~/lib/constants";
 import type { AssetsHero } from "~/types/assets_hero";
 
 export default function HeroSelector({
@@ -22,7 +23,7 @@ export default function HeroSelector({
 }) {
   const { data, isLoading } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -95,7 +96,7 @@ export function HeroSelectorMultiple({
 }) {
   const { data, isLoading } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 

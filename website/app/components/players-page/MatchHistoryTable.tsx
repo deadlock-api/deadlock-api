@@ -3,13 +3,14 @@ import { useMemo } from "react";
 import z from "zod/v4";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Dayjs } from "~/dayjs";
+import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { type $MatchHistory, MatchHistory } from "~/types/api_match_history";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
-import { APIMatchMetadataSchema } from "~/types/api_match_metadata"; // Import the metadata schema
+import { APIMatchMetadataSchema } from "~/types/api_match_metadata";
 import type { AssetsHero } from "~/types/assets_hero";
 import type { AssetsItem } from "~/types/assets_item";
 import MatchCard from "./MatchCard";
-import { mergeMatchData } from "./matchDataUtils"; // Import the new helper function
+import { mergeMatchData } from "./matchDataUtils";
 
 export default function MatchHistoryTable({
   steamId,
@@ -26,13 +27,13 @@ export default function MatchHistoryTable({
 }) {
   const { data: heroesData, isLoading: isLoadingHeroes } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const { data: itemsData, isLoading: isLoadingItems } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -40,7 +41,7 @@ export default function MatchHistoryTable({
   const { data: matchHistoryData, isLoading: isLoadingMatchHistory } = useQuery<$MatchHistory[]>({
     queryKey: ["api-match-history", steamId],
     queryFn: async () => {
-      const url = new URL(`https://api.deadlock-api.com/v1/players/${steamId}/match-history`);
+      const url = new URL(`/v1/players/${steamId}/match-history`, API_ORIGIN); // Use new URL()
       const res = await fetch(url);
       const data = await res.json();
       return z.array(MatchHistory.schema).parse(data);
@@ -80,7 +81,7 @@ export default function MatchHistoryTable({
     queryFn: async () => {
       if (filteredMatchIds.length === 0) return [];
 
-      const url = new URL("https://api.deadlock-api.com/v1/matches/metadata");
+      const url = new URL("/v1/matches/metadata", API_ORIGIN); // Use new URL()
       url.searchParams.set("include_info", "true");
       url.searchParams.set("include_player_info", "true");
       url.searchParams.set("include_player_items", "true");
