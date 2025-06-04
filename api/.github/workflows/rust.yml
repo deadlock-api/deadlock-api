@@ -54,11 +54,11 @@ jobs:
       - name: Cache local bin
         uses: actions/cache@v4
         with:
-          path: $HOME/.local/bin
-          key: $HOME/.local/bin
+          path: ~/.local/bin
+          key: ~/.local/bin
 
       - name: Setup go-task
-        run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin; fi
+        run: if [ ! -f "~/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
