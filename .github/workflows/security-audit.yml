@@ -1,0 +1,33 @@
+name: Security Audit
+
+on:
+  push:
+    paths:
+      - '**/pnpm-lock.yaml'
+      - '**/package.json'
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'The level of vulnerability to report (low, moderate, high, critical)'
+        required: false
+        default: high
+        type: choice
+        options:
+          - low
+          - moderate
+          - high
+          - critical
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: NPM Audit & Comment
+        uses: JamesRobertWiseman/pnpm-audit@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          level: high
+          fails: true
