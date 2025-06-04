@@ -26,6 +26,37 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+
+      - name: Install Protocol Buffers compiler
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler libprotobuf-dev
+          version: 1.0
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --tests --profile ci -- -D warnings
+
   test_deploy:
     name: Test and Deploy
     runs-on: ubuntu-24.04-arm
@@ -74,13 +105,11 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache"
+          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
 
       - uses: taiki-e/cache-cargo-install-action@v2
         with:
@@ -89,12 +118,6 @@ jobs:
       ###############################
       ##           Build           ##
       ###############################
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
-        run: cargo clippy --tests --profile ci -- -D warnings
-
       - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
