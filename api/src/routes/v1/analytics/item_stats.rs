@@ -185,12 +185,12 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     WITH t_matches AS (SELECT match_id, start_time, duration_s
             FROM match_info FINAL
             WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
-        t_players_filters AS (SELECT match_id FROM match_player FINAL
+        t_players_filters AS (SELECT match_id, account_id FROM match_player FINAL
             WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}),
         t_players AS (SELECT match_id, account_id, items.item_id AS item_id, items.game_time_s as buy_time, won
             FROM match_player FINAL
             ARRAY JOIN items
-            WHERE items.item_id IN (SELECT id FROM items) AND match_id IN (SELECT match_id FROM t_players_filters)
+            WHERE items.item_id IN (SELECT id FROM items) AND (match_id, account_id) IN (SELECT match_id, account_id FROM t_players_filters)
             AND items.game_time_s > 0)
     SELECT
         item_id,
