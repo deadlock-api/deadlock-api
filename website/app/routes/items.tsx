@@ -7,7 +7,7 @@ import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQueryState";
+import { useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {

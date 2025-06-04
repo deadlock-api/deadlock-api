@@ -10,7 +10,7 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
-import { type Serializer, serializers, useQSArray, useQSBoolean, useQSState } from "~/hooks/useQueryState";
+import { type Serializer, serializers, useQSArray, useQSBoolean, useQSState } from "~/hooks/useQSState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 

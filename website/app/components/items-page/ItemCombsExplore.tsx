@@ -6,7 +6,7 @@ import ItemName from "~/components/ItemName";
 import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
-import { serializers, useQSSet, useQSString } from "~/hooks/useQueryState";
+import { serializers, useQSSet, useQSString } from "~/hooks/useQSState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
