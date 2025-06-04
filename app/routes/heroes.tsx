@@ -55,7 +55,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 value={{ startDate, endDate }}
                 onValueChange={({ startDate, endDate }) => {
                   setStartDate(startDate || undefined);
-                  setEndDate(endDate || undefined);
+                  // Wait 10ms, this is necessary so the url query params are updated before the next state update
+                  setTimeout(() => {
+                    setEndDate(endDate || undefined);
+                  }, 10);
                 }}
               />
             </div>
