@@ -204,9 +204,9 @@ export function useQSString<T extends string>(
   defaultValue: T,
 ): [T, (value: T | undefined) => void, { loading: boolean; error: Error | null }];
 
-export function useQSString(
+export function useQSString<T extends string>(
   key: string,
-): [string | undefined, (value: string | undefined) => void, { loading: boolean; error: Error | null }];
+): [T | undefined, (value: T | undefined) => void, { loading: boolean; error: Error | null }];
 
 export function useQSString(
   key: string,
