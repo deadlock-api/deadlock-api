@@ -65,19 +65,19 @@ impl BucketQuery {
                 "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))".to_string()
             }
             Self::NetWorthBy1000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 1000)))".to_string()
+                "toNullable(toUInt32(floor(net_worth_at_buy / 1000) * 1000))".to_string()
             }
             Self::NetWorthBy2000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 2000)))".to_string()
+                "toNullable(toUInt32(floor(net_worth_at_buy / 2000) * 2000))".to_string()
             }
             Self::NetWorthBy3000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 3000)))".to_string()
+                "toNullable(toUInt32(floor(net_worth_at_buy / 3000) * 3000))".to_string()
             }
             Self::NetWorthBy5000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 5000)))".to_string()
+                "toNullable(toUInt32(floor(net_worth_at_buy / 5000) * 5000))".to_string()
             }
             Self::NetWorthBy10000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 10000)))".to_string()
+                "toNullable(toUInt32(floor(net_worth_at_buy / 10000) * 10000))".to_string()
             }
         }
     }
@@ -238,9 +238,7 @@ WITH
             `stats.time_stamp_s` AS st_ts,   -- stats tick-times
             `stats.net_worth`   AS st_nw    -- net-worth samples
         FROM match_player FINAL
-        /* Push the cheapest predicate (match_id) to PREWHERE for I/O pruning */
-        PREWHERE match_id IN (SELECT match_id FROM t_matches)
-        WHERE 1 = 1{player_filters}
+        WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
     ),
 
     /* 3. Explode items only after filtering */
@@ -270,20 +268,17 @@ WITH
             )                    AS net_worth_at_buy
         FROM filtered_players
         ARRAY JOIN items AS it
-        WHERE
-            buy_time > 0
-            /* Keep only recognised items */
-            AND it.item_id IN (SELECT id FROM items)
+        WHERE buy_time > 0 AND it.item_id IN (SELECT id FROM items)
     )
 
 /* 4. Aggregation */
 SELECT
     item_id,
-    {bucket_expr}                   AS bucket,
-    SUM(won)                        AS wins,
-    SUM(NOT won)                    AS losses,
-    wins + losses                   AS matches,
-    COUNT(DISTINCT account_id)      AS players
+    {bucket_expr}              AS bucket,
+    SUM(won)                   AS wins,
+    SUM(NOT won)               AS losses,
+    wins + losses              AS matches,
+    COUNT(DISTINCT account_id) AS players
 FROM exploded_players
 INNER JOIN t_matches USING (match_id)
 GROUP BY item_id, bucket
