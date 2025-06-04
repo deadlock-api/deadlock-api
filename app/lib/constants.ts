@@ -20,3 +20,6 @@ export const PATCHES = [
     endDate: day("2025-05-08T19:43:20Z"),
   },
 ];
+
+export const API_ORIGIN = "https://api.deadlock-api.com";
+export const ASSETS_ORIGIN = "https://assets.deadlock-api.com";

@@ -4,6 +4,7 @@ import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { Dayjs } from "~/dayjs";
+import { API_ORIGIN } from "~/lib/constants";
 import type { APIHeroStats } from "~/types/api_hero_stats";
 import { cn } from "../../lib/utils";
 
@@ -36,7 +37,7 @@ export default function HeroStatsTable({
   const { data: heroData, isLoading } = useQuery<APIHeroStats[]>({
     queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
+      const url = new URL("/v1/analytics/hero-stats", API_ORIGIN);
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());

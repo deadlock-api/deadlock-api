@@ -11,6 +11,7 @@ import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import { type Serializer, serializers, useQSArray, useQSBoolean, useQSState } from "~/hooks/useQSState";
+import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 
@@ -513,14 +514,14 @@ export default function ItemStatsTable({
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
     queryKey: ["api-item-stats", minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, [], []],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
+      const url = new URL("/v1/analytics/item-stats", API_ORIGIN);
       if (hero) url.searchParams.set("hero_id", hero.toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());

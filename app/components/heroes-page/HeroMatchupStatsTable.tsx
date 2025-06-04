@@ -3,7 +3,8 @@ import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
-import type { Dayjs } from "~/dayjs"; // Updated type import
+import type { Dayjs } from "~/dayjs";
+import { API_ORIGIN } from "~/lib/constants";
 import type { APIHeroCounterStats } from "~/types/api_hero_counter_stats";
 import type { APIHeroStats } from "~/types/api_hero_stats";
 import type { APIHeroSynergyStats } from "~/types/api_hero_synergy_stats";
@@ -29,7 +30,7 @@ export default function HeroMatchupStatsTable({
   const { data: heroData, isLoading: isLoadingHero } = useQuery<APIHeroStats[]>({
     queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
+      const url = new URL("/v1/analytics/hero-stats", API_ORIGIN);
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
@@ -43,7 +44,7 @@ export default function HeroMatchupStatsTable({
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
     queryKey: ["api-hero-synergy-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, sameLaneFilter],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-synergy-stats");
+      const url = new URL("/v1/analytics/hero-synergy-stats", API_ORIGIN);
       url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
@@ -58,7 +59,7 @@ export default function HeroMatchupStatsTable({
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
     queryKey: ["api-hero-counter-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, sameLaneFilter],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-counter-stats?same_lane_filter=true");
+      const url = new URL("/v1/analytics/hero-counter-stats", API_ORIGIN);
       url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());

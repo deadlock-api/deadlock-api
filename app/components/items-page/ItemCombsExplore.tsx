@@ -8,6 +8,7 @@ import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-p
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { serializers, useQSSet, useQSString } from "~/hooks/useQSState";
+import { ASSETS_ORIGIN } from "~/lib/constants";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
@@ -41,7 +42,7 @@ export default function ItemCombsExplore({
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/items/by-type/upgrade").then((res) => res.json()),
+    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
