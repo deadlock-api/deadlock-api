@@ -109,7 +109,8 @@ pub struct ItemStats {
 }
 
 fn build_item_stats_query(query: &ItemStatsQuery) -> String {
-    let mut info_filters = vec![];
+    /* ---------- match_info filters ---------- */
+    let mut info_filters = Vec::new();
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -143,7 +144,9 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
-    let mut player_filters = vec![];
+
+    /* ---------- match_player filters ---------- */
+    let mut player_filters = Vec::new();
     if let Some(hero_id) = query.hero_id {
         player_filters.push(format!("hero_id = {hero_id}"));
     }
@@ -155,59 +158,87 @@ fn build_item_stats_query(query: &ItemStatsQuery) -> String {
             "hasAll(items.item_id, [{}])",
             include_item_ids
                 .iter()
-                .map(|id| id.to_string())
+                .map(u32::to_string)
                 .collect::<Vec<_>>()
                 .join(", ")
         ));
     }
     if let Some(exclude_item_ids) = &query.exclude_item_ids {
         player_filters.push(format!(
-            "not hasAny(items.item_id, [{}])",
+            "NOT hasAny(items.item_id, [{}])",
             exclude_item_ids
                 .iter()
-                .map(|id| id.to_string())
+                .map(u32::to_string)
                 .collect::<Vec<_>>()
                 .join(", ")
         ));
     }
     let player_filters = if player_filters.is_empty() {
+        // WHERE 1 = 1 makes string concatenation simpler later on.
         "".to_string()
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let bucket = query.bucket.get_select_clause();
+
+    /* ---------- misc ---------- */
+    let bucket_expr = query.bucket.get_select_clause();
     let min_matches = query
         .min_matches
         .or(default_min_matches())
         .unwrap_or_default();
+
+    /* ---------- final query ---------- */
     format!(
         r#"
-    WITH t_matches AS (SELECT match_id, start_time, duration_s
-            FROM match_info FINAL
-            WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
-        t_players_filters AS (SELECT match_id, account_id FROM match_player FINAL
-            WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}),
-        t_players AS (SELECT match_id, account_id, items.item_id AS item_id, items.game_time_s as buy_time, won
-            FROM match_player FINAL
-            ARRAY JOIN items
-            WHERE items.item_id IN (SELECT id FROM items) AND (match_id, account_id) IN (SELECT match_id, account_id FROM t_players_filters)
-            AND items.game_time_s > 0)
-    SELECT
-        item_id,
-        {bucket}      AS bucket,
-        sum(won)      AS wins,
-        sum(not won)  AS losses,
-        wins + losses AS matches,
-        COUNT(DISTINCT account_id) AS players
-    FROM t_players
-        INNER JOIN t_matches USING (match_id)
-    GROUP BY item_id, bucket
-    HAVING matches >= {min_matches}
-    ORDER BY item_id, bucket
-    "#
+WITH
+    /* 1. Relevant matches */
+    t_matches AS (
+        SELECT match_id, start_time, duration_s
+        FROM match_info FINAL
+        WHERE match_mode IN ('Ranked', 'Unranked'){info_filters}
+    ),
+
+    /* 2. Filtered players — *single* scan of `match_player` */
+    filtered_players AS (
+        SELECT match_id, account_id, items, won
+        FROM match_player FINAL
+        /* Push the cheapest predicate (match_id) to PREWHERE for I/O pruning */
+        PREWHERE match_id IN (SELECT match_id FROM t_matches)
+        WHERE 1 = 1{player_filters}
+    ),
+
+    /* 3. Explode items only after filtering */
+    exploded_players AS (
+        SELECT
+            match_id,
+            account_id,
+            items.item_id     AS item_id,
+            items.game_time_s AS buy_time,
+            won
+        FROM filtered_players
+        ARRAY JOIN items
+        WHERE
+            buy_time > 0
+            /* Keep only recognised items */
+            AND item_id IN (SELECT id FROM items)
+    )
+
+/* 4. Aggregation */
+SELECT
+    item_id,
+    {bucket_expr}                   AS bucket,
+    SUM(won)                        AS wins,
+    SUM(NOT won)                    AS losses,
+    wins + losses                   AS matches,
+    COUNT(DISTINCT account_id)      AS players
+FROM exploded_players
+INNER JOIN t_matches USING (match_id)
+GROUP BY item_id, bucket
+HAVING matches >= {min_matches}
+ORDER BY item_id, bucket
+        "#
     )
 }
-
 #[cached(
     ty = "TimedCache<String, Vec<ItemStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
