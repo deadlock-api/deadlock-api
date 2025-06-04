@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { day, type Dayjs } from "../dayjs";
+import { type Dayjs, day } from "../dayjs";
 
 // Type definitions for better inference
 export type Serializer<T> = {

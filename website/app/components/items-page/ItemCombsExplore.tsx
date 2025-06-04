@@ -6,7 +6,7 @@ import ItemName from "~/components/ItemName";
 import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
-import { useQSSet, serializers, useQSString } from "~/hooks/useQueryState";
+import { serializers, useQSSet, useQSString } from "~/hooks/useQueryState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
@@ -227,6 +227,13 @@ export default function ItemCombsExplore({
           excludedItemIds={Array.from(excludeItems)}
           onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
           onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
+          customDropdownContent={(itemId) => (
+            <div className="text-sm">
+              <p className="font-semibold mb-2">Item Details</p>
+              <p>Item ID: {itemId}</p>
+              <p className="text-gray-400 mt-1">More details coming soon...</p>
+            </div>
+          )}
         />
       </div>
     </div>
