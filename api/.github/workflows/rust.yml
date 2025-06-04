@@ -38,6 +38,12 @@ jobs:
         with:
           fetch-depth: '0'
 
+      - name: Install Protocol Buffers compiler
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler libprotobuf-dev clang
+          version: 1.0
+
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
