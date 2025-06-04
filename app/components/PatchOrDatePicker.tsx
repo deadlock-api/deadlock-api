@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
-import { useQSString } from "~/hooks/useQueryState";
+import { useQSString } from "~/hooks/useQSState";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {

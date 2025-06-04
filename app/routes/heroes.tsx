@@ -14,7 +14,7 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
-import { serializers, useQSArray, useQSBoolean, useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQueryState";
+import { serializers, useQSArray, useQSBoolean, useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS } from "~/types/api_hero_stats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";

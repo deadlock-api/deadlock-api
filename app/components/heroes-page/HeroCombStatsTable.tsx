@@ -5,7 +5,7 @@ import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Slider } from "~/components/ui/slider";
 import type { Dayjs } from "~/dayjs";
-import { useQSNumber } from "~/hooks/useQueryState";
+import { useQSNumber } from "~/hooks/useQSState";
 import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
 
 export default function HeroCombStatsTable({
