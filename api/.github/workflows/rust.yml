@@ -60,11 +60,6 @@ jobs:
       - name: Setup go-task
         run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b $HOME/.local/bin; fi
 
-      - name: Cache Docker images.
-        uses: ScribeMD/docker-cache@0.5.0
-        with:
-          key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.testing.yaml') }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
