@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { useQSString } from "~/hooks/useQueryState";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
@@ -26,7 +26,7 @@ const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
 };
 
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
-  const [tab, setTab] = useQueryState<"patch" | "custom">("pd-picker-tab", defaultTab);
+  const [tab, setTab] = useQSString<"patch" | "custom">("pd-picker-tab", defaultTab);
 
   const matchingPatch = patchDates.find((patch) => {
     if (!value.startDate || !value.endDate) return false;

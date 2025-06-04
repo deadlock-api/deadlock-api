@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import * as React from "react";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
@@ -11,7 +10,7 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { type Serializer, serializers, useQSArray, useQSBoolean, useQSState } from "~/hooks/useQueryState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 
@@ -176,9 +175,23 @@ export function ItemStatsTableDisplay({
   onItemExclude,
   initialSort = { field: "winRate", direction: "desc" },
 }: ItemStatsTableDisplayProps) {
-  const [sort, setSort] = useQueryState<SortState>("item-sort", initialSort);
-  const [itemTiers, setItemTiers] = useQueryState<number[]>("item-tiers", [1, 2, 3, 4]);
-  const [dimLowConfidence, setDimLowConfidence] = useQueryState("dim-low-confidence", false);
+  const [sortField, setSortField] = useQSState<SortField>("item_sort_field", {
+    defaultValue: initialSort.field,
+    serializer: serializers.string as Serializer<SortField>,
+  });
+  const [sortDirection, setSortDirection] = useQSState<SortDirection>("item_sort_direction", {
+    defaultValue: initialSort.direction,
+    serializer: serializers.string as Serializer<SortDirection>,
+  });
+
+  const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
+  const setSort = (sort: SortState) => {
+    setSortField(sort.field);
+    setSortDirection(sort.direction);
+  };
+
+  const [itemTiers, setItemTiers] = useQSArray("item_tiers", serializers.number, [1, 2, 3, 4]);
+  const [dimLowConfidence, setDimLowConfidence] = useQSBoolean("dim_low_confidence", false);
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -403,7 +416,7 @@ export default function ItemStatsTable({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
+  const { data = [], isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
     queryKey: ["api-item-stats", minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, [], []],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
@@ -414,15 +427,17 @@ export default function ItemStatsTable({
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
       const res = await fetch(url);
-      return await res.json();
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+      throw new Error("Error", { cause: data });
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
-  const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const minUsage = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
-  const maxUsage = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
+  const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
+  const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
+  const minUsage = useMemo(() => Math.min(...data.map((item) => item.matches)), [data]);
+  const maxUsage = useMemo(() => Math.max(...data.map((item) => item.matches)), [data]);
   const filteredData = useMemo(
     () =>
       data?.filter((d) =>

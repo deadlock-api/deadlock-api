@@ -6,7 +6,7 @@ import ItemName from "~/components/ItemName";
 import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { useQSSet, serializers, useQSString } from "~/hooks/useQueryState";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
@@ -30,19 +30,9 @@ export default function ItemCombsExplore({
   minMatches?: number | null;
   limit?: number;
 }) {
-  const [includeItems, setIncludeItems] = useQueryState<Set<number>>(
-    "include-items",
-    new Set(),
-    (value) => new Set(JSON.parse(value)),
-    (value) => JSON.stringify(Array.from(value)),
-  );
-  const [excludeItems, setExcludeItems] = useQueryState<Set<number>>(
-    "exclude-items",
-    new Set(),
-    (value) => new Set(JSON.parse(value)),
-    (value) => JSON.stringify(Array.from(value)),
-  );
-  const [slot, setSlot] = useQueryState<"weapon" | "vitality" | "spirit">("item-slot", "weapon");
+  const [includeItems, setIncludeItems] = useQSSet("include_items", serializers.number, new Set());
+  const [excludeItems, setExcludeItems] = useQSSet("exclude_items", serializers.number, new Set());
+  const [slot, setSlot] = useQSString<"weapon" | "vitality" | "spirit">("item_slot", "weapon");
 
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -53,7 +43,7 @@ export default function ItemCombsExplore({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data, isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
+  const { data = [], isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
     queryKey: [
       "api-item-stats",
       minMatches,
@@ -76,15 +66,17 @@ export default function ItemCombsExplore({
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
       const res = await fetch(url);
-      return await res.json();
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+      throw new Error("Error", { cause: data });
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
-  const minWinRate = useMemo(() => Math.min(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const maxWinRate = useMemo(() => Math.max(...(data || []).map((item) => item.wins / item.matches)), [data]);
-  const minUsage = useMemo(() => Math.min(...(data || []).map((item) => item.matches)), [data]);
-  const maxUsage = useMemo(() => Math.max(...(data || []).map((item) => item.matches)), [data]);
+  const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
+  const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
+  const minUsage = useMemo(() => Math.min(...data.map((item) => item.matches)), [data]);
+  const maxUsage = useMemo(() => Math.max(...data.map((item) => item.matches)), [data]);
   const filteredData = useMemo(
     () =>
       data?.filter((d) =>

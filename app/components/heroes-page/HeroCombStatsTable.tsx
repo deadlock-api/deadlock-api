@@ -5,7 +5,7 @@ import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Slider } from "~/components/ui/slider";
 import type { Dayjs } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { useQSState, useQSNumber } from "~/hooks/useQueryState";
 import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
 
 export default function HeroCombStatsTable({
@@ -27,11 +27,11 @@ export default function HeroCombStatsTable({
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
 }) {
-  const [minMatchesFilter, setMinMatchesFilter] = useQueryState<number>("min-matches", 100);
+  const [minMatchesFilter, setMinMatchesFilter] = useQSNumber("min_matches", 100);
   const [minMatchesFilterT, setMinMatchesFilterT] = useState<number>(100);
-  const [combSizeFilter, setCombSizeFilter] = useQueryState<number>("comb-size", 2);
+  const [combSizeFilter, setCombSizeFilter] = useQSNumber("comb_size", 2);
   const [combSizeFilterT, setCombSizeFilterT] = useState<number>(2);
-  const [combsToShow, setCombsToShow] = useQueryState<number>("combs-to-show", limit ?? 50);
+  const [combsToShow, setCombsToShow] = useQSNumber("combs_to_show", limit ?? 50);
   const [combsToShowT, setCombsToShowT] = useState<number>(limit ?? 50);
 
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
