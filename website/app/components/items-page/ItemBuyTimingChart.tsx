@@ -17,7 +17,7 @@ const chartConfig = {
 type BucketType = Exclude<ItemStatsQueryParams["bucket"], undefined>;
 
 const MIN_AVG_THRESHOLD = 0.1; // 5 %
-const BUCKET_INCREMENTS = [1, 2, 3, 5, 7, 10] as const;
+const BUCKET_INCREMENTS = [1000, 2000, 3000, 5000, 7000, 10000] as const;
 
 function wilsonLowerBound(wins: number, total: number) {
   if (total === 0) return 0;
@@ -86,7 +86,7 @@ const BUCKET_CONFIG = {
   },
   net_worth_by_1000: {
     label: "Net Worth",
-    formatter: (v: number) => `${Math.round(v)}K`,
+    formatter: (v: number) => `${Math.round(v / 1000)}K`,
     tooltipPrefix: "Net Worth",
     tickCount: 10,
   },
@@ -118,10 +118,11 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
     const itemData = data?.filter((d) => d.item_id === itemId) || [];
     if (itemData.length === 0) return [];
 
-    const buckets = itemData.map((d) => d.bucket as number).sort((a, b) => a - b);
+    const bucketIncrements =
+      bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
 
-    let increment = BUCKET_INCREMENTS[BUCKET_INCREMENTS.length - 1];
-    for (const inc of BUCKET_INCREMENTS) {
+    let increment = bucketIncrements[bucketIncrements.length - 1];
+    for (const inc of bucketIncrements) {
       const avgMatches = computeAverageMatchCount(itemData, inc);
       const avgPercent = avgMatches / rowTotalMatches;
       if (avgPercent >= minAvgThreshold) {
@@ -196,7 +197,7 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
 
     const sma = calculateSMA(pts, increment);
     return pts.map((p, i) => ({ ...p, ema: sma[i] }));
-  }, [data, itemId, useWilsonInterval, minAvgThreshold, rowTotalMatches]);
+  }, [data, itemId, useWilsonInterval, minAvgThreshold, rowTotalMatches, bucketType]);
 
   const config = BUCKET_CONFIG[bucketType];
 
