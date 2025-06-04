@@ -206,8 +206,9 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
     if (!valid.length) return [0, 1];
     const min = Math.min(...valid.map((d) => d.displayBucket));
     const max = Math.max(...valid.map((d) => d.displayBucket));
-    return [Math.max(0, min - 1), max + 1];
-  }, [chartData]);
+    const adjustmentFactor = bucketType === "net_worth_by_1000" ? 1000 : 1;
+    return [Math.max(0, min - adjustmentFactor), max + adjustmentFactor];
+  }, [chartData, bucketType]);
 
   const hasValidData = !isLoading && chartData.some((d) => d.winrate !== null && d.matches > 0);
 
