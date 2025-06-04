@@ -220,21 +220,22 @@ function ItemStatsTableRow({
   return (
     <>
       <TableRow
-        className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 ${
+        className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 cursor-pointer ${
           shouldDim ? "brightness-60" : ""
         }`}
+        onClick={() => customDropdownContent && setOpen(!open)}
       >
         {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
         <TableCell>
           <div className="flex items-center gap-2">
             {customDropdownContent && (
-              <Button variant="ghost" size="sm" className="p-0 h-auto" onClick={() => setOpen(!open)}>
+              <span className="p-0 h-auto">
                 {open ? (
                   <span className="icon-[material-symbols--expand-less] w-4 h-4" />
                 ) : (
                   <span className="icon-[material-symbols--expand-more] w-4 h-4" />
                 )}
-              </Button>
+              </span>
             )}
             <ItemImage itemId={row.item_id} />
             <ItemName itemId={row.item_id} />
