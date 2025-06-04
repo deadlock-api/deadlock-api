@@ -38,18 +38,23 @@ pub(super) enum BucketQuery {
     #[display("game_time_normalized_percentage")]
     GameTimeNormalizedPercentage,
     /// Bucket Item Stats by Net Worth (grouped by 1000)
+    #[serde(rename = "net_worth_by_1000")]
     #[display("net_worth_by_1000")]
     NetWorthBy1000,
     /// Bucket Item Stats by Net Worth (grouped by 2000)
+    #[serde(rename = "net_worth_by_2000")]
     #[display("net_worth_by_2000")]
     NetWorthBy2000,
     /// Bucket Item Stats by Net Worth (grouped by 3000)
+    #[serde(rename = "net_worth_by_3000")]
     #[display("net_worth_by_3000")]
     NetWorthBy3000,
     /// Bucket Item Stats by Net Worth (grouped by 5000)
+    #[serde(rename = "net_worth_by_5000")]
     #[display("net_worth_by_5000")]
     NetWorthBy5000,
     /// Bucket Item Stats by Net Worth (grouped by 10000)
+    #[serde(rename = "net_worth_by_10000")]
     #[display("net_worth_by_10000")]
     NetWorthBy10000,
 }
