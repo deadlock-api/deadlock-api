@@ -181,6 +181,11 @@ export function useQSState<T>(
     [key, defaultValue, serializer, replaceState, navigate, debounceMs],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update value from URL
+  useEffect(() => {
+    setValue(parseValue(location.search));
+  }, [location.search]);
+
   // Cleanup debounce on unmount
   useEffect(() => {
     return () => {
