@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
@@ -38,6 +38,7 @@ export interface ItemStatsTableDisplayProps {
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
   initialSort?: SortState;
+  customDropdownContent?: (itemId: number) => ReactNode;
 }
 
 export interface DisplayItemStats {
@@ -55,6 +56,23 @@ export interface DisplayItemStats {
   confidenceBaselineUpper: number;
   confidenceUpper: number;
   confidenceLower: number;
+}
+
+interface ItemStatsTableRowProps {
+  row: DisplayItemStats;
+  index: number;
+  columns: string[];
+  hideIndex: boolean;
+  dimLowConfidence: boolean;
+  minWinRate: number;
+  maxWinRate: number;
+  minUsage: number;
+  maxUsage: number;
+  includedItemIds: number[];
+  excludedItemIds: number[];
+  onItemInclude?: (item: number) => void;
+  onItemExclude?: (item: number) => void;
+  customDropdownContent?: (itemId: number) => React.ReactNode;
 }
 
 function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {
@@ -158,6 +176,132 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
   );
 }
 
+function ItemStatsTableRow({
+  row,
+  index,
+  columns,
+  hideIndex,
+  dimLowConfidence,
+  minWinRate,
+  maxWinRate,
+  minUsage,
+  maxUsage,
+  includedItemIds,
+  excludedItemIds,
+  onItemInclude,
+  onItemExclude,
+  customDropdownContent,
+}: ItemStatsTableRowProps) {
+  const [open, setOpen] = useState(false);
+  const shouldDim = dimLowConfidence && row.confidenceLower < row.confidenceBaselineLower;
+
+  // Calculate total columns for colspan
+  const totalColumns =
+    (!hideIndex ? 1 : 0) + // Index column
+    1 + // Item column (always present)
+    (columns.includes("itemsTier") ? 1 : 0) +
+    (columns.includes("winRate") ? 1 : 0) +
+    (columns.includes("usage") ? 1 : 0) +
+    (columns.includes("confidence") ? 1 : 0) +
+    (onItemInclude || onItemExclude ? 1 : 0) +
+    (customDropdownContent ? 1 : 0);
+
+  return (
+    <>
+      <TableRow
+        className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 ${
+          shouldDim ? "brightness-60" : ""
+        }`}
+      >
+        {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
+        <TableCell>
+          <div className="flex items-center gap-2">
+            {customDropdownContent && (
+              <Button variant="ghost" size="sm" className="p-0 h-auto" onClick={() => setOpen(!open)}>
+                {open ? (
+                  <span className="icon-[material-symbols--expand-less] w-4 h-4" />
+                ) : (
+                  <span className="icon-[material-symbols--expand-more] w-4 h-4" />
+                )}
+              </Button>
+            )}
+            <ItemImage itemId={row.item_id} />
+            <ItemName itemId={row.item_id} />
+          </div>
+        </TableCell>
+        {columns.includes("itemsTier") && (
+          <TableCell>
+            <div className="flex items-center gap-2">
+              <ItemTier itemId={row.item_id} />
+            </div>
+          </TableCell>
+        )}
+        {columns.includes("winRate") && (
+          <TableCell
+            className="text-center"
+            title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+          >
+            <ProgressBarWithLabel
+              min={minWinRate}
+              max={maxWinRate}
+              value={row.wins / row.matches}
+              color={"#ff00ff"}
+              label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+            />
+          </TableCell>
+        )}
+        {columns.includes("usage") && (
+          <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
+            <ProgressBarWithLabel
+              min={minUsage}
+              max={maxUsage}
+              value={row.matches}
+              color={"#00ffff"}
+              label={row.matches.toLocaleString()}
+            />
+          </TableCell>
+        )}
+        {columns.includes("confidence") && (
+          <TableCell className="text-center">
+            <div className="inline-flex">
+              <ConfidenceTierBadge tier={row.confidenceTier} />
+            </div>
+          </TableCell>
+        )}
+        {(onItemInclude || onItemExclude) && (
+          <TableCell width={130}>
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="secondary"
+                disabled={includedItemIds.includes(row.item_id)}
+                className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-gray-500"
+                onClick={() => onItemInclude?.(row.item_id)}
+              >
+                <span className="icon-[mdi--plus]" />
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={excludedItemIds.includes(row.item_id)}
+                className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-gray-500"
+                onClick={() => onItemExclude?.(row.item_id)}
+              >
+                <span className="icon-[mdi--minus] text-lg" />
+              </Button>
+            </div>
+          </TableCell>
+        )}
+      </TableRow>
+      {customDropdownContent && open && (
+        <TableRow>
+          <TableCell colSpan={totalColumns} className="p-0 border-0">
+            <div className="p-4 bg-gray-800 border-t border-gray-700">{customDropdownContent(row.item_id)}</div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
+
 export function ItemStatsTableDisplay({
   data,
   isLoading,
@@ -174,6 +318,7 @@ export function ItemStatsTableDisplay({
   onItemInclude,
   onItemExclude,
   initialSort = { field: "winRate", direction: "desc" },
+  customDropdownContent,
 }: ItemStatsTableDisplayProps) {
   const [sortField, setSortField] = useQSState<SortField>("item_sort_field", {
     defaultValue: initialSort.field,
@@ -294,86 +439,25 @@ export function ItemStatsTableDisplay({
         <TableBody>
           {processedData
             .filter((row) => itemTiers.includes(row.itemTier))
-            .map((row, index) => {
-              const shouldDim = dimLowConfidence && row.confidenceLower < row.confidenceBaselineLower;
-              return (
-                <TableRow
-                  key={row.item_id}
-                  className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 ${
-                    shouldDim ? "brightness-60" : ""
-                  }`}
-                >
-                  {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <ItemImage itemId={row.item_id} />
-                      <ItemName itemId={row.item_id} />
-                    </div>
-                  </TableCell>
-                  {columns.includes("itemsTier") && (
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <ItemTier itemId={row.item_id} />
-                      </div>
-                    </TableCell>
-                  )}
-                  {columns.includes("winRate") && (
-                    <TableCell
-                      className="text-center"
-                      title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                    >
-                      <ProgressBarWithLabel
-                        min={minWinRate}
-                        max={maxWinRate}
-                        value={row.wins / row.matches}
-                        color={"#ff00ff"}
-                        label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
-                      />
-                    </TableCell>
-                  )}
-                  {columns.includes("usage") && (
-                    <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
-                      <ProgressBarWithLabel
-                        min={minUsage}
-                        max={maxUsage}
-                        value={row.matches}
-                        color={"#00ffff"}
-                        label={row.matches.toLocaleString()}
-                      />
-                    </TableCell>
-                  )}
-                  {columns.includes("confidence") && (
-                    <TableCell className="text-center">
-                      <div className="inline-flex">
-                        <ConfidenceTierBadge tier={row.confidenceTier} />
-                      </div>
-                    </TableCell>
-                  )}
-                  {(onItemInclude || onItemExclude) && (
-                    <TableCell width={130}>
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="secondary"
-                          disabled={includedItemIds.includes(row.item_id)}
-                          className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-gray-500"
-                          onClick={() => onItemInclude?.(row.item_id)}
-                        >
-                          <span className="icon-[mdi--plus]" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          disabled={excludedItemIds.includes(row.item_id)}
-                          className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-gray-500"
-                          onClick={() => onItemExclude?.(row.item_id)}
-                        >
-                          <span className="icon-[mdi--minus] text-lg" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              );
-            })}
+            .map((row, index) => (
+              <ItemStatsTableRow
+                key={row.item_id}
+                row={row}
+                index={index}
+                columns={columns}
+                hideIndex={hideIndex}
+                dimLowConfidence={dimLowConfidence}
+                minWinRate={minWinRate}
+                maxWinRate={maxWinRate}
+                minUsage={minUsage}
+                maxUsage={maxUsage}
+                includedItemIds={includedItemIds}
+                excludedItemIds={excludedItemIds}
+                onItemInclude={onItemInclude}
+                onItemExclude={onItemExclude}
+                customDropdownContent={customDropdownContent}
+              />
+            ))}
         </TableBody>
       </Table>
     </div>
