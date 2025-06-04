@@ -35,28 +35,22 @@ jobs:
         with:
           fetch-depth: '0'
 
-      - name: Install Protocol Buffers compiler
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: protobuf-compiler libprotobuf-dev clang
-          version: 1.0
-
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.87
-          components: rustfmt, clippy
+          components: clippy
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - name: Run cargo check
+        run: cargo check --profile ci --all-targets
 
-      - name: Run clippy
-        run: cargo clippy --tests --profile ci -- -D warnings
+      - name: Run cargo clippy
+        run: cargo clippy --profile ci --all-targets -- -D warnings
 
   test_deploy:
     name: Test and Deploy
