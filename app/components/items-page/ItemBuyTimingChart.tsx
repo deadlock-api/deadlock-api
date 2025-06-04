@@ -100,7 +100,7 @@ interface ItemBuyTimingChartProps {
 
 export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
   const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useState(false);
-  const [useWilsonInterval, setUseWilsonInterval] = useState(false);
+  const [useWilsonInterval, setUseWilsonInterval] = useState(true);
   const [bucketType, setBucketType] = useState<keyof typeof BUCKET_CONFIG>("net_worth_by_1000");
 
   const baseMinAvgThreshold = rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
@@ -311,7 +311,7 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
                           <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-gray-500" />
                             <span className="text-muted-foreground">
-                              {useWilsonInterval ? "Wilson Lower Bound:" : "True Win Rate:"}
+                              {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
                             </span>
                             <span className="font-mono font-medium">
                               {d.winrate === null ? "-" : d.winrate.toFixed(1)}%
