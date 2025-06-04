@@ -7,8 +7,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import type { Dayjs } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQueryState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
@@ -19,11 +18,11 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Player({ initialTab }: { initialTab?: string } = { initialTab: "mmr" }) {
-  const [steamId, setSteamId] = useQueryState<number | null>("steam-id", null);
-  const [hero, setHero] = useQueryState<number | null>("hero", null);
-  const [startDate, setStartDate] = useQueryState<Dayjs | null>("start-date", null);
-  const [endDate, setEndDate] = useQueryState<Dayjs | null>("end-date", null);
-  const [tab, setTab] = useQueryState("tab", initialTab || "mmr");
+  const [steamId, setSteamId] = useQSNumber("steam_id");
+  const [hero, setHero] = useQSNumber("hero");
+  const [startDate, setStartDate] = useQSDayjs("start_date");
+  const [endDate, setEndDate] = useQSDayjs("end_date");
+  const [tab, setTab] = useQSString("tab", initialTab || "mmr");
 
   return (
     <>
@@ -46,15 +45,15 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                 placeholder="Steam ID3 (required)"
               />
             </div>
-            <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
+            <HeroSelector onHeroSelected={(x) => setHero(x || undefined)} selectedHero={hero} allowSelectNull={true} />
             <div className="flex justify-center md:justify-start">
               <PatchOrDatePicker
                 patchDates={PATCHES}
-                value={{ startDate, endDate }}
+                value={{ startDate: startDate || null, endDate: endDate || null }}
                 defaultTab="custom"
                 onValueChange={({ startDate, endDate }) => {
-                  setStartDate(startDate);
-                  setEndDate(endDate);
+                  setStartDate(startDate || undefined);
+                  setEndDate(endDate || undefined);
                 }}
               />
             </div>

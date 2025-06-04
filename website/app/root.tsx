@@ -4,6 +4,7 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 import "./tailwind.css";
 import "./dayjs.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import NavHeader from "~/components/NavHeader";
 
 export const links: LinksFunction = () => [
@@ -78,6 +79,8 @@ export default function App() {
           <Outlet />
         </div>
       </main>
+
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

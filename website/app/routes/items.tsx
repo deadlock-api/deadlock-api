@@ -7,8 +7,7 @@ import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import type { Dayjs } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQueryState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
@@ -19,13 +18,13 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Items({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useQueryState<number>("min-rank", 0);
-  const [maxRankId, setMaxRankId] = useQueryState<number>("max-rank", 116);
-  const [hero, setHero] = useQueryState<number | null>("hero", null);
-  const [minMatches, setMinMatches] = useQueryState<number>("min-matches", 20);
-  const [startDate, setStartDate] = useQueryState<Dayjs | null>("start-date", PATCHES[0].startDate);
-  const [endDate, setEndDate] = useQueryState<Dayjs | null>("end-date", PATCHES[0].endDate);
-  const [tab, setTab] = useQueryState("tab", initialTab || "stats");
+  const [minRankId, setMinRankId] = useQSNumber("min_rank", 0);
+  const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
+  const [hero, setHero] = useQSNumber("hero");
+  const [minMatches, setMinMatches] = useQSNumber("min_matches", 20);
+  const [startDate, setStartDate] = useQSDayjs("start_date", PATCHES[0].startDate);
+  const [endDate, setEndDate] = useQSDayjs("end_date", PATCHES[0].endDate);
+  const [tab, setTab] = useQSString("tab", initialTab || "stats");
 
   return (
     <>
@@ -34,7 +33,11 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start">
             <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-center md:justify-start">
-              <HeroSelector onHeroSelected={setHero} selectedHero={hero} allowSelectNull={true} />
+              <HeroSelector
+                onHeroSelected={(x) => setHero(x || undefined)}
+                selectedHero={hero}
+                allowSelectNull={true}
+              />
               <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
                 <Label htmlFor="minMatches" className="h-8">
                   Min Matches
@@ -69,8 +72,8 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
                 onValueChange={({ startDate, endDate }) => {
-                  setStartDate(startDate);
-                  setEndDate(endDate);
+                  setStartDate(startDate || undefined);
+                  setEndDate(endDate || undefined);
                 }}
               />
             </div>

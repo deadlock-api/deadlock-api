@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
@@ -15,11 +14,10 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import type { Dayjs } from "~/dayjs";
-import useQueryState from "~/hooks/useQueryState";
+import { serializers, useQSArray, useQSBoolean, useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQueryState";
 import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS } from "~/types/api_hero_stats";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
 export const meta: MetaFunction = () => {
   return [
@@ -28,26 +26,16 @@ export const meta: MetaFunction = () => {
   ];
 };
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useQueryState<number>("min-rank", 0);
-  const [maxRankId, setMaxRankId] = useQueryState<number>("max-rank", 116);
-  const [sameLaneFilter, setSameLaneFilter] = useQueryState<boolean>("same-lane", true);
-  const [startDate, setStartDate] = useQueryState<Dayjs | null>(
-    "start-date",
-    PATCHES[0].startDate,
-    (value) => (value ? dayjs(value) : null),
-    (value) => (value ? value.toISOString() : "null"),
-  );
-  const [endDate, setEndDate] = useQueryState<Dayjs | null>(
-    "end-date",
-    PATCHES[0].endDate,
-    (value) => (value ? dayjs(value) : null),
-    (value) => (value ? value.toISOString() : "null"),
-  );
-  const [tab, setTab] = useQueryState("tab", initialTab || "stats");
-  const [heroId, setHeroId] = useQueryState("hero-id", 15);
-  const [heroIds, setHeroIds] = useQueryState("hero-ids", [15]);
-  const [heroStat, setHeroStat] = useQueryState<(typeof HERO_STATS)[number]>("hero-stat", "winrate");
-  const [heroTimeInterval, setHeroTimeInterval] = useQueryState<string>("time-interval", "start_time_day");
+  const [minRankId, setMinRankId] = useQSNumber("min_rank", 0);
+  const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
+  const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
+  const [startDate, setStartDate] = useQSDayjs("start_date", PATCHES[0].startDate);
+  const [endDate, setEndDate] = useQSDayjs("end_date", PATCHES[0].endDate);
+  const [tab, setTab] = useQSString("tab", initialTab || "stats");
+  const [heroId, setHeroId] = useQSNumber("hero_id", 7);
+  const [heroIds, setHeroIds] = useQSArray("hero_ids", serializers.number, [15]);
+  const [heroStat, setHeroStat] = useQSString<(typeof HERO_STATS)[number]>("hero_stat", "winrate");
+  const [heroTimeInterval, setHeroTimeInterval] = useQSString<string>("time_interval", "start_time_day");
 
   return (
     <>
@@ -66,8 +54,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
                 onValueChange={({ startDate, endDate }) => {
-                  setStartDate(startDate);
-                  setEndDate(endDate);
+                  setStartDate(startDate || undefined);
+                  setEndDate(endDate || undefined);
                 }}
               />
             </div>
@@ -118,7 +106,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
-                <HeroStatSelector value={heroStat} onChange={setHeroStat} />
+                <HeroStatSelector value={heroStat as (typeof HERO_STATS)[number]} onChange={setHeroStat} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Time Interval</span>
@@ -127,7 +115,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             </div>
             <HeroStatsOverTimeChart
               heroIds={heroIds}
-              heroStat={heroStat}
+              heroStat={heroStat as (typeof HERO_STATS)[number]}
               heroTimeInterval={heroTimeInterval}
               minRankId={minRankId}
               maxRankId={maxRankId}
