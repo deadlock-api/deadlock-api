@@ -37,6 +37,9 @@ pub(super) enum BucketQuery {
     /// Bucket Item Stats by Game Time Normalized
     #[display("game_time_normalized_percentage")]
     GameTimeNormalizedPercentage,
+    /// Bucket Item Stats by Net Worth at Buy Time
+    #[display("net_worth_thousands")]
+    NetWorthThousands,
 }
 
 impl BucketQuery {
@@ -48,6 +51,9 @@ impl BucketQuery {
             Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))".to_string(),
             Self::GameTimeNormalizedPercentage => {
                 "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))".to_string()
+            }
+            Self::NetWorthThousands => {
+                "toNullable(toUInt32(floor(net_worth_at_buy / 1000)))".to_string()
             }
         }
     }
@@ -200,7 +206,13 @@ WITH
 
     /* 2. Filtered players — *single* scan of `match_player` */
     filtered_players AS (
-        SELECT match_id, account_id, items, won
+        SELECT
+            match_id,
+            account_id,
+            items,
+            won,
+            `stats.time_stamp_s` AS st_ts,   -- stats tick-times
+            `stats.net_worth`   AS st_nw    -- net-worth samples
         FROM match_player FINAL
         /* Push the cheapest predicate (match_id) to PREWHERE for I/O pruning */
         PREWHERE match_id IN (SELECT match_id FROM t_matches)
@@ -212,15 +224,32 @@ WITH
         SELECT
             match_id,
             account_id,
-            items.item_id     AS item_id,
-            items.game_time_s AS buy_time,
-            won
+            it.item_id     AS item_id,
+            it.game_time_s AS buy_time,
+            won,
+
+            /* first stats tick ≥ buy_time (Int64) */
+            arrayFirstIndex(
+                ts -> ts >= it.game_time_s,
+                st_ts
+            )                    AS idx_ge,
+
+            /* net-worth sample just before / at buy_time                          *
+             * idx_ge = 0  → purchase after last sample → use last element        *
+             * idx_ge = 1  → purchase before first      → use first element (1)   */
+            arrayElement(
+                st_nw,
+                if(idx_ge = 0,
+                   toInt64(length(st_nw)),
+                   greatest(1, idx_ge - 1)
+                )
+            )                    AS net_worth_at_buy
         FROM filtered_players
-        ARRAY JOIN items
+        ARRAY JOIN items AS it
         WHERE
             buy_time > 0
             /* Keep only recognised items */
-            AND item_id IN (SELECT id FROM items)
+            AND it.item_id IN (SELECT id FROM items)
     )
 
 /* 4. Aggregation */
@@ -239,6 +268,7 @@ ORDER BY item_id, bucket
         "#
     )
 }
+
 #[cached(
     ty = "TimedCache<String, Vec<ItemStats>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
