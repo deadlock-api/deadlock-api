@@ -16,7 +16,7 @@ export interface ItemStatsQueryParams {
     | "start_time_day"
     | "game_time_min"
     | "game_time_normalized_percentage"
-    | "net_worth_thousands";
+    | "net_worth_by_1000";
 }
 
 export function itemStatsQueryOptions({

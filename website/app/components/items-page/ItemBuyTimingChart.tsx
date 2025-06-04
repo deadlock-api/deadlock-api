@@ -6,102 +6,91 @@ import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const chartConfig = {
-  winrate: {
-    label: "Win Rate",
-    color: "hsl(var(--chart-1))",
-  },
-  ema: {
-    label: "Moving Average",
-    color: "hsl(var(--chart-3))",
-  },
+  winrate: { label: "Win Rate", color: "hsl(var(--chart-1))" },
+  ema: { label: "Moving Average", color: "hsl(var(--chart-3))" },
 };
 
-type BucketType = "game_time_min" | "net_worth_thousands";
+type BucketType = Exclude<ItemStatsQueryParams["bucket"], undefined>;
 
-// Calculate Wilson interval lower bound for 95% confidence
-function wilsonLowerBound(wins: number, total: number): number {
+const MIN_AVG_THRESHOLD = 0.1; // 5 %
+const BUCKET_INCREMENTS = [1, 2, 3, 5, 7, 10] as const;
+
+function wilsonLowerBound(wins: number, total: number) {
   if (total === 0) return 0;
   const p = wins / total;
   const n = total;
-  const z = 1.96; // 95% confidence
-
+  const z = 1.96;
   const numerator = p + (z * z) / (2 * n) - z * Math.sqrt((p * (1 - p) + (z * z) / (4 * n)) / n);
   const denominator = 1 + (z * z) / n;
-
   return Math.max(0, numerator / denominator);
 }
 
-function movingAverage(arr: Array<number | null | undefined>, window: number): Array<number | null> {
+function movingAverage(arr: Array<number | null | undefined>, window: number) {
   const n = arr.length;
   const result = new Array<number | null>(n);
   const half = Math.floor(window / 2);
-
-  // Find start of data (first non-null)
-  let firstDataIdx = 0;
-  while (firstDataIdx < n && (arr[firstDataIdx] === null || arr[firstDataIdx] === undefined)) {
-    firstDataIdx++;
-  }
-
-  // Find end of data (last non-null)
-  let lastDataIdx = n - 1;
-  while (lastDataIdx >= 0 && (arr[lastDataIdx] === null || arr[lastDataIdx] === undefined)) {
-    lastDataIdx--;
-  }
-
+  let first = 0;
+  while (first < n && (arr[first] === null || arr[first] === undefined)) first++;
+  let last = n - 1;
+  while (last >= 0 && (arr[last] === null || arr[last] === undefined)) last--;
   for (let i = 0; i < n; i++) {
-    if (i < firstDataIdx || i > lastDataIdx) {
-      // Leading or trailing null/undefined runs
+    if (i < first || i > last) {
       result[i] = null;
       continue;
     }
-
-    const start = Math.max(0, i - half);
-    const end = Math.min(n - 1, i + half);
+    const s = Math.max(0, i - half);
+    const e = Math.min(n - 1, i + half);
     let sum = 0;
     let count = 0;
-
-    for (let j = start; j <= end; j++) {
-      const val = arr[j];
-      if (val !== null && val !== undefined) {
-        sum += val;
+    for (let j = s; j <= e; j++) {
+      const v = arr[j];
+      if (v !== null && v !== undefined) {
+        sum += v;
         count++;
       }
     }
-    result[i] = count > 0 ? sum / count : null;
+    result[i] = count ? sum / count : null;
   }
   return result;
 }
 
-// Calculate simple moving average
-function calculateSMA(data: Array<{ winrate: number | null }>, windowSize = 5): Array<number | null> {
+function calculateSMA(data: Array<{ winrate: number | null }>, windowSize: number) {
   return movingAverage(
     data.map((d) => d.winrate),
     windowSize,
   );
 }
 
-const MIN_MATCHES_PERCENTAGE_OF_TOTAL = 0.02;
+function computeAverageMatchCount(itemData: { bucket: number | null; matches: number }[], increment: number): number {
+  const groups = new Map<number, { matches: number }>();
+  for (const p of itemData) {
+    const key = Math.floor((p.bucket as number) / increment) * increment;
+    const g = groups.get(key) || { matches: 0 };
+    g.matches += p.matches;
+    groups.set(key, g);
+  }
+  const totalMatches = Array.from(groups.values()).reduce((sum, g) => sum + g.matches, 0);
+  return totalMatches / groups.size;
+}
 
-// Configuration for different bucket types
 const BUCKET_CONFIG = {
   game_time_min: {
     label: "Minutes",
-    range: [0, 45] as [number, number],
-    tickCount: 12,
-    formatter: (value: number) => `${Math.round(value)}`,
+    formatter: (v: number) => `${Math.round(v)}`,
     tooltipPrefix: "Minute",
+    tickCount: 12,
   },
-  net_worth_thousands: {
+  net_worth_by_1000: {
     label: "Net Worth",
-    range: [0, 100] as [number, number], // Assuming reasonable range, will be dynamic based on data
-    tickCount: 10,
-    formatter: (value: number) => `${Math.round(value)}K`,
+    formatter: (v: number) => `${Math.round(v)}K`,
     tooltipPrefix: "Net Worth",
+    tickCount: 10,
   },
-} as const;
+} as const satisfies Partial<Record<BucketType, unknown>>;
 
 interface ItemBuyTimingChartProps {
   itemId: number;
@@ -110,89 +99,116 @@ interface ItemBuyTimingChartProps {
 }
 
 export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
+  const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useState(false);
   const [useWilsonInterval, setUseWilsonInterval] = useState(false);
-  const [bucketType, setBucketType] = useState<BucketType>("net_worth_thousands");
+  const [bucketType, setBucketType] = useState<keyof typeof BUCKET_CONFIG>("net_worth_by_1000");
 
-  const minMatches = Math.min(1, Math.floor(rowTotalMatches * MIN_MATCHES_PERCENTAGE_OF_TOTAL));
+  const baseMinAvgThreshold = rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
+  const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
+  const minMatches = rowTotalMatches > 500 ? 20 : rowTotalMatches > 250 ? 10 : 2;
 
   const queryOptions = useMemo(
-    () => ({
-      ...baseQueryOptions,
-      bucket: bucketType,
-      minMatches: 1,
-    }),
-    [baseQueryOptions, bucketType],
+    () => ({ ...baseQueryOptions, bucket: bucketType, minMatches }),
+    [baseQueryOptions, bucketType, minMatches],
   );
 
   const { data, isLoading } = useQuery(itemStatsQueryOptions(queryOptions));
 
-  // Create chart data based on bucket type
   const chartData = useMemo(() => {
     const itemData = data?.filter((d) => d.item_id === itemId) || [];
+    if (itemData.length === 0) return [];
 
-    if (itemData.length === 0) {
-      return [];
+    const buckets = itemData.map((d) => d.bucket as number).sort((a, b) => a - b);
+
+    let increment = BUCKET_INCREMENTS[BUCKET_INCREMENTS.length - 1];
+    for (const inc of BUCKET_INCREMENTS) {
+      const avgMatches = computeAverageMatchCount(itemData, inc);
+      const avgPercent = avgMatches / rowTotalMatches;
+      if (avgPercent >= minAvgThreshold) {
+        increment = inc;
+        console.log(
+          `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
+        );
+        break;
+      }
+      console.log(
+        `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
+      );
     }
 
-    // Determine the range based on actual data
-    const buckets = itemData
-      .map((d) => d.bucket)
-      .filter((b) => typeof b === "number")
-      .sort((a, b) => a - b);
-    const minBucket = buckets[0] || 0;
-    const maxBucket = buckets[buckets.length - 1] || (bucketType === "game_time_min" ? 45 : 100);
+    const groups = new Map<number, { matches: number; wins: number }>();
+    for (const p of itemData) {
+      const key = Math.floor((p.bucket as number) / increment) * increment;
+      const g = groups.get(key) || { matches: 0, wins: 0 };
+      g.matches += p.matches;
+      g.wins += p.wins;
+      groups.set(key, g);
+    }
 
-    // Create data points for the full range
-    const chartPoints = [];
-    for (let bucket = minBucket; bucket <= maxBucket; bucket++) {
-      const dataPoint = itemData.find((d) => d.bucket === bucket);
-      if (!dataPoint || dataPoint.matches < minMatches) {
-        chartPoints.push({
-          bucket,
+    const keys = Array.from(groups.keys()).sort((a, b) => a - b);
+    const pts: Array<{
+      bucket: number;
+      displayBucket: number;
+      bucketStart: number;
+      bucketEnd: number;
+      winrate: number | null;
+      trueWinrate: number | null;
+      wilsonLowerBound: number | null;
+      matches: number;
+      ema: number | null;
+    }> = [];
+
+    for (const k of keys) {
+      // biome-ignore lint/style/noNonNullAssertion: <explanation>
+      const g = groups.get(k)!;
+      const bucketStart = k;
+      const bucketEnd = k + increment;
+      const displayBucket = k + increment / 2; // Center the dot in the middle of the bucket range
+
+      if (!g.matches) {
+        pts.push({
+          bucket: k,
+          displayBucket,
+          bucketStart,
+          bucketEnd,
           winrate: null,
           trueWinrate: null,
           wilsonLowerBound: null,
-          matches: dataPoint?.matches || 0,
+          matches: 0,
           ema: null,
         });
         continue;
       }
-
-      const trueWinrate = (dataPoint.wins / dataPoint.matches) * 100;
-      const wilsonLower = wilsonLowerBound(dataPoint.wins, dataPoint.matches) * 100;
-
-      chartPoints.push({
-        bucket,
-        winrate: useWilsonInterval ? wilsonLower : trueWinrate,
-        trueWinrate,
-        wilsonLowerBound: wilsonLower,
-        matches: dataPoint.matches,
+      const trueWR = (g.wins / g.matches) * 100;
+      const wilson = wilsonLowerBound(g.wins, g.matches) * 100;
+      pts.push({
+        bucket: k,
+        displayBucket,
+        bucketStart,
+        bucketEnd,
+        winrate: useWilsonInterval ? wilson : trueWR,
+        trueWinrate: trueWR,
+        wilsonLowerBound: wilson,
+        matches: g.matches,
         ema: null,
       });
     }
 
-    // Calculate SMA and add to the data
-    const smaValues = calculateSMA(chartPoints);
-
-    return chartPoints.map((point, index) => ({
-      ...point,
-      ema: smaValues[index],
-    }));
-  }, [data, itemId, useWilsonInterval, minMatches, bucketType]);
+    const sma = calculateSMA(pts, increment);
+    return pts.map((p, i) => ({ ...p, ema: sma[i] }));
+  }, [data, itemId, useWilsonInterval, minAvgThreshold, rowTotalMatches]);
 
   const config = BUCKET_CONFIG[bucketType];
 
-  // Determine actual range from data for better chart display
-  const dataRange = useMemo((): [number, number] => {
-    const validData = chartData.filter((d) => d.winrate !== null);
-    if (validData.length === 0) return config.range;
+  const dataRange = useMemo<[number, number]>(() => {
+    const valid = chartData.filter((d) => d.winrate !== null);
+    if (!valid.length) return [0, 1];
+    const min = Math.min(...valid.map((d) => d.displayBucket));
+    const max = Math.max(...valid.map((d) => d.displayBucket));
+    return [Math.max(0, min - 1), max + 1];
+  }, [chartData]);
 
-    const minValue = Math.min(...validData.map((d) => d.bucket));
-    const maxValue = Math.max(...validData.map((d) => d.bucket));
-    return [Math.max(0, minValue - 1), maxValue + 1];
-  }, [chartData, config.range]);
-
-  const hasValidData = !isLoading && chartData.filter((d) => d.winrate !== null).length > 0;
+  const hasValidData = !isLoading && chartData.some((d) => d.winrate !== null && d.matches > 0);
 
   return (
     <Card className="w-full">
@@ -207,13 +223,11 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
             <ToggleGroup
               type="single"
               value={bucketType}
-              onValueChange={(value) => {
-                if (value) setBucketType(value as BucketType);
-              }}
+              onValueChange={(v) => v && setBucketType(v as keyof typeof BUCKET_CONFIG)}
               variant="outline"
               size="sm"
             >
-              <ToggleGroupItem value="net_worth_thousands" className="px-6">
+              <ToggleGroupItem value="net_worth_by_1000" className="px-6">
                 Net Worth
               </ToggleGroupItem>
               <ToggleGroupItem value="game_time_min" className="px-6">
@@ -223,23 +237,44 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
           </div>
           <div className="flex items-center space-x-2">
             <Switch id="wilson-interval" checked={useWilsonInterval} onCheckedChange={setUseWilsonInterval} />
-            <Label htmlFor="wilson-interval" className="text-sm">
-              Use Wilson Interval Lower Bound (95% confidence)
+            <Label htmlFor="wilson-interval" className="text-sm flex items-center gap-1">
+              Use conservative win-rate estimate based on volume
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="icon-[material-symbols--info] h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs bg-background text-foreground p-4 text-center text-pretty space-y-2">
+                  <p>
+                    Less matches played for a datapoint means we're less confident in the win rate, so we reduce it a
+                    bit to compensate.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="fine-grained"
+              checked={showFineGrainedIntervals}
+              onCheckedChange={setShowFineGrainedIntervals}
+            />
+            <Label htmlFor="fine-grained" className="text-sm">
+              Show fine grained intervals
             </Label>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-96">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
           </div>
         ) : !hasValidData ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex items-center justify-center h-96">
             <p className="text-muted-foreground">No data available</p>
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-64 w-full">
+          <ChartContainer config={chartConfig} className="h-96 w-full">
             <LineChart
               data={chartData}
               width={undefined}
@@ -248,7 +283,7 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
-                dataKey="bucket"
+                dataKey="displayBucket"
                 domain={dataRange}
                 type="number"
                 tickCount={config.tickCount}
@@ -256,21 +291,19 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
                 label={{ value: config.label, position: "insideBottom", offset: -5 }}
               />
               <YAxis
-                domain={[
-                  (dataMin: number) => Math.max(0, dataMin - 5),
-                  (dataMax: number) => Math.min(100, dataMax + 5),
-                ]}
+                domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
                 label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
-                tickFormatter={(value) => `${value.toFixed(0)}%`}
+                tickFormatter={(v) => `${v.toFixed(0)}%`}
+                tickCount={10}
               />
               <ChartTooltip
-                content={({ active, payload, label }) => {
+                content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const data = payload[0].payload;
+                    const d = payload[0].payload;
                     return (
                       <div className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl">
                         <div className="font-medium">
-                          {config.tooltipPrefix} {config.formatter(data.bucket)}
+                          {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
                         </div>
                         <div className="grid gap-1.5">
                           <div className="flex items-center gap-2">
@@ -278,20 +311,23 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
                             <span className="text-muted-foreground">
                               {useWilsonInterval ? "Wilson Lower Bound:" : "True Win Rate:"}
                             </span>
-                            <span className="font-mono font-medium">{Number(data.winrate).toFixed(1)}%</span>
+                            <span className="font-mono font-medium">
+                              {d.winrate === null ? "-" : d.winrate.toFixed(1)}%
+                            </span>
                           </div>
                           {useWilsonInterval && (
                             <div className="flex items-center gap-2">
                               <div className="h-2 w-2 rounded-full bg-gray-300" />
                               <span className="text-muted-foreground">True Win Rate:</span>
-                              <span className="font-mono font-medium">{Number(data.trueWinrate).toFixed(1)}%</span>
+                              <span className="font-mono font-medium">
+                                {d.trueWinrate === null ? "-" : d.trueWinrate.toFixed(1)}%
+                              </span>
                             </div>
                           )}
-
                           <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-gray-400" />
                             <span className="text-muted-foreground">Matches:</span>
-                            <span className="font-mono font-medium">{data.matches}</span>
+                            <span className="font-mono font-medium">{d.matches}</span>
                           </div>
                         </div>
                       </div>
@@ -309,16 +345,17 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
                 connectNulls={false}
                 isAnimationActive={false}
               />
-              <Line
+              {/* TODO: Add moving average later, but for now it just clutters the chart */}
+              {/* <Line
                 type="monotone"
                 dataKey="ema"
                 stroke="var(--chart-2)"
-                strokeWidth={3}
+                strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
                 connectNulls={false}
                 isAnimationActive={false}
-              />
+              /> */}
             </LineChart>
           </ChartContainer>
         )}
