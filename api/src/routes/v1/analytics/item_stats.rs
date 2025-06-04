@@ -37,9 +37,21 @@ pub(super) enum BucketQuery {
     /// Bucket Item Stats by Game Time Normalized
     #[display("game_time_normalized_percentage")]
     GameTimeNormalizedPercentage,
-    /// Bucket Item Stats by Net Worth at Buy Time
-    #[display("net_worth_thousands")]
-    NetWorthThousands,
+    /// Bucket Item Stats by Net Worth (grouped by 1000)
+    #[display("net_worth_by_1000")]
+    NetWorth1000,
+    /// Bucket Item Stats by Net Worth (grouped by 2000)
+    #[display("net_worth_by_2000")]
+    NetWorth2000,
+    /// Bucket Item Stats by Net Worth (grouped by 3000)
+    #[display("net_worth_by_3000")]
+    NetWorth3000,
+    /// Bucket Item Stats by Net Worth (grouped by 5000)
+    #[display("net_worth_by_5000")]
+    NetWorth5000,
+    /// Bucket Item Stats by Net Worth (grouped by 10000)
+    #[display("net_worth_by_10000")]
+    NetWorth10000,
 }
 
 impl BucketQuery {
@@ -52,8 +64,20 @@ impl BucketQuery {
             Self::GameTimeNormalizedPercentage => {
                 "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))".to_string()
             }
-            Self::NetWorthThousands => {
+            Self::NetWorth1000 => {
                 "toNullable(toUInt32(floor(net_worth_at_buy / 1000)))".to_string()
+            }
+            Self::NetWorth2000 => {
+                "toNullable(toUInt32(floor(net_worth_at_buy / 2000)))".to_string()
+            }
+            Self::NetWorth3000 => {
+                "toNullable(toUInt32(floor(net_worth_at_buy / 3000)))".to_string()
+            }
+            Self::NetWorth5000 => {
+                "toNullable(toUInt32(floor(net_worth_at_buy / 5000)))".to_string()
+            }
+            Self::NetWorth10000 => {
+                "toNullable(toUInt32(floor(net_worth_at_buy / 10000)))".to_string()
             }
         }
     }
