@@ -10,3 +10,4 @@ alwaysApply: false
 - avoid `useEffect` in most scenarios, attempt other solutions to the problem first.
 - when encountering things like opaque strings which are actually enums, try to encode that knowledge into the zod types to avoid problems in the future. Same goes with numbers which are actually enums/booleans.
 - use `z.int()` instead of `z.number().string()`
+- once you're done with your changes, use `pnpm biome check --fix . && pnpm typecheck` to verify (no need to build).

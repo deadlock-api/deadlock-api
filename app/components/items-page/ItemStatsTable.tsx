@@ -38,7 +38,12 @@ export interface ItemStatsTableDisplayProps {
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
   initialSort?: SortState;
-  customDropdownContent?: (itemId: number) => ReactNode;
+  customDropdownContent?: ({
+    itemId,
+    rowWins,
+    rowLosses,
+    rowTotal,
+  }: { itemId: number; rowWins: number; rowLosses: number; rowTotal: number }) => ReactNode;
 }
 
 export interface DisplayItemStats {
@@ -72,7 +77,12 @@ interface ItemStatsTableRowProps {
   excludedItemIds: number[];
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
-  customDropdownContent?: (itemId: number) => React.ReactNode;
+  customDropdownContent?: ({
+    itemId,
+    rowWins,
+    rowLosses,
+    rowTotal,
+  }: { itemId: number; rowWins: number; rowLosses: number; rowTotal: number }) => ReactNode;
 }
 
 function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {
@@ -294,7 +304,14 @@ function ItemStatsTableRow({
       {customDropdownContent && open && (
         <TableRow>
           <TableCell colSpan={totalColumns} className="p-0 border-0">
-            <div className="p-4 bg-gray-800 border-t border-gray-700">{customDropdownContent(row.item_id)}</div>
+            <div className="p-4 bg-gray-800 border-t border-gray-700">
+              {customDropdownContent({
+                itemId: row.item_id,
+                rowWins: row.wins,
+                rowLosses: row.losses,
+                rowTotal: row.matches,
+              })}
+            </div>
           </TableCell>
         </TableRow>
       )}
