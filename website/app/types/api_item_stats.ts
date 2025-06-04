@@ -4,4 +4,5 @@ export interface APIItemStats {
   losses: number;
   matches: number;
   players: number;
+  bucket: number | null;
 }

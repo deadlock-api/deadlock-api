@@ -3,10 +3,12 @@ import * as React from "react";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
+import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { serializers, useQSSet, useQSString } from "~/hooks/useQSState";
+import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
@@ -43,35 +45,21 @@ export default function ItemCombsExplore({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data = [], isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
-    queryKey: [
-      "api-item-stats",
+  const queryStatOptions = useMemo(() => {
+    return {
       minMatches,
       hero,
       minRankId,
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
-      Array.from(includeItems),
-      Array.from(excludeItems),
-    ],
-    queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/item-stats");
-      if (hero) url.searchParams.set("hero_id", hero.toString());
-      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
-      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (includeItems.size > 0) url.searchParams.set("include_item_ids", Array.from(includeItems).join(","));
-      if (excludeItems.size > 0) url.searchParams.set("exclude_item_ids", Array.from(excludeItems).join(","));
-      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
-      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
-      if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
-      const res = await fetch(url);
-      const data = await res.json();
-      if (Array.isArray(data)) return data;
-      throw new Error("Error", { cause: data });
-    },
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
-  });
+      includeItems,
+      excludeItems,
+      bucket: undefined,
+    } satisfies ItemStatsQueryParams;
+  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, includeItems, excludeItems]);
+
+  const { data = [], isLoading: isLoadingItemStats } = useQuery(itemStatsQueryOptions(queryStatOptions));
 
   const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
@@ -94,7 +82,7 @@ export default function ItemCombsExplore({
         ? [...(filteredData || [])].sort((a, b) => {
             const a_score = sortBy !== "winrate" ? a[sortBy] : a.wins / a.matches;
             const b_score = sortBy !== "winrate" ? b[sortBy] : b.wins / b.matches;
-            return b_score - a_score;
+            return (b_score || 0) - (a_score || 0);
           })
         : filteredData,
     [filteredData, sortBy],
@@ -227,12 +215,8 @@ export default function ItemCombsExplore({
           excludedItemIds={Array.from(excludeItems)}
           onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
           onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
-          customDropdownContent={(itemId) => (
-            <div className="text-sm">
-              <p className="font-semibold mb-2">Item Details</p>
-              <p>Item ID: {itemId}</p>
-              <p className="text-gray-400 mt-1">More details coming soon...</p>
-            </div>
+          customDropdownContent={({ itemId, rowTotal }) => (
+            <ItemBuyTimingChart itemId={itemId} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
           )}
         />
       </div>
