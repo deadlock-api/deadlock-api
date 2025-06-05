@@ -24,19 +24,19 @@ pub(crate) struct SteamProxyRawResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub(crate) struct SteamProxyResponse<R: Message> {
-    pub(crate) msg: R,
+pub(crate) struct SteamProxyResponse<M: Message> {
+    pub(crate) msg: M,
     pub(crate) username: String,
 }
 
-impl<R: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse<R> {
+impl<M: Message + Default> TryFrom<SteamProxyRawResponse> for SteamProxyResponse<M> {
     type Error = SteamProxyError;
 
     fn try_from(
         SteamProxyRawResponse { data, username }: SteamProxyRawResponse,
     ) -> Result<Self, Self::Error> {
         let decoded_data = BASE64_STANDARD.decode(&data)?;
-        let msg = R::decode(decoded_data.as_slice())?;
+        let msg = M::decode(decoded_data.as_slice())?;
         Ok(SteamProxyResponse { msg, username })
     }
 }
