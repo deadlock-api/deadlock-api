@@ -146,19 +146,19 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
     }
     if let Some(min_unix_timestamp) = params.min_unix_timestamp {
         query_builder.push(" AND updated_at >= ");
-        query_builder.push(format!("to_timestamp({})", min_unix_timestamp));
+        query_builder.push(format!("to_timestamp({min_unix_timestamp})"));
     }
     if let Some(max_unix_timestamp) = params.max_unix_timestamp {
         query_builder.push(" AND updated_at <= ");
-        query_builder.push(format!("to_timestamp({})", max_unix_timestamp));
+        query_builder.push(format!("to_timestamp({max_unix_timestamp})"));
     }
     if let Some(min_published_unix_timestamp) = params.min_published_unix_timestamp {
         query_builder.push(" AND published_at >= ");
-        query_builder.push(format!("to_timestamp({})", min_published_unix_timestamp));
+        query_builder.push(format!("to_timestamp({min_published_unix_timestamp})"));
     }
     if let Some(max_published_unix_timestamp) = params.max_published_unix_timestamp {
         query_builder.push(" AND published_at <= ");
-        query_builder.push(format!("to_timestamp({})", max_published_unix_timestamp));
+        query_builder.push(format!("to_timestamp({max_published_unix_timestamp})"));
     }
     if params.only_latest.unwrap_or_default() {
         query_builder.push(" ) SELECT builds FROM hero_builds WHERE rn = 1");

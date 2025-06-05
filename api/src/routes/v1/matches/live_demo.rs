@@ -58,8 +58,7 @@ pub(super) async fn live_demo(
         state
             .http_client
             .head(format!(
-                "https://dist1-ord1.steamcontent.com/tv/{}/sync",
-                match_id
+                "https://dist1-ord1.steamcontent.com/tv/{match_id}/sync"
             ))
             .send()
             .await
