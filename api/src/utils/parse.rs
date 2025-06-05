@@ -2,8 +2,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
-const STEAM_ID_64_IDENT: u64 = 76561197960265728;
-
+// Date Parsing
 pub(crate) fn parse_rfc2822_datetime<'de, D>(
     deserializer: D,
 ) -> Result<DateTime<FixedOffset>, D::Error>
@@ -15,25 +14,28 @@ where
         .and_then(|s| DateTime::parse_from_rfc2822(&s).map_err(serde::de::Error::custom))
 }
 
+// Steam ID Parsing
+const STEAM_ID_64_IDENT: u64 = 76561197960265728;
+
+fn steamid64_to_steamid3(steam_id: u64) -> u32 {
+    // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
+    if steam_id < STEAM_ID_64_IDENT {
+        return steam_id as u32;
+    }
+    (steam_id - STEAM_ID_64_IDENT) as u32
+}
+
 pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
     u64::deserialize(deserializer)
         .map_err(serde::de::Error::custom)
-        .map(|steam_id| {
-            if steam_id >= STEAM_ID_64_IDENT {
-                (steam_id - STEAM_ID_64_IDENT) as u32
-            } else {
-                steam_id as u32
-            }
-        })
+        .map(steamid64_to_steamid3)
         .and_then(|steam_id| {
-            if steam_id > 0 {
-                Ok(steam_id)
-            } else {
-                Err(serde::de::Error::custom("Invalid steam id"))
-            }
+            (steam_id > 0)
+                .then_some(steam_id)
+                .ok_or_else(|| serde::de::Error::custom("Invalid steam id"))
         })
 }
 
@@ -43,28 +45,24 @@ where
 {
     Option::<u64>::deserialize(deserializer)
         .map_err(serde::de::Error::custom)
-        .map(|steam_id| match steam_id {
-            Some(steam_id) => {
-                if steam_id >= STEAM_ID_64_IDENT {
-                    Some((steam_id - STEAM_ID_64_IDENT) as u32)
-                } else {
-                    Some(steam_id as u32)
-                }
-            }
-            None => None,
-        })
+        .map(|steam_id| steam_id.map(steamid64_to_steamid3))
         .map(|steam_id| steam_id.filter(|&s| s > 0))
 }
 
+// Query Parameter Parsing
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum CommaSeparatedNum<T>
 where
     T: std::fmt::Debug + FromStr,
 {
+    /// A List of numbers in a single comma separated string, e.g. "1,2,3"
     CommaStringList(String),
+    /// A List of numbers in a string array, e.g. ["1", "2", "3"]
     StringList(Vec<String>),
+    /// A single number, e.g. 1
     Single(T),
+    /// A list of numbers, e.g. [1, 2, 3]
     List(Vec<T>),
 }
 
@@ -98,6 +96,11 @@ where
         }
         CommaSeparatedNum::CommaStringList(str) => {
             let str = str.replace("[", "").replace("]", "");
+
+            // If the string is empty, return None
+            if str.is_empty() {
+                return Ok(None);
+            }
 
             let mut out = vec![];
             for s in str.split(',') {
@@ -186,20 +189,13 @@ mod tests {
     }
 
     #[rstest]
-    #[case(76561198123456789u64, Some(163191061u32))] // Steam ID 64 to Steam ID 32
-    #[case(123456u64, Some(123456u32))] // Steam ID 32 stays the same
-    #[case(0u64, None)] // Invalid Steam ID (0) becomes None
-    fn test_parse_steam_id_option_with_value(#[case] input: u64, #[case] expected: Option<u32>) {
-        let json = format!("{{\"steam_id\": {input}}}");
-        let result: SteamIdOptionTestStruct = serde_json::from_str(&json).unwrap();
-        assert_eq!(result.steam_id, expected);
-    }
-
-    #[test]
-    fn test_parse_steam_id_option_null() {
-        let json = "{\"steam_id\": null}";
+    #[case("{\"steam_id\": 76561198123456789}", Some(163191061u32))] // Steam ID 64 to Steam ID 32
+    #[case("{\"steam_id\": 123456}", Some(123456u32))] // Steam ID 32 stays the same
+    #[case("{\"steam_id\": 0}", None)] // Invalid Steam ID (0) becomes None
+    #[case("{\"steam_id\": null}", None)] // Null becomes None
+    fn test_parse_steam_id_option(#[case] json: &str, #[case] expected: Option<u32>) {
         let result: SteamIdOptionTestStruct = serde_json::from_str(json).unwrap();
-        assert_eq!(result.steam_id, None);
+        assert_eq!(result.steam_id, expected);
     }
 
     #[derive(Deserialize, Debug)]
@@ -215,12 +211,29 @@ mod tests {
     #[case("{\"ids\": [\"1\", \"2\", \"3\"]}", Some(vec![1, 2, 3]))] // String array
     #[case("{\"ids\": null}", None)] // Null
     #[case("{\"ids\": \"[1,2,3]\"}", Some(vec![1, 2, 3]))] // Brackets
+    #[case("{\"ids\": \"1, 2, 3\"}", Some(vec![1, 2, 3]))] // Spaces
+    #[case("{\"ids\": \"1,2, 3\"}", Some(vec![1, 2, 3]))] // Mixed spaces and no spaces
+    #[case("{\"ids\": \"\"}", None)] // Empty string
+    #[case("{\"ids\": []}", None)] // Empty array
     fn test_comma_separated_num_deserialize_option(
         #[case] json: &str,
         #[case] expected: Option<Vec<u32>>,
     ) {
         let result: CommaSeparatedTestStruct = serde_json::from_str(json).unwrap();
         assert_eq!(result.ids, expected);
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"a\"}")]
+    #[case("{\"ids\": \"a,b,c\"}")]
+    #[case("{\"ids\": [\"a\", \"b\", \"c\"]}")]
+    #[case("{\"ids\": \"1,2,notanumber\"}")]
+    #[case("{\"ids\": [1, 2, \"oops\"]}")]
+    #[case("{\"ids\": [18446744073709551615u64]}")] // u64 that overflows u32
+    #[case("{\"ids\": \"1,\"2\", 3\"}")] // Mixed numbers and strings, do we want to support this?
+    fn test_comma_separated_num_deserialize_option_invalid(#[case] json: &str) {
+        let result = serde_json::from_str::<CommaSeparatedTestStruct>(json);
+        assert!(result.is_err());
     }
 
     #[derive(Deserialize)]
@@ -270,5 +283,20 @@ mod tests {
     #[test]
     fn test_default_true() {
         assert!(default_true());
+    }
+
+    #[test]
+    fn test_querify() {
+        let query = querify("key1=value1&key2=value2&key3=value3");
+        assert_eq!(
+            query,
+            vec![("key1", "value1"), ("key2", "value2"), ("key3", "value3")]
+        );
+    }
+
+    #[test]
+    fn test_stringify() {
+        let query = vec![("key1", "value1"), ("key2", "value2"), ("key3", "value3")];
+        assert_eq!(stringify(query), "key1=value1&key2=value2&key3=value3&");
     }
 }
