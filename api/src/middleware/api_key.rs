@@ -102,6 +102,71 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_write_api_key_to_header_with_api_key_in_header() {
+        // Create a router with our middleware
+        let app = app();
+
+        // Create a request with api_key in header
+        let request = Request::builder()
+            .uri("/test")
+            .header("x-api-key", "fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64")
+            .body(Body::empty())
+            .unwrap();
+
+        // Call the service
+        let response = app.oneshot(request).await.unwrap();
+
+        // Check the response
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Convert the response body to bytes and then to a string
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body_str = String::from_utf8(bytes.to_vec()).unwrap();
+
+        // Verify the api_key was added to headers
+        assert_eq!(
+            body_str.to_lowercase(),
+            "has_api_key=true, value=fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_write_api_key_to_header_with_api_key_in_bearer_token() {
+        // Create a router with our middleware
+        let app = app();
+
+        // Create a request with api_key in bearer token
+        let request = Request::builder()
+            .uri("/test")
+            .header(
+                "authorization",
+                "Bearer fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64",
+            )
+            .body(Body::empty())
+            .unwrap();
+
+        // Call the service
+        let response = app.oneshot(request).await.unwrap();
+
+        // Check the response
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Convert the response body to bytes and then to a string
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body_str = String::from_utf8(bytes.to_vec()).unwrap();
+
+        // Verify the api_key was added to headers
+        assert_eq!(
+            body_str.to_lowercase(),
+            "has_api_key=true, value=fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64"
+        );
+    }
+
+    #[tokio::test]
     async fn test_write_api_key_to_header_without_api_key() {
         // Create a router with our middleware
         let app = app();
