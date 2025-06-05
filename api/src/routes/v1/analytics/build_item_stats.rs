@@ -24,10 +24,10 @@ pub(super) struct BuildItemStatsQuery {
     max_last_updated_unix_timestamp: Option<u64>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, ToSchema, Eq, PartialEq, Hash)]
-struct BuildItemStats {
-    item_id: i64,
-    builds: i64,
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, ToSchema, Eq, PartialEq, Hash)]
+pub struct BuildItemStats {
+    pub item_id: i64,
+    pub builds: i64,
 }
 
 fn build_query(query: &BuildItemStatsQuery) -> String {

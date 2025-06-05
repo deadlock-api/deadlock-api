@@ -1,4 +1,4 @@
-mod build_item_stats;
+pub mod build_item_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
 pub mod hero_scoreboard;

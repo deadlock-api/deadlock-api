@@ -1,5 +1,6 @@
 mod utils;
 
+use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
 use deadlock_api_rust::routes::v1::analytics::hero_scoreboard::HeroScoreboardEntry;
@@ -11,6 +12,31 @@ use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQueryS
 use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
+
+#[rstest]
+#[tokio::test]
+async fn test_build_item_stats(#[values(None, Some(1))] hero_id: Option<u32>) {
+    let mut queries = vec![];
+    if let Some(hero_id) = hero_id {
+        queries.push(("hero_id", hero_id.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/build-item-stats", queries).await;
+    let item_stats: Vec<BuildItemStats> = response.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        item_stats.iter().map(|s| s.item_id).unique().count(),
+        item_stats.len(),
+    );
+
+    for stat in &item_stats {
+        assert!(stat.builds > 0);
+    }
+}
 
 #[rstest]
 #[tokio::test]
@@ -324,6 +350,81 @@ async fn test_hero_synergies_stats(
         );
         assert!(
             stat.creeps1 > 0 && stat.creeps2 > 0,
+            "Creeps should be greater than 0"
+        );
+    }
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_hero_counter_stats(
+    #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
+) {
+    let mut queries = vec![];
+    if let Some(same_lane_filter) = same_lane_filter {
+        queries.push(("same_lane_filter", same_lane_filter.to_string()));
+    }
+    if let Some(account_id) = account_id {
+        queries.push(("account_id", account_id.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = utils::request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
+    let counter_stats: Vec<HeroCounterStats> =
+        response.json().await.expect("Failed to parse response");
+
+    assert_eq!(
+        counter_stats
+            .iter()
+            .map(|s| (s.hero_id, s.enemy_hero_id))
+            .unique()
+            .count(),
+        counter_stats.len()
+    );
+
+    for stat in counter_stats {
+        assert!(
+            stat.wins <= stat.matches_played,
+            "Wins should not exceed total matches"
+        );
+        assert_ne!(
+            stat.hero_id, stat.enemy_hero_id,
+            "Heroes in a synergy pair should be different"
+        );
+        assert!(
+            stat.kills > 0 && stat.enemy_kills > 0,
+            "Kills should be greater than 0"
+        );
+        assert!(
+            stat.deaths > 0 && stat.enemy_deaths > 0,
+            "Deaths should be greater than 0"
+        );
+        assert!(
+            stat.assists > 0 && stat.enemy_assists > 0,
+            "Assists should be greater than 0"
+        );
+        assert!(
+            stat.denies > 0 && stat.enemy_denies > 0,
+            "Denies should be greater than 0"
+        );
+        assert!(
+            stat.last_hits > 0 && stat.enemy_last_hits > 0,
+            "Last hits should be greater than 0"
+        );
+        assert!(
+            stat.networth > 0 && stat.enemy_networth > 0,
+            "Net worth should be greater than 0"
+        );
+        assert!(
+            stat.obj_damage > 0 && stat.enemy_obj_damage > 0,
+            "Objective damage should be greater than 0"
+        );
+        assert!(
+            stat.creeps > 0 && stat.enemy_creeps > 0,
             "Creeps should be greater than 0"
         );
     }
