@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct EnemyStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
@@ -137,4 +137,149 @@ pub(super) async fn enemy_stats(
     get_enemy_stats(&state.ch_client, account_id, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_build_query_default() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 12345"));
+        assert!(sql.contains("WITH players AS"));
+        assert!(sql.contains("if(team = 'Team1', 'Team0', 'Team1') as enemy_team"));
+        assert!(sql.contains("team IN ('Team0', 'Team1')"));
+        assert!(sql.contains("SELECT account_id as enemy_id"));
+        assert!(sql.contains("sum(won) as wins"));
+        assert!(sql.contains("count() as matches_played"));
+        assert!(sql.contains("groupUniqArray(match_id) as matches"));
+        assert!(sql.contains("GROUP BY enemy_id"));
+        assert!(sql.contains("ORDER BY matches_played DESC"));
+        assert!(sql.contains("matches_played > 0")); // Default min_matches_played
+        // Should not contain any filters
+        assert!(!sql.contains("start_time >="));
+        assert!(!sql.contains("start_time <="));
+        assert!(!sql.contains("match_id >="));
+        assert!(!sql.contains("match_id <="));
+        assert!(!sql.contains("average_badge_team"));
+    }
+
+    #[test]
+    fn test_build_query_min_unix_timestamp() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("start_time >= 1672531200"));
+    }
+
+    #[test]
+    fn test_build_query_max_unix_timestamp() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            max_unix_timestamp: Some(1675209599),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("start_time <= 1675209599"));
+    }
+
+    #[test]
+    fn test_build_query_min_match_id() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            min_match_id: Some(10000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("match_id >= 10000"));
+    }
+
+    #[test]
+    fn test_build_query_max_match_id() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            max_match_id: Some(1000000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("match_id <= 1000000"));
+    }
+
+    #[test]
+    fn test_build_query_min_average_badge() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            min_average_badge: Some(5),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("average_badge_team0 >= 5 AND average_badge_team1 >= 5"));
+    }
+
+    #[test]
+    fn test_build_query_max_average_badge() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            max_average_badge: Some(100),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("average_badge_team0 <= 100 AND average_badge_team1 <= 100"));
+    }
+
+    #[test]
+    fn test_build_query_min_matches_played() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            min_matches_played: Some(5),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("matches_played > 5"));
+    }
+
+    #[test]
+    fn test_build_query_combined_filters() {
+        let account_id = 98765;
+        let query = EnemyStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            max_unix_timestamp: Some(1675209599),
+            min_average_badge: Some(10),
+            max_average_badge: Some(90),
+            min_match_id: Some(5000),
+            max_match_id: Some(500000),
+            min_matches_played: Some(3),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 98765"));
+        assert!(sql.contains("start_time >= 1672531200"));
+        assert!(sql.contains("start_time <= 1675209599"));
+        assert!(sql.contains("match_id >= 5000"));
+        assert!(sql.contains("match_id <= 500000"));
+        assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
+        assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
+        assert!(sql.contains("matches_played > 3"));
+    }
+
+    #[test]
+    fn test_build_query_team_logic() {
+        let account_id = 12345;
+        let query = EnemyStatsQuery {
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        // Verify the team logic is correct - enemies are on the opposite team
+        assert!(sql.contains("if(team = 'Team1', 'Team0', 'Team1') as enemy_team"));
+        assert!(sql.contains("team IN ('Team0', 'Team1')"));
+        assert!(sql.contains("(match_id, team) IN (SELECT match_id, enemy_team FROM players)"));
+    }
 }

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct HeroStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
@@ -169,4 +169,159 @@ pub(super) async fn hero_stats(
     get_hero_stats(&state.ch_client, account_id, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_build_query_default() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 12345"));
+        assert!(sql.contains("SELECT"));
+        assert!(sql.contains("hero_id"));
+        assert!(sql.contains("COUNT() AS matches_played"));
+        assert!(sql.contains("sum(won) AS wins"));
+        assert!(sql.contains("FROM match_player mp FINAL"));
+        assert!(sql.contains("INNER ANY JOIN match_info mi USING (match_id)"));
+        assert!(sql.contains("PREWHERE account_id = 12345"));
+        assert!(sql.contains("WHERE match_mode IN ('Ranked', 'Unranked')"));
+        assert!(sql.contains("GROUP BY hero_id"));
+        assert!(sql.contains("ORDER BY hero_id"));
+        // Should not contain any filters
+        assert!(!sql.contains("start_time >="));
+        assert!(!sql.contains("start_time <="));
+        assert!(!sql.contains("match_id >="));
+        assert!(!sql.contains("match_id <="));
+        assert!(!sql.contains("average_badge_team"));
+    }
+
+    #[test]
+    fn test_build_query_min_unix_timestamp() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("start_time >= 1672531200"));
+    }
+
+    #[test]
+    fn test_build_query_max_unix_timestamp() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            max_unix_timestamp: Some(1675209599),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("start_time <= 1675209599"));
+    }
+
+    #[test]
+    fn test_build_query_min_match_id() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            min_match_id: Some(10000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("match_id >= 10000"));
+    }
+
+    #[test]
+    fn test_build_query_max_match_id() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            max_match_id: Some(1000000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("match_id <= 1000000"));
+    }
+
+    #[test]
+    fn test_build_query_min_average_badge() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            min_average_badge: Some(5),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("average_badge_team0 >= 5 AND average_badge_team1 >= 5"));
+    }
+
+    #[test]
+    fn test_build_query_max_average_badge() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            max_average_badge: Some(100),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("average_badge_team0 <= 100 AND average_badge_team1 <= 100"));
+    }
+
+    #[test]
+    fn test_build_query_combined_filters() {
+        let account_id = 98765;
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            max_unix_timestamp: Some(1675209599),
+            min_average_badge: Some(10),
+            max_average_badge: Some(90),
+            min_match_id: Some(5000),
+            max_match_id: Some(500000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 98765"));
+        assert!(sql.contains("start_time >= 1672531200"));
+        assert!(sql.contains("start_time <= 1675209599"));
+        assert!(sql.contains("match_id >= 5000"));
+        assert!(sql.contains("match_id <= 500000"));
+        assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
+        assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
+    }
+
+    #[test]
+    fn test_build_query_statistical_fields() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        // Verify all statistical fields are included
+        assert!(sql.contains("avg(arrayMax(stats.level)) AS ending_level"));
+        assert!(sql.contains("sum(kills) AS kills"));
+        assert!(sql.contains("sum(deaths) AS deaths"));
+        assert!(sql.contains("sum(assists) AS assists"));
+        assert!(sql.contains("avg(denies) AS denies_per_match"));
+        assert!(sql.contains("60 * avg(mp.kills / duration_s) AS kills_per_min"));
+        assert!(sql.contains("60 * avg(mp.deaths / duration_s) AS deaths_per_min"));
+        assert!(sql.contains("60 * avg(mp.assists / duration_s) AS assists_per_min"));
+        assert!(sql.contains("60 * avg(denies / duration_s) AS denies_per_min"));
+        assert!(sql.contains("60 * avg(net_worth / duration_s) AS networth_per_min"));
+        assert!(sql.contains("60 * avg(last_hits / duration_s) AS last_hits_per_min"));
+        assert!(sql.contains(
+            "60 * avg(arrayMax(stats.player_damage) / duration_s) AS damage_mitigated_per_min"
+        ));
+        assert!(sql.contains(
+            "60 * avg(arrayMax(stats.player_damage_taken) / duration_s) AS damage_taken_per_min"
+        ));
+        assert!(
+            sql.contains("60 * avg(arrayMax(stats.creep_kills) / duration_s) AS creeps_per_min")
+        );
+        assert!(sql.contains(
+            "60 * avg(arrayMax(stats.neutral_damage) / duration_s) AS obj_damage_per_min"
+        ));
+        assert!(sql.contains("avg(arrayMax(stats.shots_hit) / greatest(1, arrayMax(stats.shots_hit) + arrayMax(stats.shots_missed))) AS accuracy"));
+        assert!(sql.contains("avg(arrayMax(stats.hero_bullets_hit_crit) / greatest(1, arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit))) AS crit_shot_rate"));
+        assert!(sql.contains("groupUniqArray(mi.match_id) as matches"));
+    }
 }

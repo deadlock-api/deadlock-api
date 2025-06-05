@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct MateStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
@@ -162,4 +162,185 @@ pub(super) async fn mate_stats(
     get_mate_stats(&state.ch_client, account_id, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_build_query_default_same_party() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 12345"));
+        assert!(sql.contains("WITH players AS"));
+        assert!(sql.contains("party != 0"));
+        assert!(sql.contains("account_id != 12345"));
+        assert!(sql.contains("SELECT account_id as mate_id"));
+        assert!(sql.contains("GROUP BY mate_id"));
+        assert!(sql.contains("ORDER BY matches_played DESC"));
+        // Should not contain any filters
+        assert!(!sql.contains("start_time >="));
+        assert!(!sql.contains("start_time <="));
+        assert!(!sql.contains("match_id >="));
+        assert!(!sql.contains("match_id <="));
+        assert!(!sql.contains("average_badge_team"));
+    }
+
+    #[test]
+    fn test_build_query_default_not_same_party() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            same_party: false,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 12345"));
+        assert!(sql.contains("WITH players AS"));
+        assert!(!sql.contains("party != 0")); // Should not filter by party
+        assert!(sql.contains("account_id != 12345"));
+        assert!(sql.contains("SELECT account_id as mate_id"));
+        assert!(sql.contains("GROUP BY mate_id"));
+        assert!(sql.contains("ORDER BY matches_played DESC"));
+    }
+
+    #[test]
+    fn test_build_query_min_unix_timestamp() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("start_time >= 1672531200"));
+    }
+
+    #[test]
+    fn test_build_query_max_unix_timestamp() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            max_unix_timestamp: Some(1675209599),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("start_time <= 1675209599"));
+    }
+
+    #[test]
+    fn test_build_query_min_match_id() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            min_match_id: Some(10000),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("match_id >= 10000"));
+    }
+
+    #[test]
+    fn test_build_query_max_match_id() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            max_match_id: Some(1000000),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("match_id <= 1000000"));
+    }
+
+    #[test]
+    fn test_build_query_min_average_badge() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            min_average_badge: Some(5),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("average_badge_team0 >= 5 AND average_badge_team1 >= 5"));
+    }
+
+    #[test]
+    fn test_build_query_max_average_badge() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            max_average_badge: Some(100),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("average_badge_team0 <= 100 AND average_badge_team1 <= 100"));
+    }
+
+    #[test]
+    fn test_build_query_min_matches_played() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            min_matches_played: Some(5),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("matches_played > 5"));
+    }
+
+    #[test]
+    fn test_build_query_combined_filters_same_party() {
+        let account_id = 98765;
+        let query = MateStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            max_unix_timestamp: Some(1675209599),
+            min_average_badge: Some(10),
+            max_average_badge: Some(90),
+            min_match_id: Some(5000),
+            max_match_id: Some(500000),
+            min_matches_played: Some(3),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 98765"));
+        assert!(sql.contains("start_time >= 1672531200"));
+        assert!(sql.contains("start_time <= 1675209599"));
+        assert!(sql.contains("match_id >= 5000"));
+        assert!(sql.contains("match_id <= 500000"));
+        assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
+        assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
+        assert!(sql.contains("matches_played > 3"));
+        assert!(sql.contains("party != 0"));
+    }
+
+    #[test]
+    fn test_build_query_combined_filters_not_same_party() {
+        let account_id = 98765;
+        let query = MateStatsQuery {
+            min_unix_timestamp: Some(1672531200),
+            max_unix_timestamp: Some(1675209599),
+            min_average_badge: Some(10),
+            max_average_badge: Some(90),
+            min_match_id: Some(5000),
+            max_match_id: Some(500000),
+            min_matches_played: Some(3),
+            same_party: false,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("account_id = 98765"));
+        assert!(sql.contains("start_time >= 1672531200"));
+        assert!(sql.contains("start_time <= 1675209599"));
+        assert!(sql.contains("match_id >= 5000"));
+        assert!(sql.contains("match_id <= 500000"));
+        assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
+        assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
+        assert!(sql.contains("matches_played > 3"));
+        assert!(!sql.contains("party != 0")); // Should not filter by party
+    }
 }

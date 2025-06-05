@@ -12,7 +12,7 @@ use sqlx::{Execute, Pool, Postgres, QueryBuilder};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct BuildItemStatsQuery {
     /// Filter builds based on the hero ID.
     hero_id: Option<u32>,
@@ -103,4 +103,90 @@ pub(super) async fn build_item_stats(
     get_build_item_stats(&state.pg_client, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_build_query_default() {
+        let query = BuildItemStatsQuery {
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains(
+            "SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds"
+        ));
+        assert!(sql.contains("FROM hero_builds"));
+        assert!(sql.contains("WHERE TRUE"));
+        assert!(sql.contains("GROUP BY item_id ORDER BY num_builds DESC"));
+        // Should not contain any filters
+        assert!(!sql.contains("AND hero ="));
+        assert!(!sql.contains("AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint"));
+    }
+
+    #[test]
+    fn test_build_query_hero_id() {
+        let query = BuildItemStatsQuery {
+            hero_id: Some(42),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("AND hero = 42"));
+    }
+
+    #[test]
+    fn test_build_query_min_last_updated_unix_timestamp() {
+        let query = BuildItemStatsQuery {
+            min_last_updated_unix_timestamp: Some(1672531200),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains(
+            "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint > 1672531200"
+        ));
+    }
+
+    #[test]
+    fn test_build_query_max_last_updated_unix_timestamp() {
+        let query = BuildItemStatsQuery {
+            max_last_updated_unix_timestamp: Some(1675209599),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains(
+            "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint < 1675209599"
+        ));
+    }
+
+    #[test]
+    fn test_build_query_combined_filters() {
+        let query = BuildItemStatsQuery {
+            hero_id: Some(25),
+            min_last_updated_unix_timestamp: Some(1672531200),
+            max_last_updated_unix_timestamp: Some(1675209599),
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("AND hero = 25"));
+        assert!(sql.contains(
+            "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint > 1672531200"
+        ));
+        assert!(sql.contains(
+            "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint < 1675209599"
+        ));
+    }
+
+    #[test]
+    fn test_build_query_with_default_timestamp() {
+        let query = BuildItemStatsQuery {
+            hero_id: Some(10),
+            min_last_updated_unix_timestamp: default_last_month_timestamp(),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("AND hero = 10"));
+        // Should contain the default timestamp filter
+        assert!(sql.contains("AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint >"));
+    }
 }
