@@ -25,3 +25,22 @@ pub enum SortDirectionDesc {
     #[display("asc")]
     Asc,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sort_direction_asc() {
+        assert_eq!(SortDirectionAsc::default().to_string(), "asc");
+        assert_eq!(SortDirectionAsc::Asc.to_string(), "asc");
+        assert_eq!(SortDirectionAsc::Desc.to_string(), "desc");
+    }
+
+    #[test]
+    fn test_sort_direction_desc() {
+        assert_eq!(SortDirectionDesc::default().to_string(), "desc");
+        assert_eq!(SortDirectionDesc::Desc.to_string(), "desc");
+        assert_eq!(SortDirectionDesc::Asc.to_string(), "asc");
+    }
+}
