@@ -23,10 +23,10 @@ pub(super) struct HeroMMRHistoryQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub(crate) struct MMRHistory {
+pub struct MMRHistory {
     match_id: u64,
     /// Start time of the match
-    start_time: u32,
+    pub start_time: u32,
     /// Player Score is the index for the rank array (internally used for the rank regression)
     player_score: f32,
     /// The Player Rank

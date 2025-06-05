@@ -1,10 +1,10 @@
 mod card;
-mod enemy_stats;
-mod hero_stats;
+pub mod enemy_stats;
+pub mod hero_stats;
 pub(crate) mod match_history;
-mod mate_stats;
-pub(super) mod mmr_history;
-mod party_stats;
+pub mod mate_stats;
+pub mod mmr_history;
+pub mod party_stats;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;

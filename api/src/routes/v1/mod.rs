@@ -8,7 +8,7 @@ pub mod info;
 mod leaderboard;
 mod matches;
 mod patches;
-pub(super) mod players;
+pub mod players;
 mod sql;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

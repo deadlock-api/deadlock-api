@@ -43,8 +43,8 @@ pub(super) struct MateStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct MateStats {
-    mate_id: u32,
+pub struct MateStats {
+    pub mate_id: u32,
     wins: u64,
     matches_played: u64,
     matches: Vec<u64>,

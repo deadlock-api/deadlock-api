@@ -38,8 +38,8 @@ pub(super) struct EnemyStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct EnemyStats {
-    enemy_id: u32,
+pub struct EnemyStats {
+    pub enemy_id: u32,
     wins: u64,
     matches_played: u64,
     matches: Vec<u64>,

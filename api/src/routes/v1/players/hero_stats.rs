@@ -36,8 +36,8 @@ pub(super) struct HeroStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct HeroStats {
-    hero_id: u32,
+pub struct HeroStats {
+    pub hero_id: u32,
     matches_played: u64,
     wins: u64,
     ending_level: f64,

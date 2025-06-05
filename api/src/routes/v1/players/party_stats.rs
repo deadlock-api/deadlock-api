@@ -36,8 +36,8 @@ pub(super) struct PartyStatsQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct PartyStats {
-    party_size: u64,
+pub struct PartyStats {
+    pub party_size: u64,
     wins: u64,
     matches_played: u64,
     matches: Vec<u64>,
