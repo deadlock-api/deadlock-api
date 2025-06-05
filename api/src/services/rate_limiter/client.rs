@@ -34,39 +34,35 @@ impl RateLimitClient {
             return Ok(None);
         }
 
-        // Validate the API key if it is present
-        let api_key = match rate_limit_key.api_key {
-            Some(key) => is_api_key_valid(&self.pg_client, key)
-                .await
-                .then_some(key)
-                .ok_or_else(|| {
-                    error!("Failed to validate API key: {key}");
-                    APIError::status_msg(StatusCode::FORBIDDEN, "Invalid API key")
-                })?
-                .into(),
-            None => None,
-        };
-
-        // If no api key, and there are no IP quotas, but there are key quotas, return an error
-        if api_key.is_none()
+        if let Some(api_key) = rate_limit_key.api_key {
+            // If API key is present, check if it is valid
+            if !is_api_key_valid(&self.pg_client, api_key).await {
+                return Err(APIError::status_msg(
+                    StatusCode::FORBIDDEN,
+                    "Invalid API key",
+                ));
+            }
+        } else if quotas.iter().any(|q| q.rate_limit_quota_type.is_key())
             && !quotas.iter().any(|q| q.rate_limit_quota_type.is_ip())
-            && quotas.iter().any(|q| q.rate_limit_quota_type.is_key())
         {
+            // If API key is not present check if this route requires an API key
+            // Routes that have a key limit, but no IP limit, require an API key
+            // This way we can make routes key-only, by only assigning a key limit
             return Err(APIError::status_msg(
                 StatusCode::FORBIDDEN,
                 "API key is required for this endpoint",
             ));
-        }
-
-        // If the service is in emergency mode, only requests with an API key are allowed
-        if self.emergency_mode && api_key.is_none() {
+        } else if self.emergency_mode {
+            // If API key is not present check if the service is in emergency mode
+            // If the service is in emergency mode, only requests with an API key are allowed
             return Err(APIError::status_msg(
                 StatusCode::SERVICE_UNAVAILABLE,
                 "Service is in emergency mode",
             ));
         }
 
-        let prefix = api_key
+        let prefix = rate_limit_key
+            .api_key
             .map(|k| k.to_string())
             .unwrap_or_else(|| rate_limit_key.ip.to_string());
         let increment_result = self.increment_key(&prefix, key).await;
@@ -76,7 +72,7 @@ impl RateLimitClient {
         }
 
         // Check for custom quotas
-        let quotas = match api_key {
+        let quotas = match rate_limit_key.api_key {
             None => quotas.to_vec(),
             Some(api_key) => {
                 let custom_quotas = get_custom_quotas(&self.pg_client, api_key, key).await;
@@ -94,6 +90,8 @@ impl RateLimitClient {
                 }
             }
         };
+
+        // Check all quotas
         let mut all_statuses = Vec::new();
         for quota in quotas {
             let prefixed_key = if quota.rate_limit_quota_type.is_global() {
@@ -116,6 +114,7 @@ impl RateLimitClient {
             all_statuses.push(status);
         }
 
+        // Return the status with the lowest remaining requests (most critical)
         Ok(all_statuses.into_iter().min_by_key(|s| s.remaining()))
     }
 
