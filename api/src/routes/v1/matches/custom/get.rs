@@ -46,7 +46,7 @@ async fn get_party_match_id(
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetch Custom Match ID failed")
     ),
-    tags = ["Custom Matches [PREVIEW]"],
+    tags = ["Custom Matches"],
     summary = "Get Custom Match ID",
     description = "This endpoint allows you to get the match id of a custom match."
 )]

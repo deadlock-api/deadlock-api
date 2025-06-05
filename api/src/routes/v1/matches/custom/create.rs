@@ -222,7 +222,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Creating custom match failed")
     ),
-    tags = ["Custom Matches [PREVIEW]"],
+    tags = ["Custom Matches"],
     summary = "Create Custom Match",
     description = "This endpoint allows you to create a custom match."
 )]
