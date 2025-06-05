@@ -58,7 +58,7 @@ where
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum CommaSeperatedNum<T>
+enum CommaSeparatedNum<T>
 where
     T: std::fmt::Debug + FromStr,
 {
@@ -75,15 +75,15 @@ where
     D: Deserializer<'de>,
     T: FromStr + Deserialize<'de> + std::fmt::Debug,
 {
-    let deserialized: Option<CommaSeperatedNum<T>> = Option::deserialize(deserializer)?;
+    let deserialized: Option<CommaSeparatedNum<T>> = Option::deserialize(deserializer)?;
     let Some(deserialized) = deserialized else {
         return Ok(None);
     };
 
     Ok(match deserialized {
-        CommaSeperatedNum::List(vec) => Some(vec),
-        CommaSeperatedNum::Single(val) => Some(vec![val]),
-        CommaSeperatedNum::StringList(val) => {
+        CommaSeparatedNum::List(vec) => Some(vec),
+        CommaSeparatedNum::Single(val) => Some(vec![val]),
+        CommaSeparatedNum::StringList(val) => {
             let mut out = vec![];
             for s in val {
                 let parsed = s
@@ -96,13 +96,13 @@ where
                 false => Some(out),
             }
         }
-        CommaSeperatedNum::CommaStringList(str) => {
+        CommaSeparatedNum::CommaStringList(str) => {
             let str = str.replace("[", "").replace("]", "");
 
             let mut out = vec![];
             for s in str.split(',') {
                 let parsed = s.trim().parse().map_err(|_| {
-                    serde::de::Error::custom("Failed to parse comma seperated list")
+                    serde::de::Error::custom("Failed to parse comma separated list")
                 })?;
                 out.push(parsed);
             }
