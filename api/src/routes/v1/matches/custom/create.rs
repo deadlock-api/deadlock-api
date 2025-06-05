@@ -29,7 +29,7 @@ use valveprotos::gcsdk::EgcPlatform;
 
 #[derive(Serialize, ToSchema)]
 struct CreateCustomResponse {
-    party_id: u64,
+    party_id: String,
     party_code: String,
 }
 
@@ -305,7 +305,7 @@ pub(super) async fn create_custom(
     }
 
     let response = CreateCustomResponse {
-        party_id,
+        party_id: party_id.to_string(),
         party_code: party_code.to_string(),
     };
     Ok(Json(response))
