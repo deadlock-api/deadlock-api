@@ -64,7 +64,7 @@ struct ItemPermutationStats {
     matches: u64,
 }
 
-fn build_item_permutation_stats_query(query: &ItemPermutationStatsQuery) -> String {
+fn build_query(query: &ItemPermutationStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -178,7 +178,7 @@ async fn get_item_permutation_stats(
     ch_client: &clickhouse::Client,
     query: ItemPermutationStatsQuery,
 ) -> APIResult<Vec<ItemPermutationStats>> {
-    let query = build_item_permutation_stats_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }

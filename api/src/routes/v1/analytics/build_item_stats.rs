@@ -30,7 +30,7 @@ struct BuildItemStats {
     builds: i64,
 }
 
-fn build_build_item_stats_query(query: &BuildItemStatsQuery) -> String {
+fn build_query(query: &BuildItemStatsQuery) -> String {
     let mut query_builder: QueryBuilder<Postgres> = QueryBuilder::default();
     query_builder.push(r#"
     SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds
@@ -67,7 +67,7 @@ async fn get_build_item_stats(
     pg_client: &Pool<Postgres>,
     query: BuildItemStatsQuery,
 ) -> APIResult<Vec<BuildItemStats>> {
-    let query = build_build_item_stats_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(sqlx::query(&query).fetch_all(pg_client).await.map(|rows| {
         rows.into_iter()

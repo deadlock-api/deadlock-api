@@ -143,7 +143,7 @@ pub struct ItemStats {
     players: u64,
 }
 
-fn build_item_stats_query(query: &ItemStatsQuery) -> String {
+fn build_query(query: &ItemStatsQuery) -> String {
     /* ---------- match_info filters ---------- */
     let mut info_filters = Vec::new();
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
@@ -305,7 +305,7 @@ async fn get_item_stats(
     ch_client: &clickhouse::Client,
     query: ItemStatsQuery,
 ) -> APIResult<Vec<ItemStats>> {
-    let query = build_item_stats_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -346,7 +346,7 @@ mod test {
             min_unix_timestamp: min_unix_timestamp.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("start_time >= {min_unix_timestamp}")));
     }
 
@@ -357,7 +357,7 @@ mod test {
             max_unix_timestamp: max_unix_timestamp.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("start_time <= {max_unix_timestamp}")));
     }
 
@@ -368,7 +368,7 @@ mod test {
             min_duration_s: min_duration_s.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("duration_s >= {min_duration_s}")));
     }
 
@@ -379,7 +379,7 @@ mod test {
             max_duration_s: max_duration_s.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("duration_s <= {max_duration_s}")));
     }
 
@@ -390,7 +390,7 @@ mod test {
             min_average_badge: min_average_badge.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
             "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
         )));
@@ -403,7 +403,7 @@ mod test {
             max_average_badge: max_average_badge.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
             "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
         )));
@@ -416,7 +416,7 @@ mod test {
             min_match_id: min_match_id.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("match_id >= {min_match_id}")));
     }
 
@@ -427,7 +427,7 @@ mod test {
             max_match_id: max_match_id.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("match_id <= {max_match_id}")));
     }
 
@@ -438,7 +438,7 @@ mod test {
             account_id: account_id.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("account_id = {account_id}")));
     }
 
@@ -449,7 +449,7 @@ mod test {
             min_matches: min_matches.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("matches >= {min_matches}")));
     }
 
@@ -460,7 +460,7 @@ mod test {
             hero_id: hero_id.into(),
             ..Default::default()
         };
-        let query_str = build_item_stats_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains(&format!("hero_id = {hero_id}")));
     }
 }

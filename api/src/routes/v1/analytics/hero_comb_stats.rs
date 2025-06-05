@@ -85,7 +85,7 @@ impl AddAssign for HeroCombStats {
     }
 }
 
-fn build_comb_hero_query(query: &HeroCombStatsQuery) -> String {
+fn build_query(query: &HeroCombStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -202,7 +202,7 @@ async fn get_comb_stats(
     ch_client: &clickhouse::Client,
     query: HeroCombStatsQuery,
 ) -> APIResult<Vec<HeroCombStats>> {
-    let ch_query = build_comb_hero_query(&query);
+    let ch_query = build_query(&query);
     debug!(?query);
     let comb_stats: Vec<HeroCombStats> = ch_client.query(&ch_query).fetch_all().await?;
     let comb_size = match query.comb_size {
@@ -273,112 +273,112 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_build_comb_hero_query_min_unix_timestamp() {
+    fn test_build_query_min_unix_timestamp() {
         let min_unix_timestamp = Some(1672531200);
         let comb_query = HeroCombStatsQuery {
             min_unix_timestamp,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("start_time >= 1672531200"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_max_unix_timestamp() {
+    fn test_build_query_max_unix_timestamp() {
         let max_unix_timestamp = Some(1675209599);
         let comb_query = HeroCombStatsQuery {
             max_unix_timestamp,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("start_time <= 1675209599"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_min_duration_s() {
+    fn test_build_query_min_duration_s() {
         let min_duration_s = Some(600);
         let comb_query = HeroCombStatsQuery {
             min_duration_s,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("duration_s >= 600"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_max_duration_s() {
+    fn test_build_query_max_duration_s() {
         let max_duration_s = Some(1800);
         let comb_query = HeroCombStatsQuery {
             max_duration_s,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("duration_s <= 1800"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_min_average_badge() {
+    fn test_build_query_min_average_badge() {
         let min_average_badge = Some(1);
         let comb_query = HeroCombStatsQuery {
             min_average_badge,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_max_average_badge() {
+    fn test_build_query_max_average_badge() {
         let max_average_badge = Some(116);
         let comb_query = HeroCombStatsQuery {
             max_average_badge,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_min_match_id() {
+    fn test_build_query_min_match_id() {
         let min_match_id = Some(10000);
         let comb_query = HeroCombStatsQuery {
             min_match_id,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("match_id >= 10000"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_max_match_id() {
+    fn test_build_query_max_match_id() {
         let max_match_id = Some(1000000);
         let comb_query = HeroCombStatsQuery {
             max_match_id,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("match_id <= 1000000"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_account_id() {
+    fn test_build_query_account_id() {
         let account_id = Some(18373975);
         let comb_query = HeroCombStatsQuery {
             account_id,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("has(account_ids, 18373975)"));
     }
 
     #[test]
-    fn test_build_comb_hero_query_include_hero_ids() {
+    fn test_build_query_include_hero_ids() {
         let include_hero_ids = vec![1, 2, 3];
         let comb_query = HeroCombStatsQuery {
             include_hero_ids: include_hero_ids.clone().into(),
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains(&format!(
                             "hasAll(hero_ids, [{}])",
                             include_hero_ids.iter()
@@ -389,13 +389,13 @@ mod test {
     }
 
     #[test]
-    fn test_build_comb_hero_query_exclude_hero_ids() {
+    fn test_build_query_exclude_hero_ids() {
         let exclude_hero_ids = vec![1, 2, 3];
         let comb_query = HeroCombStatsQuery {
             exclude_hero_ids: exclude_hero_ids.clone().into(),
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains(&format!(
                             "not hasAny(hero_ids, [{}])",
                             exclude_hero_ids.iter()
@@ -406,13 +406,13 @@ mod test {
     }
 
     #[test]
-    fn test_build_comb_hero_query_min_matches() {
+    fn test_build_query_min_matches() {
         let min_matches = Some(1);
         let comb_query = HeroCombStatsQuery {
             min_matches,
             ..Default::default()
         };
-        let query = build_comb_hero_query(&comb_query);
+        let query = build_query(&comb_query);
         assert!(query.contains("matches >= 1"));
     }
 }

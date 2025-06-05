@@ -60,7 +60,7 @@ struct HeroStats {
     matches: Vec<u64>,
 }
 
-fn build_hero_stats_query(account_id: u32, query: &HeroStatsQuery) -> String {
+fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -143,7 +143,7 @@ async fn get_hero_stats(
     account_id: u32,
     query: HeroStatsQuery,
 ) -> APIResult<Vec<HeroStats>> {
-    let query = build_hero_stats_query(account_id, &query);
+    let query = build_query(account_id, &query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }

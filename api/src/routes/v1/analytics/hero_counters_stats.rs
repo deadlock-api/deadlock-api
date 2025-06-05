@@ -98,7 +98,7 @@ pub struct HeroCounterStats {
     enemy_creeps: u64,
 }
 
-fn build_hero_counter_stats_query(query: &HeroCounterStatsQuery) -> String {
+fn build_query(query: &HeroCounterStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -198,7 +198,7 @@ async fn get_hero_counter_stats(
     ch_client: &clickhouse::Client,
     query: HeroCounterStatsQuery,
 ) -> APIResult<Vec<HeroCounterStats>> {
-    let query = build_hero_counter_stats_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -242,7 +242,7 @@ mod test {
             min_unix_timestamp: Some(1672531200),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("start_time >= 1672531200"));
     }
 
@@ -252,7 +252,7 @@ mod test {
             max_unix_timestamp: Some(1675209599),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("start_time <= 1675209599"));
     }
 
@@ -262,7 +262,7 @@ mod test {
             min_duration_s: Some(600),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("duration_s >= 600"));
     }
 
@@ -272,7 +272,7 @@ mod test {
             max_duration_s: Some(1800),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("duration_s <= 1800"));
     }
 
@@ -282,7 +282,7 @@ mod test {
             min_average_badge: Some(1),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
     }
 
@@ -292,7 +292,7 @@ mod test {
             max_average_badge: Some(116),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
     }
 
@@ -302,7 +302,7 @@ mod test {
             min_match_id: Some(10000),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("match_id >= 10000"));
     }
 
@@ -312,7 +312,7 @@ mod test {
             max_match_id: Some(1000000),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("match_id <= 1000000"));
     }
 
@@ -322,7 +322,7 @@ mod test {
             same_lane_filter: Some(true),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("p1.assigned_lane = p2.assigned_lane"));
     }
 
@@ -332,7 +332,7 @@ mod test {
             same_lane_filter: Some(false),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(!sql.contains("p1.assigned_lane = p2.assigned_lane"));
     }
 
@@ -342,7 +342,7 @@ mod test {
             account_id: Some(18373975),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("account_id = 18373975"));
     }
 
@@ -352,7 +352,7 @@ mod test {
             min_matches: Some(10),
             ..Default::default()
         };
-        let sql = build_hero_counter_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("matches_played >= 10"));
     }
 }

@@ -30,7 +30,7 @@ struct BadgeDistribution {
     total_matches: u64,
 }
 
-fn build_badge_distribution_query(query: &BadgeDistributionQuery) -> String {
+fn build_query(query: &BadgeDistributionQuery) -> String {
     let mut filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -75,7 +75,7 @@ async fn get_badge_distribution(
     ch_client: &clickhouse::Client,
     query: BadgeDistributionQuery,
 ) -> APIResult<Vec<BadgeDistribution>> {
-    let query = build_badge_distribution_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }

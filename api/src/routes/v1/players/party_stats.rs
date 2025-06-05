@@ -43,7 +43,7 @@ struct PartyStats {
     matches: Vec<u64>,
 }
 
-fn build_party_stats_query(account_id: u32, query: &PartyStatsQuery) -> String {
+fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -108,7 +108,7 @@ async fn get_party_stats(
     account_id: u32,
     query: PartyStatsQuery,
 ) -> APIResult<Vec<PartyStats>> {
-    let query = build_party_stats_query(account_id, &query);
+    let query = build_query(account_id, &query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }

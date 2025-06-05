@@ -76,7 +76,7 @@ pub struct PlayerScoreboardEntry {
     pub matches: u64,
 }
 
-fn build_player_scoreboard_query(query: &PlayerScoreboardQuery) -> String {
+fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
@@ -172,7 +172,7 @@ async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
     query: &PlayerScoreboardQuery,
 ) -> APIResult<Vec<PlayerScoreboardEntry>> {
-    let query = build_player_scoreboard_query(query);
+    let query = build_query(query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -213,7 +213,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("hero_id = 15"));
     }
 
@@ -228,7 +228,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("start_time >= 1672531200"));
         assert!(query_str.contains("start_time <= 1675209599"));
     }
@@ -244,7 +244,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("duration_s >= 600"));
         assert!(query_str.contains("duration_s <= 1800"));
     }
@@ -260,7 +260,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
         assert!(query_str.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
     }
@@ -276,7 +276,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("match_id >= 10000"));
         assert!(query_str.contains("match_id <= 1000000"));
     }
@@ -290,7 +290,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("count(distinct match_id) >= 10"));
     }
 
@@ -307,7 +307,7 @@ mod test {
             limit,
             ..Default::default()
         };
-        let query_str = build_player_scoreboard_query(&query);
+        let query_str = build_query(&query);
         assert!(query_str.contains("ORDER BY value desc"));
         assert!(query_str.contains(&format!(
             "toFloat64({}) as value",

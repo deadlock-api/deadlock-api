@@ -50,7 +50,7 @@ struct MateStats {
     matches: Vec<u64>,
 }
 
-fn build_mate_stats_query(account_id: u32, query: &MateStatsQuery) -> String {
+fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -136,7 +136,7 @@ async fn get_mate_stats(
     account_id: u32,
     query: MateStatsQuery,
 ) -> APIResult<Vec<MateStats>> {
-    let query = build_mate_stats_query(account_id, &query);
+    let query = build_query(account_id, &query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }

@@ -102,7 +102,7 @@ pub struct HeroSynergyStats {
     pub creeps2: u64,
 }
 
-fn build_hero_synergy_stats_query(query: &HeroSynergyStatsQuery) -> String {
+fn build_query(query: &HeroSynergyStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -206,7 +206,7 @@ async fn get_hero_synergy_stats(
     ch_client: &clickhouse::Client,
     query: HeroSynergyStatsQuery,
 ) -> APIResult<Vec<HeroSynergyStats>> {
-    let query = build_hero_synergy_stats_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -246,98 +246,98 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_build_hero_synergy_stats_query_min_max_unix_timestamp() {
+    fn test_build_query_min_max_unix_timestamp() {
         let query = HeroSynergyStatsQuery {
             min_unix_timestamp: Some(1672531200),
             max_unix_timestamp: Some(1675209599),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("start_time >= 1672531200"));
         assert!(sql.contains("start_time <= 1675209599"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_min_max_duration() {
+    fn test_build_query_min_max_duration() {
         let query = HeroSynergyStatsQuery {
             min_duration_s: Some(600),
             max_duration_s: Some(1800),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("duration_s >= 600"));
         assert!(sql.contains("duration_s <= 1800"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_min_max_average_badge() {
+    fn test_build_query_min_max_average_badge() {
         let query = HeroSynergyStatsQuery {
             min_average_badge: Some(1),
             max_average_badge: Some(116),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
         assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_min_max_match_id() {
+    fn test_build_query_min_max_match_id() {
         let query = HeroSynergyStatsQuery {
             min_match_id: Some(10000),
             max_match_id: Some(1000000),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("match_id >= 10000"));
         assert!(sql.contains("match_id <= 1000000"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_same_lane_filter() {
+    fn test_build_query_same_lane_filter() {
         let mut query = HeroSynergyStatsQuery {
             same_lane_filter: Some(true),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("p1.assigned_lane = p2.assigned_lane"));
 
         query.same_lane_filter = Some(false);
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(!sql.contains("p1.assigned_lane = p2.assigned_lane"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_same_party_filter() {
+    fn test_build_query_same_party_filter() {
         let mut query = HeroSynergyStatsQuery {
             same_party_filter: Some(true),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("p1.party = p2.party AND p1.party > 0"));
 
         query.same_party_filter = Some(false);
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(!sql.contains("p1.party = p2.party"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_min_matches() {
+    fn test_build_query_min_matches() {
         let query = HeroSynergyStatsQuery {
             min_matches: Some(10),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("matches_played >= 10"));
     }
 
     #[test]
-    fn test_build_hero_synergy_stats_query_account_id() {
+    fn test_build_query_account_id() {
         let query = HeroSynergyStatsQuery {
             account_id: Some(18373975),
             ..Default::default()
         };
-        let sql = build_hero_synergy_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("account_id = 18373975"));
     }
 }

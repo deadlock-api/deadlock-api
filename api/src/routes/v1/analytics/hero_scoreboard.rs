@@ -59,7 +59,7 @@ pub struct HeroScoreboardEntry {
     pub matches: u64,
 }
 
-fn build_hero_scoreboard_query(query: &HeroScoreboardQuery) -> String {
+fn build_query(query: &HeroScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
@@ -144,7 +144,7 @@ async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
     query: HeroScoreboardQuery,
 ) -> APIResult<Vec<HeroScoreboardEntry>> {
-    let query = build_hero_scoreboard_query(&query);
+    let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -184,7 +184,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let sql = build_hero_scoreboard_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("start_time >= 1672531200"));
         assert!(sql.contains("start_time <= 1675209599"));
     }
@@ -198,7 +198,7 @@ mod test {
             sort_direction: SortDirectionDesc::Desc,
             ..Default::default()
         };
-        let sql = build_hero_scoreboard_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("duration_s >= 600"));
         assert!(sql.contains("duration_s <= 1800"));
     }
@@ -212,7 +212,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let sql = build_hero_scoreboard_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
         assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
     }
@@ -226,7 +226,7 @@ mod test {
             sort_direction: SortDirectionDesc::Desc,
             ..Default::default()
         };
-        let sql = build_hero_scoreboard_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("match_id >= 10000"));
         assert!(sql.contains("match_id <= 1000000"));
     }
@@ -240,7 +240,7 @@ mod test {
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
-        let sql = build_hero_scoreboard_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("account_id = 18373975"));
         assert!(sql.contains("count(distinct match_id) >= 10"));
     }
@@ -252,7 +252,7 @@ mod test {
             sort_direction: SortDirectionDesc::Desc,
             ..Default::default()
         };
-        let sql = build_hero_scoreboard_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("ORDER BY value desc"));
         assert!(sql.contains(&format!(
             "toFloat64({}) as value",

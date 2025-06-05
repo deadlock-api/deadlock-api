@@ -99,7 +99,7 @@ pub struct AnalyticsHeroStats {
     total_denies: u64,
 }
 
-fn build_hero_stats_query(query: &HeroStatsQuery) -> String {
+fn build_query(query: &HeroStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -252,7 +252,7 @@ async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     query: HeroStatsQuery,
 ) -> APIResult<Vec<AnalyticsHeroStats>> {
-    let query_str = build_hero_stats_query(&query);
+    let query_str = build_query(&query);
     debug!(?query_str);
     Ok(ch_client.query(&query_str).fetch_all().await?)
 }
@@ -283,123 +283,123 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_build_hero_stats_query_min_unix_timestamp() {
+    fn test_build_query_min_unix_timestamp() {
         let query = HeroStatsQuery {
             min_unix_timestamp: Some(1672531200),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("start_time >= 1672531200"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_max_unix_timestamp() {
+    fn test_build_query_max_unix_timestamp() {
         let query = HeroStatsQuery {
             max_unix_timestamp: Some(1675209599),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("start_time <= 1675209599"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_min_duration_s() {
+    fn test_build_query_min_duration_s() {
         let query = HeroStatsQuery {
             min_duration_s: Some(600),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("duration_s >= 600"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_max_duration_s() {
+    fn test_build_query_max_duration_s() {
         let query = HeroStatsQuery {
             max_duration_s: Some(1800),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("duration_s <= 1800"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_min_average_badge() {
+    fn test_build_query_min_average_badge() {
         let query = HeroStatsQuery {
             min_average_badge: Some(1),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_max_average_badge() {
+    fn test_build_query_max_average_badge() {
         let query = HeroStatsQuery {
             max_average_badge: Some(116),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_min_match_id() {
+    fn test_build_query_min_match_id() {
         let query = HeroStatsQuery {
             min_match_id: Some(10000),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("match_id >= 10000"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_max_match_id() {
+    fn test_build_query_max_match_id() {
         let query = HeroStatsQuery {
             max_match_id: Some(1000000),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("match_id <= 1000000"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_account_id() {
+    fn test_build_query_account_id() {
         let query = HeroStatsQuery {
             account_id: Some(18373975),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("account_id = 18373975"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_include_item_ids() {
+    fn test_build_query_include_item_ids() {
         let query = HeroStatsQuery {
             include_item_ids: Some(vec![1, 2, 3]),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("hasAll(items, [1, 2, 3])"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_exclude_item_ids() {
+    fn test_build_query_exclude_item_ids() {
         let query = HeroStatsQuery {
             exclude_item_ids: Some(vec![4, 5, 6]),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("not hasAny(items, [4, 5, 6])"));
     }
 
     #[test]
-    fn test_build_hero_stats_query_include_and_exclude_item_ids() {
+    fn test_build_query_include_and_exclude_item_ids() {
         let query = HeroStatsQuery {
             include_item_ids: Some(vec![1, 2, 3]),
             exclude_item_ids: Some(vec![4, 5, 6]),
             ..Default::default()
         };
-        let sql = build_hero_stats_query(&query);
+        let sql = build_query(&query);
         assert!(sql.contains("hasAll(items, [1, 2, 3])"));
         assert!(sql.contains("not hasAny(items, [4, 5, 6])"));
     }

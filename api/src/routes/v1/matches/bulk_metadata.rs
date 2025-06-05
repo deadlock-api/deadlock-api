@@ -144,7 +144,7 @@ pub(super) async fn bulk_metadata(
         ));
     }
     debug!(?query);
-    let query = build_ch_query(query)?;
+    let query = build_query(query)?;
     let lines = fetch_lines(&state.ch_client, &query).await?;
     let parsed_result = parse_lines(lines)
         .await
@@ -158,7 +158,7 @@ pub(super) async fn bulk_metadata(
     Ok(Json(parsed_result))
 }
 
-fn build_ch_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
+fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if query.include_info {
         select_fields.extend(vec![
@@ -367,7 +367,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = build_ch_query(query).unwrap();
+        let result = build_query(query).unwrap();
         let normalized = normalize_whitespace(&result);
 
         // Should contain the player filter subquery
@@ -389,7 +389,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = build_ch_query(query).unwrap();
+        let result = build_query(query).unwrap();
         let normalized = normalize_whitespace(&result);
 
         // Should not contain player filter when account_ids is empty
@@ -400,12 +400,11 @@ mod tests {
     fn test_build_ch_query_without_account_ids() {
         let query = BulkMatchMetadataQuery {
             include_info: true,
-            account_ids: None,
             limit: 10,
             ..Default::default()
         };
 
-        let result = build_ch_query(query).unwrap();
+        let result = build_query(query).unwrap();
         let normalized = normalize_whitespace(&result);
 
         // Should not contain player filter when account_ids is None
@@ -423,7 +422,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = build_ch_query(query).unwrap();
+        let result = build_query(query).unwrap();
         let normalized = normalize_whitespace(&result);
 
         // Should contain all filters
