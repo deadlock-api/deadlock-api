@@ -98,7 +98,7 @@ pub(crate) struct MatchHistoryQuery {
     only_stored_history: bool,
 }
 
-async fn insert_match_history_to_ch(
+pub(crate) async fn insert_match_history_to_ch(
     ch_client: &clickhouse::Client,
     match_history: &[PlayerMatchHistoryEntry],
 ) -> clickhouse::error::Result<()> {
@@ -376,16 +376,12 @@ pub(super) async fn match_history(
         .collect_vec();
     if !ch_missing_entries.is_empty() {
         let ch_client = state.ch_client;
-        let handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             let result = insert_match_history_to_ch(&ch_client, &ch_missing_entries).await;
             if let Err(e) = result {
                 warn!("Failed to insert player match history to ClickHouse: {e:?}")
             };
-        })
-        .await;
-        if let Err(e) = handle {
-            warn!("Failed to spawn task to insert player match history to ClickHouse: {e:?}");
-        };
+        });
     }
 
     // Combine and return player match history

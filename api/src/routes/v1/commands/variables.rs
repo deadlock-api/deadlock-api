@@ -3,7 +3,7 @@ use crate::error::APIResult;
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::patches::feed::fetch_patch_notes;
-use crate::routes::v1::players::match_history::PlayerMatchHistory;
+use crate::routes::v1::players::match_history::{PlayerMatchHistory, insert_match_history_to_ch};
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
 };
@@ -765,7 +765,17 @@ impl Variable {
                 .map_err(|_| "matches")?
         } else {
             match fetch_steam_match_history(steam_client, account_id, false).await {
-                Ok(m) => m,
+                Ok(m) => {
+                    let ch_client = ch_client.clone();
+                    let matches = m.clone();
+                    tokio::spawn(async move {
+                        let result = insert_match_history_to_ch(&ch_client, &matches).await;
+                        if let Err(e) = result {
+                            warn!("Failed to insert player match history to ClickHouse: {e:?}")
+                        };
+                    });
+                    m
+                }
                 Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id)
                     .await
                     .map_err(|_| "matches")?,
