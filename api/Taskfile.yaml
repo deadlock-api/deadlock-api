@@ -38,11 +38,13 @@ tasks:
 
   start-test-env:
     desc: "Starts the testing Docker environment."
+    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
     env:
       NO_BUILD: 0
       IMAGE: deadlock-api-rust:latest
     cmds:
       - task: start-test-env-api-deps
+      - task: import-test-data
       - "if [[ $NO_BUILD = 1 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans; fi"
       - "if [[ $NO_BUILD = 0 ]]; then docker compose -f $TESTING_DOCKER_COMPOSE up -d --wait --remove-orphans --build; fi"
 
@@ -77,18 +79,11 @@ tasks:
       - task: import-test-data-postgres
       - task: import-test-data-clickhouse
 
-  setup-test-env:
-    desc: "Sets up the testing Docker environment."
-    dotenv: [ '{{.TESTING_ENV_FILE}}' ]
-    cmds:
-      - task: start-test-env
-      - task: import-test-data
-
   test:
     desc: "Runs the cargo tests after setting up the test environment."
     dotenv: [ '{{.TESTING_ENV_FILE}}' ]
     deps:
-      - task: setup-test-env
+      - task: start-test-env
     cmds:
       - |
         if [[ -n "${CARGO_PROFILE:-}" ]]; then
