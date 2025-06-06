@@ -4,14 +4,14 @@ use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use clickhouse::query::BytesCursor;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::time::Duration;
-use tracing::error;
+use tokio::io::{AsyncBufReadExt, Lines};
+use tracing::{debug, error};
 use utoipa::IntoParams;
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
@@ -24,70 +24,20 @@ pub(super) struct TableQuery {
     table: String,
 }
 
-#[cached(
-    ty = "TimedCache<String, String>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn call_duckdb(
-    http_client: &reqwest::Client,
-    duckdb_url: String,
-    query: &SQLQuery,
-) -> reqwest::Result<String> {
-    http_client
-        .post(format!("{duckdb_url}/query"))
-        .json(&query)
-        .send()
-        .await?
-        .error_for_status()?
-        .text()
-        .await
+#[derive(Debug, Clone, Deserialize, Serialize, clickhouse::Row)]
+pub struct TableSchemaRow {
+    pub name: String,
+    pub r#type: String,
 }
 
-#[cached(
-    ty = "TimedCache<u8, Vec<String>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "by_key",
-    key = "u8"
-)]
-async fn fetch_list_tables(
-    http_client: &reqwest::Client,
-    duckdb_url: String,
-) -> reqwest::Result<Vec<String>> {
-    http_client
-        .get(format!("{duckdb_url}/tables"))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await
-}
-
-#[cached(
-    ty = "TimedCache<String, HashMap<String, String>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
-    result = true,
-    convert = r#"{ format!("{}", table) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn fetch_table_schema(
-    http_client: &reqwest::Client,
-    duckdb_url: String,
-    table: &str,
-) -> reqwest::Result<HashMap<String, String>> {
-    http_client
-        .get(format!("{duckdb_url}/tables/{table}/schema"))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await
+#[derive(thiserror::Error, Debug)]
+enum SQLQueryError {
+    #[error("Failed to execute query: {0}")]
+    Query(#[from] clickhouse::error::Error),
+    #[error("Failed to parse query result: {0}")]
+    Parse(#[from] serde_json::Error),
+    #[error("Failed to read query result: {0}")]
+    Read(#[from] tokio::io::Error),
 }
 
 #[utoipa::path(
@@ -106,32 +56,54 @@ pub(super) async fn sql(
     rate_limit_key: RateLimitKey,
     Query(query): Query<SQLQuery>,
     State(state): State<AppState>,
-) -> APIResult<String> {
-    let Some(duckdb_url) = state.config.duckdb_url else {
-        return Err(APIError::status_msg(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "DuckDB is not enabled",
-        ));
-    };
-
+) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
         .apply_limits(
             &rate_limit_key,
             "sql",
             &[
-                RateLimitQuota::ip_limit(10, Duration::from_secs(60)),
-                RateLimitQuota::global_limit(100, Duration::from_secs(60)),
+                RateLimitQuota::ip_limit(10, Duration::from_secs(10)),
+                RateLimitQuota::global_limit(100, Duration::from_secs(10)),
             ],
         )
         .await?;
 
-    call_duckdb(&state.http_client, duckdb_url, &query)
+    let query = query.query;
+    let query = query.trim().replace(";", "");
+    debug!("CUSTOM QUERY: {query}");
+
+    run_sql(&state.ch_client_restricted, &query)
         .await
+        .map(Json)
         .map_err(|e| {
             error!("Failed to execute query: {e}");
             APIError::internal(format!("Failed to execute query: {e}"))
         })
+}
+
+#[cached(
+    ty = "TimedCache<String, Vec<serde_json::Value>>",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    result = true,
+    convert = r#"{ format!("{:?}", query) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn run_sql(
+    ch_client: &clickhouse::Client,
+    query: &str,
+) -> Result<Vec<serde_json::Value>, SQLQueryError> {
+    let mut lines: Lines<BytesCursor> = ch_client
+        .query(query)
+        .fetch_bytes("JSONEachRow")
+        .map(|m| m.lines())?;
+    let mut parsed_result: Vec<serde_json::Value> = vec![];
+    while let Some(line) = lines.next_line().await? {
+        let value: serde_json::Value = serde_json::de::from_str(&line)?;
+        parsed_result.push(value);
+    }
+    Ok(parsed_result)
 }
 
 #[utoipa::path(
@@ -146,20 +118,37 @@ pub(super) async fn sql(
     description = "Lists all tables in the database."
 )]
 pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
-    let Some(duckdb_url) = state.config.duckdb_url else {
-        return Err(APIError::status_msg(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "DuckDB is not enabled",
-        ));
-    };
-
-    fetch_list_tables(&state.http_client, duckdb_url)
+    fetch_list_tables(&state.ch_client_restricted)
         .await
         .map_err(|e| {
             error!("Failed to list tables: {e}");
             APIError::internal(format!("Failed to list tables: {e}"))
         })
         .map(Json)
+}
+
+#[cached(
+    ty = "TimedCache<u8, Vec<String>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+async fn fetch_list_tables(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<Vec<String>> {
+    ch_client
+        .query(
+            r#"
+            SELECT name
+            FROM system.tables
+            WHERE database = 'default'
+                AND name NOT LIKE '%inner%'
+                AND engine != 'MaterializedView'
+        "#,
+        )
+        .fetch_all::<String>()
+        .await
 }
 
 #[utoipa::path(
@@ -178,18 +167,36 @@ pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let Some(duckdb_url) = state.config.duckdb_url else {
-        return Err(APIError::status_msg(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "DuckDB is not enabled",
-        ));
-    };
-
-    fetch_table_schema(&state.http_client, duckdb_url, &table)
+    fetch_table_schema(&state.ch_client_restricted, &table)
         .await
         .map_err(|e| {
             error!("Failed to get table schema: {e}");
             APIError::internal(format!("Failed to get table schema: {e}"))
         })
         .map(Json)
+}
+
+#[cached(
+    ty = "TimedCache<String, Vec<TableSchemaRow>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = r#"{ format!("{}", table) }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn fetch_table_schema(
+    ch_client: &clickhouse::Client,
+    table: &str,
+) -> clickhouse::error::Result<Vec<TableSchemaRow>> {
+    ch_client
+        .query(
+            r#"
+            SELECT name, type
+            FROM system.columns
+            WHERE database = 'default' AND table = ?
+        "#,
+        )
+        .bind(table)
+        .fetch_all()
+        .await
 }

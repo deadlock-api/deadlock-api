@@ -46,6 +46,7 @@ pub(crate) struct AppState {
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
     pub(crate) ch_client: clickhouse::Client,
     pub(crate) ch_client_ro: clickhouse::Client,
+    pub(crate) ch_client_restricted: clickhouse::Client,
     pub(crate) pg_client: Pool<Postgres>,
     pub(crate) feature_flags: FeatureFlags,
     pub(crate) steam_client: SteamClient,
@@ -158,6 +159,24 @@ impl AppState {
             return Err(AppStateError::Clickhouse(e));
         }
 
+        // Create a Clickhouse restricted connection pool
+        debug!("Creating restricted Clickhouse client");
+        let ch_client_restricted = clickhouse::Client::default()
+            .with_url(format!(
+                "http://{}:{}",
+                config.clickhouse_host, config.clickhouse_http_port
+            ))
+            .with_user(&config.clickhouse_restricted_username)
+            .with_password(&config.clickhouse_restricted_password)
+            .with_database(&config.clickhouse_dbname);
+        if let Err(e) = ch_client_restricted
+            .query("SELECT 1")
+            .fetch_one::<u8>()
+            .await
+        {
+            return Err(AppStateError::Clickhouse(e));
+        }
+
         // Create a Postgres connection pool
         debug!("Creating PostgreSQL client");
         let pg_options = PgConnectOptions::new_without_pgpass()
@@ -210,6 +229,7 @@ impl AppState {
             redis_client,
             ch_client,
             ch_client_ro,
+            ch_client_restricted,
             pg_client,
             feature_flags,
             steam_client,

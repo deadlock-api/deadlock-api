@@ -58,6 +58,7 @@ services:
       CLICKHOUSE_USER: default
       CLICKHOUSE_PASSWORD: ijojdmkasd
       CLICKHOUSE_DB: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://default:ijojdmkasd@localhost:8123/?query=SELECT%201 || exit 1" ]
       interval: 10s

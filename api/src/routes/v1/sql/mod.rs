@@ -1,4 +1,4 @@
-mod route;
+pub mod route;
 
 use crate::context::AppState;
 use utoipa::OpenApi;

@@ -74,8 +74,6 @@ pub(crate) struct Config {
     pub(super) s3_cache_secret_access_key: String,
     pub(super) s3_cache_endpoint: String,
 
-    pub(crate) duckdb_url: Option<String>,
-
     #[serde(default = "default_clickhouse_host")]
     pub(super) clickhouse_host: String,
     #[serde(default = "default_clickhouse_http_port")]
@@ -85,6 +83,10 @@ pub(crate) struct Config {
     pub(super) clickhouse_password: String,
     #[serde(default = "default_clickhouse_dbname")]
     pub(super) clickhouse_dbname: String,
+
+    #[serde(default = "default_clickhouse_username")]
+    pub(super) clickhouse_restricted_username: String,
+    pub(super) clickhouse_restricted_password: String,
 
     #[serde(default = "default_postgres_host")]
     pub(super) postgres_host: String,
