@@ -4,6 +4,7 @@ use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use axum::Json;
 use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -57,6 +58,13 @@ pub(super) async fn sql(
     Query(query): Query<SQLQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if !state.config.allow_custom_queries {
+        return Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "Custom queries are disabled",
+        ));
+    }
+
     state
         .rate_limit_client
         .apply_limits(
@@ -118,6 +126,13 @@ async fn run_sql(
     description = "Lists all tables in the database."
 )]
 pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
+    if !state.config.allow_custom_queries {
+        return Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "Custom queries are disabled",
+        ));
+    }
+
     fetch_list_tables(&state.ch_client_restricted)
         .await
         .map_err(|e| {
@@ -167,6 +182,13 @@ pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if !state.config.allow_custom_queries {
+        return Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "Custom queries are disabled",
+        ));
+    }
+
     fetch_table_schema(&state.ch_client_restricted, &table)
         .await
         .map_err(|e| {

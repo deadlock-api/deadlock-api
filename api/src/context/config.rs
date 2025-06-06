@@ -1,3 +1,4 @@
+use crate::utils::parse::default_true;
 use serde::Deserialize;
 
 fn default_redis_url() -> String {
@@ -87,6 +88,8 @@ pub(crate) struct Config {
     #[serde(default = "default_clickhouse_username")]
     pub(super) clickhouse_restricted_username: String,
     pub(super) clickhouse_restricted_password: String,
+    #[serde(default = "default_true")]
+    pub(crate) allow_custom_queries: bool,
 
     #[serde(default = "default_postgres_host")]
     pub(super) postgres_host: String,
