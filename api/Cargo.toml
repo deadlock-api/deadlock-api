@@ -21,7 +21,7 @@ codegen-units = 256
 reqwest = { version = "0.12.19", features = ["json"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-redis = { version = "0.31.0", features = ["tokio-comp"], default-features = false }
+redis = { version = "0.32.0", features = ["tokio-comp"], default-features = false }
 envy = "0.4.2"
 clickhouse = "0.13.3"
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
