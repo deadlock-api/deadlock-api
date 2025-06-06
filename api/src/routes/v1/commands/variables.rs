@@ -326,7 +326,7 @@ impl Variable {
                 get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id).await
             }
             Self::HighestDeathCount => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.player_deaths)
@@ -335,7 +335,7 @@ impl Variable {
                     .ok_or("player deaths")
             }
             Self::HighestDenies => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.denies)
@@ -344,7 +344,7 @@ impl Variable {
                     .ok_or("player denies")
             }
             Self::HighestKillCount => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.player_kills)
@@ -353,7 +353,7 @@ impl Variable {
                     .ok_or("player kills")
             }
             Self::HighestLastHits => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.last_hits)
@@ -362,7 +362,7 @@ impl Variable {
                     .ok_or("player last hits")
             }
             Self::HighestNetWorth => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
                     .iter()
                     .map(|m| m.net_worth)
@@ -371,7 +371,7 @@ impl Variable {
                     .ok_or("player net worth")
             }
             Self::HoursPlayed => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let seconds_playtime: u32 = matches.iter().map(|m| m.match_duration_s).sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
@@ -430,7 +430,7 @@ impl Variable {
                 )
             }
             Self::MostPlayedHero => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let most_played_hero = matches
                     .iter()
                     .fold(HashMap::new(), |mut acc, m| {
@@ -450,7 +450,7 @@ impl Variable {
                     .ok_or("hero name")
             }
             Self::MostPlayedHeroCount => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let most_played_hero_count = matches
                     .iter()
                     .fold(HashMap::new(), |mut acc, m| {
@@ -462,14 +462,14 @@ impl Variable {
                 Ok(most_played_hero_count.unwrap_or(0).to_string())
             }
             Self::TotalKd => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let (kills, deaths) = matches.iter().fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
                 Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
             }
             Self::TotalKills => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
                     .iter()
                     .map(|m| m.player_kills)
@@ -477,11 +477,11 @@ impl Variable {
                     .to_string())
             }
             Self::TotalMatches => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches.len().to_string())
             }
             Self::TotalWinrate => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let wins = matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -492,7 +492,7 @@ impl Variable {
                 ))
             }
             Self::TotalWins => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
                     .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
@@ -500,7 +500,7 @@ impl Variable {
                     .to_string())
             }
             Self::TotalLosses => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
                     .iter()
                     .filter(|m| m.match_result as i8 != m.player_team)
@@ -508,7 +508,7 @@ impl Variable {
                     .to_string())
             }
             Self::TotalWinsLosses => {
-                let matches = Self::get_all_matches(&state.ch_client, steam_id).await?;
+                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
@@ -532,7 +532,7 @@ impl Variable {
                 .ok_or("patch notes"),
             Self::HeroHoursPlayed => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.ch_client,
+                    &state.ch_client_ro,
                     &state.assets_client,
                     steam_id,
                     extra_args,
@@ -543,7 +543,7 @@ impl Variable {
             }
             Self::HeroKd => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.ch_client,
+                    &state.ch_client_ro,
                     &state.assets_client,
                     steam_id,
                     extra_args,
@@ -556,7 +556,7 @@ impl Variable {
             }
             Self::HeroKills => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.ch_client,
+                    &state.ch_client_ro,
                     &state.assets_client,
                     steam_id,
                     extra_args,
@@ -568,14 +568,17 @@ impl Variable {
                     .sum::<u32>()
                     .to_string())
             }
-            Self::HeroMatches => {
-                Self::get_hero_matches(&state.ch_client, &state.assets_client, steam_id, extra_args)
-                    .await
-                    .map(|m| m.len().to_string())
-            }
+            Self::HeroMatches => Self::get_hero_matches(
+                &state.ch_client_ro,
+                &state.assets_client,
+                steam_id,
+                extra_args,
+            )
+            .await
+            .map(|m| m.len().to_string()),
             Self::HeroLosses => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.ch_client,
+                    &state.ch_client_ro,
                     &state.assets_client,
                     steam_id,
                     extra_args,
@@ -589,7 +592,7 @@ impl Variable {
             }
             Self::HeroWinrate => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.ch_client,
+                    &state.ch_client_ro,
                     &state.assets_client,
                     steam_id,
                     extra_args,
@@ -604,7 +607,7 @@ impl Variable {
             }
             Self::HeroWins => {
                 let hero_matches = Self::get_hero_matches(
-                    &state.ch_client,
+                    &state.ch_client_ro,
                     &state.assets_client,
                     steam_id,
                     extra_args,
@@ -617,31 +620,31 @@ impl Variable {
                     .to_string())
             }
             Self::MaxBombStacks => {
-                Self::get_max_ability_stat(&state.ch_client, steam_id, 2521902222)
+                Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 2521902222)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| "max bomb stacks")
             }
             Self::MaxSpiritSnareStacks => {
-                Self::get_max_ability_stat(&state.ch_client, steam_id, 512733154)
+                Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 512733154)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| "max spirit snare stacks")
             }
             Self::MaxBonusHealthPerKill => {
-                Self::get_max_ability_stat(&state.ch_client, steam_id, 1917840730)
+                Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 1917840730)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| "max bonus health per kill")
             }
             Self::MaxGuidedOwlStacks => {
-                Self::get_max_ability_stat(&state.ch_client, steam_id, 3242902780)
+                Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 3242902780)
                     .await
                     .map(|b| b.to_string())
                     .map_err(|_| "max guided owl")
             }
             Self::MMRHistoryRank => {
-                let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
+                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id)
                     .await
                     .map_err(|_| "mmr history")?;
                 let ranks = state
@@ -657,7 +660,7 @@ impl Variable {
                 Ok(format!("{rank_name} {}", mmr_history.division_tier))
             }
             Self::MMRHistoryRankImg => {
-                let mmr_history = get_last_mmr_history(&state.ch_client, steam_id)
+                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id)
                     .await
                     .map_err(|_| "mmr history")?;
                 let ranks = state

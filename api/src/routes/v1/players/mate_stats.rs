@@ -159,7 +159,7 @@ pub(super) async fn mate_stats(
     Query(query): Query<MateStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_mate_stats(&state.ch_client, account_id, query)
+    get_mate_stats(&state.ch_client_ro, account_id, query)
         .await
         .map(Json)
 }

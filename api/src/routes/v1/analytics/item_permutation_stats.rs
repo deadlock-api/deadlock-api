@@ -216,7 +216,7 @@ pub(super) async fn item_permutation_stats(
             "No item ids provided",
         ));
     }
-    get_item_permutation_stats(&state.ch_client, query)
+    get_item_permutation_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

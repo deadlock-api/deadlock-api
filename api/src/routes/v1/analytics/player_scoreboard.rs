@@ -194,7 +194,7 @@ pub(crate) async fn player_scoreboard(
     Query(query): Query<PlayerScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_player_scoreboard(&state.ch_client, &query)
+    get_player_scoreboard(&state.ch_client_ro, &query)
         .await
         .map(Json)
 }

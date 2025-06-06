@@ -331,7 +331,7 @@ pub(crate) async fn item_stats(
     Query(query): Query<ItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_item_stats(&state.ch_client, query).await.map(Json)
+    get_item_stats(&state.ch_client_ro, query).await.map(Json)
 }
 
 #[cfg(test)]

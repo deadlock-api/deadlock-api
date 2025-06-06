@@ -166,7 +166,9 @@ pub(super) async fn hero_scoreboard(
     Query(query): Query<HeroScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_scoreboard(&state.ch_client, query).await.map(Json)
+    get_hero_scoreboard(&state.ch_client_ro, query)
+        .await
+        .map(Json)
 }
 
 #[cfg(test)]

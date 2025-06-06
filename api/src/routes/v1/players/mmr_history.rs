@@ -138,7 +138,7 @@ pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_mmr_history(&state.ch_client, account_id)
+    get_mmr_history(&state.ch_client_ro, account_id)
         .await
         .map(Json)
 }
@@ -185,7 +185,7 @@ pub(super) async fn hero_mmr_history(
     Path(path): Path<HeroMMRHistoryQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_mmr_history(&state.ch_client, path.account_id, path.hero_id)
+    get_hero_mmr_history(&state.ch_client_ro, path.account_id, path.hero_id)
         .await
         .map(Json)
 }

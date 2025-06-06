@@ -226,7 +226,7 @@ pub(super) async fn hero_counters_stats(
     Query(query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_counter_stats(&state.ch_client, query)
+    get_hero_counter_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

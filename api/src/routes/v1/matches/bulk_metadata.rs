@@ -145,7 +145,7 @@ pub(super) async fn bulk_metadata(
     }
     debug!(?query);
     let query = build_query(query)?;
-    let lines = fetch_lines(&state.ch_client, &query).await?;
+    let lines = fetch_lines(&state.ch_client_ro, &query).await?;
     let parsed_result = parse_lines(lines)
         .await
         .map_err(|_| APIError::internal("Failed to parse match metadata".to_string()))?;

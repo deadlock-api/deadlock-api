@@ -294,7 +294,7 @@ pub(super) async fn match_history(
     }
 
     let ch_match_history =
-        fetch_match_history_from_clickhouse(&state.ch_client, account_id).await?;
+        fetch_match_history_from_clickhouse(&state.ch_client_ro, account_id).await?;
 
     // If only stored history is requested, we can just return the data from ClickHouse
     if query.only_stored_history {
@@ -310,7 +310,7 @@ pub(super) async fn match_history(
             >= (chrono::Utc::now() - chrono::Duration::minutes(40)).timestamp() as u32;
         if is_newer_than_40_min {
             let exists_newer_match =
-                exists_newer_match_than(&state.ch_client, account_id, last_match.match_id).await;
+                exists_newer_match_than(&state.ch_client_ro, account_id, last_match.match_id).await;
             if !exists_newer_match {
                 return Ok(Json(ch_match_history));
             } else {

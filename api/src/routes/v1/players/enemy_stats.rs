@@ -134,7 +134,7 @@ pub(super) async fn enemy_stats(
     Query(query): Query<EnemyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_enemy_stats(&state.ch_client, account_id, query)
+    get_enemy_stats(&state.ch_client_ro, account_id, query)
         .await
         .map(Json)
 }

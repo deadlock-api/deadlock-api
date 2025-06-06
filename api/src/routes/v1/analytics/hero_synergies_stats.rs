@@ -235,7 +235,7 @@ pub(super) async fn hero_synergies_stats(
     Query(query): Query<HeroSynergyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_synergy_stats(&state.ch_client, query)
+    get_hero_synergy_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
 }

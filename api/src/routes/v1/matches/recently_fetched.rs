@@ -60,6 +60,6 @@ pub(super) async fn recently_fetched(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     Ok(Json(
-        get_recently_fetched_match_ids(&state.ch_client).await?,
+        get_recently_fetched_match_ids(&state.ch_client_ro).await?,
     ))
 }

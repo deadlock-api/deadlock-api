@@ -80,7 +80,7 @@ async fn check_health(
     description = "Checks the health of the services."
 )]
 pub(super) async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
-    check_health(state.ch_client, state.pg_client, &mut state.redis_client)
+    check_health(state.ch_client_ro, state.pg_client, &mut state.redis_client)
         .await
         .map(Json)
 }

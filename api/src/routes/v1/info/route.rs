@@ -145,5 +145,5 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     description = "Returns information about the API."
 )]
 pub(super) async fn info(State(state): State<AppState>) -> impl IntoResponse {
-    Json(fetch_ch_info(&state.ch_client).await)
+    Json(fetch_ch_info(&state.ch_client_ro).await)
 }

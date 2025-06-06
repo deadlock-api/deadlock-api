@@ -264,7 +264,7 @@ pub(crate) async fn hero_comb_stats(
     Query(query): Query<HeroCombStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_comb_stats(&state.ch_client, query).await.map(Json)
+    get_comb_stats(&state.ch_client_ro, query).await.map(Json)
 }
 
 #[cfg(test)]

@@ -274,7 +274,7 @@ pub(crate) async fn hero_stats(
     Query(query): Query<HeroStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_stats(&state.ch_client, query).await.map(Json)
+    get_hero_stats(&state.ch_client_ro, query).await.map(Json)
 }
 
 #[cfg(test)]

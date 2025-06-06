@@ -97,7 +97,7 @@ pub(super) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_badge_distribution(&state.ch_client, query)
+    get_badge_distribution(&state.ch_client_ro, query)
         .await
         .map(Json)
 }
