@@ -151,7 +151,6 @@ pub(crate) async fn insert_mmrs(
 
     match mmrs[0] {
         MMR::Player(_) => {
-            debug!("Inserting player mmrs");
             let mut inserter = ch_client.insert("mmr_history")?;
             for mmr in mmrs {
                 if let MMR::Player(mmr) = mmr {
@@ -161,7 +160,6 @@ pub(crate) async fn insert_mmrs(
             inserter.end().await
         }
         MMR::Hero(_) => {
-            debug!("Inserting hero mmrs");
             let mut inserter = ch_client.insert("hero_mmr_history")?;
             for mmr in mmrs {
                 if let MMR::Hero(mmr) = mmr {
