@@ -81,6 +81,7 @@ async fn main() -> anyhow::Result<()> {
             .map_into()
             .collect(),
     };
+    info!("Loaded {} mmrs", all_player_mmrs.len());
     let mut all_player_mmrs: HashMap<u32, MMR> = all_player_mmrs
         .into_iter()
         .map(|mmr| match mmr {

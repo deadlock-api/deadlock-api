@@ -102,7 +102,7 @@ pub(crate) async fn get_all_player_mmrs(
     ch_client
         .query(
             r#"
-    SELECT match_id, account_id, player_score
+    SELECT algorithm, match_id, account_id, player_score
     FROM mmr_history
     WHERE match_id <= ?
     AND algorithm = ?
@@ -125,7 +125,7 @@ pub(crate) async fn get_all_player_hero_mmrs(
     ch_client
         .query(
             r#"
-    SELECT match_id, account_id, hero_id, player_score
+    SELECT algorithm, match_id, account_id, hero_id, player_score
     FROM hero_mmr_history
     WHERE match_id <= ?
     AND algorithm = ?
