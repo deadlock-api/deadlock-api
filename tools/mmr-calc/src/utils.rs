@@ -52,7 +52,7 @@ pub(crate) async fn get_regression_starting_id(
         .query(&format!(
             r#"
     SELECT start_time
-    FROM {}
+    FROM {} FINAL
     INNER JOIN match_info USING (match_id)
     WHERE match_outcome = 'TeamWin'
         AND match_mode IN ('Ranked', 'Unranked')
@@ -77,10 +77,8 @@ pub(crate) async fn get_regression_starting_id(
         .query(
             r#"
     SELECT match_id
-    FROM match_info
-    WHERE match_outcome = 'TeamWin'
-        AND match_mode IN ('Ranked', 'Unranked')
-        AND game_mode = 'Normal'
+    FROM match_info FINAL
+    WHERE match_mode IN ('Ranked', 'Unranked')
         AND average_badge_team0 IS NOT NULL
         AND average_badge_team1 IS NOT NULL
         AND created_at > ?
@@ -104,7 +102,7 @@ pub(crate) async fn get_all_player_mmrs(
         .query(
             r#"
     SELECT match_id, account_id, player_score
-    FROM mmr_history
+    FROM mmr_history FINAL
     WHERE match_id <= ?
     AND algorithm = ?
     ORDER BY account_id, match_id DESC
@@ -127,7 +125,7 @@ pub(crate) async fn get_all_player_hero_mmrs(
         .query(
             r#"
     SELECT match_id, account_id, hero_id, player_score
-    FROM hero_mmr_history
+    FROM hero_mmr_history FINAL
     WHERE match_id <= ?
     AND algorithm = ?
     ORDER BY account_id, match_id DESC
