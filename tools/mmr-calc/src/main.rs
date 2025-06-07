@@ -1,5 +1,6 @@
 use crate::algorithms::Algorithm;
-use crate::types::{AlgorithmType, MMR, Match};
+use crate::types::{MMR, Match};
+use algorithms::AlgorithmType;
 use algorithms::basic::BasicAlgorithm;
 use clap::Parser;
 use itertools::Itertools;

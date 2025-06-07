@@ -1,14 +1,5 @@
+use crate::algorithms::AlgorithmType;
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
-
-#[derive(
-    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum,
-)]
-#[repr(u8)]
-pub enum AlgorithmType {
-    #[default]
-    Basic = 0,
-}
 
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) struct PlayerMMR {

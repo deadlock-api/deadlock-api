@@ -1,6 +1,6 @@
 use crate::MMRType;
-use crate::algorithms::Algorithm;
-use crate::types::{AlgorithmType, MMR, Match, PlayerHeroMMR, PlayerMMR};
+use crate::algorithms::{Algorithm, AlgorithmType};
+use crate::types::{MMR, Match, PlayerHeroMMR, PlayerMMR};
 use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
 

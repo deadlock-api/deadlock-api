@@ -1,5 +1,6 @@
 use crate::MMRType;
-use crate::types::{AlgorithmType, CHMatch, MMR, PlayerHeroMMR, PlayerMMR};
+use crate::algorithms::AlgorithmType;
+use crate::types::{CHMatch, MMR, PlayerHeroMMR, PlayerMMR};
 use clickhouse::query::RowCursor;
 use tracing::debug;
 
