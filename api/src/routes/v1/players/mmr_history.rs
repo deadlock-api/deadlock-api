@@ -17,8 +17,8 @@ use utoipa::{IntoParams, ToSchema};
 #[serde(rename_all = "snake_case")]
 pub enum Algorithm {
     #[default]
-    #[display("Basic")]
-    Basic,
+    #[display("LinearRegression")]
+    LinearRegression,
 }
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
