@@ -27,7 +27,7 @@ SELECT account_id,
        groupUniqArray(mi.match_id)                                                                            as matches
 FROM match_player
       INNER ANY JOIN match_info mi USING (match_id)
-WHERE match_outcome = 'TeamWin' AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 'Normal'
+WHERE match_mode IN ('Ranked', 'Unranked')
 GROUP by account_id, hero_id
 ORDER BY account_id
  SETTINGS allow_experimental_refreshable_materialized_view = 1;
