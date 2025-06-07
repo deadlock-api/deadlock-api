@@ -21,7 +21,7 @@ enum MMRType {
 struct Args {
     #[arg(short, long, required = true)]
     mmr_type: MMRType,
-    #[arg(short, long, required = true)]
+    #[arg(short, long, default_value = "linear-regression")]
     algorithm: AlgorithmType,
 }
 

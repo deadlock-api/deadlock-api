@@ -2,8 +2,9 @@ use crate::MMRType;
 use crate::types::{MMR, Match};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::collections::HashMap;
+use crate::algorithms::linear_regression::LinearRegression;
 
-pub(crate) mod basic;
+pub(crate) mod linear_regression;
 
 #[derive(
     Serialize_repr, Deserialize_repr, Copy, Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum,
@@ -11,13 +12,13 @@ pub(crate) mod basic;
 #[repr(u8)]
 pub enum AlgorithmType {
     #[default]
-    Basic = 0,
+    LinearRegression = 0,
 }
 
 impl AlgorithmType {
     pub fn get_algorithm(&self) -> impl Algorithm {
         match self {
-            Self::Basic => basic::BasicAlgorithm,
+            Self::LinearRegression => LinearRegression,
         }
     }
 }

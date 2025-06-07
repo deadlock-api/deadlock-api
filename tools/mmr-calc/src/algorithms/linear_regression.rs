@@ -8,9 +8,9 @@ const ERROR_MULTIPLIER: f32 = 0.9;
 const ERROR_BIAS: f32 = 0.2;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct BasicAlgorithm;
+pub struct LinearRegression;
 
-impl Algorithm for BasicAlgorithm {
+impl Algorithm for LinearRegression {
     fn run_regression(
         &self,
         match_: &Match,
@@ -29,13 +29,13 @@ impl Algorithm for BasicAlgorithm {
                         .entry(p.account_id)
                         .or_insert(match mmr_type {
                             MMRType::Player => MMR::Player(PlayerMMR {
-                                algorithm: AlgorithmType::Basic,
+                                algorithm: AlgorithmType::LinearRegression,
                                 match_id: match_.match_id,
                                 account_id: p.account_id,
                                 player_score: avg_team_rank_true,
                             }),
                             MMRType::Hero => MMR::Hero(PlayerHeroMMR {
-                                algorithm: AlgorithmType::Basic,
+                                algorithm: AlgorithmType::LinearRegression,
                                 match_id: match_.match_id,
                                 account_id: p.account_id,
                                 hero_id: p.hero_id as u8,
