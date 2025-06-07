@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS mmr_history;
 
 CREATE TABLE IF NOT EXISTS mmr_history
 (
- algorithm     Enum8('Basic' = 0),
+ algorithm     Enum8('Basic' = 0) default 'Basic',
  account_id    UInt32,
  match_id      UInt64,
  player_score  Float32,
@@ -85,7 +85,7 @@ DROP TABLE IF EXISTS hero_mmr_history;
 
 CREATE TABLE IF NOT EXISTS hero_mmr_history
 (
- algorithm     Enum8('Basic' = 0),
+ algorithm     Enum8('Basic' = 0) default 'Basic',
  account_id    UInt32,
  hero_id       UInt8,
  match_id      UInt64,
