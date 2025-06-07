@@ -36,7 +36,6 @@ pub(crate) async fn get_matches_starting_from(
     GROUP BY match_id
     HAVING length(team0_players) = 6 AND length(team1_players) = 6
     ORDER BY match_id
-    LIMIT 1000000
     "#,
         )
         .bind(start_id)

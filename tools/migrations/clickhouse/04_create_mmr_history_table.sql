@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS mmr_history;
 
 CREATE TABLE IF NOT EXISTS mmr_history
 (
- account_id    UInt64,
+ account_id    UInt32,
  match_id      UInt64,
  player_score  Float32,
  rank          UInt32 ALIAS [
@@ -82,7 +82,7 @@ DROP TABLE IF EXISTS hero_mmr_history;
 
 CREATE TABLE IF NOT EXISTS hero_mmr_history
 (
- account_id    UInt64,
+ account_id    UInt32,
  hero_id       UInt8,
  match_id      UInt64,
  player_score  Float32,
