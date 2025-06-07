@@ -8,23 +8,54 @@ use itertools::Itertools;
 use rstest::rstest;
 
 #[rstest]
+#[case(
+    Some(10),
+    Some(BuildsSearchQuerySortBy::Favorites),
+    Some(SortDirectionDesc::Desc),
+    Some("Paradox"),
+    Some(true),
+    Some(252377),
+    Some(10),
+    Some(10),
+    Some(157250480),
+    Some(1747743170),
+    Some(1747763170),
+    Some(1747763170),
+    Some(1747763170)
+)]
+#[case(
+    None, None, None, None, None, None, None, None, None, None, None, None, None
+)]
+#[case(
+    None,
+    Some(BuildsSearchQuerySortBy::Favorites),
+    Some(SortDirectionDesc::Desc),
+    Some("Paradox"),
+    Some(true),
+    Some(252377),
+    None,
+    None,
+    Some(157250480),
+    Some(1747743170),
+    Some(1747763170),
+    Some(1747763170),
+    Some(1747763170)
+)]
 #[tokio::test]
 async fn test_builds(
-    #[values(None, Some(10))] limit: Option<usize>,
-    #[values(None, Some(BuildsSearchQuerySortBy::UpdatedAt))] sort_by: Option<
-        BuildsSearchQuerySortBy,
-    >,
-    #[values(None, Some(SortDirectionDesc::Asc))] sort_direction: Option<SortDirectionDesc>,
-    #[values(None, Some("Paradox"))] search_name: Option<&str>,
-    #[values(None, Some(true))] only_latest: Option<bool>,
-    #[values(None, Some(252377))] build_id: Option<u32>,
-    #[values(None, Some(10))] version: Option<u32>,
-    #[values(None, Some(10))] hero_id: Option<u32>,
-    #[values(None, Some(157250480))] author_id: Option<u32>,
-    #[values(None, Some(1747743170))] min_unix_timestamp: Option<u64>,
-    #[values(None, Some(1747763170))] max_unix_timestamp: Option<u64>,
-    #[values(None, Some(1747743170))] min_published_unix_timestamp: Option<u64>,
-    #[values(None, Some(1747763170))] max_published_unix_timestamp: Option<u64>,
+    #[case] limit: Option<usize>,
+    #[case] sort_by: Option<BuildsSearchQuerySortBy>,
+    #[case] sort_direction: Option<SortDirectionDesc>,
+    #[case] search_name: Option<&str>,
+    #[case] only_latest: Option<bool>,
+    #[case] build_id: Option<u32>,
+    #[case] version: Option<u32>,
+    #[case] hero_id: Option<u32>,
+    #[case] author_id: Option<u32>,
+    #[case] min_unix_timestamp: Option<u64>,
+    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_published_unix_timestamp: Option<u64>,
+    #[case] max_published_unix_timestamp: Option<u64>,
 ) {
     let mut queries = vec![];
     if let Some(limit) = limit {
