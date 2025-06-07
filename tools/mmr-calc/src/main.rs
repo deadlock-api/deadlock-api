@@ -67,13 +67,15 @@ async fn main() -> anyhow::Result<()> {
     let ch_client = common::get_ch_client()?;
     let args = Args::parse();
     let algorithm_type = args.algorithm;
+    let start_match =
+        utils::get_regression_starting_id(&ch_client, args.mmr_type, algorithm_type).await?;
     let all_player_mmrs: Vec<MMR> = match args.mmr_type {
-        MMRType::Hero => utils::get_all_player_hero_mmrs(&ch_client, 0, algorithm_type)
+        MMRType::Hero => utils::get_all_player_hero_mmrs(&ch_client, start_match, algorithm_type)
             .await?
             .into_iter()
             .map_into()
             .collect(),
-        MMRType::Player => utils::get_all_player_mmrs(&ch_client, 0, algorithm_type)
+        MMRType::Player => utils::get_all_player_mmrs(&ch_client, start_match, algorithm_type)
             .await?
             .into_iter()
             .map_into()
