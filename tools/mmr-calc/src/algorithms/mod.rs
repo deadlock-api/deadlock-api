@@ -14,7 +14,15 @@ pub enum AlgorithmType {
     Basic = 0,
 }
 
-pub trait Algorithm {
+impl AlgorithmType {
+    pub fn get_algorithm(&self) -> impl Algorithm {
+        match self {
+            Self::Basic => basic::BasicAlgorithm,
+        }
+    }
+}
+
+pub trait Algorithm: Default {
     fn run_regression(
         &self,
         match_: &Match,

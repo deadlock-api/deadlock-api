@@ -1,7 +1,6 @@
 use crate::algorithms::Algorithm;
 use crate::types::{MMR, Match};
 use algorithms::AlgorithmType;
-use algorithms::basic::BasicAlgorithm;
 use clap::Parser;
 use itertools::Itertools;
 use std::collections::HashMap;
@@ -29,7 +28,6 @@ struct Args {
 async fn run_regression(
     ch_client: &clickhouse::Client,
     algorithm_type: AlgorithmType,
-    algorithm: &dyn Algorithm,
     mmr_type: MMRType,
     all_player_mmrs: &mut HashMap<u32, MMR>,
 ) -> anyhow::Result<()> {
@@ -39,6 +37,7 @@ async fn run_regression(
     let mut updates = Vec::new();
     let mut processed = 0;
     let mut sum_squared_errors = 0.0;
+    let algorithm = algorithm_type.get_algorithm();
     while let Some(match_) = matches.next().await? {
         let match_: Match = match_.into();
         let (updated_mmrs, squared_errors) =
@@ -68,10 +67,6 @@ async fn main() -> anyhow::Result<()> {
     let ch_client = common::get_ch_client()?;
     let args = Args::parse();
     let algorithm_type = args.algorithm;
-    let algorithm: Box<dyn Algorithm> = match algorithm_type {
-        AlgorithmType::Basic => Box::new(BasicAlgorithm),
-    };
-
     let all_player_mmrs: Vec<MMR> = match args.mmr_type {
         MMRType::Hero => utils::get_all_player_hero_mmrs(&ch_client, 0, algorithm_type)
             .await?
@@ -98,7 +93,6 @@ async fn main() -> anyhow::Result<()> {
         run_regression(
             &ch_client,
             algorithm_type,
-            &*algorithm,
             args.mmr_type,
             &mut all_player_mmrs,
         )
