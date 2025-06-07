@@ -1,5 +1,5 @@
 use crate::MMRType;
-use crate::types::{CHMatch, MMR, PlayerHeroMMR, PlayerMMR};
+use crate::types::{AlgorithmType, CHMatch, MMR, PlayerHeroMMR, PlayerMMR};
 use clickhouse::query::RowCursor;
 use tracing::debug;
 
@@ -45,6 +45,7 @@ pub(crate) async fn get_matches_starting_from(
 pub(crate) async fn get_regression_starting_id(
     ch_client: &clickhouse::Client,
     mmr_type: MMRType,
+    algorithm_type: AlgorithmType,
 ) -> clickhouse::error::Result<u64> {
     debug!("Fetching regression starting id");
     let min_created_at = ch_client
@@ -58,6 +59,7 @@ pub(crate) async fn get_regression_starting_id(
         AND game_mode = 'Normal'
         AND average_badge_team0 IS NOT NULL
         AND average_badge_team1 IS NOT NULL
+        AND algorithm = ?
     ORDER BY match_id DESC
     LIMIT 1
     "#,
@@ -66,6 +68,7 @@ pub(crate) async fn get_regression_starting_id(
                 MMRType::Hero => "hero_mmr_history",
             }
         ))
+        .bind(algorithm_type)
         .fetch_one::<u32>()
         .await
         .unwrap_or_default();
@@ -94,6 +97,7 @@ pub(crate) async fn get_regression_starting_id(
 pub(crate) async fn get_all_player_mmrs(
     ch_client: &clickhouse::Client,
     at_match_id: u64,
+    algorithm_type: AlgorithmType,
 ) -> clickhouse::error::Result<Vec<PlayerMMR>> {
     debug!("Fetching all player mmrs at match id {}", at_match_id);
     ch_client
@@ -102,11 +106,13 @@ pub(crate) async fn get_all_player_mmrs(
     SELECT match_id, account_id, player_score
     FROM mmr_history
     WHERE match_id <= ?
+    AND algorithm = ?
     ORDER BY account_id, match_id DESC
     LIMIT 1 BY account_id
     "#,
         )
         .bind(at_match_id)
+        .bind(algorithm_type)
         .fetch_all()
         .await
 }
@@ -114,6 +120,7 @@ pub(crate) async fn get_all_player_mmrs(
 pub(crate) async fn get_all_player_hero_mmrs(
     ch_client: &clickhouse::Client,
     at_match_id: u64,
+    algorithm_type: AlgorithmType,
 ) -> clickhouse::error::Result<Vec<PlayerHeroMMR>> {
     debug!("Fetching all player hero mmrs at match id {}", at_match_id);
     ch_client
@@ -122,11 +129,13 @@ pub(crate) async fn get_all_player_hero_mmrs(
     SELECT match_id, account_id, hero_id, player_score
     FROM hero_mmr_history
     WHERE match_id <= ?
+    AND algorithm = ?
     ORDER BY account_id, match_id DESC
     LIMIT 1 BY (account_id, hero_id)
     "#,
         )
         .bind(at_match_id)
+        .bind(algorithm_type)
         .fetch_all()
         .await
 }

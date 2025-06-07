@@ -2125,6 +2125,7 @@ dependencies = [
  "common",
  "itertools 0.14.0",
  "serde",
+ "serde_repr",
  "tokio",
  "tracing",
 ]

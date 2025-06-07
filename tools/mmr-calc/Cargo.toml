@@ -12,3 +12,4 @@ common = { version = "0.1.0", path = "../common" }
 clap = { version = "4.5.39", features = ["derive"] }
 itertools = "0.14.0"
 tracing = "0.1.41"
+serde_repr = "0.1.20"

@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS mmr_history;
 
 CREATE TABLE IF NOT EXISTS mmr_history
 (
+ algorithm     Enum8('Basic' = 0),
  account_id    UInt32,
  match_id      UInt64,
  player_score  Float32,
@@ -76,12 +77,15 @@ CREATE TABLE IF NOT EXISTS mmr_history
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
  division      UInt32 ALIAS rank / 10,
  division_tier UInt32 ALIAS rank % 10
-) ENGINE = ReplacingMergeTree ORDER BY (account_id, match_id);
+) ENGINE = ReplacingMergeTree
+   PARTITION BY algorithm
+   ORDER BY (algorithm, account_id, match_id);
 
 DROP TABLE IF EXISTS hero_mmr_history;
 
 CREATE TABLE IF NOT EXISTS hero_mmr_history
 (
+ algorithm     Enum8('Basic' = 0),
  account_id    UInt32,
  hero_id       UInt8,
  match_id      UInt64,
@@ -157,4 +161,6 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
  division      UInt32 ALIAS rank / 10,
  division_tier UInt32 ALIAS rank % 10
-) ENGINE = ReplacingMergeTree ORDER BY (hero_id, account_id, match_id);
+) ENGINE = ReplacingMergeTree
+   PARTITION BY algorithm
+   ORDER BY (algorithm, hero_id, account_id, match_id);
