@@ -52,15 +52,17 @@ pub(crate) async fn get_regression_starting_id(
     let min_created_at = ch_client
         .query(&format!(
             r#"
-    SELECT start_time
+WITH last_mmr AS (
+    SELECT match_id
     FROM {}
-    INNER JOIN match_info USING (match_id)
-    WHERE match_mode IN ('Ranked', 'Unranked')
-        AND average_badge_team0 IS NOT NULL
-        AND average_badge_team1 IS NOT NULL
-        AND algorithm = ?
+    WHERE algorithm = ?
     ORDER BY match_id DESC
     LIMIT 1
+)
+SELECT created_at
+FROM match_info
+WHERE match_id IN last_mmr
+LIMIT 1
     "#,
             match mmr_type {
                 MMRType::Player => "mmr_history",
