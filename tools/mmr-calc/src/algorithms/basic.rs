@@ -55,6 +55,7 @@ impl Algorithm for BasicAlgorithm {
             squared_error += error * error;
             for p in team.players.iter() {
                 let mmr = all_mmrs.get_mut(&p.account_id).unwrap();
+                *mmr.match_id_mut() = match_.match_id;
                 *mmr.player_score_mut() += error;
                 updates.push(mmr.clone());
             }

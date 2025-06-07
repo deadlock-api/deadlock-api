@@ -59,6 +59,12 @@ impl MMR {
             Self::Hero(p) => &mut p.player_score,
         }
     }
+    pub fn match_id_mut(&mut self) -> &mut u64 {
+        match self {
+            Self::Player(p) => &mut p.match_id,
+            Self::Hero(p) => &mut p.match_id,
+        }
+    }
 }
 
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
