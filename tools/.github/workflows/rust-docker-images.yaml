@@ -41,6 +41,11 @@ jobs:
         with:
           fetch-depth: '0'
 
+      - name: SCCache
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build Base Image
@@ -89,6 +94,11 @@ jobs:
         with:
           filters: |
             change: [ '${{ matrix.component }}/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+
+      - name: SCCache
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
 
       - name: Check if component should build
         id: should_build
