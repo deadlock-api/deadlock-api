@@ -9,7 +9,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use itertools::Itertools;
-use redis::{AsyncCommands, RedisResult};
+use redis::{AsyncTypedCommands, RedisResult};
 use serde::Serialize;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -90,19 +90,26 @@ async fn create_party(
 async fn get_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
-) -> RedisResult<String> {
+) -> RedisResult<Option<String>> {
     redis_client.get(party_id.to_string()).await
 }
 
 async fn wait_for_party_code(
     redis_client: &mut redis::aio::MultiplexedConnection,
     party_id: u64,
-) -> RedisResult<String> {
+) -> RedisResult<Option<String>> {
     let mut retries_left = 100;
     loop {
         match get_party_code(redis_client, party_id).await {
-            Ok(party_code) => {
-                return Ok(party_code);
+            Ok(Some(party_code)) => {
+                return Ok(Some(party_code));
+            }
+            Ok(None) => {
+                retries_left -= 1;
+                if retries_left <= 0 {
+                    return Ok(None);
+                }
+                sleep(Duration::from_millis(100)).await;
             }
             Err(e) => {
                 retries_left -= 1;
@@ -271,6 +278,10 @@ pub(super) async fn create_custom(
     });
 
     let party_code = wait_for_party_code(&mut state.redis_client, party_id).await?;
+    let Some(party_code) = party_code else {
+        error!("Failed to retrieve party code");
+        return Err(APIError::internal("Failed to retrieve party code"));
+    };
     debug!("Retrieved party code: {party_code}");
 
     let Some((_, account_id, party_code)) = party_code.split(':').collect_tuple() else {
