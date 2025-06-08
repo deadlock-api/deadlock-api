@@ -1,5 +1,5 @@
 use crate::MMRType;
-use crate::types::{CHMatch, MMR, PlayerHeroMMR, PlayerMMR};
+use crate::types::{CHMatch, PlayerMMR};
 use clickhouse::query::RowCursor;
 use tracing::debug;
 
@@ -97,7 +97,7 @@ pub(crate) async fn get_all_player_mmrs(
     ch_client
         .query(
             r#"
-    SELECT match_id, account_id, player_score
+    SELECT match_id, account_id, NULL AS hero_id, player_score
     FROM mmr_history
     WHERE match_id <= ?
     ORDER BY account_id, match_id DESC
@@ -112,7 +112,7 @@ pub(crate) async fn get_all_player_mmrs(
 pub(crate) async fn get_all_player_hero_mmrs(
     ch_client: &clickhouse::Client,
     at_match_id: u64,
-) -> clickhouse::error::Result<Vec<PlayerHeroMMR>> {
+) -> clickhouse::error::Result<Vec<PlayerMMR>> {
     debug!("Fetching all player hero mmrs at match id {}", at_match_id);
     ch_client
         .query(
@@ -131,31 +131,15 @@ pub(crate) async fn get_all_player_hero_mmrs(
 
 pub(crate) async fn insert_mmrs(
     ch_client: &clickhouse::Client,
-    mmrs: &[MMR],
+    mmrs: &[PlayerMMR],
 ) -> clickhouse::error::Result<()> {
-    debug!("Inserting {} mmrs", mmrs.len());
     if mmrs.is_empty() {
         return Ok(());
     }
-
-    match mmrs[0] {
-        MMR::Player(_) => {
-            let mut inserter = ch_client.insert("mmr_history")?;
-            for mmr in mmrs {
-                if let MMR::Player(mmr) = mmr {
-                    inserter.write(mmr).await?;
-                }
-            }
-            inserter.end().await
-        }
-        MMR::Hero(_) => {
-            let mut inserter = ch_client.insert("hero_mmr_history")?;
-            for mmr in mmrs {
-                if let MMR::Hero(mmr) = mmr {
-                    inserter.write(mmr).await?;
-                }
-            }
-            inserter.end().await
-        }
+    debug!("Inserting {} mmrs", mmrs.len());
+    let mut inserter = ch_client.insert("mmr_history")?;
+    for mmr in mmrs {
+        inserter.write(mmr).await?;
     }
+    inserter.end().await
 }

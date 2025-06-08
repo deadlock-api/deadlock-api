@@ -1,5 +1,5 @@
 use crate::MMRType;
-use crate::types::{MMR, Match, PlayerHeroMMR, PlayerMMR};
+use crate::types::{Match, PlayerMMR};
 use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
 
@@ -13,10 +13,10 @@ impl Regression {
     pub(crate) fn run_regression(
         &self,
         match_: &Match,
-        all_mmrs: &mut HashMap<u32, MMR>,
+        all_mmrs: &mut HashMap<u32, PlayerMMR>,
         mmr_type: MMRType,
-    ) -> (Vec<MMR>, f64) {
-        let mut updates: Vec<MMR> = Vec::with_capacity(12);
+    ) -> (Vec<PlayerMMR>, f64) {
+        let mut updates: Vec<PlayerMMR> = Vec::with_capacity(12);
         let mut squared_error = 0.0;
         for team in match_.teams.iter() {
             let avg_team_rank_true = rank_to_player_score(team.average_badge_team);
@@ -26,20 +26,13 @@ impl Regression {
                 .map(|p| {
                     all_mmrs
                         .entry(p.account_id)
-                        .or_insert(match mmr_type {
-                            MMRType::Player => MMR::Player(PlayerMMR {
-                                match_id: match_.match_id,
-                                account_id: p.account_id,
-                                player_score: avg_team_rank_true,
-                            }),
-                            MMRType::Hero => MMR::Hero(PlayerHeroMMR {
-                                match_id: match_.match_id,
-                                account_id: p.account_id,
-                                hero_id: p.hero_id as u8,
-                                player_score: avg_team_rank_true,
-                            }),
+                        .or_insert(PlayerMMR {
+                            match_id: match_.match_id,
+                            account_id: p.account_id,
+                            hero_id: (mmr_type == MMRType::Hero).then_some(p.hero_id),
+                            player_score: avg_team_rank_true,
                         })
-                        .player_score()
+                        .player_score
                 })
                 .sum::<f64>()
                 / 6.0;
@@ -52,9 +45,9 @@ impl Regression {
             squared_error += error * error;
             for p in team.players.iter() {
                 let mmr = all_mmrs.get_mut(&p.account_id).unwrap();
-                *mmr.match_id_mut() = match_.match_id;
-                *mmr.player_score_mut() += error;
-                updates.push(mmr.clone());
+                mmr.match_id = match_.match_id;
+                mmr.player_score += error;
+                updates.push(*mmr);
             }
         }
         (updates, squared_error)

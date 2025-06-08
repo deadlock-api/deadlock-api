@@ -1,8 +1,9 @@
 use crate::regression::Regression;
-use crate::types::{MMR, Match};
+use crate::types::{Match, PlayerMMR};
 use clap::Parser;
 use itertools::Itertools;
 use std::collections::HashMap;
+use std::time::Duration;
 use tracing::info;
 
 mod regression;
@@ -25,7 +26,7 @@ struct Args {
 async fn run_regression(
     ch_client: &clickhouse::Client,
     mmr_type: MMRType,
-    all_player_mmrs: &mut HashMap<u32, MMR>,
+    all_player_mmrs: &mut HashMap<u32, PlayerMMR>,
 ) -> anyhow::Result<()> {
     let start_match = utils::get_regression_starting_id(ch_client, mmr_type).await?;
     let mut matches = utils::get_matches_starting_from(ch_client, start_match).await?;
@@ -62,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
     let ch_client = common::get_ch_client()?;
     let args = Args::parse();
     let start_match = utils::get_regression_starting_id(&ch_client, args.mmr_type).await?;
-    let all_player_mmrs: Vec<MMR> = match args.mmr_type {
+    let all_player_mmrs: Vec<PlayerMMR> = match args.mmr_type {
         MMRType::Hero => utils::get_all_player_hero_mmrs(&ch_client, start_match)
             .await?
             .into_iter()
@@ -75,15 +76,12 @@ async fn main() -> anyhow::Result<()> {
             .collect(),
     };
     info!("Loaded {} mmrs", all_player_mmrs.len());
-    let mut all_player_mmrs: HashMap<u32, MMR> = all_player_mmrs
+    let mut all_player_mmrs: HashMap<u32, PlayerMMR> = all_player_mmrs
         .into_iter()
-        .map(|mmr| match mmr {
-            MMR::Player(ref m) => (m.account_id, mmr),
-            MMR::Hero(ref m) => (m.account_id, mmr),
-        })
+        .map(|mmr| (mmr.account_id, mmr))
         .collect();
 
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+    let mut interval = tokio::time::interval(Duration::from_secs(60));
     loop {
         interval.tick().await;
         run_regression(&ch_client, args.mmr_type, &mut all_player_mmrs).await?;
