@@ -119,8 +119,8 @@ pub(crate) async fn get_all_player_hero_mmrs(
         .query(
             r#"
     SELECT match_id, account_id, hero_id, player_score
-    FROM hero_mmr_history
-    WHERE match_id <= ?
+    FROM mmr_history
+    WHERE match_id <= ? AND hero_id IS NOT NULL
     ORDER BY account_id, match_id DESC
     LIMIT 1 BY (account_id, hero_id)
     "#,
