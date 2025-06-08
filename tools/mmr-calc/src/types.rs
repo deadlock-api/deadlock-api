@@ -6,7 +6,7 @@ pub(crate) struct PlayerMMR {
     pub(crate) algorithm: AlgorithmType,
     pub(crate) match_id: u64,
     pub(crate) account_id: u32,
-    pub(crate) player_score: f32,
+    pub(crate) player_score: f64,
 }
 
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -15,7 +15,7 @@ pub(crate) struct PlayerHeroMMR {
     pub(crate) match_id: u64,
     pub(crate) account_id: u32,
     pub(crate) hero_id: u8,
-    pub(crate) player_score: f32,
+    pub(crate) player_score: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -38,13 +38,13 @@ impl From<PlayerHeroMMR> for MMR {
 }
 
 impl MMR {
-    pub fn player_score(&self) -> f32 {
+    pub fn player_score(&self) -> f64 {
         match self {
             Self::Player(p) => p.player_score,
             Self::Hero(p) => p.player_score,
         }
     }
-    pub fn player_score_mut(&mut self) -> &mut f32 {
+    pub fn player_score_mut(&mut self) -> &mut f64 {
         match self {
             Self::Player(p) => &mut p.player_score,
             Self::Hero(p) => &mut p.player_score,

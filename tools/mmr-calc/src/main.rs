@@ -47,7 +47,7 @@ async fn run_regression(
 
         processed += 1;
         if processed % 1000 == 0 {
-            let rmse = (sum_squared_errors / processed as f32).sqrt();
+            let rmse = (sum_squared_errors / processed as f64).sqrt();
             info!("Processed {processed} matches, RMSE: {rmse}");
             utils::insert_mmrs(ch_client, &updates).await?;
             updates.clear();

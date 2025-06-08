@@ -10,8 +10,8 @@ const RANKS: [u32; 67] = [
     86, 91, 92, 93, 94, 95, 96, 101, 102, 103, 104, 105, 106, 111, 112, 113, 114, 115, 116,
 ];
 
-pub fn rank_to_player_score(rank: u32) -> f32 {
-    RANKS.iter().position(|&r| r == rank).unwrap() as f32
+pub fn rank_to_player_score(rank: u32) -> f64 {
+    RANKS.iter().position(|&r| r == rank).unwrap() as f64
 }
 
 pub(crate) async fn get_matches_starting_from(

@@ -29,5 +29,5 @@ pub trait Algorithm: Default {
         match_: &Match,
         all_mmrs: &mut HashMap<u32, MMR>,
         mmr_type: MMRType,
-    ) -> (Vec<MMR>, f32);
+    ) -> (Vec<MMR>, f64);
 }

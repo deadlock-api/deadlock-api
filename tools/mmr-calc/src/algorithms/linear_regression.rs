@@ -4,8 +4,8 @@ use crate::types::{MMR, Match, PlayerHeroMMR, PlayerMMR};
 use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
 
-const ERROR_MULTIPLIER: f32 = 0.9;
-const ERROR_BIAS: f32 = 0.2;
+const ERROR_MULTIPLIER: f64 = 0.9;
+const ERROR_BIAS: f64 = 0.2;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct LinearRegression;
@@ -16,7 +16,7 @@ impl Algorithm for LinearRegression {
         match_: &Match,
         all_mmrs: &mut HashMap<u32, MMR>,
         mmr_type: MMRType,
-    ) -> (Vec<MMR>, f32) {
+    ) -> (Vec<MMR>, f64) {
         let mut updates: Vec<MMR> = Vec::with_capacity(12);
         let mut squared_error = 0.0;
         for team in match_.teams.iter() {
@@ -44,7 +44,7 @@ impl Algorithm for LinearRegression {
                         })
                         .player_score()
                 })
-                .sum::<f32>()
+                .sum::<f64>()
                 / 6.0;
             let error = (avg_team_rank_true - avg_team_rank_pred) / 6.0;
             let error = if team.won {
