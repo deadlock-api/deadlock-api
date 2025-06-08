@@ -43,7 +43,7 @@ pub struct MMRHistory {
     /// Start time of the match
     pub start_time: u32,
     /// Player Score is the index for the rank array (internally used for the rank regression)
-    player_score: f32,
+    player_score: f64,
     /// The Player Rank
     rank: u32,
     /// Extracted from the rank the division (rank // 10)
