@@ -2,7 +2,6 @@ DROP TABLE IF EXISTS mmr_history;
 
 CREATE TABLE IF NOT EXISTS mmr_history
 (
- algorithm     Enum8('LinearRegression' = 0) default 'LinearRegression',
  account_id    UInt32,
  match_id      UInt64,
  player_score  Float64,
@@ -78,14 +77,12 @@ CREATE TABLE IF NOT EXISTS mmr_history
  division      UInt32 ALIAS rank / 10,
  division_tier UInt32 ALIAS rank % 10
 ) ENGINE = ReplacingMergeTree
-   PARTITION BY algorithm
-   ORDER BY (algorithm, account_id, match_id);
+   ORDER BY (account_id, match_id);
 
 DROP TABLE IF EXISTS hero_mmr_history;
 
 CREATE TABLE IF NOT EXISTS hero_mmr_history
 (
- algorithm     Enum8('LinearRegression' = 0) default 'LinearRegression',
  account_id    UInt32,
  hero_id       UInt8,
  match_id      UInt64,
@@ -162,5 +159,4 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
  division      UInt32 ALIAS rank / 10,
  division_tier UInt32 ALIAS rank % 10
 ) ENGINE = ReplacingMergeTree
-   PARTITION BY algorithm
-   ORDER BY (algorithm, hero_id, account_id, match_id);
+   ORDER BY (hero_id, account_id, match_id);
