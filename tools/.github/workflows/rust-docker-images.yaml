@@ -48,17 +48,18 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Build Base Image
         id: build-base
         uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
           push: false
-          target: builder-base
           tags: ghcr.io/${{ github.repository }}/rust-base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/rust-base.tar
+
       - name: Upload Base Image
         uses: actions/upload-artifact@v4
         with:
@@ -95,11 +96,6 @@ jobs:
           filters: |
             change: [ '${{ matrix.component }}/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
 
-      - name: SCCache
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-
       - name: Check if component should build
         id: should_build
         run: |
@@ -109,9 +105,8 @@ jobs:
             echo "build=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Set up Docker Buildx
-        if: steps.should_build.outputs.build == 'true'
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
 
       - name: Login to GitHub Container Registry
         if: steps.should_build.outputs.build == 'true'
@@ -132,17 +127,8 @@ jobs:
         if: steps.should_build.outputs.build == 'true'
         run: |
           docker load --input /tmp/rust-base.tar
+          docker tag ghcr.io/${{ github.repository }}/rust-base:latest ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
 
       - name: Build and Push Component
         if: steps.should_build.outputs.build == 'true'
-        run: |
-          echo "Building and pushing ${{ matrix.component }}"
-          docker buildx build \
-            --platform linux/arm64 \
-            --target runtime \
-            --build-arg EXE_NAME=${{ matrix.component }} \
-            --tag ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest \
-            --cache-from type=gha \
-            --cache-to type=gha,mode=max \
-            --push \
-            .
+        run: docker push ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
