@@ -62,6 +62,8 @@ haste = { git = "https://github.com/deadlock-api/haste.git", rev = "563c7c72a133
 async-stream = "0.3.6"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"
+rand = "0.9.1"
+url = { version = "2.5.4", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.25.0"

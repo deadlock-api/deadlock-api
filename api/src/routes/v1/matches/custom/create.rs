@@ -1,20 +1,25 @@
+use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-
-use crate::context::AppState;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use axum::Json;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use base64::Engine;
+use base64::prelude::BASE64_URL_SAFE;
 use itertools::Itertools;
+use rand::RngCore;
+use rand::prelude::ThreadRng;
 use redis::{AsyncTypedCommands, RedisResult};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
-use utoipa::ToSchema;
+use url::Url;
+use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
     CMsgClientToGcPartyAction, CMsgClientToGcPartyActionResponse, CMsgClientToGcPartyCreate,
@@ -27,10 +32,25 @@ use valveprotos::deadlock::{
 };
 use valveprotos::gcsdk::EgcPlatform;
 
+#[derive(Serialize, Deserialize, IntoParams, ToSchema)]
+pub(super) struct CreateCustomRequest {
+    pub(super) callback_url: Option<String>,
+}
+
 #[derive(Serialize, ToSchema)]
 struct CreateCustomResponse {
     party_id: String,
     party_code: String,
+    /// If a callback url is provided, this is the secret that should be used to verify the callback.
+    /// The secret is a base64 encoded random string. To verify it you should compare it with the X-Callback-Secret header.
+    /// If no callback url is provided, this will be None.
+    callback_secret: Option<String>,
+}
+
+fn generate_callback_secret(length_bytes: usize) -> String {
+    let mut secret_bytes = vec![0u8; length_bytes];
+    ThreadRng::default().fill_bytes(&mut secret_bytes);
+    BASE64_URL_SAFE.encode(&mut secret_bytes)
 }
 
 async fn create_party(
@@ -223,6 +243,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
 #[utoipa::path(
     post,
     path = "/create",
+    params(CreateCustomRequest),
     responses(
         (status = 200, description = "Successfully fetched custom match id.", body = CreateCustomResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -236,6 +257,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
+    Json(CreateCustomRequest { callback_url }): Json<CreateCustomRequest>,
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
@@ -263,6 +285,35 @@ pub(super) async fn create_custom(
             created_party
         );
         return Err(APIError::internal("Failed to create party"));
+    };
+
+    // Store Callback URL & Callback Secret in Redis
+    let callback_secret = match callback_url.map(|c| Url::parse(&c)) {
+        Some(Ok(callback_url)) => {
+            let callback_secret = generate_callback_secret(32);
+            redis::pipe()
+                .set_ex(
+                    format!("{party_id}:callback-url"),
+                    callback_url.to_string(),
+                    20 * 60,
+                )
+                .set_ex(
+                    format!("{party_id}:callback-secret"),
+                    &callback_secret,
+                    20 * 60,
+                )
+                .exec_async(&mut state.redis_client) // Execute the pipeline
+                .await?;
+            Some(callback_secret)
+        }
+        Some(Err(e)) => {
+            error!("Failed to parse callback url: {e}");
+            return Err(APIError::status_msg(
+                StatusCode::BAD_REQUEST,
+                "Failed to parse callback url",
+            ));
+        }
+        None => None,
     };
 
     let steam_client = state.steam_client.clone();
@@ -318,6 +369,7 @@ pub(super) async fn create_custom(
     let response = CreateCustomResponse {
         party_id: party_id.to_string(),
         party_code: party_code.to_string(),
+        callback_secret,
     };
     Ok(Json(response))
 }

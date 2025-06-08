@@ -636,6 +636,7 @@ dependencies = [
  "metrics",
  "object_store",
  "prost",
+ "rand 0.9.1",
  "redis",
  "reqwest",
  "rstest",
@@ -656,6 +657,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tryhard",
+ "url",
  "utoipa",
  "utoipa-axum",
  "utoipa-scalar",
@@ -3606,6 +3608,7 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
