@@ -31,6 +31,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-24.04, ubuntu-24.04-arm ]
+        toolchain: [ stable, nightly ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -47,7 +48,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.87.0
+          toolchain: ${{ matrix.toolchain }}
           components: clippy
 
       - name: Cache Rust dependencies
