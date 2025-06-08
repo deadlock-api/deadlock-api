@@ -1,4 +1,3 @@
-use crate::MMRType;
 use crate::types::{CHMatch, PlayerMMR};
 use clickhouse::query::RowCursor;
 use tracing::debug;
@@ -22,8 +21,8 @@ pub(crate) async fn get_matches_starting_from(
         .query(
             r#"
     SELECT match_id,
-           groupArrayIf((account_id, hero_id), team = 'Team0') as team0_players,
-           groupArrayIf((account_id, hero_id), team = 'Team1') as team1_players,
+           groupArrayIf(account_id, team = 'Team0') as team0_players,
+           groupArrayIf(account_id, team = 'Team1') as team1_players,
            any(assumeNotNull(average_badge_team0))                 as avg_badge_team0,
            any(assumeNotNull(average_badge_team1))                 as avg_badge_team1,
            any(winning_team)                        as winning_team
@@ -44,11 +43,10 @@ pub(crate) async fn get_matches_starting_from(
 
 pub(crate) async fn get_regression_starting_id(
     ch_client: &clickhouse::Client,
-    mmr_type: MMRType,
 ) -> clickhouse::error::Result<u64> {
     debug!("Fetching regression starting id");
     let min_created_at = ch_client
-        .query(&format!(
+        .query(
             r#"
 WITH last_mmr AS (
     SELECT match_id
@@ -62,11 +60,7 @@ FROM match_info
 WHERE match_id IN last_mmr
 LIMIT 1
     "#,
-            match mmr_type {
-                MMRType::Player => "hero_id IS NULL",
-                MMRType::Hero => "hero_id IS NOT NULL",
-            }
-        ))
+        )
         .fetch_one::<u32>()
         .await
         .unwrap_or_default();
@@ -98,31 +92,11 @@ pub(crate) async fn get_all_player_mmrs(
     ch_client
         .query(
             r#"
-    SELECT match_id, account_id, NULL AS hero_id, player_score
+    SELECT match_id, account_id, player_score
     FROM mmr_history
     WHERE match_id <= ?
     ORDER BY account_id, match_id DESC
     LIMIT 1 BY account_id
-    "#,
-        )
-        .bind(at_match_id)
-        .fetch_all()
-        .await
-}
-
-pub(crate) async fn get_all_player_hero_mmrs(
-    ch_client: &clickhouse::Client,
-    at_match_id: u64,
-) -> clickhouse::error::Result<Vec<PlayerMMR>> {
-    debug!("Fetching all player hero mmrs at match id {}", at_match_id);
-    ch_client
-        .query(
-            r#"
-    SELECT match_id, account_id, hero_id, player_score
-    FROM mmr_history
-    WHERE match_id <= ? AND hero_id IS NOT NULL
-    ORDER BY account_id, match_id DESC
-    LIMIT 1 BY (account_id, hero_id)
     "#,
         )
         .bind(at_match_id)

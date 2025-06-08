@@ -1,4 +1,3 @@
-use crate::MMRType;
 use crate::types::{Match, PlayerMMR};
 use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
@@ -14,7 +13,6 @@ impl Regression {
         &self,
         match_: &Match,
         all_mmrs: &mut HashMap<u32, PlayerMMR>,
-        mmr_type: MMRType,
     ) -> (Vec<PlayerMMR>, f64) {
         let mut updates: Vec<PlayerMMR> = Vec::with_capacity(12);
         let mut squared_error = 0.0;
@@ -25,11 +23,10 @@ impl Regression {
                 .iter()
                 .map(|p| {
                     all_mmrs
-                        .entry(p.account_id)
+                        .entry(*p)
                         .or_insert(PlayerMMR {
                             match_id: match_.match_id,
-                            account_id: p.account_id,
-                            hero_id: (mmr_type == MMRType::Hero).then_some(p.hero_id),
+                            account_id: *p,
                             player_score: avg_team_rank_true,
                         })
                         .player_score
@@ -44,7 +41,7 @@ impl Regression {
             };
             squared_error += error * error;
             for p in team.players.iter() {
-                let mmr = all_mmrs.get_mut(&p.account_id).unwrap();
+                let mmr = all_mmrs.get_mut(p).unwrap();
                 mmr.match_id = match_.match_id;
                 mmr.player_score += error;
                 updates.push(*mmr);
