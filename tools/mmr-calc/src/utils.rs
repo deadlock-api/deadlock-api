@@ -51,7 +51,6 @@ pub(crate) async fn get_regression_starting_id(
 WITH last_mmr AS (
     SELECT match_id
     FROM mmr_history
-    WHERE {}
     ORDER BY match_id DESC
     LIMIT 1
 )
