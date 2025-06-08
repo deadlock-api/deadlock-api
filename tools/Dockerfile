@@ -26,7 +26,7 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo build --release --bin
+    cargo build --release
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
