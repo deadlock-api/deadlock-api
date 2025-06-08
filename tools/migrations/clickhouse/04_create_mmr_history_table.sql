@@ -78,4 +78,6 @@ CREATE TABLE IF NOT EXISTS mmr_history
  division      UInt32 ALIAS rank / 10,
  division_tier UInt32 ALIAS rank % 10
 ) ENGINE = ReplacingMergeTree
-   ORDER BY (account_id, match_id);
+   PARTITION BY (hero_id)
+   ORDER BY (hero_id, account_id, match_id)
+   SETTINGS allow_nullable_key = 1;

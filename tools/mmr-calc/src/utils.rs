@@ -52,7 +52,8 @@ pub(crate) async fn get_regression_starting_id(
             r#"
 WITH last_mmr AS (
     SELECT match_id
-    FROM {}
+    FROM mmr_history
+    WHERE {}
     ORDER BY match_id DESC
     LIMIT 1
 )
@@ -62,8 +63,8 @@ WHERE match_id IN last_mmr
 LIMIT 1
     "#,
             match mmr_type {
-                MMRType::Player => "mmr_history",
-                MMRType::Hero => "hero_mmr_history",
+                MMRType::Player => "hero_id IS NULL",
+                MMRType::Hero => "hero_id IS NOT NULL",
             }
         ))
         .fetch_one::<u32>()
