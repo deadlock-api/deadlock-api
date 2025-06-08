@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS mmr_history
 (
  account_id    UInt32,
  match_id      UInt64,
- hero_id       Nullable(UInt32) default NULL,
  player_score  Float64,
  rank          UInt32 ALIAS [
   0,
@@ -78,6 +77,5 @@ CREATE TABLE IF NOT EXISTS mmr_history
  division      UInt32 ALIAS rank / 10,
  division_tier UInt32 ALIAS rank % 10
 ) ENGINE = ReplacingMergeTree
-   PARTITION BY (hero_id)
-   ORDER BY (hero_id, account_id, match_id)
+   ORDER BY (account_id, match_id)
    SETTINGS allow_nullable_key = 1;
