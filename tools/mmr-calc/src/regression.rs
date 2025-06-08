@@ -1,5 +1,4 @@
 use crate::MMRType;
-use crate::algorithms::{Algorithm, AlgorithmType};
 use crate::types::{MMR, Match, PlayerHeroMMR, PlayerMMR};
 use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
@@ -8,10 +7,10 @@ const ERROR_MULTIPLIER: f64 = 0.9;
 const ERROR_BIAS: f64 = 0.2;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct LinearRegression;
+pub struct Regression;
 
-impl Algorithm for LinearRegression {
-    fn run_regression(
+impl Regression {
+    pub(crate) fn run_regression(
         &self,
         match_: &Match,
         all_mmrs: &mut HashMap<u32, MMR>,
@@ -29,13 +28,11 @@ impl Algorithm for LinearRegression {
                         .entry(p.account_id)
                         .or_insert(match mmr_type {
                             MMRType::Player => MMR::Player(PlayerMMR {
-                                algorithm: AlgorithmType::LinearRegression,
                                 match_id: match_.match_id,
                                 account_id: p.account_id,
                                 player_score: avg_team_rank_true,
                             }),
                             MMRType::Hero => MMR::Hero(PlayerHeroMMR {
-                                algorithm: AlgorithmType::LinearRegression,
                                 match_id: match_.match_id,
                                 account_id: p.account_id,
                                 hero_id: p.hero_id as u8,

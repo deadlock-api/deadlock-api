@@ -1,9 +1,7 @@
-use crate::algorithms::AlgorithmType;
 use serde::{Deserialize, Serialize};
 
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) struct PlayerMMR {
-    pub(crate) algorithm: AlgorithmType,
     pub(crate) match_id: u64,
     pub(crate) account_id: u32,
     pub(crate) player_score: f64,
@@ -11,7 +9,6 @@ pub(crate) struct PlayerMMR {
 
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub(crate) struct PlayerHeroMMR {
-    pub(crate) algorithm: AlgorithmType,
     pub(crate) match_id: u64,
     pub(crate) account_id: u32,
     pub(crate) hero_id: u8,

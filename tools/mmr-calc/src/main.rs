@@ -1,12 +1,11 @@
-use crate::algorithms::Algorithm;
+use crate::regression::Regression;
 use crate::types::{MMR, Match};
-use algorithms::AlgorithmType;
 use clap::Parser;
 use itertools::Itertools;
 use std::collections::HashMap;
 use tracing::info;
 
-mod algorithms;
+mod regression;
 mod types;
 mod utils;
 
@@ -21,23 +20,19 @@ enum MMRType {
 struct Args {
     #[arg(short, long, required = true)]
     mmr_type: MMRType,
-    #[arg(short, long, default_value = "linear-regression")]
-    algorithm: AlgorithmType,
 }
 
 async fn run_regression(
     ch_client: &clickhouse::Client,
-    algorithm_type: AlgorithmType,
     mmr_type: MMRType,
     all_player_mmrs: &mut HashMap<u32, MMR>,
 ) -> anyhow::Result<()> {
-    let start_match =
-        utils::get_regression_starting_id(ch_client, mmr_type, algorithm_type).await?;
+    let start_match = utils::get_regression_starting_id(ch_client, mmr_type).await?;
     let mut matches = utils::get_matches_starting_from(ch_client, start_match).await?;
     let mut updates = Vec::new();
     let mut processed = 0;
     let mut sum_squared_errors = 0.0;
-    let algorithm = algorithm_type.get_algorithm();
+    let algorithm = Regression;
     while let Some(match_) = matches.next().await? {
         let match_: Match = match_.into();
         let (updated_mmrs, squared_errors) =
@@ -66,16 +61,14 @@ async fn main() -> anyhow::Result<()> {
 
     let ch_client = common::get_ch_client()?;
     let args = Args::parse();
-    let algorithm_type = args.algorithm;
-    let start_match =
-        utils::get_regression_starting_id(&ch_client, args.mmr_type, algorithm_type).await?;
+    let start_match = utils::get_regression_starting_id(&ch_client, args.mmr_type).await?;
     let all_player_mmrs: Vec<MMR> = match args.mmr_type {
-        MMRType::Hero => utils::get_all_player_hero_mmrs(&ch_client, start_match, algorithm_type)
+        MMRType::Hero => utils::get_all_player_hero_mmrs(&ch_client, start_match)
             .await?
             .into_iter()
             .map_into()
             .collect(),
-        MMRType::Player => utils::get_all_player_mmrs(&ch_client, start_match, algorithm_type)
+        MMRType::Player => utils::get_all_player_mmrs(&ch_client, start_match)
             .await?
             .into_iter()
             .map_into()
@@ -93,12 +86,6 @@ async fn main() -> anyhow::Result<()> {
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
     loop {
         interval.tick().await;
-        run_regression(
-            &ch_client,
-            algorithm_type,
-            args.mmr_type,
-            &mut all_player_mmrs,
-        )
-        .await?;
+        run_regression(&ch_client, args.mmr_type, &mut all_player_mmrs).await?;
     }
 }
