@@ -50,7 +50,7 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 prost = "0.13.5"
 base64 = "0.22.1"
 tryhard = "0.5.1"
-async-compression = { version = "0.4.23", features = ["bzip2", "tokio"] }
+async-compression = { version = "0.4.24", features = ["bzip2", "tokio"] }
 strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
 hmac = "0.12.1"
