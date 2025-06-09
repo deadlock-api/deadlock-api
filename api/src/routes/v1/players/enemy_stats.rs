@@ -156,7 +156,7 @@ mod test {
         assert!(sql.contains("if(team = 'Team1', 'Team0', 'Team1') as enemy_team"));
         assert!(sql.contains("team IN ('Team0', 'Team1')"));
         assert!(sql.contains("SELECT account_id as enemy_id"));
-        assert!(sql.contains("sum(won) as wins"));
+        assert!(sql.contains("sum(not won) as wins"));
         assert!(sql.contains("count() as matches_played"));
         assert!(sql.contains("groupUniqArray(match_id) as matches"));
         assert!(sql.contains("GROUP BY enemy_id"));
