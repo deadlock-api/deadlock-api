@@ -28,6 +28,9 @@ pub(super) enum BucketQuery {
     /// Bucket Item Stats By Hero
     #[display("hero")]
     Hero,
+    /// Bucket Item Stats By Team
+    #[display("team")]
+    Team,
     /// Bucket Item Stats By Start Time (Hour)
     #[display("start_time_hour")]
     StartTimeHour,
@@ -67,6 +70,7 @@ impl BucketQuery {
         match self {
             Self::NoBucket => "NULL".to_string(),
             Self::Hero => "toNullable(hero_id)".to_string(),
+            Self::Team => "toNullable(toUInt32(if(team = 'Team0', 0, 1)))".to_string(),
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
             Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
             Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))".to_string(),
@@ -241,6 +245,7 @@ WITH
     filtered_players AS (
         SELECT
             match_id,
+            team,
             account_id,
             items,
             won,
@@ -254,6 +259,7 @@ WITH
     exploded_players AS (
         SELECT
             match_id,
+            team,
             account_id,
             it.item_id     AS item_id,
             it.game_time_s AS buy_time,
