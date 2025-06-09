@@ -7,11 +7,19 @@ pub(crate) struct PlayerMMR {
     pub(crate) player_score: f64,
 }
 
+#[derive(clickhouse::Row, Debug, Copy, Clone, PartialEq, Deserialize, Serialize)]
+pub(crate) struct PlayerHeroMMR {
+    pub(crate) match_id: u64,
+    pub(crate) account_id: u32,
+    pub(crate) hero_id: u32,
+    pub(crate) player_score: f64,
+}
+
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub(crate) struct CHMatch {
     match_id: u64,
-    team0_players: Vec<u32>,
-    team1_players: Vec<u32>,
+    team0_players: Vec<(u32, u32)>,
+    team1_players: Vec<(u32, u32)>,
     avg_badge_team0: u32,
     avg_badge_team1: u32,
     winning_team: u8,
@@ -25,7 +33,7 @@ pub struct Match {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 pub struct MatchTeam {
-    pub players: Vec<u32>,
+    pub players: Vec<(u32, u32)>,
     pub average_badge_team: u32,
     pub won: bool,
 }

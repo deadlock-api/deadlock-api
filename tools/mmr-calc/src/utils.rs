@@ -1,4 +1,4 @@
-use crate::types::{CHMatch, PlayerMMR};
+use crate::types::{CHMatch, PlayerHeroMMR, PlayerMMR};
 use clickhouse::query::RowCursor;
 use tracing::debug;
 
@@ -21,8 +21,8 @@ pub(crate) async fn get_matches_starting_from(
         .query(
             r#"
     SELECT match_id,
-           groupArrayIf(account_id, team = 'Team0') as team0_players,
-           groupArrayIf(account_id, team = 'Team1') as team1_players,
+           groupArrayIf((account_id, hero_id), team = 'Team0') as team0_players,
+           groupArrayIf((account_id, hero_id), team = 'Team1') as team1_players,
            any(assumeNotNull(average_badge_team0))                 as avg_badge_team0,
            any(assumeNotNull(average_badge_team1))                 as avg_badge_team1,
            any(winning_team)                        as winning_team
@@ -83,6 +83,48 @@ LIMIT 1
         .await
 }
 
+pub(crate) async fn get_hero_regression_starting_id(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<u64> {
+    debug!("Fetching hero regression starting id");
+    let min_created_at = ch_client
+        .query(
+            r#"
+WITH last_mmr AS (
+    SELECT match_id
+    FROM hero_mmr_history
+    ORDER BY match_id DESC
+    LIMIT 1
+)
+SELECT created_at
+FROM match_info
+WHERE match_id IN last_mmr
+LIMIT 1
+    "#,
+        )
+        .fetch_one::<u32>()
+        .await
+        .unwrap_or_default();
+
+    ch_client
+        .query(
+            r#"
+    SELECT match_id
+    FROM match_info
+    WHERE match_mode IN ('Ranked', 'Unranked')
+        AND average_badge_team0 IS NOT NULL
+        AND average_badge_team1 IS NOT NULL
+        AND created_at > ?
+        AND match_id > 28626948
+    ORDER BY created_at
+    LIMIT 1
+    "#,
+        )
+        .bind(min_created_at)
+        .fetch_one::<u64>()
+        .await
+}
+
 pub(crate) async fn get_all_player_mmrs(
     ch_client: &clickhouse::Client,
     at_match_id: u64,
@@ -103,6 +145,26 @@ pub(crate) async fn get_all_player_mmrs(
         .await
 }
 
+pub(crate) async fn get_all_player_hero_mmrs(
+    ch_client: &clickhouse::Client,
+    at_match_id: u64,
+) -> clickhouse::error::Result<Vec<PlayerHeroMMR>> {
+    debug!("Fetching all player mmrs at match id {}", at_match_id);
+    ch_client
+        .query(
+            r#"
+    SELECT match_id, account_id, hero_id, player_score
+    FROM hero_mmr_history
+    WHERE match_id <= ?
+    ORDER BY account_id, match_id DESC
+    LIMIT 1 BY (account_id, hero_id)
+    "#,
+        )
+        .bind(at_match_id)
+        .fetch_all()
+        .await
+}
+
 pub(crate) async fn insert_mmrs(
     ch_client: &clickhouse::Client,
     mmrs: &[PlayerMMR],
@@ -112,6 +174,21 @@ pub(crate) async fn insert_mmrs(
     }
     debug!("Inserting {} mmrs", mmrs.len());
     let mut inserter = ch_client.insert("mmr_history")?;
+    for mmr in mmrs {
+        inserter.write(mmr).await?;
+    }
+    inserter.end().await
+}
+
+pub(crate) async fn insert_hero_mmrs(
+    ch_client: &clickhouse::Client,
+    mmrs: &[PlayerHeroMMR],
+) -> clickhouse::error::Result<()> {
+    if mmrs.is_empty() {
+        return Ok(());
+    }
+    debug!("Inserting {} hero mmrs", mmrs.len());
+    let mut inserter = ch_client.insert("hero_mmr_history")?;
     for mmr in mmrs {
         inserter.write(mmr).await?;
     }
