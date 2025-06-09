@@ -128,6 +128,24 @@ impl SteamClient {
             .await
             .map(|r| r.to_vec())
     }
+
+    pub(crate) async fn metadata_file_exists(
+        &self,
+        match_id: u64,
+        salts: CMsgClientToGcGetMatchMetaDataResponse,
+    ) -> reqwest::Result<()> {
+        self.http_client
+            .head(format!(
+                "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
+                salts.replay_group_id.unwrap_or_default(),
+                salts.metadata_salt.unwrap_or_default()
+            ))
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .and_then(|resp| resp.error_for_status())
+            .map(drop)
+    }
 }
 
 #[cached(

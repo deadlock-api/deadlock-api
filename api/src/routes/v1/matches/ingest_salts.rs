@@ -6,33 +6,7 @@ use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use serde_json::json;
-use std::time::Duration;
 use tracing::debug;
-
-async fn check_salt(http_client: &reqwest::Client, salts: &ClickhouseSalts) -> bool {
-    let Some(cluster_id) = salts.cluster_id else {
-        return false;
-    };
-    let Some(metadata_salt) = salts.metadata_salt else {
-        return false;
-    };
-
-    tryhard::retry_fn(|| async {
-        http_client
-            .head(format!(
-                "http://replay{cluster_id}.valve.net/1422450/{}_{metadata_salt}.meta.bz2",
-                salts.match_id,
-            ))
-            .timeout(Duration::from_secs(5))
-            .send()
-            .await
-            .and_then(|r| r.error_for_status())
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await
-    .is_ok()
-}
 
 pub(super) async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,
@@ -85,7 +59,12 @@ pub(super) async fn ingest_salts(
     let match_salts: Vec<ClickhouseSalts> = if !bypass_check {
         let mut valid_salts = Vec::with_capacity(match_salts.len());
         for salt in match_salts.into_iter() {
-            if check_salt(&state.http_client, &salt).await {
+            if state
+                .steam_client
+                .metadata_file_exists(salt.match_id, salt.into())
+                .await
+                .is_ok()
+            {
                 valid_salts.push(salt);
             }
         }
