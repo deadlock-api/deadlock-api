@@ -211,7 +211,7 @@ impl AppState {
 
         // Create an Assets client
         debug!("Creating Assets client");
-        let assets_client = AssetsClient::new(http_client.clone());
+        let assets_client = AssetsClient::new(config.assets_base_url.clone(), http_client.clone());
 
         // Create a Rate Limit client
         debug!("Creating Rate Limit client");

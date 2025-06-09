@@ -41,6 +41,10 @@ fn default_postgres_pool_size() -> u32 {
     10
 }
 
+fn default_assets_base_url() -> String {
+    "https://assets.deadlock-api.com".to_string()
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct Config {
     // ========================================
@@ -102,4 +106,7 @@ pub(crate) struct Config {
     pub(super) postgres_dbname: String,
     #[serde(default = "default_postgres_pool_size")]
     pub(super) postgres_pool_size: u32,
+
+    #[serde(default = "default_assets_base_url")]
+    pub(super) assets_base_url: String,
 }

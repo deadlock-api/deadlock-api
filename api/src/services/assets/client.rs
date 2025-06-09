@@ -7,6 +7,7 @@ use tracing::debug;
 /// Client for interacting with the Deadlock assets API
 #[derive(Constructor, Clone)]
 pub(crate) struct AssetsClient {
+    base_url: String,
     http_client: reqwest::Client,
 }
 
@@ -14,13 +15,13 @@ impl AssetsClient {
     /// Fetch heroes from the assets API
     pub(crate) async fn fetch_heroes(&self) -> reqwest::Result<Vec<AssetsHero>> {
         debug!("Fetching heroes from assets API");
-        fetch_heroes_cached(&self.http_client).await
+        fetch_heroes_cached(&self.http_client, &self.base_url).await
     }
 
     /// Fetch ranks from the assets API
     pub(crate) async fn fetch_ranks(&self) -> reqwest::Result<Vec<AssetsRanks>> {
         debug!("Fetching ranks from assets API");
-        fetch_ranks_cached(&self.http_client).await
+        fetch_ranks_cached(&self.http_client, &self.base_url).await
     }
 
     /// Find a hero ID by name
@@ -64,9 +65,12 @@ impl AssetsClient {
     result = true,
     convert = "{ 0 }"
 )]
-async fn fetch_heroes_cached(http_client: &reqwest::Client) -> reqwest::Result<Vec<AssetsHero>> {
+async fn fetch_heroes_cached(
+    http_client: &reqwest::Client,
+    base_url: &str,
+) -> reqwest::Result<Vec<AssetsHero>> {
     http_client
-        .get("https://assets.deadlock-api.com/v2/heroes")
+        .get(format!("{base_url}/v2/heroes"))
         .send()
         .await?
         .json()
@@ -80,9 +84,12 @@ async fn fetch_heroes_cached(http_client: &reqwest::Client) -> reqwest::Result<V
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-async fn fetch_ranks_cached(http_client: &reqwest::Client) -> reqwest::Result<Vec<AssetsRanks>> {
+async fn fetch_ranks_cached(
+    http_client: &reqwest::Client,
+    base_url: &str,
+) -> reqwest::Result<Vec<AssetsRanks>> {
     http_client
-        .get("https://assets.deadlock-api.com/v2/ranks")
+        .get(format!("{base_url}/v2/ranks"))
         .send()
         .await?
         .json()
