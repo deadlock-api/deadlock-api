@@ -122,10 +122,10 @@ pub(crate) struct ItemStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// Comma separated list of item ids to include
+    /// Comma separated list of item ids to include. See more: https://assets.deadlock-api.com/v2/items
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude
+    /// Comma separated list of item ids to exclude. See more: https://assets.deadlock-api.com/v2/items
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
@@ -143,6 +143,7 @@ pub(crate) struct ItemStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct ItemStats {
+    /// See more: https://assets.deadlock-api.com/v2/items
     pub item_id: u32,
     pub bucket: Option<u32>,
     pub wins: u64,

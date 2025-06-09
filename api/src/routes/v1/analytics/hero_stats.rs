@@ -67,10 +67,10 @@ pub(crate) struct HeroStatsQuery {
     min_hero_matches: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
     max_hero_matches: Option<u64>,
-    /// Comma separated list of item ids to include (only heroes who have purchased these items)
+    /// Comma separated list of item ids to include (only heroes who have purchased these items). See more: https://assets.deadlock-api.com/v2/items
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude (only heroes who have not purchased these items)
+    /// Comma separated list of item ids to exclude (only heroes who have not purchased these items). See more: https://assets.deadlock-api.com/v2/items
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// Filter for matches with a specific player account ID.

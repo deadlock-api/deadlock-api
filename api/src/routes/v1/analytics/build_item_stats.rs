@@ -26,6 +26,7 @@ pub(super) struct BuildItemStatsQuery {
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, ToSchema, Eq, PartialEq, Hash)]
 pub struct BuildItemStats {
+    /// See more: https://assets.deadlock-api.com/v2/items
     pub item_id: i64,
     pub builds: i64,
 }

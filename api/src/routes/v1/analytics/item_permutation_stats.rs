@@ -21,7 +21,7 @@ fn default_comb_size() -> Option<u8> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct ItemPermutationStatsQuery {
-    /// Comma separated list of item ids
+    /// Comma separated list of item ids. See more: https://assets.deadlock-api.com/v2/items
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     item_ids: Option<Vec<u32>>,
     /// The combination size to return.
@@ -58,6 +58,7 @@ pub(super) struct ItemPermutationStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 struct ItemPermutationStats {
+    /// See more: https://assets.deadlock-api.com/v2/items
     item_ids: Vec<u32>,
     wins: u64,
     losses: u64,
