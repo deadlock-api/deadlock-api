@@ -134,7 +134,7 @@ pub(crate) fn default_true() -> bool {
 
 type QueryParam<'a> = (&'a str, &'a str);
 type QueryParams<'a> = Vec<QueryParam<'a>>;
-pub(crate) fn querify(string: &str) -> QueryParams {
+pub(crate) fn querify(string: &str) -> QueryParams<'_> {
     let mut v = Vec::new();
     for pair in string.split('&') {
         let mut it = pair.split('=').take(2);
