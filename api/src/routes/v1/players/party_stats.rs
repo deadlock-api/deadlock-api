@@ -23,10 +23,10 @@ pub(super) struct PartyStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved.
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
