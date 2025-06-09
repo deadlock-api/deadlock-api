@@ -220,3 +220,123 @@ pub(super) async fn item_permutation_stats(
         .await
         .map(Json)
 }
+
+#[cfg(test)]
+mod test {
+    #![allow(clippy::too_many_arguments)]
+    use super::*;
+
+    #[test]
+    fn test_build_item_stats_query_min_unix_timestamp() {
+        let min_unix_timestamp = 1672531200;
+        let query = ItemPermutationStatsQuery {
+            min_unix_timestamp: min_unix_timestamp.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("start_time >= {min_unix_timestamp}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_unix_timestamp() {
+        let max_unix_timestamp = 1675209599;
+        let query = ItemPermutationStatsQuery {
+            max_unix_timestamp: max_unix_timestamp.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("start_time <= {max_unix_timestamp}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_duration_s() {
+        let min_duration_s = 600;
+        let query = ItemPermutationStatsQuery {
+            min_duration_s: min_duration_s.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("duration_s >= {min_duration_s}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_duration_s() {
+        let max_duration_s = 1800;
+        let query = ItemPermutationStatsQuery {
+            max_duration_s: max_duration_s.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("duration_s <= {max_duration_s}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_average_badge() {
+        let min_average_badge = 1;
+        let query = ItemPermutationStatsQuery {
+            min_average_badge: min_average_badge.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!(
+            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
+        )));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_average_badge() {
+        let max_average_badge = 116;
+        let query = ItemPermutationStatsQuery {
+            max_average_badge: max_average_badge.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!(
+            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
+        )));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_match_id() {
+        let min_match_id = 10000;
+        let query = ItemPermutationStatsQuery {
+            min_match_id: min_match_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("match_id >= {min_match_id}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_match_id() {
+        let max_match_id = 1000000;
+        let query = ItemPermutationStatsQuery {
+            max_match_id: max_match_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("match_id <= {max_match_id}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_account_id() {
+        let account_id = 18373975;
+        let query = ItemPermutationStatsQuery {
+            account_id: account_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("account_id = {account_id}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_hero_id() {
+        let hero_id = 15;
+        let query = ItemPermutationStatsQuery {
+            hero_id: hero_id.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("hero_id = {hero_id}")));
+    }
+}
