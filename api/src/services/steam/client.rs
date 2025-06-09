@@ -14,9 +14,11 @@ use cached::proc_macro::cached;
 use derive_more::Constructor;
 use metrics::counter;
 use prost::Message;
+use reqwest::header::HeaderValue;
 use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, error};
+use uuid::Uuid;
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
@@ -155,6 +157,27 @@ impl SteamClient {
             .send()
             .await
             .and_then(|resp| resp.error_for_status())
+            .map(drop)
+    }
+
+    pub(crate) async fn send_webhook(
+        &self,
+        webhook_url: &str,
+        payload: Vec<u8>,
+        sig: &HeaderValue,
+    ) -> reqwest::Result<()> {
+        self.http_client
+            .post(webhook_url)
+            .body(payload)
+            .header("X-Hook0-Signature", sig)
+            .header("X-Event-Type", "match.metadata.created")
+            .header("X-Event-Id", Uuid::new_v4().to_string())
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "hook0-output-worker/0.3.0")
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .and_then(|m| m.error_for_status())
             .map(drop)
     }
 }

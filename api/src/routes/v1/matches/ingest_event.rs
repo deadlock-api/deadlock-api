@@ -17,9 +17,7 @@ use serde::Serialize;
 use serde_json::json;
 use sha2::Sha256;
 use sqlx::{Pool, Postgres};
-use std::time::Duration;
 use tracing::warn;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize)]
 struct MatchCreatedWebhookPayload {
@@ -140,18 +138,9 @@ pub(super) async fn ingest_event(
                 "Failed to serialize payload".to_string(),
             ))?;
         if let Err(e) = state
-            .http_client
-            .post(&webhook_url)
-            .body(payload)
-            .header("X-Hook0-Signature", sig)
-            .header("X-Event-Type", "match.metadata.created")
-            .header("X-Event-Id", Uuid::new_v4().to_string())
-            .header("Content-Type", "application/json")
-            .header("User-Agent", "hook0-output-worker/0.3.0")
-            .timeout(Duration::from_secs(5))
-            .send()
+            .steam_client
+            .send_webhook(&webhook_url, payload, &sig)
             .await
-            .and_then(|m| m.error_for_status())
         {
             warn!("Failed to send webhook to {webhook_url}: {e}");
         }
