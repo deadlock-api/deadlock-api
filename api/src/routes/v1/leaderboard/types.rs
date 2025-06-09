@@ -23,7 +23,7 @@ pub(crate) struct LeaderboardEntry {
     pub(crate) account_name: Option<String>,
     /// The rank of the player.
     pub(crate) rank: Option<u32>,
-    /// The top hero IDs of the player.
+    /// The top hero IDs of the player. See more: https://assets.deadlock-api.com/v2/heroes
     #[serde(default)]
     top_hero_ids: Vec<u32>,
     /// The badge level of the player.

@@ -27,7 +27,7 @@ pub(super) struct ItemPermutationStatsQuery {
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
     comb_size: Option<u8>,
-    /// Filter matches based on the hero ID.
+    /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]

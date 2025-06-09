@@ -74,7 +74,7 @@ pub(super) struct BuildsSearchQuery {
     build_id: Option<u32>,
     /// Filter builds by version.
     version: Option<u32>,
-    /// Filter builds by hero ID.
+    /// Filter builds by hero ID. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     /// Filter builds by rollup category.
     rollup_category: Option<u32>,

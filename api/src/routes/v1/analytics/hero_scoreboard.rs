@@ -54,6 +54,7 @@ pub(super) struct HeroScoreboardQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroScoreboardEntry {
     rank: u64,
+    /// See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: u32,
     pub value: f64,
     pub matches: u64,

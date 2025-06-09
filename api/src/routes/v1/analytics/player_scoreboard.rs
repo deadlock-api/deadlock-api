@@ -31,7 +31,7 @@ pub(crate) struct PlayerScoreboardQuery {
     #[serde(default)]
     #[param(inline)]
     sort_direction: SortDirectionDesc,
-    /// Filter matches based on the hero ID.
+    /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
     #[serde(default = "default_min_matches")]

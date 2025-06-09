@@ -14,7 +14,7 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct BuildItemStatsQuery {
-    /// Filter builds based on the hero ID.
+    /// Filter builds based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     /// Filter builds based on their last updated time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]

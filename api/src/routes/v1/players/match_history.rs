@@ -32,6 +32,7 @@ pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 pub(crate) struct PlayerMatchHistoryEntry {
     account_id: u32,
     pub(crate) match_id: u32,
+    /// See more: https://assets.deadlock-api.com/v2/heroes
     pub(crate) hero_id: u32,
     hero_level: u32,
     pub(crate) start_time: u32,

@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryQuery {
-    /// The hero ID to fetch the MMR history for.
+    /// The hero ID to fetch the MMR history for. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: u8,
 }
 

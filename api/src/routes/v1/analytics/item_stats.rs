@@ -98,7 +98,7 @@ impl BucketQuery {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct ItemStatsQuery {
-    /// Filter matches based on the hero ID.
+    /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]

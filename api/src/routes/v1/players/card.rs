@@ -41,6 +41,7 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 struct PlayerCardSlotHero {
+    /// See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     hero_kills: Option<u32>,
     hero_wins: Option<u32>,

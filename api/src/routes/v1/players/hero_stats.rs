@@ -37,6 +37,7 @@ pub(super) struct HeroStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroStats {
+    /// See more: https://assets.deadlock-api.com/v2/heroes
     pub hero_id: u32,
     matches_played: u64,
     wins: u64,
