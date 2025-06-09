@@ -17,6 +17,7 @@ use prost::Message;
 use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, error};
+use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
 
@@ -107,6 +108,25 @@ impl SteamClient {
 
     pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Vec<Patch>> {
         fetch_patch_notes(&self.http_client).await
+    }
+
+    pub(crate) async fn fetch_metadata_file(
+        &self,
+        match_id: u64,
+        salts: CMsgClientToGcGetMatchMetaDataResponse,
+    ) -> reqwest::Result<Vec<u8>> {
+        self.http_client
+            .get(format!(
+                "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
+                salts.replay_group_id.unwrap_or_default(),
+                salts.metadata_salt.unwrap_or_default()
+            ))
+            .send()
+            .await
+            .and_then(|resp| resp.error_for_status())?
+            .bytes()
+            .await
+            .map(|r| r.to_vec())
     }
 }
 

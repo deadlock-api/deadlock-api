@@ -32,7 +32,6 @@ async fn fetch_match_metadata_raw(
     rate_limit_client: &RateLimitClient,
     rate_limit_key: &RateLimitKey,
     steam_client: &SteamClient,
-    http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     s3: &impl ObjectStore,
     s3_cache: &impl ObjectStore,
@@ -105,18 +104,7 @@ async fn fetch_match_metadata_raw(
         false,
     )
     .await?;
-    Ok(http_client
-        .get(format!(
-            "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
-            salts.replay_group_id.unwrap_or_default(),
-            salts.metadata_salt.unwrap_or_default()
-        ))
-        .send()
-        .await
-        .and_then(|resp| resp.error_for_status())?
-        .bytes()
-        .await
-        .map(|r| r.to_vec())?)
+    Ok(steam_client.fetch_metadata_file(match_id, salts).await?)
 }
 
 async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDataContents> {
@@ -166,7 +154,6 @@ pub(super) async fn metadata_raw(
         &state.rate_limit_client,
         &rate_limit_key,
         &state.steam_client,
-        &state.http_client,
         &state.ch_client,
         &state.s3_client,
         &state.s3_cache_client,
@@ -207,7 +194,6 @@ pub(super) async fn metadata(
         &state.rate_limit_client,
         &rate_limit_key,
         &state.steam_client,
-        &state.http_client,
         &state.ch_client,
         &state.s3_client,
         &state.s3_cache_client,
