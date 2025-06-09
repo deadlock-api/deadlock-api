@@ -40,6 +40,7 @@ pub(super) struct EnemyStatsQuery {
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct EnemyStats {
     pub enemy_id: u32,
+    /// The amount of matches won against the enemy.
     wins: u64,
     matches_played: u64,
     matches: Vec<u64>,
@@ -88,7 +89,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
          enemies AS (SELECT DISTINCT match_id, won, account_id
                    FROM match_player
                    WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM players))
-    SELECT account_id as enemy_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+    SELECT account_id as enemy_id, sum(not won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
     FROM enemies
     GROUP BY enemy_id
     HAVING matches_played > {}
