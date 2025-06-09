@@ -25,6 +25,9 @@ pub(super) enum BucketQuery {
     #[display("no_bucket")]
     #[default]
     NoBucket,
+    /// Bucket Item Stats By Hero
+    #[display("hero")]
+    Hero,
     /// Bucket Item Stats By Start Time (Hour)
     #[display("start_time_hour")]
     StartTimeHour,
@@ -34,7 +37,7 @@ pub(super) enum BucketQuery {
     /// Bucket Item Stats by Game Time (Minutes)
     #[display("game_time_min")]
     GameTimeMin,
-    /// Bucket Item Stats by Game Time Normalized
+    /// Bucket Item Stats by Game Time Normalized with the match duration
     #[display("game_time_normalized_percentage")]
     GameTimeNormalizedPercentage,
     /// Bucket Item Stats by Net Worth (grouped by 1000)
@@ -63,6 +66,7 @@ impl BucketQuery {
     pub(super) fn get_select_clause(&self) -> String {
         match self {
             Self::NoBucket => "NULL".to_string(),
+            Self::Hero => "toNullable(hero_id)".to_string(),
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
             Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
             Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))".to_string(),
