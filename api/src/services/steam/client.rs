@@ -4,8 +4,8 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::context::AppState;
 use crate::services::steam::types::{
-    GetPlayerSummariesResponse, SteamAccountNameError, SteamProxyQuery, SteamProxyRawResponse,
-    SteamProxyResponse, SteamProxyResult,
+    GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError, SteamProxyQuery,
+    SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
@@ -17,6 +17,8 @@ use prost::Message;
 use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, error};
+
+const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
 
 /// Client for interacting with the Steam API and proxy
 #[derive(Constructor, Clone)]
@@ -102,6 +104,40 @@ impl SteamClient {
         )
         .await
     }
+
+    pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Vec<Patch>> {
+        fetch_patch_notes(&self.http_client).await
+    }
+}
+
+#[cached(
+    ty = "TimedCache<u8, Vec<Patch>>",
+    create = "{ TimedCache::with_lifespan(30 * 60) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+pub(crate) async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
+    let response = http_client.get(RSS_ENDPOINT).send().await.map_err(|e| {
+        APIError::status_msg(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to fetch patch notes: {e}"),
+        )
+    })?;
+    let rss = response.text().await.map_err(|e| {
+        APIError::status_msg(
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to read patch notes: {e}"),
+        )
+    })?;
+    serde_xml_rs::from_str::<Rss>(&rss)
+        .map(|rss| rss.channel.patch_notes)
+        .map_err(|e| {
+            APIError::status_msg(
+                reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to parse patch notes: {e}"),
+            )
+        })
 }
 
 #[cached(
@@ -182,4 +218,17 @@ async fn fetch_steam_account_name_cached(
         .first()
         .and_then(|player| player.personaname.clone())
         .ok_or(SteamAccountNameError::ParseError)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_patches() {
+        let patches = fetch_patch_notes(&reqwest::Client::new())
+            .await
+            .expect("Failed to fetch patch notes");
+        assert!(patches.len() > 7);
+    }
 }

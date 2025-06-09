@@ -1,9 +1,12 @@
+use crate::utils::parse::parse_rfc2822_datetime;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
+use chrono::{DateTime, FixedOffset};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
+use utoipa::ToSchema;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
 #[derive(Debug, Clone)]
@@ -78,4 +81,51 @@ pub(crate) enum SteamAccountNameError {
     ParseError,
     #[error("Rate limit exceeded: {0}")]
     RateLimitExceeded(String),
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct Rss {
+    pub(crate) channel: Channel,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Channel {
+    #[serde(rename = "item")]
+    pub(crate) patch_notes: Vec<Patch>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct Patch {
+    pub(crate) title: String,
+    #[serde(deserialize_with = "parse_rfc2822_datetime")]
+    pub pub_date: DateTime<FixedOffset>,
+    pub(crate) link: String,
+    pub(crate) guid: PatchGuid,
+    pub(crate) author: String,
+    pub(crate) category: PatchCategory,
+    #[serde(rename(deserialize = "dc:creator"))]
+    pub(crate) dc_creator: String,
+    #[serde(rename(deserialize = "content:encoded"))]
+    pub(crate) content_encoded: String,
+    #[serde(rename(deserialize = "slash:comments"))]
+    pub(crate) slash_comments: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct PatchGuid {
+    #[serde(rename(deserialize = "@isPermaLink"))]
+    pub(crate) is_perma_link: bool,
+    #[serde(rename(deserialize = "#text"))]
+    pub(crate) text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct PatchCategory {
+    #[serde(rename(deserialize = "@domain"))]
+    pub(crate) domain: String,
+    #[serde(rename(deserialize = "#text"))]
+    pub(crate) text: String,
 }

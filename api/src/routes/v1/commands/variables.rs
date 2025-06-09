@@ -2,7 +2,6 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
-use crate::routes::v1::patches::feed::fetch_patch_notes;
 use crate::routes::v1::players::match_history::{PlayerMatchHistory, insert_match_history_to_ch};
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
@@ -518,13 +517,17 @@ impl Variable {
                 });
                 Ok(format!("{wins}-{losses}"))
             }
-            Self::LatestPatchnotesTitle => fetch_patch_notes(&state.http_client)
+            Self::LatestPatchnotesTitle => state
+                .steam_client
+                .fetch_patch_notes()
                 .await
                 .map_err(|_| "patch notes")?
                 .first()
                 .map(|patch_notes| patch_notes.title.clone())
                 .ok_or("patch notes"),
-            Self::LatestPatchnotesLink => fetch_patch_notes(&state.http_client)
+            Self::LatestPatchnotesLink => state
+                .steam_client
+                .fetch_patch_notes()
                 .await
                 .map_err(|_| "patch notes")?
                 .first()
