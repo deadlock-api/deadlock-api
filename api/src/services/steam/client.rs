@@ -146,6 +146,17 @@ impl SteamClient {
             .and_then(|resp| resp.error_for_status())
             .map(drop)
     }
+
+    pub(crate) async fn live_demo_exists(&self, match_id: u64) -> reqwest::Result<()> {
+        self.http_client
+            .head(format!(
+                "https://dist1-ord1.steamcontent.com/tv/{match_id}/sync"
+            ))
+            .send()
+            .await
+            .and_then(|resp| resp.error_for_status())
+            .map(drop)
+    }
 }
 
 #[cached(

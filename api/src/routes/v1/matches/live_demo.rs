@@ -49,24 +49,15 @@ async fn demo_stream(
 )]
 pub(super) async fn live_demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    State(state): State<AppState>,
+    State(AppState { steam_client, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    spectate_match(&state.steam_client, match_id).await?;
+    spectate_match(&steam_client, match_id).await?;
 
     // Wait for the demo to be available
-    tryhard::retry_fn(|| async {
-        state
-            .http_client
-            .head(format!(
-                "https://dist1-ord1.steamcontent.com/tv/{match_id}/sync"
-            ))
-            .send()
-            .await
-            .and_then(|resp| resp.error_for_status())
-    })
-    .retries(20)
-    .fixed_backoff(Duration::from_millis(200))
-    .await?;
+    tryhard::retry_fn(|| steam_client.live_demo_exists(match_id))
+        .retries(20)
+        .fixed_backoff(Duration::from_millis(200))
+        .await?;
 
     let stream = demo_stream(match_id).await;
     Ok(Body::from_stream(stream))
