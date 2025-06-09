@@ -155,11 +155,8 @@ pub(super) async fn fetch_match_salts(
     }
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
         // Insert into Clickhouse
-        if let Err(e) = ingest_salts::insert_salts_to_clickhouse(
-            ch_client,
-            vec![(match_id, salts, Some("api".to_string()))],
-        )
-        .await
+        if let Err(e) =
+            ingest_salts::insert_salts_to_clickhouse(ch_client, vec![(match_id, salts)]).await
         {
             warn!("Failed to insert match salts into Clickhouse: {e}");
         }
