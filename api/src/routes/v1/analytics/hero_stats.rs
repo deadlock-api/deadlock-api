@@ -41,6 +41,10 @@ impl BucketQuery {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct HeroStatsQuery {
+    /// Bucket the stats.
+    #[serde(default)]
+    #[param(inline)]
+    bucket: BucketQuery,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -76,10 +80,6 @@ pub(crate) struct HeroStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
-    /// Bucket the stats.
-    #[serde(default)]
-    #[param(inline)]
-    bucket: BucketQuery,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]

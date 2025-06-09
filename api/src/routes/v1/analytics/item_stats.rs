@@ -98,6 +98,10 @@ impl BucketQuery {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct ItemStatsQuery {
+    /// Bucket the stats.
+    #[serde(default)]
+    #[param(inline)]
+    bucket: BucketQuery,
     /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -135,10 +139,6 @@ pub(crate) struct ItemStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
-    /// Bucket the stats.
-    #[serde(default)]
-    #[param(inline)]
-    bucket: BucketQuery,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
