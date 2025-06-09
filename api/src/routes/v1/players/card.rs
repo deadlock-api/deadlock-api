@@ -77,8 +77,11 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 struct PlayerCard {
     account_id: Option<u32>,
+    /// See more: https://assets.deadlock-api.com/v2/ranks
     ranked_badge_level: Option<u32>,
+    /// See more: https://assets.deadlock-api.com/v2/ranks
     ranked_rank: Option<u32>,
+    /// See more: https://assets.deadlock-api.com/v2/ranks
     ranked_subrank: Option<u32>,
     slots: Vec<PlayerCardSlot>,
 }

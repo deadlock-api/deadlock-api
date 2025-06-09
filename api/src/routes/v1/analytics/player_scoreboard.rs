@@ -70,6 +70,7 @@ pub(crate) struct PlayerScoreboardQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerScoreboardEntry {
+    /// See more: https://assets.deadlock-api.com/v2/ranks
     rank: u64,
     account_id: u32,
     pub value: f64,

@@ -24,7 +24,7 @@ pub struct MMRHistory {
     pub start_time: u32,
     /// Player Score is the index for the rank array (internally used for the rank regression)
     player_score: f64,
-    /// The Player Rank
+    /// The Player Rank. See more: https://assets.deadlock-api.com/v2/ranks
     rank: u32,
     /// Extracted from the rank the division (rank // 10)
     pub(crate) division: u32,
