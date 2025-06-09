@@ -40,7 +40,6 @@ pub(crate) struct FeatureFlags {
 #[derive(Clone)]
 pub(crate) struct AppState {
     pub(crate) config: Config,
-    pub(crate) http_client: reqwest::Client,
     pub(crate) s3_client: object_store::aws::AmazonS3,
     pub(crate) s3_cache_client: object_store::aws::AmazonS3,
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
@@ -223,7 +222,6 @@ impl AppState {
 
         Ok(Self {
             config,
-            http_client,
             s3_client,
             s3_cache_client,
             redis_client,
