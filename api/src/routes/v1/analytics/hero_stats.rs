@@ -27,6 +27,12 @@ pub(super) enum BucketQuery {
     /// Bucket Item Stats By Start Time (Day)
     #[display("start_time_day")]
     StartTimeDay,
+    /// Bucket Item Stats By Start Time (Week)
+    #[display("start_time_week")]
+    StartTimeWeek,
+    /// Bucket Item Stats By Start Time (Month)
+    #[display("start_time_month")]
+    StartTimeMonth,
 }
 
 impl BucketQuery {
@@ -35,6 +41,8 @@ impl BucketQuery {
             Self::NoBucket => "NULL".to_string(),
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
             Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
+            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))".to_string(),
+            Self::StartTimeMonth => "toNullable(toStartOfMonth(start_time))".to_string(),
         }
     }
 }
