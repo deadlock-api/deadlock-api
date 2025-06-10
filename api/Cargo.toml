@@ -7,15 +7,15 @@ repository = "https://github.com/deadlock-api/deadlock-api-rust"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.12.19", features = ["json"] }
+reqwest = { version = "0.12.20", features = ["json"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-redis = { version = "0.32.0", features = ["tokio-comp"], default-features = false }
+redis = { version = "0.32.0", default-features = false, features = ["tokio-comp"] }
 envy = "0.4.2"
 clickhouse = "0.13.3"
-sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "uuid"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.17.0", features = ["v4"] }
-cached = { version = "0.55.1", features = ["async", "serde", "tokio"] }
+cached = { version = "0.55.1", features = ["async", "serde"] }
 axum = { version = "0.8.4", features = ["http2"] }
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.3.1", features = ["axum_extras", "chrono"] }
@@ -47,7 +47,7 @@ sha2 = "0.10.9"
 hex = "0.4.3"
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.2"
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "563c7c72a133dccdec36b1ae4fc75553edd4c4de" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "1b696b2ef24c093f1d390214b88038ab9b06c0e1" }
 async-stream = "0.3.6"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"
