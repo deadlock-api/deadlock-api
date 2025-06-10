@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
                 .map(|mmr| ((mmr.account_id, 0), mmr))
                 .collect();
 
-            let mut interval = tokio::time::interval(Duration::from_secs(60));
+            let mut interval = tokio::time::interval(Duration::from_secs(300));
             loop {
                 interval.tick().await;
                 regression(&ch_client, &mut all_player_mmrs).await?;
