@@ -20,7 +20,7 @@ tasks:
     deps:
       - task: format:check
     cmds:
-      - cargo clippy --all-targets --all-features -- -D warnings
+      - cargo clippy --all-targets --all-features --locked -- -D warnings
 
   teardown-test-env:
     desc: "Stops and removes the testing Docker containers."
@@ -85,5 +85,5 @@ tasks:
     deps:
       - task: start-test-env
     cmds:
-      - cargo nextest run
+      - cargo nextest run --locked
       - task: teardown-test-env
