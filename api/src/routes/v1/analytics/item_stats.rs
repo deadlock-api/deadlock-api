@@ -258,6 +258,7 @@ WITH
             match_id,
             team,
             account_id,
+            hero_id,
             items,
             won,
             `stats.time_stamp_s` AS st_ts,   -- stats tick-times
@@ -272,6 +273,7 @@ WITH
             match_id,
             team,
             account_id,
+            hero_id,
             it.item_id     AS item_id,
             it.game_time_s AS buy_time,
             won,
