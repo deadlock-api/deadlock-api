@@ -37,6 +37,12 @@ pub(super) enum BucketQuery {
     /// Bucket Item Stats By Start Time (Day)
     #[display("start_time_day")]
     StartTimeDay,
+    /// Bucket Item Stats By Start Time (Week)
+    #[display("start_time_week")]
+    StartTimeWeek,
+    /// Bucket Item Stats By Start Time (Month)
+    #[display("start_time_month")]
+    StartTimeMonth,
     /// Bucket Item Stats by Game Time (Minutes)
     #[display("game_time_min")]
     GameTimeMin,
@@ -73,6 +79,10 @@ impl BucketQuery {
             Self::Team => "toNullable(toUInt32(if(team = 'Team0', 0, 1)))".to_string(),
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
             Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
+            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))".to_string(),
+            Self::StartTimeMonth => {
+                "toNullable(toDateTime(toStartOfMonth(start_time)))".to_string()
+            }
             Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))".to_string(),
             Self::GameTimeNormalizedPercentage => {
                 "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))".to_string()

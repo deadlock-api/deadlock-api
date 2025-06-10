@@ -42,7 +42,9 @@ impl BucketQuery {
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
             Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
             Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))".to_string(),
-            Self::StartTimeMonth => "toNullable(toStartOfMonth(start_time))".to_string(),
+            Self::StartTimeMonth => {
+                "toNullable(toDateTime(toStartOfMonth(start_time)))".to_string()
+            }
         }
     }
 }
