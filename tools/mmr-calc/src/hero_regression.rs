@@ -62,9 +62,9 @@ fn run_hero_regression(
             / 6.0;
         let error = (avg_team_rank_true - avg_team_rank_pred) / 6.0;
         let error = if team.won {
-            error * ERROR_MULTIPLIER + ERROR_BIAS
+            (error + ERROR_BIAS) * ERROR_MULTIPLIER
         } else {
-            error * ERROR_MULTIPLIER - ERROR_BIAS
+            (error - ERROR_BIAS) * ERROR_MULTIPLIER
         };
         squared_error += error * error;
         for p in team.players.iter() {
