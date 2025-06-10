@@ -8,7 +8,7 @@ anyhow = "1.0.98"
 axum = "0.8.4"
 base64 = "0.22.1"
 cached = { version = "0.55", features = ["async", "async_tokio_rt_multi_thread"] }
-clap = { version = "4.5.39", features = ["derive", "env"] }
+clap = { version = "4.5.40", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
 haste = { git = "https://github.com/deadlock-api/haste.git", rev = "563c7c72a133dccdec36b1ae4fc75553edd4c4de" }
@@ -25,5 +25,5 @@ tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8618612dfc39e29b895c8cb726a98963ade5a557", features = ["user-msgs"] }
 thiserror = "2.0.12"
-async-compression = { version = "0.4.23", features = ["tokio", "bzip2", "zstd"] }
+async-compression = { version = "0.4.24", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }
