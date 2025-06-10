@@ -60,15 +60,15 @@ jobs:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
 
       - name: Run cargo check
-        run: cargo check --profile ci --all-targets
+        run: cargo check --profile ci --all-targets --locked
 
       - name: Run cargo clippy (deny warnings)
         if: ${{ matrix.toolchain == 'stable' }}
-        run: cargo clippy --profile ci --all-targets -- -D warnings
+        run: cargo clippy --profile ci --all-targets --locked -- -D warnings
 
       - name: Run cargo clippy (allow warnings)
         if: ${{ matrix.toolchain != 'stable' }}
-        run: cargo clippy --profile ci --all-targets
+        run: cargo clippy --profile ci --all-targets --locked
 
   test_deploy:
     name: Test and Deploy
