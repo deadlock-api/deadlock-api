@@ -16,6 +16,7 @@ env:
   CARGO_TERM_COLOR: always
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
 
 permissions:
   contents: read
@@ -60,15 +61,15 @@ jobs:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
 
       - name: Run cargo check
-        run: cargo check --profile ci --all-targets --locked
+        run: cargo check --all-targets --locked
 
       - name: Run cargo clippy (deny warnings)
         if: ${{ matrix.toolchain == 'stable' }}
-        run: cargo clippy --profile ci --all-targets --locked -- -D warnings
+        run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: Run cargo clippy (allow warnings)
         if: ${{ matrix.toolchain != 'stable' }}
-        run: cargo clippy --profile ci --all-targets --locked
+        run: cargo clippy --all-targets --locked
 
   test_deploy:
     name: Test and Deploy
@@ -146,7 +147,7 @@ jobs:
       ##         Test Code         ##
       ###############################
       - name: Test Docker image
-        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} CARGO_PROFILE=ci task test
+        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
 
       ###############################
       ##        Deploy Code        ##

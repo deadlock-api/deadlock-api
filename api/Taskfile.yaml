@@ -85,10 +85,5 @@ tasks:
     deps:
       - task: start-test-env
     cmds:
-      - |
-        if [[ -n "${CARGO_PROFILE:-}" ]]; then
-          cargo nextest run --cargo-profile ${CARGO_PROFILE}
-        else
-          cargo nextest run
-        fi
+      - cargo nextest run
       - task: teardown-test-env
