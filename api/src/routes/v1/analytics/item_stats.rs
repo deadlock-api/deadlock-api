@@ -112,7 +112,12 @@ pub(crate) struct ItemStatsQuery {
     #[serde(default)]
     #[param(inline)]
     bucket: BucketQuery,
+    /// Filter matches based on the hero IDs. See more: https://assets.deadlock-api.com/v2/heroes
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    hero_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
+    #[deprecated(note = "Use hero_ids instead")]
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -201,8 +206,20 @@ fn build_query(query: &ItemStatsQuery) -> String {
 
     /* ---------- match_player filters ---------- */
     let mut player_filters = Vec::new();
+    let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
+    #[allow(deprecated)]
     if let Some(hero_id) = query.hero_id {
-        player_filters.push(format!("hero_id = {hero_id}"));
+        hero_ids.push(hero_id);
+    }
+    if !hero_ids.is_empty() {
+        player_filters.push(format!(
+            "hero_id IN ({})",
+            hero_ids
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
     }
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
@@ -359,8 +376,8 @@ pub(crate) async fn item_stats(
 
 #[cfg(test)]
 mod test {
-    #![allow(clippy::too_many_arguments)]
     use super::*;
+    use itertools::Itertools;
 
     #[test]
     fn test_build_item_stats_query_min_unix_timestamp() {
@@ -477,13 +494,16 @@ mod test {
     }
 
     #[test]
-    fn test_build_item_stats_query_hero_id() {
-        let hero_id = 15;
+    fn test_build_item_stats_query_hero_ids() {
+        let hero_ids = vec![1, 2, 3];
         let query = ItemStatsQuery {
-            hero_id: hero_id.into(),
+            hero_ids: hero_ids.clone().into(),
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("hero_id = {hero_id}")));
+        assert!(query_str.contains(&format!(
+            "hero_id IN ({})",
+            hero_ids.iter().map(|id| id.to_string()).join(", ")
+        )));
     }
 }
