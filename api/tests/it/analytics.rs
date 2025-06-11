@@ -1,5 +1,4 @@
-mod utils;
-
+use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
@@ -25,7 +24,7 @@ async fn test_build_item_stats(#[values(None, Some(1))] hero_id: Option<u32>) {
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/build-item-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/build-item-stats", queries).await;
     let item_stats: Vec<BuildItemStats> = response.json().await.expect("Failed to parse response");
 
     assert_eq!(
@@ -65,7 +64,7 @@ async fn test_hero_comb_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/hero-comb-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/hero-comb-stats", queries).await;
     let comb_stats: Vec<HeroCombStats> = response.json().await.expect("Failed to parse response");
 
     for comb in comb_stats.iter() {
@@ -101,7 +100,7 @@ async fn test_hero_counters_stats(#[values(None, Some(20))] min_matches: Option<
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
     let counter_stats: Vec<HeroCounterStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -141,7 +140,7 @@ async fn test_hero_scoreboard(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/scoreboards/heroes", queries).await;
+    let response = request_endpoint("/v1/analytics/scoreboards/heroes", queries).await;
     let hero_scoreboard: Vec<HeroScoreboardEntry> =
         response.json().await.expect("Failed to parse response");
 
@@ -209,7 +208,7 @@ async fn test_player_scoreboard(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/scoreboards/players", queries).await;
+    let response = request_endpoint("/v1/analytics/scoreboards/players", queries).await;
     let player_scoreboard: Vec<PlayerScoreboardEntry> =
         response.json().await.expect("Failed to parse response");
 
@@ -259,7 +258,7 @@ async fn test_player_scoreboard(
 
 #[tokio::test]
 async fn test_hero_stats() {
-    let response = utils::request_endpoint("/v1/analytics/hero-stats", []).await;
+    let response = request_endpoint("/v1/analytics/hero-stats", []).await;
     let hero_stats: Vec<AnalyticsHeroStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -294,7 +293,7 @@ async fn test_hero_synergies_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/hero-synergy-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/hero-synergy-stats", queries).await;
     let synergy_stats: Vec<HeroSynergyStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -373,7 +372,7 @@ async fn test_hero_counter_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
     let counter_stats: Vec<HeroCounterStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -448,7 +447,7 @@ async fn test_item_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/analytics/item-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/item-stats", queries).await;
     let item_stats: Vec<ItemStats> = response.json().await.expect("Failed to parse response");
 
     assert_eq!(

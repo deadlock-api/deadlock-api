@@ -1,6 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-mod utils;
+use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::builds::query::BuildsSearchQuerySortBy;
 use deadlock_api_rust::routes::v1::builds::structs::Build;
 use deadlock_api_rust::utils::types::SortDirectionDesc;
@@ -107,7 +107,7 @@ async fn test_builds(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
-    let response = utils::request_endpoint("/v1/builds", queries).await;
+    let response = request_endpoint("/v1/builds", queries).await;
     let builds: Vec<Build> = response.json().await.expect("Failed to parse response");
 
     let sort_by = sort_by.unwrap_or_default();

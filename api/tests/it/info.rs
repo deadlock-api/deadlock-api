@@ -1,11 +1,10 @@
-mod utils;
-
+use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::info::health::Status;
 use deadlock_api_rust::routes::v1::info::route::APIInfo;
 
 #[tokio::test]
 async fn test_info() {
-    let response = utils::request_endpoint("/v1/info", []).await;
+    let response = request_endpoint("/v1/info", []).await;
     let info: APIInfo = response.json().await.expect("Failed to parse response");
 
     let expected_table_sizes = [
@@ -28,7 +27,7 @@ async fn test_info() {
 
 #[tokio::test]
 async fn test_health() {
-    let response = utils::request_endpoint("/v1/info/health", []).await;
+    let response = request_endpoint("/v1/info/health", []).await;
     let status: Status = response.json().await.expect("Failed to parse response");
     assert!(status.services.all_ok());
 }
