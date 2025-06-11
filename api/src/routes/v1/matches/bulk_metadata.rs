@@ -134,7 +134,10 @@ pub(super) async fn bulk_metadata(
         .apply_limits(
             &rate_limit_key,
             "match_metadata_bulk",
-            &[RateLimitQuota::ip_limit(10, Duration::from_secs(1))],
+            &[
+                RateLimitQuota::ip_limit(1, Duration::from_secs(1)),
+                RateLimitQuota::key_limit(10, Duration::from_secs(1)),
+            ],
         )
         .await?;
     if query.limit > 10000 {
