@@ -39,6 +39,7 @@ impl CacheControlMiddleware {
     fn header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         let mut header_value = String::new();
         write!(&mut header_value, "max-age={}", self.max_age.as_secs()).ok();
+        write!(&mut header_value, ", s-maxage={}", self.max_age.as_secs()).ok();
         write!(&mut header_value, ", public").ok();
         if let Some(stale_while_revalidate) = self.stale_while_revalidate {
             write!(
