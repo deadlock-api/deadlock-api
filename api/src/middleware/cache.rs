@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, public"
+            "max-age=60, s-maxage=60, public"
         );
     }
 
@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, public, stale-while-revalidate=60"
+            "max-age=60, s-maxage=60, public, stale-while-revalidate=60"
         );
     }
 
@@ -180,7 +180,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, public, stale-if-error=60"
+            "max-age=60, s-maxage=60, public, stale-if-error=60"
         );
     }
 }
