@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS mmr_history
   115,
   116
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
- division      UInt32 ALIAS rank / 10,
+ division      UInt32 ALIAS floor(rank / 10),
  division_tier UInt32 ALIAS rank % 10
 ) ENGINE = ReplacingMergeTree
    ORDER BY (account_id, match_id)
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
   115,
   116
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
- division      UInt32 ALIAS rank / 10,
+ division      UInt32 ALIAS floor(rank / 10),
  division_tier UInt32 ALIAS rank % 10
 ) ENGINE = ReplacingMergeTree
    PARTITION BY hero_id
