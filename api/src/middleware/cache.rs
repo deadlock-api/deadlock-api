@@ -38,9 +38,8 @@ impl CacheControlMiddleware {
 
     fn header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         let mut header_value = String::new();
-        write!(&mut header_value, "max-age={}", self.max_age.as_secs()).ok();
-        write!(&mut header_value, ", s-maxage={}", self.max_age.as_secs()).ok();
-        write!(&mut header_value, ", public").ok();
+        write!(&mut header_value, "public").ok();
+        write!(&mut header_value, ", max-age={}", self.max_age.as_secs()).ok();
         if let Some(stale_while_revalidate) = self.stale_while_revalidate {
             write!(
                 &mut header_value,
@@ -144,7 +143,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, s-maxage=60, public"
+            "public, max-age=60"
         );
     }
 
@@ -162,7 +161,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, s-maxage=60, public, stale-while-revalidate=60"
+            "public, max-age=60, stale-while-revalidate=60"
         );
     }
 
@@ -180,7 +179,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
-            "max-age=60, s-maxage=60, public, stale-if-error=60"
+            "public, max-age=60, stale-if-error=60"
         );
     }
 }
