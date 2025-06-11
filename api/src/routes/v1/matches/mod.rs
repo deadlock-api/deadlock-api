@@ -34,7 +34,11 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(badge_distribution::badge_distribution))
-                .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
+                .layer(
+                    CacheControlMiddleware::new(Duration::from_secs(60 * 60))
+                        .with_stale_while_revalidate(Duration::from_secs(60 * 60))
+                        .with_stale_if_error(Duration::from_secs(60 * 60)),
+                ),
         )
         .merge(
             OpenApiRouter::new()
@@ -42,9 +46,15 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(metadata::metadata_raw))
                 .routes(routes!(salts::salts))
                 .routes(routes!(live_url::live_url))
-                .layer(CacheControlMiddleware::new(Duration::from_secs(
-                    7 * 24 * 60 * 60,
-                ))),
+                .layer(
+                    CacheControlMiddleware::new(Duration::from_secs(60 * 60))
+                        .with_stale_while_revalidate(Duration::from_secs(60 * 60))
+                        .with_stale_if_error(Duration::from_secs(60 * 60)),
+                )
+                .layer(
+                    CacheControlMiddleware::new(Duration::from_secs(7 * 24 * 60 * 60))
+                        .with_stale_if_error(Duration::from_secs(24 * 60 * 60)),
+                ),
         )
         .nest("/custom", custom::router())
 }

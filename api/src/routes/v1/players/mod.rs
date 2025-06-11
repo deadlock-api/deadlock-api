@@ -36,7 +36,11 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(mmr_history::hero_mmr_history))
                 .routes(routes!(card::card_raw))
                 .routes(routes!(card::card))
-                .layer(CacheControlMiddleware::new(Duration::from_secs(5 * 60))),
+                .layer(
+                    CacheControlMiddleware::new(Duration::from_secs(5 * 60))
+                        .with_stale_while_revalidate(Duration::from_secs(60))
+                        .with_stale_if_error(Duration::from_secs(5 * 60)),
+                ),
         )
         .merge(
             OpenApiRouter::new()
@@ -44,6 +48,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(enemy_stats::enemy_stats))
                 .routes(routes!(party_stats::party_stats))
                 .routes(routes!(hero_stats::hero_stats))
-                .layer(CacheControlMiddleware::new(Duration::from_secs(60 * 60))),
+                .layer(
+                    CacheControlMiddleware::new(Duration::from_secs(60 * 60))
+                        .with_stale_while_revalidate(Duration::from_secs(60 * 60))
+                        .with_stale_if_error(Duration::from_secs(60 * 60)),
+                ),
         )
 }
