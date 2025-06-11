@@ -70,7 +70,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(
             CacheControlMiddleware::new(Duration::from_secs(DEFAULT_CACHE_TIME))
-                .with_stale_if_error(Duration::from_secs(1 * 60)),
+                .with_stale_if_error(Duration::from_secs(60)),
         )
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::<DefaultPredicate>::default())
