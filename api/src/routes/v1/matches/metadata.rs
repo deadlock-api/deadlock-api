@@ -42,8 +42,9 @@ async fn fetch_match_metadata_raw(
             rate_limit_key,
             "match_metadata_s3_cache",
             &[
-                RateLimitQuota::ip_limit(10000, Duration::from_secs(10)),
-                RateLimitQuota::global_limit(10000, Duration::from_secs(1)),
+                RateLimitQuota::ip_limit(500, Duration::from_secs(10)),
+                RateLimitQuota::key_limit(500, Duration::from_secs(1)),
+                RateLimitQuota::global_limit(1000, Duration::from_secs(1)),
             ],
         )
         .await?;
@@ -70,9 +71,9 @@ async fn fetch_match_metadata_raw(
             rate_limit_key,
             "match_metadata_s3",
             &[
-                RateLimitQuota::ip_limit(1000, Duration::from_secs(10)),
-                RateLimitQuota::key_limit(5000, Duration::from_secs(10)),
-                RateLimitQuota::global_limit(700, Duration::from_secs(1)),
+                RateLimitQuota::ip_limit(100, Duration::from_secs(10)),
+                RateLimitQuota::key_limit(100, Duration::from_secs(1)),
+                RateLimitQuota::global_limit(700, Duration::from_secs(1)), // This is a limitation by Hetzner Object Store
             ],
         )
         .await?;
