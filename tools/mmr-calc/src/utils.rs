@@ -31,6 +31,7 @@ pub(crate) async fn get_matches_starting_from(
     WHERE match_mode IN ('Ranked', 'Unranked')
       AND average_badge_team0 IS NOT NULL
       AND average_badge_team1 IS NOT NULL
+      AND abandon_match_time_s = 0
       AND match_id > ?
     GROUP BY match_id
     HAVING length(team0_players) = 6 AND length(team1_players) = 6
