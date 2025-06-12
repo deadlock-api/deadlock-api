@@ -4,7 +4,7 @@ use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
 use tracing::info;
 
-const ERROR_MULTIPLIER: f64 = 0.9;
+const ERROR_MULTIPLIER: f64 = 0.6;
 const ERROR_BIAS: f64 = 0.0;
 
 pub(crate) async fn hero_regression(
