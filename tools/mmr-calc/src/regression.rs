@@ -4,7 +4,7 @@ use crate::utils::rank_to_player_score;
 use std::collections::HashMap;
 use tracing::info;
 
-const ERROR_MULTIPLIER: f64 = 0.6;
+const ERROR_MULTIPLIER: f64 = 0.9;
 const ERROR_BIAS: f64 = 0.0;
 
 pub(crate) async fn regression(
@@ -61,10 +61,11 @@ fn run_regression(
             / 6.0;
         let error = (avg_team_rank_true - avg_team_rank_pred) / 6.0;
         let error = if team.won {
-            (error + ERROR_BIAS) * ERROR_MULTIPLIER
+            error + ERROR_BIAS
         } else {
-            (error - ERROR_BIAS) * ERROR_MULTIPLIER
-        };
+            error - ERROR_BIAS
+        } * ERROR_MULTIPLIER;
+        let error = error.clamp(-1.0, 1.0);
         squared_error += error * error;
         for p in team.players.iter() {
             let mmr = all_mmrs.get_mut(p).unwrap();
