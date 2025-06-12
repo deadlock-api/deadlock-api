@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use tracing::info;
 
 const ERROR_MULTIPLIER: f64 = 0.9;
-const ERROR_BIAS: f64 = 0.2;
+const ERROR_BIAS: f64 = 0.0;
 
 pub(crate) async fn hero_regression(
     ch_client: &clickhouse::Client,
