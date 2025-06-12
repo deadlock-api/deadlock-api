@@ -102,10 +102,10 @@ pub(super) async fn live_url(
         )
         .await?;
 
-    // Check if the match could be live, by checking the match id from a match 2 hours ago
+    // Check if the match could be live, by checking the match id from a match 4 hours ago
     let match_id_2_hours_ago = state
         .ch_client
-        .query("SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 2 HOUR ORDER BY match_id DESC LIMIT 1")
+        .query("SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 4 HOUR ORDER BY match_id DESC LIMIT 1")
         .fetch_one::<u64>()
         .await?;
 
