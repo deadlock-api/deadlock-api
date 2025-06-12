@@ -10,10 +10,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((
-    name = "Builds",
-    description = "Endpoints to get all data about ingame hero builds."
-)))]
+#[openapi(tags((name = "Builds", description = r#"
+Search and retrieve hero builds with comprehensive filtering options.
+"#)))]
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

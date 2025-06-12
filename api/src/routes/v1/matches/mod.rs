@@ -19,7 +19,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Matches", description = "Match related endpoints")))]
+#[openapi(tags((name = "Matches", description = r#"
+Comprehensive match data endpoints for retrieving detailed information about games.
+Provides access to active matches, match metadata, replay salts, and more.
+"#)))]
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
