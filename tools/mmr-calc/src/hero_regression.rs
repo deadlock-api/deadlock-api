@@ -66,13 +66,17 @@ fn run_hero_regression(
         } else {
             error - ERROR_BIAS
         } * ERROR_MULTIPLIER;
-        let error = error.clamp(-1.0, 1.0);
+        let error = error.clamp(-0.5, 0.5);
         squared_error += error * error;
         for p in team.players.iter() {
-            let mmr = all_mmrs.get_mut(p).unwrap();
-            mmr.match_id = match_.match_id;
-            mmr.player_score += error;
-            updates.push(*mmr);
+            let mmr = PlayerHeroMMR {
+                match_id: match_.match_id,
+                account_id: p.0,
+                hero_id: p.1,
+                player_score: all_mmrs.get(p).unwrap().player_score + error,
+            };
+            all_mmrs.insert(*p, mmr);
+            updates.push(mmr);
         }
     }
     (updates, squared_error)
