@@ -35,8 +35,8 @@ axum-prometheus = "0.8.0"
 itertools = "0.14.0"
 futures = "0.3.31"
 snap = "1.1.1"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8618612dfc39e29b895c8cb726a98963ade5a557", features = ["gc-client", "serde"] }
-prost = "0.13.5"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "3911167527c1dcb1bdcb872f7b1a53fb4620c5bd", features = ["gc-client", "serde"] }
+prost = "0.14.0"
 base64 = "0.22.1"
 tryhard = "0.5.1"
 async-compression = { version = "0.4.24", features = ["bzip2", "tokio"] }
@@ -47,7 +47,7 @@ sha2 = "0.10.9"
 hex = "0.4.3"
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.2"
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "1b696b2ef24c093f1d390214b88038ab9b06c0e1" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "3d10952c5167a27cb607584fc4de742aaef63cc2" }
 async-stream = "0.3.6"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"

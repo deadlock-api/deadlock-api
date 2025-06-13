@@ -57,7 +57,10 @@ impl SteamClient {
         });
         match self._call_proxy(&query, &body).await {
             Ok(r) => {
-                debug!("Successfully called Steam proxy for {query:?}");
+                debug!(
+                    "Successfully called Steam proxy for {}",
+                    query.msg_type.as_str_name()
+                );
                 counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "false").increment(1);
                 Ok(r)
             }
