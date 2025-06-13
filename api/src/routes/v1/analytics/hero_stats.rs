@@ -83,6 +83,10 @@ pub(crate) struct HeroStatsQuery {
     /// Comma separated list of item ids to exclude (only heroes who have not purchased these items). See more: https://assets.deadlock-api.com/v2/items
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
+    /// Query for additional stats
+    #[serde(default)]
+    #[param(default)]
+    stats: bool,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
@@ -104,6 +108,14 @@ pub struct AnalyticsHeroStats {
     total_net_worth: u64,
     total_last_hits: u64,
     total_denies: u64,
+    total_player_damage: Option<u64>,
+    total_player_damage_taken: Option<u64>,
+    total_boss_damage: Option<u64>,
+    total_creep_damage: Option<u64>,
+    total_neutral_damage: Option<u64>,
+    total_max_health: Option<u64>,
+    total_shots_hit: Option<u64>,
+    total_shots_missed: Option<u64>,
 }
 
 fn build_query(query: &HeroStatsQuery) -> String {
@@ -182,6 +194,31 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         player_hero_filters.join(" AND ")
     };
+    let stats = if query.stats {
+        r#"
+        ,toNullable(sum(arrayMax(stats.player_damage))) AS total_player_damage
+        ,toNullable(sum(arrayMax(stats.player_damage_taken))) AS total_player_damage_taken
+        ,toNullable(sum(arrayMax(stats.boss_damage))) AS total_boss_damage
+        ,toNullable(sum(arrayMax(stats.creep_damage))) AS total_creep_damage
+        ,toNullable(sum(arrayMax(stats.neutral_damage))) AS total_neutral_damage
+        ,toNullable(sum(arrayMax(stats.max_health))) AS total_max_health
+        ,toNullable(sum(arrayMax(stats.shots_hit))) AS total_shots_hit
+        ,toNullable(sum(arrayMax(stats.shots_missed))) AS total_shots_missed
+        "#
+        .to_string()
+    } else {
+        r#"
+        ,NULL AS total_player_damage
+        ,NULL AS total_player_damage_taken
+        ,NULL AS total_boss_damage
+        ,NULL AS total_creep_damage
+        ,NULL AS total_neutral_damage
+        ,NULL AS total_max_health
+        ,NULL AS total_shots_hit
+        ,NULL AS total_shots_missed
+        "#
+        .to_string()
+    };
     let bucket = query.bucket.get_select_clause();
     format!(
         r#"
@@ -211,6 +248,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(net_worth) AS total_net_worth,
         sum(last_hits) AS total_last_hits,
         sum(denies) AS total_denies
+        {stats}
     FROM match_player FINAL
     INNER JOIN t_matches USING (match_id)
     INNER JOIN t_matches_per_bucket m ON {}
