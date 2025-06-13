@@ -22,7 +22,6 @@ utoipa = { version = "5.3.1", features = ["axum_extras", "chrono"] }
 serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 serde_json = "1.0.140"
-derive_more = { version = "2.0.1", features = ["constructor", "display", "from", "is_variant"] }
 object_store = { version = "0.12.2", features = ["aws"], default-features = false }
 tower = "0.5.2"
 tower-layer = "0.3.3"

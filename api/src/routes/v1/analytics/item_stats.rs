@@ -9,8 +9,8 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
+use strum_macros::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -20,54 +20,46 @@ fn default_min_matches() -> Option<u32> {
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub(super) enum BucketQuery {
     /// No Bucketing
-    #[display("no_bucket")]
     #[default]
     NoBucket,
     /// Bucket Item Stats By Hero
-    #[display("hero")]
     Hero,
     /// Bucket Item Stats By Team
-    #[display("team")]
     Team,
     /// Bucket Item Stats By Start Time (Hour)
-    #[display("start_time_hour")]
     StartTimeHour,
     /// Bucket Item Stats By Start Time (Day)
-    #[display("start_time_day")]
     StartTimeDay,
     /// Bucket Item Stats By Start Time (Week)
-    #[display("start_time_week")]
     StartTimeWeek,
     /// Bucket Item Stats By Start Time (Month)
-    #[display("start_time_month")]
     StartTimeMonth,
     /// Bucket Item Stats by Game Time (Minutes)
-    #[display("game_time_min")]
     GameTimeMin,
     /// Bucket Item Stats by Game Time Normalized with the match duration
-    #[display("game_time_normalized_percentage")]
     GameTimeNormalizedPercentage,
     /// Bucket Item Stats by Net Worth (grouped by 1000)
     #[serde(rename = "net_worth_by_1000")]
-    #[display("net_worth_by_1000")]
+    #[strum(to_string = "net_worth_by_1000")]
     NetWorthBy1000,
     /// Bucket Item Stats by Net Worth (grouped by 2000)
     #[serde(rename = "net_worth_by_2000")]
-    #[display("net_worth_by_2000")]
+    #[strum(to_string = "net_worth_by_2000")]
     NetWorthBy2000,
     /// Bucket Item Stats by Net Worth (grouped by 3000)
     #[serde(rename = "net_worth_by_3000")]
-    #[display("net_worth_by_3000")]
+    #[strum(to_string = "net_worth_by_3000")]
     NetWorthBy3000,
     /// Bucket Item Stats by Net Worth (grouped by 5000)
     #[serde(rename = "net_worth_by_5000")]
-    #[display("net_worth_by_5000")]
+    #[strum(to_string = "net_worth_by_5000")]
     NetWorthBy5000,
     /// Bucket Item Stats by Net Worth (grouped by 10000)
     #[serde(rename = "net_worth_by_10000")]
-    #[display("net_worth_by_10000")]
+    #[strum(to_string = "net_worth_by_10000")]
     NetWorthBy10000,
 }
 

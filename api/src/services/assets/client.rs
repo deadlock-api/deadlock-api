@@ -1,17 +1,23 @@
 use crate::services::assets::types::{AssetsHero, AssetsRanks};
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use derive_more::Constructor;
 use tracing::debug;
 
 /// Client for interacting with the Deadlock assets API
-#[derive(Constructor, Clone)]
+#[derive(Clone)]
 pub(crate) struct AssetsClient {
     base_url: String,
     http_client: reqwest::Client,
 }
 
 impl AssetsClient {
+    pub(crate) fn new(base_url: String, http_client: reqwest::Client) -> Self {
+        Self {
+            base_url,
+            http_client,
+        }
+    }
+
     /// Fetch heroes from the assets API
     pub(crate) async fn fetch_heroes(&self) -> reqwest::Result<Vec<AssetsHero>> {
         debug!("Fetching heroes from assets API");

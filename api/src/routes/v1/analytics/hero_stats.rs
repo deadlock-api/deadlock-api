@@ -9,29 +9,25 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
+use strum_macros::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub(super) enum BucketQuery {
     /// No Bucketing
-    #[display("no_bucket")]
     #[default]
     NoBucket,
     /// Bucket Item Stats By Start Time (Hour)
-    #[display("start_time_hour")]
     StartTimeHour,
     /// Bucket Item Stats By Start Time (Day)
-    #[display("start_time_day")]
     StartTimeDay,
     /// Bucket Item Stats By Start Time (Week)
-    #[display("start_time_week")]
     StartTimeWeek,
     /// Bucket Item Stats By Start Time (Month)
-    #[display("start_time_month")]
     StartTimeMonth,
 }
 

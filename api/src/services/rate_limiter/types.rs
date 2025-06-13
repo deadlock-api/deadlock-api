@@ -2,11 +2,11 @@ use crate::error::{APIError, APIResult};
 use axum::http::HeaderMap;
 use chrono::{DateTime, Utc};
 
-use derive_more::IsVariant;
 use std::time::Duration;
+use strum_macros::EnumIs;
 use tracing::error;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, IsVariant)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIs)]
 pub(super) enum RateLimitQuotaType {
     IP,
     Key,

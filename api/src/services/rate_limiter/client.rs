@@ -6,7 +6,6 @@ use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
-use derive_more::Constructor;
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
@@ -16,7 +15,7 @@ use uuid::Uuid;
 
 const MAX_TTL_SECONDS: isize = 60 * 60;
 
-#[derive(Constructor, Clone)]
+#[derive(Clone)]
 pub(crate) struct RateLimitClient {
     redis_client: MultiplexedConnection,
     pg_client: Pool<Postgres>,
@@ -24,6 +23,18 @@ pub(crate) struct RateLimitClient {
 }
 
 impl RateLimitClient {
+    pub(crate) fn new(
+        redis_client: MultiplexedConnection,
+        pg_client: Pool<Postgres>,
+        emergency_mode: bool,
+    ) -> Self {
+        Self {
+            redis_client,
+            pg_client,
+            emergency_mode,
+        }
+    }
+
     pub(crate) async fn apply_limits(
         &self,
         rate_limit_key: &RateLimitKey,

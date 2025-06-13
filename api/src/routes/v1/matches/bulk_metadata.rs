@@ -14,7 +14,7 @@ use clickhouse::query::BytesCursor;
 use itertools::Itertools;
 use serde::Deserialize;
 use std::time::Duration;
-use strum_macros::IntoStaticStr;
+use strum_macros::Display;
 use tokio::io::{AsyncBufReadExt, Lines};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -23,7 +23,7 @@ fn default_limit() -> u32 {
     1000
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema, Default, IntoStaticStr)]
+#[derive(Debug, Clone, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 enum SortKey {
@@ -302,8 +302,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     } else {
         "".to_owned()
     };
-    let order_by: &str = query.order_by.into();
-    let order = format!(" ORDER BY {order_by} {} ", query.order_direction);
+    let order = format!(" ORDER BY {} {} ", query.order_by, query.order_direction);
     let limit = format!(" LIMIT {} ", query.limit);
 
     let mut query = String::new();

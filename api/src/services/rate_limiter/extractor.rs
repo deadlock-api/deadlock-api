@@ -1,14 +1,19 @@
 use crate::error::APIError;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use derive_more::Constructor;
 use std::net::Ipv4Addr;
 use uuid::Uuid;
 
-#[derive(Constructor, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct RateLimitKey {
     pub(super) api_key: Option<Uuid>,
     pub(super) ip: Ipv4Addr,
+}
+
+impl RateLimitKey {
+    pub(crate) fn new(api_key: Option<Uuid>, ip: Ipv4Addr) -> Self {
+        Self { api_key, ip }
+    }
 }
 
 impl<S> FromRequestParts<S> for RateLimitKey

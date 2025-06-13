@@ -11,7 +11,6 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use derive_more::Constructor;
 use metrics::counter;
 use prost::Message;
 use reqwest::header::HeaderValue;
@@ -24,7 +23,7 @@ use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
 
 /// Client for interacting with the Steam API and proxy
-#[derive(Constructor, Clone)]
+#[derive(Clone)]
 pub(crate) struct SteamClient {
     http_client: reqwest::Client,
     steam_proxy_url: String,
@@ -33,6 +32,20 @@ pub(crate) struct SteamClient {
 }
 
 impl SteamClient {
+    pub(crate) fn new(
+        http_client: reqwest::Client,
+        steam_proxy_url: String,
+        steam_proxy_api_key: String,
+        steam_api_key: String,
+    ) -> Self {
+        Self {
+            http_client,
+            steam_proxy_url,
+            steam_proxy_api_key,
+            steam_api_key,
+        }
+    }
+
     pub(crate) async fn call_steam_proxy<M: Message, R: Message + Default>(
         &self,
         query: SteamProxyQuery<M>,

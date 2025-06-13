@@ -1,8 +1,8 @@
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::types::SortDirectionDesc;
-use derive_more::Display;
 use serde::Deserialize;
 use sqlx::{Execute, QueryBuilder};
+use strum_macros::Display;
 use utoipa::{IntoParams, ToSchema};
 
 fn default_limit() -> Option<u32> {
@@ -11,28 +11,22 @@ fn default_limit() -> Option<u32> {
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum BuildsSearchQuerySortBy {
     /// Sort by the number of weekly favorites.
-    #[display("weekly_favorites")]
     WeeklyFavorites,
     /// Sort by the number of all-time favorites.
     #[default]
-    #[display("favorites")]
     Favorites,
     /// Sort by the number of weekly ignores. (currently always 0)
-    #[display("ignores")]
     Ignores,
     /// Sort by the number of weekly reports. (currently always 0)
-    #[display("reports")]
     Reports,
     /// Sort by the last time the build was updated.
-    #[display("updated_at")]
     UpdatedAt,
     /// Sort by the time the build was published.
-    #[display("published_at")]
     PublishedAt,
     /// Sort by the build version.
-    #[display("version")]
     Version,
 }
 
