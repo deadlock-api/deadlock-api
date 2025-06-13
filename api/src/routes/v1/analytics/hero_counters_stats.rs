@@ -168,8 +168,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
            SUM(p2.net_worth) AS enemy_networth,
            SUM(p1.max_neutral_damage) AS obj_damage,
            SUM(p2.max_neutral_damage) AS enemy_obj_damage,
-           SUM(arrayMax(p1.stats.creep_kills)) AS creeps,
-           SUM(arrayMax(p2.stats.creep_kills)) AS enemy_creeps
+           SUM(p1.max_creep_kills) AS creeps,
+           SUM(p2.max_creep_kills) AS enemy_creeps
     FROM match_player p1
              INNER JOIN match_player p2 USING (match_id)
     WHERE match_id IN matches
