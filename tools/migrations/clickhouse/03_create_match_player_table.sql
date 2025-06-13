@@ -85,5 +85,18 @@ CREATE TABLE IF NOT EXISTS match_player
         heal_lost UInt32,
         damage_mitigated UInt32,
         level UInt32
-    )
+    ),
+    max_level UInt32 MATERIALIZED arrayMax(stats.level),
+    max_player_damage UInt32 MATERIALIZED arrayMax(stats.player_damage),
+    max_player_damage_taken UInt32 MATERIALIZED arrayMax(stats.player_damage_taken),
+    max_boss_damage UInt32 MATERIALIZED arrayMax(stats.boss_damage),
+    max_creep_damage UInt32 MATERIALIZED arrayMax(stats.creep_damage),
+    max_creep_kills UInt32 MATERIALIZED arrayMax(stats.creep_kills),
+    max_neutral_kills UInt32 MATERIALIZED arrayMax(stats.neutral_kills),
+    max_neutral_damage UInt32 MATERIALIZED arrayMax(stats.neutral_damage),
+    max_max_health UInt32 MATERIALIZED arrayMax(stats.max_health),
+    max_hero_bullets_hit UInt32 MATERIALIZED arrayMax(stats.hero_bullets_hit),
+    max_hero_bullets_hit_crit UInt32 MATERIALIZED arrayMax(stats.hero_bullets_hit_crit),
+    max_shots_hit UInt32 MATERIALIZED arrayMax(stats.shots_hit),
+    max_shots_missed UInt32 MATERIALIZED arrayMax(stats.shots_missed)
 ) ENGINE = ReplacingMergeTree ORDER BY (match_id, account_id);
