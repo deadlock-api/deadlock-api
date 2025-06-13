@@ -114,11 +114,11 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         60 * avg(denies / duration_s) AS denies_per_min,
         60 * avg(net_worth / duration_s) AS networth_per_min,
         60 * avg(last_hits / duration_s) AS last_hits_per_min,
-        60 * avg(arrayMax(stats.player_damage) / duration_s) AS damage_mitigated_per_min,
-        60 * avg(arrayMax(stats.player_damage_taken) / duration_s) AS damage_taken_per_min,
+        60 * avg(max_player_damage / duration_s) AS damage_mitigated_per_min,
+        60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min,
         60 * avg(arrayMax(stats.creep_kills) / duration_s) AS creeps_per_min,
-        60 * avg(arrayMax(stats.neutral_damage) / duration_s) AS obj_damage_per_min,
-        avg(arrayMax(stats.shots_hit) / greatest(1, arrayMax(stats.shots_hit) + arrayMax(stats.shots_missed))) AS accuracy,
+        60 * avg(max_neutral_damage / duration_s) AS obj_damage_per_min,
+        avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy,
         avg(arrayMax(stats.hero_bullets_hit_crit) / greatest(1, arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit))) AS crit_shot_rate,
         groupUniqArray(mi.match_id) as matches
     FROM match_player mp FINAL
@@ -309,19 +309,19 @@ mod test {
         assert!(sql.contains("60 * avg(denies / duration_s) AS denies_per_min"));
         assert!(sql.contains("60 * avg(net_worth / duration_s) AS networth_per_min"));
         assert!(sql.contains("60 * avg(last_hits / duration_s) AS last_hits_per_min"));
-        assert!(sql.contains(
-            "60 * avg(arrayMax(stats.player_damage) / duration_s) AS damage_mitigated_per_min"
-        ));
-        assert!(sql.contains(
-            "60 * avg(arrayMax(stats.player_damage_taken) / duration_s) AS damage_taken_per_min"
-        ));
+        assert!(
+            sql.contains("60 * avg(max_player_damage / duration_s) AS damage_mitigated_per_min")
+        );
+        assert!(
+            sql.contains("60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min")
+        );
         assert!(
             sql.contains("60 * avg(arrayMax(stats.creep_kills) / duration_s) AS creeps_per_min")
         );
+        assert!(sql.contains("60 * avg(max_neutral_damage / duration_s) AS obj_damage_per_min"));
         assert!(sql.contains(
-            "60 * avg(arrayMax(stats.neutral_damage) / duration_s) AS obj_damage_per_min"
+            "avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy"
         ));
-        assert!(sql.contains("avg(arrayMax(stats.shots_hit) / greatest(1, arrayMax(stats.shots_hit) + arrayMax(stats.shots_missed))) AS accuracy"));
         assert!(sql.contains("avg(arrayMax(stats.hero_bullets_hit_crit) / greatest(1, arrayMax(stats.hero_bullets_hit_crit) + arrayMax(stats.hero_bullets_hit))) AS crit_shot_rate"));
         assert!(sql.contains("groupUniqArray(mi.match_id) as matches"));
     }

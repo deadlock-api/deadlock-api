@@ -173,8 +173,8 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
            SUM(p2.last_hits) AS last_hits2,
            SUM(p1.net_worth) AS networth1,
            SUM(p2.net_worth) AS networth2,
-           SUM(arrayMax(p1.stats.neutral_damage)) AS obj_damage1,
-           SUM(arrayMax(p2.stats.neutral_damage)) AS obj_damage2,
+           SUM(p1.max_neutral_damage) AS obj_damage1,
+           SUM(p2.max_neutral_damage) AS obj_damage2,
            SUM(arrayMax(p1.stats.creep_kills)) AS creeps1,
            SUM(arrayMax(p2.stats.creep_kills)) AS creeps2
     FROM match_player p1
