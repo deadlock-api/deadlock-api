@@ -2,7 +2,7 @@ use crate::context::config::Config;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::steam::client::SteamClient;
-use object_store::aws::AmazonS3Builder;
+use object_store::aws::{AmazonS3, AmazonS3Builder};
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
 use serde::Deserialize;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
@@ -40,8 +40,8 @@ pub(crate) struct FeatureFlags {
 #[derive(Clone)]
 pub(crate) struct AppState {
     pub(crate) config: Config,
-    pub(crate) s3_client: object_store::aws::AmazonS3,
-    pub(crate) s3_cache_client: object_store::aws::AmazonS3,
+    pub(crate) s3_client: AmazonS3,
+    pub(crate) s3_cache_client: AmazonS3,
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
     pub(crate) ch_client: clickhouse::Client,
     pub(crate) ch_client_ro: clickhouse::Client,

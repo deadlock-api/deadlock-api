@@ -13,13 +13,14 @@ use axum::response::IntoResponse;
 use futures::future::join;
 use metrics::counter;
 use object_store::ObjectStore;
+use object_store::aws::AmazonS3;
 use prost::Message;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tracing::debug;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
-async fn fetch_from_s3(s3: &impl ObjectStore, file: &str) -> object_store::Result<Vec<u8>> {
+async fn fetch_from_s3(s3: &AmazonS3, file: &str) -> object_store::Result<Vec<u8>> {
     s3.get(&object_store::path::Path::from(file))
         .await?
         .bytes()
@@ -33,8 +34,8 @@ async fn fetch_match_metadata_raw(
     rate_limit_key: &RateLimitKey,
     steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
-    s3: &impl ObjectStore,
-    s3_cache: &impl ObjectStore,
+    s3: &AmazonS3,
+    s3_cache: &AmazonS3,
     match_id: u64,
 ) -> APIResult<Vec<u8>> {
     rate_limit_client
