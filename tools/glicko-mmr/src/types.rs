@@ -22,7 +22,7 @@ impl Glicko2HistoryEntry {
         ch_client
             .query(
                 r#"
-                    SELECT ?fields FROM glicko_history
+                    SELECT ?fields FROM glicko
                     WHERE match_id < ?
                     ORDER BY match_id DESC
                     LIMIT 1 BY account_id

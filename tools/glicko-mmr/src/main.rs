@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
         {
             Ok(updates) if !updates.is_empty() => {
                 debug!("Writing {} updates", updates.len());
-                let mut inserter = ch_client.insert("glicko_history")?;
+                let mut inserter = ch_client.insert("glicko")?;
                 for update in updates {
                     inserter.write(&update).await?;
                 }

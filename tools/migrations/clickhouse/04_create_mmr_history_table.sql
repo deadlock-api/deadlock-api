@@ -163,9 +163,9 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
    ORDER BY (hero_id, account_id, match_id)
    SETTINGS allow_nullable_key = 1;
 
-DROP TABLE IF EXISTS glicko_history;
+DROP TABLE IF EXISTS glicko;
 
-CREATE TABLE IF NOT EXISTS glicko_history
+CREATE TABLE IF NOT EXISTS glicko
 (
  account_id       UInt32,
  match_id         UInt64,
