@@ -15,7 +15,7 @@ pub(crate) async fn get_rating_period_starting_day(
         AND start_time > '2025-01-01'
         AND match_id NOT IN (SELECT match_id FROM glicko_history)
     GROUP BY day
-    HAVING COUNT(DISTINCT match_id) >= 10
+    HAVING COUNT(DISTINCT match_id) >= 100
     ORDER BY day
     LIMIT 1
     "#,
