@@ -1,7 +1,9 @@
 use clap::Parser;
 use glicko_mmr::config::Config;
-use glicko_mmr::update_single_rating_period;
-use tracing::{error, info};
+use glicko_mmr::types::{CHMatch, Glicko2HistoryEntry};
+use glicko_mmr::{update_single_rating_period, utils};
+use std::collections::HashMap;
+use tracing::{debug, error, info};
 
 const UPDATE_INTERVAL: u64 = 30 * 60; // 30 minutes
 
@@ -16,9 +18,45 @@ async fn main() -> anyhow::Result<()> {
 
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(UPDATE_INTERVAL));
     loop {
-        match update_single_rating_period(&config, &ch_client).await {
-            Ok(true) => info!("Updated ratings"),
-            Ok(false) => {
+        let Ok(start_time) = utils::get_rating_period_starting_day(&ch_client).await else {
+            info!("No matches to process, sleeping...");
+            interval.tick().await;
+            continue;
+        };
+        let matches_to_process =
+            CHMatch::query_rating_period(&ch_client, start_time, start_time + 24 * 60 * 60).await?;
+        if matches_to_process.is_empty() {
+            info!("No matches to process, sleeping...");
+            interval.tick().await;
+            continue;
+        }
+        let player_ratings_before_rating_period =
+            Glicko2HistoryEntry::query_latest_before_match_id(
+                &ch_client,
+                matches_to_process[0].match_id, // This is safe because we checked that matches_to_process is not empty
+            )
+            .await?
+            .into_iter()
+            .map(|entry| (entry.account_id, entry))
+            .collect::<HashMap<_, _>>();
+        match update_single_rating_period(
+            &config,
+            start_time,
+            &matches_to_process,
+            &player_ratings_before_rating_period,
+        )
+        .await
+        {
+            Ok(updates) if !updates.is_empty() => {
+                debug!("Writing {} updates", updates.len());
+                let mut inserter = ch_client.insert("glicko_history")?;
+                for update in updates {
+                    inserter.write(&update).await?;
+                }
+                inserter.end().await?;
+                info!("Updated ratings");
+            }
+            Ok(_) => {
                 info!("No matches to process, sleeping...");
                 interval.tick().await;
             }

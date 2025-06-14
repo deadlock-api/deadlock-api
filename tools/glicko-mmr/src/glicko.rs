@@ -25,8 +25,8 @@ pub fn update_player_ratings_all_matches(
     matches: &[&CHMatch], // Assume matches are sorted by match_id
     before_player_ratings: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> anyhow::Result<Vec<Glicko2HistoryEntry>> {
-    let mut applied_matches = Vec::with_capacity(matches.len());
-    let mut out = Vec::with_capacity(matches.len());
+    let mut applied_matches = vec![];
+    let mut out = vec![];
     for match_ in matches {
         applied_matches.push(*match_);
         out.push(update_player_ratings(
