@@ -356,7 +356,6 @@ dependencies = [
  "common",
  "itertools 0.14.0",
  "metrics",
- "once_cell",
  "rand 0.9.1",
  "reqwest",
  "serde_json",
