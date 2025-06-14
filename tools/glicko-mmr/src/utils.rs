@@ -12,7 +12,7 @@ pub async fn get_rating_period_starting_day(
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND average_badge_team0 IS NOT NULL
         AND average_badge_team1 IS NOT NULL
-        AND start_time > '2025-01-01'
+        AND start_time >= '2025-01-01'
         AND match_id NOT IN (SELECT match_id FROM glicko)
     GROUP BY day
     HAVING COUNT(DISTINCT match_id) >= 100

@@ -18,7 +18,7 @@ FROM match_info
 WHERE match_mode IN ('Ranked', 'Unranked')
     AND average_badge_team0 IS NOT NULL
     AND average_badge_team1 IS NOT NULL
-    AND start_time > '2025-05-01'
+    AND start_time >= '2025-05-01'
 ORDER BY match_id
 LIMIT 1
 "#,
