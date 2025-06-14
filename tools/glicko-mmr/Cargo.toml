@@ -13,7 +13,5 @@ tracing = "0.1.41"
 clap = { version = "4.5.40", features = ["derive", "env"] }
 cached = "0.55.1"
 chrono = "0.4.41"
-itertools = "0.14.0"
 dotenv = "0.15.0"
-indicatif = { version = "0.17.11", features = ["rayon", "tokio"] }
 rayon = "1.10.0"
