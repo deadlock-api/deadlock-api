@@ -1,6 +1,6 @@
 use tracing::debug;
 
-pub(crate) async fn get_rating_period_starting_day(
+pub async fn get_rating_period_starting_day(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<u32> {
     debug!("Fetching rating period starting id");

@@ -15,6 +15,7 @@ pub async fn update_single_rating_period(
     start_time: u32,
     matches: &[CHMatch],
     player_ratings_before_rating_period: &HashMap<u32, Glicko2HistoryEntry>,
+    process_all_matches: bool,
 ) -> anyhow::Result<Vec<Glicko2HistoryEntry>> {
     info!(
         "Processing Rating Period starting at {}",
@@ -33,13 +34,25 @@ pub async fn update_single_rating_period(
     Ok(account_matches
         .into_par_iter()
         .flat_map(|(account_id, matches)| {
-            glicko::update_player_ratings_all_matches(
-                config,
-                account_id,
-                &matches,
-                player_ratings_before_rating_period,
-            )
-            .unwrap()
+            if process_all_matches {
+                glicko::update_player_ratings_all_matches(
+                    config,
+                    account_id,
+                    &matches,
+                    player_ratings_before_rating_period,
+                )
+                .unwrap()
+            } else {
+                vec![
+                    glicko::update_player_ratings(
+                        config,
+                        account_id,
+                        &matches,
+                        player_ratings_before_rating_period,
+                    )
+                    .unwrap(),
+                ]
+            }
         })
         .collect::<Vec<_>>())
 }

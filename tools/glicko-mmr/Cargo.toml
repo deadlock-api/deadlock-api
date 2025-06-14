@@ -11,7 +11,20 @@ anyhow = "1.0"
 common = { version = "0.1.0", path = "../common" }
 tracing = "0.1.41"
 clap = { version = "4.5.40", features = ["derive", "env"] }
-cached = "0.55.1"
+cached = { version = "0.55.1", features = ["async"] }
 chrono = "0.4.41"
 dotenv = "0.15.0"
 rayon = "1.10.0"
+tpe = { version= "0.2.0", optional = true }
+rand = { version= "0.8.5", optional = true }
+
+[features]
+hyper_param_tuner = ["dep:tpe", "dep:rand"]
+
+[[bin]]
+name = "glicko-mmr"
+path = "src/main.rs"
+
+[[bin]]
+name = "hyper-param-tuner"
+path = "tools/hyper_param_tuner.rs"

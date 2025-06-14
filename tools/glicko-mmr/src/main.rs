@@ -44,6 +44,7 @@ async fn main() -> anyhow::Result<()> {
             start_time,
             &matches_to_process,
             &player_ratings_before_rating_period,
+            true,
         )
         .await
         {

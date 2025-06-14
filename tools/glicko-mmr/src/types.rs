@@ -1,9 +1,11 @@
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
 use clickhouse::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(clickhouse::Row, Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub(crate) struct Glicko2HistoryEntry {
+pub struct Glicko2HistoryEntry {
     pub account_id: u32,
     pub match_id: u64,
     pub rating: f64,
@@ -76,4 +78,42 @@ ORDER BY match_id
             .fetch_all()
             .await
     }
+}
+
+#[cached(
+    ty = "TimedCache<String, Vec<CHMatch>>",
+    result = true,
+    create = "{ TimedCache::with_lifespan(9999999) }",
+    convert = r#"{ format!("{}{}", start_time, end_time) }"#
+)]
+pub async fn query_rating_period(
+    ch_client: &Client,
+    start_time: u32,
+    end_time: u32,
+) -> clickhouse::error::Result<Vec<CHMatch>> {
+    ch_client
+        .query(
+            r#"
+SELECT match_id,
+       any(mi.start_time)                       as start_time,
+       groupArrayIf(account_id, team = 'Team0') as team0_players,
+       groupArrayIf(account_id, team = 'Team1') as team1_players,
+       any(assumeNotNull(average_badge_team0))  as avg_badge_team0,
+       any(assumeNotNull(average_badge_team1))  as avg_badge_team1,
+       any(winning_team)                        as winning_team
+FROM match_player FINAL
+    INNER JOIN match_info mi FINAL USING (match_id)
+WHERE match_mode IN ('Ranked', 'Unranked')
+  AND average_badge_team0 IS NOT NULL
+  AND average_badge_team1 IS NOT NULL
+  AND mi.start_time >= ? AND mi.start_time < ?
+GROUP BY match_id
+HAVING length(team0_players) = 6 AND length(team1_players) = 6
+ORDER BY match_id
+            "#,
+        )
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_all()
+        .await
 }
