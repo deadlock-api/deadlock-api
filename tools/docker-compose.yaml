@@ -31,9 +31,9 @@ services:
       RUST_LOG: debug
     env_file: salt-scraper/.env
 
-  mmr-calc:
+  glicko-mmr:
     build:
-      context: mmr-calc
+      context: glicko-mmr
     restart: always
     env_file: .env
 

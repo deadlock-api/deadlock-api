@@ -19,7 +19,7 @@ on:
       - 'history-fetcher/**'
       - 'steam-profile-fetcher/**'
       - 'update-assets-tables/**'
-      - 'mmr-calc/**'
+      - 'glicko-mmr/**'
 
 permissions:
   contents: read
@@ -82,7 +82,7 @@ jobs:
           - history-fetcher
           - steam-profile-fetcher
           - update-assets-tables
-          - mmr-calc
+          - glicko-mmr
     steps:
       - name: Checkout
         uses: actions/checkout@v4

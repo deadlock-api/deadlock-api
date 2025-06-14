@@ -162,3 +162,15 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
 ) ENGINE = ReplacingMergeTree
    ORDER BY (hero_id, account_id, match_id)
    SETTINGS allow_nullable_key = 1;
+
+DROP TABLE IF EXISTS glicko_history;
+
+CREATE TABLE IF NOT EXISTS glicko_history
+(
+ account_id       UInt32,
+ match_id         UInt64,
+ rating           Float64,
+ rating_deviation Float64,
+ start_time       DateTime
+) ENGINE = ReplacingMergeTree
+   ORDER BY (account_id, match_id);
