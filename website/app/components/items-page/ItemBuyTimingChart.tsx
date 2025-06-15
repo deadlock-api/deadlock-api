@@ -90,6 +90,12 @@ const BUCKET_CONFIG = {
     tooltipPrefix: "Net Worth",
     tickCount: 10,
   },
+  game_time_normalized_percentage: {
+    label: "Minutes (Relative)",
+    formatter: (v: number) => `${Math.round(v)}%`,
+    tooltipPrefix: "Minutes (Relative)",
+    tickCount: 10,
+  },
 } as const satisfies Partial<Record<BucketType, unknown>>;
 
 interface ItemBuyTimingChartProps {
@@ -234,6 +240,9 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
               </ToggleGroupItem>
               <ToggleGroupItem value="game_time_min" className="px-6">
                 Time
+              </ToggleGroupItem>
+              <ToggleGroupItem value="game_time_normalized_percentage" className="px-6">
+                Time (Relative)
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
