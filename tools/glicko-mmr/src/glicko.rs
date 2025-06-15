@@ -130,10 +130,32 @@ fn new_rd(config: &Config, old_rd: f64, time_since_last_match: Duration) -> f64 
         .min(config.rating_deviation_unrated)
 }
 
+/// Calculates the g(RD) value used in the Glicko-2 rating system.
+///
+/// # Formula
+/// g(RD) = 1 / sqrt(1 + 3 * q² * RD² / π²)
+///
+/// # Arguments
+/// * `rd` - The player's rating deviation.
+///
+/// # Returns
+/// * The g(RD) value.
 fn g(rd: f64) -> f64 {
     1.0 / (1.0 + (3.0 / PI.powi(2)) * q().powi(2) * rd.powi(2)).sqrt()
 }
 
+/// Calculates the expected score (E) for a player against an opponent.
+///
+/// # Formula
+/// E = 1 / (1 + e^(-g(RD) * Q * (R - R')))
+///
+/// # Arguments
+/// * `rating` - The player's rating.
+/// * `rating_opponent` - The opponent's rating.
+/// * `rd_opponent` - The opponent's rating deviation.
+///
+/// # Returns
+/// * The expected score (E) for the player against the opponent.
 fn e(rating: f64, rating_opponent: f64, rd_opponent: f64) -> f64 {
     1.0 / (1.0 + E.powf(-g(rd_opponent) * q() * (rating - rating_opponent)))
 }
