@@ -31,7 +31,7 @@ pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Row, Eq, PartialEq, Hash)]
 pub(crate) struct PlayerMatchHistoryEntry {
     account_id: u32,
-    pub(crate) match_id: u32,
+    pub(crate) match_id: u64,
     /// See more: https://assets.deadlock-api.com/v2/heroes
     pub(crate) hero_id: u32,
     hero_level: u32,
@@ -60,7 +60,7 @@ impl PlayerMatchHistoryEntry {
     ) -> Option<Self> {
         Some(Self {
             account_id,
-            match_id: entry.match_id? as u32,
+            match_id: entry.match_id?,
             hero_id: entry.hero_id?,
             hero_level: entry.hero_level?,
             start_time: entry.start_time?,
@@ -243,7 +243,7 @@ pub(crate) async fn fetch_steam_match_history(
 async fn exists_newer_match_than(
     ch_client: &clickhouse::Client,
     account_id: u32,
-    match_id: u32,
+    match_id: u64,
 ) -> bool {
     let query = format!(
         r#"
@@ -254,7 +254,7 @@ async fn exists_newer_match_than(
     LIMIT 1
     "#
     );
-    ch_client.query(&query).fetch_one::<u32>().await.is_ok()
+    ch_client.query(&query).fetch_one::<u64>().await.is_ok()
 }
 
 #[utoipa::path(
