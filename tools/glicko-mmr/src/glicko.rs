@@ -74,7 +74,7 @@ pub fn update_player_rating(
                 let opponent_rating = before_player_ratings
                     .get(opponent_id)
                     .map(|entry| entry.rating)
-                    .unwrap_or(1500.0);
+                    .unwrap_or(config.rating_unrated);
                 let opponent_rd = before_player_ratings
                     .get(opponent_id)
                     .map(|entry| entry.rating_deviation)
