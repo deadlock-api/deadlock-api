@@ -9,7 +9,7 @@ pub async fn get_rating_period_starting_day(
             r#"
     WITH t_matches as (SELECT match_id FROM glicko FINAL)
     SELECT toStartOfDay(start_time) as day
-    FROM match_info
+    FROM match_info FINAL
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND average_badge_team0 IS NOT NULL
         AND average_badge_team1 IS NOT NULL
