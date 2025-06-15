@@ -44,7 +44,7 @@ pub async fn update_single_rating_period(
                 .unwrap()
             } else {
                 vec![
-                    glicko::update_player_ratings(
+                    glicko::update_player_rating(
                         config,
                         account_id,
                         &matches,

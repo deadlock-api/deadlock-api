@@ -29,7 +29,7 @@ pub fn update_player_ratings_all_matches(
     let mut out = vec![];
     for match_ in matches {
         applied_matches.push(*match_);
-        out.push(update_player_ratings(
+        out.push(update_player_rating(
             config,
             account_id,
             &applied_matches,
@@ -39,7 +39,7 @@ pub fn update_player_ratings_all_matches(
     Ok(out)
 }
 
-pub fn update_player_ratings(
+pub fn update_player_rating(
     config: &Config,
     account_id: u32,
     matches: &[&CHMatch], // Assume matches are sorted by match_id
