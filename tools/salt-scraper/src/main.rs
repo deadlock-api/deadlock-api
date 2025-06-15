@@ -1,8 +1,8 @@
 use anyhow::bail;
+use clickhouse::Client;
 use futures::StreamExt;
 use metrics::counter;
 use models::{MatchIdQueryResult, MatchSalt};
-use reqwest::{Error, Response};
 use std::sync::LazyLock;
 use std::time::Duration;
 use tracing::{debug, info, instrument, warn};
@@ -14,9 +14,6 @@ use valveprotos::deadlock::{
 
 mod models;
 
-static INTERNAL_DEADLOCK_API_KEY: LazyLock<String> = LazyLock::new(|| {
-    std::env::var("INTERNAL_DEADLOCK_API_KEY").expect("INTERNAL_DEADLOCK_API_KEY must be set")
-});
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("SALTS_COOLDOWN_MILLIS")
         .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
@@ -55,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
             tokio::time::sleep(Duration::from_secs(60)).await;
             continue;
         }
+        info!("Found {} matches to fetch", recent_matches.len());
         // if recent_matches.len() < 100 {
         //     info!(
         //         "Only got {} matches, fetching salts for hltv matches.",
@@ -76,10 +74,13 @@ async fn main() -> anyhow::Result<()> {
         //     recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
         // }
         futures::stream::iter(recent_matches)
-            .map(|match_id| async move {
-                match fetch_match(match_id).await {
-                    Ok(_) => info!("Fetched match {}", match_id),
-                    Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
+            .map(|match_id| {
+                let ch_client = ch_client.clone();
+                async move {
+                    match fetch_match(&ch_client, match_id).await {
+                        Ok(_) => info!("Fetched match {}", match_id),
+                        Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
+                    }
                 }
             })
             .buffer_unordered(2)
@@ -88,8 +89,8 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-#[instrument()]
-async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
+#[instrument(skip(ch_client))]
+async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
     // Fetch Salts
     let salts = tryhard::retry_fn(|| fetch_salts(match_id))
         .retries(30)
@@ -119,7 +120,7 @@ async fn fetch_match(match_id: u64) -> anyhow::Result<()> {
     debug!("Parsed salts");
 
     // Ingest Salts
-    match ingest_salts(match_id, salts, username.into()).await {
+    match ingest_salts(ch_client, match_id, salts, username.into()).await {
         Ok(_) => {
             counter!("salt_scraper.ingest_salt.success").increment(1);
             debug!("Ingested salts");
@@ -153,22 +154,19 @@ async fn fetch_salts(
 }
 
 async fn ingest_salts(
+    ch_client: &Client,
     match_id: u64,
     salts: CMsgClientToGcGetMatchMetaDataResponse,
     username: Option<String>,
-) -> Result<Response, Error> {
-    let salts = vec![MatchSalt {
+) -> clickhouse::error::Result<()> {
+    let salts = MatchSalt {
         match_id,
         cluster_id: salts.replay_group_id,
         metadata_salt: salts.metadata_salt,
         replay_salt: salts.replay_salt,
         username,
-    }];
-    HTTP_CLIENT
-        .post("https://api.deadlock-api.com/v1/matches/salts")
-        .header("X-API-Key", INTERNAL_DEADLOCK_API_KEY.clone())
-        .json(&salts)
-        .send()
-        .await
-        .and_then(|r| r.error_for_status())
+    };
+    let mut inserter = ch_client.insert("match_salts")?;
+    inserter.write(&salts).await?;
+    inserter.end().await
 }

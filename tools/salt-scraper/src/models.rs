@@ -6,11 +6,11 @@ pub struct MatchIdQueryResult {
     pub(crate) match_id: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Row)]
 pub struct MatchSalt {
-    pub(crate) cluster_id: u32,
-    pub(crate) match_id: u32,
-    pub(crate) metadata_salt: u32,
-    pub(crate) replay_salt: u32,
+    pub(crate) match_id: u64,
+    pub(crate) cluster_id: Option<u32>,
+    pub(crate) metadata_salt: Option<u32>,
+    pub(crate) replay_salt: Option<u32>,
     pub(crate) username: Option<String>,
 }

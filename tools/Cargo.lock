@@ -3238,7 +3238,6 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "reqwest",
  "serde",
  "tokio",
  "tracing",
