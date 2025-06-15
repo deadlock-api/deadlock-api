@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
 pub struct MatchIdQueryResult {
-    pub(crate) match_id: u32,
+    pub(crate) match_id: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

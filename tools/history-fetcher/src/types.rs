@@ -7,7 +7,7 @@ pub type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
 pub struct PlayerMatchHistoryEntry {
     pub account_id: u32,
-    pub match_id: u32,
+    pub match_id: u64,
     pub hero_id: u32,
     pub hero_level: u32,
     pub start_time: u32,
@@ -35,7 +35,7 @@ impl PlayerMatchHistoryEntry {
     ) -> Option<Self> {
         Some(Self {
             account_id,
-            match_id: entry.match_id? as u32,
+            match_id: entry.match_id?,
             hero_id: entry.hero_id?,
             hero_level: entry.hero_level?,
             start_time: entry.start_time?,
