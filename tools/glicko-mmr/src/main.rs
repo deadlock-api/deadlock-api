@@ -41,7 +41,6 @@ async fn main() -> anyhow::Result<()> {
             .collect::<HashMap<_, _>>();
         match update_single_rating_period(
             &config,
-            start_time,
             &matches_to_process,
             &player_ratings_before_rating_period,
             true,

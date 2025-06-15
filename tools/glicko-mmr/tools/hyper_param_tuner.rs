@@ -44,7 +44,6 @@ async fn run_data(config: &Config) -> f64 {
         }
         match update_single_rating_period(
             config,
-            start_time,
             &matches,
             &player_ratings_before_rating_period,
             false,
@@ -83,9 +82,8 @@ async fn run_data(config: &Config) -> f64 {
                 .sum::<f64>()
                 / (ratings.len() - 1) as f64;
             let std_rating = std_rating.sqrt();
-            let mut error =
+            let error =
                 (avg_rating - TARGET_AVG_RATING).abs() + (std_rating - TARGET_STD_RATING).abs();
-            error += ratings.iter().filter(|x| **x < 0.0 || **x > 66.0).count() as f64 / ratings.len() as f64 * 10.0;
             sum_errors += error * error;
             count += 1;
         }
@@ -100,21 +98,19 @@ async fn main() {
 
     let mut optim_rating_unrated = TpeOptimizer::new(parzen_estimator(), range(10., 40.).unwrap());
     let mut optim_rating_deviation_unrated =
-        TpeOptimizer::new(parzen_estimator(), range(1., 15.).unwrap());
-    let mut optim_update_error_weight =
-        TpeOptimizer::new(parzen_estimator(), range(0., 1.).unwrap());
+        TpeOptimizer::new(parzen_estimator(), range(1., 10.).unwrap());
+    let mut optim_rating_deviation_typical =
+        TpeOptimizer::new(parzen_estimator(), range(1., 5.).unwrap());
 
     let mut best_value = f64::INFINITY;
     let mut best_config = None;
     let mut rng = rand::rngs::StdRng::from_seed(Default::default());
     for _ in 0..1000 {
-        let rating_deviation_unrated = optim_rating_deviation_unrated.ask(&mut rng).unwrap();
         let config = Config {
             rating_unrated: optim_rating_unrated.ask(&mut rng).unwrap(),
-            rating_deviation_unrated,
-            rating_deviation_typical: rating_deviation_unrated / 7.,
+            rating_deviation_unrated: optim_rating_deviation_unrated.ask(&mut rng).unwrap(),
+            rating_deviation_typical: optim_rating_deviation_typical.ask(&mut rng).unwrap(),
             rating_periods_till_full_reset: 90.0,
-            update_error_weight: optim_update_error_weight.ask(&mut rng).unwrap(),
         };
         debug!("Running with config: {config:?}");
         let rmse = run_data(&config).await;
@@ -124,8 +120,8 @@ async fn main() {
         optim_rating_deviation_unrated
             .tell(config.rating_deviation_unrated, rmse)
             .unwrap();
-        optim_update_error_weight
-            .tell(config.update_error_weight, rmse)
+        optim_rating_deviation_typical
+            .tell(config.rating_deviation_typical, rmse)
             .unwrap();
         if rmse < best_value {
             best_value = rmse;

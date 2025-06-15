@@ -15,11 +15,12 @@ cached = { version = "0.55.1", features = ["async"] }
 chrono = "0.4.41"
 dotenv = "0.15.0"
 rayon = "1.10.0"
-tpe = { version= "0.2.0", optional = true }
-rand = { version= "0.8.5", optional = true }
+rand = { version = "0.8.5", optional = true }
+serde_json = "1.0.140"
+tpe = { version = "0.2.0", optional = true }
 
 [features]
-hyper_param_tuner = ["dep:tpe", "dep:rand"]
+hyper_param_tuner = [ "dep:rand", "dep:tpe" ]
 
 [[bin]]
 name = "glicko-mmr"

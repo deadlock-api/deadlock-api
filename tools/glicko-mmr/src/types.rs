@@ -1,4 +1,4 @@
-use cached::TimedCache;
+use cached::UnboundCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
 use clickhouse::Client;
@@ -34,7 +34,7 @@ impl Glicko2HistoryEntry {
     }
 }
 
-#[derive(clickhouse::Row, Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
+#[derive(clickhouse::Row, Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct CHMatch {
     pub match_id: u64,
     #[serde(with = "clickhouse::serde::chrono::datetime")]
@@ -81,17 +81,28 @@ ORDER BY match_id
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<CHMatch>>",
+    ty = "UnboundCache<String, Vec<CHMatch>>",
     result = true,
-    create = "{ TimedCache::with_lifespan(9999999) }",
-    convert = r#"{ format!("{}{}", start_time, end_time) }"#
+    create = "{ UnboundCache::new() }",
+    convert = r#"{ format!("{path}") }"#,
+    sync_writes = "by_key",
+    key = "String"
 )]
+async fn load_file(path: &str) -> anyhow::Result<Vec<CHMatch>> {
+    let matches = tokio::fs::read(path).await?;
+    Ok(serde_json::from_slice(&matches)?)
+}
+
 pub async fn query_rating_period(
     ch_client: &Client,
     start_time: u32,
     end_time: u32,
-) -> clickhouse::error::Result<Vec<CHMatch>> {
-    ch_client
+) -> anyhow::Result<Vec<CHMatch>> {
+    let cache_path = format!("data/rating_period_{start_time}_{end_time}.json");
+    if let Ok(matches) = load_file(&cache_path).await {
+        return Ok(matches);
+    }
+    let result = ch_client
         .query(
             r#"
 SELECT match_id,
@@ -115,5 +126,7 @@ ORDER BY match_id
         .bind(start_time)
         .bind(end_time)
         .fetch_all()
-        .await
+        .await?;
+    tokio::fs::write(&cache_path, serde_json::to_vec(&result)?).await?;
+    Ok(result)
 }

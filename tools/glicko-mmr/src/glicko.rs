@@ -104,22 +104,10 @@ pub fn update_player_rating(
                     g(opponent_rd) * (won as u8 as f64 - e(rating, opponent_rating, opponent_rd))
                 })
                 .sum::<f64>();
-    let error = matches
-        .iter()
-        .map(|m| {
-            if m.team0_players.contains(&account_id) {
-                new_rating - m.avg_badge_team0 as f64
-            } else {
-                new_rating - m.avg_badge_team1 as f64
-            }
-        })
-        .sum::<f64>()
-        / matches.len() as f64
-        * config.update_error_weight;
     Ok(Glicko2HistoryEntry {
         account_id,
         match_id: matches.last().unwrap().match_id, // matches.last() is safe because we checked that matches is not empty
-        rating: (new_rating - error).clamp(0.0, 66.0),
+        rating: new_rating,
         rating_deviation: new_rating_deviation,
         start_time: matches.last().unwrap().start_time, // matches.last() is safe because we checked that matches is not empty
     })
