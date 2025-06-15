@@ -7,13 +7,14 @@ pub async fn get_rating_period_starting_day(
     ch_client
         .query(
             r#"
+    WITH t_matches as (SELECT match_id FROM glicko FINAL)
     SELECT toStartOfDay(start_time) as day
     FROM match_info
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND average_badge_team0 IS NOT NULL
         AND average_badge_team1 IS NOT NULL
         AND start_time >= '2025-01-01'
-        AND match_id NOT IN (SELECT match_id FROM glicko)
+        AND match_id NOT IN t_matches
     GROUP BY day
     HAVING COUNT(DISTINCT match_id) >= 100
     ORDER BY day
