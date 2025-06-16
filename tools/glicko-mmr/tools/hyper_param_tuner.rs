@@ -1,15 +1,10 @@
 use chrono::{DateTime, NaiveDate};
 use glicko_mmr::config::Config;
-use glicko_mmr::{types, update_single_rating_period};
+use glicko_mmr::{types, update_single_rating_period, utils};
 use rand::SeedableRng;
 use std::collections::HashMap;
 use tpe::{TpeOptimizer, parzen_estimator, range};
 use tracing::{debug, error, info};
-
-const TARGET_AVG_RATING: f64 = 28.731226357964307;
-const TARGET_STD_RATING: f64 = 11.419221962282887;
-
-// Config { rating_unrated: 23.3910902475032, rating_deviation_unrated: 8.144845982324988, rating_deviation_typical: 11.648886693817948, rating_periods_till_full_reset: 88.21611063293939 }
 
 async fn get_start_day(ch_client: &clickhouse::Client) -> clickhouse::error::Result<u32> {
     ch_client
@@ -31,7 +26,7 @@ LIMIT 1
 
 async fn run_data(config: &Config) -> f64 {
     let ch_client = common::get_ch_client().unwrap();
-    let mut player_ratings_before_rating_period = HashMap::new();
+    let mut player_ratings = HashMap::new();
     let mut start_time = get_start_day(&ch_client).await.unwrap();
     let mut sum_errors = 0.0;
     let mut count = 0;
@@ -42,18 +37,16 @@ async fn run_data(config: &Config) -> f64 {
         if matches.is_empty() {
             break;
         }
-        match update_single_rating_period(
-            config,
-            &matches,
-            &player_ratings_before_rating_period,
-            false,
-        )
-        .await
-        {
+        let mut all_ratings: HashMap<(u64, u32), f64> = HashMap::new();
+        match update_single_rating_period(config, &matches, &player_ratings, true).await {
             Ok(updates) if !updates.is_empty() => {
-                for update in updates {
-                    player_ratings_before_rating_period.insert(update.account_id, update);
+                for update in updates.iter() {
+                    all_ratings.insert((update.match_id, update.account_id), update.rating);
                 }
+                player_ratings.insert(
+                    updates.last().unwrap().account_id,
+                    updates.last().unwrap().clone(),
+                );
             }
             Ok(_) => {
                 info!("No matches to process, sleeping...");
@@ -71,20 +64,28 @@ async fn run_data(config: &Config) -> f64 {
             .date_naive()
             >= NaiveDate::from_ymd_opt(2025, 5, 1).unwrap()
         {
-            let ratings = player_ratings_before_rating_period
-                .values()
-                .map(|entry| entry.rating)
-                .collect::<Vec<_>>();
-            let avg_rating = ratings.iter().sum::<f64>() / ratings.len() as f64;
-            let std_rating = ratings
+            let error: f64 = matches
                 .iter()
-                .map(|x| (x - avg_rating).powi(2))
+                .map(|m| {
+                    let team0_rating = m
+                        .team0_players
+                        .iter()
+                        .map(|p| all_ratings[&(m.match_id, *p)])
+                        .sum::<f64>()
+                        / m.team0_players.len() as f64;
+                    let team1_rating = m
+                        .team1_players
+                        .iter()
+                        .map(|p| all_ratings[&(m.match_id, *p)])
+                        .sum::<f64>()
+                        / m.team1_players.len() as f64;
+                    (utils::rating_to_rank(team0_rating) as f64 - m.avg_badge_team0 as f64).abs()
+                        + (utils::rating_to_rank(team1_rating) as f64 - m.avg_badge_team1 as f64)
+                            .abs()
+                })
                 .sum::<f64>()
-                / (ratings.len() - 1) as f64;
-            let std_rating = std_rating.sqrt();
-            let error =
-                (avg_rating - TARGET_AVG_RATING).abs() + (std_rating - TARGET_STD_RATING).abs();
-            sum_errors += error * error;
+                / matches.len() as f64;
+            sum_errors += error.sqrt().powi(2);
             count += 1;
         }
     }
@@ -97,9 +98,9 @@ async fn main() {
     common::init_metrics().unwrap();
 
     let mut optim_rating_deviation_unrated =
-        TpeOptimizer::new(parzen_estimator(), range(1., 10.).unwrap());
+        TpeOptimizer::new(parzen_estimator(), range(1., 20.).unwrap());
     let mut optim_rating_deviation_typical =
-        TpeOptimizer::new(parzen_estimator(), range(1., 5.).unwrap());
+        TpeOptimizer::new(parzen_estimator(), range(1., 20.).unwrap());
 
     let mut best_value = f64::INFINITY;
     let mut best_config = None;
