@@ -1,6 +1,5 @@
 use chrono::{DateTime, NaiveDate};
 use glicko_mmr::config::Config;
-use glicko_mmr::utils::Start;
 use glicko_mmr::{types, update_single_rating_period};
 use rand::SeedableRng;
 use std::collections::HashMap;
@@ -10,11 +9,11 @@ use tracing::{debug, error, info};
 const TARGET_AVG_RATING: f64 = 28.731226357964307;
 const TARGET_STD_RATING: f64 = 11.419221962282887;
 
-async fn get_start_week(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Start> {
+async fn get_start_day(ch_client: &clickhouse::Client) -> clickhouse::error::Result<u32> {
     ch_client
         .query(
             r#"
-SELECT toStartOfWeek(start_time) as start
+SELECT toStartOfDay(start_time) as start
 FROM match_info
 WHERE match_mode IN ('Ranked', 'Unranked')
     AND start_time >= '2025-01-01'
@@ -29,14 +28,9 @@ LIMIT 1
 async fn run_data(config: &Config) -> f64 {
     let ch_client = common::get_ch_client().unwrap();
     let mut player_ratings = HashMap::new();
-    let mut start_time = get_start_week(&ch_client)
+    let mut start_time = get_start_day(&ch_client)
         .await
-        .unwrap()
-        .start
-        .and_hms_opt(0, 0, 0)
-        .unwrap()
-        .and_utc()
-        .timestamp() as u32;
+        .unwrap();
     let mut sum_errors = 0.0;
     let mut count = 0;
     loop {
@@ -114,7 +108,6 @@ async fn main() {
             rating_unrated: optim_rating_unrated.ask(&mut rng).unwrap(),
             rating_deviation_unrated,
             c: optim_c.ask(&mut rng).unwrap(),
-            rating_periods_till_full_reset: 12.0,
         };
         debug!("Running with config: {config:?}");
         let rmse = run_data(&config).await;

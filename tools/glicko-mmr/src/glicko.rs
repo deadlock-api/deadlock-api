@@ -118,7 +118,7 @@ pub fn update_player_rating(
 /// # Returns
 /// * The updated rating deviation (`rd`) for the player, capped at `RD_UNRATED`.
 fn new_rd(config: &Config, old_rd: f64, time_since_last_match: Duration) -> f64 {
-    (old_rd.powi(2) + config.c.powi(2) * (time_since_last_match.num_days() / 7) as f64)
+    (old_rd.powi(2) + config.c.powi(2) * time_since_last_match.num_days() as f64)
         .sqrt()
         .min(config.rating_deviation_unrated)
 }

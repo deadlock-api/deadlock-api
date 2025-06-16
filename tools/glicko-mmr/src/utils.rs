@@ -2,38 +2,27 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-#[derive(clickhouse::Row, Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Start {
-    #[serde(with = "clickhouse::serde::chrono::date")]
-    pub start: NaiveDate,
-}
-
-pub async fn get_rating_period_starting_week(
+pub async fn get_rating_period_starting(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<u32> {
     debug!("Fetching rating period starting id");
-    Ok(ch_client
+    ch_client
         .query(
             r#"
     WITH t_matches as (SELECT match_id FROM glicko FINAL)
-    SELECT toStartOfWeek(start_time) as week
+    SELECT toStartOfDay(start_time) as day
     FROM match_info FINAL
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND start_time >= '2025-01-01'
         AND match_id NOT IN t_matches
-    GROUP BY week
+    GROUP BY day
     HAVING COUNT(DISTINCT match_id) >= 100
-    ORDER BY week
+    ORDER BY day
     LIMIT 1
     "#,
         )
-        .fetch_one::<Start>()
-        .await?
-        .start
-        .and_hms_opt(0, 0, 0)
-        .unwrap()
-        .and_utc()
-        .timestamp() as u32)
+        .fetch_one()
+        .await
 }
 
 const RANKS: [u32; 67] = [
