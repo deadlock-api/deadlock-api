@@ -2739,12 +2739,11 @@ dependencies = [
 [[package]]
 name = "serde-xml-rs"
 version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53630160a98edebde0123eb4dfd0fce6adff091b2305db3154a9e920206eb510"
+source = "git+https://github.com/RReverser/serde-xml-rs.git?rev=a659f21d990d2449714228d80acd96e75423e850#a659f21d990d2449714228d80acd96e75423e850"
 dependencies = [
  "log",
  "serde",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "xml-rs",
 ]
 
@@ -2872,12 +2871,9 @@ checksum = "c1e9a774a6c28142ac54bb25d25562e6bcf957493a184f15ad4eebccb23e410a"
 
 [[package]]
 name = "slab"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
-dependencies = [
- "autocfg",
-]
+checksum = "04dc19736151f35336d325007ac991178d504a119863a2fcb3758cdb5e52c50d"
 
 [[package]]
 name = "smallvec"
