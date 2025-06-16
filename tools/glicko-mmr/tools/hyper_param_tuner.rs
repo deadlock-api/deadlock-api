@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDate};
 use glicko_mmr::config::Config;
 use glicko_mmr::utils::Start;
-use glicko_mmr::{types, update_single_rating_period, utils};
+use glicko_mmr::{types, update_single_rating_period};
 use rand::SeedableRng;
 use std::collections::HashMap;
 use tpe::{TpeOptimizer, parzen_estimator, range};
@@ -17,8 +17,6 @@ async fn get_start_week(ch_client: &clickhouse::Client) -> clickhouse::error::Re
 SELECT toStartOfWeek(start_time) as start
 FROM match_info
 WHERE match_mode IN ('Ranked', 'Unranked')
-    AND average_badge_team0 IS NOT NULL
-    AND average_badge_team1 IS NOT NULL
     AND start_time >= '2025-01-01'
 ORDER BY match_id
 LIMIT 1
@@ -75,28 +73,6 @@ async fn run_data(config: &Config) -> f64 {
             .date_naive()
             >= NaiveDate::from_ymd_opt(2025, 5, 1).unwrap()
         {
-            let badge_error: f64 = matches
-                .iter()
-                .map(|m| {
-                    let team0_rating = m
-                        .team0_players
-                        .iter()
-                        .map(|p| all_ratings[&(m.match_id, *p)])
-                        .sum::<f64>()
-                        / m.team0_players.len() as f64;
-                    let team1_rating = m
-                        .team1_players
-                        .iter()
-                        .map(|p| all_ratings[&(m.match_id, *p)])
-                        .sum::<f64>()
-                        / m.team1_players.len() as f64;
-                    (utils::rating_to_rank(team0_rating) as f64 - m.avg_badge_team0 as f64).abs()
-                        + (utils::rating_to_rank(team1_rating) as f64 - m.avg_badge_team1 as f64)
-                            .abs()
-                })
-                .sum::<f64>()
-                / matches.len() as f64;
-
             let ratings = player_ratings
                 .values()
                 .map(|entry| entry.rating)
@@ -111,7 +87,7 @@ async fn run_data(config: &Config) -> f64 {
             let dist_error =
                 (avg_rating - TARGET_AVG_RATING).abs() + (std_rating - TARGET_STD_RATING).abs();
 
-            sum_errors += 10.0 * badge_error.sqrt().powi(2) + dist_error.sqrt().powi(2);
+            sum_errors += dist_error.sqrt().powi(2);
             count += 1;
         }
     }
@@ -123,12 +99,11 @@ async fn main() {
     common::init_tracing();
     common::init_metrics().unwrap();
 
+    let mut optim_rating_unrated =
+        TpeOptimizer::new(parzen_estimator(), range(1000., 3000.).unwrap());
     let mut optim_rating_deviation_unrated =
         TpeOptimizer::new(parzen_estimator(), range(1., 20.).unwrap());
-    let mut optim_c =
-        TpeOptimizer::new(parzen_estimator(), range(0., 10.).unwrap());
-    let mut optim_update_error_rate =
-        TpeOptimizer::new(parzen_estimator(), range(-1., 1.).unwrap());
+    let mut optim_c = TpeOptimizer::new(parzen_estimator(), range(0., 10.).unwrap());
 
     let mut best_value = f64::INFINITY;
     let mut best_config = None;
@@ -136,20 +111,20 @@ async fn main() {
     for _ in 0..1000 {
         let rating_deviation_unrated = optim_rating_deviation_unrated.ask(&mut rng).unwrap();
         let config = Config {
+            rating_unrated: optim_rating_unrated.ask(&mut rng).unwrap(),
             rating_deviation_unrated,
             c: optim_c.ask(&mut rng).unwrap(),
             rating_periods_till_full_reset: 12.0,
-            update_error_rate: optim_update_error_rate.ask(&mut rng).unwrap(),
         };
         debug!("Running with config: {config:?}");
         let rmse = run_data(&config).await;
+        optim_rating_unrated
+            .tell(config.rating_unrated, rmse)
+            .unwrap();
         optim_rating_deviation_unrated
             .tell(config.rating_deviation_unrated, rmse)
             .unwrap();
         optim_c.tell(config.c, rmse).unwrap();
-        optim_update_error_rate
-            .tell(config.update_error_rate, rmse)
-            .unwrap();
         if rmse < best_value {
             best_value = rmse;
             best_config = Some(config);

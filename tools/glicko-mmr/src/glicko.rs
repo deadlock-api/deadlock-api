@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
-use crate::utils;
 use anyhow::bail;
 use cached::proc_macro::once;
 use chrono::Duration;
@@ -46,13 +45,7 @@ pub fn update_player_rating(
     let rating = before_player_ratings
         .get(&account_id)
         .map(|entry| entry.rating)
-        .unwrap_or_else(|| {
-            utils::rank_to_rating(if matches[0].team0_players.contains(&account_id) {
-                matches[0].avg_badge_team0
-            } else {
-                matches[0].avg_badge_team1
-            })
-        });
+        .unwrap_or(config.rating_unrated);
     let rating_deviation = match before_player_ratings.get(&account_id) {
         Some(entry) => new_rd(
             config,
@@ -65,17 +58,16 @@ pub fn update_player_rating(
     let opponents = matches
         .iter()
         .flat_map(|m| {
-            let (opponent_team, avg_opponent_team_badge, won) =
-                if m.team0_players.contains(&account_id) {
-                    (&m.team1_players, m.avg_badge_team1, m.winning_team == 0)
-                } else {
-                    (&m.team0_players, m.avg_badge_team0, m.winning_team == 1)
-                };
+            let (opponent_team, won) = if m.team0_players.contains(&account_id) {
+                (&m.team1_players, m.winning_team == 0)
+            } else {
+                (&m.team0_players, m.winning_team == 1)
+            };
             opponent_team.iter().map(move |opponent_id| {
                 let opponent_rating = before_player_ratings
                     .get(opponent_id)
                     .map(|entry| entry.rating)
-                    .unwrap_or(utils::rank_to_rating(avg_opponent_team_badge));
+                    .unwrap_or(config.rating_unrated);
                 let opponent_rd = before_player_ratings
                     .get(opponent_id)
                     .map(|entry| entry.rating_deviation)
@@ -105,45 +97,10 @@ pub fn update_player_rating(
                     g(opponent_rd) * (won as u8 as f64 - e(rating, opponent_rating, opponent_rd))
                 })
                 .sum::<f64>();
-    // Calculate the error from our rating to the avg badge of the match
-    let error = matches
-        .iter()
-        .map(|m| {
-            let team_players = if m.team0_players.contains(&account_id) {
-                &m.team0_players
-            } else {
-                &m.team1_players
-            };
-            let team_rating = team_players
-                .iter()
-                .map(|p| {
-                    before_player_ratings
-                        .get(p)
-                        .map(|entry| entry.rating)
-                        .unwrap_or_else(|| {
-                            utils::rank_to_rating(if m.team0_players.contains(p) {
-                                m.avg_badge_team0
-                            } else {
-                                m.avg_badge_team1
-                            })
-                        })
-                })
-                .sum::<f64>()
-                / team_players.len() as f64;
-            let avg_badge = if m.team0_players.contains(&account_id) {
-                m.avg_badge_team0
-            } else {
-                m.avg_badge_team1
-            };
-            (avg_badge as f64 - utils::rating_to_rank(team_rating) as f64).abs()
-                / team_players.len() as f64
-        })
-        .sum::<f64>()
-        / matches.len() as f64;
     Ok(Glicko2HistoryEntry {
         account_id,
         match_id: matches.last().unwrap().match_id, // unwrap is safe because we checked that matches is not empty
-        rating: new_rating + config.update_error_rate * error,
+        rating: new_rating,
         rating_deviation: new_rating_deviation,
         start_time: matches.last().unwrap().start_time, // unwrap is safe because we checked that matches is not empty
     })
