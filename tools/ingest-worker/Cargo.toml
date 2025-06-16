@@ -7,13 +7,13 @@ edition = "2024"
 async-compression = { version = "0.4.24", features = ["tokio", "bzip2"] }
 clickhouse = { version = "0.13.3", features = ["test-util", "time"] }
 futures = "0.3.31"
-prost = "0.14.0"
+prost = "0.13.5"
 reqwest = "0.12.20"
 object_store = { version = "0.12.2", features = ["aws"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_repr = "0.1.20"
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "3911167527c1dcb1bdcb872f7b1a53fb4620c5bd", features = ["gc-client"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "6d93306ab4f4f4f85cd5eb56df0625a373c4e4c4", features = ["gc-client"] }
 metrics = "0.24"
 tracing = "0.1.41"
 tryhard = "0.5.1"

@@ -9,7 +9,7 @@ clickhouse = "0.13.3"
 common = { version = "0.1.0", path = "../common" }
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 reqwest = "0.12.20"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "3911167527c1dcb1bdcb872f7b1a53fb4620c5bd", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "6d93306ab4f4f4f85cd5eb56df0625a373c4e4c4", features = ["gc-client", "serde"] }
 metrics = "0.24"
 tracing = "0.1.41"
 serde = { version = "1.0.219", features = ["derive"] }
