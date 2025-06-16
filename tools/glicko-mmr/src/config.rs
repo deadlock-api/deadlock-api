@@ -15,9 +15,4 @@ pub struct Config {
 
     #[arg(long, env, default_value_t = 6.)] // Hyper parameter tuned
     pub c: f64,
-
-    /// Number of rating periods until a full reset occurs.
-    /// Set via --rating-periods-till-full-reset or RATING_PERIODS_TILL_FULL_RESET.
-    #[arg(long, env, default_value_t = 12.0)]
-    pub rating_periods_till_full_reset: f64,
 }
