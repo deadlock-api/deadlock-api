@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
+use crate::utils;
 use anyhow::bail;
 use cached::proc_macro::once;
 use chrono::Duration;
@@ -52,7 +53,13 @@ pub fn update_player_rating(
     let rating = before_player_ratings
         .get(&account_id)
         .map(|entry| entry.rating)
-        .unwrap_or(config.rating_unrated);
+        .unwrap_or_else(|| {
+            utils::rank_to_rating(if matches[0].team0_players.contains(&account_id) {
+                matches[0].avg_badge_team0
+            } else {
+                matches[0].avg_badge_team1
+            })
+        });
     let rating_deviation = match before_player_ratings.get(&account_id) {
         Some(entry) => new_rd(
             config,
@@ -65,16 +72,17 @@ pub fn update_player_rating(
     let opponents = matches
         .iter()
         .flat_map(|m| {
-            let (opponent_team, won) = if m.team0_players.contains(&account_id) {
-                (&m.team1_players, m.winning_team == 0)
-            } else {
-                (&m.team0_players, m.winning_team == 1)
-            };
+            let (opponent_team, avg_opponent_team_badge, won) =
+                if m.team0_players.contains(&account_id) {
+                    (&m.team1_players, m.avg_badge_team1, m.winning_team == 0)
+                } else {
+                    (&m.team0_players, m.avg_badge_team0, m.winning_team == 1)
+                };
             opponent_team.iter().map(move |opponent_id| {
                 let opponent_rating = before_player_ratings
                     .get(opponent_id)
                     .map(|entry| entry.rating)
-                    .unwrap_or(config.rating_unrated);
+                    .unwrap_or(utils::rank_to_rating(avg_opponent_team_badge));
                 let opponent_rd = before_player_ratings
                     .get(opponent_id)
                     .map(|entry| entry.rating_deviation)

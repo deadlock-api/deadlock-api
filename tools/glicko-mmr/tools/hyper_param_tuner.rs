@@ -96,7 +96,6 @@ async fn main() {
     common::init_tracing();
     common::init_metrics().unwrap();
 
-    let mut optim_rating_unrated = TpeOptimizer::new(parzen_estimator(), range(10., 40.).unwrap());
     let mut optim_rating_deviation_unrated =
         TpeOptimizer::new(parzen_estimator(), range(1., 10.).unwrap());
     let mut optim_rating_deviation_typical =
@@ -107,16 +106,12 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_seed(Default::default());
     for _ in 0..1000 {
         let config = Config {
-            rating_unrated: optim_rating_unrated.ask(&mut rng).unwrap(),
             rating_deviation_unrated: optim_rating_deviation_unrated.ask(&mut rng).unwrap(),
             rating_deviation_typical: optim_rating_deviation_typical.ask(&mut rng).unwrap(),
             rating_periods_till_full_reset: 90.0,
         };
         debug!("Running with config: {config:?}");
         let rmse = run_data(&config).await;
-        optim_rating_unrated
-            .tell(config.rating_unrated, rmse)
-            .unwrap();
         optim_rating_deviation_unrated
             .tell(config.rating_deviation_unrated, rmse)
             .unwrap();
