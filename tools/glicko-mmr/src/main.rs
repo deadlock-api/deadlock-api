@@ -18,13 +18,14 @@ async fn main() -> anyhow::Result<()> {
 
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(UPDATE_INTERVAL));
     loop {
-        let Ok(start_time) = utils::get_rating_period_starting_day(&ch_client).await else {
+        let Ok(start_time) = utils::get_rating_period_starting_week(&ch_client).await else {
             info!("No matches to process, sleeping...");
             interval.tick().await;
             continue;
         };
         let matches_to_process =
-            CHMatch::query_rating_period(&ch_client, start_time, start_time + 24 * 60 * 60).await?;
+            CHMatch::query_rating_period(&ch_client, start_time, start_time + 7 * 24 * 60 * 60)
+                .await?;
         if matches_to_process.is_empty() {
             info!("No matches to process, sleeping...");
             interval.tick().await;

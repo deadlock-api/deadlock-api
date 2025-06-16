@@ -8,13 +8,6 @@ use std::collections::HashMap;
 use std::f64::consts::{E, PI};
 
 #[once]
-pub fn c(config: &Config) -> f64 {
-    ((config.rating_deviation_unrated.powi(2) - config.rating_deviation_typical.powi(2))
-        / config.rating_periods_till_full_reset)
-        .sqrt()
-}
-
-#[once]
 pub fn q() -> f64 {
     10f64.ln() / 400.0
 }
@@ -64,8 +57,8 @@ pub fn update_player_rating(
         Some(entry) => new_rd(
             config,
             entry.rating_deviation,
-            matches[0].start_time - entry.start_time,
-        ), // matches[0] is safe because we checked that matches is not empty
+            matches[0].start_time - entry.start_time, // matches[0] is safe because we checked that matches is not empty
+        ),
         None => config.rating_deviation_unrated, // If the player has no rating history, use the default RD_UNRATED
     };
 
@@ -112,12 +105,47 @@ pub fn update_player_rating(
                     g(opponent_rd) * (won as u8 as f64 - e(rating, opponent_rating, opponent_rd))
                 })
                 .sum::<f64>();
+    // Calculate the error from our rating to the avg badge of the match
+    let error = matches
+        .iter()
+        .map(|m| {
+            let team_players = if m.team0_players.contains(&account_id) {
+                &m.team0_players
+            } else {
+                &m.team1_players
+            };
+            let team_rating = team_players
+                .iter()
+                .map(|p| {
+                    before_player_ratings
+                        .get(p)
+                        .map(|entry| entry.rating)
+                        .unwrap_or_else(|| {
+                            utils::rank_to_rating(if m.team0_players.contains(p) {
+                                m.avg_badge_team0
+                            } else {
+                                m.avg_badge_team1
+                            })
+                        })
+                })
+                .sum::<f64>()
+                / team_players.len() as f64;
+            let avg_badge = if m.team0_players.contains(&account_id) {
+                m.avg_badge_team0
+            } else {
+                m.avg_badge_team1
+            };
+            (avg_badge as f64 - utils::rating_to_rank(team_rating) as f64).abs()
+                / team_players.len() as f64
+        })
+        .sum::<f64>()
+        / matches.len() as f64;
     Ok(Glicko2HistoryEntry {
         account_id,
-        match_id: matches.last().unwrap().match_id, // matches.last() is safe because we checked that matches is not empty
-        rating: new_rating,
+        match_id: matches.last().unwrap().match_id, // unwrap is safe because we checked that matches is not empty
+        rating: new_rating + config.update_error_rate * error,
         rating_deviation: new_rating_deviation,
-        start_time: matches.last().unwrap().start_time, // matches.last() is safe because we checked that matches is not empty
+        start_time: matches.last().unwrap().start_time, // unwrap is safe because we checked that matches is not empty
     })
 }
 
@@ -133,7 +161,7 @@ pub fn update_player_rating(
 /// # Returns
 /// * The updated rating deviation (`rd`) for the player, capped at `RD_UNRATED`.
 fn new_rd(config: &Config, old_rd: f64, time_since_last_match: Duration) -> f64 {
-    (old_rd.powi(2) + c(config).powi(2) * time_since_last_match.num_days() as f64)
+    (old_rd.powi(2) + config.c.powi(2) * (time_since_last_match.num_days() / 7) as f64)
         .sqrt()
         .min(config.rating_deviation_unrated)
 }
