@@ -65,7 +65,7 @@ jobs:
           rustup update stable
           rustup component add clippy
       - name: Cargo Clippy
-        run: cargo clippy --all-targets --locked -- -D warnings
+        run: cargo clippy --all-targets --locked --all-features -- -D warnings
 
   build-base:
     runs-on: ubuntu-24.04-arm
