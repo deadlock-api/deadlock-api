@@ -3,6 +3,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
+import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
@@ -12,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import type { Dayjs } from "~/dayjs";
 import { type Serializer, serializers, useQSArray, useQSBoolean, useQSState } from "~/hooks/useQSState";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 
@@ -220,23 +222,25 @@ function ItemStatsTableRow({
   return (
     <>
       <TableRow
-        className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 cursor-pointer ${
+        className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 cursor-pointer  ${
           shouldDim ? "brightness-60" : ""
         }`}
         onClick={() => customDropdownContent && setOpen(!open)}
       >
+        {customDropdownContent && (
+          <TableCell className="font-semibold text-center w-4 h-4">
+            <span className="p-0 h-auto">
+              {open ? (
+                <span className="icon-[material-symbols--expand-less] w-4 h-4 align-middle" />
+              ) : (
+                <span className="icon-[material-symbols--expand-more] w-4 h-4 align-middle" />
+              )}
+            </span>
+          </TableCell>
+        )}
         {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
         <TableCell>
           <div className="flex items-center gap-2">
-            {customDropdownContent && (
-              <span className="p-0 h-auto">
-                {open ? (
-                  <span className="icon-[material-symbols--expand-less] w-4 h-4" />
-                ) : (
-                  <span className="icon-[material-symbols--expand-more] w-4 h-4" />
-                )}
-              </span>
-            )}
             <ItemImage itemId={row.item_id} />
             <ItemName itemId={row.item_id} />
           </div>
@@ -421,10 +425,11 @@ export function ItemStatsTableDisplay({
           </div>
         )}
       </div>
-      <Table className="w-full min-w-fit">
+      <Table className="w-full min-w-fit table-auto">
         {!hideHeader && (
           <TableHeader className="bg-gray-800">
             <TableRow>
+              {customDropdownContent && <TableHead className="text-center w-4" />}
               {!hideIndex && <TableHead className="text-center">#</TableHead>}
               <TableHead>Item</TableHead>
               {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
@@ -555,6 +560,18 @@ export default function ItemStatsTable({
   const limitedData = useMemo(() => (limit ? filteredData?.slice(0, limit) : filteredData), [filteredData, limit]);
   const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
 
+  const queryStatOptions = useMemo(() => {
+    return {
+      minMatches,
+      hero,
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      bucket: undefined,
+    } satisfies ItemStatsQueryParams;
+  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp]);
+
   return (
     <ItemStatsTableDisplay
       data={displayData}
@@ -570,6 +587,9 @@ export default function ItemStatsTable({
       maxUsage={maxUsage}
       includedItemIds={[]}
       excludedItemIds={[]}
+      customDropdownContent={({ itemId, rowTotal }) => (
+        <ItemBuyTimingChart itemId={itemId} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+      )}
     />
   );
 }
