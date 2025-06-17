@@ -260,29 +260,48 @@ fn build_query(query: &ItemStatsQuery) -> String {
         .or(default_min_matches())
         .unwrap_or_default();
 
+    let buy_time_expr = if query.bucket == BucketQuery::GameTimeMin {
+        ",it.game_time_s AS buy_time"
+    } else {
+        ""
+    };
+
+    let net_worth_expr = if [
+        BucketQuery::NetWorthBy1000,
+        BucketQuery::NetWorthBy2000,
+        BucketQuery::NetWorthBy3000,
+        BucketQuery::NetWorthBy5000,
+        BucketQuery::NetWorthBy10000,
+    ]
+    .contains(&query.bucket)
+    {
+        r#"
+        , coalesce(
+            arrayElementOrNull(
+                stats.net_worth,
+                arrayFirstIndex(ts -> ts >= it.game_time_s, stats.time_stamp_s) - 1
+            ), net_worth
+        ) AS net_worth_at_buy
+        "#
+    } else {
+        ""
+    };
+
     /* ---------- final query ---------- */
     format!(
         r#"
 WITH
     /* 1. Relevant matches */
     t_matches AS (
-        SELECT match_id, start_time, duration_s
-        FROM match_info FINAL
+        SELECT match_id, start_time, duration_s, winning_team
+        FROM match_info
         WHERE match_mode IN ('Ranked', 'Unranked'){info_filters}
     ),
 
     /* 2. Filtered players — *single* scan of `match_player` */
     filtered_players AS (
-        SELECT
-            match_id,
-            team,
-            account_id,
-            hero_id,
-            items,
-            won,
-            `stats.time_stamp_s` AS st_ts,   -- stats tick-times
-            `stats.net_worth`   AS st_nw    -- net-worth samples
-        FROM match_player FINAL
+        SELECT match_id, account_id
+        FROM match_player
         WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
     ),
 
@@ -293,39 +312,25 @@ WITH
             team,
             account_id,
             hero_id,
-            it.item_id     AS item_id,
-            it.game_time_s AS buy_time,
-            won,
-
-            /* first stats tick ≥ buy_time (Int64) */
-            arrayFirstIndex(
-                ts -> ts >= it.game_time_s,
-                st_ts
-            )                    AS idx_ge,
-
-            /* net-worth sample just before / at buy_time                          *
-             * idx_ge = 0  → purchase after last sample → use last element        *
-             * idx_ge = 1  → purchase before first      → use first element (1)   */
-            arrayElement(
-                st_nw,
-                if(idx_ge = 0,
-                   toInt64(length(st_nw)),
-                   greatest(1, idx_ge - 1)
-                )
-            )                    AS net_worth_at_buy
-        FROM filtered_players
-        ARRAY JOIN items AS it
-        WHERE buy_time > 0 AND it.item_id IN (SELECT id FROM items)
+            it.item_id AS item_id
+            {buy_time_expr}
+            {net_worth_expr}
+        FROM match_player FINAL
+            ARRAY JOIN items AS it
+        WHERE TRUE
+            AND (account_id, match_id) IN (SELECT account_id, match_id FROM filtered_players)
+            AND it.item_id IN (SELECT id FROM items)
+            AND it.game_time_s > 0
     )
 
 /* 4. Aggregation */
 SELECT
     item_id,
     {bucket_expr}              AS bucket,
-    SUM(won)                   AS wins,
-    SUM(NOT won)               AS losses,
+    SUM(winning_team = team)   AS wins,
+    SUM(winning_team != team)  AS losses,
     wins + losses              AS matches,
-    COUNT(DISTINCT account_id) AS players
+    uniqExact(account_id)      AS players
 FROM exploded_players
 INNER JOIN t_matches USING (match_id)
 GROUP BY item_id, bucket
