@@ -132,7 +132,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)) AS crit_shot_rate,
         groupUniqArray(mi.match_id) as matches
     FROM match_player mp FINAL
-        INNER ANY JOIN match_info mi USING (match_id)
+        INNER JOIN match_info mi USING (match_id)
     PREWHERE {account_filter}
     WHERE match_mode IN ('Ranked', 'Unranked') {filters}
     GROUP BY hero_id
@@ -199,7 +199,7 @@ mod test {
         assert!(sql.contains("COUNT() AS matches_played"));
         assert!(sql.contains("sum(won) AS wins"));
         assert!(sql.contains("FROM match_player mp FINAL"));
-        assert!(sql.contains("INNER ANY JOIN match_info mi USING (match_id)"));
+        assert!(sql.contains("INNER JOIN match_info mi USING (match_id)"));
         assert!(sql.contains("PREWHERE account_id = 12345"));
         assert!(sql.contains("WHERE match_mode IN ('Ranked', 'Unranked')"));
         assert!(sql.contains("GROUP BY hero_id"));
