@@ -24,8 +24,7 @@ async fn main() -> anyhow::Result<()> {
             continue;
         };
         let matches_to_process =
-            CHMatch::query_rating_period(&ch_client, start_time, start_time + 24 * 60 * 60)
-                .await?;
+            CHMatch::query_rating_period(&ch_client, start_time, start_time + 24 * 60 * 60).await?;
         if matches_to_process.is_empty() {
             info!("No matches to process, sleeping...");
             interval.tick().await;

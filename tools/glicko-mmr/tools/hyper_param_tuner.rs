@@ -28,9 +28,7 @@ LIMIT 1
 async fn run_data(config: &Config) -> f64 {
     let ch_client = common::get_ch_client().unwrap();
     let mut player_ratings = HashMap::new();
-    let mut start_time = get_start_day(&ch_client)
-        .await
-        .unwrap();
+    let mut start_time = get_start_day(&ch_client).await.unwrap();
     let mut sum_errors = 0.0;
     let mut count = 0;
     loop {
