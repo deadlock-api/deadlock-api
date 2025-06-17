@@ -1,13 +1,13 @@
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 rustflags = [
-    "-Clink-arg=-fuse-ld=lld",
+    "-Clink-arg=-fuse-ld=/usr/bin/mold",
 ]
 
 [target.aarch64-unknown-linux-gnu]
 linker = "clang"
 rustflags = [
-    "-Clink-arg=-fuse-ld=lld",
+    "-Clink-arg=-fuse-ld=/usr/bin/mold",
 ]
 
 # Registry configuration for faster dependency fetching
