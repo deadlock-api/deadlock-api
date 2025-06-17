@@ -9,8 +9,8 @@ export interface ItemStatsQueryParams {
   maxRankId?: number;
   minDateTimestamp?: number;
   maxDateTimestamp?: number;
-  includeItems: Set<number>;
-  excludeItems: Set<number>;
+  includeItems?: Set<number>;
+  excludeItems?: Set<number>;
   bucket?:
     | "start_time_hour"
     | "start_time_day"
@@ -40,16 +40,16 @@ export function itemStatsQueryOptions({
       minDateTimestamp,
       maxDateTimestamp,
       bucket,
-      Array.from(includeItems),
-      Array.from(excludeItems),
+      includeItems ? Array.from(includeItems) : "",
+      excludeItems ? Array.from(excludeItems) : "",
     ],
     queryFn: async (): Promise<APIItemStats[]> => {
       const url = new URL("/v1/analytics/item-stats", API_ORIGIN);
       if (hero) url.searchParams.set("hero_id", hero.toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (includeItems.size > 0) url.searchParams.set("include_item_ids", Array.from(includeItems).join(","));
-      if (excludeItems.size > 0) url.searchParams.set("exclude_item_ids", Array.from(excludeItems).join(","));
+      if (includeItems?.size) url.searchParams.set("include_item_ids", Array.from(includeItems).join(","));
+      if (excludeItems?.size) url.searchParams.set("exclude_item_ids", Array.from(excludeItems).join(","));
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
       if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
       if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
