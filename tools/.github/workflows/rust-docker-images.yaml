@@ -42,8 +42,8 @@ jobs:
           rustup override set stable
           rustup update stable
           rustup component add rustfmt
-      - name: Cargo Fmt
-        run: cargo fmt -- --check
+      - name: Rustfmt Check
+        uses: actions-rust-lang/rustfmt@v1
 
   lint:
     name: Lint
