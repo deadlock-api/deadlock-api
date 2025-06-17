@@ -31,6 +31,14 @@ pub(super) struct HeroCounterStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter players based on their net worth.
+    min_networth: Option<u64>,
+    /// Filter players based on their net worth.
+    max_networth: Option<u64>,
+    /// Filter enemy players based on their net worth.
+    min_enemy_networth: Option<u64>,
+    /// Filter enemy players based on their net worth.
+    max_enemy_networth: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
@@ -139,6 +147,18 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     }
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("p1.account_id = {account_id}"));
+    }
+    if let Some(min_networth) = query.min_networth {
+        player_filters.push(format!("p1.net_worth >= {min_networth}"));
+    }
+    if let Some(max_networth) = query.max_networth {
+        player_filters.push(format!("p1.net_worth <= {max_networth}"));
+    }
+    if let Some(min_enemy_networth) = query.min_enemy_networth {
+        player_filters.push(format!("p2.net_worth >= {min_enemy_networth}"));
+    }
+    if let Some(max_enemy_networth) = query.max_enemy_networth {
+        player_filters.push(format!("p2.net_worth <= {max_enemy_networth}"));
     }
     let player_filters = if player_filters.is_empty() {
         "".to_string()
@@ -274,6 +294,46 @@ mod test {
         };
         let sql = build_query(&query);
         assert!(sql.contains("duration_s <= 1800"));
+    }
+
+    #[test]
+    fn test_build_hero_counters_stats_query_min_networth() {
+        let query = HeroCounterStatsQuery {
+            min_networth: Some(1000),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("p1.net_worth >= 1000"));
+    }
+
+    #[test]
+    fn test_build_hero_counters_stats_query_max_networth() {
+        let query = HeroCounterStatsQuery {
+            max_networth: Some(10000),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("p1.net_worth <= 10000"));
+    }
+
+    #[test]
+    fn test_build_hero_counters_stats_query_min_enemy_networth() {
+        let query = HeroCounterStatsQuery {
+            min_enemy_networth: Some(1000),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("p2.net_worth >= 1000"));
+    }
+
+    #[test]
+    fn test_build_hero_counters_stats_query_max_enemy_networth() {
+        let query = HeroCounterStatsQuery {
+            max_enemy_networth: Some(10000),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert!(sql.contains("p2.net_worth <= 10000"));
     }
 
     #[test]

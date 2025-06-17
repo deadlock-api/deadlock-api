@@ -23,6 +23,10 @@ pub(super) struct HeroStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter players based on their net worth.
+    min_networth: Option<u64>,
+    /// Filter players based on their net worth.
+    max_networth: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
@@ -90,6 +94,12 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     }
     if let Some(max_duration_s) = query.max_duration_s {
         filters.push(format!("duration_s <= {max_duration_s}"));
+    }
+    if let Some(min_networth) = query.min_networth {
+        filters.push(format!("net_worth >= {min_networth}"));
+    }
+    if let Some(max_networth) = query.max_networth {
+        filters.push(format!("net_worth <= {max_networth}"));
     }
     let filters = if filters.is_empty() {
         "".to_string()
@@ -322,5 +332,27 @@ mod test {
         ));
         assert!(sql.contains("avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)) AS crit_shot_rate"));
         assert!(sql.contains("groupUniqArray(mi.match_id) as matches"));
+    }
+
+    #[test]
+    fn test_build_query_min_networth() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            min_networth: Some(1000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("net_worth >= 1000"));
+    }
+
+    #[test]
+    fn test_build_query_max_networth() {
+        let account_id = 12345;
+        let query = HeroStatsQuery {
+            max_networth: Some(10000),
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("net_worth <= 10000"));
     }
 }

@@ -40,6 +40,10 @@ pub(crate) struct HeroCombStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter players based on their net worth.
+    min_networth: Option<u64>,
+    /// Filter players based on their net worth.
+    max_networth: Option<u64>,
     /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
@@ -124,6 +128,12 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     let mut player_filters = vec![];
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("has(account_ids, {account_id})"));
+    }
+    if let Some(min_networth) = query.min_networth {
+        player_filters.push(format!("net_worth >= {min_networth}"));
+    }
+    if let Some(max_networth) = query.max_networth {
+        player_filters.push(format!("net_worth <= {max_networth}"));
     }
     let player_filters = if player_filters.is_empty() {
         "".to_string()
@@ -315,6 +325,28 @@ mod test {
         };
         let query = build_query(&comb_query);
         assert!(query.contains("duration_s <= 1800"));
+    }
+
+    #[test]
+    fn test_build_query_min_networth() {
+        let min_networth = Some(1000);
+        let comb_query = HeroCombStatsQuery {
+            min_networth,
+            ..Default::default()
+        };
+        let query = build_query(&comb_query);
+        assert!(query.contains("net_worth >= 1000"));
+    }
+
+    #[test]
+    fn test_build_query_max_networth() {
+        let max_networth = Some(10000);
+        let comb_query = HeroCombStatsQuery {
+            max_networth,
+            ..Default::default()
+        };
+        let query = build_query(&comb_query);
+        assert!(query.contains("net_worth <= 10000"));
     }
 
     #[test]
