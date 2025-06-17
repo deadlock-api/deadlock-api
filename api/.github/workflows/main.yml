@@ -104,6 +104,12 @@ jobs:
           tool: cargo-nextest
 
       ###############################
+      ##         Test Code         ##
+      ###############################
+      - name: Unit Tests
+        run: cargo nextest run --locked --lib
+
+      ###############################
       ##           Build           ##
       ###############################
       - name: Build Docker image
