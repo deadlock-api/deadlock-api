@@ -1,0 +1,9 @@
+[advisories]
+ignore = [
+    "RUSTSEC-2023-0071", # rsa: potential key recovery through timing sidechannels
+
+    "RUSTSEC-2024-0436", # paste is unmaintained.
+    # https://rustsec.org/advisories/RUSTSEC-2024-0436
+]
+informational_warnings = ["unmaintained"] # warn for categories of informational advisories
+severity_threshold = "low" # CVSS severity ("none", "low", "medium", "high", "critical")
