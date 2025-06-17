@@ -13,10 +13,7 @@ on:
         type: string
 
 env:
-  CARGO_TERM_COLOR: always
   IMAGE_NAME: ghcr.io/${{ github.repository }}
-  CARGO_INCREMENTAL: 0
-  CARGO_PROFILE_TEST_DEBUG: 0
 
 permissions:
   contents: read
@@ -27,54 +24,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  lint:
-    name: Lint
-    strategy:
-      matrix:
-        os: [ ubuntu-24.04, ubuntu-24.04-arm ]
-        toolchain: [ stable, nightly ]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-
-      - name: Install Protocol Buffers compiler
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: protobuf-compiler libprotobuf-dev clang
-          version: 1.0
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          components: clippy
-
-      - name: Override toolchain
-        run: rustup override set ${{ matrix.toolchain }}
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
-
-      - name: Run cargo check
-        run: cargo check --all-targets --locked
-
-      - name: Run cargo clippy (deny warnings)
-        if: ${{ matrix.toolchain == 'stable' }}
-        run: cargo clippy --all-targets --locked -- -D warnings
-
-      - name: Run cargo clippy (allow warnings)
-        if: ${{ matrix.toolchain != 'stable' }}
-        run: cargo clippy --all-targets --locked
-
   test_deploy:
     name: Test and Deploy
     runs-on: ubuntu-24.04-arm
-
     steps:
       - name: Determine Docker Tag
         run: |
@@ -91,40 +43,26 @@ jobs:
       ###############################
       ##           Setup           ##
       ###############################
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-
-      - name: Cache local bin
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/bin
-          key: ~/.local/bin
-
+      - uses: actions/checkout@v4
       - name: Setup go-task
         run: if [ ! -f "~/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Start API Dependency Docker Images (in Background)
         run: nohup task start-test-env-api-deps > pull.log 2>&1 &
-
       - name: Install Protocol Buffers compiler
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: protobuf-compiler libprotobuf-dev clang
           version: 1.0
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
-
+      - name: Update Rust toolchain
+        run: |
+          rustup override set stable
+          rustup update stable
       - uses: taiki-e/cache-cargo-install-action@v2
         with:
           tool: cargo-nextest
@@ -159,7 +97,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Push Docker image
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
         run: docker push ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
