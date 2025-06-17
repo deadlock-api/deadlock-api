@@ -72,19 +72,9 @@ jobs:
     outputs:
       image-id: ${{ steps.build-base.outputs.imageid }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-
-      - name: SCCache
-        run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-
+      - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Build Base Image
         id: build-base
         uses: docker/build-push-action@v6
@@ -95,7 +85,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/rust-base.tar
-
       - name: Upload Base Image
         uses: actions/upload-artifact@v4
         with:
@@ -120,51 +109,42 @@ jobs:
           - update-assets-tables
           - glicko-mmr
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: '0'
-
+      - uses: actions/checkout@v4
       - name: Filter changed paths
         id: changes
         uses: dorny/paths-filter@v3
         with:
           filters: |
             change: [ '${{ matrix.component }}/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
-
       - name: Check if component should build
-        id: should_build
+        id: should_deploy
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs['change'] }}" == "true" ]]; then
-            echo "build=true" >> $GITHUB_OUTPUT
+            echo "deploy=true" >> $GITHUB_OUTPUT
           else
-            echo "build=false" >> $GITHUB_OUTPUT
+            echo "deploy=false" >> $GITHUB_OUTPUT
           fi
-
       - name: Set up Docker
+        if: steps.should_deploy.outputs.deploy == 'true'
         uses: docker/setup-docker-action@v4
-
       - name: Login to GitHub Container Registry
-        if: steps.should_build.outputs.build == 'true'
+        if: steps.should_deploy.outputs.deploy == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Download Base Image
-        if: steps.should_build.outputs.build == 'true'
+        if: steps.should_deploy.outputs.deploy == 'true'
         uses: actions/download-artifact@v4
         with:
           name: rust-base-image
           path: /tmp
-
       - name: Load Base Image
-        if: steps.should_build.outputs.build == 'true'
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: |
           docker load --input /tmp/rust-base.tar
           docker tag ghcr.io/${{ github.repository }}/rust-base:latest ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
-
       - name: Build and Push Component
-        if: steps.should_build.outputs.build == 'true'
+        if: steps.should_deploy.outputs.deploy == 'true'
         run: docker push ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
