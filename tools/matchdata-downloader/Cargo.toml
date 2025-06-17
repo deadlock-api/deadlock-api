@@ -11,7 +11,7 @@ reqwest = { version = "0.12.20", features = ["stream"] }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = { version = "0.7.15", features = ["io"] }
-metrics = "0.24"
+metrics = "0.24.2"
 tracing = "0.1.41"
 anyhow = "1.0.98"
 itertools = "0.14.0"

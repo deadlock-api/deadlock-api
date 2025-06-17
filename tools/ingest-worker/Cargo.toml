@@ -13,8 +13,8 @@ object_store = { version = "0.12.2", features = ["aws"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_repr = "0.1.20"
 tokio = { version = "1.45.1", features = ["rt-multi-thread", "macros"] }
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "6d93306ab4f4f4f85cd5eb56df0625a373c4e4c4", features = ["gc-client"] }
-metrics = "0.24"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "6f71a2563d6f63655bc08d1c7e001c39ed53a2fb", features = ["gc-client"] }
+metrics = "0.24.2"
 tracing = "0.1.41"
 tryhard = "0.5.1"
 common = { version = "0.1.0", path = "../common" }
