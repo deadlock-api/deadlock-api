@@ -1,10 +1,4 @@
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = [
-    "-Clink-arg=-fuse-ld=/usr/bin/mold",
-]
-
-[target.aarch64-unknown-linux-gnu]
+[target.'cfg(target_os = "linux")']
 linker = "clang"
 rustflags = [
     "-Clink-arg=-fuse-ld=/usr/bin/mold",
