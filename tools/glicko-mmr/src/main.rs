@@ -9,7 +9,6 @@ const UPDATE_INTERVAL: u64 = 30 * 60; // 30 minutes
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    dotenv::dotenv().ok();
     common::init_tracing();
     common::init_metrics()?;
 
