@@ -53,7 +53,7 @@ jobs:
       - name: Install Protocol Buffers compiler
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: protobuf-compiler libprotobuf-dev clang
+          packages: protobuf-compiler libprotobuf-dev clang mold
           version: 1.0
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
