@@ -260,7 +260,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
         .or(default_min_matches())
         .unwrap_or_default();
 
-    let buy_time_expr = if query.bucket == BucketQuery::GameTimeMin {
+    let buy_time_expr = if query.bucket == BucketQuery::GameTimeMin
+        || query.bucket == BucketQuery::GameTimeNormalizedPercentage
+    {
         ",it.game_time_s AS buy_time"
     } else {
         ""
