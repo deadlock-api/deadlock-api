@@ -121,7 +121,7 @@ export default function Index() {
           <Card>
             <CardHeader>
               <CardTitle>Best Heroes</CardTitle>
-              <CardDescription>(Last 7 days)</CardDescription>
+              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
             </CardHeader>
             <CardContent>
               <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
@@ -136,7 +136,7 @@ export default function Index() {
           <Card>
             <CardHeader>
               <CardTitle>Popular Heroes</CardTitle>
-              <CardDescription>(Last 7 days)</CardDescription>
+              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
             </CardHeader>
             <CardContent>
               <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
@@ -151,7 +151,7 @@ export default function Index() {
           <Card>
             <CardHeader>
               <CardTitle>Best Items</CardTitle>
-              <CardDescription>(Last 7 days)</CardDescription>
+              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
             </CardHeader>
             <CardContent>
               <ItemStatsTable
@@ -173,7 +173,7 @@ export default function Index() {
           <Card>
             <CardHeader>
               <CardTitle>Popular Items</CardTitle>
-              <CardDescription>(Last 7 days)</CardDescription>
+              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
             </CardHeader>
             <CardContent>
               <ItemStatsTable
