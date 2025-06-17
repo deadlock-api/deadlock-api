@@ -42,8 +42,8 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             )
             .layer(
                 CacheControlMiddleware::new(Duration::from_secs(60 * 60))
-                    .with_stale_while_revalidate(Duration::from_secs(60 * 60))
-                    .with_stale_if_error(Duration::from_secs(60 * 60)),
+                    .with_stale_while_revalidate(Duration::from_secs(4 * 60 * 60))
+                    .with_stale_if_error(Duration::from_secs(4 * 60 * 60)),
             ),
     )
 }
