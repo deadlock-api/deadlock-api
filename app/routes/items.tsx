@@ -18,7 +18,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Items({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useQSNumber("min_rank", 0);
+  const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [hero, setHero] = useQSNumber("hero");
   const [minMatches, setMinMatches] = useQSNumber("min_matches", 20);
