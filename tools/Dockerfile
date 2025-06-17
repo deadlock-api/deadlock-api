@@ -1,7 +1,7 @@
 FROM rust:1.87.0-slim-bookworm AS chef
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential curl git mold \
+    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install --locked cargo-chef
