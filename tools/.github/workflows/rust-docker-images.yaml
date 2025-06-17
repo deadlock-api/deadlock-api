@@ -31,6 +31,42 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update Rust toolchain
+        run: |
+          rustup override set stable
+          rustup update stable
+          rustup component add rustfmt
+      - name: Cargo Fmt
+        run: cargo fmt -- --check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Protocol Buffers compiler
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: protobuf-compiler libprotobuf-dev clang
+          version: 1.0
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
+      - name: Update Rust toolchain
+        run: |
+          rustup override set stable
+          rustup update stable
+          rustup component add clippy
+      - name: Cargo Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
   build-base:
     runs-on: ubuntu-24.04-arm
     outputs:
