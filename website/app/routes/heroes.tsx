@@ -26,7 +26,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useQSNumber("min_rank", 0);
+  const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
   const [startDate, setStartDate] = useQSDayjs("start_date", PATCHES[0].startDate);
