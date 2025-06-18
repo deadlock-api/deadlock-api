@@ -131,9 +131,9 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "autocfg"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
+checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "axum"
@@ -615,7 +615,7 @@ dependencies = [
  "itertools",
  "metrics",
  "object_store",
- "prost",
+ "prost 0.14.1",
  "rand 0.9.1",
  "redis",
  "reqwest",
@@ -1070,7 +1070,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=20e01315c5f052e1265f0bac25efae4cafd82afa#20e01315c5f052e1265f0bac25efae4cafd82afa"
+source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1079,14 +1079,14 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=20e01315c5f052e1265f0bac25efae4cafd82afa#20e01315c5f052e1265f0bac25efae4cafd82afa"
+source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
 dependencies = [
  "anyhow",
  "bytes",
  "haste_core",
  "http",
  "log",
- "prost",
+ "prost 0.14.1",
  "reqwest",
  "serde",
  "serde_json",
@@ -1098,7 +1098,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=20e01315c5f052e1265f0bac25efae4cafd82afa#20e01315c5f052e1265f0bac25efae4cafd82afa"
+source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
 dependencies = [
  "anyhow",
  "dungers",
@@ -1107,7 +1107,7 @@ dependencies = [
  "haste_vartype",
  "lazy_static",
  "nohash",
- "prost",
+ "prost 0.14.1",
  "snap",
  "thiserror 2.0.12",
  "valveprotos",
@@ -1116,7 +1116,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=20e01315c5f052e1265f0bac25efae4cafd82afa#20e01315c5f052e1265f0bac25efae4cafd82afa"
+source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
 dependencies = [
  "dungers",
  "thiserror 2.0.12",
@@ -2049,7 +2049,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.13.5",
+]
+
+[[package]]
+name = "prost"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7231bd9b3d3d33c86b58adbac74b5ec0ad9f496b19d22801d773636feaa95f3d"
+dependencies = [
+ "bytes",
+ "prost-derive 0.14.1",
 ]
 
 [[package]]
@@ -2065,8 +2075,28 @@ dependencies = [
  "once_cell",
  "petgraph",
  "prettyplease",
- "prost",
- "prost-types",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
+ "regex",
+ "syn",
+ "tempfile",
+]
+
+[[package]]
+name = "prost-build"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac6c3320f9abac597dcbc668774ef006702672474aad53c6d596b62e487b40b1"
+dependencies = [
+ "heck",
+ "itertools",
+ "log",
+ "multimap",
+ "once_cell",
+ "petgraph",
+ "prettyplease",
+ "prost 0.14.1",
+ "prost-types 0.14.1",
  "regex",
  "syn",
  "tempfile",
@@ -2086,12 +2116,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-derive"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52c2c1bf36ddb1a1c396b3601a3cec27c2462e45f07c386894ec3ccf5332bd16"
 dependencies = [
- "prost",
+ "prost 0.13.5",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9b4db3d6da204ed77bb26ba83b6122a73aeb2e87e25fbf7ad2e84c4ccbf8f72"
+dependencies = [
+ "prost 0.14.1",
 ]
 
 [[package]]
@@ -2102,7 +2154,7 @@ checksum = "497e1e938f0c09ef9cabe1d49437b4016e03e8f82fbbe5d1c62a9b61b9decae1"
 dependencies = [
  "chrono",
  "inventory",
- "prost",
+ "prost 0.13.5",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2116,9 +2168,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07b8bf115b70a7aa5af1fd5d6e9418492e9ccb6e4785e858c938e28d132a884b"
 dependencies = [
  "heck",
- "prost",
- "prost-build",
- "prost-types",
+ "prost 0.13.5",
+ "prost-build 0.13.5",
+ "prost-types 0.13.5",
  "quote",
 ]
 
@@ -2129,9 +2181,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8cdde6df0a98311c839392ca2f2f0bcecd545f86a62b4e3c6a49c336e970fe5"
 dependencies = [
  "chrono",
- "prost",
- "prost-build",
- "prost-types",
+ "prost 0.13.5",
+ "prost-build 0.13.5",
+ "prost-types 0.13.5",
  "prost-wkt",
  "prost-wkt-build",
  "regex",
@@ -2314,9 +2366,9 @@ dependencies = [
 
 [[package]]
 name = "redis"
-version = "0.32.0"
+version = "0.32.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd673deb3d184140109c1e27b043c2354cb79399c3ef304c365fc628092ed773"
+checksum = "c65f367b70919b9600eb6a77436dacd7131fc185cc3bda949a97ab27bfd6213e"
 dependencies = [
  "bytes",
  "cfg-if",
@@ -3627,12 +3679,12 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=6d93306ab4f4f4f85cd5eb56df0625a373c4e4c4#6d93306ab4f4f4f85cd5eb56df0625a373c4e4c4"
+source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=dd0a663eae1c53db66265443a5d818bb1db4f79c#dd0a663eae1c53db66265443a5d818bb1db4f79c"
 dependencies = [
  "heck",
- "prost",
- "prost-build",
- "prost-types",
+ "prost 0.14.1",
+ "prost-build 0.14.1",
+ "prost-types 0.14.1",
  "prost-wkt",
  "prost-wkt-build",
  "prost-wkt-types",
@@ -4091,18 +4143,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.25"
+version = "0.8.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1702d9583232ddb9174e01bb7c15a2ab8fb1bc6f227aa1233858c351a3ba0cb"
+checksum = "1039dd0d3c310cf05de012d8a39ff557cb0d23087fd44cad61df08fc31907a2f"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.25"
+version = "0.8.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28a6e20d751156648aa063f3800b706ee209a32c0b4d9f24be3d980b01be55ef"
+checksum = "9ecf5b4cc5364572d7f4c329661bcc82724222973f2cab6f050a4e5c22f75181"
 dependencies = [
  "proc-macro2",
  "quote",
