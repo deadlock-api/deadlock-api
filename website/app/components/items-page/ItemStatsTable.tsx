@@ -493,6 +493,7 @@ export default function ItemStatsTable({
   limit,
   hideHeader,
   hideIndex,
+  hideDropdown,
   hideItemTierFilter,
   initialSort,
   minRankId,
@@ -506,6 +507,7 @@ export default function ItemStatsTable({
   limit?: number;
   hideHeader?: boolean;
   hideIndex?: boolean;
+  hideDropdown?: boolean;
   hideItemTierFilter?: boolean;
   initialSort?: SortState;
   minRankId?: number;
@@ -587,9 +589,13 @@ export default function ItemStatsTable({
       maxUsage={maxUsage}
       includedItemIds={[]}
       excludedItemIds={[]}
-      customDropdownContent={({ itemId, rowTotal }) => (
-        <ItemBuyTimingChart itemId={itemId} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
-      )}
+      customDropdownContent={
+        !hideDropdown
+          ? ({ itemId, rowTotal }) => (
+              <ItemBuyTimingChart itemId={itemId} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+            )
+          : undefined
+      }
     />
   );
 }
