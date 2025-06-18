@@ -4,6 +4,7 @@ use utoipa_axum::router::OpenApiRouter;
 pub mod analytics;
 pub mod builds;
 mod commands;
+mod esports;
 pub mod info;
 mod leaderboard;
 mod matches;
@@ -21,5 +22,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())
         .nest("/info", info::router())
+        .nest("/esports", esports::router())
         .nest("/sql", sql::router())
 }

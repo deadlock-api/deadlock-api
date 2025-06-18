@@ -1,0 +1,91 @@
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::esports::types::ESportsMatch;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils;
+use axum::Json;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use serde_json::json;
+use tracing::warn;
+use uuid::Uuid;
+
+#[utoipa::path(
+    post,
+    path = "/ingest/match",
+    request_body = ESportsMatch,
+    responses(
+        (status = OK),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = INTERNAL_SERVER_ERROR, description = "Ingest failed")
+    ),
+    tags = ["E-Sports"],
+    summary = "Esports Match Ingest",
+    description = r#"
+To use this Endpoint you need to have special permissions.
+    "#
+)]
+pub(super) async fn ingest_match(
+    rate_limit_key: RateLimitKey,
+    State(state): State<AppState>,
+    Json(match_data): Json<ESportsMatch>,
+) -> APIResult<impl IntoResponse> {
+    match utils::checks::check_api_key_is_esports_ingest_key(&state.pg_client, rate_limit_key).await
+    {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "Your API-Key has not the necessary permissions to perform this action!",
+        )),
+        Err(e) => {
+            warn!("Failed to validate API-Key: {e}");
+            Err(APIError::internal("Failed to validate API-Key!"))
+        }
+    }?;
+
+    sqlx::query!(
+        r#"
+    INSERT INTO esports_matches (
+        update_id,
+        provider,
+        match_id,
+        team0_name,
+        team1_name,
+        team0_player_ids,
+        team1_player_ids,
+        tournament_name,
+        tournament_stage,
+        scheduled_date,
+        status
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (update_id) DO UPDATE SET
+        match_id = EXCLUDED.match_id,
+        team0_name = EXCLUDED.team0_name,
+        team1_name = EXCLUDED.team1_name,
+        team0_player_ids = EXCLUDED.team0_player_ids,
+        team1_player_ids = EXCLUDED.team1_player_ids,
+        tournament_name = EXCLUDED.tournament_name,
+        tournament_stage = EXCLUDED.tournament_stage,
+        scheduled_date = EXCLUDED.scheduled_date,
+        status = EXCLUDED.status
+            "#,
+        match_data.update_id.unwrap_or(Uuid::new_v4()),
+        match_data.provider,
+        match_data.match_id,
+        match_data.team0_name,
+        match_data.team1_name,
+        &match_data.team0_player_ids.unwrap_or_default(),
+        &match_data.team1_player_ids.unwrap_or_default(),
+        match_data.tournament_name,
+        match_data.tournament_stage,
+        match_data.scheduled_date,
+        match_data.status as _,
+    )
+    .execute(&state.pg_client)
+    .await?;
+
+    Ok(Json(json! ({
+        "status": 200,
+        "message": "Match successfully ingested"
+    })))
+}
