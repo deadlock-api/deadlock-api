@@ -156,6 +156,7 @@ export default function Index() {
             <CardContent>
               <ItemStatsTable
                 hideIndex={true}
+                hideDropdown={true}
                 hideHeader={true}
                 hideItemTierFilter={true}
                 limit={5}
@@ -178,6 +179,7 @@ export default function Index() {
             <CardContent>
               <ItemStatsTable
                 hideIndex={true}
+                hideDropdown={true}
                 hideHeader={true}
                 hideItemTierFilter={true}
                 limit={5}
