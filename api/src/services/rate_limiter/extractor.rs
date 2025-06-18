@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub(crate) struct RateLimitKey {
-    pub(super) api_key: Option<Uuid>,
-    pub(super) ip: Ipv4Addr,
+    pub(crate) api_key: Option<Uuid>,
+    pub(crate) ip: Ipv4Addr,
 }
 
 impl RateLimitKey {

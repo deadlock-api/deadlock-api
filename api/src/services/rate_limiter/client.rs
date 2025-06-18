@@ -172,12 +172,12 @@ impl RateLimitClient {
     sync_writes = "by_key",
     key = "Uuid"
 )]
-async fn is_api_key_valid(state: &Pool<Postgres>, api_key: Uuid) -> bool {
+async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> bool {
     sqlx::query!(
         "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
         api_key
     )
-    .fetch_one(state)
+    .fetch_one(pg_client)
     .await
     .ok()
     .and_then(|row| row.count.map(|c| c > 0))
