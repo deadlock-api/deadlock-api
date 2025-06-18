@@ -4,7 +4,7 @@ use axum::http::request::Parts;
 use std::net::Ipv4Addr;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct RateLimitKey {
     pub(crate) api_key: Option<Uuid>,
     pub(crate) ip: Ipv4Addr,

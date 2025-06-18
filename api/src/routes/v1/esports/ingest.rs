@@ -1,6 +1,7 @@
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::esports::types::ESportsMatch;
+use crate::services::rate_limiter::RateLimitQuota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils;
 use axum::Json;
@@ -8,6 +9,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde_json::json;
+use std::time::Duration;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -43,6 +45,18 @@ pub(super) async fn ingest_match(
             Err(APIError::internal("Failed to validate API-Key!"))
         }
     }?;
+
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "esports_match_ingest",
+            &[
+                RateLimitQuota::key_limit(100, Duration::from_secs(60 * 60)),
+                RateLimitQuota::global_limit(1000, Duration::from_secs(60 * 60)),
+            ],
+        )
+        .await?;
 
     sqlx::query!(
         r#"
