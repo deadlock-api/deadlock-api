@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.6",
-    "@iconify-json/material-symbols": "^1.2.26",
+    "@iconify-json/material-symbols": "^1.2.27",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify/tailwind4": "^1.0.6",
     "@radix-ui/react-avatar": "^1.1.10",
