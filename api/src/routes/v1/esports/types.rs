@@ -21,8 +21,6 @@ pub(super) struct ESportsMatch {
     pub(super) match_id: Option<i64>,
     pub(super) team0_name: Option<String>,
     pub(super) team1_name: Option<String>,
-    pub(super) team0_player_ids: Option<Vec<i32>>,
-    pub(super) team1_player_ids: Option<Vec<i32>>,
     pub(super) tournament_name: Option<String>,
     pub(super) tournament_stage: Option<String>,
     pub(super) scheduled_date: Option<DateTime<Utc>>,
