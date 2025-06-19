@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
@@ -54,7 +56,6 @@ async fn test_build_item_stats(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 #[rstest]
 #[case(
     Some(1),
