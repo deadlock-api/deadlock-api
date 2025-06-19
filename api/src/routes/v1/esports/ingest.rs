@@ -78,7 +78,8 @@ pub(super) async fn ingest_match(
         tournament_name = EXCLUDED.tournament_name,
         tournament_stage = EXCLUDED.tournament_stage,
         scheduled_date = EXCLUDED.scheduled_date,
-        status = EXCLUDED.status
+        status = EXCLUDED.status,
+        updated_at = now()
             "#,
         match_data.update_id.unwrap_or(Uuid::new_v4()),
         match_data.provider,
