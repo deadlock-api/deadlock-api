@@ -13,11 +13,18 @@ use axum::response::IntoResponse;
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing the RSS-Feed failed")
     ),
     tags = ["Patches"],
-    summary = "Patch Notes",
+    summary = "Notes",
     description = r#"
 Returns the parsed result of the RSS Feed from the official Forum.
 
 RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn feed(State(state): State<AppState>) -> APIResult<impl IntoResponse> {

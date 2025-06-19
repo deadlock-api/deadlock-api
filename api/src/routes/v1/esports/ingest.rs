@@ -23,10 +23,17 @@ use uuid::Uuid;
         (status = INTERNAL_SERVER_ERROR, description = "Ingest failed")
     ),
     tags = ["E-Sports"],
-    summary = "Esports Match Ingest",
+    summary = "Ingest",
     description = r#"
 To use this Endpoint you need to have special permissions.
 Please contact us if you organize E-Sports Matches and want to ingest them to us.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/h |
+| Key | - |
+| Global | 1000req/h |
     "#
 )]
 pub(super) async fn ingest_match(

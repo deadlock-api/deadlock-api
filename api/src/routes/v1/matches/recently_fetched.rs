@@ -55,8 +55,17 @@ async fn get_recently_fetched_match_ids(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch recently fetched matches")
     ),
     tags = ["Matches"],
-    summary = "Recently Fetched Matches",
-    description = "This endpoint returns a list of match ids that have been fetched within the last 10 minutes."
+    summary = "Recently Fetched",
+    description = r#"
+This endpoint returns a list of match ids that have been fetched within the last 10 minutes.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn recently_fetched(
     State(state): State<AppState>,

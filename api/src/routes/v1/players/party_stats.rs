@@ -124,7 +124,16 @@ async fn get_party_stats(
     ),
     tags = ["Players"],
     summary = "Party Stats",
-    description = "This endpoint returns the party stats."
+    description = r#"
+This endpoint returns the party stats.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn party_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

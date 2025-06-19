@@ -113,7 +113,16 @@ impl Signature {
     ),
     tags = ["Internal"],
     summary = "Match Ingest Event",
-    description = "This endpoint is used internally to send a match ingest event to webhook subcribers."
+    description = r#"
+This endpoint is used internally to send a match ingest event to webhook subcribers.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn ingest_event(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,

@@ -173,7 +173,16 @@ async fn get_hero_scoreboard(
     ),
     tags = ["Analytics"],
     summary = "Hero Scoreboard",
-    description = "This endpoint returns the hero scoreboard."
+    description = r#"
+This endpoint returns the hero scoreboard.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn hero_scoreboard(
     Query(query): Query<HeroScoreboardQuery>,

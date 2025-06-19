@@ -127,7 +127,14 @@ So to get the rank we get the closest index from the player score.
 **Example:**
 - Player Score: 7.8 -> Index 8 -> Rank 22
 - Player Score: 7.2 -> Index 7 -> Rank 21
-"#,
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#,
 )]
 pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -174,7 +181,14 @@ So to get the rank we get the closest index from the player score.
 **Example:**
 - Player Score: 7.8 -> Index 8 -> Rank 22
 - Player Score: 7.2 -> Index 7 -> Rank 21
-"#,
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#,
 )]
 pub(super) async fn hero_mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

@@ -2,6 +2,8 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::live_url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use async_stream::try_stream;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -45,16 +47,39 @@ async fn demo_stream(
     ),
     tags = ["Matches"],
     summary = "Live Demo",
-    description = "Streams the live demo of a match."
+    description = r#"
+Streams the live demo of a match.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 10req/30mins |
+| Key | 60req/min |
+| Global | 100req/10s |
+    "#
 )]
 pub(super) async fn live_demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    State(AppState { steam_client, .. }): State<AppState>,
+    rate_limit_key: RateLimitKey,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    spectate_match(&steam_client, match_id).await?;
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "spectate",
+            &[
+                RateLimitQuota::ip_limit(10, Duration::from_secs(30 * 60)),
+                RateLimitQuota::key_limit(60, Duration::from_secs(60)),
+                RateLimitQuota::global_limit(100, Duration::from_secs(10)),
+            ],
+        )
+        .await?;
+
+    spectate_match(&state.steam_client, match_id).await?;
 
     // Wait for the demo to be available
-    tryhard::retry_fn(|| steam_client.live_demo_exists(match_id))
+    tryhard::retry_fn(|| state.steam_client.live_demo_exists(match_id))
         .retries(20)
         .fixed_backoff(Duration::from_millis(200))
         .await?;

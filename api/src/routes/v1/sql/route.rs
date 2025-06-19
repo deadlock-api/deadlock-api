@@ -50,8 +50,17 @@ enum SQLQueryError {
         (status = INTERNAL_SERVER_ERROR, body = String)
     ),
     tags = ["SQL"],
-    summary = "SQL Query",
-    description = "Executes a SQL query on the database."
+    summary = "Query",
+    description = r#"
+Executes a SQL query on the database.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 10req/10s |
+| Key | 10req/10s |
+| Global | 100req/10s |
+    "#
 )]
 pub(super) async fn sql(
     rate_limit_key: RateLimitKey,
@@ -72,6 +81,7 @@ pub(super) async fn sql(
             "sql",
             &[
                 RateLimitQuota::ip_limit(10, Duration::from_secs(10)),
+                RateLimitQuota::key_limit(10, Duration::from_secs(10)),
                 RateLimitQuota::global_limit(100, Duration::from_secs(10)),
             ],
         )
@@ -123,7 +133,16 @@ async fn run_sql(
     ),
     tags = ["SQL"],
     summary = "List Tables",
-    description = "Lists all tables in the database."
+    description = r#"
+Lists all tables in the database.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     if !state.config.allow_custom_queries {
@@ -176,7 +195,16 @@ async fn fetch_list_tables(
     ),
     tags = ["SQL"],
     summary = "Table Schema",
-    description = "Returns the schema of a table."
+    description = r#"
+Returns the schema of a table.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,

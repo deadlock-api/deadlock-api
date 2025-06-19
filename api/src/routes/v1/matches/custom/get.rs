@@ -47,8 +47,17 @@ async fn get_party_match_id(
         (status = INTERNAL_SERVER_ERROR, description = "Fetch Custom Match ID failed")
     ),
     tags = ["Custom Matches"],
-    summary = "Get Custom Match ID",
-    description = "This endpoint allows you to get the match id of a custom match."
+    summary = "Get Match ID",
+    description = r#"
+This endpoint allows you to get the match id of a custom match.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+"#
 )]
 pub(super) async fn get_custom(
     Path(PartyIdQuery { party_id }): Path<PartyIdQuery>,

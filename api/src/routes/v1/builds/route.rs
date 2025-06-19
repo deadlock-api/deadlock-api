@@ -44,8 +44,17 @@ async fn fetch_builds(
         (status = INTERNAL_SERVER_ERROR, description = "Internal server error")
     ),
     tags = ["Builds"],
-    summary = "Search for builds",
-    description = "Search for builds based on various criteria."
+    summary = "Search",
+    description = r#"
+Search for builds based on various criteria.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,

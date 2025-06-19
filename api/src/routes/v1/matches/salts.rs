@@ -180,11 +180,18 @@ pub(super) async fn fetch_match_salts(
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match salts failed")
     ),
     tags = ["Matches"],
-    summary = "Match Salts",
+    summary = "Salts",
     description = r#"
 This endpoints returns salts that can be used to fetch metadata and demofile for a match.
 
 **Note:** We currently fetch many matches without salts, so for these matches we do not have salts stored.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | From DB: 100req/s<br>From Steam: 10req/30mins |
+| Key | From DB: -<br>From Steam: 10req/min |
+| Global | From DB: -<br>From Steam: 10req/10s |
     "#
 )]
 pub(super) async fn salts(

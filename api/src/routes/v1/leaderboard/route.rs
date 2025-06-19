@@ -81,6 +81,13 @@ pub(crate) async fn fetch_leaderboard_raw(
     summary = "Leaderboard as Protobuf",
     description = r#"
 Returns the leaderboard, serialized as protobuf message.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn leaderboard_raw(
@@ -108,6 +115,13 @@ pub(super) async fn leaderboard_raw(
     summary = "Hero Leaderboard as Protobuf",
     description = r#"
 Returns the leaderboard for a specific hero, serialized as protobuf message.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn leaderboard_hero_raw(
@@ -141,6 +155,13 @@ pub(super) async fn leaderboard_hero_raw(
     summary = "Leaderboard",
     description = r#"
 Returns the leaderboard.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn leaderboard(
@@ -167,6 +188,13 @@ pub(super) async fn leaderboard(
     summary = "Hero Leaderboard",
     description = r#"
 Returns the leaderboard for a specific hero.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn leaderboard_hero(

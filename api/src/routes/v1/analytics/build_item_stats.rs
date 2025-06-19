@@ -95,6 +95,13 @@ async fn get_build_item_stats(
 Retrieves item statistics from hero builds.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn build_item_stats(

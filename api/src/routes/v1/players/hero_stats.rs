@@ -170,7 +170,16 @@ async fn get_hero_stats(
     ),
     tags = ["Players"],
     summary = "Hero Stats",
-    description = "This endpoint returns statistics for each hero played by a given player account."
+    description = r#"
+This endpoint returns statistics for each hero played by a given player account.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn hero_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

@@ -75,13 +75,20 @@ pub(super) async fn spectate_match(
         (status = INTERNAL_SERVER_ERROR, description = "Spectating match failed")
     ),
     tags = ["Matches"],
-    summary = "Match Live Broadcast URL",
+    summary = "Live Broadcast URL",
     description = r#"
 This endpoints specates a match and returns the live URL to be used in any demofile broadcast parser.
 
 Example Parsers:
 - [Demofile-Net](https://github.com/saul/demofile-net)
 - [Haste](https://github.com/blukai/haste/)
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 10req/30mins |
+| Key | 60req/min |
+| Global | 100req/10s |
     "#
 )]
 pub(super) async fn live_url(

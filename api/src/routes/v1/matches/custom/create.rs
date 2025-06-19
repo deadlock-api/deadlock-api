@@ -251,8 +251,17 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
         (status = INTERNAL_SERVER_ERROR, description = "Creating custom match failed")
     ),
     tags = ["Custom Matches"],
-    summary = "Create Custom Match",
-    description = "This endpoint allows you to create a custom match."
+    summary = "Create Match",
+    description = r#"
+This endpoint allows you to create a custom match.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | API-Key ONLY |
+| Key | 100req/h |
+| Global | 1000req/h |
+"#
 )]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
@@ -265,8 +274,8 @@ pub(super) async fn create_custom(
             &rate_limit_key,
             "create_custom",
             &[
-                RateLimitQuota::key_limit(100, Duration::from_secs(3600)),
-                RateLimitQuota::global_limit(1000, Duration::from_secs(3600)),
+                RateLimitQuota::key_limit(100, Duration::from_secs(60 * 60)),
+                RateLimitQuota::global_limit(1000, Duration::from_secs(60 * 60)),
             ],
         )
         .await?;

@@ -128,7 +128,16 @@ async fn get_enemy_stats(
     ),
     tags = ["Players"],
     summary = "Enemy Stats",
-    description = "This endpoint returns the enemy stats."
+    description = r#"
+This endpoint returns the enemy stats.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn enemy_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

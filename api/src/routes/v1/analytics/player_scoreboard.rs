@@ -199,7 +199,16 @@ async fn get_player_scoreboard(
     ),
     tags = ["Analytics"],
     summary = "Player Scoreboard",
-    description = "This endpoint returns the player scoreboard."
+    description = r#"
+This endpoint returns the player scoreboard.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(crate) async fn player_scoreboard(
     Query(query): Query<PlayerScoreboardQuery>,

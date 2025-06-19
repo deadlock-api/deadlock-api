@@ -134,7 +134,7 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
         (status = INTERNAL_SERVER_ERROR, description = "Fetching match metadata failed")
     ),
     tags = ["Matches"],
-    summary = "Match Metadata as Protobuf",
+    summary = "Metadata as Protobuf",
     description = r#"
 This endpoints returns the raw .meta.bz2 file for the given `match_id`.
 
@@ -145,6 +145,13 @@ Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protob
 Relevant Protobuf Messages:
 - CMsgMatchMetaData
 - CMsgMatchMetaDataContents
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | From Cache: 500req/10s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
+| Key | From Cache: 500req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
+| Global | From Cache: 1000req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
     "#
 )]
 pub(super) async fn metadata_raw(
@@ -176,7 +183,7 @@ pub(super) async fn metadata_raw(
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing match metadata failed")
     ),
     tags = ["Matches"],
-    summary = "Matches Metadata",
+    summary = "Metadata",
     description = r#"
 This endpoint returns the match metadata for the given `match_id` parsed into JSON.
 
@@ -185,6 +192,13 @@ Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protob
 Relevant Protobuf Messages:
 - CMsgMatchMetaData
 - CMsgMatchMetaDataContents
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | From Cache: 500req/10s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
+| Key | From Cache: 500req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
+| Global | From Cache: 1000req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
     "#
 )]
 pub(super) async fn metadata(

@@ -77,7 +77,16 @@ async fn check_health(
     ),
     tags = ["Info"],
     summary = "Health Check",
-    description = "Checks the health of the services."
+    description = r#"
+Checks the health of the services.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn health_check(State(mut state): State<AppState>) -> APIResult<Json<Status>> {
     check_health(state.ch_client_ro, state.pg_client, &mut state.redis_client)

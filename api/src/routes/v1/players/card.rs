@@ -148,6 +148,13 @@ Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protob
 Relevant Protobuf Messages:
 - CMsgClientToGcGetProfileCard
 - CMsgCitadelProfileCard
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 5req/min |
+| Key | 20req/min & 800req/h |
+| Global | 200req/min |
     "#
 )]
 pub(super) async fn card_raw(
@@ -161,8 +168,10 @@ pub(super) async fn card_raw(
             &rate_limit_key,
             "card",
             &[
-                RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
-                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+                RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
+                RateLimitQuota::key_limit(20, Duration::from_secs(60)),
+                RateLimitQuota::key_limit(800, Duration::from_secs(60 * 60)),
+                RateLimitQuota::global_limit(200, Duration::from_secs(60)),
             ],
         )
         .await?;
@@ -194,6 +203,13 @@ Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protob
 Relevant Protobuf Messages:
 - CMsgClientToGcGetProfileCard
 - CMsgCitadelProfileCard
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 5req/min |
+| Key | 20req/min & 800req/h |
+| Global | 200req/min |
     "#
 )]
 pub(super) async fn card(
@@ -207,8 +223,10 @@ pub(super) async fn card(
             &rate_limit_key,
             "card",
             &[
-                RateLimitQuota::ip_limit(50, Duration::from_secs(1)),
-                RateLimitQuota::global_limit(100, Duration::from_secs(1)),
+                RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
+                RateLimitQuota::key_limit(20, Duration::from_secs(60)),
+                RateLimitQuota::key_limit(800, Duration::from_secs(60 * 60)),
+                RateLimitQuota::global_limit(200, Duration::from_secs(60)),
             ],
         )
         .await?;

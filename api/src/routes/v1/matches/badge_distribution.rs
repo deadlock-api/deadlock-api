@@ -91,7 +91,16 @@ async fn get_badge_distribution(
     ),
     tags = ["Matches"],
     summary = "Badge Distribution",
-    description = "This endpoint returns the player badge distribution."
+    description = r#"
+This endpoint returns the player badge distribution.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,

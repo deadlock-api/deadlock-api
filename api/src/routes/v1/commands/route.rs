@@ -51,7 +51,16 @@ impl From<Variable> for VariableDescription {
     ),
     tags = ["Commands"],
     summary = "Available Variables",
-    description = "Returns a list of available variables that can be used in the command endpoint."
+    description = r#"
+Returns a list of available variables that can be used in the command endpoint.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     let variable_descriptions = Variable::VARIANTS
@@ -71,7 +80,16 @@ pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     ),
     tags = ["Commands"],
     summary = "Widget Versions",
-    description = "Returns a map of str->int of widget versions."
+    description = r#"
+Returns a map of str->int of widget versions.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+"#
 )]
 pub(super) async fn widget_versions() -> APIResult<impl IntoResponse> {
     let widget_versions_file = std::fs::File::open("widget_versions.json").map_err(|e| {
@@ -113,7 +131,16 @@ pub(super) struct CommandResolveQuery {
     ),
     tags = ["Commands"],
     summary = "Resolve Command",
-    description = "Resolves a command and returns the resolved command."
+    description = r#"
+    Resolves a command and returns the resolved command.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 60req/60s |
+| Key | - |
+| Global | 300req/60s |
+    "#
 )]
 pub(super) async fn command_resolve(
     rate_limit_key: RateLimitKey,
@@ -203,7 +230,16 @@ pub(super) struct VariablesResolveQuery {
     ),
     tags = ["Commands"],
     summary = "Resolve Variables",
-    description = "Resolves variables and returns a map of variable name to resolved value."
+    description = r#"
+Resolves variables and returns a map of variable name to resolved value.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 60req/min |
+| Key | - |
+| Global | 300req/min |
+    "#
 )]
 pub(super) async fn variables_resolve(
     rate_limit_key: RateLimitKey,

@@ -301,7 +301,16 @@ async fn get_hero_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Stats",
-    description = "Retrieves performance statistics for each hero based on historical match data."
+    description = r#"
+Retrieves performance statistics for each hero based on historical match data.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "#
 )]
 pub(crate) async fn hero_stats(
     Query(query): Query<HeroStatsQuery>,

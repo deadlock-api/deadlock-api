@@ -41,6 +41,13 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 - `metadata_salt`: The metadata salt
 - `replay_salt`: The replay salt
 - `username`: The username of the person who submitted the match
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "#
 )]
 pub(super) async fn ingest_salts(

@@ -279,6 +279,13 @@ Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protob
 Relevant Protobuf Messages:
 - CMsgClientToGcGetMatchHistory
 - CMsgClientToGcGetMatchHistoryResponse
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 5req/min<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 5req/h |
+| Key | 20req/min & 800req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
+| Global | 200req/min<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
     "#
 )]
 pub(super) async fn match_history(
@@ -328,8 +335,9 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history_refetch",
                 &[
-                    RateLimitQuota::ip_limit(5, Duration::from_secs(3600)),
-                    RateLimitQuota::global_limit(10, Duration::from_secs(3600)),
+                    RateLimitQuota::ip_limit(5, Duration::from_secs(60 * 60)),
+                    RateLimitQuota::key_limit(5, Duration::from_secs(60 * 60)),
+                    RateLimitQuota::global_limit(10, Duration::from_secs(60 * 60)),
                 ],
             )
             .await

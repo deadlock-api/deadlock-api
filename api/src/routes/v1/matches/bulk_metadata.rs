@@ -107,60 +107,6 @@ pub(super) struct BulkMatchMetadataQuery {
     limit: u32,
 }
 
-#[utoipa::path(
-    get,
-    path = "/metadata",
-    params(BulkMatchMetadataQuery),
-    responses(
-        (status = OK, body = [u8]),
-        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
-    ),
-    tags = ["Matches"],
-    summary = "Bulk Match Metadata",
-    description = r#"
-> ⚠ **IN DEVELOPMENT**
-
-This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
-    "#
-)]
-pub(super) async fn bulk_metadata(
-    Query(query): Query<BulkMatchMetadataQuery>,
-    rate_limit_key: RateLimitKey,
-    State(state): State<AppState>,
-) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "match_metadata_bulk",
-            &[
-                RateLimitQuota::ip_limit(1, Duration::from_secs(1)),
-                RateLimitQuota::key_limit(10, Duration::from_secs(1)),
-            ],
-        )
-        .await?;
-    if query.limit > 10000 {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Limit is too high".to_string(),
-        ));
-    }
-    debug!(?query);
-    let query = build_query(query)?;
-    let lines = fetch_lines(&state.ch_client_ro, &query).await?;
-    let parsed_result = parse_lines(lines)
-        .await
-        .map_err(|_| APIError::internal("Failed to parse match metadata".to_string()))?;
-    if parsed_result.is_empty() {
-        return Err(APIError::status_msg(
-            StatusCode::NOT_FOUND,
-            "No matches found".to_string(),
-        ));
-    }
-    Ok(Json(parsed_result))
-}
-
 fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if query.include_info {
@@ -347,6 +293,65 @@ async fn parse_lines(mut lines: Lines<BytesCursor>) -> serde_json::Result<Vec<se
         parsed_result.push(value);
     }
     Ok(parsed_result)
+}
+
+#[utoipa::path(
+    get,
+    path = "/metadata",
+    params(BulkMatchMetadataQuery),
+    responses(
+        (status = OK, body = [u8]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+    ),
+    tags = ["Matches"],
+    summary = "Bulk Metadata",
+    description = r#"
+This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 1req/s |
+| Key | - |
+| Global | 10req/s |
+    "#
+)]
+pub(super) async fn bulk_metadata(
+    Query(query): Query<BulkMatchMetadataQuery>,
+    rate_limit_key: RateLimitKey,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "match_metadata_bulk",
+            &[
+                RateLimitQuota::ip_limit(1, Duration::from_secs(1)),
+                RateLimitQuota::key_limit(10, Duration::from_secs(1)),
+            ],
+        )
+        .await?;
+    if query.limit > 10000 {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "limit must be between 1 and 1000".to_string(),
+        ));
+    }
+    debug!(?query);
+    let query = build_query(query)?;
+    let lines = fetch_lines(&state.ch_client_ro, &query).await?;
+    let parsed_result = parse_lines(lines)
+        .await
+        .map_err(|_| APIError::internal("Failed to parse match metadata".to_string()))?;
+    if parsed_result.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "No matches found".to_string(),
+        ));
+    }
+    Ok(Json(parsed_result))
 }
 
 #[cfg(test)]

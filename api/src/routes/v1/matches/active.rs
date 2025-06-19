@@ -1,6 +1,8 @@
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
+use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::parse::parse_steam_id_option;
 use axum::Json;
@@ -74,16 +76,33 @@ async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>
         (status = INTERNAL_SERVER_ERROR, description = "Fetching active matches failed")
     ),
     tags = ["Matches"],
-    summary = "Active Matches as Protobuf",
+    summary = "Active as Protobuf",
     description = r#"
 Returns active matches that are currently being played, serialized as protobuf message.
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | 10req/s |
     "#
 )]
 pub(super) async fn active_matches_raw(
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "active_matches",
+            &[RateLimitQuota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
+        )
+        .await?;
+
     tryhard::retry_fn(|| fetch_active_matches_raw(&state))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
@@ -100,17 +119,34 @@ pub(super) async fn active_matches_raw(
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing active matches failed")
     ),
     tags = ["Matches"],
-    summary = "Active Matches",
+    summary = "Active",
     description = r#"
 Returns active matches that are currently being played.
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | 10req/s |
     "#
 )]
 pub(super) async fn active_matches(
     Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "active_matches",
+            &[RateLimitQuota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
+        )
+        .await?;
+
     let mut active_matches = tryhard::retry_fn(|| async {
         let raw_data = fetch_active_matches_raw(&state).await?;
         parse_active_matches_raw(&raw_data).await
