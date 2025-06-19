@@ -21,7 +21,7 @@ fn default_min_matches() -> Option<u32> {
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub(super) enum BucketQuery {
+pub enum BucketQuery {
     /// No Bucketing
     #[default]
     NoBucket,
