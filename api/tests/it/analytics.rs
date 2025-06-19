@@ -14,10 +14,26 @@ use rstest::rstest;
 
 #[rstest]
 #[tokio::test]
-async fn test_build_item_stats(#[values(None, Some(1))] hero_id: Option<u32>) {
+async fn test_build_item_stats(
+    #[values(None, Some(1))] hero_id: Option<u32>,
+    #[values(None, Some(1746057600))] min_last_updated_unix_timestamp: Option<u64>,
+    #[values(None, Some(1748736000))] max_last_updated_unix_timestamp: Option<u64>,
+) {
     let mut queries = vec![];
     if let Some(hero_id) = hero_id {
         queries.push(("hero_id", hero_id.to_string()));
+    }
+    if let Some(min_last_updated_unix_timestamp) = min_last_updated_unix_timestamp {
+        queries.push((
+            "min_last_updated_unix_timestamp",
+            min_last_updated_unix_timestamp.to_string(),
+        ));
+    }
+    if let Some(max_last_updated_unix_timestamp) = max_last_updated_unix_timestamp {
+        queries.push((
+            "max_last_updated_unix_timestamp",
+            max_last_updated_unix_timestamp.to_string(),
+        ));
     }
 
     let queries = queries
@@ -37,12 +53,42 @@ async fn test_build_item_stats(#[values(None, Some(1))] hero_id: Option<u32>) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[rstest]
+#[case(
+    Some(1),
+    Some(vec![1, 2, 3]),
+    Some(vec![15, 13]),
+    Some(1747743170),
+    Some(1747763170),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226),
+    Some(375690830),
+    Some(4),
+)]
 #[tokio::test]
 async fn test_hero_comb_stats(
-    #[values(None, Some(1))] min_matches: Option<u64>,
-    #[values(None, Some(vec![1, 15]), Some(vec![10, 11, 12]))] include_hero_ids: Option<Vec<u32>>,
-    #[values(None, Some(vec![2, 52]), Some(vec![16, 25]))] exclude_hero_ids: Option<Vec<u32>>,
+    #[case] min_matches: Option<u64>,
+    #[case] include_hero_ids: Option<Vec<u32>>,
+    #[case] exclude_hero_ids: Option<Vec<u32>>,
+    #[case] min_unix_timestamp: Option<u64>,
+    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_duration_s: Option<u64>,
+    #[case] max_duration_s: Option<u64>,
+    #[case] min_networth: Option<u64>,
+    #[case] max_networth: Option<u64>,
+    #[case] min_average_badge: Option<u8>,
+    #[case] max_average_badge: Option<u8>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
+    #[case] account_id: Option<u32>,
+    #[case] comb_size: Option<u8>,
 ) {
     let mut queries = vec![];
     if let Some(min_matches) = min_matches {
@@ -59,6 +105,42 @@ async fn test_hero_comb_stats(
             "exclude_hero_ids",
             exclude_hero_ids.iter().map(|s| s.to_string()).join(","),
         ));
+    }
+    if let Some(min_unix_timestamp) = min_unix_timestamp {
+        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
+    }
+    if let Some(max_unix_timestamp) = max_unix_timestamp {
+        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
+    }
+    if let Some(min_duration_s) = min_duration_s {
+        queries.push(("min_duration_s", min_duration_s.to_string()));
+    }
+    if let Some(max_duration_s) = max_duration_s {
+        queries.push(("max_duration_s", max_duration_s.to_string()));
+    }
+    if let Some(min_networth) = min_networth {
+        queries.push(("min_networth", min_networth.to_string()));
+    }
+    if let Some(max_networth) = max_networth {
+        queries.push(("max_networth", max_networth.to_string()));
+    }
+    if let Some(min_average_badge) = min_average_badge {
+        queries.push(("min_average_badge", min_average_badge.to_string()));
+    }
+    if let Some(max_average_badge) = max_average_badge {
+        queries.push(("max_average_badge", max_average_badge.to_string()));
+    }
+    if let Some(min_match_id) = min_match_id {
+        queries.push(("min_match_id", min_match_id.to_string()));
+    }
+    if let Some(max_match_id) = max_match_id {
+        queries.push(("max_match_id", max_match_id.to_string()));
+    }
+    if let Some(account_id) = account_id {
+        queries.push(("account_id", account_id.to_string()));
+    }
+    if let Some(comb_size) = comb_size {
+        queries.push(("comb_size", comb_size.to_string()));
     }
     let queries = queries
         .iter()
