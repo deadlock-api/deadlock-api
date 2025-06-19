@@ -14,7 +14,7 @@ pub(super) enum ESportsMatchStatus {
     Cancelled,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, sqlx::FromRow)]
 pub(super) struct ESportsMatch {
     pub(super) provider: String,
     pub(super) update_id: Option<Uuid>,

@@ -26,6 +26,7 @@ use uuid::Uuid;
     summary = "Esports Match Ingest",
     description = r#"
 To use this Endpoint you need to have special permissions.
+Please contact us if you organize E-Sports Matches and want to ingest them to us.
     "#
 )]
 pub(super) async fn ingest_match(
@@ -66,18 +67,14 @@ pub(super) async fn ingest_match(
         match_id,
         team0_name,
         team1_name,
-        team0_player_ids,
-        team1_player_ids,
         tournament_name,
         tournament_stage,
         scheduled_date,
         status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (update_id) DO UPDATE SET
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (update_id) DO UPDATE SET
         match_id = EXCLUDED.match_id,
         team0_name = EXCLUDED.team0_name,
         team1_name = EXCLUDED.team1_name,
-        team0_player_ids = EXCLUDED.team0_player_ids,
-        team1_player_ids = EXCLUDED.team1_player_ids,
         tournament_name = EXCLUDED.tournament_name,
         tournament_stage = EXCLUDED.tournament_stage,
         scheduled_date = EXCLUDED.scheduled_date,
@@ -88,8 +85,6 @@ pub(super) async fn ingest_match(
         match_data.match_id,
         match_data.team0_name,
         match_data.team1_name,
-        &match_data.team0_player_ids.unwrap_or_default(),
-        &match_data.team1_player_ids.unwrap_or_default(),
         match_data.tournament_name,
         match_data.tournament_stage,
         match_data.scheduled_date,
