@@ -29,6 +29,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
+  const [samePartyFilter, setSamePartyFilter] = useQSBoolean("same_party", true);
   const [startDate, setStartDate] = useQSDayjs("start_date", PATCHES[0].startDate);
   const [endDate, setEndDate] = useQSDayjs("end_date", PATCHES[0].endDate);
   const [tab, setTab] = useQSString("tab", initialTab || "stats");
@@ -141,6 +142,16 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   onCheckedChange={(i) => setSameLaneFilter(i === true)}
                 />
               </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="same-party-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                  Same Party Filter
+                </label>
+                <Checkbox
+                  id="same-party-filter"
+                  checked={samePartyFilter}
+                  onCheckedChange={(i) => setSamePartyFilter(i === true)}
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-4">
               <HeroMatchupStatsTable
@@ -149,6 +160,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
                 sameLaneFilter={sameLaneFilter}
+                samePartyFilter={samePartyFilter}
               />
             </div>
           </div>
@@ -191,6 +203,16 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   onCheckedChange={(i) => setSameLaneFilter(i === true)}
                 />
               </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="same-party-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                  Same Party Filter
+                </label>
+                <Checkbox
+                  id="same-party-filter"
+                  checked={samePartyFilter}
+                  onCheckedChange={(i) => setSamePartyFilter(i === true)}
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <HeroMatchupDetailsStatsTable
@@ -210,6 +232,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   }
                 }}
                 sameLaneFilter={sameLaneFilter}
+                samePartyFilter={samePartyFilter}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -228,6 +251,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   }
                 }}
                 sameLaneFilter={sameLaneFilter}
+                samePartyFilter={samePartyFilter}
               />
             </div>
           </div>
