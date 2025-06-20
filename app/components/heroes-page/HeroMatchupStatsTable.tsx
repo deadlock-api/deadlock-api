@@ -16,6 +16,7 @@ export default function HeroMatchupStatsTable({
   minDate,
   maxDate,
   sameLaneFilter,
+  samePartyFilter,
 }: {
   hideHeader?: boolean;
   minRankId?: number;
@@ -23,6 +24,7 @@ export default function HeroMatchupStatsTable({
   minDate?: Dayjs | null;
   maxDate?: Dayjs | null;
   sameLaneFilter?: boolean;
+  samePartyFilter?: boolean;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -42,10 +44,19 @@ export default function HeroMatchupStatsTable({
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery<APIHeroSynergyStats[]>({
-    queryKey: ["api-hero-synergy-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, sameLaneFilter],
+    queryKey: [
+      "api-hero-synergy-stats",
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      sameLaneFilter,
+      samePartyFilter,
+    ],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-synergy-stats", API_ORIGIN);
       url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
+      url.searchParams.set("same_party_filter", samePartyFilter?.toString() || "false");
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
@@ -57,10 +68,19 @@ export default function HeroMatchupStatsTable({
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery<APIHeroCounterStats[]>({
-    queryKey: ["api-hero-counter-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, sameLaneFilter],
+    queryKey: [
+      "api-hero-counter-stats",
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      sameLaneFilter,
+      samePartyFilter,
+    ],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-counter-stats", API_ORIGIN);
       url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
+      url.searchParams.set("same_party_filter", samePartyFilter?.toString() || "false");
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
