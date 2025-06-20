@@ -138,8 +138,7 @@ pub(super) async fn ingest_event(
     let payload = MatchCreatedWebhookPayload::new(match_id);
     let webhook_urls: Vec<(String, String)> = get_webhook_urls(&state.pg_client).await?;
     for (webhook_url, secret) in webhook_urls {
-        let payload = serde_json::to_vec(&payload)
-            .map_err(|_| APIError::internal("Failed to serialize payload".to_string()))?;
+        let payload = serde_json::to_vec(&payload)?;
         let sig = Signature::new(&secret, &payload, Utc::now())
             .ok()
             .and_then(|m| m.to_header_value().ok())

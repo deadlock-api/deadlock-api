@@ -152,13 +152,7 @@ pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl
         ));
     }
 
-    fetch_list_tables(&state.ch_client_restricted)
-        .await
-        .map_err(|e| {
-            error!("Failed to list tables: {e}");
-            APIError::internal(format!("Failed to list tables: {e}"))
-        })
-        .map(Json)
+    Ok(Json(fetch_list_tables(&state.ch_client_restricted).await?))
 }
 
 #[cached(
@@ -217,13 +211,9 @@ pub(super) async fn table_schema(
         ));
     }
 
-    fetch_table_schema(&state.ch_client_restricted, &table)
-        .await
-        .map_err(|e| {
-            error!("Failed to get table schema: {e}");
-            APIError::internal(format!("Failed to get table schema: {e}"))
-        })
-        .map(Json)
+    Ok(Json(
+        fetch_table_schema(&state.ch_client_restricted, &table).await?,
+    ))
 }
 
 #[cached(

@@ -52,6 +52,12 @@ pub(super) enum APIError {
     PostgreSQL(#[from] sqlx::Error),
     #[error("Redis Error: {0}")]
     Redis(#[from] redis::RedisError),
+    #[error("Json De-/Serialization Error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("IO Error: {0}")]
+    Io(#[from] io::Error),
+    #[error("Snappy Error: {0}")]
+    Snappy(#[from] snap::Error),
 }
 
 impl APIError {
@@ -154,8 +160,11 @@ impl IntoResponse for APIError {
             }
             Self::Request(_) => Self::internal("Request failed.").into_response(),
             Self::Clickhouse(_) => Self::internal("Clickhouse error.").into_response(),
-            APIError::PostgreSQL(_) => Self::internal("PostgreSQL error.").into_response(),
-            APIError::Redis(_) => Self::internal("Redis error.").into_response(),
+            Self::PostgreSQL(_) => Self::internal("PostgreSQL error.").into_response(),
+            Self::Redis(_) => Self::internal("Redis error.").into_response(),
+            Self::Json(_) => Self::internal("Json error.").into_response(),
+            Self::Io(_) => Self::internal("IO error.").into_response(),
+            Self::Snappy(_) => Self::internal("Snappy error.").into_response(),
         }
     }
 }

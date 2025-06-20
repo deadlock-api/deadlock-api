@@ -126,11 +126,8 @@ pub(super) async fn live_url(
     let spectate_response = tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
-        .await;
+        .await?;
 
-    let Ok(spectate_response) = spectate_response else {
-        return Err(APIError::internal("Failed to spectate match"));
-    };
     let Some(spectate_response) = spectate_response.result else {
         return Err(APIError::internal("Failed to spectate match"));
     };

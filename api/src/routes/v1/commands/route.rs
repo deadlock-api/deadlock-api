@@ -92,16 +92,8 @@ Returns a map of str->int of widget versions.
 "#
 )]
 pub(super) async fn widget_versions() -> APIResult<impl IntoResponse> {
-    let widget_versions_file = std::fs::File::open("widget_versions.json").map_err(|e| {
-        warn!("Failed to open widget_versions.json: {e}");
-        APIError::internal(format!("Failed to open widget_versions.json: {e}"))
-    })?;
-    serde_json::from_reader(widget_versions_file)
-        .map(|r: HashMap<String, i32>| Json(r))
-        .map_err(|e| {
-            warn!("Failed to parse widget_versions.json: {e}");
-            APIError::internal(format!("Failed to parse widget_versions.json: {e}"))
-        })
+    let widget_versions_file = std::fs::File::open("widget_versions.json")?;
+    Ok(serde_json::from_reader(widget_versions_file).map(|r: HashMap<String, i32>| Json(r))?)
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]

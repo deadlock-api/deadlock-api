@@ -112,10 +112,7 @@ async fn fetch_match_metadata_raw(
 async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDataContents> {
     let mut decompressor = BzDecoder::new(raw_data);
     let mut buf = Vec::with_capacity(decompressor.get_ref().len());
-    decompressor
-        .read_to_end(&mut buf)
-        .await
-        .map_err(|e| APIError::internal(format!("Failed to decompress match metadata: {e}")))?;
+    decompressor.read_to_end(&mut buf).await?;
     let match_data = CMsgMatchMetaData::decode(buf.as_slice())?
         .match_details
         .ok_or_else(|| APIError::internal("Failed to parse match metadata: No data".to_string()))?;

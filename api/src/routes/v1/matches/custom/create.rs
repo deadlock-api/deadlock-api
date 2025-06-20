@@ -353,27 +353,8 @@ pub(super) async fn create_custom(
         .parse()
         .map_err(|_| APIError::internal("Failed to parse account id".to_string()))?;
 
-    match switch_to_spectator_slot(&state.steam_client, username.clone(), party_id, account_id)
-        .await
-    {
-        Ok(_) => {
-            debug!("Switched to spectator slot");
-        }
-        Err(e) => {
-            error!("Failed to switch to spectator slot: {e}");
-            return Err(APIError::internal("Failed to switch to spectator slot"));
-        }
-    }
-
-    match make_ready(&state.steam_client, username.clone(), party_id).await {
-        Ok(_) => {
-            debug!("Made ready");
-        }
-        Err(e) => {
-            error!("Failed to make ready: {e}");
-            return Err(APIError::internal("Failed to make ready"));
-        }
-    }
+    switch_to_spectator_slot(&state.steam_client, username.clone(), party_id, account_id).await?;
+    make_ready(&state.steam_client, username.clone(), party_id).await?;
 
     let response = CreateCustomResponse {
         party_id: party_id.to_string(),
