@@ -38,6 +38,20 @@ pub(super) enum APIError {
     RateLimitExceeded { status: RateLimitStatus },
     #[error("Internal server error: {message}")]
     InternalError { message: String },
+    #[error("Steam Proxy Error: {0}")]
+    SteamProxy(#[from] SteamProxyError),
+    #[error("Protobuf Error: {0}")]
+    Protobuf(#[from] prost::DecodeError),
+    #[error("Base64 Decode Error: {0}")]
+    Base64Decode(#[from] base64::DecodeError),
+    #[error("Request Error: {0}")]
+    Request(#[from] reqwest::Error),
+    #[error("Clickhouse Error: {0}")]
+    Clickhouse(#[from] clickhouse::error::Error),
+    #[error("PostgreSQL Error: {0}")]
+    PostgreSQL(#[from] sqlx::Error),
+    #[error("Redis Error: {0}")]
+    Redis(#[from] redis::RedisError),
 }
 
 impl APIError {
@@ -55,57 +69,9 @@ impl APIError {
     }
 }
 
-impl From<SteamProxyError> for APIError {
-    fn from(e: SteamProxyError) -> Self {
-        error!("Failed to call Steam proxy: {e}");
-        Self::internal("Request to Steam failed.")
-    }
-}
-
-impl From<clickhouse::error::Error> for APIError {
-    fn from(e: clickhouse::error::Error) -> Self {
-        error!("Failed to query Clickhouse: {e}");
-        Self::internal("Clickhouse error")
-    }
-}
-
-impl From<sqlx::Error> for APIError {
-    fn from(e: sqlx::Error) -> Self {
-        error!("Failed to query PostgreSQL: {e}");
-        Self::internal("PostgreSQL error")
-    }
-}
-
-impl From<redis::RedisError> for APIError {
-    fn from(e: redis::RedisError) -> Self {
-        error!("Failed to query Redis: {e}");
-        Self::internal("Redis error")
-    }
-}
-
-impl From<reqwest::Error> for APIError {
-    fn from(e: reqwest::Error) -> Self {
-        error!("Failed to call external service: {e}");
-        Self::internal("Request to external service failed")
-    }
-}
-
-impl From<base64::DecodeError> for APIError {
-    fn from(e: base64::DecodeError) -> Self {
-        error!("Failed to decode base64 data: {e}");
-        Self::internal("Failed to decode base64 data")
-    }
-}
-
-impl From<prost::DecodeError> for APIError {
-    fn from(e: prost::DecodeError) -> Self {
-        error!("Failed to decode protobuf message: {e}");
-        Self::internal("Failed to decode protobuf message")
-    }
-}
-
 impl IntoResponse for APIError {
     fn into_response(self) -> Response<Body> {
+        error!("API Error: {self}");
         match self {
             Self::Status { status } => Response::builder()
                 .status(status)
@@ -158,7 +124,7 @@ impl IntoResponse for APIError {
                     )
                     .unwrap_or_else(|_| "Internal server error".to_string().into_response())
             }
-            APIError::InternalError { message } => Response::builder()
+            Self::InternalError { message } => Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .body(
                     serde_json::to_string(&json!({
@@ -169,6 +135,27 @@ impl IntoResponse for APIError {
                     .into(),
                 )
                 .unwrap_or_else(|_| "Internal server error".to_string().into_response()),
+            Self::SteamProxy(e) => match e {
+                SteamProxyError::Request(_) => {
+                    Self::internal("Request to Steam failed.").into_response()
+                }
+                SteamProxyError::Base64(_) => {
+                    Self::internal("Failed to decode base64 data from Steam.").into_response()
+                }
+                SteamProxyError::Protobuf(_) => {
+                    Self::internal("Failed to parse protobuf message from Steam.").into_response()
+                }
+            },
+            Self::Protobuf(_) => {
+                Self::internal("Failed to parse protobuf message.").into_response()
+            }
+            Self::Base64Decode(_) => {
+                Self::internal("Failed to decode base64 data.").into_response()
+            }
+            Self::Request(_) => Self::internal("Request failed.").into_response(),
+            Self::Clickhouse(_) => Self::internal("Clickhouse error.").into_response(),
+            APIError::PostgreSQL(_) => Self::internal("PostgreSQL error.").into_response(),
+            APIError::Redis(_) => Self::internal("Redis error.").into_response(),
         }
     }
 }
