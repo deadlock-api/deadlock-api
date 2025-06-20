@@ -33,7 +33,7 @@ jobs:
         toolchain: [ stable, beta, nightly ]
     steps:
       - uses: actions/checkout@v4
-      - name: Update Rust toolchain
+      - name: Update Rust toolchain to ${{ matrix.toolchain }}
         run: |
           rustup override set ${{ matrix.toolchain }}
           rustup update ${{ matrix.toolchain }}
@@ -58,7 +58,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
-      - name: Update Rust toolchain
+      - name: Update Rust toolchain to ${{ matrix.toolchain }}
         run: |
           rustup override set ${{ matrix.toolchain }}
           rustup update ${{ matrix.toolchain }}
@@ -73,6 +73,9 @@ jobs:
   test_deploy:
     name: Test and Deploy
     runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        toolchain: [ stable, beta, nightly ]
     steps:
       - name: Determine Docker Tag
         run: |
@@ -105,10 +108,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
-      - name: Update Rust toolchain
+      - name: Update Rust toolchain to ${{ matrix.toolchain }}
         run: |
-          rustup override set stable
-          rustup update stable
+          rustup override set ${{ matrix.toolchain }}
+          rustup update ${{ matrix.toolchain }}
       - uses: taiki-e/cache-cargo-install-action@v2
         with:
           tool: cargo-nextest
@@ -144,11 +147,11 @@ jobs:
       ###############################
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+        if: (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master') && matrix.toolchain == 'stable'
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push Docker image
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+        if: (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master') && matrix.toolchain == 'stable'
         run: docker push ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
