@@ -118,11 +118,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     if !hero_ids.is_empty() {
         player_filters.push(format!(
             "hero_id IN ({})",
-            hero_ids
-                .iter()
-                .map(u32::to_string)
-                .collect::<Vec<_>>()
-                .join(", ")
+            hero_ids.iter().map(u32::to_string).join(", ")
         ));
     }
     if let Some(account_id) = query.account_id {

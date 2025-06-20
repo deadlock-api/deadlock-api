@@ -357,10 +357,7 @@ mod tests {
     use super::*;
 
     fn normalize_whitespace(s: &str) -> String {
-        s.replace(['\n', '\t'], " ")
-            .split_whitespace()
-            .collect::<Vec<&str>>()
-            .join(" ")
+        s.replace(['\n', '\t'], " ").split_whitespace().join(" ")
     }
 
     #[test]

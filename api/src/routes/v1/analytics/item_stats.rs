@@ -9,6 +9,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum_macros::Display;
 use tracing::debug;
@@ -210,11 +211,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if !hero_ids.is_empty() {
         player_filters.push(format!(
             "hero_id IN ({})",
-            hero_ids
-                .iter()
-                .map(u32::to_string)
-                .collect::<Vec<_>>()
-                .join(", ")
+            hero_ids.iter().map(u32::to_string).join(", ")
         ));
     }
     if let Some(account_id) = query.account_id {
@@ -229,21 +226,13 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if let Some(include_item_ids) = &query.include_item_ids {
         player_filters.push(format!(
             "hasAll(items.item_id, [{}])",
-            include_item_ids
-                .iter()
-                .map(u32::to_string)
-                .collect::<Vec<_>>()
-                .join(", ")
+            include_item_ids.iter().map(u32::to_string).join(", ")
         ));
     }
     if let Some(exclude_item_ids) = &query.exclude_item_ids {
         player_filters.push(format!(
             "NOT hasAny(items.item_id, [{}])",
-            exclude_item_ids
-                .iter()
-                .map(u32::to_string)
-                .collect::<Vec<_>>()
-                .join(", ")
+            exclude_item_ids.iter().map(u32::to_string).join(", ")
         ));
     }
     let player_filters = if player_filters.is_empty() {

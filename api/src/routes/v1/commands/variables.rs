@@ -2,7 +2,9 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
-use crate::routes::v1::players::match_history::{PlayerMatchHistory, insert_match_history_to_ch};
+use crate::routes::v1::players::match_history::{
+    PlayerMatchHistory, PlayerMatchHistoryEntry, insert_match_history_to_ch,
+};
 use crate::routes::v1::players::match_history::{
     fetch_match_history_from_clickhouse, fetch_steam_match_history,
 };
@@ -327,7 +329,6 @@ impl Variable {
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
-                    .iter()
                     .map(|m| m.player_deaths)
                     .max()
                     .map(|m| m.to_string())
@@ -336,7 +337,6 @@ impl Variable {
             Self::HighestDenies => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
-                    .iter()
                     .map(|m| m.denies)
                     .max()
                     .map(|m| m.to_string())
@@ -345,7 +345,6 @@ impl Variable {
             Self::HighestKillCount => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
-                    .iter()
                     .map(|m| m.player_kills)
                     .max()
                     .map(|m| m.to_string())
@@ -354,7 +353,6 @@ impl Variable {
             Self::HighestLastHits => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
-                    .iter()
                     .map(|m| m.last_hits)
                     .max()
                     .map(|m| m.to_string())
@@ -363,7 +361,6 @@ impl Variable {
             Self::HighestNetWorth => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
-                    .iter()
                     .map(|m| m.net_worth)
                     .max()
                     .map(|m| m.to_string())
@@ -371,20 +368,23 @@ impl Variable {
             }
             Self::HoursPlayed => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let seconds_playtime: u32 = matches.iter().map(|m| m.match_duration_s).sum();
+                let seconds_playtime: u32 = matches.map(|m| m.match_duration_s).sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::WinrateToday => {
                 let matches =
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?;
-                let wins = matches
-                    .iter()
-                    .filter(|m| m.match_result as i8 == m.player_team)
-                    .count();
+                let (wins, matches) = matches.iter().fold((0, 0), |(wins, matches), m| {
+                    if m.match_result as i8 == m.player_team {
+                        (wins + 1, matches + 1)
+                    } else {
+                        (wins, matches + 1)
+                    }
+                });
                 Ok(format!(
                     "{:.2}%",
-                    wins as f32 / matches.len().max(1) as f32 * 100.0
+                    wins as f32 / matches.max(1) as f32 * 100.0
                 ))
             }
             Self::WinsLossesToday => {
@@ -431,7 +431,6 @@ impl Variable {
             Self::MostPlayedHero => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let most_played_hero = matches
-                    .iter()
                     .fold(HashMap::new(), |mut acc, m| {
                         *acc.entry(m.hero_id).or_insert(0) += 1;
                         acc
@@ -451,7 +450,6 @@ impl Variable {
             Self::MostPlayedHeroCount => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let most_played_hero_count = matches
-                    .iter()
                     .fold(HashMap::new(), |mut acc, m| {
                         *acc.entry(m.hero_id).or_insert(0) += 1;
                         acc
@@ -462,38 +460,36 @@ impl Variable {
             }
             Self::TotalKd => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let (kills, deaths) = matches.iter().fold((0, 0), |(kills, deaths), m| {
+                let (kills, deaths) = matches.fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
                 Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
             }
             Self::TotalKills => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches
-                    .iter()
-                    .map(|m| m.player_kills)
-                    .sum::<u32>()
-                    .to_string())
+                Ok(matches.map(|m| m.player_kills).sum::<u32>().to_string())
             }
             Self::TotalMatches => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches.len().to_string())
+                Ok(matches.count().to_string())
             }
             Self::TotalWinrate => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let wins = matches
-                    .iter()
-                    .filter(|m| m.match_result as i8 == m.player_team)
-                    .count();
+                let (wins, matches) = matches.fold((0, 0), |(wins, matches), m| {
+                    if m.match_result as i8 == m.player_team {
+                        (wins + 1, matches + 1)
+                    } else {
+                        (wins, matches + 1)
+                    }
+                });
                 Ok(format!(
                     "{:.2}%",
-                    wins as f32 / matches.len().max(1) as f32 * 100.0
+                    wins as f32 / matches.max(1) as f32 * 100.0
                 ))
             }
             Self::TotalWins => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
-                    .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
                     .count()
                     .to_string())
@@ -501,14 +497,13 @@ impl Variable {
             Self::TotalLosses => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
-                    .iter()
                     .filter(|m| m.match_result as i8 != m.player_team)
                     .count()
                     .to_string())
             }
             Self::TotalWinsLosses => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
+                let (wins, losses) = matches.fold((0, 0), |(wins, losses), m| {
                     if m.match_result as i8 == m.player_team {
                         (wins + 1, losses)
                     } else {
@@ -541,7 +536,7 @@ impl Variable {
                     extra_args,
                 )
                 .await?;
-                let seconds_playtime: u32 = hero_matches.iter().map(|m| m.match_duration_s).sum();
+                let seconds_playtime: u32 = hero_matches.map(|m| m.match_duration_s).sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::HeroKd => {
@@ -552,7 +547,7 @@ impl Variable {
                     extra_args,
                 )
                 .await?;
-                let (kills, deaths) = hero_matches.iter().fold((0, 0), |(kills, deaths), m| {
+                let (kills, deaths) = hero_matches.fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
                 Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
@@ -566,7 +561,6 @@ impl Variable {
                 )
                 .await?;
                 Ok(hero_matches
-                    .iter()
                     .map(|m| m.player_kills)
                     .sum::<u32>()
                     .to_string())
@@ -578,7 +572,7 @@ impl Variable {
                 extra_args,
             )
             .await
-            .map(|m| m.len().to_string()),
+            .map(|m| m.count().to_string()),
             Self::HeroLosses => {
                 let hero_matches = Self::get_hero_matches(
                     &state.ch_client_ro,
@@ -588,7 +582,6 @@ impl Variable {
                 )
                 .await?;
                 Ok(hero_matches
-                    .iter()
                     .filter(|m| m.match_result as i8 != m.player_team)
                     .count()
                     .to_string())
@@ -601,11 +594,16 @@ impl Variable {
                     extra_args,
                 )
                 .await?;
-                let wins = hero_matches
-                    .iter()
-                    .filter(|m| m.match_result as i8 == m.player_team)
-                    .count();
-                let total = hero_matches.len();
+                let (wins, total) = hero_matches.fold((0, 0), |(wins, total), m| {
+                    (
+                        wins + if m.match_result as i8 == m.player_team {
+                            1
+                        } else {
+                            0
+                        },
+                        total + 1,
+                    )
+                });
                 Ok(format!("{:.2}%", wins as f32 / total.max(1) as f32 * 100.0))
             }
             Self::HeroWins => {
@@ -617,7 +615,6 @@ impl Variable {
                 )
                 .await?;
                 Ok(hero_matches
-                    .iter()
                     .filter(|m| m.match_result as i8 == m.player_team)
                     .count()
                     .to_string())
@@ -709,7 +706,7 @@ impl Variable {
     async fn get_all_matches(
         ch_client: &clickhouse::Client,
         steam_id: u32,
-    ) -> Result<PlayerMatchHistory, &'static str> {
+    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, &'static str> {
         let ch_match_history = fetch_match_history_from_clickhouse(ch_client, steam_id)
             .await
             .map_err(|_| "matches")?;
@@ -722,8 +719,7 @@ impl Variable {
             })
             .sorted_by_key(|e| e.match_id)
             .rev()
-            .unique_by(|e| e.match_id)
-            .collect_vec())
+            .unique_by(|e| e.match_id))
     }
 
     async fn get_hero_matches(
@@ -731,7 +727,7 @@ impl Variable {
         assets_client: &AssetsClient,
         steam_id: u32,
         extra_args: &HashMap<String, String>,
-    ) -> Result<PlayerMatchHistory, &'static str> {
+    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, &'static str> {
         let hero_name = extra_args.get("hero_name").ok_or("hero name")?;
 
         // Create a temporary AssetsClient
@@ -741,10 +737,10 @@ impl Variable {
             .ok()
             .flatten()
             .ok_or("hero id")?;
-        Self::get_all_matches(ch_client, steam_id)
+        let matches = Self::get_all_matches(ch_client, steam_id)
             .await
-            .map(|m| m.into_iter().filter(|m| m.hero_id == hero_id).collect())
-            .map_err(|_| "matches")
+            .map_err(|_| "matches")?;
+        Ok(matches.filter(move |m| m.hero_id == hero_id))
     }
 
     async fn get_todays_matches(

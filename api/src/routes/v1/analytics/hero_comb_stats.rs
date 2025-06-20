@@ -144,21 +144,13 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     if let Some(include_hero_ids) = &query.include_hero_ids {
         grouped_filters.push(format!(
             "hasAll(hero_ids, [{}])",
-            include_hero_ids
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+            include_hero_ids.iter().map(|id| id.to_string()).join(", ")
         ));
     }
     if let Some(exclude_hero_ids) = &query.exclude_hero_ids {
         grouped_filters.push(format!(
             "not hasAny(hero_ids, [{}])",
-            exclude_hero_ids
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+            exclude_hero_ids.iter().map(|id| id.to_string()).join(", ")
         ));
     }
     let grouped_filters = if grouped_filters.is_empty() {
@@ -420,12 +412,9 @@ mod test {
         };
         let query = build_query(&comb_query);
         assert!(query.contains(&format!(
-                            "hasAll(hero_ids, [{}])",
-                            include_hero_ids.iter()
-                                .map(|id| id.to_string())
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        )));
+            "hasAll(hero_ids, [{}])",
+            include_hero_ids.iter().map(|id| id.to_string()).join(", ")
+        )));
     }
 
     #[test]
@@ -437,12 +426,9 @@ mod test {
         };
         let query = build_query(&comb_query);
         assert!(query.contains(&format!(
-                            "not hasAny(hero_ids, [{}])",
-                            exclude_hero_ids.iter()
-                                .map(|id| id.to_string())
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        )));
+            "not hasAny(hero_ids, [{}])",
+            exclude_hero_ids.iter().map(|id| id.to_string()).join(", ")
+        )));
     }
 
     #[test]
