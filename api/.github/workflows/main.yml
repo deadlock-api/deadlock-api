@@ -57,7 +57,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
+          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.toolchain }}"
       - name: Update Rust toolchain to ${{ matrix.toolchain }}
         run: |
           rustup override set ${{ matrix.toolchain }}
@@ -107,7 +107,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
+          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.toolchain }}"
       - name: Update Rust toolchain to ${{ matrix.toolchain }}
         run: |
           rustup override set ${{ matrix.toolchain }}
