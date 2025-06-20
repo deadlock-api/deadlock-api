@@ -28,13 +28,15 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        toolchain: [ stable, beta, nightly ]
     steps:
       - uses: actions/checkout@v4
       - name: Update Rust toolchain
         run: |
-          rustup override set stable
-          rustup update stable
+          rustup override set ${{ matrix.toolchain }}
+          rustup update ${{ matrix.toolchain }}
           rustup component add rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
@@ -42,6 +44,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: [ stable, beta, nightly ]
     steps:
       - uses: actions/checkout@v4
       - name: Install Protocol Buffers compiler
@@ -55,8 +60,8 @@ jobs:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
       - name: Update Rust toolchain
         run: |
-          rustup override set stable
-          rustup update stable
+          rustup override set ${{ matrix.toolchain }}
+          rustup update ${{ matrix.toolchain }}
           rustup component add clippy
       - name: Cargo Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
