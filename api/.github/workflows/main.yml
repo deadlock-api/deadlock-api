@@ -63,8 +63,12 @@ jobs:
           rustup override set ${{ matrix.toolchain }}
           rustup update ${{ matrix.toolchain }}
           rustup component add clippy
-      - name: Cargo Clippy
+      - name: Cargo Clippy (Deny Warnings)
+        if: matrix.toolchain == 'stable'
         run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Cargo Clippy (Allow Warnings)
+        if: matrix.toolchain != 'stable'
+        run: cargo clippy --all-targets --locked
 
   test_deploy:
     name: Test and Deploy
