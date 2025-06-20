@@ -193,25 +193,27 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   }
                 }}
               />
-              <div className="flex items-center gap-2">
-                <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
-                  Same Lane Filter
-                </label>
-                <Checkbox
-                  id="same-lane-filter"
-                  checked={sameLaneFilter}
-                  onCheckedChange={(i) => setSameLaneFilter(i === true)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label htmlFor="same-party-filter" className="text-sm font-semibold text-foreground text-nowrap">
-                  Same Party Filter
-                </label>
-                <Checkbox
-                  id="same-party-filter"
-                  checked={samePartyFilter}
-                  onCheckedChange={(i) => setSamePartyFilter(i === true)}
-                />
+              <div className="flex flex-col flex-wrap items-center sm:flex-nowrap gap-2">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                    Same Lane Filter
+                  </label>
+                  <Checkbox
+                    id="same-lane-filter"
+                    checked={sameLaneFilter}
+                    onCheckedChange={(i) => setSameLaneFilter(i === true)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="same-party-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                    Same Party Filter
+                  </label>
+                  <Checkbox
+                    id="same-party-filter"
+                    checked={samePartyFilter}
+                    onCheckedChange={(i) => setSamePartyFilter(i === true)}
+                  />
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
