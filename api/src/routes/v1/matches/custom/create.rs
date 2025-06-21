@@ -6,6 +6,7 @@ use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use axum::Json;
 use axum::extract::State;
+use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use base64::Engine;
@@ -34,6 +35,8 @@ use valveprotos::gcsdk::EgcPlatform;
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct CreateCustomRequest {
+    #[serde(default)]
+    #[param(default)]
     pub(super) callback_url: Option<String>,
 }
 
@@ -243,7 +246,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
 #[utoipa::path(
     post,
     path = "/create",
-    params(CreateCustomRequest),
+    request_body = CreateCustomRequest,
     responses(
         (status = 200, description = "Successfully fetched custom match id.", body = CreateCustomResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -266,7 +269,7 @@ This endpoint allows you to create a custom match.
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
-    Json(CreateCustomRequest { callback_url }): Json<CreateCustomRequest>,
+    payload: Result<Json<CreateCustomRequest>, JsonRejection>,
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
@@ -279,6 +282,8 @@ pub(super) async fn create_custom(
             ],
         )
         .await?;
+
+    let callback_url = payload.ok().and_then(|p| p.0.callback_url);
 
     let SteamProxyResponse {
         username,
