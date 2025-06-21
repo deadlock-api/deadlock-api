@@ -192,12 +192,14 @@ impl AppState {
         // Load feature flags
         debug!("Loading feature flags");
         let feature_flags = File::open("feature_flags.json")
-            .map_err(AppStateError::from)
-            .and_then(|f| serde_json::from_reader(f).map_err(AppStateError::from))
-            .unwrap_or_else(|e| {
-                warn!("Failed to load feature flags: {e}");
-                FeatureFlags::default()
-            });
+            .inspect_err(|e| warn!("Failed to open feature flags file: {e}"))
+            .ok()
+            .and_then(|f| {
+                serde_json::from_reader(f)
+                    .inpect_err(|e| warn!("Failed to parse feature flags: {e}"))
+                    .ok()
+            })
+            .unwrap_or_default();
 
         // Create a Steam client
         debug!("Creating Steam client");
