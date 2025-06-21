@@ -196,7 +196,7 @@ impl AppState {
             .ok()
             .and_then(|f| {
                 serde_json::from_reader(f)
-                    .inpect_err(|e| warn!("Failed to parse feature flags: {e}"))
+                    .inspect_err(|e| warn!("Failed to parse feature flags: {e}"))
                     .ok()
             })
             .unwrap_or_default();
