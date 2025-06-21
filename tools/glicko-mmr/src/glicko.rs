@@ -1,154 +1,164 @@
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
-use anyhow::bail;
-use cached::proc_macro::once;
 use chrono::Duration;
+use roots::SimpleConvergency;
 use std::collections::HashMap;
 use std::f64::consts::{E, PI};
 
-#[once]
-pub fn q() -> f64 {
-    10f64.ln() / 400.0
-}
-
-#[tracing::instrument(skip(matches, before_player_ratings))]
-pub fn update_player_ratings_all_matches(
+#[tracing::instrument(skip(player_ratings_before))]
+pub fn update_match(
     config: &Config,
-    account_id: u32,
-    matches: &[&CHMatch], // Assume matches are sorted by match_id
-    before_player_ratings: &HashMap<u32, Glicko2HistoryEntry>,
-) -> anyhow::Result<Vec<Glicko2HistoryEntry>> {
-    let mut applied_matches = vec![];
-    let mut out = vec![];
-    for match_ in matches {
-        applied_matches.push(*match_);
-        out.push(update_player_rating(
+    match_: &CHMatch,
+    player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
+) -> Vec<Glicko2HistoryEntry> {
+    let mut updates: Vec<Glicko2HistoryEntry> = Vec::with_capacity(36);
+    for p in &match_.team0_players {
+        updates.push(update_glicko_rating(
             config,
-            account_id,
-            &applied_matches,
-            before_player_ratings,
-        )?);
+            match_,
+            p,
+            &match_.team1_players,
+            match_.winning_team == 0,
+            player_ratings_before,
+        ));
     }
-    Ok(out)
+    for p in &match_.team1_players {
+        updates.push(update_glicko_rating(
+            config,
+            match_,
+            p,
+            &match_.team0_players,
+            match_.winning_team == 1,
+            player_ratings_before,
+        ));
+    }
+    updates
 }
 
-pub fn update_player_rating(
+fn update_glicko_rating(
     config: &Config,
-    account_id: u32,
-    matches: &[&CHMatch], // Assume matches are sorted by match_id
-    before_player_ratings: &HashMap<u32, Glicko2HistoryEntry>,
-) -> anyhow::Result<Glicko2HistoryEntry> {
-    if matches.is_empty() {
-        bail!("No matches to update ratings for");
-    }
-    // Step 1: Calculate the new rating deviation (`rd`) for the player based on the time since their last match.
-    let rating = before_player_ratings
-        .get(&account_id)
-        .map(|entry| entry.rating)
+    match_: &CHMatch,
+    player: &u32,
+    opponents: &[u32],
+    won: bool,
+    player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
+) -> Glicko2HistoryEntry {
+    // Get current rating mu
+    let rating_mu = player_ratings_before
+        .get(player)
+        .map(|entry| entry.rating_mu)
         .unwrap_or(config.rating_unrated);
-    let rating_deviation = match before_player_ratings.get(&account_id) {
-        Some(entry) => new_rd(
+    let phi = match player_ratings_before.get(player) {
+        Some(entry) => new_rating_phi(
             config,
-            entry.rating_deviation,
-            matches[0].start_time - entry.start_time, // matches[0] is safe because we checked that matches is not empty
+            entry.rating_phi,
+            entry.rating_sigma,
+            match_.start_time - entry.start_time,
         ),
-        None => config.rating_deviation_unrated, // If the player has no rating history, use the default RD_UNRATED
+        None => config.rating_phi_unrated, // If the player has no rating history, use the default rating mu
     };
+    let sigma = player_ratings_before
+        .get(player)
+        .map(|entry| entry.rating_sigma)
+        .unwrap_or(config.rating_sigma_unrated);
 
-    let opponents = matches
+    // Get opponent values
+    let opponents_eg = opponents
         .iter()
-        .flat_map(|m| {
-            let (opponent_team, won) = if m.team0_players.contains(&account_id) {
-                (&m.team1_players, m.winning_team == 0)
-            } else {
-                (&m.team0_players, m.winning_team == 1)
-            };
-            opponent_team.iter().map(move |opponent_id| {
-                let opponent_rating = before_player_ratings
-                    .get(opponent_id)
-                    .map(|entry| entry.rating)
-                    .unwrap_or(config.rating_unrated);
-                let opponent_rd = before_player_ratings
-                    .get(opponent_id)
-                    .map(|entry| entry.rating_deviation)
-                    .unwrap_or(config.rating_deviation_unrated);
-                (opponent_rating, opponent_rd, won)
-            })
+        .map(move |opponent_id| {
+            let opponent_mu = player_ratings_before
+                .get(opponent_id)
+                .map(|entry| entry.rating_mu)
+                .unwrap_or(config.rating_unrated);
+            let opponent_phi = player_ratings_before
+                .get(opponent_id)
+                .map(|entry| entry.rating_phi)
+                .unwrap_or(config.rating_phi_unrated);
+            (
+                e(rating_mu, opponent_mu, opponent_phi).clamp(1e-6, 1.0 - 1e-6),
+                g(opponent_phi),
+            )
         })
         .collect::<Vec<_>>();
-    let one_over_d_squared = q().powi(2)
-        * opponents
+
+    // Calculate estimated variance
+    let v = 1.
+        / opponents_eg
             .iter()
-            .map(|(opponent_rating, opponent_rd, _)| {
-                let e = e(rating, *opponent_rating, *opponent_rd);
-                g(*opponent_rd).powi(2) * e * (1.0 - e)
-            })
+            .map(|(e, g)| g.powi(2) * (e * (1.0 - e)))
             .sum::<f64>();
-    let denominator = 1.0 / rating_deviation.powi(2) + one_over_d_squared;
-    let new_rating_deviation = (1.0 / denominator).sqrt();
-    if new_rating_deviation.is_nan() {
-        bail!("New rating deviation is NaN");
-    }
-    let new_rating = rating
-        + q() / denominator
-            * opponents
-                .into_iter()
-                .map(|(opponent_rating, opponent_rd, won)| {
-                    g(opponent_rd) * (won as u8 as f64 - e(rating, opponent_rating, opponent_rd))
-                })
+
+    // Calculate estimated improvement
+    let outcome = if won { 1.0 } else { 0.0 };
+    let delta = v * opponents_eg
+        .iter()
+        .map(|(e, g)| g * (outcome - e))
+        .sum::<f64>();
+
+    let mut convergency = SimpleConvergency {
+        eps: 1e-10f64,
+        max_iter: 100,
+    };
+
+    let f = |x: f64| {
+        let numerator_1 = x.exp() * (delta.powi(2) - phi.powi(2) - v - x.exp());
+        let denominator_1 = 2.0 * (phi.powi(2) + v + x.exp()).powi(2);
+        let ratio_1 = numerator_1 / denominator_1;
+        let ratio_2 = (x - sigma.powi(2).ln()) / config.tau.powi(2);
+        ratio_1 - ratio_2
+    };
+
+    let a = (sigma * sigma).ln();
+    let b = if delta * delta > phi * phi + v {
+        (delta * delta - phi * phi - v).ln()
+    } else {
+        let mut k = 1.0;
+        loop {
+            let b = a - k * config.tau;
+            if f(b) < 0.0 {
+                k += 1.0;
+            } else {
+                break b;
+            }
+        }
+    };
+
+    let root = roots::find_root_regula_falsi(a, b, &f, &mut convergency).unwrap();
+    let new_rating_sigma = root.exp().sqrt();
+    let new_rating_phi = 1. / (1. / (phi.powi(2) + new_rating_sigma.powi(2)) + 1. / v).sqrt();
+    let new_rating_mu = rating_mu
+        + new_rating_phi.powi(2)
+            * opponents_eg
+                .iter()
+                .map(|(e, g)| g * (outcome - e))
                 .sum::<f64>();
-    Ok(Glicko2HistoryEntry {
-        account_id,
-        match_id: matches.last().unwrap().match_id, // unwrap is safe because we checked that matches is not empty
-        rating: new_rating,
-        rating_deviation: new_rating_deviation,
-        start_time: matches.last().unwrap().start_time, // unwrap is safe because we checked that matches is not empty
-    })
+    Glicko2HistoryEntry {
+        account_id: *player,
+        match_id: match_.match_id,
+        rating_mu: new_rating_mu.clamp(-8.63473, 8.63473),
+        rating_phi: new_rating_phi,
+        rating_sigma: new_rating_sigma,
+        start_time: match_.start_time,
+    }
 }
 
-/// Calculates the new rating deviation (`rd`) for a player based on the time since their last match.
-///
-/// # Formula
-/// RD = min(sqrt(RD₀² + c² * t), RD_UNRATED)
-///
-/// # Arguments
-/// * `old_rd` - The player's previous rating deviation.
-/// * `time_since_last_match` - The duration since the player's last match, represented as a `Duration`.
-///
-/// # Returns
-/// * The updated rating deviation (`rd`) for the player, capped at `RD_UNRATED`.
-fn new_rd(config: &Config, old_rd: f64, time_since_last_match: Duration) -> f64 {
-    (old_rd.powi(2) + config.c.powi(2) * time_since_last_match.num_days() as f64)
-        .sqrt()
-        .min(config.rating_deviation_unrated)
+fn new_rating_phi(
+    config: &Config,
+    old_rating_phi: f64,
+    old_rating_sigma: f64,
+    time_since_last_match: Duration,
+) -> f64 {
+    let rating_period_fraction =
+        time_since_last_match.num_seconds() as f64 / config.rating_period_seconds as f64;
+    (old_rating_phi.powi(2) + old_rating_sigma.powi(2) * rating_period_fraction).sqrt()
 }
 
-/// Calculates the g(RD) value used in the Glicko-2 rating system.
-///
-/// # Formula
-/// g(RD) = 1 / sqrt(1 + 3 * q² * RD² / π²)
-///
-/// # Arguments
-/// * `rd` - The player's rating deviation.
-///
-/// # Returns
-/// * The g(RD) value.
-fn g(rd: f64) -> f64 {
-    1.0 / (1.0 + (3.0 / PI.powi(2)) * q().powi(2) * rd.powi(2)).sqrt()
+fn e(mu: f64, opponent_mu: f64, opponent_phi: f64) -> f64 {
+    let denominator = 1.0 + E.powf(-g(opponent_phi) * (mu - opponent_mu));
+    1.0 / denominator
 }
 
-/// Calculates the expected score (E) for a player against an opponent.
-///
-/// # Formula
-/// E = 1 / (1 + e^(-g(RD) * Q * (R - R')))
-///
-/// # Arguments
-/// * `rating` - The player's rating.
-/// * `rating_opponent` - The opponent's rating.
-/// * `rd_opponent` - The opponent's rating deviation.
-///
-/// # Returns
-/// * The expected score (E) for the player against the opponent.
-fn e(rating: f64, rating_opponent: f64, rd_opponent: f64) -> f64 {
-    1.0 / (1.0 + E.powf(-g(rd_opponent) * q() * (rating - rating_opponent)))
+fn g(opponent_phi: f64) -> f64 {
+    let denominator = (1.0 + (3.0 / PI.powi(2)) * opponent_phi.powi(2)).sqrt();
+    1.0 / denominator
 }
