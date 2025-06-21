@@ -31,9 +31,9 @@ Please contact us if you organize E-Sports Matches and want to ingest them to us
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/h |
+| IP | 1000req/h |
 | Key | - |
-| Global | 1000req/h |
+| Global | 10000req/h |
     "#
 )]
 pub(super) async fn ingest_match(
@@ -60,8 +60,8 @@ pub(super) async fn ingest_match(
             &rate_limit_key,
             "esports_match_ingest",
             &[
-                RateLimitQuota::key_limit(100, Duration::from_secs(60 * 60)),
-                RateLimitQuota::global_limit(1000, Duration::from_secs(60 * 60)),
+                RateLimitQuota::key_limit(1000, Duration::from_secs(60 * 60)),
+                RateLimitQuota::global_limit(10000, Duration::from_secs(60 * 60)),
             ],
         )
         .await?;
