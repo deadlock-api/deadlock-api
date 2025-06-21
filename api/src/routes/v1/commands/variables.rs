@@ -1,5 +1,5 @@
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::players::match_history::{
@@ -22,9 +22,24 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
+use thiserror::Error;
 use tracing::warn;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchMode};
+
+#[derive(Debug, Error)]
+pub(super) enum VariableResolveError {
+    #[error("No data found for {0}")]
+    NoData(&'static str),
+    #[error(transparent)]
+    SQLx(#[from] sqlx::Error),
+    #[error(transparent)]
+    Clickhouse(#[from] clickhouse::error::Error),
+    #[error(transparent)]
+    Request(#[from] reqwest::Error),
+    #[error(transparent)]
+    Api(#[from] APIError),
+}
 
 #[derive(Debug, Serialize, Clone, Copy, ToSchema)]
 pub(super) enum VariableCategory {
@@ -237,42 +252,39 @@ impl Variable {
         steam_id: u32,
         region: LeaderboardRegion,
         extra_args: &HashMap<String, String>,
-    ) -> Result<String, &'static str> {
+    ) -> Result<String, VariableResolveError> {
         match self {
             Self::LeaderboardRankImg => {
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
-                        .await?;
+                        .await?
+                        .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
                 let badge_level = leaderboard_entry
                     .badge_level
-                    .ok_or("leaderboard badge level")?;
-                let ranks = state
-                    .assets_client
-                    .fetch_ranks()
-                    .await
-                    .map_err(|_| "ranks")?;
+                    .ok_or(VariableResolveError::NoData("leaderboard badge level"))?;
+                let ranks = state.assets_client.fetch_ranks().await?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
                 ranks
                     .iter()
                     .find(|r| r.tier == rank)
                     .and_then(|r| r.images.get(&format!("small_subrank{subrank}")))
                     .cloned()
-                    .ok_or("rank")
+                    .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
             Self::LeaderboardRank => {
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
-                        .await?;
+                        .await?
+                        .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
                 let badge_level = leaderboard_entry
                     .badge_level
-                    .ok_or("leaderboard badge level")?;
-                let ranks = state
-                    .assets_client
-                    .fetch_ranks()
-                    .await
-                    .map_err(|_| "ranks")?;
+                    .ok_or(VariableResolveError::NoData("leaderboard badge level"))?;
+                let ranks = state.assets_client.fetch_ranks().await?;
                 let (rank, subrank) = (badge_level / 10, badge_level % 10);
-                let rank = ranks.iter().find(|r| r.tier == rank).ok_or("rank")?;
+                let rank = ranks
+                    .iter()
+                    .find(|r| r.tier == rank)
+                    .ok_or(VariableResolveError::NoData("leaderboard rank"))?;
                 Ok(format!("{} {subrank}", rank.name))
             }
             Self::HeroesPlayedToday => {
@@ -283,11 +295,7 @@ impl Variable {
                     *acc.entry(m.hero_id).or_insert(0) += 1;
                     acc
                 });
-                let heroes = state
-                    .assets_client
-                    .fetch_heroes()
-                    .await
-                    .map_err(|_| "heroes")?;
+                let heroes = state.assets_client.fetch_heroes().await?;
                 let heroes = heroes
                     .into_iter()
                     .map(|h| (h.id, h.name))
@@ -300,13 +308,14 @@ impl Variable {
                     .join(", "))
             }
             Self::HeroLeaderboardPlace => {
+                let hero_name = extra_args
+                    .get("hero_name")
+                    .ok_or(VariableResolveError::NoData("hero name"))?;
                 let hero_id = state
                     .assets_client
-                    .fetch_hero_id_from_name(extra_args.get("hero_name").ok_or("hero name")?)
-                    .await
-                    .ok()
-                    .flatten()
-                    .ok_or("hero id")?;
+                    .fetch_hero_id_from_name(hero_name)
+                    .await?
+                    .ok_or(VariableResolveError::NoData("hero id"))?;
                 let leaderboard_entry = Self::get_leaderboard_entry(
                     rate_limit_key,
                     state,
@@ -314,13 +323,15 @@ impl Variable {
                     region,
                     Some(hero_id),
                 )
-                .await?;
+                .await?
+                .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardPlace => {
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
-                        .await?;
+                        .await?
+                        .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::SteamAccountName => {
@@ -332,7 +343,7 @@ impl Variable {
                     .map(|m| m.player_deaths)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or("player deaths")
+                    .ok_or(VariableResolveError::NoData("player deaths"))
             }
             Self::HighestDenies => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -340,7 +351,7 @@ impl Variable {
                     .map(|m| m.denies)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or("player denies")
+                    .ok_or(VariableResolveError::NoData("player denies"))
             }
             Self::HighestKillCount => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -348,7 +359,7 @@ impl Variable {
                     .map(|m| m.player_kills)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or("player kills")
+                    .ok_or(VariableResolveError::NoData("player kills"))
             }
             Self::HighestLastHits => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -356,7 +367,7 @@ impl Variable {
                     .map(|m| m.last_hits)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or("player last hits")
+                    .ok_or(VariableResolveError::NoData("player last hits"))
             }
             Self::HighestNetWorth => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -364,7 +375,7 @@ impl Variable {
                     .map(|m| m.net_worth)
                     .max()
                     .map(|m| m.to_string())
-                    .ok_or("player net worth")
+                    .ok_or(VariableResolveError::NoData("player net worth"))
             }
             Self::HoursPlayed => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -438,14 +449,14 @@ impl Variable {
                     .into_iter()
                     .max_by_key(|(_, count)| *count)
                     .map(|(hero_id, _)| hero_id)
-                    .ok_or("most played hero")?;
+                    .ok_or(VariableResolveError::NoData("most played hero"))?;
                 state
                     .assets_client
                     .fetch_hero_name_from_id(most_played_hero)
                     .await
                     .ok()
                     .flatten()
-                    .ok_or("hero name")
+                    .ok_or(VariableResolveError::NoData("most played hero name"))
             }
             Self::MostPlayedHeroCount => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -515,19 +526,17 @@ impl Variable {
             Self::LatestPatchnotesTitle => state
                 .steam_client
                 .fetch_patch_notes()
-                .await
-                .map_err(|_| "patch notes")?
+                .await?
                 .first()
                 .map(|patch_notes| patch_notes.title.clone())
-                .ok_or("patch notes"),
+                .ok_or(VariableResolveError::NoData("patch notes")),
             Self::LatestPatchnotesLink => state
                 .steam_client
                 .fetch_patch_notes()
-                .await
-                .map_err(|_| "patch notes")?
+                .await?
                 .first()
                 .map(|patch_notes| patch_notes.link.clone())
-                .ok_or("patch notes"),
+                .ok_or(VariableResolveError::NoData("patch notes")),
             Self::HeroHoursPlayed => {
                 let hero_matches = Self::get_hero_matches(
                     &state.ch_client_ro,
@@ -622,52 +631,40 @@ impl Variable {
             Self::MaxBombStacks => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 2521902222)
                     .await
-                    .map(|b| b.to_string())
-                    .map_err(|_| "max bomb stacks")
+                    .map(|r| r.to_string())
+                    .map_err(|e| e.into())
             }
             Self::MaxSpiritSnareStacks => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 512733154)
                     .await
-                    .map(|b| b.to_string())
-                    .map_err(|_| "max spirit snare stacks")
+                    .map(|r| r.to_string())
+                    .map_err(|e| e.into())
             }
             Self::MaxBonusHealthPerKill => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 1917840730)
                     .await
-                    .map(|b| b.to_string())
-                    .map_err(|_| "max bonus health per kill")
+                    .map(|r| r.to_string())
+                    .map_err(|e| e.into())
             }
             Self::MaxGuidedOwlStacks => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 3242902780)
                     .await
-                    .map(|b| b.to_string())
-                    .map_err(|_| "max guided owl")
+                    .map(|r| r.to_string())
+                    .map_err(|e| e.into())
             }
             Self::MMRHistoryRank => {
-                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id)
-                    .await
-                    .map_err(|_| "mmr history")?;
-                let ranks = state
-                    .assets_client
-                    .fetch_ranks()
-                    .await
-                    .map_err(|_| "ranks")?;
+                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
+                let ranks = state.assets_client.fetch_ranks().await?;
                 let rank_name = ranks
                     .iter()
                     .find(|r| r.tier == mmr_history.division)
                     .map(|r| r.name.clone())
-                    .ok_or("rank")?;
+                    .ok_or(VariableResolveError::NoData("rank name"))?;
                 Ok(format!("{rank_name} {}", mmr_history.division_tier))
             }
             Self::MMRHistoryRankImg => {
-                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id)
-                    .await
-                    .map_err(|_| "mmr history")?;
-                let ranks = state
-                    .assets_client
-                    .fetch_ranks()
-                    .await
-                    .map_err(|_| "ranks")?;
+                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
+                let ranks = state.assets_client.fetch_ranks().await?;
                 ranks
                     .iter()
                     .find(|r| r.tier == mmr_history.division)
@@ -676,7 +673,7 @@ impl Variable {
                             .get(&format!("small_subrank{}", mmr_history.division_tier))
                     })
                     .cloned()
-                    .ok_or("rank")
+                    .ok_or(VariableResolveError::NoData("rank img"))
             }
         }
     }
@@ -706,10 +703,8 @@ impl Variable {
     async fn get_all_matches(
         ch_client: &clickhouse::Client,
         steam_id: u32,
-    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, &'static str> {
-        let ch_match_history = fetch_match_history_from_clickhouse(ch_client, steam_id)
-            .await
-            .map_err(|_| "matches")?;
+    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, VariableResolveError> {
+        let ch_match_history = fetch_match_history_from_clickhouse(ch_client, steam_id).await?;
 
         Ok(ch_match_history
             .into_iter()
@@ -727,19 +722,17 @@ impl Variable {
         assets_client: &AssetsClient,
         steam_id: u32,
         extra_args: &HashMap<String, String>,
-    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, &'static str> {
-        let hero_name = extra_args.get("hero_name").ok_or("hero name")?;
+    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, VariableResolveError> {
+        let hero_name = extra_args
+            .get("hero_name")
+            .ok_or(VariableResolveError::NoData("hero name"))?;
 
         // Create a temporary AssetsClient
         let hero_id = assets_client
             .fetch_hero_id_from_name(hero_name)
-            .await
-            .ok()
-            .flatten()
-            .ok_or("hero id")?;
-        let matches = Self::get_all_matches(ch_client, steam_id)
-            .await
-            .map_err(|_| "matches")?;
+            .await?
+            .ok_or(VariableResolveError::NoData("hero id"))?;
+        let matches = Self::get_all_matches(ch_client, steam_id).await?;
         Ok(matches.filter(move |m| m.hero_id == hero_id))
     }
 
@@ -747,7 +740,7 @@ impl Variable {
         ch_client: &clickhouse::Client,
         steam_client: &SteamClient,
         account_id: u32,
-    ) -> Result<PlayerMatchHistory, &'static str> {
+    ) -> Result<PlayerMatchHistory, VariableResolveError> {
         let last_match_newer_than_40min = ch_client
             .query(
                 r#"
@@ -762,9 +755,7 @@ impl Variable {
             .await
             .is_ok();
         let matches = if last_match_newer_than_40min {
-            fetch_match_history_from_clickhouse(ch_client, account_id)
-                .await
-                .map_err(|_| "matches")?
+            fetch_match_history_from_clickhouse(ch_client, account_id).await?
         } else {
             match fetch_steam_match_history(steam_client, account_id, false).await {
                 Ok(m) => {
@@ -778,13 +769,13 @@ impl Variable {
                     });
                     m
                 }
-                Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id)
-                    .await
-                    .map_err(|_| "matches")?,
+                Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id).await?,
             }
         };
 
-        let first_match = matches.first().ok_or("matches")?;
+        let first_match = matches
+            .first()
+            .ok_or(VariableResolveError::NoData("todays matches"))?;
 
         // If the first match is older than 8 hours ago, we can assume that the player has no matches today
         if first_match.start_time < (chrono::Utc::now() - Duration::hours(8)).timestamp() as u32 {
@@ -809,7 +800,7 @@ impl Variable {
         steam_id: u32,
         region: LeaderboardRegion,
         hero_id: Option<u32>,
-    ) -> Result<LeaderboardEntry, &'static str> {
+    ) -> Result<Option<LeaderboardEntry>, VariableResolveError> {
         let (leaderboard, steam_name) = join(
             async {
                 let raw_leaderboard =
@@ -822,18 +813,14 @@ impl Variable {
             get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id),
         )
         .await;
-        let leaderboard = leaderboard.map_err(|_| "leaderboard")?;
+        let leaderboard = leaderboard?;
         let steam_name = steam_name?;
-        leaderboard
-            .entries
-            .into_iter()
-            .find(|entry| {
-                entry
-                    .account_name
-                    .as_ref()
-                    .is_some_and(|n| n == &steam_name)
-            })
-            .ok_or("leaderboard entry")
+        Ok(leaderboard.entries.into_iter().find(|entry| {
+            entry
+                .account_name
+                .as_ref()
+                .is_some_and(|n| n == &steam_name)
+        }))
     }
 }
 
@@ -877,7 +864,7 @@ async fn get_steam_account_name(
     state: &AppState,
     pg_client: &Pool<Postgres>,
     steam_id: u32,
-) -> Result<String, &'static str> {
+) -> Result<String, VariableResolveError> {
     match state
         .steam_client
         .fetch_steam_account_name(rate_limit_key, state, steam_id)
@@ -893,10 +880,9 @@ async fn get_steam_account_name(
                 steam_id as i32
             )
             .fetch_one(pg_client)
-            .await
-            .ok()
-            .and_then(|row| row.personaname)
-            .ok_or("Failed to fetch steam name from database")
+            .await?
+            .personaname
+            .ok_or(VariableResolveError::NoData("steam account name"))
         }
     }
 }

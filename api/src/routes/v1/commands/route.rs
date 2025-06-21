@@ -180,7 +180,10 @@ pub(super) async fn command_resolve(
                         .await
                     {
                         Ok(resolved) => Ok((template_str, resolved)),
-                        Err(e) => Err(format!("Failed to resolve variable: {}, {e}", v.get_name())),
+                        Err(e) => {
+                            warn!("Failed to resolve variable: {}, {e}", v.get_name());
+                            Err(format!("Failed to resolve variable: {}", v.get_name()))
+                        }
                     }
                 }
             }),
