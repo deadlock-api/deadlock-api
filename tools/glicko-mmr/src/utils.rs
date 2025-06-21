@@ -13,6 +13,7 @@ pub async fn get_rating_period_starting(
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND start_time >= '2025-01-01'
         AND match_id NOT IN t_matches
+        AND low_pri_pool != true
     GROUP BY day
     HAVING COUNT(DISTINCT match_id) >= 100
     ORDER BY day

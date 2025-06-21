@@ -62,6 +62,7 @@ FROM match_player FINAL
     INNER JOIN match_info mi FINAL USING (match_id)
 WHERE match_mode IN ('Ranked', 'Unranked')
   AND mi.start_time >= ? AND mi.start_time < ?
+  AND low_pri_pool != true
 GROUP BY match_id
 HAVING length(team0_players) = 6 AND length(team1_players) = 6
 ORDER BY match_id
@@ -108,6 +109,7 @@ FROM match_player FINAL
     INNER JOIN match_info mi FINAL USING (match_id)
 WHERE match_mode IN ('Ranked', 'Unranked')
   AND mi.start_time >= ? AND mi.start_time < ?
+  AND low_pri_pool != true
 GROUP BY match_id
 HAVING length(team0_players) = 6 AND length(team1_players) = 6
 ORDER BY match_id
