@@ -40,6 +40,8 @@ pub struct CHMatch {
     pub start_time: DateTime<Utc>,
     pub team0_players: Vec<u32>,
     pub team1_players: Vec<u32>,
+    pub avg_badge_team0: u32,
+    pub avg_badge_team1: u32,
     pub winning_team: u8,
 }
 
@@ -56,10 +58,14 @@ SELECT match_id,
        any(mi.start_time)                       as start_time,
        groupArrayIf(account_id, team = 'Team0') as team0_players,
        groupArrayIf(account_id, team = 'Team1') as team1_players,
+       any(assumeNotNull(average_badge_team0))  as avg_badge_team0,
+       any(assumeNotNull(average_badge_team1))  as avg_badge_team1,
        any(winning_team)                        as winning_team
 FROM match_player FINAL
     INNER JOIN match_info mi FINAL USING (match_id)
 WHERE match_mode IN ('Ranked', 'Unranked')
+  AND average_badge_team0 IS NOT NULL
+  AND average_badge_team1 IS NOT NULL
   AND match_id >= ?
   AND low_pri_pool != true
 GROUP BY match_id

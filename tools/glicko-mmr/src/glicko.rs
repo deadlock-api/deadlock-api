@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
+use crate::utils;
 use chrono::Duration;
 use roots::SimpleConvergency;
 use std::collections::HashMap;
@@ -19,6 +20,8 @@ pub fn update_match(
             p,
             &match_.team1_players,
             match_.winning_team == 0,
+            match_.avg_badge_team0,
+            match_.avg_badge_team1,
             player_ratings_before,
         ));
     }
@@ -29,25 +32,30 @@ pub fn update_match(
             p,
             &match_.team0_players,
             match_.winning_team == 1,
+            match_.avg_badge_team1,
+            match_.avg_badge_team0,
             player_ratings_before,
         ));
     }
     updates
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_glicko_rating(
     config: &Config,
     match_: &CHMatch,
     player: &u32,
     opponents: &[u32],
     won: bool,
+    avg_badge_player: u32,
+    avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> Glicko2HistoryEntry {
     // Get current rating mu
     let rating_mu = player_ratings_before
         .get(player)
         .map(|entry| entry.rating_mu)
-        .unwrap_or(config.rating_unrated);
+        .unwrap_or_else(|| 8.6 * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.));
     let phi = match player_ratings_before.get(player) {
         Some(entry) => new_rating_phi(
             config,
@@ -69,7 +77,7 @@ fn update_glicko_rating(
             let opponent_mu = player_ratings_before
                 .get(opponent_id)
                 .map(|entry| entry.rating_mu)
-                .unwrap_or(config.rating_unrated);
+                .unwrap_or(8.6 * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.));
             let opponent_phi = player_ratings_before
                 .get(opponent_id)
                 .map(|entry| entry.rating_phi)
@@ -135,7 +143,7 @@ fn update_glicko_rating(
     Glicko2HistoryEntry {
         account_id: *player,
         match_id: match_.match_id,
-        rating_mu: new_rating_mu.clamp(-20., 20.),
+        rating_mu: new_rating_mu.clamp(-8.6, 8.6),
         rating_phi: new_rating_phi.min(config.rating_phi_unrated),
         rating_sigma: new_rating_sigma.min(config.rating_sigma_unrated),
         start_time: match_.start_time,
