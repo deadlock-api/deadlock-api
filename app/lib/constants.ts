@@ -2,9 +2,9 @@ import { day } from "~/dayjs";
 
 export const PATCHES = [
   {
-    id: "2025-05-27",
-    name: "Latest Patch (2025-05-27)",
-    startDate: day("2025-05-27T23:47:06Z"),
+    id: "2025-06-17",
+    name: "Latest Patch (2025-06-17)",
+    startDate: day("2025-06-17T20:34:00Z"),
     endDate: day().startOf("day"),
   },
   {
