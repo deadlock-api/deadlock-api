@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
         };
         info!("Processing matches starting from {start_match_id}");
         let matches_to_process =
-            CHMatch::query_matches_after(&ch_client, start_match_id, 10000).await?;
+            CHMatch::query_matches_after(&ch_client, start_match_id, 100000).await?;
         if matches_to_process.is_empty() {
             info!("No matches to process, sleeping...");
             interval.tick().await;
