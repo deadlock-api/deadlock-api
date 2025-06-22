@@ -55,7 +55,7 @@ fn update_glicko_rating(
     let rating_mu = player_ratings_before
         .get(player)
         .map(|entry| entry.rating_mu)
-        .unwrap_or_else(|| 8.6 * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.));
+        .unwrap_or_else(|| 6. * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.));
     let phi = match player_ratings_before.get(player) {
         Some(entry) => new_rating_phi(
             config,
@@ -77,7 +77,7 @@ fn update_glicko_rating(
             let opponent_mu = player_ratings_before
                 .get(opponent_id)
                 .map(|entry| entry.rating_mu)
-                .unwrap_or(8.6 * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.));
+                .unwrap_or(6. * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.));
             let opponent_phi = player_ratings_before
                 .get(opponent_id)
                 .map(|entry| entry.rating_phi)
