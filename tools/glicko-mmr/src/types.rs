@@ -47,6 +47,7 @@ impl CHMatch {
     pub async fn query_matches_after(
         ch_client: &Client,
         match_id: u64,
+        limit: u64,
     ) -> clickhouse::error::Result<Vec<Self>> {
         ch_client
             .query(
@@ -64,9 +65,11 @@ WHERE match_mode IN ('Ranked', 'Unranked')
 GROUP BY match_id
 HAVING length(team0_players) = 6 AND length(team1_players) = 6
 ORDER BY match_id
+LIMIT ?
             "#,
             )
             .bind(match_id)
+            .bind(limit)
             .fetch_all()
             .await
     }
