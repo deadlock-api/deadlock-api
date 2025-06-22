@@ -152,13 +152,13 @@ fn update_glicko_rating(
 
 fn new_rating_phi(
     config: &Config,
-    old_rating_phi: f64,
-    old_rating_sigma: f64,
+    rating_phi: f64,
+    rating_sigma: f64,
     time_since_last_match: Duration,
 ) -> f64 {
     let rating_period_fraction =
         time_since_last_match.num_seconds() as f64 / config.rating_period_seconds as f64;
-    (old_rating_phi.powi(2) + old_rating_sigma.powi(2) * rating_period_fraction).sqrt()
+    (rating_phi.powi(2) + rating_sigma.powi(2) * rating_period_fraction).sqrt()
 }
 
 fn e(mu: f64, opponent_mu: f64, opponent_phi: f64) -> f64 {
