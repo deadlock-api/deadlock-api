@@ -14,7 +14,7 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
-import { serializers, useQSArray, useQSBoolean, useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQSState";
+import { serializers, useQSArray, useQSBoolean, useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
 import type { HERO_STATS } from "~/types/api_hero_stats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -30,8 +30,10 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
   const [samePartyFilter, setSamePartyFilter] = useQSBoolean("same_party", true);
-  const [startDate, setStartDate] = useQSDayjs("start_date", PATCHES[0].startDate);
-  const [endDate, setEndDate] = useQSDayjs("end_date", PATCHES[0].endDate);
+  const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
+    PATCHES[0].startDate,
+    PATCHES[0].endDate,
+  ]);
   const [tab, setTab] = useQSString("tab", initialTab || "stats");
   const [heroId, setHeroId] = useQSNumber("hero_id", 7);
   const [heroIds, setHeroIds] = useQSArray("hero_ids", serializers.number, [15]);
@@ -55,11 +57,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
                 onValueChange={({ startDate, endDate }) => {
-                  setStartDate(startDate || undefined);
-                  // Wait 10ms, this is necessary so the url query params are updated before the next state update
-                  setTimeout(() => {
-                    setEndDate(endDate || undefined);
-                  }, 10);
+                  if (startDate && endDate) setDateRange([startDate, endDate]);
                 }}
               />
             </div>

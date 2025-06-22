@@ -7,7 +7,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQSState";
+import { useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
@@ -20,8 +20,10 @@ export const meta: MetaFunction = () => {
 export default function Player({ initialTab }: { initialTab?: string } = { initialTab: "mmr" }) {
   const [steamId, setSteamId] = useQSNumber("steam_id");
   const [hero, setHero] = useQSNumber("hero");
-  const [startDate, setStartDate] = useQSDayjs("start_date");
-  const [endDate, setEndDate] = useQSDayjs("end_date");
+  const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
+    PATCHES[0].startDate,
+    PATCHES[0].endDate,
+  ]);
   const [tab, setTab] = useQSString("tab", initialTab || "mmr");
 
   return (
@@ -52,8 +54,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                 value={{ startDate: startDate || null, endDate: endDate || null }}
                 defaultTab="custom"
                 onValueChange={({ startDate, endDate }) => {
-                  setStartDate(startDate || undefined);
-                  setEndDate(endDate || undefined);
+                  if (startDate && endDate) setDateRange([startDate, endDate]);
                 }}
               />
             </div>

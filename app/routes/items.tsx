@@ -7,7 +7,7 @@ import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useQSDayjs, useQSNumber, useQSString } from "~/hooks/useQSState";
+import { useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
 
 export const meta: MetaFunction = () => {
@@ -22,8 +22,10 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [hero, setHero] = useQSNumber("hero");
   const [minMatches, setMinMatches] = useQSNumber("min_matches", 20);
-  const [startDate, setStartDate] = useQSDayjs("start_date", PATCHES[0].startDate);
-  const [endDate, setEndDate] = useQSDayjs("end_date", PATCHES[0].endDate);
+  const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
+    PATCHES[0].startDate,
+    PATCHES[0].endDate,
+  ]);
   const [tab, setTab] = useQSString("tab", initialTab || "stats");
 
   return (
@@ -72,8 +74,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
                 onValueChange={({ startDate, endDate }) => {
-                  setStartDate(startDate || undefined);
-                  setEndDate(endDate || undefined);
+                  if (startDate && endDate) setDateRange([startDate, endDate]);
                 }}
               />
             </div>
