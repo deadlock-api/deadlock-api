@@ -616,12 +616,12 @@ dependencies = [
  "metrics",
  "object_store",
  "prost 0.14.1",
+ "quick-xml",
  "rand 0.9.1",
  "redis",
  "reqwest",
  "rstest",
  "serde",
- "serde-xml-rs",
  "serde_json",
  "sha2",
  "snap",
@@ -2733,17 +2733,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-xml-rs"
-version = "0.8.1"
-source = "git+https://github.com/RReverser/serde-xml-rs.git?rev=a659f21d990d2449714228d80acd96e75423e850#a659f21d990d2449714228d80acd96e75423e850"
-dependencies = [
- "log",
- "serde",
- "thiserror 2.0.12",
- "xml-rs",
-]
-
-[[package]]
 name = "serde_derive"
 version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4189,12 +4178,6 @@ name = "writeable"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
-
-[[package]]
-name = "xml-rs"
-version = "0.8.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a62ce76d9b56901b19a74f19431b0d8b3bc7ca4ad685a746dfd78ca8f4fc6bda"
 
 [[package]]
 name = "yoke"

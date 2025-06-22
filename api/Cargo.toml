@@ -29,7 +29,6 @@ tower-service = "0.3.3"
 tower-http = { version = "0.6.6", features = ["compression-zstd", "compression-gzip", "cors", "decompression-zstd", "decompression-gzip", "normalize-path", "trace"] }
 tracing = "0.1.41"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-serde-xml-rs = "0.8.1"
 axum-prometheus = "0.8.0"
 itertools = "0.14.0"
 futures = "0.3.31"
@@ -52,10 +51,7 @@ bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"
 rand = "0.9.1"
 url = { version = "2.5.4", features = ["serde"] }
+quick-xml = { version = "0.37.5", features = ["serde"] }
 
 [dev-dependencies]
 rstest = "0.25.0"
-
-[patch.crates-io]
-# Remove this when new version is released
-serde-xml-rs = { git = "https://github.com/RReverser/serde-xml-rs.git", rev = "a659f21d990d2449714228d80acd96e75423e850" }

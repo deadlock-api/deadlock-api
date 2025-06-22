@@ -218,7 +218,7 @@ pub(crate) async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResul
             format!("Failed to read patch notes: {e}"),
         )
     })?;
-    serde_xml_rs::from_str::<Rss>(&rss)
+    quick_xml::de::from_str::<Rss>(&rss)
         .map(|rss| rss.channel.patch_notes)
         .map_err(|e| {
             APIError::status_msg(

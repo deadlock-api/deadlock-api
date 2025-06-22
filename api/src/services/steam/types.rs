@@ -104,11 +104,11 @@ pub(crate) struct Patch {
     pub(crate) guid: PatchGuid,
     pub(crate) author: String,
     pub(crate) category: PatchCategory,
-    #[serde(rename(deserialize = "dc:creator"))]
+    #[serde(rename(deserialize = "creator"))]
     pub(crate) dc_creator: String,
-    #[serde(rename(deserialize = "content:encoded"))]
+    #[serde(rename(deserialize = "encoded"))]
     pub(crate) content_encoded: String,
-    #[serde(rename(deserialize = "slash:comments"))]
+    #[serde(rename(deserialize = "comments"))]
     pub(crate) slash_comments: String,
 }
 
@@ -117,7 +117,7 @@ pub(crate) struct Patch {
 pub(crate) struct PatchGuid {
     #[serde(rename(deserialize = "@isPermaLink"))]
     pub(crate) is_perma_link: bool,
-    #[serde(rename(deserialize = "#text"))]
+    #[serde(rename(deserialize = "$text"))]
     pub(crate) text: String,
 }
 
@@ -126,6 +126,6 @@ pub(crate) struct PatchGuid {
 pub(crate) struct PatchCategory {
     #[serde(rename(deserialize = "@domain"))]
     pub(crate) domain: String,
-    #[serde(rename(deserialize = "#text"))]
+    #[serde(rename(deserialize = "$text"))]
     pub(crate) text: String,
 }
