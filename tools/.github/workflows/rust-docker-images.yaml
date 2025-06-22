@@ -72,10 +72,15 @@ jobs:
 
   build-base:
     runs-on: ubuntu-24.04-arm
-    outputs:
-      image-id: ${{ steps.build-base.outputs.imageid }}
     steps:
       - uses: actions/checkout@v4
+      - name: Login to GitHub Container Registry
+        if: steps.should_deploy.outputs.deploy == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build Base Image
@@ -83,19 +88,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           platforms: linux/arm64
-          push: false
+          push: true
           tags: ghcr.io/${{ github.repository }}/rust-base:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/rust-base.tar
-      - name: Upload Base Image
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust-base-image
-          path: /tmp/rust-base.tar
-          retention-days: 1
 
-  build-and-push-components:
+  push-components:
     runs-on: ubuntu-24.04-arm
     needs: build-base
     strategy:
@@ -137,17 +135,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download Base Image
-        if: steps.should_deploy.outputs.deploy == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: rust-base-image
-          path: /tmp
-      - name: Load Base Image
+      - name: Push Component
         if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker load --input /tmp/rust-base.tar
+          docker pull ghcr.io/${{ github.repository }}/rust-base:latest
           docker tag ghcr.io/${{ github.repository }}/rust-base:latest ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
-      - name: Build and Push Component
-        if: steps.should_deploy.outputs.deploy == 'true'
-        run: docker push ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
+          docker push ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
