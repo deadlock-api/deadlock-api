@@ -22,7 +22,7 @@ async fn fetch_matches(pg_client: &sqlx::Pool<sqlx::Postgres>) -> sqlx::Result<V
 
 #[utoipa::path(
     get,
-    path = "/",
+    path = "/matches",
     responses(
         (status = OK, body = [ESportsMatch]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
