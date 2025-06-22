@@ -7,7 +7,7 @@ pub struct Config {
     #[arg(long, env, default_value_t = 0.0)]
     pub rating_unrated: f64,
 
-    #[arg(long, env, default_value_t = 2.576)] // Hyper parameter tuned
+    #[arg(long, env, default_value_t = 2.)] // Hyper parameter tuned
     pub rating_phi_unrated: f64,
 
     #[arg(long, env, default_value_t = 0.06)]
