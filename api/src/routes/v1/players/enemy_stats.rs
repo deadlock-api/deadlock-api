@@ -35,6 +35,8 @@ pub(super) struct EnemyStatsQuery {
     max_match_id: Option<u64>,
     /// Filter based on the number of matches played.
     min_matches_played: Option<u64>,
+    /// Filter based on the number of matches played.
+    max_matches_played: Option<u64>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -81,6 +83,18 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
+    let mut having_filters = vec![];
+    if let Some(min_matches_played) = query.min_matches_played {
+        having_filters.push(format!("matches_played >= {min_matches_played}"));
+    }
+    if let Some(max_matches_played) = query.max_matches_played {
+        having_filters.push(format!("matches_played <= {max_matches_played}"));
+    }
+    let having_clause = if !having_filters.is_empty() {
+        format!("HAVING {}", having_filters.join(" AND "))
+    } else {
+        "".to_string()
+    };
     format!(
         r#"
     WITH players AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
@@ -92,10 +106,9 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     SELECT account_id as enemy_id, sum(not won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
     FROM enemies
     GROUP BY enemy_id
-    HAVING matches_played > {}
+    {having_clause}
     ORDER BY matches_played DESC
-    "#,
-        query.min_matches_played.unwrap_or_default()
+    "#
     )
 }
 
@@ -170,7 +183,6 @@ mod test {
         assert!(sql.contains("groupUniqArray(match_id) as matches"));
         assert!(sql.contains("GROUP BY enemy_id"));
         assert!(sql.contains("ORDER BY matches_played DESC"));
-        assert!(sql.contains("matches_played > 0")); // Default min_matches_played
         // Should not contain any filters
         assert!(!sql.contains("start_time >="));
         assert!(!sql.contains("start_time <="));
@@ -250,10 +262,12 @@ mod test {
         let account_id = 12345;
         let query = EnemyStatsQuery {
             min_matches_played: Some(5),
+            max_matches_played: Some(100),
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
-        assert!(sql.contains("matches_played > 5"));
+        assert!(sql.contains("matches_played >= 5"));
+        assert!(sql.contains("matches_played <= 100"));
     }
 
     #[test]
@@ -267,6 +281,7 @@ mod test {
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             min_matches_played: Some(3),
+            max_matches_played: Some(100),
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -277,7 +292,8 @@ mod test {
         assert!(sql.contains("match_id <= 500000"));
         assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
         assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
-        assert!(sql.contains("matches_played > 3"));
+        assert!(sql.contains("matches_played >= 3"));
+        assert!(sql.contains("matches_played <= 100"));
     }
 
     #[test]

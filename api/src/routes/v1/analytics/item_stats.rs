@@ -148,6 +148,9 @@ pub(crate) struct ItemStatsQuery {
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
+    /// The maximum number of matches played for a hero combination to be included in the response.
+    #[param(minimum = 1)]
+    max_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
@@ -244,10 +247,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
 
     /* ---------- misc ---------- */
     let bucket_expr = query.bucket.get_select_clause();
-    let min_matches = query
-        .min_matches
-        .or(default_min_matches())
-        .unwrap_or_default();
 
     let buy_time_expr = if query.bucket == BucketQuery::GameTimeMin
         || query.bucket == BucketQuery::GameTimeNormalizedPercentage
@@ -278,6 +277,18 @@ fn build_query(query: &ItemStatsQuery) -> String {
         ""
     };
 
+    let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!("matches >= {min_matches}"));
+    }
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("matches <= {max_matches}"));
+    }
+    let having_clause = if !having_filters.is_empty() {
+        format!("HAVING {}", having_filters.join(" AND "))
+    } else {
+        "".to_string()
+    };
     /* ---------- final query ---------- */
     format!(
         r#"
@@ -325,7 +336,7 @@ SELECT
 FROM exploded_players
 INNER JOIN t_matches USING (match_id)
 GROUP BY item_id, bucket
-HAVING matches >= {min_matches}
+{having_clause}
 ORDER BY item_id, bucket
         "#
     )

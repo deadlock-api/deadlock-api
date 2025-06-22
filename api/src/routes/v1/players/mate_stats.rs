@@ -37,6 +37,8 @@ pub(super) struct MateStatsQuery {
     /// Filter based on the number of matches played.
     min_matches_played: Option<u64>,
     /// Filter based on the number of matches played.
+    max_matches_played: Option<u64>,
+    /// Filter based on the number of matches played.
     #[serde(default = "default_true")]
     #[param(default = true)]
     same_party: bool,
@@ -86,6 +88,18 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
         format!(" AND {}", info_filters.join(" AND "))
     };
 
+    let mut having_filters = vec![];
+    if let Some(min_matches_played) = query.min_matches_played {
+        having_filters.push(format!("matches_played >= {min_matches_played}"));
+    }
+    if let Some(max_matches_played) = query.max_matches_played {
+        having_filters.push(format!("matches_played <= {max_matches_played}"));
+    }
+    let having_clause = if !having_filters.is_empty() {
+        format!("HAVING {}", having_filters.join(" AND "))
+    } else {
+        "".to_string()
+    };
     if query.same_party {
         format!(
             r#"
@@ -98,10 +112,9 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
-            HAVING matches_played > {}
+            {having_clause}
             ORDER BY matches_played DESC
-            "#,
-            query.min_matches_played.unwrap_or_default()
+            "#
         )
     } else {
         format!(
@@ -115,10 +128,9 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
-            HAVING matches_played > {}
+            {having_clause}
             ORDER BY matches_played DESC
-            "#,
-            query.min_matches_played.unwrap_or_default()
+            "#
         )
     }
 }
@@ -298,7 +310,19 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
-        assert!(sql.contains("matches_played > 5"));
+        assert!(sql.contains("matches_played >= 5"));
+    }
+
+    #[test]
+    fn test_build_query_max_matches_played() {
+        let account_id = 12345;
+        let query = MateStatsQuery {
+            max_matches_played: Some(100),
+            same_party: true,
+            ..Default::default()
+        };
+        let sql = build_query(account_id, &query);
+        assert!(sql.contains("matches_played <= 100"));
     }
 
     #[test]
@@ -312,6 +336,7 @@ mod test {
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             min_matches_played: Some(3),
+            max_matches_played: Some(100),
             same_party: true,
             ..Default::default()
         };
@@ -323,7 +348,8 @@ mod test {
         assert!(sql.contains("match_id <= 500000"));
         assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
         assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
-        assert!(sql.contains("matches_played > 3"));
+        assert!(sql.contains("matches_played >= 3"));
+        assert!(sql.contains("matches_played <= 100"));
         assert!(sql.contains("party != 0"));
     }
 
@@ -338,6 +364,7 @@ mod test {
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             min_matches_played: Some(3),
+            max_matches_played: Some(100),
             same_party: false,
             ..Default::default()
         };
@@ -349,7 +376,8 @@ mod test {
         assert!(sql.contains("match_id <= 500000"));
         assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
         assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
-        assert!(sql.contains("matches_played > 3"));
+        assert!(sql.contains("matches_played >= 3"));
+        assert!(sql.contains("matches_played <= 100"));
         assert!(!sql.contains("party != 0")); // Should not filter by party
     }
 }

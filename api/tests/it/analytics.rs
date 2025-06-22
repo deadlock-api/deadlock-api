@@ -59,6 +59,7 @@ async fn test_build_item_stats(
 #[rstest]
 #[case(
     Some(1),
+    Some(100),
     Some(vec![1, 2, 3]),
     Some(vec![15, 13]),
     Some(1747743170),
@@ -77,6 +78,7 @@ async fn test_build_item_stats(
 #[tokio::test]
 async fn test_hero_comb_stats(
     #[case] min_matches: Option<u64>,
+    #[case] max_matches: Option<u64>,
     #[case] include_hero_ids: Option<Vec<u32>>,
     #[case] exclude_hero_ids: Option<Vec<u32>>,
     #[case] min_unix_timestamp: Option<u64>,
@@ -95,6 +97,9 @@ async fn test_hero_comb_stats(
     let mut queries = vec![];
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(max_matches) = max_matches {
+        queries.push(("max_matches", max_matches.to_string()));
     }
     if let Some(include_hero_ids) = include_hero_ids.as_ref() {
         queries.push((
@@ -158,6 +163,9 @@ async fn test_hero_comb_stats(
         if let Some(min_matches) = min_matches {
             assert!(comb.matches >= min_matches);
         }
+        if let Some(max_matches) = max_matches {
+            assert!(comb.matches <= max_matches);
+        }
         if let Some(include_hero_ids) = include_hero_ids.as_ref() {
             assert!(include_hero_ids.iter().all(|id| comb.hero_ids.contains(id)));
         }
@@ -176,6 +184,7 @@ async fn test_hero_comb_stats(
 #[rstest]
 #[case(
     Some(20),
+    Some(70),
     Some(1746057600),
     Some(1748736000),
     Some(1000),
@@ -194,6 +203,7 @@ async fn test_hero_comb_stats(
 #[tokio::test]
 async fn test_hero_counters_stats(
     #[case] min_matches: Option<u64>,
+    #[case] max_matches: Option<u64>,
     #[case] min_unix_timestamp: Option<u64>,
     #[case] max_unix_timestamp: Option<u64>,
     #[case] min_duration_s: Option<u64>,
@@ -212,6 +222,9 @@ async fn test_hero_counters_stats(
     let mut queries = vec![];
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(max_matches) = max_matches {
+        queries.push(("max_matches", max_matches.to_string()));
     }
     if let Some(min_unix_timestamp) = min_unix_timestamp {
         queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
@@ -272,9 +285,12 @@ async fn test_hero_counters_stats(
         counter_stats.len()
     );
     for counter_stat in counter_stats {
+        assert!(counter_stat.wins <= counter_stat.matches_played);
         if let Some(min_matches) = min_matches {
-            assert!(counter_stat.wins <= counter_stat.matches_played);
             assert!(counter_stat.matches_played >= min_matches);
+        }
+        if let Some(max_matches) = max_matches {
+            assert!(counter_stat.matches_played <= max_matches);
         }
     }
 }
@@ -282,6 +298,7 @@ async fn test_hero_counters_stats(
 #[rstest]
 #[case(
     Some(10),
+    Some(70),
     SortDirectionDesc::Desc,
     Some(1746057600),
     Some(1748736000),
@@ -362,6 +379,7 @@ async fn test_hero_scoreboard(
     )]
     sort_by: ScoreboardQuerySortBy,
     #[case] min_matches: Option<u64>,
+    #[case] max_matches: Option<u64>,
     #[case] sort_direction: SortDirectionDesc,
     #[case] min_unix_timestamp: Option<u64>,
     #[case] max_unix_timestamp: Option<u64>,
@@ -380,6 +398,9 @@ async fn test_hero_scoreboard(
     queries.push(("sort_direction", sort_direction.to_string()));
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(max_matches) = max_matches {
+        queries.push(("max_matches", max_matches.to_string()));
     }
     if let Some(min_unix_timestamp) = min_unix_timestamp {
         queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
@@ -429,6 +450,13 @@ async fn test_hero_scoreboard(
         }
     }
 
+    // Verify max_matches requirement
+    if let Some(max_matches) = max_matches {
+        for entry in &hero_scoreboard {
+            assert!(entry.matches <= max_matches);
+        }
+    }
+
     // Verify sorting
     if hero_scoreboard.len() > 1 {
         let check_sorted = |field_extractor: fn(&HeroScoreboardEntry) -> f64,
@@ -452,6 +480,7 @@ async fn test_hero_scoreboard(
 #[rstest]
 #[case(
     Some(10),
+    Some(70),
     Some(1746057600),
     Some(1748736000),
     Some(1000),
@@ -534,6 +563,7 @@ async fn test_player_scoreboard(
     #[values(None, Some(SortDirectionDesc::Desc), Some(SortDirectionDesc::Asc))]
     sort_direction: Option<SortDirectionDesc>,
     #[case] min_matches: Option<u64>,
+    #[case] max_matches: Option<u64>,
     #[case] min_unix_timestamp: Option<u64>,
     #[case] max_unix_timestamp: Option<u64>,
     #[case] min_duration_s: Option<u64>,
@@ -554,6 +584,9 @@ async fn test_player_scoreboard(
     }
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(max_matches) = max_matches {
+        queries.push(("max_matches", max_matches.to_string()));
     }
     if let Some(min_unix_timestamp) = min_unix_timestamp {
         queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
@@ -605,6 +638,13 @@ async fn test_player_scoreboard(
     if let Some(min_matches) = min_matches {
         for entry in &player_scoreboard {
             assert!(entry.matches >= min_matches);
+        }
+    }
+
+    // Verify max_matches requirement
+    if let Some(max_matches) = max_matches {
+        for entry in &player_scoreboard {
+            assert!(entry.matches <= max_matches);
         }
     }
 
@@ -748,6 +788,7 @@ async fn test_hero_stats(
     Some(34000226),
     Some(34000226),
     Some(18373975),
+    Some(10),
     Some(100)
 )]
 #[tokio::test]
@@ -766,6 +807,7 @@ async fn test_hero_synergies_stats(
     #[case] max_match_id: Option<u64>,
     #[case] account_id: Option<u32>,
     #[case] min_matches: Option<u64>,
+    #[case] max_matches: Option<u64>,
 ) {
     let mut queries = vec![];
     if let Some(same_lane_filter) = same_lane_filter {
@@ -810,6 +852,9 @@ async fn test_hero_synergies_stats(
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
     }
+    if let Some(max_matches) = max_matches {
+        queries.push(("max_matches", max_matches.to_string()));
+    }
 
     let queries = queries
         .iter()
@@ -833,6 +878,12 @@ async fn test_hero_synergies_stats(
             assert!(
                 stat.matches_played >= min_matches,
                 "Matches played should be greater than or equal to min_matches"
+            );
+        }
+        if let Some(max_matches) = max_matches {
+            assert!(
+                stat.matches_played <= max_matches,
+                "Matches played should be less than or equal to max_matches"
             );
         }
         if let Some(min_networth) = min_networth {
@@ -910,6 +961,7 @@ async fn test_hero_synergies_stats(
     Some(vec![1548066885, 1009965641, 709540378]),
     Some(vec![1248737459, 3535785353]),
     Some(18373975),
+    Some(10),
     Some(100),
 )]
 #[tokio::test]
@@ -947,6 +999,7 @@ async fn test_item_stats(
     #[case] exclude_item_ids: Option<Vec<u32>>,
     #[case] account_id: Option<u32>,
     #[case] min_matches: Option<u64>,
+    #[case] max_matches: Option<u64>,
 ) {
     let mut queries = vec![];
     if let Some(bucket) = bucket {
@@ -1015,6 +1068,9 @@ async fn test_item_stats(
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
     }
+    if let Some(max_matches) = max_matches {
+        queries.push(("max_matches", max_matches.to_string()));
+    }
     if let Some(account_id) = account_id {
         queries.push(("account_id", account_id.to_string()));
     }
@@ -1036,6 +1092,12 @@ async fn test_item_stats(
             assert!(
                 stat.matches >= min_matches,
                 "Matches should be greater than or equal to min_matches"
+            );
+        }
+        if let Some(max_matches) = max_matches {
+            assert!(
+                stat.matches <= max_matches,
+                "Matches should be less than or equal to max_matches"
             );
         }
         match bucket {

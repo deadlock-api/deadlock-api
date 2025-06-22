@@ -67,6 +67,9 @@ pub(crate) struct HeroCombStatsQuery {
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
+    /// The maximum number of matches played for a hero combination to be included in the response.
+    #[param(minimum = 1)]
+    max_matches: Option<u32>,
     /// The combination size to return.
     #[serde(default = "default_comb_size")]
     #[param(minimum = 2, maximum = 6, default = 6)]
@@ -158,6 +161,18 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     } else {
         format!(" AND {}", grouped_filters.join(" AND "))
     };
+    let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!("matches >= {min_matches}"));
+    }
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("matches <= {max_matches}"));
+    }
+    let having_clause = if !having_filters.is_empty() {
+        format!("HAVING {}", having_filters.join(" AND "))
+    } else {
+        "".to_string()
+    };
     format!(
         r#"
 WITH hero_combinations AS (
@@ -179,17 +194,9 @@ SELECT
 FROM hero_combinations
 WHERE true {grouped_filters}
 GROUP BY hero_ids
-HAVING matches >= {}
+{having_clause}
 ORDER BY wins / greatest(1, matches) DESC
-    "#,
-        if query.comb_size.or(default_comb_size()).unwrap_or_default() == 6 {
-            query
-                .min_matches
-                .or(default_min_matches())
-                .unwrap_or_default()
-        } else {
-            0
-        }
+    "#
     )
 }
 
@@ -240,6 +247,7 @@ async fn get_comb_stats(
                     .min_matches
                     .or(default_min_matches())
                     .unwrap_or_default() as u64
+                && c.matches <= query.max_matches.unwrap_or(u32::MAX) as u64
         })
         .sorted_by_key(|c| c.wins / c.matches)
         .rev()
@@ -440,5 +448,16 @@ mod test {
         };
         let query = build_query(&comb_query);
         assert!(query.contains("matches >= 1"));
+    }
+
+    #[test]
+    fn test_build_query_max_matches() {
+        let max_matches = Some(1000);
+        let comb_query = HeroCombStatsQuery {
+            max_matches,
+            ..Default::default()
+        };
+        let query = build_query(&comb_query);
+        assert!(query.contains("matches <= 1000"));
     }
 }

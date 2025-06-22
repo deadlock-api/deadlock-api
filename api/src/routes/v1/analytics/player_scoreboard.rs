@@ -37,6 +37,9 @@ pub(crate) struct PlayerScoreboardQuery {
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
+    /// The maximum number of matches played for a hero combination to be included in the response.
+    #[param(minimum = 1)]
+    max_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
     /// Filter matches based on their start time (Unix timestamp).
@@ -144,12 +147,15 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     } else {
         "".to_owned()
     };
-    let mut player_having = vec![];
+    let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
-        player_having.push(format!("count(distinct match_id) >= {min_matches}"));
+        having_filters.push(format!("count(distinct match_id) >= {min_matches}"));
     }
-    let player_having = if !player_having.is_empty() {
-        format!(" HAVING {} ", player_having.join(" AND "))
+    if let Some(max_matches) = query.max_matches {
+        having_filters.push(format!("count(distinct match_id) <= {max_matches}"));
+    }
+    let having_clause = if !having_filters.is_empty() {
+        format!(" HAVING {} ", having_filters.join(" AND "))
     } else {
         "".to_owned()
     };
@@ -159,7 +165,7 @@ SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, 
 FROM match_player
 {player_filters}
 GROUP BY account_id
-{player_having}
+{having_clause}
 ORDER BY value {}
 LIMIT {} OFFSET {}
     "#,
@@ -303,15 +309,26 @@ mod test {
 
     #[test]
     fn test_build_player_scoreboard_query_min_matches() {
-        let min_matches = Some(10);
         let query = PlayerScoreboardQuery {
             sort_by: ScoreboardQuerySortBy::Matches,
-            min_matches,
+            min_matches: Some(10),
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
         let query_str = build_query(&query);
         assert!(query_str.contains("count(distinct match_id) >= 10"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_max_matches() {
+        let query = PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Matches,
+            max_matches: Some(100),
+            sort_direction: SortDirectionDesc::Asc,
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains("count(distinct match_id) <= 100"));
     }
 
     #[test]
