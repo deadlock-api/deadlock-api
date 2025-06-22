@@ -35,8 +35,10 @@ pub(super) struct MateStatsQuery {
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
     /// Filter based on the number of matches played.
+    #[serde(default)]
     min_matches_played: Option<u64>,
     /// Filter based on the number of matches played.
+    #[serde(default)]
     max_matches_played: Option<u64>,
     /// Filter based on the number of matches played.
     #[serde(default = "default_true")]

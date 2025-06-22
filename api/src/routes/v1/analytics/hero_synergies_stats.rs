@@ -61,6 +61,7 @@ pub(super) struct HeroSynergyStatsQuery {
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u64>,
     /// The maximum number of matches played for a hero combination to be included in the response.
+    #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,
 }

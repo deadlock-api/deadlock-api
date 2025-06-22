@@ -38,6 +38,7 @@ pub(crate) struct PlayerScoreboardQuery {
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
     /// The maximum number of matches played for a hero combination to be included in the response.
+    #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp).

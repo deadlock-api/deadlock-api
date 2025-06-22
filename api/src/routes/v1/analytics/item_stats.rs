@@ -149,6 +149,7 @@ pub(crate) struct ItemStatsQuery {
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
     /// The maximum number of matches played for a hero combination to be included in the response.
+    #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
