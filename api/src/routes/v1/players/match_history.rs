@@ -284,8 +284,8 @@ Relevant Protobuf Messages:
 | Type | Limit |
 | ---- | ----- |
 | IP | 5req/min<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 5req/h |
-| Key | 20req/min & 800req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
-| Global | 200req/min<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
+| Key | 50req/min & 800req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
+| Global | 2000req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
     "#
 )]
 pub(super) async fn match_history(
@@ -349,9 +349,9 @@ pub(super) async fn match_history(
                 "match_history",
                 &[
                     RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
-                    RateLimitQuota::key_limit(20, Duration::from_secs(60)),
+                    RateLimitQuota::key_limit(50, Duration::from_secs(60)),
                     RateLimitQuota::key_limit(800, Duration::from_secs(60 * 60)),
-                    RateLimitQuota::global_limit(200, Duration::from_secs(60)),
+                    RateLimitQuota::global_limit(2000, Duration::from_secs(60 * 60)),
                 ],
             )
             .await
