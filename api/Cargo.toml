@@ -36,7 +36,7 @@ snap = "1.1.1"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "dd0a663eae1c53db66265443a5d818bb1db4f79c", features = ["gc-client", "serde"] }
 prost = "0.14.1"
 base64 = "0.22.1"
-tryhard = "0.5.1"
+tryhard = "0.5.2"
 async-compression = { version = "0.4.25", features = ["bzip2", "tokio"] }
 strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
