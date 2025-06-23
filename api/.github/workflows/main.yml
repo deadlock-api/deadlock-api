@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        toolchain: [ stable, beta, nightly ]
+        toolchain: [ stable, beta ]
     steps:
       - uses: actions/checkout@v4
       - name: Update Rust toolchain to ${{ matrix.toolchain }}
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        toolchain: [ stable, beta, nightly ]
+        toolchain: [ stable, beta ]
     steps:
       - uses: actions/checkout@v4
       - name: Install Protocol Buffers compiler
@@ -77,7 +77,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
-        toolchain: [ stable, beta, nightly ]
+        toolchain: [ stable, beta ]
     steps:
       - name: Determine Docker Tag
         run: |
