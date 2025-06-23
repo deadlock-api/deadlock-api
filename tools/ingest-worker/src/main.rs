@@ -1,5 +1,4 @@
 use prost::Message;
-use std::env;
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use anyhow::bail;
@@ -22,7 +21,6 @@ async fn main() -> anyhow::Result<()> {
     common::init_tracing();
     common::init_metrics()?;
 
-    let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
     let store = common::get_store()?;
     let mut interval = tokio::time::interval(Duration::from_secs(10));
@@ -53,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
             .map(|key| async {
                 match timeout(
                     Duration::from_secs(30),
-                    ingest_object(&store, &http_client, &ch_client, key),
+                    ingest_object(&store, &ch_client, key),
                 )
                 .await
                 {
@@ -79,10 +77,9 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
-#[instrument(skip(store, http_client, ch_client))]
+#[instrument(skip(store, ch_client))]
 async fn ingest_object(
     store: &impl ObjectStore,
-    http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     key: &Path,
 ) -> anyhow::Result<String> {
@@ -120,11 +117,6 @@ async fn ingest_object(
     // Move Object to processed folder
     let new_path = Path::from(format!("processed/metadata/{}", key.filename().unwrap()));
     move_object(store, key, &new_path).await?;
-
-    // Send Ingest Event
-    if let Some(match_id) = match_info.match_id {
-        send_ingest_event(http_client, match_id).await?;
-    }
     Ok(key.to_string())
 }
 
@@ -247,30 +239,6 @@ async fn move_object(
         Err(e) => {
             counter!("ingest_worker.move_object.failure").increment(1);
             error!("Error moving object: {}", e);
-            Err(e)
-        }
-    }
-}
-
-async fn send_ingest_event(http_client: &reqwest::Client, match_id: u64) -> reqwest::Result<()> {
-    let result = http_client
-        .post(format!(
-            "https://api.deadlock-api.com/v1/matches/{}/ingest",
-            match_id
-        ))
-        .header("X-Api-Key", env::var("INTERNAL_DEADLOCK_API_KEY").unwrap())
-        .send()
-        .await
-        .and_then(|res| res.error_for_status());
-    match result {
-        Ok(_) => {
-            counter!("ingest_worker.send_event.success").increment(1);
-            debug!("Sent event");
-            Ok(())
-        }
-        Err(e) => {
-            counter!("ingest_worker.send_event.failure").increment(1);
-            error!("Error sending event for match: {}", e);
             Err(e)
         }
     }
