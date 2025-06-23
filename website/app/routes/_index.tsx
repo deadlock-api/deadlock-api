@@ -213,13 +213,7 @@ export default function Index() {
           .
         </p>
         <div className="flex justify-center items-center gap-8 mt-4">
-          <a
-            href="https://deadlock.blast.tv/"
-            title="Blast.TV"
-            target="_blank"
-            rel="noreferrer"
-            className="max-w-[200px]"
-          >
+          <a href="https://blast.tv/" title="Blast.TV" target="_blank" rel="noreferrer" className="max-w-[200px]">
             <img src="/logo/blast.svg" alt="Blast.TV Logo" />
           </a>
         </div>
