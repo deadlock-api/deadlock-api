@@ -52,10 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Protocol Buffers compiler
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: protobuf-compiler libprotobuf-dev clang mold
-          version: 1.0
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -99,10 +96,7 @@ jobs:
       - name: Start API Dependency Docker Images (in Background)
         run: nohup task start-test-env-api-deps > pull.log 2>&1 &
       - name: Install Protocol Buffers compiler
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: protobuf-compiler libprotobuf-dev clang mold
-          version: 1.0
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
