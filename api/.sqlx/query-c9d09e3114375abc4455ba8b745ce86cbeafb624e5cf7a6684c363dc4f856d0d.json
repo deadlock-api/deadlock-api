@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT webhook_url, secret FROM webhooks",
+  "query": "SELECT webhook_url, secret FROM webhooks WHERE enabled = true",
   "describe": {
     "columns": [
       {
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "c46da5407366eebceb6492f0aa237939c594a6a14298328454489ff343cd9bd1"
+  "hash": "c9d09e3114375abc4455ba8b745ce86cbeafb624e5cf7a6684c363dc4f856d0d"
 }
