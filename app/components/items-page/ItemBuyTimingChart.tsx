@@ -375,7 +375,6 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                           <div className="text-sm">{data.name}</div>
                           <div className="font-medium">
                             {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
-                            {data.name}
                           </div>
                           <div className="grid gap-1.5">
                             <div className="flex items-center gap-2">
