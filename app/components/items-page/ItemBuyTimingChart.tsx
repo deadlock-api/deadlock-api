@@ -1,13 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { ASSETS_ORIGIN } from "~/lib/constants";
+import { randomColorHex } from "~/lib/utils";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import type { AssetsItem } from "~/types/assets_item";
 
 const chartConfig = {
   winrate: { label: "Win Rate", color: "hsl(var(--chart-1))" },
@@ -99,19 +102,34 @@ const BUCKET_CONFIG = {
 } as const satisfies Partial<Record<BucketType, unknown>>;
 
 interface ItemBuyTimingChartProps {
-  itemId: number;
+  itemIds: number[];
   baseQueryOptions: Omit<ItemStatsQueryParams, "bucket">;
-  rowTotalMatches: number;
+  rowTotalMatches?: number;
 }
 
-export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
+export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
   const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useState(false);
   const [useWilsonInterval, setUseWilsonInterval] = useState(true);
   const [bucketType, setBucketType] = useState<keyof typeof BUCKET_CONFIG>("net_worth_by_1000");
 
-  const baseMinAvgThreshold = rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
+  const baseMinAvgThreshold = rowTotalMatches && rowTotalMatches > 200 ? MIN_AVG_THRESHOLD : MIN_AVG_THRESHOLD * 1.5;
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
-  const minMatches = rowTotalMatches > 500 ? 20 : rowTotalMatches > 250 ? 10 : 2;
+  const minMatches = rowTotalMatches && rowTotalMatches > 500 ? 20 : rowTotalMatches && rowTotalMatches > 250 ? 10 : 2;
+
+  const { data: itemsData, isLoading: isLoadingItems } = useQuery<AssetsItem[]>({
+    queryKey: ["assets-items-upgrades"],
+    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const itemNameMap = useMemo(() => {
+    return itemsData?.reduce(
+      (acc, item) => {
+        acc[item.id] = item.name;
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
+  }, [itemsData]);
 
   const queryOptions = useMemo(
     () => ({ ...baseQueryOptions, bucket: bucketType, minMatches }),
@@ -120,95 +138,130 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
 
   const { data, isLoading } = useQuery(itemStatsQueryOptions(queryOptions));
 
-  const chartData = useMemo(() => {
-    const itemData = data?.filter((d) => d.item_id === itemId) || [];
-    if (itemData.length === 0) return [];
+  const chartData:
+    | never[]
+    | Record<
+        string,
+        {
+          bucket: number;
+          displayBucket: number;
+          bucketStart: number;
+          bucketEnd: number;
+          winrate: number | null;
+          trueWinrate: number | null;
+          wilsonLowerBound: number | null;
+          matches: number;
+          ema: number | null;
+        }[]
+      > = useMemo(() => {
+    const res: Record<
+      string,
+      {
+        bucket: number;
+        displayBucket: number;
+        bucketStart: number;
+        bucketEnd: number;
+        winrate: number | null;
+        trueWinrate: number | null;
+        wilsonLowerBound: number | null;
+        matches: number;
+        ema: number | null;
+      }[]
+    > = {};
+    for (const itemId of itemIds) {
+      const itemData = data?.filter((d) => d.item_id === itemId) || [];
+      if (itemData.length === 0) return [];
 
-    const bucketIncrements =
-      bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
+      const bucketIncrements =
+        bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
 
-    let increment = bucketIncrements[bucketIncrements.length - 1];
-    for (const inc of bucketIncrements) {
-      const avgMatches = computeAverageMatchCount(itemData, inc);
-      const avgPercent = avgMatches / rowTotalMatches;
-      if (avgPercent >= minAvgThreshold) {
-        increment = inc;
-        console.log(
-          `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-        );
-        break;
+      let increment = rowTotalMatches ? bucketIncrements[bucketIncrements.length - 1] : bucketIncrements[0];
+      if (rowTotalMatches) {
+        for (const inc of bucketIncrements) {
+          const avgMatches = computeAverageMatchCount(itemData, inc);
+          const avgPercent = rowTotalMatches ? avgMatches / rowTotalMatches : 0;
+          if (avgPercent >= minAvgThreshold) {
+            increment = inc;
+            console.log(
+              `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
+            );
+            break;
+          }
+          console.log(
+            `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
+          );
+        }
       }
-      console.log(
-        `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-      );
-    }
 
-    const groups = new Map<number, { matches: number; wins: number }>();
-    for (const p of itemData) {
-      const key = Math.floor((p.bucket as number) / increment) * increment;
-      const g = groups.get(key) || { matches: 0, wins: 0 };
-      g.matches += p.matches;
-      g.wins += p.wins;
-      groups.set(key, g);
-    }
+      const groups = new Map<number, { matches: number; wins: number }>();
+      for (const p of itemData) {
+        const key = Math.floor((p.bucket as number) / increment) * increment;
+        const g = groups.get(key) || { matches: 0, wins: 0 };
+        g.matches += p.matches;
+        g.wins += p.wins;
+        groups.set(key, g);
+      }
 
-    const keys = Array.from(groups.keys()).sort((a, b) => a - b);
-    const pts: Array<{
-      bucket: number;
-      displayBucket: number;
-      bucketStart: number;
-      bucketEnd: number;
-      winrate: number | null;
-      trueWinrate: number | null;
-      wilsonLowerBound: number | null;
-      matches: number;
-      ema: number | null;
-    }> = [];
+      const keys = Array.from(groups.keys()).sort((a, b) => a - b);
+      const pts: Array<{
+        bucket: number;
+        displayBucket: number;
+        bucketStart: number;
+        bucketEnd: number;
+        winrate: number | null;
+        trueWinrate: number | null;
+        wilsonLowerBound: number | null;
+        matches: number;
+        ema: number | null;
+      }> = [];
 
-    for (const k of keys) {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
-      const g = groups.get(k)!;
-      const bucketStart = k;
-      const bucketEnd = k + increment;
-      const displayBucket = k + increment / 2; // Center the dot in the middle of the bucket range
+      for (const k of keys) {
+        // biome-ignore lint/style/noNonNullAssertion: <explanation>
+        const g = groups.get(k)!;
+        const bucketStart = k;
+        const bucketEnd = k + increment;
+        const displayBucket = k + increment / 2; // Center the dot in the middle of the bucket range
 
-      if (!g.matches) {
+        if (!g.matches) {
+          pts.push({
+            bucket: k,
+            displayBucket,
+            bucketStart,
+            bucketEnd,
+            winrate: null,
+            trueWinrate: null,
+            wilsonLowerBound: null,
+            matches: 0,
+            ema: null,
+          });
+          continue;
+        }
+        const trueWR = (g.wins / g.matches) * 100;
+        const wilson = wilsonLowerBound(g.wins, g.matches) * 100;
         pts.push({
           bucket: k,
           displayBucket,
           bucketStart,
           bucketEnd,
-          winrate: null,
-          trueWinrate: null,
-          wilsonLowerBound: null,
-          matches: 0,
+          winrate: useWilsonInterval ? wilson : trueWR,
+          trueWinrate: trueWR,
+          wilsonLowerBound: wilson,
+          matches: g.matches,
           ema: null,
         });
-        continue;
       }
-      const trueWR = (g.wins / g.matches) * 100;
-      const wilson = wilsonLowerBound(g.wins, g.matches) * 100;
-      pts.push({
-        bucket: k,
-        displayBucket,
-        bucketStart,
-        bucketEnd,
-        winrate: useWilsonInterval ? wilson : trueWR,
-        trueWinrate: trueWR,
-        wilsonLowerBound: wilson,
-        matches: g.matches,
-        ema: null,
-      });
-    }
 
-    const sma = calculateSMA(pts, increment);
-    return pts.map((p, i) => ({ ...p, ema: sma[i] }));
-  }, [data, itemId, useWilsonInterval, minAvgThreshold, rowTotalMatches, bucketType]);
+      const sma = calculateSMA(pts, increment);
+      res[String(itemId)] = pts.map((p, i) => ({ ...p, ema: sma[i] }));
+    }
+    return res;
+  }, [data, itemIds, useWilsonInterval, minAvgThreshold, rowTotalMatches, bucketType]);
 
   const config = BUCKET_CONFIG[bucketType];
 
   const dataRange = useMemo<[number, number]>(() => {
-    const valid = chartData.filter((d) => d.winrate !== null);
+    const data = Object.values(chartData).flat();
+    const valid = data.filter((d) => d.winrate !== null);
     if (!valid.length) return [0, 1];
     const min = Math.min(...valid.map((d) => d.displayBucket));
     const max = Math.max(...valid.map((d) => d.displayBucket));
@@ -216,7 +269,11 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
     return [Math.max(0, min - adjustmentFactor), max + adjustmentFactor];
   }, [chartData, bucketType]);
 
-  const hasValidData = !isLoading && chartData.some((d) => d.winrate !== null && d.matches > 0);
+  const hasValidData =
+    !isLoading &&
+    Object.values(chartData)
+      .flat()
+      .some((d) => d.winrate !== null && d.matches > 0);
 
   return (
     <Card className="w-full">
@@ -263,35 +320,33 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
               </Tooltip>
             </Label>
           </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="fine-grained"
-              checked={showFineGrainedIntervals}
-              onCheckedChange={setShowFineGrainedIntervals}
-            />
-            <Label htmlFor="fine-grained" className="text-sm">
-              Show fine grained intervals
-            </Label>
-          </div>
+          {rowTotalMatches && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="fine-grained"
+                checked={showFineGrainedIntervals}
+                onCheckedChange={setShowFineGrainedIntervals}
+              />
+              <Label htmlFor="fine-grained" className="text-sm">
+                Show fine grained intervals
+              </Label>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex items-center justify-center h-96">
+          <div className="flex items-center justify-center h-120">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
           </div>
         ) : !hasValidData ? (
-          <div className="flex items-center justify-center h-96">
+          <div className="flex items-center justify-center h-120">
             <p className="text-muted-foreground">No data available</p>
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-96 w-full">
-            <LineChart
-              data={chartData}
-              width={undefined}
-              height={undefined}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
+          <ChartContainer config={chartConfig} className="h-120 w-full">
+            <LineChart width={undefined} height={undefined} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              {itemIds.length > 1 && <Legend layout="vertical" align="right" verticalAlign="top" />}
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="displayBucket"
@@ -304,69 +359,78 @@ export default function ItemBuyTimingChart({ itemId, baseQueryOptions, rowTotalM
               <YAxis
                 domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
                 label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
-                tickFormatter={(v) => `${v.toFixed(0)}%`}
+                tickFormatter={(v) => `${v?.toFixed(0)}%`}
                 tickCount={10}
               />
               <ChartTooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const d = payload[0].payload;
-                    return (
-                      <div className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl">
-                        <div className="font-medium">
-                          {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
-                        </div>
-                        <div className="grid gap-1.5">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-gray-500" />
-                            <span className="text-muted-foreground">
-                              {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
-                            </span>
-                            <span className="font-mono font-medium">
-                              {d.winrate === null ? "-" : d.winrate.toFixed(1)}%
-                            </span>
+                    return payload.map((data) => {
+                      const d = data.payload;
+                      return (
+                        <div
+                          key={`${data.name} ${d.bucketStart}-${d.bucketEnd}`}
+                          className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl"
+                        >
+                          <div className="text-sm">{data.name}</div>
+                          <div className="font-medium">
+                            {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
+                            {data.name}
                           </div>
-                          {useWilsonInterval && (
+                          <div className="grid gap-1.5">
                             <div className="flex items-center gap-2">
-                              <div className="h-2 w-2 rounded-full bg-gray-300" />
-                              <span className="text-muted-foreground">True Win Rate:</span>
+                              <div className="h-2 w-2 rounded-full bg-gray-500" />
+                              <span className="text-muted-foreground">
+                                {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
+                              </span>
                               <span className="font-mono font-medium">
-                                {d.trueWinrate === null ? "-" : d.trueWinrate.toFixed(1)}%
+                                {d.winrate === null ? "-" : d.winrate?.toFixed(1)}%
                               </span>
                             </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-gray-400" />
-                            <span className="text-muted-foreground">Matches:</span>
-                            <span className="font-mono font-medium">{d.matches}</span>
+                            {useWilsonInterval && (
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-gray-300" />
+                                <span className="text-muted-foreground">True Win Rate:</span>
+                                <span className="font-mono font-medium">
+                                  {d.trueWinrate === null ? "-" : d.trueWinrate?.toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <div className="h-2 w-2 rounded-full bg-gray-400" />
+                              <span className="text-muted-foreground">Matches:</span>
+                              <span className="font-mono font-medium">{d.matches}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
+                      );
+                    });
                   }
                   return null;
                 }}
               />
-              <Line
-                type="monotone"
-                dataKey="winrate"
-                stroke="var(--chart-1)"
-                strokeWidth={1}
-                dot={{ r: 3, fill: "var(--chart-1)" }}
-                connectNulls={false}
-                isAnimationActive={false}
-              />
-              {/* TODO: Add moving average later, but for now it just clutters the chart */}
-              {/* <Line
-                type="monotone"
-                dataKey="ema"
-                stroke="var(--chart-2)"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={false}
-                connectNulls={false}
-                isAnimationActive={false}
-              /> */}
+              {(itemIds || []).map((itemId) => (
+                <Line
+                  key={itemId}
+                  dataKey="winrate"
+                  data={chartData[itemId]}
+                  type="monotone"
+                  stroke={randomColorHex(itemId)}
+                  dot={false}
+                  activeDot={{ r: 6 }}
+                  strokeWidth={2}
+                  name={itemNameMap?.[itemId]}
+                />
+              ))}
+              {/*<Line*/}
+              {/*  type="monotone"*/}
+              {/*  dataKey="winrate"*/}
+              {/*  stroke="var(--chart-1)"*/}
+              {/*  strokeWidth={1}*/}
+              {/*  dot={{ r: 3, fill: "var(--chart-1)" }}*/}
+              {/*  connectNulls={false}*/}
+              {/*  isAnimationActive={false}*/}
+              {/*/>*/}
             </LineChart>
           </ChartContainer>
         )}

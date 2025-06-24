@@ -217,7 +217,7 @@ export default function ItemCombsExplore({
           onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
           onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
           customDropdownContent={({ itemId, rowTotal }) => (
-            <ItemBuyTimingChart itemId={itemId} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+            <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
           )}
         />
       </div>

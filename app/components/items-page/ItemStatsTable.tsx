@@ -592,7 +592,7 @@ export default function ItemStatsTable({
       customDropdownContent={
         !hideDropdown
           ? ({ itemId, rowTotal }) => (
-              <ItemBuyTimingChart itemId={itemId} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+              <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
             )
           : undefined
       }
