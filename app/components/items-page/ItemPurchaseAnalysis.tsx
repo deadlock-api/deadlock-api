@@ -43,10 +43,7 @@ export default function ItemPurchaseAnalysis({
         <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-muted-foreground">Items</span>
-            <ItemSelectorMultiple
-              onItemesSelected={(i) => setItemIds(new Set(i))}
-              selectedItemes={Array.from(itemIds)}
-            />
+            <ItemSelectorMultiple onItemsSelected={(i) => setItemIds(new Set(i))} selectedItems={Array.from(itemIds)} />
           </div>
         </div>
         <ItemBuyTimingChart itemIds={Array.from(itemIds)} baseQueryOptions={queryStatOptions} />

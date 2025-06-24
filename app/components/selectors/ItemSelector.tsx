@@ -27,10 +27,15 @@ export default function ItemSelector({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const sortedItemes = useMemo(
-    () => data?.filter((i) => !i.disabled).sort((a: AssetsItem, b: AssetsItem) => a.name.localeCompare(b.name)) ?? [],
-    [data],
-  );
+  function sortItems(a: AssetsItem, b: AssetsItem) {
+    if (a.item_tier !== b.item_tier) {
+      return a.item_tier - b.item_tier;
+    }
+    return a.name.localeCompare(b.name);
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Function
+  const sortedItems = useMemo(() => data?.filter((i) => !i.disabled).sort(sortItems) || [], [data]);
 
   const handleValueChange = (value: string) => {
     if (value === "none" || value === "") {
@@ -42,7 +47,7 @@ export default function ItemSelector({
 
   const selectValue = selectedItem === null || selectedItem === undefined ? "" : String(selectedItem);
 
-  const currentItem = selectedItem ? sortedItemes.find((opt: AssetsItem) => opt.id === selectedItem) : undefined;
+  const currentItem = selectedItem ? sortedItems.find((opt: AssetsItem) => opt.id === selectedItem) : undefined;
 
   return (
     <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
@@ -69,7 +74,7 @@ export default function ItemSelector({
                 <span className="truncate">None</span>
               </SelectItem>
             )}
-            {sortedItemes.map((item: AssetsItem) => (
+            {sortedItems.map((item: AssetsItem) => (
               <SelectItem key={item.id} value={String(item.id)}>
                 <ItemImage itemId={item.id} className="size-5 object-contain flex-shrink-0" />
                 <ItemName itemId={item.id} />
@@ -83,12 +88,12 @@ export default function ItemSelector({
 }
 
 export function ItemSelectorMultiple({
-  onItemesSelected,
-  selectedItemes,
+  onItemsSelected,
+  selectedItems,
   label,
 }: {
-  onItemesSelected: (selectedItemes: number[]) => void;
-  selectedItemes: number[];
+  onItemsSelected: (selectedItems: number[]) => void;
+  selectedItems: number[];
   label?: string;
 }) {
   const { data, isLoading } = useQuery<AssetsItem[]>({
@@ -97,17 +102,22 @@ export function ItemSelectorMultiple({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const sortedItemes = useMemo(
-    () => data?.filter((i) => !i.disabled).sort((a: AssetsItem, b: AssetsItem) => a.name.localeCompare(b.name)) ?? [],
-    [data],
-  );
+  function sortItems(a: AssetsItem, b: AssetsItem) {
+    if (a.item_tier !== b.item_tier) {
+      return a.item_tier - b.item_tier;
+    }
+    return a.name.localeCompare(b.name);
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Function
+  const sortedItems = useMemo(() => data?.filter((i) => !i.disabled).sort(sortItems) || [], [data]);
 
   if (isLoading) {
     return "";
   }
 
-  const allSelected = selectedItemes.length === sortedItemes.length;
-  const noneSelected = selectedItemes.length === 0;
+  const allSelected = selectedItems.length === sortedItems.length;
+  const noneSelected = selectedItems.length === 0;
   const indeterminate = !allSelected && !noneSelected;
 
   return (
@@ -118,10 +128,10 @@ export function ItemSelectorMultiple({
           className="w-fit min-w-[150px] max-w-[250px] overflow-hidden max-h-20 min-h-9 h-min p-1 box-border"
         >
           <div className="flex flex-wrap gap-2 items-center justify-start">
-            {selectedItemes.length === 0 ? (
-              <span className="truncate text-muted-foreground">{label || "Select Itemes..."}</span>
+            {selectedItems.length === 0 ? (
+              <span className="truncate text-muted-foreground">{label || "Select Items..."}</span>
             ) : (
-              selectedItemes
+              selectedItems
                 .map((itemId) => (
                   <span key={itemId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
                     <ItemImage itemId={itemId} className="size-4 object-contain flex-shrink-0" />
@@ -130,8 +140,8 @@ export function ItemSelectorMultiple({
                 ))
                 .slice(0, 5)
             )}
-            {selectedItemes.length > 5 && (
-              <span className="truncate text-muted-foreground">+{selectedItemes.length - 5}</span>
+            {selectedItems.length > 5 && (
+              <span className="truncate text-muted-foreground">+{selectedItems.length - 5}</span>
             )}
           </div>
         </Button>
@@ -143,9 +153,9 @@ export function ItemSelectorMultiple({
               checked={allSelected ? true : indeterminate ? "indeterminate" : false}
               onCheckedChange={(checked) => {
                 if (checked) {
-                  onItemesSelected(sortedItemes.map((item: AssetsItem) => item.id));
+                  onItemsSelected(sortedItems.map((item: AssetsItem) => item.id));
                 } else {
-                  onItemesSelected([]);
+                  onItemsSelected([]);
                 }
               }}
               id="select-all-items"
@@ -154,17 +164,17 @@ export function ItemSelectorMultiple({
               Select all
             </label>
           </div>
-          {sortedItemes.map((item: AssetsItem) => (
+          {sortedItems.map((item: AssetsItem) => (
             <div key={item.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent cursor-pointer">
               <Checkbox
-                checked={selectedItemes.includes(item.id)}
+                checked={selectedItems.includes(item.id)}
                 tabIndex={-1}
                 className="mr-2"
                 onCheckedChange={() => {
-                  if (selectedItemes.includes(item.id)) {
-                    onItemesSelected(selectedItemes.filter((id: number) => id !== item.id));
+                  if (selectedItems.includes(item.id)) {
+                    onItemsSelected(selectedItems.filter((id: number) => id !== item.id));
                   } else {
-                    onItemesSelected([...selectedItemes, item.id]);
+                    onItemsSelected([...selectedItems, item.id]);
                   }
                 }}
                 id={`item-checkbox-${item.id}`}
