@@ -206,4 +206,8 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  .h-120 {
+    height: calc(var(--spacing) * 120);
+  }
 }

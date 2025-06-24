@@ -1,6 +1,7 @@
 import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
+import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
@@ -85,12 +86,23 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
-          <TabsTrigger value="item-combs">Item Combination Stats</TabsTrigger>
+          <TabsTrigger value="item-purchase-analysis">Purchase Analysis</TabsTrigger>
+          <TabsTrigger value="item-combs">Combination Stats</TabsTrigger>
         </TabsList>
         <TabsContent value="stats">
           <ItemStatsTable
             columns={["itemsTier", "winRate", "usage", "confidence"]}
             initialSort={{ field: "winRate", direction: "desc" }}
+            minRankId={minRankId}
+            maxRankId={maxRankId}
+            minDate={startDate || undefined}
+            maxDate={endDate || undefined}
+            hero={hero}
+            minMatches={minMatches}
+          />
+        </TabsContent>
+        <TabsContent value="item-purchase-analysis">
+          <ItemPurchaseAnalysis
             minRankId={minRankId}
             maxRankId={maxRankId}
             minDate={startDate || undefined}
