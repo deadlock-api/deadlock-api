@@ -183,7 +183,9 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
   };
 
   return (
-    <div className={`rounded-full px-3 py-1 text-xs font-semibold border ${getConfidenceColor(tier)}`}>
+    <div
+      className={`rounded-full px-3 py-1.5 items-center flex text-xs font-semibold border ${getConfidenceColor(tier)}`}
+    >
       {getConfidenceLabel(tier)}
     </div>
   );
