@@ -99,7 +99,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
         <div>
           {tab === "patch" ? (
             <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-              <SelectTrigger id="patch-select" className="h-10 focus-visible:ring-0 min-w-full">
+              <SelectTrigger id={matchingPatch?.id} className="h-10 focus-visible:ring-0 min-w-full">
                 <SelectValue placeholder="Select a patch..." />
               </SelectTrigger>
               <SelectContent>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import { Button } from "~/components/ui/button";
@@ -96,7 +96,7 @@ export function ItemSelectorMultiple({
   selectedItems: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery<AssetsItem[]>({
+  const { data } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items"],
     queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
@@ -111,10 +111,6 @@ export function ItemSelectorMultiple({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Function
   const sortedItems = useMemo(() => data?.filter((i) => !i.disabled).sort(sortItems) || [], [data]);
-
-  if (isLoading) {
-    return "";
-  }
 
   const allSelected = selectedItems.length === sortedItems.length;
   const noneSelected = selectedItems.length === 0;
@@ -158,7 +154,7 @@ export function ItemSelectorMultiple({
                   onItemsSelected([]);
                 }
               }}
-              id="select-all-items"
+              id={useId()}
             />
             <label htmlFor="select-all-items" className="text-sm cursor-pointer select-none">
               Select all

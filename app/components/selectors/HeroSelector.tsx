@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
@@ -94,7 +94,7 @@ export function HeroSelectorMultiple({
   selectedHeroes: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery<AssetsHero[]>({
+  const { data } = useQuery<AssetsHero[]>({
     queryKey: ["assets-heroes"],
     queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
@@ -107,10 +107,6 @@ export function HeroSelectorMultiple({
         .sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
     [data],
   );
-
-  if (isLoading) {
-    return "";
-  }
 
   const allSelected = selectedHeroes.length === sortedHeroes.length;
   const noneSelected = selectedHeroes.length === 0;
@@ -154,7 +150,7 @@ export function HeroSelectorMultiple({
                   onHeroesSelected([]);
                 }
               }}
-              id="select-all-heroes"
+              id={useId()}
             />
             <label htmlFor="select-all-heroes" className="text-sm cursor-pointer select-none">
               Select all

@@ -1,7 +1,8 @@
+import { useId } from "react";
 import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
-import MMRChart from "~/components/players-page/MMRChart";
 import MatchHistoryTable from "~/components/players-page/MatchHistoryTable";
+import MMRChart from "~/components/players-page/MMRChart";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -39,7 +40,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
               </Label>
               <Input
                 type="number"
-                id="steamId"
+                id={useId()}
                 min={1}
                 max={4294967295}
                 value={steamId ?? ""}

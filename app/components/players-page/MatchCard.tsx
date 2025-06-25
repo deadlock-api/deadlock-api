@@ -8,6 +8,7 @@ import type { AssetsHero } from "~/types/assets_hero";
 import type { AssetsItem } from "~/types/assets_item";
 import { cn } from "../../lib/utils";
 import RankImage from "../RankImage";
+import { Button } from "../ui/button";
 
 export interface MatchDisplayData {
   match: {
@@ -207,12 +208,13 @@ export default function MatchCard({ matchData, itemsMap, heroesMap, setSteamId }
                   ) : (
                     <div className="w-5 h-5 bg-border rounded-full" />
                   )}
-                  <span
-                    className="truncate text-muted-foreground text-xs hover:underline hover:cursor-pointer"
+                  <Button
+                    variant="ghost"
+                    className="truncate text-muted-foreground text-xs p-0 h-fit hover:underline hover:cursor-pointer"
                     onClick={() => setSteamId?.(p.account_id)}
                   >
                     Player {p.account_id}
-                  </span>
+                  </Button>
                 </div>
               ))}
             </div>

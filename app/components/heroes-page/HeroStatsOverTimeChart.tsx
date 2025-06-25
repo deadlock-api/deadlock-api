@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { type Dayjs, day } from "~/dayjs";
-import { type APIHeroStats, HERO_STATS, TIME_INTERVALS, hero_stats_transform } from "~/types/api_hero_stats";
-
 import {
   Select,
   SelectContent,
@@ -13,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { type Dayjs, day } from "~/dayjs";
+import { type APIHeroStats, HERO_STATS, hero_stats_transform, TIME_INTERVALS } from "~/types/api_hero_stats";
 import type { AssetsHero } from "~/types/assets_hero";
 
 export function HeroStatSelector({
@@ -41,13 +40,7 @@ export function HeroStatSelector({
   );
 }
 
-export function HeroTimeIntervalSelector({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (val: string) => void;
-}) {
+export function HeroTimeIntervalSelector({ value, onChange }: { value: string; onChange: (val: string) => void }) {
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="min-w-[160px]">
