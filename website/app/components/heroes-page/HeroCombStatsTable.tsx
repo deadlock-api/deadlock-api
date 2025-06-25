@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
@@ -86,7 +86,7 @@ export default function HeroCombStatsTable({
           </label>
           <div className="flex items-center gap-2">
             <Slider
-              id="comb-size"
+              id={useId()}
               min={2}
               max={6}
               value={[combSizeFilterT]}
@@ -104,7 +104,7 @@ export default function HeroCombStatsTable({
           </label>
           <div className="flex items-center gap-2">
             <Slider
-              id="min-matches"
+              id={useId()}
               min={1}
               step={10}
               max={1000}
@@ -123,7 +123,7 @@ export default function HeroCombStatsTable({
           </label>
           <div className="flex items-center gap-2">
             <Slider
-              id="combs-to-show"
+              id={useId()}
               min={0}
               step={100}
               max={Math.min(500, numCombs)}
