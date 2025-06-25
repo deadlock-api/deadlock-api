@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated > now() - INTERVAL '2 weeks'",
+  "query": "SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated < now() - INTERVAL '2 weeks'",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "8686dc4c3c65cafe2799c396264fd33804693bf86b6d9edcf922b5508a7197cd"
+  "hash": "f2c2948cc10ad87fd5a4bb222f9ad8a17b6e29e98d4516d9c755613e6a5a489c"
 }
