@@ -13,9 +13,6 @@ pub struct ClickhouseMatchInfo {
     pub match_outcome: MatchOutcome,
     pub match_mode: MatchMode,
     pub game_mode: GameMode,
-    pub sample_time_s: Vec<u32>,
-    pub stat_type: Vec<i32>,
-    pub source_name: Vec<String>,
     pub objectives_mask_team0: u16,
     pub objectives_mask_team1: u16,
     pub is_high_skill_range_parties: Option<bool>,
@@ -98,21 +95,6 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
                 .map(|v| v.team())
                 .map(Team::from)
                 .collect(),
-            sample_time_s: value
-                .damage_matrix
-                .as_ref()
-                .map(|v| v.clone().sample_time_s)
-                .unwrap_or_default(),
-            stat_type: value
-                .damage_matrix
-                .as_ref()
-                .and_then(|v| v.clone().source_details.map(|s| s.stat_type))
-                .unwrap_or_default(),
-            source_name: value
-                .damage_matrix
-                .as_ref()
-                .and_then(|v| v.clone().source_details.map(|s| s.source_name))
-                .unwrap_or_default(),
             objectives_mask_team0: value.objectives_mask_team0() as u16,
             objectives_mask_team1: value.objectives_mask_team1() as u16,
             mid_boss_team_killed: value

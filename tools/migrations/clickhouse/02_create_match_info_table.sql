@@ -25,9 +25,6 @@ CREATE TABLE IF NOT EXISTS match_info
     game_mode Enum8 (
         'Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3
     ),
-    sample_time_s Array (UInt32),
-    stat_type Array (Int32),
-    source_name Array (String),
     objectives_mask_team0 UInt16,
     objectives_mask_team1 UInt16,
     is_high_skill_range_parties Nullable (Bool),
