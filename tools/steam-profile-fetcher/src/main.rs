@@ -8,7 +8,7 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::{Error, PgPool};
 use std::env;
 use std::time::Duration;
-use tracing::{error, info, instrument};
+use tracing::{debug, error, info, instrument};
 mod models;
 mod steam_api;
 
@@ -103,13 +103,26 @@ async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
     pg_client: &PgPool,
 ) -> Result<Vec<u32>> {
+    // Get New Accounts to Fetch
     let ch_account_ids = get_ch_account_ids(ch_client).await?;
-    let mut pg_account_ids = get_pg_account_ids(pg_client).await?;
-    pg_account_ids.shuffle(&mut rng());
+    let pg_new_account_ids = get_pg_account_ids_new(pg_client).await?;
+    let ch_account_ids = ch_account_ids
+        .into_iter()
+        .filter(|id| !pg_new_account_ids.contains(id))
+        .unique()
+        .collect_vec();
+    debug!("Found {} new account IDs to update", ch_account_ids.len());
+
+    let mut pg_outdated_account_ids = get_pg_account_ids_outdated(pg_client).await?;
+    pg_outdated_account_ids.shuffle(&mut rng());
+    debug!(
+        "Found {} outdated account IDs to update",
+        pg_outdated_account_ids.len()
+    );
 
     Ok(ch_account_ids
         .into_iter()
-        .chain(pg_account_ids.into_iter())
+        .chain(pg_outdated_account_ids.into_iter())
         .unique()
         .collect())
 }
@@ -125,9 +138,20 @@ ORDER BY RAND()
     ch_client.query(query).fetch_all().await
 }
 
-async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
+async fn get_pg_account_ids_outdated(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
     Ok(
         sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated < now() - INTERVAL '2 weeks'")
+            .fetch_all(pg_client)
+            .await?
+            .into_iter()
+            .map(|row| row.account_id as u32)
+            .collect(),
+    )
+}
+
+async fn get_pg_account_ids_new(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
+    Ok(
+        sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated > now() - INTERVAL '2 weeks'")
             .fetch_all(pg_client)
             .await?
             .into_iter()
