@@ -1,5 +1,5 @@
-import { useId } from "react";
 import type { MetaFunction } from "react-router";
+import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -10,7 +10,6 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
@@ -136,7 +135,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   Same Lane Filter
                 </label>
                 <Checkbox
-                  id={useId()}
+                  id="same-lane-filter"
                   checked={sameLaneFilter}
                   onCheckedChange={(i) => setSameLaneFilter(i === true)}
                 />
@@ -146,7 +145,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   Same Party Filter
                 </label>
                 <Checkbox
-                  id={useId()}
+                  id="same-party-filter"
                   checked={samePartyFilter}
                   onCheckedChange={(i) => setSamePartyFilter(i === true)}
                 />
@@ -198,7 +197,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                     Same Lane Filter
                   </label>
                   <Checkbox
-                    id={useId()}
+                    id="same-lane-filter"
                     checked={sameLaneFilter}
                     onCheckedChange={(i) => setSameLaneFilter(i === true)}
                   />
@@ -208,7 +207,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                     Same Party Filter
                   </label>
                   <Checkbox
-                    id={useId()}
+                    id="same-party-filter"
                     checked={samePartyFilter}
                     onCheckedChange={(i) => setSamePartyFilter(i === true)}
                   />

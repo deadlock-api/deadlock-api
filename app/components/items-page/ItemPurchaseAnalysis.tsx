@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useMemo } from "react";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";

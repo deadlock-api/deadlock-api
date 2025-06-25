@@ -56,11 +56,7 @@ export default function RankSelector({
   onRankSelected,
   selectedRank,
   label,
-}: {
-  onRankSelected: (selectedRankId: number) => void;
-  selectedRank?: number | null;
-  label?: string;
-}) {
+}: { onRankSelected: (selectedRankId: number) => void; selectedRank?: number | null; label?: string }) {
   const { data: ranksData, isLoading } = useQuery<AssetsRank[]>({
     queryKey: ["assets-ranks"],
     queryFn: () => fetch(new URL("/v2/ranks", ASSETS_ORIGIN)).then((res) => res.json()),

@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
+import * as React from "react";
 import { useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "~/components/ui/button";
@@ -75,10 +76,15 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn("w-[300px] justify-evenly font-normal", !startDate && "text-foreground")}
+            className={cn("w-[300px] justify-between text-left font-normal", !startDate && "text-foreground")}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayText}
+            <span
+              onClick={() => onDateRangeChange({ startDate: null, endDate: null })}
+              aria-label="Reset date range"
+              className="hover:text-red-500 font-bold text-lg align-middle icon-[mdi--close]"
+            />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="start">

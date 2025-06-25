@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
@@ -116,7 +116,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
   const minMatches = rowTotalMatches && rowTotalMatches > 500 ? 20 : rowTotalMatches && rowTotalMatches > 250 ? 10 : 2;
 
-  const { data: itemsData } = useQuery<AssetsItem[]>({
+  const { data: itemsData, isLoading: isLoadingItems } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
     queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
     staleTime: Number.POSITIVE_INFINITY,
@@ -216,7 +216,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
       }> = [];
 
       for (const k of keys) {
-        // biome-ignore lint/style/noNonNullAssertion: We know this exists
+        // biome-ignore lint/style/noNonNullAssertion: <explanation>
         const g = groups.get(k)!;
         const bucketStart = k;
         const bucketEnd = k + increment;
@@ -304,7 +304,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
             </ToggleGroup>
           </div>
           <div className="flex items-center space-x-2">
-            <Switch id={useId()} checked={useWilsonInterval} onCheckedChange={setUseWilsonInterval} />
+            <Switch id="wilson-interval" checked={useWilsonInterval} onCheckedChange={setUseWilsonInterval} />
             <Label htmlFor="wilson-interval" className="text-sm flex items-center gap-1">
               Use conservative win-rate estimate based on volume
               <Tooltip>
@@ -323,7 +323,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
           {rowTotalMatches && (
             <div className="flex items-center space-x-2">
               <Switch
-                id={rowTotalMatches.toString()}
+                id="fine-grained"
                 checked={showFineGrainedIntervals}
                 onCheckedChange={setShowFineGrainedIntervals}
               />
