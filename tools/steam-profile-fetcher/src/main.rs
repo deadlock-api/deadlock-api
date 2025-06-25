@@ -72,7 +72,7 @@ async fn fetch_and_update_profiles(
         Err(e) => {
             error!("Failed to fetch Steam profiles: {}", e);
             counter!("steam_profile_fetcher.fetched_profiles.failure")
-                .increment(account_ids.len() as u64);
+                .increment(batch.len() as u64);
             return Err(e);
         }
     };
