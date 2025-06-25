@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
         interval.tick().await;
         match fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
             Ok(_) => info!("Updated Steam profiles"),
-            Err(e) => error!("Error updating Steam profiles: {}", e),
+            Err(_) => error!("Error updating Steam profiles"),
         }
     }
 }
