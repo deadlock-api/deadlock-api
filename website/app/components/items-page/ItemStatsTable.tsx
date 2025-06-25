@@ -46,12 +46,7 @@ export interface ItemStatsTableDisplayProps {
     rowWins,
     rowLosses,
     rowTotal,
-  }: {
-    itemId: number;
-    rowWins: number;
-    rowLosses: number;
-    rowTotal: number;
-  }) => ReactNode;
+  }: { itemId: number; rowWins: number; rowLosses: number; rowTotal: number }) => ReactNode;
 }
 
 export interface DisplayItemStats {
@@ -90,12 +85,7 @@ interface ItemStatsTableRowProps {
     rowWins,
     rowLosses,
     rowTotal,
-  }: {
-    itemId: number;
-    rowWins: number;
-    rowLosses: number;
-    rowTotal: number;
-  }) => ReactNode;
+  }: { itemId: number; rowWins: number; rowLosses: number; rowTotal: number }) => ReactNode;
 }
 
 function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {
@@ -430,7 +420,6 @@ export function ItemStatsTableDisplay({
         {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
         {columns.includes("confidence") && (
           <div className="flex items-center gap-2">
-            {/** biome-ignore lint/nursery/useUniqueElementIds: it's fine */}
             <Switch id="dim-low-confidence" checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
             <Label htmlFor="dim-low-confidence" className="text-sm font-medium cursor-pointer">
               Highlight overperforming items

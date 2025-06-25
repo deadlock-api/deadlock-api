@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "../ui/button";
 
 const TIERS = [1, 2, 3, 4];
