@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use rand::rng;
 use rand::seq::IndexedRandom;
 use std::env;
-use tracing::{info, instrument};
+use tracing::instrument;
 
 use crate::models::{SteamPlayerSummary, SteamPlayerSummaryResponse};
 
@@ -53,7 +53,5 @@ pub async fn fetch_steam_profiles(
         .json()
         .await?;
     let player_summaries = player_summaries.response.players;
-    info!("Fetched {} Steam profiles", player_summaries.len());
-
     Ok(player_summaries.into_iter().map_into().collect_vec())
 }

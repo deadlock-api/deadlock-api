@@ -51,15 +51,13 @@ async fn fetch_and_update_profiles(
     pg_client: &PgPool,
 ) -> Result<()> {
     let account_ids = get_account_ids_to_update(ch_client, pg_client).await?;
+    gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
     if account_ids.is_empty() {
         info!("No new account IDs to update, sleeping 10min...");
-        gauge!("steam_profile_fetcher.account_ids_to_update").set(0);
         return Ok(());
     }
-
     info!("Found {} account IDs to update", account_ids.len());
-    gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
     let batch = account_ids.iter().take(100).collect_vec();
     let profiles = match steam_api::fetch_steam_profiles(http_client, &batch).await {
@@ -111,12 +109,11 @@ async fn get_account_ids_to_update(
         .filter(|id| !pg_new_account_ids.contains(id))
         .unique()
         .collect_vec();
-    debug!("Found {} new account IDs to update", ch_account_ids.len());
-
     let mut pg_outdated_account_ids = get_pg_account_ids_outdated(pg_client).await?;
     pg_outdated_account_ids.shuffle(&mut rng());
     debug!(
-        "Found {} outdated account IDs to update",
+        "Found {} new accounts and {} outdated accounts to update",
+        ch_account_ids.len(),
         pg_outdated_account_ids.len()
     );
 
