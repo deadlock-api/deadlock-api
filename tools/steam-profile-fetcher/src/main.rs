@@ -1,5 +1,4 @@
 use anyhow::Result;
-use arl::RateLimiter;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use once_cell::sync::Lazy;
@@ -9,7 +8,6 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::{Error, PgPool};
 use std::env;
 use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{error, info, instrument};
 mod models;
 mod steam_api;
@@ -25,21 +23,6 @@ static FETCH_INTERVAL: Lazy<Duration> = Lazy::new(|| {
     )
 });
 
-static REQUESTS_PER_10_MINUTES: Lazy<usize> = Lazy::new(|| {
-    env::var("REQUESTS_PER_10_MINUTES")
-        .unwrap_or_else(|_| "10".to_string())
-        .parse()
-        .unwrap_or(10)
-});
-
-static BATCH_SIZE: Lazy<usize> = Lazy::new(|| {
-    env::var("BATCH_SIZE")
-        .unwrap_or_else(|_| "100".to_string())
-        .parse()
-        .unwrap_or(100)
-        .min(100) // Steam API has a limit of 100 accounts per request
-});
-
 #[tokio::main]
 async fn main() -> Result<()> {
     common::init_tracing();
@@ -51,11 +34,10 @@ async fn main() -> Result<()> {
     let ch_client = common::get_ch_client()?;
     let pg_client = common::get_pg_client().await?;
 
-    let limiter = RateLimiter::new(*REQUESTS_PER_10_MINUTES, Duration::from_secs(10 * 60));
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     loop {
         interval.tick().await;
-        match fetch_and_update_profiles(&http_client, &ch_client, &pg_client, &limiter).await {
+        match fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
             Ok(_) => info!("Updated Steam profiles"),
             Err(e) => {
                 error!("Error updating Steam profiles: {}", e);
@@ -70,24 +52,20 @@ async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
     pg_client: &PgPool,
-    limiter: &RateLimiter,
 ) -> Result<()> {
     let account_ids = get_account_ids_to_update(ch_client, pg_client).await?;
 
     if account_ids.is_empty() {
         info!("No new account IDs to update, sleeping 10min...");
         gauge!("steam_profile_fetcher.account_ids_to_update").set(0);
-        sleep(Duration::from_secs(60 * 10)).await;
         return Ok(());
     }
 
     info!("Found {} account IDs to update", account_ids.len());
     gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
-    let mut remaining = account_ids.len();
-    limiter.wait().await;
-
-    let profiles = match steam_api::fetch_steam_profiles(http_client, &account_ids).await {
+    let batch = account_ids.iter().take(100).collect_vec();
+    let profiles = match steam_api::fetch_steam_profiles(http_client, &batch).await {
         Ok(profiles) => {
             info!("Fetched {} Steam profiles", profiles.len());
             counter!("steam_profile_fetcher.fetched_profiles.success")
@@ -104,11 +82,10 @@ async fn fetch_and_update_profiles(
 
     match save_profiles(pg_client, &profiles).await {
         Ok(_) => {
-            remaining -= profiles.len();
             info!(
                 "Saved {} Steam profiles, {} account IDs remaining to update",
                 profiles.len(),
-                remaining
+                account_ids.len() - profiles.len()
             );
             gauge!("steam_profile_fetcher.account_ids_to_update").decrement(profiles.len() as f64);
             counter!("steam_profile_fetcher.saved_profiles.success")
@@ -137,7 +114,6 @@ async fn get_account_ids_to_update(
         .into_iter()
         .chain(pg_account_ids.into_iter())
         .unique()
-        .take(*BATCH_SIZE)
         .collect())
 }
 

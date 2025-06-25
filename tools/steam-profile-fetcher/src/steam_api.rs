@@ -19,7 +19,7 @@ static STEAM_API_KEYS: Lazy<Vec<String>> = Lazy::new(|| {
 #[instrument(skip(http_client), fields(account_ids = account_ids.len()))]
 pub async fn fetch_steam_profiles(
     http_client: &reqwest::Client,
-    account_ids: &[u32],
+    account_ids: &[&u32],
 ) -> Result<Vec<SteamPlayerSummary>> {
     if account_ids.is_empty() {
         return Ok(Vec::new());
@@ -28,7 +28,7 @@ pub async fn fetch_steam_profiles(
     // Convert account IDs to Steam ID3 format
     let steam_id64s: Vec<String> = account_ids
         .iter()
-        .map(|id| common::account_id_to_steam_id64(*id))
+        .map(|id| common::account_id_to_steam_id64(**id))
         .map(|i| i.to_string())
         .collect();
 
