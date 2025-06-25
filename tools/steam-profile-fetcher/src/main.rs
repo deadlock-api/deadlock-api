@@ -39,12 +39,8 @@ async fn main() -> Result<()> {
         interval.tick().await;
         match fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
             Ok(_) => info!("Updated Steam profiles"),
-            Err(e) => {
-                error!("Error updating Steam profiles: {}", e);
-                continue;
-            }
+            Err(e) => error!("Error updating Steam profiles: {}", e)}
         }
-    }
 }
 
 #[instrument(skip_all)]
@@ -121,7 +117,7 @@ async fn get_ch_account_ids(ch_client: &clickhouse::Client) -> clickhouse::error
     let query = "
 SELECT DISTINCT account_id
 FROM match_player
-WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 1 MONTH)
+WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK)
 AND account_id > 0
 ORDER BY RAND()
     ";
@@ -130,7 +126,7 @@ ORDER BY RAND()
 
 async fn get_pg_account_ids(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
     Ok(
-        sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated > now() - INTERVAL '2 weeks'")
+        sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated < now() - INTERVAL '2 weeks'")
             .fetch_all(pg_client)
             .await?
             .into_iter()
