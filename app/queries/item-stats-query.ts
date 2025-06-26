@@ -14,6 +14,7 @@ export interface ItemStatsQueryParams {
   bucket?:
     | "start_time_hour"
     | "start_time_day"
+    | "start_time_week"
     | "game_time_min"
     | "game_time_normalized_percentage"
     | "net_worth_by_1000";

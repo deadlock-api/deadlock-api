@@ -72,4 +72,8 @@ export const TIME_INTERVALS: TimeInterval[] = [
     label: "Day",
     query: "start_time_day",
   },
+  {
+    label: "Week",
+    query: "start_time_week",
+  },
 ];
