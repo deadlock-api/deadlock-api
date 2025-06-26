@@ -4,6 +4,7 @@ use metrics::{counter, gauge};
 use once_cell::sync::Lazy;
 use std::env;
 use std::time::Duration;
+use tokio::join;
 use tracing::{error, info, instrument};
 mod models;
 mod steam_api;
@@ -96,7 +97,7 @@ async fn fetch_and_update_profiles(
 async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<u32>> {
-    let query = format!(
+    let new_accounts_query = format!(
         r#"
 WITH recent_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - {OUTDATED_INTERVAL}),
     up_to_date_accounts AS (SELECT account_id FROM steam_profiles WHERE last_updated > now() - {OUTDATED_INTERVAL})
@@ -105,15 +106,24 @@ FROM match_player
 WHERE match_id IN recent_matches AND account_id NOT IN up_to_date_accounts
 AND account_id > 0
 ORDER BY RAND()
-
-UNION DISTINCT
-
+    "#
+    );
+    let outdated_accounts_query = format!(
+        r#"
 SELECT DISTINCT account_id
 FROM steam_profiles FINAL
 WHERE last_updated < now() - {OUTDATED_INTERVAL}
     "#
     );
-    ch_client.query(&query).fetch_all().await
+    let (r1, r2) = join!(
+        ch_client.query(&new_accounts_query).fetch_all::<u32>(),
+        ch_client.query(&outdated_accounts_query).fetch_all::<u32>()
+    );
+    Ok(r1?
+        .into_iter()
+        .chain(r2?.into_iter())
+        .unique()
+        .collect_vec())
 }
 
 #[instrument(skip_all)]
