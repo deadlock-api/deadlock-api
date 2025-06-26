@@ -8,7 +8,6 @@ ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
 WORKDIR /app
 
 FROM chef AS planner
-ARG EXE_NAME
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
