@@ -190,13 +190,13 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if let Some(max_match_id) = query.max_match_id {
         info_filters.push(format!("match_id <= {max_match_id}"));
     }
-    if let Some(match_ids) = query.match_ids {
-        if !match_ids.is_empty() {
-            info_filters.push(format!(
-                "match_id IN ({})",
-                match_ids.iter().map(ToString::to_string).join(",")
-            ));
-        }
+    if let Some(match_ids) = query.match_ids
+        && !match_ids.is_empty()
+    {
+        info_filters.push(format!(
+            "match_id IN ({})",
+            match_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
     if let Some(min_duration_s) = query.min_duration_s {
         info_filters.push(format!("duration_s >= {min_duration_s}"));
@@ -226,13 +226,13 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
 
     // Player filters - conditions that require subqueries on match_player
     let mut player_filters = vec![];
-    if let Some(account_ids) = query.account_ids {
-        if !account_ids.is_empty() {
-            player_filters.push(format!(
-                "account_id IN ({})",
-                account_ids.iter().map(ToString::to_string).join(",")
-            ));
-        }
+    if let Some(account_ids) = query.account_ids
+        && !account_ids.is_empty()
+    {
+        player_filters.push(format!(
+            "account_id IN ({})",
+            account_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
 
     // Add player filter subquery if any player filters exist

@@ -1,6 +1,6 @@
 ARG EXE_NAME=deadlock-api-rust
 
-FROM rust:1.87.0-slim-bookworm AS chef
+FROM rust:1.88.0-slim-bookworm AS chef
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl mold
 RUN cargo install --locked cargo-chef

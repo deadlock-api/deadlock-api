@@ -15,25 +15,23 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
             .find(|(key, _)| *key == "api_key")
             .map(|(_, value)| value.to_string())
     });
-    if let Some(api_key) = query_api_key {
-        if let Ok(api_key) = api_key.parse::<HeaderValue>() {
-            request.headers_mut().insert("x-api-key", api_key);
-            return next.run(request).await;
-        }
+    if let Some(api_key) = query_api_key
+        && let Ok(api_key) = api_key.parse::<HeaderValue>()
+    {
+        request.headers_mut().insert("x-api-key", api_key);
+        return next.run(request).await;
     }
 
     // Check if API-Key is set as a bearer token
-    if let Some(api_key) = request.headers().get("authorization") {
-        if let Some(api_key) = api_key
+    if let Some(api_key) = request.headers().get("authorization")
+        && let Some(api_key) = api_key
             .to_str()
             .ok()
             .and_then(|s| s.strip_prefix("Bearer "))
-        {
-            if let Ok(api_key) = api_key.parse::<HeaderValue>() {
-                request.headers_mut().insert("x-api-key", api_key);
-                return next.run(request).await;
-            }
-        }
+        && let Ok(api_key) = api_key.parse::<HeaderValue>()
+    {
+        request.headers_mut().insert("x-api-key", api_key);
+        return next.run(request).await;
     }
 
     next.run(request).await
