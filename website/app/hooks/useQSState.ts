@@ -75,8 +75,8 @@ export const dayjsSerializer = serializers.custom(
   (v: Dayjs) => v.toISOString(),
 );
 export const dayjsRangeSerializer = serializers.custom(
-  (v: string) => v.split("_").map((v) => day(v)) as [Dayjs, Dayjs],
-  (v: [Dayjs, Dayjs]) => `${v[0].toISOString()}_${v[1].toISOString()}`,
+  (v: string) => v.split("_").map((v) => (v ? day(v) : undefined)) as [Dayjs | undefined, Dayjs | undefined],
+  (v: [Dayjs | undefined, Dayjs | undefined]) => `${v[0]?.toISOString() ?? ""}_${v[1]?.toISOString() ?? ""}`,
 );
 
 // Main hook with conditional types for better inference
@@ -352,19 +352,27 @@ export function useQSDayjs(
 
 export function useQSDayjsRange(
   key: string,
-  defaultValue: [Dayjs, Dayjs],
-): [[Dayjs, Dayjs], (value: [Dayjs, Dayjs] | undefined) => void, { loading: boolean; error: Error | null }];
-
-export function useQSDayjsRange(
-  key: string,
-): [[Dayjs, Dayjs] | undefined, (value: [Dayjs, Dayjs] | undefined) => void, { loading: boolean; error: Error | null }];
-
-export function useQSDayjsRange(
-  key: string,
-  defaultValue?: [Dayjs, Dayjs],
+  defaultValue: [Dayjs | undefined, Dayjs | undefined],
 ): [
-  [Dayjs, Dayjs] | undefined,
-  (value: [Dayjs, Dayjs] | undefined) => void,
+  [Dayjs | undefined, Dayjs | undefined],
+  (value: [Dayjs | undefined, Dayjs | undefined] | undefined) => void,
+  { loading: boolean; error: Error | null },
+];
+
+export function useQSDayjsRange(
+  key: string,
+): [
+  [Dayjs | undefined, Dayjs | undefined] | undefined,
+  (value: [Dayjs | undefined, Dayjs | undefined] | undefined) => void,
+  { loading: boolean; error: Error | null },
+];
+
+export function useQSDayjsRange(
+  key: string,
+  defaultValue?: [Dayjs | undefined, Dayjs | undefined],
+): [
+  [Dayjs | undefined, Dayjs | undefined] | undefined,
+  (value: [Dayjs | undefined, Dayjs | undefined] | undefined) => void,
   { loading: boolean; error: Error | null },
 ] {
   return useQSState(

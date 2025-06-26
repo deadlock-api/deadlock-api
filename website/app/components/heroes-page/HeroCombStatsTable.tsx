@@ -25,8 +25,8 @@ export default function HeroCombStatsTable({
   hideIndex?: boolean;
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Dayjs | null;
-  maxDate?: Dayjs | null;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
 }) {
   const [minMatchesFilter, setMinMatchesFilter] = useQSNumber("min_matches", 100);
   const [minMatchesFilterT, setMinMatchesFilterT] = useState<number>(100);

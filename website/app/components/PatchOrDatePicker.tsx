@@ -15,8 +15,8 @@ export interface PatchInfo {
 
 export interface PatchOrDatePickerProps {
   patchDates: PatchInfo[];
-  value: { startDate: Dayjs | null; endDate: Dayjs | null };
-  onValueChange: (value: { startDate: Dayjs | null; endDate: Dayjs | null }) => void;
+  value: { startDate?: Dayjs; endDate?: Dayjs };
+  onValueChange: (value: { startDate?: Dayjs; endDate?: Dayjs }) => void;
   className?: string;
   defaultTab?: "patch" | "custom";
 }
@@ -64,14 +64,14 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       });
     } else {
       // Handle case where "Select a patch" or an empty value is chosen
-      onValueChange({ startDate: null, endDate: null });
+      onValueChange({});
     }
   };
 
   const handleDateRangePickerChange: DateRangePickerProps["onDateRangeChange"] = (range) => {
     onValueChange({
-      startDate: range.startDate ? range.startDate.startOf("day") : null,
-      endDate: range.endDate ? range.endDate.endOf("day") : null,
+      startDate: range.startDate?.startOf("day"),
+      endDate: range.endDate?.endOf("day"),
     });
   };
 

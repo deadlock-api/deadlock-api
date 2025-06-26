@@ -29,8 +29,8 @@ export default function HeroMatchupDetailsStatsTable({
   stat: HeroMatchupDetailsStatsTableStat;
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Dayjs | null;
-  maxDate?: Dayjs | null;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
   onHeroSelected?: (heroId: number) => void;
   sameLaneFilter?: boolean;
   samePartyFilter?: boolean;

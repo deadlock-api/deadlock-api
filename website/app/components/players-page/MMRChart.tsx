@@ -15,8 +15,8 @@ export default function MMRChart({
 }: {
   steamId: number;
   hero?: number | null;
-  minDate?: Dayjs | null;
-  maxDate?: Dayjs | null;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
 }) {
   const { data: ranksData, isLoading: isLoadingAssetsRanks } = useQuery<AssetsRank[]>({
     queryKey: ["assets-ranks"],

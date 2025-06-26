@@ -81,8 +81,8 @@ export default function HeroStatsOverTimeChart({
   heroTimeInterval: string;
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Dayjs | null;
-  maxDate?: Dayjs | null;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);

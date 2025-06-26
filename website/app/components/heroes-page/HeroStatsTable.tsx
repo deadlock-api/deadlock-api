@@ -27,8 +27,8 @@ export default function HeroStatsTable({
   sortBy?: keyof APIHeroStats | "winrate";
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Dayjs | null;
-  maxDate?: Dayjs | null;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
   fullWidth?: boolean;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
