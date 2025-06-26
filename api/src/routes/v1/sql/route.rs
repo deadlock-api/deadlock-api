@@ -115,7 +115,7 @@ async fn run_sql(
     let mut lines: Lines<BytesCursor> = ch_client
         .query(query)
         .fetch_bytes("JSONEachRow")
-        .map(|m| m.lines())?;
+        .map(AsyncBufReadExt::lines)?;
     let mut parsed_result: Vec<serde_json::Value> = vec![];
     while let Some(line) = lines.next_line().await? {
         let value: serde_json::Value = serde_json::de::from_str(&line)?;

@@ -149,7 +149,7 @@ pub(super) async fn live_url(
                 failed.result.and_then(|r| r.try_into().ok());
             Err(APIError::internal(format!(
                 "Failed to spectate match: {:?}",
-                result.map(|r| r.as_str_name()).unwrap_or("Unknown")
+                result.map_or("Unknown", |r| r.as_str_name())
             )))
         }
     }

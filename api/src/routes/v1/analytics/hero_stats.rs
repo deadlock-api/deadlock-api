@@ -150,7 +150,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
@@ -167,17 +167,17 @@ fn build_query(query: &HeroStatsQuery) -> String {
     if let Some(include_item_ids) = &query.include_item_ids {
         player_filters.push(format!(
             "hasAll(items, [{}])",
-            include_item_ids.iter().map(|id| id.to_string()).join(", ")
+            include_item_ids.iter().map(ToString::to_string).join(", ")
         ));
     }
     if let Some(exclude_item_ids) = &query.exclude_item_ids {
         player_filters.push(format!(
             "not hasAny(items, [{}])",
-            exclude_item_ids.iter().map(|id| id.to_string()).join(", ")
+            exclude_item_ids.iter().map(ToString::to_string).join(", ")
         ));
     }
     let player_filters = if player_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
@@ -252,7 +252,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         )"#
             )
         } else {
-            "".to_string()
+            String::new()
         },
         match query.bucket {
             BucketQuery::NoBucket => "TRUE".to_string(),

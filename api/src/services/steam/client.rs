@@ -13,6 +13,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use metrics::counter;
 use prost::Message;
+use reqwest::Response;
 use serde_json::json;
 use std::time::Duration;
 use tracing::{debug, error};
@@ -139,7 +140,7 @@ impl SteamClient {
             ))
             .send()
             .await
-            .and_then(|resp| resp.error_for_status())?
+            .and_then(Response::error_for_status)?
             .bytes()
             .await
             .map(|r| r.to_vec())
@@ -159,7 +160,7 @@ impl SteamClient {
             .timeout(Duration::from_secs(5))
             .send()
             .await
-            .and_then(|resp| resp.error_for_status())
+            .and_then(Response::error_for_status)
             .map(drop)
     }
 
@@ -170,7 +171,7 @@ impl SteamClient {
             ))
             .send()
             .await
-            .and_then(|resp| resp.error_for_status())
+            .and_then(Response::error_for_status)
             .map(drop)
     }
 }
@@ -217,7 +218,7 @@ async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<
         .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
         .send()
         .await
-        .and_then(|resp| resp.error_for_status())?
+        .and_then(Response::error_for_status)?
         .text().await?;
     for line in steam_info.lines() {
         if line.starts_with("ClientVersion=") {
@@ -269,7 +270,7 @@ async fn fetch_steam_account_name_cached(
         ))
         .send()
         .await
-        .and_then(|r| r.error_for_status())
+        .and_then(Response::error_for_status)
         .map_err(|e| SteamAccountNameError::FetchError(e.to_string()))?;
 
     let player_summaries = response

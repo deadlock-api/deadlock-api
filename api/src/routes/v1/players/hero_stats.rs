@@ -102,7 +102,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         filters.push(format!("net_worth <= {max_networth}"));
     }
     let filters = if filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", filters.join(" AND "))
     };

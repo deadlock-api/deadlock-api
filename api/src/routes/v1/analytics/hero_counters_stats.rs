@@ -141,7 +141,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
@@ -165,7 +165,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         player_filters.push(format!("p2.net_worth <= {max_enemy_networth}"));
     }
     let player_filters = if player_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
@@ -176,10 +176,10 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches_played <= {max_matches}"));
     }
-    let having_clause = if !having_filters.is_empty() {
-        format!("HAVING {}", having_filters.join(" AND "))
+    let having_clause = if having_filters.is_empty() {
+        String::new()
     } else {
-        "".to_string()
+        format!("HAVING {}", having_filters.join(" AND "))
     };
     format!(
         r#"

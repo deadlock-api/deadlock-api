@@ -57,7 +57,7 @@ pub(super) async fn ingest_salts(
 ) -> APIResult<impl IntoResponse> {
     let bypass_check = headers
         .get("X-API-Key")
-        .and_then(|key| key.to_str().ok().map(|key| key.to_string()))
+        .and_then(|key| key.to_str().ok().map(ToString::to_string))
         .is_some_and(|key| key == state.config.internal_api_key);
 
     debug!("Received salts: {match_salts:?}");

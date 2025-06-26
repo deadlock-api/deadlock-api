@@ -632,25 +632,25 @@ impl Variable {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 2521902222)
                     .await
                     .map(|r| r.to_string())
-                    .map_err(|e| e.into())
+                    .map_err(Into::into)
             }
             Self::MaxSpiritSnareStacks => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 512733154)
                     .await
                     .map(|r| r.to_string())
-                    .map_err(|e| e.into())
+                    .map_err(Into::into)
             }
             Self::MaxBonusHealthPerKill => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 1917840730)
                     .await
                     .map(|r| r.to_string())
-                    .map_err(|e| e.into())
+                    .map_err(Into::into)
             }
             Self::MaxGuidedOwlStacks => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 3242902780)
                     .await
                     .map(|r| r.to_string())
-                    .map_err(|e| e.into())
+                    .map_err(Into::into)
             }
             Self::MMRHistoryRank => {
                 let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;

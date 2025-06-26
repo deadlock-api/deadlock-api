@@ -45,7 +45,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         filters.push(format!("match_id <= {max_match_id}"));
     }
     let filters = if filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", filters.join(" AND "))
     };

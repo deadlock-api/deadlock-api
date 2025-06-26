@@ -105,7 +105,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
@@ -131,15 +131,15 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         player_filters.push(format!("net_worth <= {max_networth}"));
     }
     let player_filters = if player_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {
-            return "".to_string();
+            return String::new();
         }
-        let items_list = format!("[{}]", item_ids.iter().map(|i| i.to_string()).join(", "));
+        let items_list = format!("[{}]", item_ids.iter().map(ToString::to_string).join(", "));
         format!(
             r#"
         WITH t_matches AS (SELECT match_id
@@ -241,7 +241,7 @@ pub(super) async fn item_permutation_stats(
             "Cannot specify both comb_size and item_ids",
         ));
     }
-    if query.item_ids.as_ref().is_some_and(|i| i.is_empty()) {
+    if query.item_ids.as_ref().is_some_and(Vec::is_empty) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "No item ids provided",
@@ -391,7 +391,7 @@ mod test {
         let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
             "hero_id IN ({})",
-            hero_ids.iter().map(|id| id.to_string()).join(", ")
+            hero_ids.iter().map(ToString::to_string).join(", ")
         )));
     }
 }

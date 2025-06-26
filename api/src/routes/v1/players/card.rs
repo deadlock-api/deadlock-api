@@ -68,8 +68,8 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
     fn from(value: c_msg_citadel_profile_card::Slot) -> Self {
         Self {
             slot_id: value.slot_id,
-            hero: value.hero.map(|r| r.into()),
-            stat: value.stat.map(|r| r.into()),
+            hero: value.hero.map(Into::into),
+            stat: value.stat.map(Into::into),
         }
     }
 }

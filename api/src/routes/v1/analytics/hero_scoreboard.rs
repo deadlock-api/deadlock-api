@@ -97,10 +97,10 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
 
-    let info_filters = if !info_filters.is_empty() {
-        format!(" WHERE {} ", info_filters.join(" AND "))
+    let info_filters = if info_filters.is_empty() {
+        String::new()
     } else {
-        "".to_owned()
+        format!(" WHERE {} ", info_filters.join(" AND "))
     };
     let mut player_filters = vec![];
     if !info_filters.is_empty() {
@@ -117,19 +117,19 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     if let Some(max_networth) = query.max_networth {
         player_filters.push(format!("net_worth <= {max_networth}"));
     }
-    let player_filters = if !player_filters.is_empty() {
-        format!(" WHERE {} ", player_filters.join(" AND "))
+    let player_filters = if player_filters.is_empty() {
+        String::new()
     } else {
-        "".to_owned()
+        format!(" WHERE {} ", player_filters.join(" AND "))
     };
     let mut player_having = vec![];
     if let Some(min_matches) = query.min_matches {
         player_having.push(format!("count(distinct match_id) >= {min_matches}"));
     }
-    let player_having = if !player_having.is_empty() {
-        format!(" HAVING {} ", player_having.join(" AND "))
+    let player_having = if player_having.is_empty() {
+        String::new()
     } else {
-        "".to_owned()
+        format!(" HAVING {} ", player_having.join(" AND "))
     };
     format!(
         r#"

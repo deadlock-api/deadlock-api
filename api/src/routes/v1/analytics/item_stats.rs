@@ -200,7 +200,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
@@ -241,7 +241,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     let player_filters = if player_filters.is_empty() {
         // WHERE 1 = 1 makes string concatenation simpler later on.
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
@@ -285,10 +285,10 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
-    let having_clause = if !having_filters.is_empty() {
-        format!("HAVING {}", having_filters.join(" AND "))
+    let having_clause = if having_filters.is_empty() {
+        String::new()
     } else {
-        "".to_string()
+        format!("HAVING {}", having_filters.join(" AND "))
     };
     /* ---------- final query ---------- */
     format!(
@@ -541,7 +541,7 @@ mod test {
         let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
             "hero_id IN ({})",
-            hero_ids.iter().map(|id| id.to_string()).join(", ")
+            hero_ids.iter().map(ToString::to_string).join(", ")
         )));
     }
 }

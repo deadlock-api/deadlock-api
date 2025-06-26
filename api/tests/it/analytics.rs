@@ -104,13 +104,13 @@ async fn test_hero_comb_stats(
     if let Some(include_hero_ids) = include_hero_ids.as_ref() {
         queries.push((
             "include_hero_ids",
-            include_hero_ids.iter().map(|s| s.to_string()).join(","),
+            include_hero_ids.iter().map(ToString::to_string).join(","),
         ));
     }
     if let Some(exclude_hero_ids) = exclude_hero_ids.as_ref() {
         queries.push((
             "exclude_hero_ids",
-            exclude_hero_ids.iter().map(|s| s.to_string()).join(","),
+            exclude_hero_ids.iter().map(ToString::to_string).join(","),
         ));
     }
     if let Some(min_unix_timestamp) = min_unix_timestamp {
@@ -742,13 +742,13 @@ async fn test_hero_stats(
     if let Some(include_item_ids) = include_item_ids.as_ref() {
         queries.push((
             "include_item_ids",
-            include_item_ids.iter().map(|s| s.to_string()).join(","),
+            include_item_ids.iter().map(ToString::to_string).join(","),
         ));
     }
     if let Some(exclude_item_ids) = exclude_item_ids.as_ref() {
         queries.push((
             "exclude_item_ids",
-            exclude_item_ids.iter().map(|s| s.to_string()).join(","),
+            exclude_item_ids.iter().map(ToString::to_string).join(","),
         ));
     }
     if let Some(account_id) = account_id {
@@ -1010,7 +1010,7 @@ async fn test_item_stats(
             "hero_ids",
             hero_ids
                 .iter()
-                .map(|s| s.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(","),
         ));
@@ -1050,7 +1050,7 @@ async fn test_item_stats(
             "include_item_ids",
             include_item_ids
                 .iter()
-                .map(|s| s.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(","),
         ));
@@ -1060,7 +1060,7 @@ async fn test_item_stats(
             "exclude_item_ids",
             exclude_item_ids
                 .iter()
-                .map(|s| s.to_string())
+                .map(ToString::to_string)
                 .collect::<Vec<_>>()
                 .join(","),
         ));

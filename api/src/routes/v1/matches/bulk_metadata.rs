@@ -194,7 +194,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         if !match_ids.is_empty() {
             info_filters.push(format!(
                 "match_id IN ({})",
-                match_ids.iter().map(|m| m.to_string()).join(",")
+                match_ids.iter().map(ToString::to_string).join(",")
             ));
         }
     }
@@ -230,7 +230,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         if !account_ids.is_empty() {
             player_filters.push(format!(
                 "account_id IN ({})",
-                account_ids.iter().map(|id| id.to_string()).join(",")
+                account_ids.iter().map(ToString::to_string).join(",")
             ));
         }
     }
@@ -243,10 +243,10 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         ));
     }
 
-    let info_filters = if !info_filters.is_empty() {
-        format!(" WHERE {} ", info_filters.join(" AND "))
+    let info_filters = if info_filters.is_empty() {
+        String::new()
     } else {
-        "".to_owned()
+        format!(" WHERE {} ", info_filters.join(" AND "))
     };
     let order = format!(" ORDER BY {} {} ", query.order_by, query.order_direction);
     let limit = format!(" LIMIT {} ", query.limit);
@@ -283,7 +283,7 @@ async fn fetch_lines(
     ch_client
         .query(query)
         .fetch_bytes("JSONEachRow")
-        .map(|m| m.lines())
+        .map(tokio::io::AsyncBufReadExt::lines)
 }
 
 async fn parse_lines(mut lines: Lines<BytesCursor>) -> serde_json::Result<Vec<serde_json::Value>> {

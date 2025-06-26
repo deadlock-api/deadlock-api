@@ -74,7 +74,7 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };

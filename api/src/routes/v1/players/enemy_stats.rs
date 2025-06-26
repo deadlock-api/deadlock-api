@@ -81,7 +81,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     let info_filters = if info_filters.is_empty() {
-        "".to_string()
+        String::new()
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
@@ -92,10 +92,10 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     if let Some(max_matches_played) = query.max_matches_played {
         having_filters.push(format!("matches_played <= {max_matches_played}"));
     }
-    let having_clause = if !having_filters.is_empty() {
-        format!("HAVING {}", having_filters.join(" AND "))
+    let having_clause = if having_filters.is_empty() {
+        String::new()
     } else {
-        "".to_string()
+        format!("HAVING {}", having_filters.join(" AND "))
     };
     format!(
         r#"

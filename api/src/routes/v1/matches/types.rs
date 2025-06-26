@@ -117,7 +117,7 @@ impl From<MatchPlayer> for ActiveMatchPlayer {
         Self {
             account_id: value.account_id,
             team: value.team,
-            team_parsed: value.team.map(|m| m.into()),
+            team_parsed: value.team.map(Into::into),
             abandoned: value.abandoned,
             hero_id: value.hero_id,
         }
@@ -156,7 +156,7 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
         Self {
             start_time: value.start_time,
             winning_team: value.winning_team,
-            winning_team_parsed: value.winning_team.map(|m| m.into()),
+            winning_team_parsed: value.winning_team.map(Into::into),
             match_id: value.match_id,
             players: value.players.into_iter().map_into().collect(),
             lobby_id: value.lobby_id,
@@ -169,12 +169,12 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
             objectives_mask_team0: value.objectives_mask_team0,
             objectives_mask_team1: value.objectives_mask_team1,
             match_mode: value.match_mode,
-            match_mode_parsed: value.match_mode.map(|m| m.into()),
+            match_mode_parsed: value.match_mode.map(Into::into),
             game_mode: value.game_mode,
-            game_mode_parsed: value.game_mode.map(|m| m.into()),
+            game_mode_parsed: value.game_mode.map(Into::into),
             match_score: value.match_score,
             region_mode: value.region_mode,
-            region_mode_parsed: value.region_mode.map(|m| m.into()),
+            region_mode_parsed: value.region_mode.map(Into::into),
             compat_version: value.compat_version,
         }
     }

@@ -35,7 +35,7 @@ impl From<Variable> for VariableDescription {
         Self {
             name: v.get_name().to_string(),
             description: v.get_description().to_string(),
-            default_label: v.get_default_label().map(|l| l.to_string()),
+            default_label: v.get_default_label().map(ToString::to_string),
             extra_args: v.extra_args(),
             category: v.get_category(),
         }
@@ -263,7 +263,7 @@ pub(super) async fn variables_resolve(
     if let Some(hero_name) = query.hero_name {
         extra_args.insert("hero_name".to_string(), hero_name);
     }
-    let variables_to_resolve = query.variables.split(',').map(|v| v.trim()).collect_vec();
+    let variables_to_resolve = query.variables.split(',').map(str::trim).collect_vec();
     let results = futures::future::join_all(
         Variable::VARIANTS
             .iter()
