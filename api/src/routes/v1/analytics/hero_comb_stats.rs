@@ -175,7 +175,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     format!(
-        r#"
+        r"
 WITH hero_combinations AS (
     SELECT
         groupArraySorted(6)(hero_id) AS hero_ids,
@@ -197,7 +197,7 @@ WHERE true {grouped_filters}
 GROUP BY hero_ids
 {having_clause}
 ORDER BY wins / greatest(1, matches) DESC
-    "#
+    "
     )
 }
 
@@ -266,7 +266,7 @@ async fn get_comb_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Comb Stats",
-    description = r#"
+    description = r"
 Retrieves overall statistics for each hero combination.
 
 Results are cached for **1 hour**. The cache key is determined by the specific combination of filter parameters used in the query. Subsequent requests using the exact same filters within this timeframe will receive the cached response.
@@ -277,7 +277,7 @@ Results are cached for **1 hour**. The cache key is determined by the specific c
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(crate) async fn hero_comb_stats(
     Query(query): Query<HeroCombStatsQuery>,

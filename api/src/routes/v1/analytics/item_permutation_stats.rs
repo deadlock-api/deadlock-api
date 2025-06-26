@@ -141,7 +141,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         }
         let items_list = format!("[{}]", item_ids.iter().map(ToString::to_string).join(", "));
         format!(
-            r#"
+            r"
         WITH t_matches AS (SELECT match_id
                 FROM match_info
                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
@@ -156,7 +156,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             {player_filters}
         GROUP BY item_ids
         ORDER BY matches DESC
-        "#
+        "
         )
     } else {
         let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
@@ -169,7 +169,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             .map(|(i, j)| format!("i{i}_index < i{j}_index"))
             .join(" AND ");
         format!(
-            r#"
+            r"
         WITH t_matches AS (SELECT match_id
                 FROM match_info
                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
@@ -185,7 +185,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         WHERE {filters_distinct}
         GROUP BY item_ids
         ORDER BY matches DESC
-        "#
+        "
         )
     }
 }
@@ -218,7 +218,7 @@ async fn get_item_permutation_stats(
     ),
     tags = ["Analytics"],
     summary = "Item Permutation Stats",
-    description = r#"
+    description = r"
 Retrieves item permutation statistics based on historical match data.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
@@ -229,7 +229,7 @@ Results are cached for **1 hour** based on the unique combination of query param
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn item_permutation_stats(
     Query(query): Query<ItemPermutationStatsQuery>,

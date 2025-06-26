@@ -181,7 +181,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     format!(
-        r#"
+        r"
     WITH matches AS (SELECT match_id
                  FROM match_info
                  WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
@@ -214,7 +214,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     GROUP BY p1.hero_id, p2.hero_id
     {having_clause}
     ORDER BY p1.hero_id, p2.hero_id
-    "#
+    "
     )
 }
 
@@ -247,7 +247,7 @@ async fn get_hero_synergy_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Synergy Stats",
-    description = r#"
+    description = r"
 Retrieves hero pair synergy statistics based on historical match data.
 
 This endpoint analyzes completed matches to calculate how often a specific pair of heroes (`hero_id1` and `hero_id2`) won when playing *together on the same team*, and the total number of times they have played together under the specified filter conditions.
@@ -260,7 +260,7 @@ Results are cached for **1 hour** based on the combination of query parameters p
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn hero_synergies_stats(
     Query(query): Query<HeroSynergyStatsQuery>,

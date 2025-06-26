@@ -182,7 +182,7 @@ pub(super) async fn fetch_match_salts(
     ),
     tags = ["Matches"],
     summary = "Salts",
-    description = r#"
+    description = r"
 This endpoints returns salts that can be used to fetch metadata and demofile for a match.
 
 **Note:** We currently fetch many matches without salts, so for these matches we do not have salts stored.
@@ -193,7 +193,7 @@ This endpoints returns salts that can be used to fetch metadata and demofile for
 | IP | From DB: 100req/s<br>From Steam: 10req/30mins |
 | Key | From DB: -<br>From Steam: 10req/min |
 | Global | From DB: -<br>From Steam: 10req/10s |
-    "#
+    "
 )]
 pub(super) async fn salts(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,

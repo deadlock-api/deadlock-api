@@ -48,7 +48,7 @@ async fn get_party_match_id(
     ),
     tags = ["Custom Matches"],
     summary = "Get Match ID",
-    description = r#"
+    description = r"
 This endpoint allows you to get the match id of a custom match.
 
 ### Rate Limits:
@@ -57,7 +57,7 @@ This endpoint allows you to get the match id of a custom match.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-"#
+"
 )]
 pub(super) async fn get_custom(
     Path(PartyIdQuery { party_id }): Path<PartyIdQuery>,

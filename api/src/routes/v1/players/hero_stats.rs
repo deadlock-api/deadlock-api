@@ -108,7 +108,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     };
     let account_filter = format!("account_id = {account_id}");
     format!(
-        r#"
+        r"
     SELECT
         hero_id,
         COUNT() AS matches_played,
@@ -137,7 +137,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     WHERE match_mode IN ('Ranked', 'Unranked') {filters}
     GROUP BY hero_id
     ORDER BY hero_id
-    "#
+    "
     )
 }
 
@@ -170,7 +170,7 @@ async fn get_hero_stats(
     ),
     tags = ["Players"],
     summary = "Hero Stats",
-    description = r#"
+    description = r"
 This endpoint returns statistics for each hero played by a given player account.
 
 ### Rate Limits:
@@ -179,7 +179,7 @@ This endpoint returns statistics for each hero played by a given player account.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn hero_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

@@ -6,10 +6,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "SQL", description = r#"
+#[openapi(tags((name = "SQL", description = r"
 Database exploration endpoints for direct SQL access.
 Provides functionality to execute custom SQL queries with rate limiting protection, list available tables, and inspect table schemas.
-"#)))]
+")))]
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

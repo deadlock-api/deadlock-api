@@ -79,7 +79,7 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
         format!(" AND {}", info_filters.join(" AND "))
     };
     format!(
-        r#"
+        r"
     WITH players AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
                      WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
@@ -91,7 +91,7 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
     FROM parties
     GROUP BY party_size
     ORDER BY party_size
-    "#
+    "
     )
 }
 
@@ -124,7 +124,7 @@ async fn get_party_stats(
     ),
     tags = ["Players"],
     summary = "Party Stats",
-    description = r#"
+    description = r"
 This endpoint returns the party stats.
 
 ### Rate Limits:
@@ -133,7 +133,7 @@ This endpoint returns the party stats.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn party_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

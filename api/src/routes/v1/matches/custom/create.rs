@@ -255,7 +255,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
     ),
     tags = ["Custom Matches"],
     summary = "Create Match",
-    description = r#"
+    description = r"
 This endpoint allows you to create a custom match.
 
 ### Rate Limits:
@@ -264,7 +264,7 @@ This endpoint allows you to create a custom match.
 | IP | API-Key ONLY |
 | Key | 100req/h |
 | Global | 1000req/h |
-"#
+"
 )]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,

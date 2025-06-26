@@ -195,7 +195,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     };
     let bucket = query.bucket.get_select_clause();
     format!(
-        r#"
+        r"
     WITH t_matches AS (
             SELECT match_id, start_time
             FROM match_info
@@ -238,10 +238,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
     GROUP BY hero_id, bucket
     HAVING COUNT() > 1
     ORDER BY hero_id, bucket
-    "#,
+    ",
         if query.min_hero_matches.or(query.max_hero_matches).is_some() {
             format!(
-                r#",
+                r",
         t_players AS (
             SELECT account_id, hero_id
             FROM match_player
@@ -249,7 +249,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
                 {player_filters}
             GROUP BY account_id, hero_id
             HAVING {player_hero_filters}
-        )"#
+        )"
             )
         } else {
             String::new()
@@ -294,7 +294,7 @@ async fn get_hero_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Stats",
-    description = r#"
+    description = r"
 Retrieves performance statistics for each hero based on historical match data.
 
 ### Rate Limits:
@@ -303,7 +303,7 @@ Retrieves performance statistics for each hero based on historical match data.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(crate) async fn hero_stats(
     Query(query): Query<HeroStatsQuery>,

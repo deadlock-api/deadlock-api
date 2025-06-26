@@ -31,7 +31,7 @@ pub(super) async fn insert_salts_to_clickhouse(
     ),
     tags = ["Internal"],
     summary = "Match Salts Ingest",
-    description = r#"
+    description = r"
 You can use this endpoint to help us collecting data.
 
 The endpoint accepts a list of MatchSalts objects, which contain the following fields:
@@ -48,7 +48,7 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn ingest_salts(
     headers: HeaderMap,

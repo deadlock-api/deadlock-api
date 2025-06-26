@@ -34,25 +34,25 @@ pub struct MMRHistory {
 
 fn build_mmr_history_query(account_id: u32) -> String {
     format!(
-        r#"
+        r"
     SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
     FROM mmr_history FINAL
     JOIN match_info mi USING (match_id)
     WHERE account_id = {account_id}
     ORDER BY match_id
-    "#
+    "
     )
 }
 
 fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     format!(
-        r#"
+        r"
     SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
     FROM hero_mmr_history FINAL
     JOIN match_info mi USING (match_id)
     WHERE account_id = {account_id} AND hero_id = {hero_id}
     ORDER BY match_id
-    "#
+    "
     )
 }
 
@@ -102,7 +102,7 @@ async fn get_hero_mmr_history(
     ),
     tags = ["Players"],
     summary = "MMR History",
-    description = r#"
+    description = r"
 # STOP! READ THIS FIRST!
 
 Please be very careful when using this endpoint and make yourself familiar with the way we calculate the MMR.
@@ -134,7 +134,7 @@ So to get the rank we get the closest index from the player score.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#,
+    ",
 )]
 pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -156,7 +156,7 @@ pub(super) async fn mmr_history(
     ),
     tags = ["Players"],
     summary = "Hero MMR History",
-    description = r#"
+    description = r"
 # STOP! READ THIS FIRST!
 
 Please be very careful when using this endpoint and make yourself familiar with the way we calculate the MMR.
@@ -188,7 +188,7 @@ So to get the rank we get the closest index from the player score.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#,
+    ",
 )]
 pub(super) async fn hero_mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

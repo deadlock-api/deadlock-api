@@ -14,7 +14,7 @@ use axum::response::IntoResponse;
     ),
     tags = ["Patches"],
     summary = "Notes",
-    description = r#"
+    description = r"
 Returns the parsed result of the RSS Feed from the official Forum.
 
 RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
@@ -25,7 +25,7 @@ RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn feed(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     state.steam_client.fetch_patch_notes().await.map(Json)

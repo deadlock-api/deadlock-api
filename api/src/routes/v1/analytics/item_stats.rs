@@ -266,14 +266,14 @@ fn build_query(query: &ItemStatsQuery) -> String {
     ]
     .contains(&query.bucket)
     {
-        r#"
+        r"
         , coalesce(
             arrayElementOrNull(
                 stats.net_worth,
                 arrayFirstIndex(ts -> ts >= it.game_time_s, stats.time_stamp_s) - 1
             ), net_worth
         ) AS net_worth_at_buy
-        "#
+        "
     } else {
         ""
     };
@@ -292,7 +292,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
     /* ---------- final query ---------- */
     format!(
-        r#"
+        r"
 WITH
     /* 1. Relevant matches */
     t_matches AS (
@@ -339,7 +339,7 @@ INNER JOIN t_matches USING (match_id)
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
-        "#
+        "
     )
 }
 
@@ -371,7 +371,7 @@ async fn get_item_stats(
     ),
     tags = ["Analytics"],
     summary = "Item Stats",
-    description = r#"
+    description = r"
 Retrieves item statistics based on historical match data.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
@@ -382,7 +382,7 @@ Results are cached for **1 hour** based on the unique combination of query param
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(crate) async fn item_stats(
     Query(query): Query<ItemStatsQuery>,

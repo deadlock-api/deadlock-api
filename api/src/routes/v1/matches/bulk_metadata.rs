@@ -306,7 +306,7 @@ async fn parse_lines(mut lines: Lines<BytesCursor>) -> serde_json::Result<Vec<se
     ),
     tags = ["Matches"],
     summary = "Bulk Metadata",
-    description = r#"
+    description = r"
 This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
 
 ### Rate Limits:
@@ -315,7 +315,7 @@ This endpoints lets you fetch multiple match metadata at once. The response is a
 | IP | 1req/s |
 | Key | - |
 | Global | 10req/s |
-    "#
+    "
 )]
 pub(super) async fn bulk_metadata(
     Query(query): Query<BulkMatchMetadataQuery>,

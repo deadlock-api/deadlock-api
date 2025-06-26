@@ -47,7 +47,7 @@ async fn demo_stream(
     ),
     tags = ["Matches"],
     summary = "Live Demo",
-    description = r#"
+    description = r"
 Streams the live demo of a match.
 
 ### Rate Limits:
@@ -56,7 +56,7 @@ Streams the live demo of a match.
 | IP | 10req/30mins |
 | Key | 60req/min |
 | Global | 100req/10s |
-    "#
+    "
 )]
 pub(super) async fn live_demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,

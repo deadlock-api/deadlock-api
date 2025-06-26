@@ -24,7 +24,7 @@ use uuid::Uuid;
     ),
     tags = ["E-Sports"],
     summary = "Ingest",
-    description = r#"
+    description = r"
 To use this Endpoint you need to have special permissions.
 Please contact us if you organize E-Sports Matches and want to ingest them to us.
 
@@ -34,7 +34,7 @@ Please contact us if you organize E-Sports Matches and want to ingest them to us
 | IP | 1000req/h |
 | Key | - |
 | Global | 10000req/h |
-    "#
+    "
 )]
 pub(super) async fn ingest_match(
     rate_limit_key: RateLimitKey,

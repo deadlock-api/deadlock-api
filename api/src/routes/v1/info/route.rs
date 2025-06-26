@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
 
-const TABLE_SIZES_QUERY: &str = r#"
+const TABLE_SIZES_QUERY: &str = r"
 SELECT
     name                     AS table,
     toBool(parts IS NULL)    AS is_view,
@@ -25,9 +25,9 @@ WHERE database = 'default'
     AND total_bytes IS NOT NULL
     AND total_bytes_uncompressed IS NOT NULL
 ORDER BY table
-"#;
+";
 
-const FETCHED_MATCHES_LAST_24H_QUERY: &str = r#"
+const FETCHED_MATCHES_LAST_24H_QUERY: &str = r"
 WITH fetched_matches AS (
     SELECT match_id
     FROM match_info
@@ -40,9 +40,9 @@ WITH fetched_matches AS (
 )
 SELECT COUNT() as fetched_matches_per_day
 FROM fetched_matches
-"#;
+";
 
-const MISSED_MATCHES_QUERY: &str = r#"
+const MISSED_MATCHES_QUERY: &str = r"
 SELECT COUNT(DISTINCT match_id)
 FROM player_match_history
 WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
@@ -56,7 +56,7 @@ WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
         FROM match_info
         WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
     )
-"#;
+";
 
 #[derive(Deserialize, Row)]
 struct TableSizeRow {
@@ -142,7 +142,7 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     ),
     tags = ["Info"],
     summary = "API Info",
-    description = r#"
+    description = r"
 Returns information about the API.
 
 ### Rate Limits:
@@ -151,7 +151,7 @@ Returns information about the API.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn info(State(state): State<AppState>) -> impl IntoResponse {
     Json(fetch_ch_info(&state.ch_client_ro).await)

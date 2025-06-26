@@ -17,11 +17,11 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Analytics", description = r#"
+#[openapi(tags((name = "Analytics", description = r"
 Comprehensive game statistics and analysis endpoints.
 Provides detailed performance metrics for heroes, items, and players, including hero synergies, counters, and combinations.
 Features scoreboards for both heroes and players.
-"#)))]
+")))]
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

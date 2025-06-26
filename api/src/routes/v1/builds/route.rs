@@ -45,7 +45,7 @@ async fn fetch_builds(
     ),
     tags = ["Builds"],
     summary = "Search",
-    description = r#"
+    description = r"
 Search for builds based on various criteria.
 
 ### Rate Limits:
@@ -54,7 +54,7 @@ Search for builds based on various criteria.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn search_builds(
     Query(params): Query<BuildsSearchQuery>,

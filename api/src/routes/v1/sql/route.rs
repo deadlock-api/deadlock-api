@@ -51,7 +51,7 @@ enum SQLQueryError {
     ),
     tags = ["SQL"],
     summary = "Query",
-    description = r#"
+    description = r"
 Executes a SQL query on the database.
 
 ### Rate Limits:
@@ -60,7 +60,7 @@ Executes a SQL query on the database.
 | IP | 10req/10s |
 | Key | 10req/10s |
 | Global | 100req/10s |
-    "#
+    "
 )]
 pub(super) async fn sql(
     rate_limit_key: RateLimitKey,
@@ -133,7 +133,7 @@ async fn run_sql(
     ),
     tags = ["SQL"],
     summary = "List Tables",
-    description = r#"
+    description = r"
 Lists all tables in the database.
 
 ### Rate Limits:
@@ -142,7 +142,7 @@ Lists all tables in the database.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     if !state.config.allow_custom_queries {
@@ -167,13 +167,13 @@ async fn fetch_list_tables(
 ) -> clickhouse::error::Result<Vec<String>> {
     ch_client
         .query(
-            r#"
+            r"
             SELECT name
             FROM system.tables
             WHERE database = 'default'
                 AND name NOT LIKE '%inner%'
                 AND engine != 'MaterializedView'
-        "#,
+        ",
         )
         .fetch_all::<String>()
         .await
@@ -189,7 +189,7 @@ async fn fetch_list_tables(
     ),
     tags = ["SQL"],
     summary = "Table Schema",
-    description = r#"
+    description = r"
 Returns the schema of a table.
 
 ### Rate Limits:
@@ -198,7 +198,7 @@ Returns the schema of a table.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
@@ -230,11 +230,11 @@ async fn fetch_table_schema(
 ) -> clickhouse::error::Result<Vec<TableSchemaRow>> {
     ch_client
         .query(
-            r#"
+            r"
             SELECT name, type
             FROM system.columns
             WHERE database = 'default' AND table = ?
-        "#,
+        ",
         )
         .bind(table)
         .fetch_all()

@@ -140,7 +140,7 @@ async fn fetch_player_card_raw(
     ),
     tags = ["Players"],
     summary = "Card as Protobuf",
-    description = r#"
+    description = r"
 This endpoint returns the player card for the given `account_id`, serialized as protobuf message.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
@@ -155,7 +155,7 @@ Relevant Protobuf Messages:
 | IP | 5req/min |
 | Key | 20req/min & 800req/h |
 | Global | 200req/min |
-    "#
+    "
 )]
 pub(super) async fn card_raw(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
@@ -195,7 +195,7 @@ pub(super) async fn card_raw(
     ),
     tags = ["Players"],
     summary = "Card",
-    description = r#"
+    description = r"
 This endpoint returns the player card for the given `account_id`.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
@@ -210,7 +210,7 @@ Relevant Protobuf Messages:
 | IP | 5req/min |
 | Key | 20req/min & 800req/h |
 | Global | 200req/min |
-    "#
+    "
 )]
 pub(super) async fn card(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

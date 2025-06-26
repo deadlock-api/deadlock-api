@@ -161,7 +161,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         format!(" HAVING {} ", having_filters.join(" AND "))
     };
     format!(
-        r#"
+        r"
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
 {player_filters}
@@ -169,7 +169,7 @@ GROUP BY account_id
 {having_clause}
 ORDER BY value {}
 LIMIT {} OFFSET {}
-    "#,
+    ",
         query.start.unwrap_or_default() + 1,
         query.sort_by.get_select_clause(),
         query.sort_direction,
@@ -206,7 +206,7 @@ async fn get_player_scoreboard(
     ),
     tags = ["Analytics"],
     summary = "Player Scoreboard",
-    description = r#"
+    description = r"
 This endpoint returns the player scoreboard.
 
 ### Rate Limits:
@@ -215,7 +215,7 @@ This endpoint returns the player scoreboard.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(crate) async fn player_scoreboard(
     Query(query): Query<PlayerScoreboardQuery>,

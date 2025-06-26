@@ -50,7 +50,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         format!(" AND {}", filters.join(" AND "))
     };
     format!(
-        r#"
+        r"
     SELECT
         coalesce(t_badge_level, 0) as badge_level,
         COUNT() as total_matches
@@ -59,7 +59,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     WHERE match_mode IN ('Ranked', 'Unranked') AND badge_level > 0 {filters}
     GROUP BY badge_level
     ORDER BY badge_level
-    "#
+    "
     )
 }
 
@@ -91,7 +91,7 @@ async fn get_badge_distribution(
     ),
     tags = ["Matches"],
     summary = "Badge Distribution",
-    description = r#"
+    description = r"
 This endpoint returns the player badge distribution.
 
 ### Rate Limits:
@@ -100,7 +100,7 @@ This endpoint returns the player badge distribution.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,

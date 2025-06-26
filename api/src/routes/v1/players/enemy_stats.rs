@@ -98,7 +98,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     format!(
-        r#"
+        r"
     WITH players AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
                      FROM match_player
                      WHERE team IN ('Team0', 'Team1') AND account_id = {account_id}  AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
@@ -110,7 +110,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     GROUP BY enemy_id
     {having_clause}
     ORDER BY matches_played DESC
-    "#
+    "
     )
 }
 
@@ -143,7 +143,7 @@ async fn get_enemy_stats(
     ),
     tags = ["Players"],
     summary = "Enemy Stats",
-    description = r#"
+    description = r"
 This endpoint returns the enemy stats.
 
 ### Rate Limits:
@@ -152,7 +152,7 @@ This endpoint returns the enemy stats.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn enemy_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

@@ -30,14 +30,14 @@ async fn fetch_matches(pg_client: &sqlx::Pool<sqlx::Postgres>) -> sqlx::Result<V
     ),
     tags = ["E-Sports"],
     summary = "List Matches",
-    description = r#"
+    description = r"
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn matches(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     Ok(Json(fetch_matches(&state.pg_client).await?))

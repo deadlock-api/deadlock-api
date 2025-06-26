@@ -33,7 +33,7 @@ struct ClickhouseMatchInfo {
 async fn get_recently_fetched_match_ids(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<ClickhouseMatchInfo>> {
-    let query = r#"
+    let query = r"
     SELECT match_id,
         start_time,
         duration_s,
@@ -43,7 +43,7 @@ async fn get_recently_fetched_match_ids(
     FROM match_info FINAL
     WHERE created_at > now() - 600 AND match_mode IN ('Ranked', 'Unranked')
     ORDER BY created_at DESC
-    "#;
+    ";
     ch_client.query(query).fetch_all().await
 }
 
@@ -56,7 +56,7 @@ async fn get_recently_fetched_match_ids(
     ),
     tags = ["Matches"],
     summary = "Recently Fetched",
-    description = r#"
+    description = r"
 This endpoint returns a list of match ids that have been fetched within the last 10 minutes.
 
 ### Rate Limits:
@@ -65,7 +65,7 @@ This endpoint returns a list of match ids that have been fetched within the last
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn recently_fetched(
     State(state): State<AppState>,

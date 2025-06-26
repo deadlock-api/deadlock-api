@@ -6,7 +6,7 @@ use utoipa::{Modify, OpenApi};
     info(
         title = "Deadlock API",
         version = "0.1.0",
-        description = r#"
+        description = r"
 ## Support the Deadlock API
 
 Whether you're building your own database, developing data science projects, or enhancing your website with game and player analytics, the Deadlock API has the data you need.
@@ -19,7 +19,7 @@ Help us continue to provide the data you need - sponsor the Deadlock API today!
 
 ## Disclaimer
 _deadlock-api.com is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone officially involved in producing or managing Valve properties. Valve and all associated properties are trademarks or registered trademarks of Valve Corporation_
-        "#,
+        ",
         contact(name = "Deadlock API - Discord", url = "https://discord.gg/XMF9Xrgfqu"),
         license(
             name = "MIT",

@@ -132,14 +132,14 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
         format!(" HAVING {} ", player_having.join(" AND "))
     };
     format!(
-        r#"
+        r"
 SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
 {player_filters}
 GROUP BY hero_id
 {player_having}
 ORDER BY value {}
-    "#,
+    ",
         query.sort_by.get_select_clause(),
         query.sort_direction,
     )
@@ -173,7 +173,7 @@ async fn get_hero_scoreboard(
     ),
     tags = ["Analytics"],
     summary = "Hero Scoreboard",
-    description = r#"
+    description = r"
 This endpoint returns the hero scoreboard.
 
 ### Rate Limits:
@@ -182,7 +182,7 @@ This endpoint returns the hero scoreboard.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn hero_scoreboard(
     Query(query): Query<HeroScoreboardQuery>,

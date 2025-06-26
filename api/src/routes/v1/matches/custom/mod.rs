@@ -7,7 +7,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Custom Matches", description = r#"Custom Match related endpoints"#)))]
+#[openapi(tags((name = "Custom Matches", description = "Custom Match related endpoints")))]
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

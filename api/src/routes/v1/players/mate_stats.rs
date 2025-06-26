@@ -104,7 +104,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     };
     if query.same_party {
         format!(
-            r#"
+            r"
             WITH players AS (SELECT DISTINCT match_id, team, party
                              FROM match_player
                              WHERE account_id = {account_id} AND party != 0 AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
@@ -116,11 +116,11 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             GROUP BY mate_id
             {having_clause}
             ORDER BY matches_played DESC
-            "#
+            "
         )
     } else {
         format!(
-            r#"
+            r"
             WITH players AS (SELECT DISTINCT match_id, team
                              FROM match_player
                              WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
@@ -132,7 +132,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             GROUP BY mate_id
             {having_clause}
             ORDER BY matches_played DESC
-            "#
+            "
         )
     }
 }
@@ -166,7 +166,7 @@ async fn get_mate_stats(
     ),
     tags = ["Players"],
     summary = "Mate Stats",
-    description = r#"
+    description = r"
 This endpoint returns the mate stats.
 
 ### Rate Limits:
@@ -175,7 +175,7 @@ This endpoint returns the mate stats.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn mate_stats(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

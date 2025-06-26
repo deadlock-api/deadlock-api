@@ -76,7 +76,7 @@ pub(super) async fn spectate_match(
     ),
     tags = ["Matches"],
     summary = "Live Broadcast URL",
-    description = r#"
+    description = r"
 This endpoints specates a match and returns the live URL to be used in any demofile broadcast parser.
 
 Example Parsers:
@@ -89,7 +89,7 @@ Example Parsers:
 | IP | 10req/30mins |
 | Key | 60req/min |
 | Global | 100req/10s |
-    "#
+    "
 )]
 pub(super) async fn live_url(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,

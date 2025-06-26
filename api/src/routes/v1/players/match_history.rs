@@ -243,13 +243,13 @@ async fn exists_newer_match_than(
     match_id: u64,
 ) -> bool {
     let query = format!(
-        r#"
+        r"
     SELECT match_id
     FROM match_player
     WHERE account_id = {account_id} AND match_id > {match_id}
     ORDER BY match_id DESC
     LIMIT 1
-    "#
+    "
     );
     ch_client.query(&query).fetch_one::<u64>().await.is_ok()
 }
@@ -266,7 +266,7 @@ async fn exists_newer_match_than(
     ),
     tags = ["Players"],
     summary = "Match History",
-    description = r#"
+    description = r"
 This endpoint returns the player match history for the given `account_id`.
 
 The player match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.
@@ -283,7 +283,7 @@ Relevant Protobuf Messages:
 | IP | 5req/min<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 5req/h |
 | Key | 50req/min & 800req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
 | Global | 2000req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
-    "#
+    "
 )]
 pub(super) async fn match_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,

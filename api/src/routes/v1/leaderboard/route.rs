@@ -91,12 +91,12 @@ pub(crate) async fn fetch_steam_names(
     let mut out = HashMap::new();
     for row in ch_client
         .query(
-            r#"
+            r"
                 SELECT DISTINCT assumeNotNull(name) as name, account_id
                 FROM steam_profiles
                 ARRAY JOIN [personaname, realname] AS name
                 WHERE name IS NOT NULL AND not empty(name)
-            "#,
+            ",
         )
         .fetch_all::<CHResponse>()
         .await?
@@ -119,7 +119,7 @@ pub(crate) async fn fetch_steam_names(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard as Protobuf",
-    description = r#"
+    description = r"
 Returns the leaderboard, serialized as protobuf message.
 
 ### Rate Limits:
@@ -128,7 +128,7 @@ Returns the leaderboard, serialized as protobuf message.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn leaderboard_raw(
     State(state): State<AppState>,
@@ -153,7 +153,7 @@ pub(super) async fn leaderboard_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard as Protobuf",
-    description = r#"
+    description = r"
 Returns the leaderboard for a specific hero, serialized as protobuf message.
 
 ### Rate Limits:
@@ -162,7 +162,7 @@ Returns the leaderboard for a specific hero, serialized as protobuf message.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn leaderboard_hero_raw(
     State(state): State<AppState>,
@@ -193,7 +193,7 @@ pub(super) async fn leaderboard_hero_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard",
-    description = r#"
+    description = r"
 Returns the leaderboard.
 
 ### Rate Limits:
@@ -202,7 +202,7 @@ Returns the leaderboard.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn leaderboard(
     State(state): State<AppState>,
@@ -244,7 +244,7 @@ pub(super) async fn leaderboard(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard",
-    description = r#"
+    description = r"
 Returns the leaderboard for a specific hero.
 
 ### Rate Limits:
@@ -253,7 +253,7 @@ Returns the leaderboard for a specific hero.
 | IP | 100req/s |
 | Key | - |
 | Global | - |
-    "#
+    "
 )]
 pub(super) async fn leaderboard_hero(
     State(state): State<AppState>,
