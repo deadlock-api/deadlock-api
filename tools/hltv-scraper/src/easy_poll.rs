@@ -73,14 +73,14 @@ where
 
             match client.get(&url).send().await {
                 Ok(response) => {
-                    if let Ok(response) = response.error_for_status() {
-                        if let Some(parsed) = parse_fn(response).await {
-                            let mut data = data_clone.write().await;
-                            *data = parsed;
-                        }
+                    if let Ok(response) = response.error_for_status()
+                        && let Some(parsed) = parse_fn(response).await
+                    {
+                        let mut data = data_clone.write().await;
+                        *data = parsed;
                     }
                 }
-                Err(e) => eprintln!("Error polling URL: {}", e),
+                Err(e) => eprintln!("Error polling URL: {e}"),
             }
         }
     });

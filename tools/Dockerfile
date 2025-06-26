@@ -1,4 +1,4 @@
-FROM rust:1.87.0-slim-bookworm AS chef
+FROM rust:1.88.0-slim-bookworm AS chef
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \

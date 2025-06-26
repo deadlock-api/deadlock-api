@@ -97,7 +97,7 @@ pub async fn download_match_mpsc(
 ) -> Result<Receiver<HltvFragment>, DownloadError> {
     let (sender, receiver) = channel::<HltvFragment>(100);
 
-    let sync_url = format!("{}/{}/sync", prefix_url, match_id);
+    let sync_url = format!("{prefix_url}/{match_id}/sync");
 
     let sync_response: SyncResponse = get_initial_sync(&client, &sync_url).await?;
 

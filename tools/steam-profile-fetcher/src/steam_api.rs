@@ -40,8 +40,7 @@ pub async fn fetch_steam_profiles(
     let api_key = STEAM_API_KEYS.choose(&mut rng()).unwrap();
     let steam_ids = steam_id64s.join(",");
     let url = format!(
-        "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={}&steamids={}",
-        api_key, steam_ids
+        "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"
     );
 
     // Make the API call

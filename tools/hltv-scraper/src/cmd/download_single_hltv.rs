@@ -105,13 +105,13 @@ fn format_duration(seconds: u64) -> String {
     let mut result = String::new();
 
     if hours > 0 {
-        result.push_str(&format!("{}h", hours));
+        result.push_str(&format!("{hours}h"));
     }
     if minutes > 0 {
-        result.push_str(&format!("{}m", minutes));
+        result.push_str(&format!("{minutes}m"));
     }
     if secs > 0 || result.is_empty() {
-        result.push_str(&format!("{}s", secs));
+        result.push_str(&format!("{secs}s"));
     }
 
     result
