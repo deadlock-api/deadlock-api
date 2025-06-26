@@ -22,6 +22,7 @@ pub struct StatusServices {
 }
 
 impl StatusServices {
+    #[must_use]
     pub fn all_ok(&self) -> bool {
         self.clickhouse && self.postgres && self.redis
     }
