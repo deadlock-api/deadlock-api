@@ -146,11 +146,6 @@ pub(crate) fn querify(string: &str) -> QueryParams<'_> {
     }
     v
 }
-pub fn stringify(query: QueryParams) -> String {
-    query.iter().fold(String::new(), |acc, &tuple| {
-        acc + tuple.0 + "=" + tuple.1 + "&"
-    })
-}
 
 #[cfg(test)]
 mod tests {
@@ -283,20 +278,5 @@ mod tests {
     #[test]
     fn test_default_true() {
         assert!(default_true());
-    }
-
-    #[test]
-    fn test_querify() {
-        let query = querify("key1=value1&key2=value2&key3=value3");
-        assert_eq!(
-            query,
-            vec![("key1", "value1"), ("key2", "value2"), ("key3", "value3")]
-        );
-    }
-
-    #[test]
-    fn test_stringify() {
-        let query = vec![("key1", "value1"), ("key2", "value2"), ("key3", "value3")];
-        assert_eq!(stringify(query), "key1=value1&key2=value2&key3=value3&");
     }
 }

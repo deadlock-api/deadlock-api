@@ -1,4 +1,3 @@
-use deadlock_api_rust::utils::parse;
 use reqwest::Response;
 
 pub fn check_response(response: &Response) {
@@ -12,12 +11,19 @@ pub fn check_response(response: &Response) {
     );
 }
 
+fn stringify<'a>(query: &[(&'a str, &'a str)]) -> String {
+    query.iter().fold(String::new(), |acc, &tuple| {
+        acc + tuple.0 + "=" + tuple.1 + "&"
+    })
+}
+
 pub async fn request_endpoint(
     endpoint: &str,
     query_args: impl IntoIterator<Item = (&str, &str)>,
 ) -> Response {
     let mut url = format!("http://localhost:3000{endpoint}");
-    let query = parse::stringify(query_args.into_iter().collect());
+
+    let query = stringify(query_args.into_iter().collect::<Vec<_>>().as_slice());
     if !query.is_empty() {
         url = format!("{url}?{query}");
     }
