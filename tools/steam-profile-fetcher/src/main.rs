@@ -2,13 +2,9 @@ use anyhow::Result;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use once_cell::sync::Lazy;
-use rand::rng;
-use rand::seq::SliceRandom;
-use sqlx::postgres::PgQueryResult;
-use sqlx::{Error, PgPool};
 use std::env;
 use std::time::Duration;
-use tracing::{debug, error, info, instrument};
+use tracing::{error, info, instrument};
 mod models;
 mod steam_api;
 
@@ -17,11 +13,13 @@ use models::SteamPlayerSummary;
 static FETCH_INTERVAL: Lazy<Duration> = Lazy::new(|| {
     Duration::from_secs(
         env::var("FETCH_INTERVAL_SECONDS")
-            .unwrap_or_else(|_| "600".to_string())
+            .unwrap_or_else(|_| "120".to_string())
             .parse()
-            .unwrap_or(10 * 60),
+            .unwrap_or(2 * 60),
     )
 });
+
+const OUTDATED_INTERVAL: &str = "INTERVAL 2 WEEK";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -32,12 +30,11 @@ async fn main() -> Result<()> {
 
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
-    let pg_client = common::get_pg_client().await?;
 
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     loop {
         interval.tick().await;
-        match fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
+        match fetch_and_update_profiles(&http_client, &ch_client).await {
             Ok(_) => info!("Updated Steam profiles"),
             Err(_) => error!("Error updating Steam profiles"),
         }
@@ -48,9 +45,8 @@ async fn main() -> Result<()> {
 async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
-    pg_client: &PgPool,
 ) -> Result<()> {
-    let account_ids = get_account_ids_to_update(ch_client, pg_client).await?;
+    let account_ids = get_account_ids_to_update(ch_client).await?;
     gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
     if account_ids.is_empty() {
@@ -75,7 +71,7 @@ async fn fetch_and_update_profiles(
         }
     };
 
-    match save_profiles(pg_client, &profiles).await {
+    match save_profiles(ch_client, &profiles).await {
         Ok(_) => {
             info!(
                 "Saved {} Steam profiles, {} account IDs remaining to update",
@@ -99,97 +95,35 @@ async fn fetch_and_update_profiles(
 
 async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
-    pg_client: &PgPool,
-) -> Result<Vec<u32>> {
-    // Get New Accounts to Fetch
-    let ch_account_ids = get_ch_account_ids(ch_client).await?;
-    let pg_new_account_ids = get_pg_account_ids_new(pg_client).await?;
-    let ch_account_ids = ch_account_ids
-        .into_iter()
-        .filter(|id| !pg_new_account_ids.contains(id))
-        .unique()
-        .collect_vec();
-    let mut pg_outdated_account_ids = get_pg_account_ids_outdated(pg_client).await?;
-    pg_outdated_account_ids.shuffle(&mut rng());
-    debug!(
-        "Found {} new accounts and {} outdated accounts to update",
-        ch_account_ids.len(),
-        pg_outdated_account_ids.len()
-    );
-
-    Ok(ch_account_ids
-        .into_iter()
-        .chain(pg_outdated_account_ids.into_iter())
-        .unique()
-        .collect())
-}
-
-async fn get_ch_account_ids(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Vec<u32>> {
-    let query = "
+) -> clickhouse::error::Result<Vec<u32>> {
+    let query = format!(
+        r#"
+WITH recent_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - {OUTDATED_INTERVAL}),
+    up_to_date_accounts AS (SELECT account_id FROM steam_profiles WHERE last_updated > now() - {OUTDATED_INTERVAL})
 SELECT DISTINCT account_id
 FROM match_player
-WHERE match_id IN (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK)
+WHERE match_id IN recent_matches AND account_id NOT IN up_to_date_accounts
 AND account_id > 0
 ORDER BY RAND()
-    ";
-    ch_client.query(query).fetch_all().await
-}
 
-async fn get_pg_account_ids_outdated(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
-    Ok(
-        sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated < now() - INTERVAL '2 weeks'")
-            .fetch_all(pg_client)
-            .await?
-            .into_iter()
-            .map(|row| row.account_id as u32)
-            .collect(),
-    )
-}
+UNION DISTINCT
 
-async fn get_pg_account_ids_new(pg_client: &PgPool) -> sqlx::Result<Vec<u32>> {
-    Ok(
-        sqlx::query!("SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated > now() - INTERVAL '2 weeks'")
-            .fetch_all(pg_client)
-            .await?
-            .into_iter()
-            .map(|row| row.account_id as u32)
-            .collect(),
-    )
+SELECT DISTINCT account_id
+FROM steam_profiles FINAL
+WHERE last_updated < now() - {OUTDATED_INTERVAL}
+    "#
+    );
+    ch_client.query(&query).fetch_all().await
 }
 
 #[instrument(skip_all)]
 async fn save_profiles(
-    pg_client: &PgPool,
+    ch_client: &clickhouse::Client,
     profiles: &[SteamPlayerSummary],
-) -> std::result::Result<PgQueryResult, Error> {
-    let mut query_builder = sqlx::QueryBuilder::new(
-        "INSERT INTO steam_profiles (
-            account_id, personaname, profileurl,
-            avatar, personastate, realname, countrycode
-        ) ",
-    );
-
-    query_builder.push_values(profiles, |mut b, profile| {
-        b.push_bind(common::steam_id64_to_account_id(profile.steamid.parse().unwrap()) as i32)
-            .push_bind(&profile.personaname)
-            .push_bind(&profile.profileurl)
-            .push_bind(&profile.avatar)
-            .push_bind(profile.personastate as i32)
-            .push_bind(&profile.realname)
-            .push_bind(&profile.loccountrycode);
-    });
-
-    query_builder.push(
-        " ON CONFLICT (account_id)
-        DO UPDATE SET
-            personaname = EXCLUDED.personaname,
-            profileurl = EXCLUDED.profileurl,
-            avatar = EXCLUDED.avatar,
-            personastate = EXCLUDED.personastate,
-            realname = EXCLUDED.realname,
-            countrycode = EXCLUDED.countrycode",
-    );
-
-    let query = query_builder.build();
-    query.execute(pg_client).await
+) -> clickhouse::error::Result<()> {
+    let mut inserter = ch_client.insert("steam_profiles")?;
+    for profile in profiles {
+        inserter.write(profile).await?;
+    }
+    inserter.end().await
 }
