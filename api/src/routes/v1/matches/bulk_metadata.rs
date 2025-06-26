@@ -1,8 +1,7 @@
+use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-
-use crate::context::AppState;
 use crate::utils::parse::{comma_separated_num_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 use axum::Json;
@@ -13,6 +12,7 @@ use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
 use itertools::Itertools;
 use serde::Deserialize;
+use std::fmt::Write;
 use std::time::Duration;
 use strum_macros::Display;
 use tokio::io::Lines;
@@ -254,9 +254,10 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut query = String::new();
     // WITH
     query.push_str("WITH ");
-    query.push_str(&format!(
+    write!(
+        &mut query,
         "t_matches AS (SELECT match_id FROM match_info FINAL {info_filters} {order} {limit})"
-    ));
+    )?;
 
     // SELECT
     query.push_str("SELECT ");

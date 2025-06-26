@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Deserializer};
+use std::num::TryFromIntError;
 use std::str::FromStr;
 
 // Date Parsing
@@ -17,12 +18,13 @@ where
 // Steam ID Parsing
 const STEAM_ID_64_IDENT: u64 = 76561197960265728;
 
-fn steamid64_to_steamid3(steam_id: u64) -> u32 {
+fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntError> {
     // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
     if steam_id < STEAM_ID_64_IDENT {
-        return steam_id as u32;
+        return u32::try_from(steam_id);
     }
-    (steam_id - STEAM_ID_64_IDENT) as u32
+    // (steam_id - STEAM_ID_64_IDENT) as u32
+    u32::try_from(steam_id - STEAM_ID_64_IDENT)
 }
 
 pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
@@ -31,7 +33,7 @@ where
 {
     u64::deserialize(deserializer)
         .map_err(serde::de::Error::custom)
-        .map(steamid64_to_steamid3)
+        .and_then(|s| steamid64_to_steamid3(s).map_err(serde::de::Error::custom))
         .and_then(|steam_id| {
             (steam_id > 0)
                 .then_some(steam_id)
@@ -45,7 +47,11 @@ where
 {
     Option::<u64>::deserialize(deserializer)
         .map_err(serde::de::Error::custom)
-        .map(|steam_id| steam_id.map(steamid64_to_steamid3))
+        .and_then(|steam_id| {
+            steam_id
+                .map(|s| steamid64_to_steamid3(s).map_err(serde::de::Error::custom))
+                .transpose()
+        })
         .map(|steam_id| steam_id.filter(|&s| s > 0))
 }
 
@@ -58,7 +64,7 @@ where
 {
     /// A List of numbers in a single comma separated string, e.g. "1,2,3"
     CommaStringList(String),
-    /// A List of numbers in a string array, e.g. ["1", "2", "3"]
+    /// A List of numbers in a string array, e.g. `["1", "2", "3"]`
     StringList(Vec<String>),
     /// A single number, e.g. 1
     Single(T),

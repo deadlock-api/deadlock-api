@@ -13,7 +13,7 @@ use std::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 
-const MAX_TTL_SECONDS: isize = 60 * 60;
+const MAX_TTL_SECONDS: u64 = 60 * 60;
 
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
@@ -53,8 +53,8 @@ impl RateLimitClient {
                     "Invalid API key",
                 ));
             }
-        } else if quotas.iter().any(|q| q.quota_type.is_key())
-            && !quotas.iter().any(|q| q.quota_type.is_ip())
+        } else if quotas.iter().any(|q| q.r#type.is_key())
+            && !quotas.iter().any(|q| q.r#type.is_ip())
         {
             // If API key is not present check if this route requires an API key
             // Routes that have a key limit, but no IP limit, require an API key
@@ -87,11 +87,11 @@ impl RateLimitClient {
             Some(api_key) => {
                 let custom_quotas = get_custom_quotas(&self.pg_client, api_key, key).await;
                 if custom_quotas.is_empty() {
-                    let has_api_key_limits = quotas.iter().any(|q| q.quota_type.is_key());
+                    let has_api_key_limits = quotas.iter().any(|q| q.r#type.is_key());
                     // Remove IP quotas if there are key quotas and api_key is present
                     quotas
                         .iter()
-                        .filter(|q| !has_api_key_limits || !q.quota_type.is_ip())
+                        .filter(|q| !has_api_key_limits || !q.r#type.is_ip())
                         .copied()
                         .collect()
                 } else {
@@ -103,7 +103,7 @@ impl RateLimitClient {
         // Check all quotas
         let mut all_statuses = Vec::new();
         for quota in quotas {
-            let prefixed_key = if quota.quota_type.is_global() {
+            let prefixed_key = if quota.r#type.is_global() {
                 key
             } else {
                 &format!("{prefix}:{key}")
@@ -132,22 +132,22 @@ impl RateLimitClient {
         key: &str,
         period: Duration,
     ) -> RedisResult<(u32, DateTime<Utc>)> {
-        let current_time = Utc::now().timestamp() as isize;
+        let current_time = Utc::now().timestamp() as u64;
         let mut redis_conn = self.redis_client.clone();
         let result: Vec<isize> = redis_conn
-            .zrangebyscore(key, current_time - period.as_secs() as isize, current_time)
+            .zrangebyscore(key, current_time - period.as_secs(), current_time)
             .await?;
         let oldest_request = result
             .iter()
             .min()
             .and_then(|t| DateTime::from_timestamp(*t as i64, 0))
-            .unwrap_or_else(|| Utc::now() - Duration::from_secs(MAX_TTL_SECONDS as u64));
+            .unwrap_or_else(|| Utc::now() - Duration::from_secs(MAX_TTL_SECONDS));
         Ok((result.len() as u32 - 1, oldest_request))
     }
 
     async fn increment_key(&self, prefix: &str, key: &str) -> RedisResult<()> {
         //! Increments the rate limit key in Redis.
-        let current_time = Utc::now().timestamp() as isize;
+        let current_time = Utc::now().timestamp() as u64;
         let prefixed_key = format!("{prefix}:{key}");
         let mut redis_conn = self.redis_client.clone();
         redis::pipe()
@@ -203,7 +203,7 @@ async fn get_custom_quotas(pg_client: &Pool<Postgres>, api_key: Uuid, path: &str
             .map(|row| Quota {
                 limit: row.rate_limit as u32,
                 period: Duration::from_micros(row.rate_period.microseconds as u64),
-                quota_type: QuotaType::Key,
+                r#type: QuotaType::Key,
             })
             .collect()
     })

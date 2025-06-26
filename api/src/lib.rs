@@ -1,6 +1,17 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::large_stack_arrays)]
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::trivially_copy_pass_by_ref)]
 
 mod api_doc;
 mod context;

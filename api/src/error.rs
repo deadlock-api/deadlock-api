@@ -6,7 +6,7 @@ use axum::http::Response;
 use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde_json::json;
-use std::io;
+use std::{fmt, io};
 use thiserror::Error;
 use tracing::error;
 
@@ -56,6 +56,8 @@ pub(super) enum APIError {
     Json(#[from] serde_json::Error),
     #[error("IO Error: {0}")]
     Io(#[from] io::Error),
+    #[error("FMT Error: {0}")]
+    Fmt(#[from] fmt::Error),
     #[error("Snappy Error: {0}")]
     Snappy(#[from] snap::Error),
 }
@@ -165,6 +167,7 @@ impl IntoResponse for APIError {
             Self::Json(_) => Self::internal("Json error.").into_response(),
             Self::Io(_) => Self::internal("IO error.").into_response(),
             Self::Snappy(_) => Self::internal("Snappy error.").into_response(),
+            Self::Fmt(_) => Self::internal("Fmt error.").into_response(),
         }
     }
 }

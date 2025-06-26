@@ -228,7 +228,7 @@ impl Variable {
         }
     }
 
-    pub(super) fn extra_args(&self) -> Vec<String> {
+    pub(super) fn extra_args(self) -> Vec<String> {
         match self {
             Self::HeroHoursPlayed
             | Self::HeroKd
@@ -602,11 +602,7 @@ impl Variable {
                 .await?;
                 let (wins, total) = hero_matches.fold((0, 0), |(wins, total), m| {
                     (
-                        wins + if m.match_result as i8 == m.player_team {
-                            1
-                        } else {
-                            0
-                        },
+                        wins + i32::from(m.match_result as i8 == m.player_team),
                         total + 1,
                     )
                 });

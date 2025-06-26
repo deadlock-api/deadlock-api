@@ -17,7 +17,7 @@ pub(super) enum QuotaType {
 pub(crate) struct Quota {
     pub(crate) limit: u32,
     pub(crate) period: Duration,
-    pub(super) quota_type: QuotaType,
+    pub(super) r#type: QuotaType,
 }
 
 impl Quota {
@@ -26,7 +26,7 @@ impl Quota {
         Self {
             limit,
             period,
-            quota_type: QuotaType::IP,
+            r#type: QuotaType::IP,
         }
     }
 
@@ -35,7 +35,7 @@ impl Quota {
         Self {
             limit,
             period,
-            quota_type: QuotaType::Key,
+            r#type: QuotaType::Key,
         }
     }
 
@@ -44,7 +44,7 @@ impl Quota {
         Self {
             limit,
             period,
-            quota_type: QuotaType::Global,
+            r#type: QuotaType::Global,
         }
     }
 }
