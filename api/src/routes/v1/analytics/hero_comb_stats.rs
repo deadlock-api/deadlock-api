@@ -243,11 +243,13 @@ async fn get_comb_stats(
         .into_values()
         .filter(|c| {
             c.matches
-                >= query
-                    .min_matches
-                    .or(default_min_matches())
-                    .unwrap_or_default() as u64
-                && c.matches <= query.max_matches.unwrap_or(u32::MAX) as u64
+                >= u64::from(
+                    query
+                        .min_matches
+                        .or(default_min_matches())
+                        .unwrap_or_default(),
+                )
+                && c.matches <= u64::from(query.max_matches.unwrap_or(u32::MAX))
         })
         .sorted_by_key(|c| c.wins / c.matches)
         .rev()

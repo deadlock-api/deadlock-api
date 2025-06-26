@@ -263,7 +263,7 @@ async fn fetch_steam_account_name_cached(
         )
         .await
         .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
-    let steamid64 = steam_id as u64 + 76561197960265728;
+    let steamid64 = u64::from(steam_id) + 76561197960265728;
     let response = http_client
         .get(format!(
             "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={steam_api_key}&steamids={steamid64}",
