@@ -1,8 +1,5 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::unwrap_used)]
-#![deny(clippy::expect_used)]
-#![deny(clippy::lossy_float_literal)]
-#![deny(clippy::redundant_clone)]
+#![deny(clippy::all)]
 #![deny(unreachable_pub)]
 
 mod api_doc;
