@@ -17,7 +17,7 @@ use utoipa_axum::routes;
 
 #[derive(Deserialize, IntoParams, Default)]
 pub(crate) struct AccountIdQuery {
-    /// The players SteamID3
+    /// The players `SteamID3`
     #[serde(default)]
     #[serde(deserialize_with = "parse_steam_id")]
     account_id: u32,

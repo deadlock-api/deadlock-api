@@ -105,11 +105,11 @@ pub(crate) struct ItemStatsQuery {
     #[serde(default)]
     #[param(inline)]
     bucket: BucketQuery,
-    /// Filter matches based on the hero IDs. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     hero_ids: Option<Vec<u32>>,
-    /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -128,20 +128,20 @@ pub(crate) struct ItemStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// Comma separated list of item ids to include. See more: https://assets.deadlock-api.com/v2/items
+    /// Comma separated list of item ids to include. See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude. See more: https://assets.deadlock-api.com/v2/items
+    /// Comma separated list of item ids to exclude. See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
@@ -159,7 +159,7 @@ pub(crate) struct ItemStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct ItemStats {
-    /// See more: https://assets.deadlock-api.com/v2/items
+    /// See more: <https://assets.deadlock-api.com/v2/items>
     pub item_id: u32,
     pub bucket: Option<u32>,
     pub wins: u64,

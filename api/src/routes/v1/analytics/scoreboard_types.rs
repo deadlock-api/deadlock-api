@@ -39,17 +39,17 @@ pub enum ScoreboardQuerySortBy {
     AvgAssistsPerMatch,
     /// Sort by the max total assists
     Assists,
-    /// Sort by the max net_worth per match
+    /// Sort by the max `net_worth` per match
     MaxNetWorthPerMatch,
-    /// Sort by the avg net_worth per match
+    /// Sort by the avg `net_worth` per match
     AvgNetWorthPerMatch,
-    /// Sort by the max total net_worth
+    /// Sort by the max total `net_worth`
     NetWorth,
-    /// Sort by the max last_hits per match
+    /// Sort by the max `last_hits` per match
     MaxLastHitsPerMatch,
-    /// Sort by the avg last_hits per match
+    /// Sort by the avg `last_hits` per match
     AvgLastHitsPerMatch,
-    /// Sort by the max total last_hits
+    /// Sort by the max total `last_hits`
     LastHits,
     /// Sort by the max denies per match
     MaxDeniesPerMatch,
@@ -57,77 +57,77 @@ pub enum ScoreboardQuerySortBy {
     AvgDeniesPerMatch,
     /// Sort by the max total denies
     Denies,
-    /// Sort by the max player_level per match
+    /// Sort by the max `player_level` per match
     MaxPlayerLevelPerMatch,
-    /// Sort by the avg player_level per match
+    /// Sort by the avg `player_level` per match
     AvgPlayerLevelPerMatch,
-    /// Sort by the max total player_level
+    /// Sort by the max total `player_level`
     PlayerLevel,
-    /// Sort by the max creep_kills per match
+    /// Sort by the max `creep_kills` per match
     MaxCreepKillsPerMatch,
-    /// Sort by the avg creep_kills per match
+    /// Sort by the avg `creep_kills` per match
     AvgCreepKillsPerMatch,
-    /// Sort by the max total creep_kills
+    /// Sort by the max total `creep_kills`
     CreepKills,
-    /// Sort by the max neutral_kills per match
+    /// Sort by the max `neutral_kills` per match
     MaxNeutralKillsPerMatch,
-    /// Sort by the avg neutral_kills per match
+    /// Sort by the avg `neutral_kills` per match
     AvgNeutralKillsPerMatch,
-    /// Sort by the max total neutral_kills
+    /// Sort by the max total `neutral_kills`
     NeutralKills,
-    /// Sort by the max creep_damage per match
+    /// Sort by the max `creep_damage` per match
     MaxCreepDamagePerMatch,
-    /// Sort by the avg creep_damage per match
+    /// Sort by the avg `creep_damage` per match
     AvgCreepDamagePerMatch,
-    /// Sort by the max total creep_damage
+    /// Sort by the max total `creep_damage`
     CreepDamage,
-    /// Sort by the max player_damage per match
+    /// Sort by the max `player_damage` per match
     MaxPlayerDamagePerMatch,
-    /// Sort by the avg player_damage per match
+    /// Sort by the avg `player_damage` per match
     AvgPlayerDamagePerMatch,
-    /// Sort by the max total player_damage
+    /// Sort by the max total `player_damage`
     PlayerDamage,
-    /// Sort by the max neutral_damage per match
+    /// Sort by the max `neutral_damage` per match
     MaxNeutralDamagePerMatch,
-    /// Sort by the avg neutral_damage per match
+    /// Sort by the avg `neutral_damage` per match
     AvgNeutralDamagePerMatch,
-    /// Sort by the max total neutral_damage
+    /// Sort by the max total `neutral_damage`
     NeutralDamage,
-    /// Sort by the max boss_damage per match
+    /// Sort by the max `boss_damage` per match
     MaxBossDamagePerMatch,
-    /// Sort by the avg boss_damage per match
+    /// Sort by the avg `boss_damage` per match
     AvgBossDamagePerMatch,
-    /// Sort by the max total boss_damage
+    /// Sort by the max total `boss_damage`
     BossDamage,
-    /// Sort by the max max_health per match
+    /// Sort by the max `max_health` per match
     MaxMaxHealthPerMatch,
-    /// Sort by the avg max_health per match
+    /// Sort by the avg `max_health` per match
     AvgMaxHealthPerMatch,
-    /// Sort by the max total max_health
+    /// Sort by the max total `max_health`
     MaxHealth,
-    /// Sort by the max shots_hit per match
+    /// Sort by the max `shots_hit` per match
     MaxShotsHitPerMatch,
-    /// Sort by the avg shots_hit per match
+    /// Sort by the avg `shots_hit` per match
     AvgShotsHitPerMatch,
-    /// Sort by the max total shots_hit
+    /// Sort by the max total `shots_hit`
     ShotsHit,
-    /// Sort by the max shots_missed per match
+    /// Sort by the max `shots_missed` per match
     MaxShotsMissedPerMatch,
-    /// Sort by the avg shots_missed per match
+    /// Sort by the avg `shots_missed` per match
     AvgShotsMissedPerMatch,
-    /// Sort by the max total shots_missed
+    /// Sort by the max total `shots_missed`
     ShotsMissed,
-    /// Sort by the max hero_bullets_hit per match
+    /// Sort by the max `hero_bullets_hit` per match
     MaxHeroBulletsHitPerMatch,
-    /// Sort by the avg hero_bullets_hit per match
+    /// Sort by the avg `hero_bullets_hit` per match
     AvgHeroBulletsHitPerMatch,
-    /// Sort by the max total hero_bullets_hit
+    /// Sort by the max total `hero_bullets_hit`
     HeroBulletsHit,
-    /// Sort by the max hero_bullets_hit_crit per match
+    /// Sort by the max `hero_bullets_hit_crit` per match
     MaxHeroBulletsHitCritPerMatch,
-    /// Sort by the avg hero_bullets_hit_crit per match
+    /// Sort by the avg `hero_bullets_hit_crit` per match
     AvgHeroBulletsHitCritPerMatch,
-    /// Sort by the max total hero_bullets_hit_crit
+    /// Sort by the max total `hero_bullets_hit_crit`
     HeroBulletsHitCrit,
 }
 

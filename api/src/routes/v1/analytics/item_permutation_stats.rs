@@ -21,17 +21,17 @@ fn default_comb_size() -> Option<u8> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct ItemPermutationStatsQuery {
-    /// Comma separated list of item ids. See more: https://assets.deadlock-api.com/v2/items
+    /// Comma separated list of item ids. See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     item_ids: Option<Vec<u32>>,
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
     comb_size: Option<u8>,
-    /// Filter matches based on the hero IDs. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     hero_ids: Option<Vec<u32>>,
-    /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]
     hero_id: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -50,10 +50,10 @@ pub(super) struct ItemPermutationStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -67,7 +67,7 @@ pub(super) struct ItemPermutationStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 struct ItemPermutationStats {
-    /// See more: https://assets.deadlock-api.com/v2/items
+    /// See more: <https://assets.deadlock-api.com/v2/items>
     item_ids: Vec<u32>,
     wins: u64,
     losses: u64,

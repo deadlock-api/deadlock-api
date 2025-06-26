@@ -27,10 +27,10 @@ pub(super) struct HeroStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -41,7 +41,7 @@ pub(super) struct HeroStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroStats {
-    /// See more: https://assets.deadlock-api.com/v2/heroes
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_id: u32,
     matches_played: u64,
     wins: u64,

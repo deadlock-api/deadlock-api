@@ -68,10 +68,10 @@ pub(crate) struct HeroStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -82,10 +82,10 @@ pub(crate) struct HeroStatsQuery {
     min_hero_matches: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero.
     max_hero_matches: Option<u64>,
-    /// Comma separated list of item ids to include (only heroes who have purchased these items). See more: https://assets.deadlock-api.com/v2/items
+    /// Comma separated list of item ids to include (only heroes who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude (only heroes who have not purchased these items). See more: https://assets.deadlock-api.com/v2/items
+    /// Comma separated list of item ids to exclude (only heroes who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// Filter for matches with a specific player account ID.
@@ -95,7 +95,7 @@ pub(crate) struct HeroStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct AnalyticsHeroStats {
-    /// See more: https://assets.deadlock-api.com/v2/heroes
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_id: u32,
     pub bucket: Option<u32>,
     pub wins: u64,

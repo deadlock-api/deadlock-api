@@ -104,7 +104,7 @@ pub(super) struct ActiveMatchPlayer {
     team: Option<i32>,
     team_parsed: Option<ActiveMatchTeam>,
     abandoned: Option<bool>,
-    /// See more: https://assets.deadlock-api.com/v2/heroes
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: Option<u32>,
 }
 

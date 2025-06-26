@@ -34,9 +34,9 @@ pub enum BuildsSearchQuerySortBy {
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
 pub(super) struct BuildsSearchQuery {
-    /// Filter builds based on their last_updated time (Unix timestamp).
+    /// Filter builds based on their `last_updated` time (Unix timestamp).
     min_unix_timestamp: Option<u64>,
-    /// Filter builds based on their last_updated time (Unix timestamp).
+    /// Filter builds based on their `last_updated` time (Unix timestamp).
     max_unix_timestamp: Option<u64>,
     /// Filter builds based on their published time (Unix timestamp).
     min_published_unix_timestamp: Option<u64>,
@@ -68,11 +68,11 @@ pub(super) struct BuildsSearchQuery {
     build_id: Option<u32>,
     /// Filter builds by version.
     version: Option<u32>,
-    /// Filter builds by hero ID. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Filter builds by hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: Option<u32>,
     /// Filter builds by rollup category.
     rollup_category: Option<u32>,
-    /// The author's SteamID3
+    /// The author's `SteamID3`
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     author_id: Option<u32>,
 }

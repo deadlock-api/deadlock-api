@@ -102,7 +102,7 @@ pub(super) struct CommandResolveQuery {
     #[serde(default)]
     #[param(inline)]
     region: LeaderboardRegion,
-    /// The players SteamID3
+    /// The players `SteamID3`
     #[serde(deserialize_with = "parse_steam_id")]
     account_id: u32,
     /// The command template to resolve

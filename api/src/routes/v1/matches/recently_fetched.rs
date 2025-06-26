@@ -15,10 +15,10 @@ struct ClickhouseMatchInfo {
     start_time: u32,
     duration_s: u32,
     match_mode: i8,
-    /// See more: https://assets.deadlock-api.com/v2/ranks
+    /// See more: <https://assets.deadlock-api.com/v2/ranks>
     #[serde(default)]
     average_badge_team0: Option<u32>,
-    /// See more: https://assets.deadlock-api.com/v2/ranks
+    /// See more: <https://assets.deadlock-api.com/v2/ranks>
     #[serde(default)]
     average_badge_team1: Option<u32>,
 }

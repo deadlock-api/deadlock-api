@@ -47,7 +47,7 @@ struct BuildHeroDetails {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct BuildHero {
-    /// See more: https://assets.deadlock-api.com/v2/heroes
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_id: u32,
     pub hero_build_id: u32,
     pub author_account_id: u32,

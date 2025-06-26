@@ -24,7 +24,7 @@ use valveprotos::deadlock::{
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct ActiveMatchesQuery {
-    /// The account ID to filter active matches by (SteamID3)
+    /// The account ID to filter active matches by (`SteamID3`)
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
 }

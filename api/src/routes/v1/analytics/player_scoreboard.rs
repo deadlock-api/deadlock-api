@@ -31,7 +31,7 @@ pub(crate) struct PlayerScoreboardQuery {
     #[serde(default)]
     #[param(inline)]
     sort_direction: SortDirectionDesc,
-    /// Filter matches based on the hero ID. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
     #[serde(default = "default_min_matches")]
@@ -55,10 +55,10 @@ pub(crate) struct PlayerScoreboardQuery {
     min_networth: Option<u64>,
     /// Filter players based on their net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -78,7 +78,7 @@ pub(crate) struct PlayerScoreboardQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerScoreboardEntry {
-    /// See more: https://assets.deadlock-api.com/v2/ranks
+    /// See more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u64,
     account_id: u32,
     pub value: f64,

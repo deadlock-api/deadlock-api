@@ -44,10 +44,10 @@ pub(crate) struct HeroCombStatsQuery {
     min_networth: Option<u64>,
     /// Filter players based on their net worth.
     max_networth: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: https://assets.deadlock-api.com/v2/ranks
+    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -57,10 +57,10 @@ pub(crate) struct HeroCombStatsQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
-    /// Comma separated list of hero ids to include. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Comma separated list of hero ids to include. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     include_hero_ids: Option<Vec<u32>>,
-    /// Comma separated list of hero ids to exclude. See more: https://assets.deadlock-api.com/v2/heroes
+    /// Comma separated list of hero ids to exclude. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
     exclude_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
@@ -79,7 +79,7 @@ pub(crate) struct HeroCombStatsQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroCombStats {
-    /// See more: https://assets.deadlock-api.com/v2/heroes
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_ids: Vec<u32>,
     pub wins: u64,
     pub losses: u64,

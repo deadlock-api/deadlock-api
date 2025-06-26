@@ -24,16 +24,16 @@ pub(crate) struct LeaderboardEntry {
     /// The possible account IDs of the player. **CAVEAT: This is not always correct, as Steam account names are not unique.**
     #[serde(default)]
     pub(crate) possible_account_ids: Vec<u32>,
-    /// The rank of the player. See more: https://assets.deadlock-api.com/v2/ranks
+    /// The rank of the player. See more: <https://assets.deadlock-api.com/v2/ranks>
     pub(crate) rank: Option<u32>,
-    /// The top hero IDs of the player. See more: https://assets.deadlock-api.com/v2/heroes
+    /// The top hero IDs of the player. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default)]
     top_hero_ids: Vec<u32>,
-    /// The badge level of the player. See more: https://assets.deadlock-api.com/v2/ranks
+    /// The badge level of the player. See more: <https://assets.deadlock-api.com/v2/ranks>
     pub(crate) badge_level: Option<u32>,
-    /// The ranked rank of the player. See more: https://assets.deadlock-api.com/v2/ranks
+    /// The ranked rank of the player. See more: <https://assets.deadlock-api.com/v2/ranks>
     ranked_rank: Option<u32>,
-    /// The ranked subrank of the player. See more: https://assets.deadlock-api.com/v2/ranks
+    /// The ranked subrank of the player. See more: <https://assets.deadlock-api.com/v2/ranks>
     ranked_subrank: Option<u32>,
 }
 

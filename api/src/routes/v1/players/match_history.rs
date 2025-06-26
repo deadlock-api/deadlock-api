@@ -32,7 +32,7 @@ pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 pub(crate) struct PlayerMatchHistoryEntry {
     account_id: u32,
     pub(crate) match_id: u64,
-    /// See more: https://assets.deadlock-api.com/v2/heroes
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub(crate) hero_id: u32,
     hero_level: u32,
     pub(crate) start_time: u32,
@@ -85,13 +85,13 @@ impl PlayerMatchHistoryEntry {
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct MatchHistoryQuery {
-    /// Refetch the match history from Steam, even if it is already cached in ClickHouse.
-    /// Only use this if you are sure that the data in ClickHouse is outdated.
+    /// Refetch the match history from Steam, even if it is already cached in `ClickHouse`.
+    /// Only use this if you are sure that the data in `ClickHouse` is outdated.
     /// Enabling this flag results in a strict rate limit.
     #[serde(default)]
     #[param(default)]
     force_refetch: bool,
-    /// Return only the already stored match history from ClickHouse.
+    /// Return only the already stored match history from `ClickHouse`.
     /// There is no rate limit for this option, so if you need a lot of data, you can use this option.
     /// This option is not compatible with `force_refetch`.
     #[serde(default)]
