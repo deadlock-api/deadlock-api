@@ -21,6 +21,9 @@ pub(crate) enum LeaderboardRegion {
 pub(crate) struct LeaderboardEntry {
     /// The account name of the player.
     pub(crate) account_name: Option<String>,
+    /// The possible account IDs of the player. **CAVEAT: This is not always correct, as Steam account names are not unique.**
+    #[serde(default)]
+    pub(crate) possible_account_ids: Vec<u32>,
     /// The rank of the player. See more: https://assets.deadlock-api.com/v2/ranks
     pub(crate) rank: Option<u32>,
     /// The top hero IDs of the player. See more: https://assets.deadlock-api.com/v2/heroes
@@ -38,6 +41,7 @@ impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for Lea
     fn from(value: c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry) -> Self {
         Self {
             account_name: value.account_name,
+            possible_account_ids: vec![],
             rank: value.rank,
             top_hero_ids: value.top_hero_ids,
             badge_level: value.badge_level,

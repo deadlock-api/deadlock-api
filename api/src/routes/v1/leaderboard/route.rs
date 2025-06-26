@@ -13,8 +13,12 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use clickhouse::Row;
+use futures::join;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::time::Duration;
+use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse, EgcCitadelClientMessages,
@@ -66,6 +70,42 @@ pub(crate) async fn fetch_leaderboard_raw(
             username: None,
         })
         .await
+}
+
+#[cached(
+    ty = "TimedCache<u8, HashMap<String, Vec<u32>>>",
+    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+pub(crate) async fn fetch_steam_names(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<HashMap<String, Vec<u32>>> {
+    #[derive(serde::Deserialize, Row)]
+    struct CHResponse {
+        name: String,
+        account_id: u32,
+    }
+
+    let mut out = HashMap::new();
+    for row in ch_client
+        .query(
+            r#"
+                SELECT DISTINCT assumeNotNull(name) as name, account_id
+                FROM steam_profiles
+                ARRAY JOIN [personaname, realname] AS name
+                WHERE name IS NOT NULL AND not empty(name)
+            "#,
+        )
+        .fetch_all::<CHResponse>()
+        .await?
+    {
+        out.entry(row.name)
+            .or_insert_with(Vec::new)
+            .push(row.account_id);
+    }
+    Ok(out)
 }
 
 #[utoipa::path(
@@ -168,10 +208,28 @@ pub(super) async fn leaderboard(
     State(state): State<AppState>,
     Path(LeaderboardQuery { region }): Path<LeaderboardQuery>,
 ) -> APIResult<impl IntoResponse> {
-    let raw_leaderboard = fetch_leaderboard_raw(&state.steam_client, region, None).await?;
+    let (raw_leaderboard, steam_names) = join!(
+        fetch_leaderboard_raw(&state.steam_client, region, None),
+        fetch_steam_names(&state.ch_client_ro),
+    );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
-        raw_leaderboard.try_into()?;
-    let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+        raw_leaderboard?.try_into()?;
+    let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+    match steam_names {
+        Ok(steam_names) => {
+            if let Ok(leaderboard) = &mut leaderboard {
+                for entry in &mut leaderboard.entries {
+                    if let Some(ref account_name) = entry.account_name {
+                        entry.possible_account_ids =
+                            steam_names.get(account_name).cloned().unwrap_or_default();
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to fetch steam names: {e}");
+        }
+    }
     leaderboard.map(Json)
 }
 
@@ -207,10 +265,27 @@ pub(super) async fn leaderboard_hero(
             format!("Invalid hero_id: {hero_id}"),
         ));
     }
-    let raw_leaderboard =
-        fetch_leaderboard_raw(&state.steam_client, region, hero_id.into()).await?;
+    let (raw_leaderboard, steam_names) = join!(
+        fetch_leaderboard_raw(&state.steam_client, region, hero_id.into()),
+        fetch_steam_names(&state.ch_client_ro),
+    );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
-        raw_leaderboard.try_into()?;
-    let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+        raw_leaderboard?.try_into()?;
+    let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
+    match steam_names {
+        Ok(steam_names) => {
+            if let Ok(leaderboard) = &mut leaderboard {
+                for entry in &mut leaderboard.entries {
+                    if let Some(ref account_name) = entry.account_name {
+                        entry.possible_account_ids =
+                            steam_names.get(account_name).cloned().unwrap_or_default();
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Failed to fetch steam names: {e}");
+        }
+    }
     leaderboard.map(Json)
 }
