@@ -66,7 +66,7 @@ impl SteamClient {
             "data": encoded_message,
             "bot_username": query.username,
         });
-        match self._call_proxy(&query, &body).await {
+        match self.call_proxy(&query, &body).await {
             Ok(r) => {
                 debug!(
                     "Successfully called Steam proxy for {}",
@@ -83,7 +83,7 @@ impl SteamClient {
         }
     }
 
-    async fn _call_proxy<M: Message, T: serde::Serialize + ?Sized>(
+    async fn call_proxy<M: Message, T: serde::Serialize + ?Sized>(
         &self,
         query: &SteamProxyQuery<M>,
         body: &T,

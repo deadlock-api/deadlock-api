@@ -163,13 +163,10 @@ async fn fetch_match_history_raw(
         response
             .matches
             .into_iter()
-            .flat_map(
-                |e| match PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
-                    Some(entry) => Some(entry),
-                    None => {
-                        warn!("Failed to parse player match history entry: {:?}", e);
-                        None
-                    }
+            .filter_map(
+                |e| if let Some(entry) = PlayerMatchHistoryEntry::from_protobuf(account_id, e) { Some(entry) } else {
+                    warn!("Failed to parse player match history entry: {:?}", e);
+                    None
                 },
             )
             .collect(),
@@ -319,10 +316,10 @@ pub(super) async fn match_history(
         if is_newer_than_40_min {
             let exists_newer_match =
                 exists_newer_match_than(&state.ch_client_ro, account_id, last_match.match_id).await;
-            if !exists_newer_match {
-                return Ok(Json(ch_match_history));
-            } else {
+            if exists_newer_match {
                 force_update = true; // force update if there is a newer match
+            } else {
+                return Ok(Json(ch_match_history));
             }
         }
     }
@@ -388,8 +385,8 @@ pub(super) async fn match_history(
         tokio::spawn(async move {
             let result = insert_match_history_to_ch(&ch_client, &ch_missing_entries).await;
             if let Err(e) = result {
-                warn!("Failed to insert player match history to ClickHouse: {e:?}")
-            };
+                warn!("Failed to insert player match history to ClickHouse: {e:?}");
+            }
         });
     }
 

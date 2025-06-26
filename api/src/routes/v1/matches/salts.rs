@@ -21,6 +21,8 @@ use valveprotos::deadlock::{
     EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
 };
 
+const FIRST_MATCH_DECEMBER_2024: u64 = 30742540;
+
 #[derive(Deserialize, IntoParams, Default)]
 pub(super) struct SaltsQuery {
     /// Whether the match needs a demo file or not
@@ -79,8 +81,7 @@ pub(super) async fn fetch_match_salts(
     match_id: u64,
     needs_demo: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
-    // 30742540 is the first match from December, block older requests to avoid spamming
-    if match_id < 30742540 {
+    if match_id < FIRST_MATCH_DECEMBER_2024 {
         return Err(APIError::status_msg(
             reqwest::StatusCode::NOT_FOUND,
             format!("Match salts for match {match_id} cannot be fetched"),

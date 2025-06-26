@@ -88,7 +88,7 @@ pub(super) async fn sql(
         .await?;
 
     let query = query.query;
-    let query = query.trim().replace(";", "");
+    let query = query.trim().replace(';', "");
     debug!("CUSTOM QUERY: {query}");
 
     run_sql(&state.ch_client_restricted, &query)

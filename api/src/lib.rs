@@ -81,9 +81,10 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         })
         .split_for_parts();
 
-    let server_url = match cfg!(debug_assertions) {
-        true => &format!("http://localhost:{port}"),
-        false => "https://api.deadlock-api.com",
+    let server_url = if cfg!(debug_assertions) {
+        &format!("http://localhost:{port}")
+    } else {
+        "https://api.deadlock-api.com"
     };
     api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
 
@@ -114,7 +115,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            assert_eq!(response.status(), StatusCode::SEE_OTHER)
+            assert_eq!(response.status(), StatusCode::SEE_OTHER);
         }
 
         {
@@ -125,7 +126,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            assert_eq!(response.status(), StatusCode::OK)
+            assert_eq!(response.status(), StatusCode::OK);
         }
 
         {
@@ -141,7 +142,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            assert_eq!(response.status(), StatusCode::OK)
+            assert_eq!(response.status(), StatusCode::OK);
         }
     }
 }

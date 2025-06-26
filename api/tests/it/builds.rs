@@ -119,7 +119,7 @@ async fn test_builds(
     };
 
     fn get_sort_key(sort_by: BuildsSearchQuerySortBy, build: &Build) -> u32 {
-        match sort_by {
+        let key = match sort_by {
             BuildsSearchQuerySortBy::WeeklyFavorites => build.num_weekly_favorites,
             BuildsSearchQuerySortBy::Favorites => build.num_favorites,
             BuildsSearchQuerySortBy::Ignores => build.num_ignores,
@@ -131,8 +131,8 @@ async fn test_builds(
             BuildsSearchQuerySortBy::PublishedAt => {
                 build.hero_build.publish_timestamp.map(|t| t as u32)
             }
-        }
-        .unwrap_or_default()
+        };
+        key.unwrap_or_default()
     }
 
     let is_sorted = builds_sorted.is_sorted_by_key(|k| get_sort_key(sort_by, k));

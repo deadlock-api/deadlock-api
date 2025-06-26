@@ -228,12 +228,12 @@ async fn get_comb_stats(
         None => return Ok(comb_stats),
     };
     let mut comb_stats_agg = HashMap::new();
-    for comb_stat in comb_stats.iter() {
+    for comb_stat in &comb_stats {
         for comb_hero_ids in comb_stat.hero_ids.iter().combinations(comb_size as usize) {
             *comb_stats_agg
-                .entry(comb_hero_ids.to_vec())
+                .entry(comb_hero_ids.clone())
                 .or_insert(HeroCombStats {
-                    hero_ids: comb_hero_ids.into_iter().cloned().collect_vec(),
+                    hero_ids: comb_hero_ids.into_iter().copied().collect_vec(),
                     wins: 0,
                     losses: 0,
                     matches: 0,

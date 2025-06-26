@@ -195,7 +195,7 @@ pub(super) async fn command_resolve(
             warn!("Failed to resolve variable: {:?}", result.err());
             continue;
         };
-        resolved_template = resolved_template.replace(&template_str, &resolved_variable)
+        resolved_template = resolved_template.replace(&template_str, &resolved_variable);
     }
     Ok(resolved_template)
 }

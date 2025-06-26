@@ -16,6 +16,5 @@ pub(crate) async fn check_api_key_is_esports_ingest_key(
     )    .fetch_one(pg_client)
         .await?
         .count
-        .map(|c| c > 0)
-        .unwrap_or(false))
+        .is_some_and(|c| c > 0))
 }

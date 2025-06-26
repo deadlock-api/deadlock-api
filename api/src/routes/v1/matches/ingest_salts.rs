@@ -63,9 +63,11 @@ pub(super) async fn ingest_salts(
     debug!("Received salts: {match_salts:?}");
 
     // Check if the salts are valid if not sent by the internal tools
-    let match_salts: Vec<ClickhouseSalts> = if !bypass_check {
+    let match_salts: Vec<ClickhouseSalts> = if bypass_check {
+        match_salts
+    } else {
         let mut valid_salts = Vec::with_capacity(match_salts.len());
-        for salt in match_salts.into_iter() {
+        for salt in match_salts {
             if state
                 .steam_client
                 .metadata_file_exists(salt.match_id, salt.into())
@@ -76,8 +78,6 @@ pub(super) async fn ingest_salts(
             }
         }
         valid_salts
-    } else {
-        match_salts
     };
 
     if match_salts.is_empty() {

@@ -339,7 +339,7 @@ pub(super) async fn create_custom(
         let result = leave_party(&steam_client, username_clone, party_id).await;
         if let Err(e) = result {
             error!("Failed to leave party: {e}");
-        };
+        }
     });
 
     let party_code = wait_for_party_code(&mut state.redis_client, party_id).await?;

@@ -49,7 +49,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                         .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(&s)).ok());
 
                     let uri = request.uri().to_string();
-                    let path = uri.split("?").next().unwrap_or(&uri);
+                    let path = uri.split('?').next().unwrap_or(&uri);
 
                     let mut query = parse::querify(request.uri().query().unwrap_or_default());
                     query.retain(|d| d.0 != "api_key"); // remove api_key from query

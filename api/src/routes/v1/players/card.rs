@@ -41,18 +41,18 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 struct PlayerCardSlotHero {
-    /// See more: https://assets.deadlock-api.com/v2/heroes
-    hero_id: Option<u32>,
-    hero_kills: Option<u32>,
-    hero_wins: Option<u32>,
+    /// See more: <https://assets.deadlock-api.com/v2/heroes>
+    id: Option<u32>,
+    kills: Option<u32>,
+    wins: Option<u32>,
 }
 
 impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
     fn from(value: c_msg_citadel_profile_card::slot::Hero) -> Self {
         Self {
-            hero_id: value.hero_id,
-            hero_wins: value.hero_wins,
-            hero_kills: value.hero_kills,
+            id: value.hero_id,
+            wins: value.hero_wins,
+            kills: value.hero_kills,
         }
     }
 }

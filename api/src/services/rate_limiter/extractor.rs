@@ -77,7 +77,7 @@ mod tests {
         }
         let mut request = http::Request::new(());
         *request.headers_mut() = headers;
-        let (mut parts, _) = request.into_parts();
+        let (mut parts, ()) = request.into_parts();
 
         let rate_limit_key = RateLimitKey::from_request_parts(&mut parts, &())
             .await

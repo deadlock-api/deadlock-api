@@ -156,7 +156,7 @@ async fn test_hero_comb_stats(
     let response = request_endpoint("/v1/analytics/hero-comb-stats", queries).await;
     let comb_stats: Vec<HeroCombStats> = response.json().await.expect("Failed to parse response");
 
-    for comb in comb_stats.iter() {
+    for comb in &comb_stats {
         assert_eq!(comb.wins + comb.losses, comb.matches);
         assert_eq!(comb.hero_ids.len(), 6);
         assert_eq!(comb.hero_ids.iter().unique().count(), 6);

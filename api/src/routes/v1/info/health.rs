@@ -59,12 +59,13 @@ async fn check_health(
         .await
         .is_ok();
 
-    match status.services.all_ok() {
-        true => Ok(status),
-        false => Err(APIError::StatusMsgJson {
+    if status.services.all_ok() {
+        Ok(status)
+    } else {
+        Err(APIError::StatusMsgJson {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             message: json!(status),
-        }),
+        })
     }
 }
 

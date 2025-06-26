@@ -764,8 +764,8 @@ impl Variable {
                     tokio::spawn(async move {
                         let result = insert_match_history_to_ch(&ch_client, &matches).await;
                         if let Err(e) = result {
-                            warn!("Failed to insert player match history to ClickHouse: {e:?}")
-                        };
+                            warn!("Failed to insert player match history to ClickHouse: {e:?}");
+                        }
                     });
                     m
                 }

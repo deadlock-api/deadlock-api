@@ -73,12 +73,12 @@ where
     D: Deserializer<'de>,
     T: FromStr + Deserialize<'de> + std::fmt::Debug,
 {
-    let deserialized: Option<CommaSeparatedNum<T>> = Option::deserialize(deserializer)?;
-    let Some(deserialized) = deserialized else {
-        return Ok(None);
+    let parsed: CommaSeparatedNum<T> = match Option::deserialize(deserializer)? {
+        Some(v) => v,
+        None => return Ok(None),
     };
 
-    Ok(match deserialized {
+    Ok(match parsed {
         CommaSeparatedNum::List(vec) => Some(vec),
         CommaSeparatedNum::Single(val) => Some(vec![val]),
         CommaSeparatedNum::StringList(val) => {
@@ -89,13 +89,10 @@ where
                     .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
                 out.push(parsed);
             }
-            match out.is_empty() {
-                true => None,
-                false => Some(out),
-            }
+            if out.is_empty() { None } else { Some(out) }
         }
         CommaSeparatedNum::CommaStringList(str) => {
-            let str = str.replace("[", "").replace("]", "");
+            let str = str.replace(['[', ']'], "");
 
             // If the string is empty, return None
             if str.is_empty() {
@@ -109,10 +106,7 @@ where
                 })?;
                 out.push(parsed);
             }
-            match out.is_empty() {
-                true => None,
-                false => Some(out),
-            }
+            if out.is_empty() { None } else { Some(out) }
         }
     })
 }

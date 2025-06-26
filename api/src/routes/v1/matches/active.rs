@@ -52,7 +52,7 @@ async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
     Ok(BASE64_STANDARD.decode(&steam_response.data)?)
 }
 
-async fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
+fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     if raw_data.len() < 7 {
         return Err(APIError::internal("Invalid active matches data"));
     }
@@ -147,7 +147,7 @@ pub(super) async fn active_matches(
 
     let mut active_matches = tryhard::retry_fn(|| async {
         let raw_data = fetch_active_matches_raw(&state).await?;
-        parse_active_matches_raw(&raw_data).await
+        parse_active_matches_raw(&raw_data)
     })
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))
@@ -160,7 +160,7 @@ pub(super) async fn active_matches(
                 .iter()
                 .any(|p| p.account_id.is_some_and(|a| a == account_id))
         });
-    };
+    }
 
     Ok(Json(active_matches))
 }
