@@ -30,15 +30,12 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain: [ stable, beta, nightly ]
     steps:
       - uses: actions/checkout@v4
-      - name: Update Rust toolchain to ${{ matrix.toolchain }}
+      - name: Update Rust toolchain to stable
         run: |
-          rustup override set ${{ matrix.toolchain }}
-          rustup update ${{ matrix.toolchain }}
+          rustup override set stable
+          rustup update stable
           rustup component add rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
@@ -46,9 +43,6 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain: [ stable, beta, nightly ]
     steps:
       - uses: actions/checkout@v4
       - name: Install Protocol Buffers compiler
@@ -56,17 +50,15 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.toolchain }}"
-      - name: Update Rust toolchain to ${{ matrix.toolchain }}
+          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-stable"
+      - name: Update Rust toolchain to stable
         run: |
-          rustup override set ${{ matrix.toolchain }}
-          rustup update ${{ matrix.toolchain }}
+          rustup override set stable
+          rustup update stable
           rustup component add clippy
       - name: Cargo Clippy (Deny Warnings)
-        if: matrix.toolchain == 'stable'
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Cargo Clippy (Allow Warnings)
-        if: matrix.toolchain != 'stable'
         run: cargo clippy --all-targets --locked
 
   test_deploy:
