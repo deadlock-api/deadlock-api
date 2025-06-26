@@ -412,7 +412,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                 <Line
                   key={itemId}
                   dataKey="winrate"
-                  data={chartData[itemId]}
+                  data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
                   type="monotone"
                   stroke={randomColorHex(itemId)}
                   dot={false}
