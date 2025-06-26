@@ -50,7 +50,7 @@ async fn test_sql_query(#[case] query: &str, #[case] expected: &str) {
 #[case("KILL QUERY WHERE query_id = '123'")]
 #[case("GRANT DELETE ON default.* TO api_readonly_user")]
 #[tokio::test]
-#[should_panic]
+#[should_panic(expected = "Status code is not 200")]
 async fn test_bad_sql_query(#[case] query: &str) {
     request_endpoint("/v1/sql", [("query", query)]).await;
 }

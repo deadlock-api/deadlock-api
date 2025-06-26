@@ -1,7 +1,16 @@
 use reqwest::Response;
 
+/// Check the response for common errors
+///
+/// # Panics
+///
+/// Panics if the response is not OK
 pub fn check_response(response: &Response) {
-    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    assert_eq!(
+        response.status(),
+        reqwest::StatusCode::OK,
+        "Status code is not 200"
+    );
     assert_eq!(
         response
             .headers()
@@ -17,6 +26,11 @@ fn stringify<'a>(query: &[(&'a str, &'a str)]) -> String {
     })
 }
 
+/// Request an endpoint and check the response
+///
+/// # Panics
+///
+/// Panics if the request fails or the response is not OK
 pub async fn request_endpoint(
     endpoint: &str,
     query_args: impl IntoIterator<Item = (&str, &str)>,
