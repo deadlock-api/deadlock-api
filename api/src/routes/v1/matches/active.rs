@@ -1,7 +1,7 @@
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::parse::parse_steam_id_option;
@@ -97,7 +97,7 @@ pub(super) async fn active_matches_raw(
         .apply_limits(
             &rate_limit_key,
             "active_matches",
-            &[RateLimitQuota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
+            &[Quota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
         )
         .await?;
 
@@ -141,7 +141,7 @@ pub(super) async fn active_matches(
         .apply_limits(
             &rate_limit_key,
             "active_matches",
-            &[RateLimitQuota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
+            &[Quota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
         )
         .await?;
 

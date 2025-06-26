@@ -1,6 +1,6 @@
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -80,9 +80,9 @@ pub(super) async fn sql(
             &rate_limit_key,
             "sql",
             &[
-                RateLimitQuota::ip_limit(10, Duration::from_secs(10)),
-                RateLimitQuota::key_limit(10, Duration::from_secs(10)),
-                RateLimitQuota::global_limit(100, Duration::from_secs(10)),
+                Quota::ip_limit(10, Duration::from_secs(10)),
+                Quota::key_limit(10, Duration::from_secs(10)),
+                Quota::global_limit(100, Duration::from_secs(10)),
             ],
         )
         .await?;

@@ -1,7 +1,7 @@
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::types::RateLimitQuotaType;
-use crate::services::rate_limiter::{RateLimitQuota, RateLimitStatus};
+use crate::services::rate_limiter::types::QuotaType;
+use crate::services::rate_limiter::{Quota, Status};
 use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -39,8 +39,8 @@ impl RateLimitClient {
         &self,
         rate_limit_key: &RateLimitKey,
         key: &str,
-        quotas: &[RateLimitQuota],
-    ) -> APIResult<Option<RateLimitStatus>> {
+        quotas: &[Quota],
+    ) -> APIResult<Option<Status>> {
         if quotas.is_empty() {
             return Ok(None);
         }
@@ -53,8 +53,8 @@ impl RateLimitClient {
                     "Invalid API key",
                 ));
             }
-        } else if quotas.iter().any(|q| q.rate_limit_quota_type.is_key())
-            && !quotas.iter().any(|q| q.rate_limit_quota_type.is_ip())
+        } else if quotas.iter().any(|q| q.quota_type.is_key())
+            && !quotas.iter().any(|q| q.quota_type.is_ip())
         {
             // If API key is not present check if this route requires an API key
             // Routes that have a key limit, but no IP limit, require an API key
@@ -74,8 +74,7 @@ impl RateLimitClient {
 
         let prefix = rate_limit_key
             .api_key
-            .map(|k| k.to_string())
-            .unwrap_or_else(|| rate_limit_key.ip.to_string());
+            .map_or_else(|| rate_limit_key.ip.to_string(), |k| k.to_string());
         let increment_result = self.increment_key(&prefix, key).await;
         if let Err(e) = increment_result {
             error!("Failed to increment rate limit key: {e}, will not apply limits");
@@ -88,12 +87,11 @@ impl RateLimitClient {
             Some(api_key) => {
                 let custom_quotas = get_custom_quotas(&self.pg_client, api_key, key).await;
                 if custom_quotas.is_empty() {
-                    let has_api_key_limits =
-                        quotas.iter().any(|q| q.rate_limit_quota_type.is_key());
+                    let has_api_key_limits = quotas.iter().any(|q| q.quota_type.is_key());
                     // Remove IP quotas if there are key quotas and api_key is present
                     quotas
                         .iter()
-                        .filter(|q| !has_api_key_limits || !q.rate_limit_quota_type.is_ip())
+                        .filter(|q| !has_api_key_limits || !q.quota_type.is_ip())
                         .copied()
                         .collect()
                 } else {
@@ -105,7 +103,7 @@ impl RateLimitClient {
         // Check all quotas
         let mut all_statuses = Vec::new();
         for quota in quotas {
-            let prefixed_key = if quota.rate_limit_quota_type.is_global() {
+            let prefixed_key = if quota.quota_type.is_global() {
                 key
             } else {
                 &format!("{prefix}:{key}")
@@ -116,7 +114,7 @@ impl RateLimitClient {
                 error!("Failed to check rate limit key: {prefixed_key}, will not apply limits");
                 continue;
             };
-            let status = RateLimitStatus {
+            let status = Status {
                 quota,
                 requests,
                 oldest_request,
@@ -126,7 +124,7 @@ impl RateLimitClient {
         }
 
         // Return the status with the lowest remaining requests (most critical)
-        Ok(all_statuses.into_iter().min_by_key(|s| s.remaining()))
+        Ok(all_statuses.into_iter().min_by_key(Status::remaining))
     }
 
     async fn check_requests(
@@ -185,17 +183,13 @@ async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> bool {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<RateLimitQuota>>",
+    ty = "TimedCache<String, Vec<Quota>>",
     create = "{ TimedCache::with_lifespan(10 * 60) }",
     convert = r#"{ format!("{api_key}-{path}") }"#,
     sync_writes = "by_key",
     key = "String"
 )]
-async fn get_custom_quotas(
-    pg_client: &Pool<Postgres>,
-    api_key: Uuid,
-    path: &str,
-) -> Vec<RateLimitQuota> {
+async fn get_custom_quotas(pg_client: &Pool<Postgres>, api_key: Uuid, path: &str) -> Vec<Quota> {
     sqlx::query!(
         "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
         api_key,
@@ -206,10 +200,10 @@ async fn get_custom_quotas(
     .ok()
     .map(|rows| {
         rows.iter()
-            .map(|row| RateLimitQuota {
+            .map(|row| Quota {
                 limit: row.rate_limit as u32,
                 period: Duration::from_micros(row.rate_period.microseconds as u64),
-                rate_limit_quota_type: RateLimitQuotaType::Key,
+                quota_type: QuotaType::Key,
             })
             .collect()
     })

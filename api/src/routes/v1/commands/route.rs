@@ -2,7 +2,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::commands::variables::{Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
 use axum::Json;
@@ -151,8 +151,8 @@ pub(super) async fn command_resolve(
             &rate_limit_key,
             "command",
             &[
-                RateLimitQuota::ip_limit(60, std::time::Duration::from_secs(60)),
-                RateLimitQuota::global_limit(300, std::time::Duration::from_secs(60)),
+                Quota::ip_limit(60, std::time::Duration::from_secs(60)),
+                Quota::global_limit(300, std::time::Duration::from_secs(60)),
             ],
         )
         .await?;
@@ -253,8 +253,8 @@ pub(super) async fn variables_resolve(
             &rate_limit_key,
             "command",
             &[
-                RateLimitQuota::ip_limit(60, std::time::Duration::from_secs(60)),
-                RateLimitQuota::global_limit(300, std::time::Duration::from_secs(60)),
+                Quota::ip_limit(60, std::time::Duration::from_secs(60)),
+                Quota::global_limit(300, std::time::Duration::from_secs(60)),
             ],
         )
         .await?;

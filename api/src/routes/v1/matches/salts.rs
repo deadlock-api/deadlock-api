@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{RateLimitClient, RateLimitQuota};
+use crate::services::rate_limiter::{Quota, RateLimitClient};
 
 use crate::context::AppState;
 use crate::routes::v1::matches::ingest_salts;
@@ -120,9 +120,9 @@ pub(super) async fn fetch_match_salts(
             rate_limit_key,
             "salts",
             &[
-                RateLimitQuota::ip_limit(10, Duration::from_secs(30 * 60)),
-                RateLimitQuota::key_limit(10, Duration::from_secs(60)),
-                RateLimitQuota::global_limit(10, Duration::from_secs(10)),
+                Quota::ip_limit(10, Duration::from_secs(30 * 60)),
+                Quota::key_limit(10, Duration::from_secs(60)),
+                Quota::global_limit(10, Duration::from_secs(10)),
             ],
         )
         .await?;

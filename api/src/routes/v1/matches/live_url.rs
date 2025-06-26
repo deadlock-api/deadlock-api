@@ -1,7 +1,7 @@
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::MatchIdQuery;
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
@@ -102,9 +102,9 @@ pub(super) async fn live_url(
             &rate_limit_key,
             "spectate",
             &[
-                RateLimitQuota::ip_limit(10, Duration::from_secs(30 * 60)),
-                RateLimitQuota::key_limit(60, Duration::from_secs(60)),
-                RateLimitQuota::global_limit(100, Duration::from_secs(10)),
+                Quota::ip_limit(10, Duration::from_secs(30 * 60)),
+                Quota::key_limit(60, Duration::from_secs(60)),
+                Quota::global_limit(100, Duration::from_secs(10)),
             ],
         )
         .await?;

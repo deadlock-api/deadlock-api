@@ -1,6 +1,6 @@
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{RateLimitClient, RateLimitQuota};
+use crate::services::rate_limiter::{Quota, RateLimitClient};
 
 use crate::context::AppState;
 use crate::routes::v1::matches::salts::fetch_match_salts;
@@ -43,9 +43,9 @@ async fn fetch_match_metadata_raw(
             rate_limit_key,
             "match_metadata_s3_cache",
             &[
-                RateLimitQuota::ip_limit(500, Duration::from_secs(10)),
-                RateLimitQuota::key_limit(500, Duration::from_secs(1)),
-                RateLimitQuota::global_limit(1000, Duration::from_secs(1)),
+                Quota::ip_limit(500, Duration::from_secs(10)),
+                Quota::key_limit(500, Duration::from_secs(1)),
+                Quota::global_limit(1000, Duration::from_secs(1)),
             ],
         )
         .await?;
@@ -72,9 +72,9 @@ async fn fetch_match_metadata_raw(
             rate_limit_key,
             "match_metadata_s3",
             &[
-                RateLimitQuota::ip_limit(100, Duration::from_secs(10)),
-                RateLimitQuota::key_limit(100, Duration::from_secs(1)),
-                RateLimitQuota::global_limit(700, Duration::from_secs(1)), // This is a limitation by Hetzner Object Store
+                Quota::ip_limit(100, Duration::from_secs(10)),
+                Quota::key_limit(100, Duration::from_secs(1)),
+                Quota::global_limit(700, Duration::from_secs(1)), // This is a limitation by Hetzner Object Store
             ],
         )
         .await?;

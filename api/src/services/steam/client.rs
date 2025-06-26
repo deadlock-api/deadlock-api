@@ -1,5 +1,5 @@
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::context::AppState;
@@ -256,8 +256,8 @@ async fn fetch_steam_account_name_cached(
             rate_limit_key,
             "steam_account_name",
             &[
-                RateLimitQuota::ip_limit(50, Duration::from_secs(60 * 60)),
-                RateLimitQuota::global_limit(500, Duration::from_secs(60 * 60)),
+                Quota::ip_limit(50, Duration::from_secs(60 * 60)),
+                Quota::global_limit(500, Duration::from_secs(60 * 60)),
             ],
         )
         .await

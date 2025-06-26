@@ -7,26 +7,26 @@ use strum_macros::EnumIs;
 use tracing::error;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIs)]
-pub(super) enum RateLimitQuotaType {
+pub(super) enum QuotaType {
     IP,
     Key,
     Global,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RateLimitQuota {
+pub(crate) struct Quota {
     pub(crate) limit: u32,
     pub(crate) period: Duration,
-    pub(super) rate_limit_quota_type: RateLimitQuotaType,
+    pub(super) quota_type: QuotaType,
 }
 
-impl RateLimitQuota {
+impl Quota {
     #[allow(dead_code)]
     pub(crate) fn ip_limit(limit: u32, period: Duration) -> Self {
         Self {
             limit,
             period,
-            rate_limit_quota_type: RateLimitQuotaType::IP,
+            quota_type: QuotaType::IP,
         }
     }
 
@@ -35,7 +35,7 @@ impl RateLimitQuota {
         Self {
             limit,
             period,
-            rate_limit_quota_type: RateLimitQuotaType::Key,
+            quota_type: QuotaType::Key,
         }
     }
 
@@ -44,19 +44,19 @@ impl RateLimitQuota {
         Self {
             limit,
             period,
-            rate_limit_quota_type: RateLimitQuotaType::Global,
+            quota_type: QuotaType::Global,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct RateLimitStatus {
-    pub(crate) quota: RateLimitQuota,
+pub(crate) struct Status {
+    pub(crate) quota: Quota,
     pub(crate) requests: u32,
     pub(crate) oldest_request: DateTime<Utc>,
 }
 
-impl RateLimitStatus {
+impl Status {
     pub(crate) fn remaining(&self) -> u32 {
         self.quota.limit.saturating_sub(self.requests)
     }

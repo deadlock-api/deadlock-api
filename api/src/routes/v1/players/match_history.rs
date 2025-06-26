@@ -1,5 +1,5 @@
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 use crate::context::AppState;
@@ -335,9 +335,9 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history_refetch",
                 &[
-                    RateLimitQuota::ip_limit(5, Duration::from_secs(60 * 60)),
-                    RateLimitQuota::key_limit(5, Duration::from_secs(60 * 60)),
-                    RateLimitQuota::global_limit(10, Duration::from_secs(60 * 60)),
+                    Quota::ip_limit(5, Duration::from_secs(60 * 60)),
+                    Quota::key_limit(5, Duration::from_secs(60 * 60)),
+                    Quota::global_limit(10, Duration::from_secs(60 * 60)),
                 ],
             )
             .await
@@ -348,10 +348,10 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history",
                 &[
-                    RateLimitQuota::ip_limit(5, Duration::from_secs(60)),
-                    RateLimitQuota::key_limit(50, Duration::from_secs(60)),
-                    RateLimitQuota::key_limit(800, Duration::from_secs(60 * 60)),
-                    RateLimitQuota::global_limit(2000, Duration::from_secs(60 * 60)),
+                    Quota::ip_limit(5, Duration::from_secs(60)),
+                    Quota::key_limit(50, Duration::from_secs(60)),
+                    Quota::key_limit(800, Duration::from_secs(60 * 60)),
+                    Quota::global_limit(2000, Duration::from_secs(60 * 60)),
                 ],
             )
             .await

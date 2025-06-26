@@ -1,5 +1,5 @@
 use crate::context::AppStateError;
-use crate::services::rate_limiter::RateLimitStatus;
+use crate::services::rate_limiter;
 use crate::services::steam::types::SteamProxyError;
 use axum::body::Body;
 use axum::http::Response;
@@ -35,7 +35,7 @@ pub(super) enum APIError {
         message: serde_json::Value,
     },
     #[error("Rate limit exceeded")]
-    RateLimitExceeded { status: RateLimitStatus },
+    RateLimitExceeded { status: rate_limiter::Status },
     #[error("Internal server error: {message}")]
     InternalError { message: String },
     #[error("Steam Proxy Error: {0}")]
@@ -172,7 +172,6 @@ impl IntoResponse for APIError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::rate_limiter::{RateLimitQuota, RateLimitStatus};
     use axum::http::StatusCode;
     use std::time::Duration;
 
@@ -213,8 +212,8 @@ mod tests {
     fn test_api_error_rate_limit_exceeded() {
         use chrono::Utc;
 
-        let quota = RateLimitQuota::ip_limit(100, Duration::from_secs(60));
-        let status = RateLimitStatus {
+        let quota = rate_limiter::Quota::ip_limit(100, Duration::from_secs(60));
+        let status = rate_limiter::Status {
             quota,
             requests: 100,
             oldest_request: Utc::now(),

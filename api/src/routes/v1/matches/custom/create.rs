@@ -1,6 +1,6 @@
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::RateLimitQuota;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
@@ -277,8 +277,8 @@ pub(super) async fn create_custom(
             &rate_limit_key,
             "create_custom",
             &[
-                RateLimitQuota::key_limit(100, Duration::from_secs(60 * 60)),
-                RateLimitQuota::global_limit(1000, Duration::from_secs(60 * 60)),
+                Quota::key_limit(100, Duration::from_secs(60 * 60)),
+                Quota::global_limit(1000, Duration::from_secs(60 * 60)),
             ],
         )
         .await?;
