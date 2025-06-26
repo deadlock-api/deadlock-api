@@ -172,28 +172,3 @@ impl From<ECitadelTeamObjective> for Objective {
         }
     }
 }
-
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
-pub enum RegionMode {
-    Row = 0,
-    Europe = 1,
-    SEAsia = 2,
-    SAmerica = 3,
-    Russia = 4,
-    Oceania = 5,
-}
-
-impl From<u8> for RegionMode {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => RegionMode::Row,
-            1 => RegionMode::Europe,
-            2 => RegionMode::SEAsia,
-            3 => RegionMode::SAmerica,
-            4 => RegionMode::Russia,
-            5 => RegionMode::Oceania,
-            _ => RegionMode::Row,
-        }
-    }
-}
