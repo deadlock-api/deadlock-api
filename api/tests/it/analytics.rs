@@ -1101,8 +1101,7 @@ async fn test_item_stats(
             );
         }
         match bucket {
-            Some(item_stats::BucketQuery::NoBucket) => assert_eq!(stat.bucket, None),
-            None => assert_eq!(stat.bucket, None),
+            Some(item_stats::BucketQuery::NoBucket) | None => assert_eq!(stat.bucket, None),
             _ => assert!(stat.bucket.is_some()),
         }
         assert_eq!(stat.wins + stat.losses, stat.matches);

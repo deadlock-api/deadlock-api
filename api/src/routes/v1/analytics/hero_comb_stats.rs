@@ -217,7 +217,7 @@ async fn get_comb_stats(
     debug!(?query);
     let comb_stats: Vec<HeroCombStats> = ch_client.query(&ch_query).fetch_all().await?;
     let comb_size = match query.comb_size {
-        Some(6) => return Ok(comb_stats),
+        Some(6) | None => return Ok(comb_stats),
         Some(x) if !(2..=6).contains(&x) => {
             return Err(APIError::status_msg(
                 StatusCode::BAD_REQUEST,
@@ -225,7 +225,6 @@ async fn get_comb_stats(
             ));
         }
         Some(x) => x,
-        None => return Ok(comb_stats),
     };
     let mut comb_stats_agg = HashMap::new();
     for comb_stat in &comb_stats {

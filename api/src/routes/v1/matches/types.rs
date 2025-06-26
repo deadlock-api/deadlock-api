@@ -17,7 +17,6 @@ enum ActiveMatchTeam {
 impl From<i32> for ActiveMatchTeam {
     fn from(value: i32) -> Self {
         match value {
-            0 => Self::Team0,
             1 => Self::Team1,
             16 => Self::Spectator,
             _ => Self::Team0,
@@ -41,7 +40,6 @@ enum ActiveMatchMode {
 impl From<i32> for ActiveMatchMode {
     fn from(value: i32) -> Self {
         match value {
-            0 => Self::Invalid,
             1 => Self::Unranked,
             2 => Self::PrivateLobby,
             3 => Self::CoopBot,
@@ -67,7 +65,6 @@ enum ActiveMatchGameMode {
 impl From<i32> for ActiveMatchGameMode {
     fn from(value: i32) -> Self {
         match value {
-            0 => Self::KECitadelGameModeInvalid,
             1 => Self::KECitadelGameModeNormal,
             2 => Self::KECitadelGameMode1v1Test,
             3 => Self::KECitadelGameModeSandbox,
@@ -91,7 +88,6 @@ enum ActiveMatchRegionMode {
 impl From<i32> for ActiveMatchRegionMode {
     fn from(value: i32) -> Self {
         match value {
-            0 => Self::Row,
             1 => Self::Europe,
             2 => Self::SeAsia,
             3 => Self::SAmerica,

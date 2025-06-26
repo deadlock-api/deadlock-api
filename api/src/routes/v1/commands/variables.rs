@@ -187,8 +187,7 @@ impl Variable {
             Self::LatestPatchnotesLink => "Get the link to the latest patch notes",
             Self::LatestPatchnotesTitle => "Get the title of the latest patch notes",
             Self::LeaderboardPlace => "Get the leaderboard place",
-            Self::LeaderboardRank => "Get the leaderboard rank",
-            Self::LeaderboardRankImg => "Get the leaderboard rank",
+            Self::LeaderboardRank | Self::LeaderboardRankImg => "Get the leaderboard rank",
             Self::LossesToday => "Get the number of losses today",
             Self::MatchesToday => "Get the number of matches today",
             Self::MostPlayedHero => "Get the most played hero",
@@ -208,8 +207,7 @@ impl Variable {
             Self::MaxSpiritSnareStacks => "Get the max spirit snare stacks on Grey Talon",
             Self::MaxBonusHealthPerKill => "Get the max bonus health per kill on Mo & Krill",
             Self::MaxGuidedOwlStacks => "Get the max guided owl stacks on Grey Talon",
-            Self::MMRHistoryRank => "Get the MMR history rank",
-            Self::MMRHistoryRankImg => "Get the MMR history rank",
+            Self::MMRHistoryRank | Self::MMRHistoryRankImg => "Get the MMR history rank",
         }
     }
 
@@ -225,8 +223,7 @@ impl Variable {
             Self::HeroWins => Some("{hero_name} Wins"),
             Self::WinsLossesToday => Some("Daily W-L"),
             Self::LeaderboardPlace => Some("Place"),
-            Self::LeaderboardRank => Some("Rank"),
-            Self::MMRHistoryRank => Some("Rank"),
+            Self::LeaderboardRank | Self::MMRHistoryRank => Some("Rank"),
             _ => None,
         }
     }
