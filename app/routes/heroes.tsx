@@ -56,9 +56,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               <PatchOrDatePicker
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
-                onValueChange={({ startDate, endDate }) => {
-                  if (startDate && endDate) setDateRange([startDate, endDate]);
-                }}
+                onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
               />
             </div>
           </div>
@@ -121,8 +119,8 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               heroTimeInterval={heroTimeInterval}
               minRankId={minRankId}
               maxRankId={maxRankId}
-              minDate={startDate || undefined}
-              maxDate={endDate || undefined}
+              minDate={startDate}
+              maxDate={endDate}
             />
           </div>
         </TabsContent>

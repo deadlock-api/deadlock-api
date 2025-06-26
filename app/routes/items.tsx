@@ -74,9 +74,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
               <PatchOrDatePicker
                 patchDates={PATCHES}
                 value={{ startDate, endDate }}
-                onValueChange={({ startDate, endDate }) => {
-                  if (startDate && endDate) setDateRange([startDate, endDate]);
-                }}
+                onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
               />
             </div>
           </div>

@@ -11,9 +11,9 @@ import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
 
 export interface DateRangePickerProps {
-  startDate: Dayjs | null;
-  endDate: Dayjs | null;
-  onDateRangeChange: (range: { startDate: Dayjs | null; endDate: Dayjs | null }) => void;
+  startDate?: Dayjs;
+  endDate?: Dayjs;
+  onDateRangeChange: (range: { startDate?: Dayjs; endDate?: Dayjs }) => void;
   className?: string;
   startLabel?: string;
   endLabel?: string;
@@ -32,17 +32,23 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
 
   // Handle date selection from the calendar
   const handleDateRangeSelect = useCallback(
-    (range: DateRange | undefined) => {
+    (range?: DateRange) => {
       if (!range) {
-        onDateRangeChange({ startDate: null, endDate: null });
+        onDateRangeChange({});
         return;
       }
 
       // Convert Date objects to dayjs with appropriate time adjustments
-      const newStartDate = range.from ? day(range.from).startOf("day") : null;
-      const newEndDate = range.to ? day(range.to).endOf("day") : null;
-
-      onDateRangeChange({ startDate: newStartDate, endDate: newEndDate });
+      if (range.from && range.to) {
+        onDateRangeChange({
+          startDate: day(range.from).startOf("day"),
+          endDate: day(range.to).endOf("day"),
+        });
+      } else if (range.from) {
+        onDateRangeChange({ startDate: day(range.from).startOf("day") });
+      } else if (range.to) {
+        onDateRangeChange({ endDate: day(range.to).endOf("day") });
+      }
     },
     [onDateRangeChange],
   );
@@ -81,7 +87,7 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayText}
             <span
-              onClick={() => onDateRangeChange({ startDate: null, endDate: null })}
+              onClick={() => handleDateRangeSelect()}
               aria-label="Reset date range"
               className="hover:text-red-500 font-bold text-lg align-middle icon-[mdi--close]"
             />

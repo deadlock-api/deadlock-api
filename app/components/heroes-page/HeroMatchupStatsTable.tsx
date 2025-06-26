@@ -21,8 +21,8 @@ export default function HeroMatchupStatsTable({
   hideHeader?: boolean;
   minRankId?: number;
   maxRankId?: number;
-  minDate?: Dayjs | null;
-  maxDate?: Dayjs | null;
+  minDate?: Dayjs;
+  maxDate?: Dayjs;
   sameLaneFilter?: boolean;
   samePartyFilter?: boolean;
 }) {

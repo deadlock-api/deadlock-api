@@ -51,11 +51,9 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
             <div className="flex justify-center md:justify-start">
               <PatchOrDatePicker
                 patchDates={PATCHES}
-                value={{ startDate: startDate || null, endDate: endDate || null }}
+                value={{ startDate, endDate }}
                 defaultTab="custom"
-                onValueChange={({ startDate, endDate }) => {
-                  if (startDate && endDate) setDateRange([startDate, endDate]);
-                }}
+                onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
               />
             </div>
           </div>
