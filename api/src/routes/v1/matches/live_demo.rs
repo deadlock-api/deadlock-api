@@ -14,7 +14,7 @@ use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
 use std::time::Duration;
 use tracing::{error, info};
 
-async fn demo_stream(
+fn demo_stream(
     match_id: u64,
 ) -> impl Stream<Item = Result<Bytes, BroadcastHttpClientError<reqwest::Error>>> {
     let client = reqwest::Client::new();
@@ -84,6 +84,6 @@ pub(super) async fn live_demo(
         .fixed_backoff(Duration::from_millis(200))
         .await?;
 
-    let stream = demo_stream(match_id).await;
+    let stream = demo_stream(match_id);
     Ok(Body::from_stream(stream))
 }

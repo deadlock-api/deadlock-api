@@ -15,7 +15,7 @@ use itertools::Itertools;
 use serde::Deserialize;
 use std::time::Duration;
 use strum_macros::Display;
-use tokio::io::{AsyncBufReadExt, Lines};
+use tokio::io::Lines;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -276,7 +276,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     Ok(query)
 }
 
-async fn fetch_lines(
+fn fetch_lines(
     ch_client: &clickhouse::Client,
     query: &str,
 ) -> clickhouse::error::Result<Lines<BytesCursor>> {
@@ -341,7 +341,7 @@ pub(super) async fn bulk_metadata(
     }
     debug!(?query);
     let query = build_query(query)?;
-    let lines = fetch_lines(&state.ch_client_ro, &query).await?;
+    let lines = fetch_lines(&state.ch_client_ro, &query)?;
     let parsed_result = parse_lines(lines).await?;
     if parsed_result.is_empty() {
         return Err(APIError::status_msg(
