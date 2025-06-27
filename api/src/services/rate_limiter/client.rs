@@ -155,7 +155,7 @@ impl RateLimitClient {
         let current_time = Utc::now().timestamp_micros() as u64;
         redis::pipe()
             .zrembyscore(key, 0, current_time - MAX_TTL_MICROS) // Remove old entries for the key
-            .zadd(key, current_time, current_time) // Add current timestamp for the key
+            .zadd(key, 1, current_time) // Add current timestamp for the key
             .expire(key, MAX_TTL_MICROS as i64) // Set expiration time for the key
             .exec_async(&mut self.redis_client.clone()) // Execute the pipeline
             .await
