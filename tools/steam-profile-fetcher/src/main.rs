@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use std::env;
 use std::time::Duration;
 use tokio::join;
-use tracing::{error, info, instrument};
+use tracing::{debug, error, info, instrument};
 mod models;
 mod steam_api;
 
@@ -119,9 +119,12 @@ WHERE last_updated < now() - {OUTDATED_INTERVAL}
         ch_client.query(&new_accounts_query).fetch_all::<u32>(),
         ch_client.query(&outdated_accounts_query).fetch_all::<u32>()
     );
-    Ok(r1?
+    let r1 = r1?;
+    let r2 = r2?;
+    debug!("Found {} new accounts and {} outdated accounts", r1.len(), r2.len());
+    Ok(r1
         .into_iter()
-        .chain(r2?.into_iter())
+        .chain(r2.into_iter())
         .unique()
         .collect_vec())
 }
