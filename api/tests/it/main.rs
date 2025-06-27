@@ -37,7 +37,11 @@ pub async fn request_endpoint(
 ) -> Response {
     let mut url = format!("http://localhost:3000{endpoint}");
 
-    let query = stringify(query_args.into_iter().collect::<Vec<_>>().as_slice());
+    let query_args = query_args
+        .into_iter()
+        .chain([("api_key", "HEXE-7477ea31-4cc7-42b2-b732-acb55c0d3371")].into_iter())
+        .collect::<Vec<_>>();
+    let query = stringify(&query_args);
     if !query.is_empty() {
         url = format!("{url}?{query}");
     }
