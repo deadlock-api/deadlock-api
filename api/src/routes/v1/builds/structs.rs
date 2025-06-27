@@ -59,7 +59,7 @@ pub struct BuildHero {
     pub version: u32,
     origin_build_id: u32,
     #[serde(default)]
-    tags: Vec<u32>,
+    pub tags: Vec<u32>,
     development_build: Option<bool>,
     details: BuildHeroDetails,
 }

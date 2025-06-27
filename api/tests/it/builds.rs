@@ -21,10 +21,11 @@ use rstest::rstest;
     Some(1747743170),
     Some(1747763170),
     Some(1747763170),
-    Some(1747763170)
+    Some(1747763170),
+    Some(2061574352)
 )]
 #[case(
-    None, None, None, None, None, None, None, None, None, None, None, None, None
+    None, None, None, None, None, None, None, None, None, None, None, None, None, None
 )]
 #[case(
     None,
@@ -39,7 +40,8 @@ use rstest::rstest;
     Some(1747743170),
     Some(1747763170),
     Some(1747763170),
-    Some(1747763170)
+    Some(1747763170),
+    Some(2061574352)
 )]
 #[tokio::test]
 async fn test_builds(
@@ -56,6 +58,7 @@ async fn test_builds(
     #[case] max_unix_timestamp: Option<u64>,
     #[case] min_published_unix_timestamp: Option<u64>,
     #[case] max_published_unix_timestamp: Option<u64>,
+    #[case] tag: Option<u32>,
 ) {
     let mut queries = vec![];
     if let Some(limit) = limit {
@@ -90,6 +93,9 @@ async fn test_builds(
     }
     if let Some(max_unix_timestamp) = max_unix_timestamp {
         queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
+    }
+    if let Some(tag) = tag {
+        queries.push(("tag", tag.to_string()));
     }
     if let Some(min_published_unix_timestamp) = min_published_unix_timestamp {
         queries.push((
@@ -166,6 +172,9 @@ async fn test_builds(
         }
         if let Some(version) = version {
             assert_eq!(build.hero_build.version, version);
+        }
+        if let Some(tag) = tag {
+            assert!(build.hero_build.tags.contains(&tag));
         }
         if let Some(search_name) = search_name {
             assert!(

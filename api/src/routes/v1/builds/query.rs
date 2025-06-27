@@ -70,6 +70,8 @@ pub(super) struct BuildsSearchQuery {
     version: Option<u32>,
     /// Filter builds by hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: Option<u32>,
+    /// Filter builds by tag.
+    tag: Option<u32>,
     /// Filter builds by rollup category.
     rollup_category: Option<u32>,
     /// The author's `SteamID3`
@@ -97,6 +99,7 @@ impl Default for BuildsSearchQuery {
             max_unix_timestamp: None,
             min_published_unix_timestamp: None,
             max_published_unix_timestamp: None,
+            tag: None,
         }
     }
 }
@@ -104,6 +107,11 @@ impl Default for BuildsSearchQuery {
 pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
     query_builder.push(" WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE");
+    if let Some(tag) = params.tag {
+        query_builder.push(" AND data->'hero_build'->'tags' @> '");
+        query_builder.push(tag.to_string());
+        query_builder.push("'");
+    }
     if let Some(search_name) = &params.search_name {
         query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE '%");
         query_builder.push(search_name.to_lowercase());
@@ -200,6 +208,7 @@ mod tests {
         assert_eq!(query.version, None);
         assert_eq!(query.hero_id, None);
         assert_eq!(query.author_id, None);
+        assert_eq!(query.tag, None);
 
         let sql = sql_query(&query);
         assert_eq!(
@@ -219,6 +228,20 @@ mod tests {
         assert_eq!(
             sql,
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+        );
+    }
+
+    #[test]
+    fn test_tag() {
+        let query = BuildsSearchQuery {
+            tag: Some(1),
+            ..Default::default()
+        };
+
+        let sql = sql_query(&query);
+        assert_eq!(
+            sql,
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND data->'hero_build'->'tags' @> '1' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
