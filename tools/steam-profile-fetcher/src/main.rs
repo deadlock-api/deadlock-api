@@ -119,14 +119,14 @@ WHERE last_updated < now() - {OUTDATED_INTERVAL}
         ch_client.query(&new_accounts_query).fetch_all::<u32>(),
         ch_client.query(&outdated_accounts_query).fetch_all::<u32>()
     );
-    let r1 = r1?;
     let r2 = r2?;
-    debug!("Found {} new accounts and {} outdated accounts", r1.len(), r2.len());
-    Ok(r1
-        .into_iter()
-        .chain(r2.into_iter())
-        .unique()
-        .collect_vec())
+    let r1 = r1?.into_iter().filter(|a| !r2.contains(a)).collect_vec();
+    debug!(
+        "Found {} new accounts and {} outdated accounts",
+        r1.len(),
+        r2.len()
+    );
+    Ok(r1.into_iter().chain(r2.into_iter()).collect_vec())
 }
 
 #[instrument(skip_all)]
