@@ -39,7 +39,7 @@ pub async fn request_endpoint(
 
     let query_args = query_args
         .into_iter()
-        .chain([("api_key", "HEXE-7477ea31-4cc7-42b2-b732-acb55c0d3371")].into_iter())
+        .chain([("api_key", "HEXE-fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64")].into_iter())
         .collect::<Vec<_>>();
     let query = stringify(&query_args);
     if !query.is_empty() {
