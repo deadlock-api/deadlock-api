@@ -80,8 +80,8 @@ pub(super) async fn sql(
             &rate_limit_key,
             "sql",
             &[
-                Quota::ip_limit(20, Duration::from_secs(10)),
-                Quota::key_limit(20, Duration::from_secs(10)),
+                Quota::ip_limit(120, Duration::from_secs(60)),
+                Quota::key_limit(120, Duration::from_secs(60)),
                 Quota::global_limit(100, Duration::from_secs(10)),
             ],
         )
