@@ -6,7 +6,6 @@ use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
-use futures::join;
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
@@ -14,7 +13,7 @@ use std::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 
-const MAX_TTL_MICROS: u64 = 60 * 60 * 1000 * 1000;
+const MAX_TTL_SECONDS: u64 = 60 * 60;
 
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
@@ -76,10 +75,7 @@ impl RateLimitClient {
         let prefix = rate_limit_key
             .api_key
             .map_or_else(|| rate_limit_key.ip.to_string(), |k| k.to_string());
-        let prefixed_key = format!("{prefix}:{key}");
-        let (r1, r2) = join!(self.increment_key(key), self.increment_key(&prefixed_key));
-        let increment_result = r1.and(r2);
-        // If incrementing the key fails, we don't apply any limits
+        let increment_result = self.increment_key(&prefix, key).await;
         if let Err(e) = increment_result {
             error!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
@@ -135,29 +131,33 @@ impl RateLimitClient {
         &self,
         key: &str,
         period: Duration,
-    ) -> RedisResult<(usize, DateTime<Utc>)> {
-        let now_micros = Utc::now().timestamp_micros() as u128;
-        let timestamps: Vec<i64> = self
-            .redis_client
-            .clone()
-            .zrangebyscore(key, now_micros - period.as_micros(), now_micros)
+    ) -> RedisResult<(u32, DateTime<Utc>)> {
+        let current_time = Utc::now().timestamp() as u64;
+        let mut redis_conn = self.redis_client.clone();
+        let result: Vec<isize> = redis_conn
+            .zrangebyscore(key, current_time - period.as_secs(), current_time)
             .await?;
-        let num_requests = timestamps.len();
-        let oldest_timestamp = timestamps
-            .into_iter()
+        let oldest_request = result
+            .iter()
             .min()
-            .and_then(DateTime::from_timestamp_micros)
-            .unwrap_or_else(|| Utc::now() - Duration::from_micros(MAX_TTL_MICROS));
-        Ok((num_requests - 1, oldest_timestamp))
+            .and_then(|t| DateTime::from_timestamp(*t as i64, 0))
+            .unwrap_or_else(|| Utc::now() - Duration::from_secs(MAX_TTL_SECONDS));
+        Ok((result.len() as u32 - 1, oldest_request))
     }
 
-    async fn increment_key(&self, key: &str) -> RedisResult<()> {
-        let current_time = Utc::now().timestamp_micros() as u64;
+    async fn increment_key(&self, prefix: &str, key: &str) -> RedisResult<()> {
+        //! Increments the rate limit key in Redis.
+        let current_time = Utc::now().timestamp() as u64;
+        let prefixed_key = format!("{prefix}:{key}");
+        let mut redis_conn = self.redis_client.clone();
         redis::pipe()
-            .zrembyscore(key, 0, current_time - MAX_TTL_MICROS) // Remove old entries for the key
+            .zrembyscore(&prefixed_key, 0, current_time - MAX_TTL_SECONDS) // Remove old entries
+            .zadd(&prefixed_key, current_time, current_time) // Add current timestamp
+            .expire(&prefixed_key, MAX_TTL_SECONDS as i64) // Set expiration time
+            .zrembyscore(key, 0, current_time - MAX_TTL_SECONDS) // Remove old entries for the key
             .zadd(key, current_time, current_time) // Add current timestamp for the key
-            .expire(key, (MAX_TTL_MICROS / 1000 / 1000) as i64) // Set expiration time for the key
-            .exec_async(&mut self.redis_client.clone()) // Execute the pipeline
+            .expire(key, MAX_TTL_SECONDS as i64) // Set expiration time for the key
+            .exec_async(&mut redis_conn) // Execute the pipeline
             .await
     }
 }
@@ -201,7 +201,7 @@ async fn get_custom_quotas(pg_client: &Pool<Postgres>, api_key: Uuid, path: &str
     .map(|rows| {
         rows.iter()
             .map(|row| Quota {
-                limit: row.rate_limit as usize,
+                limit: row.rate_limit as u32,
                 period: Duration::from_micros(row.rate_period.microseconds as u64),
                 r#type: QuotaType::Key,
             })
