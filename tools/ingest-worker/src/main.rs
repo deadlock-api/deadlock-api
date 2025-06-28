@@ -1,4 +1,9 @@
-use prost::Message;
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use anyhow::bail;
@@ -7,6 +12,7 @@ use futures::StreamExt;
 use metrics::{counter, gauge};
 use object_store::path::Path;
 use object_store::{GetResult, ObjectStore};
+use prost::Message;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::time::timeout;
@@ -88,7 +94,10 @@ async fn ingest_object(
 
     // Decompress Data
     let data = obj.bytes().await?;
-    let data = if key.filename().is_some_and(|f| f.ends_with(".bz2")) {
+    let data = if key
+        .extension()
+        .is_some_and(|f| f.eq_ignore_ascii_case("bz2"))
+    {
         bzip_decompress(&data).await?
     } else {
         data.to_vec()
@@ -104,7 +113,7 @@ async fn ingest_object(
         bail!("Match outcome is error moved to fail folder");
     }
     match insert_match(ch_client, &match_info).await {
-        Ok(_) => {
+        Ok(()) => {
             counter!("ingest_worker.insert_match.success").increment(1);
             debug!("Inserted match data");
         }
@@ -178,17 +187,14 @@ fn parse_match_data(data: Vec<u8>) -> anyhow::Result<MatchInfo> {
     } else {
         MatchInfo::decode(data).ok()
     };
-    match data {
-        Some(m) => {
-            counter!("ingest_worker.parse_match_data.success").increment(1);
-            debug!("Parsed match data");
-            Ok(m)
-        }
-        None => {
-            counter!("ingest_worker.parse_match_data.failure").increment(1);
-            error!("Error parsing match data");
-            Err(anyhow::anyhow!("Error parsing match data"))
-        }
+    if let Some(m) = data {
+        counter!("ingest_worker.parse_match_data.success").increment(1);
+        debug!("Parsed match data");
+        Ok(m)
+    } else {
+        counter!("ingest_worker.parse_match_data.failure").increment(1);
+        error!("Error parsing match data");
+        Err(anyhow::anyhow!("Error parsing match data"))
     }
 }
 
@@ -210,14 +216,14 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
                 .into()
         });
 
-    let mut mi_insert = client.insert("match_info")?;
-    let mut mp_insert = client.insert("match_player")?;
-    mi_insert.write(&ch_match_metadata).await?;
+    let mut match_info_insert = client.insert("match_info")?;
+    let mut match_player_insert = client.insert("match_player")?;
+    match_info_insert.write(&ch_match_metadata).await?;
     for player in ch_players {
-        mp_insert.write(&player).await?;
+        match_player_insert.write(&player).await?;
     }
-    mi_insert.end().await?;
-    mp_insert.end().await?;
+    match_info_insert.end().await?;
+    match_player_insert.end().await?;
     Ok(())
 }
 
@@ -231,7 +237,7 @@ async fn move_object(
         .exponential_backoff(Duration::from_millis(10))
         .await
     {
-        Ok(_) => {
+        Ok(()) => {
             counter!("ingest_worker.move_object.success").increment(1);
             debug!("Moved object");
             Ok(())

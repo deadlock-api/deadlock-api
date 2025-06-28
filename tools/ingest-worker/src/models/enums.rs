@@ -6,7 +6,7 @@ use valveprotos::deadlock::{
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
-pub enum GameMode {
+pub(crate) enum GameMode {
     Invalid = 0,
     Normal = 1,
     OnevOneTest = 2,
@@ -27,7 +27,6 @@ impl From<ECitadelGameMode> for GameMode {
 impl From<u8> for GameMode {
     fn from(value: u8) -> Self {
         match value {
-            0 => GameMode::Invalid,
             1 => GameMode::Normal,
             2 => GameMode::OnevOneTest,
             3 => GameMode::Sandbox,
@@ -38,7 +37,7 @@ impl From<u8> for GameMode {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
-pub enum MatchMode {
+pub(crate) enum MatchMode {
     Invalid = 0,
     Unranked = 1,
     PrivateLobby = 2,
@@ -67,7 +66,6 @@ impl From<ECitadelMatchMode> for MatchMode {
 impl From<u8> for MatchMode {
     fn from(value: u8) -> Self {
         match value {
-            0 => MatchMode::Invalid,
             1 => MatchMode::Unranked,
             2 => MatchMode::PrivateLobby,
             3 => MatchMode::CoopBot,
@@ -82,7 +80,7 @@ impl From<u8> for MatchMode {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
-pub enum MatchOutcome {
+pub(crate) enum MatchOutcome {
     TeamWin = 0,
     Error = 1,
 }
@@ -98,7 +96,7 @@ impl From<EMatchOutcome> for MatchOutcome {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
-pub enum Team {
+pub(crate) enum Team {
     Team0 = 0,
     Team1 = 1,
     Spectator = 16,
@@ -119,7 +117,6 @@ impl From<u8> for Team {
         match value {
             0 => Team::Team0,
             1 => Team::Team1,
-            16 => Team::Spectator,
             _ => Team::Spectator,
         }
     }
@@ -127,7 +124,7 @@ impl From<u8> for Team {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(u8)]
-pub enum Objective {
+pub(crate) enum Objective {
     Core = 0,
     Tier1Lane1 = 1,
     Tier1Lane2 = 2,

@@ -1,2 +1,2 @@
-pub mod clickhouse_match_metadata;
-pub mod enums;
+pub(crate) mod clickhouse_match_metadata;
+pub(crate) mod enums;
