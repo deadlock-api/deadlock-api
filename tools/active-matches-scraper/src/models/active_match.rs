@@ -3,7 +3,7 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
-pub struct ActiveMatch {
+pub(crate) struct ActiveMatch {
     pub start_time: u32,
     pub winning_team: Option<u8>,
     pub match_id: u64,
@@ -26,7 +26,7 @@ pub struct ActiveMatch {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct ActiveMatchPlayer {
+pub(crate) struct ActiveMatchPlayer {
     pub account_id: u64,
     pub team: u8,
     pub abandoned: Option<bool>,
@@ -34,7 +34,7 @@ pub struct ActiveMatchPlayer {
 }
 
 #[derive(Row, Serialize, Debug)]
-pub struct ClickHouseActiveMatch {
+pub(crate) struct ClickHouseActiveMatch {
     pub start_time: u32,
     pub winning_team: u8,
     pub match_id: u64,

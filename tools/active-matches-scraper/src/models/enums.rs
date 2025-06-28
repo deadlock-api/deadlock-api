@@ -2,7 +2,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
 #[repr(u8)]
-pub enum MatchMode {
+pub(crate) enum MatchMode {
     Invalid = 0,
     Unranked = 1,
     PrivateLobby = 2,
@@ -15,7 +15,7 @@ pub enum MatchMode {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
 #[repr(u8)]
-pub enum GameMode {
+pub(crate) enum GameMode {
     Invalid = 0,
     Normal = 1,
     OneVsOneTest = 2,
@@ -24,7 +24,7 @@ pub enum GameMode {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
 #[repr(u8)]
-pub enum RegionMode {
+pub(crate) enum RegionMode {
     Row = 0,
     Europe = 1,
     SEAsia = 2,
@@ -36,7 +36,6 @@ pub enum RegionMode {
 impl From<u8> for MatchMode {
     fn from(value: u8) -> Self {
         match value {
-            0 => MatchMode::Invalid,
             1 => MatchMode::Unranked,
             2 => MatchMode::PrivateLobby,
             3 => MatchMode::CoopBot,
@@ -52,7 +51,6 @@ impl From<u8> for MatchMode {
 impl From<u8> for GameMode {
     fn from(value: u8) -> Self {
         match value {
-            0 => GameMode::Invalid,
             1 => GameMode::Normal,
             2 => GameMode::OneVsOneTest,
             3 => GameMode::Sandbox,
@@ -64,7 +62,6 @@ impl From<u8> for GameMode {
 impl From<u8> for RegionMode {
     fn from(value: u8) -> Self {
         match value {
-            0 => RegionMode::Row,
             1 => RegionMode::Europe,
             2 => RegionMode::SEAsia,
             3 => RegionMode::SAmerica,

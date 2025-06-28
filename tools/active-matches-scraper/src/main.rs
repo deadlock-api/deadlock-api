@@ -1,3 +1,9 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss)]
+
 mod models;
 
 use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
@@ -73,7 +79,7 @@ async fn fetch_insert_active_matches(
         return;
     }
     match insert_active_matches(ch_client, &ch_active_matches).await {
-        Ok(_) => {
+        Ok(()) => {
             gauge!("active_matches_scraper.inserted_active_matches")
                 .set(ch_active_matches.len() as f64);
             counter!("active_matches_scraper.insert_active_matches.success").increment(1);
