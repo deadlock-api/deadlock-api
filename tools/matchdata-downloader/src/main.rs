@@ -1,3 +1,9 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss)]
+
 use cached::UnboundCache;
 use cached::proc_macro::cached;
 use futures::StreamExt;
@@ -49,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
         let results = futures::stream::iter(match_ids_to_fetch.iter())
             .map(|salts| async {
                 match download_match(&store, &cache_store, salts).await {
-                    Ok(_) => {
+                    Ok(()) => {
                         gauge!("matchdata_downloader.matches_to_download").decrement(1);
                         Ok(())
                     }
@@ -63,9 +69,10 @@ async fn main() -> anyhow::Result<()> {
             .collect::<Vec<_>>()
             .await;
         for (salts, result) in match_ids_to_fetch.iter().zip(results) {
-            match result.is_ok() {
-                true => uploaded.insert(salts.match_id),
-                false => failed.insert(salts.match_id),
+            if result.is_ok() {
+                uploaded.insert(salts.match_id)
+            } else {
+                failed.insert(salts.match_id)
             };
         }
     }
@@ -113,7 +120,7 @@ async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
     );
     match reqwest::get(&metadata_url)
         .await
-        .and_then(|r| r.error_for_status())?
+        .and_then(reqwest::Response::error_for_status)?
         .bytes()
         .await
     {
@@ -157,7 +164,7 @@ async fn delete_object(store: &impl ObjectStore, key: &Path) -> object_store::Re
         return Ok(());
     }
     match store.delete(key).await {
-        Ok(_) => {
+        Ok(()) => {
             counter!("matchdata_downloader.delete_object.successful").increment(1);
             debug!("Deleted object");
             Ok(())
