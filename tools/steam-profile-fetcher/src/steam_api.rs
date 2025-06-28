@@ -1,6 +1,5 @@
 use anyhow::Result;
 use itertools::Itertools;
-use once_cell::sync::Lazy;
 use rand::rng;
 use rand::seq::IndexedRandom;
 use std::env;
@@ -8,16 +7,16 @@ use tracing::instrument;
 
 use crate::models::{SteamPlayerSummary, SteamPlayerSummaryResponse};
 
-static STEAM_API_KEYS: Lazy<Vec<String>> = Lazy::new(|| {
+static STEAM_API_KEYS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
     env::var("STEAM_API_KEYS")
         .expect("STEAM_API_KEYS must be set")
         .split(',')
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect()
 });
 
 #[instrument(skip(http_client), fields(account_ids = account_ids.len()))]
-pub async fn fetch_steam_profiles(
+pub(crate) async fn fetch_steam_profiles(
     http_client: &reqwest::Client,
     account_ids: &[&u32],
 ) -> Result<Vec<SteamPlayerSummary>> {
@@ -48,7 +47,7 @@ pub async fn fetch_steam_profiles(
         .get(&url)
         .send()
         .await
-        .and_then(|r| r.error_for_status())?
+        .and_then(reqwest::Response::error_for_status)?
         .json()
         .await?;
     let player_summaries = player_summaries.response.players;

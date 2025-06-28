@@ -1,17 +1,24 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
+
 use anyhow::Result;
 use itertools::Itertools;
 use metrics::{counter, gauge};
-use once_cell::sync::Lazy;
+use models::SteamPlayerSummary;
 use std::env;
 use std::time::Duration;
 use tokio::join;
 use tracing::{debug, error, info, instrument};
+
 mod models;
 mod steam_api;
 
-use models::SteamPlayerSummary;
-
-static FETCH_INTERVAL: Lazy<Duration> = Lazy::new(|| {
+static FETCH_INTERVAL: std::sync::LazyLock<Duration> = std::sync::LazyLock::new(|| {
     Duration::from_secs(
         env::var("FETCH_INTERVAL_SECONDS")
             .unwrap_or_else(|_| "120".to_string())
@@ -35,9 +42,10 @@ async fn main() -> Result<()> {
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     loop {
         interval.tick().await;
-        match fetch_and_update_profiles(&http_client, &ch_client).await {
-            Ok(_) => info!("Updated Steam profiles"),
-            Err(_) => error!("Error updating Steam profiles"),
+        if let Ok(()) = fetch_and_update_profiles(&http_client, &ch_client).await {
+            info!("Updated Steam profiles");
+        } else {
+            error!("Error updating Steam profiles");
         }
     }
 }
@@ -73,7 +81,7 @@ async fn fetch_and_update_profiles(
     };
 
     match save_profiles(ch_client, &profiles).await {
-        Ok(_) => {
+        Ok(()) => {
             info!(
                 "Saved {} Steam profiles, {} account IDs remaining to update",
                 profiles.len(),
@@ -98,7 +106,7 @@ async fn get_account_ids_to_update(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Vec<u32>> {
     let new_accounts_query = format!(
-        r#"
+        r"
 WITH recent_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - {OUTDATED_INTERVAL}),
     up_to_date_accounts AS (SELECT account_id FROM steam_profiles WHERE last_updated > now() - {OUTDATED_INTERVAL})
 SELECT DISTINCT account_id
@@ -106,14 +114,14 @@ FROM match_player
 WHERE match_id IN recent_matches AND account_id NOT IN up_to_date_accounts
 AND account_id > 0
 ORDER BY RAND()
-    "#
+    "
     );
     let outdated_accounts_query = format!(
-        r#"
+        r"
 SELECT DISTINCT account_id
 FROM steam_profiles FINAL
 WHERE last_updated < now() - {OUTDATED_INTERVAL}
-    "#
+    "
     );
     let (r1, r2) = join!(
         ch_client.query(&new_accounts_query).fetch_all::<u32>(),
