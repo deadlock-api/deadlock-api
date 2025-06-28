@@ -1,3 +1,10 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_wrap)]
+
 use itertools::Itertools;
 use metrics::counter;
 use rand::prelude::SliceRandom;
@@ -74,7 +81,7 @@ async fn update_builds(
     langs: &[i32],
     search: Option<String>,
 ) {
-    let builds = match fetch_builds(http_client, hero_id, langs, &search)
+    let builds = match fetch_builds(http_client, hero_id, langs, search.as_ref())
         .await
         .map(|(_, b)| b.results)
     {
@@ -141,11 +148,11 @@ async fn insert_builds(
             .push_bind(build.rollup_category.map(|x| x as i32))
             .push_bind(hero_build.language.map(|x| x as i32))
             .push_bind(hero_build.last_updated_timestamp.map(|x| {
-                let offset = OffsetDateTime::from_unix_timestamp(x as i64).unwrap();
+                let offset = OffsetDateTime::from_unix_timestamp(i64::from(x)).unwrap();
                 PrimitiveDateTime::new(offset.date(), offset.time())
             }))
             .push_bind(hero_build.publish_timestamp.map(|x| {
-                let offset = OffsetDateTime::from_unix_timestamp(x as i64).unwrap();
+                let offset = OffsetDateTime::from_unix_timestamp(i64::from(x)).unwrap();
                 PrimitiveDateTime::new(offset.date(), offset.time())
             }))
             .push_bind(serde_json::to_value(build).unwrap());
@@ -160,12 +167,12 @@ async fn fetch_builds(
     http_client: &reqwest::Client,
     hero_id: u32,
     langs: &[i32],
-    search: &Option<String>,
+    search: Option<&String>,
 ) -> reqwest::Result<(String, CMsgClientToGcFindHeroBuildsResponse)> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),
-        search_text: search.clone(),
+        search_text: search.cloned(),
         ..Default::default()
     };
     loop {
