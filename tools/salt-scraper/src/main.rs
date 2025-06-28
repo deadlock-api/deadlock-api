@@ -1,3 +1,8 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+
 use anyhow::bail;
 use clickhouse::Client;
 use futures::StreamExt;
@@ -78,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
                 let ch_client = ch_client.clone();
                 async move {
                     match fetch_match(&ch_client, match_id).await {
-                        Ok(_) => info!("Fetched match {}", match_id),
+                        Ok(()) => info!("Fetched match {}", match_id),
                         Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
                     }
                 }
@@ -105,7 +110,7 @@ async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
         Err(e) => {
             counter!("salt_scraper.fetch_salts.failure").increment(1);
             warn!("Failed to fetch salts: {:?}", e);
-            return Err(e.into());
+            return Err(e);
         }
     };
 
@@ -121,7 +126,7 @@ async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
 
     // Ingest Salts
     match ingest_salts(ch_client, match_id, salts, username.into()).await {
-        Ok(_) => {
+        Ok(()) => {
             counter!("salt_scraper.ingest_salt.success").increment(1);
             debug!("Ingested salts");
             Ok(())
@@ -136,7 +141,7 @@ async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
 
 async fn fetch_salts(
     match_id: u64,
-) -> reqwest::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
+) -> anyhow::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
     let msg = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
         ..Default::default()
