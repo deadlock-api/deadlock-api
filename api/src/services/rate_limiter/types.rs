@@ -15,14 +15,14 @@ pub(super) enum QuotaType {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Quota {
-    pub(crate) limit: u32,
+    pub(crate) limit: usize,
     pub(crate) period: Duration,
     pub(super) r#type: QuotaType,
 }
 
 impl Quota {
     #[allow(dead_code)]
-    pub(crate) fn ip_limit(limit: u32, period: Duration) -> Self {
+    pub(crate) fn ip_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -31,7 +31,7 @@ impl Quota {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn key_limit(limit: u32, period: Duration) -> Self {
+    pub(crate) fn key_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -40,7 +40,7 @@ impl Quota {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn global_limit(limit: u32, period: Duration) -> Self {
+    pub(crate) fn global_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
             period,
@@ -52,12 +52,12 @@ impl Quota {
 #[derive(Debug, Clone)]
 pub(crate) struct Status {
     pub(crate) quota: Quota,
-    pub(crate) requests: u32,
+    pub(crate) requests: usize,
     pub(crate) oldest_request: DateTime<Utc>,
 }
 
 impl Status {
-    pub(crate) fn remaining(&self) -> u32 {
+    pub(crate) fn remaining(&self) -> usize {
         self.quota.limit.saturating_sub(self.requests)
     }
 
