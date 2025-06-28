@@ -9,7 +9,6 @@ use itertools::Itertools;
 use metrics::counter;
 use rand::prelude::SliceRandom;
 use rand::rng;
-use reqwest::StatusCode;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
 use sqlx::{Pool, Postgres, QueryBuilder};
@@ -168,7 +167,7 @@ async fn fetch_builds(
     hero_id: u32,
     langs: &[i32],
     search: Option<&String>,
-) -> reqwest::Result<(String, CMsgClientToGcFindHeroBuildsResponse)> {
+) -> anyhow::Result<(String, CMsgClientToGcFindHeroBuildsResponse)> {
     let msg = CMsgClientToGcFindHeroBuilds {
         hero_id: hero_id.into(),
         language: langs.to_vec(),
@@ -187,17 +186,10 @@ async fn fetch_builds(
         )
         .await;
 
-        match result {
-            Ok(r) => return Ok(r),
-            Err(e) => match e.status() {
-                Some(status) if status == StatusCode::TOO_MANY_REQUESTS => {
-                    warn!("Got proxy rate limit, waiting 10s before retrying");
-                    sleep(Duration::from_secs(10)).await;
-                }
-                _ => {
-                    return Err(e);
-                }
-            },
+        if let Ok(r) = result {
+            return Ok(r);
         }
+        warn!("Got proxy rate limit, waiting 10s before retrying");
+        sleep(Duration::from_secs(10)).await;
     }
 }

@@ -1,17 +1,18 @@
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use metrics::counter;
-use once_cell::sync::Lazy;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::LazyLock;
 use std::time::Duration;
 use tracing::instrument;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
-static STEAM_PROXY_URL: Lazy<String> = Lazy::new(|| std::env::var("STEAM_PROXY_URL").unwrap());
-static STEAM_PROXY_API_KEY: Lazy<String> =
-    Lazy::new(|| std::env::var("STEAM_PROXY_API_KEY").unwrap());
+static STEAM_PROXY_URL: LazyLock<String> =
+    LazyLock::new(|| std::env::var("STEAM_PROXY_URL").unwrap());
+static STEAM_PROXY_API_KEY: LazyLock<String> =
+    LazyLock::new(|| std::env::var("STEAM_PROXY_API_KEY").unwrap());
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SteamProxyResponse {
@@ -29,10 +30,10 @@ pub async fn call_steam_proxy<T: Message + Default>(
     in_any_groups: Option<&[&str]>,
     cooldown_time: Duration,
     request_timeout: Duration,
-) -> reqwest::Result<(String, T)> {
+) -> anyhow::Result<(String, T)> {
     let serialized_message = msg.encode_to_vec();
     let encoded_message = BASE64_STANDARD.encode(&serialized_message);
-    let result = http_client
+    let result: reqwest::Result<SteamProxyResponse> = http_client
         .post(&*STEAM_PROXY_URL)
         .bearer_auth(&*STEAM_PROXY_API_KEY)
         .timeout(request_timeout)
@@ -48,18 +49,21 @@ pub async fn call_steam_proxy<T: Message + Default>(
         .await?
         .error_for_status()?
         .json()
-        .await
-        .map(|r: SteamProxyResponse| (r.username, BASE64_STANDARD.decode(&r.data).unwrap()))
-        .map(|(username, data)| (username, T::decode(data.as_ref()).unwrap()));
-    match result {
-        Ok(_) => {
+        .await;
+    let result = match result {
+        Ok(result) => {
             counter!("steam_proxy.call.success", "msg_type" => msg_type.as_str_name().to_string())
-                .increment(1)
+                .increment(1);
+            result
         }
-        Err(_) => {
+        Err(e) => {
             counter!("steam_proxy.call.failure", "msg_type" => msg_type.as_str_name().to_string())
-                .increment(1)
+                .increment(1);
+            return Err(e.into());
         }
-    }
-    result
+    };
+    let username = result.username;
+    let data = BASE64_STANDARD.decode(&result.data)?;
+    let decoded = T::decode(data.as_ref())?;
+    Ok((username, decoded))
 }
