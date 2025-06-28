@@ -73,18 +73,6 @@ impl RateLimitClient {
             ));
         }
 
-        let prefix = rate_limit_key
-            .api_key
-            .map_or_else(|| rate_limit_key.ip.to_string(), |k| k.to_string());
-        let prefixed_key = format!("{prefix}:{key}");
-        let (r1, r2) = join!(self.increment_key(key), self.increment_key(&prefixed_key));
-        let increment_result = r1.and(r2);
-        // If incrementing the key fails, we don't apply any limits
-        if let Err(e) = increment_result {
-            error!("Failed to increment rate limit key: {e}, will not apply limits");
-            return Ok(None);
-        }
-
         // Check for custom quotas
         let quotas = match rate_limit_key.api_key {
             None => quotas.to_vec(),
@@ -105,6 +93,9 @@ impl RateLimitClient {
         };
 
         // Check all quotas
+        let prefix = rate_limit_key
+            .api_key
+            .map_or_else(|| rate_limit_key.ip.to_string(), |k| k.to_string());
         let mut all_statuses = Vec::new();
         for quota in quotas {
             let prefixed_key = if quota.r#type.is_global() {
@@ -125,6 +116,14 @@ impl RateLimitClient {
             };
             status.raise_if_exceeded()?;
             all_statuses.push(status);
+        }
+        let prefixed_key = format!("{prefix}:{key}");
+        let (r1, r2) = join!(self.increment_key(key), self.increment_key(&prefixed_key));
+        let increment_result = r1.and(r2);
+        // If incrementing the key fails, we don't apply any limits
+        if let Err(e) = increment_result {
+            error!("Failed to increment rate limit key: {e}, will not apply limits");
+            return Ok(None);
         }
 
         // Return the status with the lowest remaining requests (most critical)
