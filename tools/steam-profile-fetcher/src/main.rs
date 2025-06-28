@@ -80,6 +80,24 @@ async fn fetch_and_update_profiles(
         }
     };
 
+    let unavailable_profiles = batch
+        .into_iter()
+        .filter(|id| !profiles.iter().any(|p| p.account_id == **id))
+        .copied()
+        .collect_vec();
+    match delete_profiles(ch_client, &unavailable_profiles).await {
+        Ok(()) => {
+            info!("Deleted {} unavailable profiles", unavailable_profiles.len());
+            counter!("steam_profile_fetcher.deleted_profiles.success")
+                .increment(unavailable_profiles.len() as u64);
+        }
+        Err(e) => {
+            error!("Failed to delete unavailable profiles: {}", e);
+            counter!("steam_profile_fetcher.deleted_profiles.failure")
+                .increment(unavailable_profiles.len() as u64);
+        }
+    }
+
     match save_profiles(ch_client, &profiles).await {
         Ok(()) => {
             info!(
@@ -147,4 +165,16 @@ async fn save_profiles(
         inserter.write(profile).await?;
     }
     inserter.end().await
+}
+
+#[instrument(skip_all)]
+async fn delete_profiles(
+    ch_client: &clickhouse::Client,
+    profiles: &[u32],
+) -> clickhouse::error::Result<()> {
+    ch_client
+        .query("DELETE FROM steam_profiles WHERE account_id IN ?")
+        .bind(profiles)
+        .execute()
+        .await
 }
