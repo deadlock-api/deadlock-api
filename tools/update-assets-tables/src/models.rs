@@ -2,7 +2,7 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Row)]
-pub struct UpgradeItem {
+pub(crate) struct UpgradeItem {
     pub id: u32,
     pub name: String,
     pub item_tier: u8,
@@ -10,7 +10,7 @@ pub struct UpgradeItem {
 }
 
 #[derive(Serialize, Row)]
-pub struct ChUpgradeItem {
+pub(crate) struct ChUpgradeItem {
     pub id: u32,
     pub name: String,
     pub tier: u8,
@@ -27,7 +27,7 @@ impl From<UpgradeItem> for ChUpgradeItem {
 }
 
 #[derive(Deserialize)]
-pub struct Hero {
+pub(crate) struct Hero {
     pub id: u16,
     pub name: String,
     pub disabled: Option<bool>,
@@ -35,7 +35,7 @@ pub struct Hero {
 }
 
 #[derive(Serialize, Row)]
-pub struct ChHero {
+pub(crate) struct ChHero {
     pub id: u16,
     pub name: String,
 }

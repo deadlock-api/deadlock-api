@@ -1,3 +1,8 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+
 use crate::models::{ChHero, ChUpgradeItem};
 use metrics::counter;
 use models::{Hero, UpgradeItem};
