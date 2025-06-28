@@ -1,4 +1,4 @@
-use metrics_exporter_prometheus::{BuildError, PrometheusBuilder};
+use metrics_exporter_prometheus::PrometheusBuilder;
 use std::net::SocketAddrV4;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -16,8 +16,8 @@ pub fn init_tracing() {
         .init();
 }
 
-pub fn init_metrics() -> Result<(), BuildError> {
-    PrometheusBuilder::new()
-        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>().unwrap())
-        .install()
+pub fn init_metrics() -> anyhow::Result<()> {
+    Ok(PrometheusBuilder::new()
+        .with_http_listener("0.0.0.0:9002".parse::<SocketAddrV4>()?)
+        .install()?)
 }
