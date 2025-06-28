@@ -143,6 +143,9 @@ impl RateLimitClient {
             .zrangebyscore(key, now_micros - period.as_micros(), now_micros)
             .await?;
         let num_requests = timestamps.len();
+        if num_requests == 0 {
+            return Ok((0, Utc::now()));
+        }
         let oldest_timestamp = timestamps
             .into_iter()
             .min()
