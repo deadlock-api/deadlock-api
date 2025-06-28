@@ -58,8 +58,8 @@ async fn fetch_and_update_profiles(
     let account_ids = get_account_ids_to_update(ch_client).await?;
     gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
-    if account_ids.is_empty() {
-        info!("No new account IDs to update, sleeping 10min...");
+    if account_ids.len() < 100 {
+        info!("No full batch, waiting for next interval");
         return Ok(());
     }
     info!("Found {} account IDs to update", account_ids.len());
