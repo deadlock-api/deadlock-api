@@ -88,6 +88,7 @@ async fn update_builds(
             counter!("builds_fetcher.fetch_builds.failure", "hero_id" => hero_id.to_string())
                 .increment(1);
             warn!("Failed to fetch builds: {}", e);
+            sleep(Duration::from_secs(10)).await;
             return;
         }
     };
@@ -104,6 +105,7 @@ async fn update_builds(
             counter!("builds_fetcher.insert_builds.failure", "hero_id" => hero_id.to_string())
                 .increment(1);
             warn!("Failed to insert builds: {}", e);
+            sleep(Duration::from_secs(10)).await;
         }
     }
 }
