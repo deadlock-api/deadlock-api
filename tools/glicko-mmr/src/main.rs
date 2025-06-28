@@ -1,3 +1,14 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::implicit_hasher)]
+
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
 use clap::Parser;
@@ -28,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
         };
         info!("Processing matches starting from {start_match_id}");
         let matches_to_process =
-            CHMatch::query_matches_after(&ch_client, start_match_id, 100000).await?;
+            CHMatch::query_matches_after(&ch_client, start_match_id, 100_000).await?;
         if matches_to_process.is_empty() {
             info!("No matches to process, sleeping...");
             interval.tick().await;

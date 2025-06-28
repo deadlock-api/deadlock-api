@@ -17,7 +17,7 @@ pub fn update_match(
         updates.push(update_glicko_rating(
             config,
             match_,
-            p,
+            *p,
             &match_.team1_players,
             match_.winning_team == 0,
             match_.avg_badge_team0,
@@ -29,7 +29,7 @@ pub fn update_match(
         updates.push(update_glicko_rating(
             config,
             match_,
-            p,
+            *p,
             &match_.team0_players,
             match_.winning_team == 1,
             match_.avg_badge_team1,
@@ -44,7 +44,7 @@ pub fn update_match(
 fn update_glicko_rating(
     config: &Config,
     match_: &CHMatch,
-    player: &u32,
+    player: u32,
     opponents: &[u32],
     won: bool,
     avg_badge_player: u32,
@@ -52,11 +52,11 @@ fn update_glicko_rating(
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> Glicko2HistoryEntry {
     // Get current rating mu
-    let rating_mu = player_ratings_before
-        .get(player)
-        .map(|entry| entry.rating_mu)
-        .unwrap_or_else(|| 6. * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.));
-    let phi = match player_ratings_before.get(player) {
+    let rating_mu = player_ratings_before.get(&player).map_or_else(
+        || 6. * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.),
+        |entry| entry.rating_mu,
+    );
+    let phi = match player_ratings_before.get(&player) {
         Some(entry) => new_rating_phi(
             config,
             entry.rating_phi,
@@ -66,22 +66,20 @@ fn update_glicko_rating(
         None => config.rating_phi_unrated, // If the player has no rating history, use the default rating mu
     };
     let sigma = player_ratings_before
-        .get(player)
-        .map(|entry| entry.rating_sigma)
-        .unwrap_or(config.rating_sigma_unrated);
+        .get(&player)
+        .map_or(config.rating_sigma_unrated, |entry| entry.rating_sigma);
 
     // Get opponent values
     let opponents_eg = opponents
         .iter()
         .map(move |opponent_id| {
-            let opponent_mu = player_ratings_before
-                .get(opponent_id)
-                .map(|entry| entry.rating_mu)
-                .unwrap_or(6. * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.));
+            let opponent_mu = player_ratings_before.get(opponent_id).map_or(
+                6. * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.),
+                |entry| entry.rating_mu,
+            );
             let opponent_phi = player_ratings_before
                 .get(opponent_id)
-                .map(|entry| entry.rating_phi)
-                .unwrap_or(config.rating_phi_unrated);
+                .map_or(config.rating_phi_unrated, |entry| entry.rating_phi);
             (
                 e(rating_mu, opponent_mu, opponent_phi).clamp(1e-6, 1.0 - 1e-6),
                 g(opponent_phi),
@@ -90,7 +88,7 @@ fn update_glicko_rating(
         .collect::<Vec<_>>();
 
     // Calculate estimated variance
-    let v = 1.
+    let estimated_variance = 1.
         / opponents_eg
             .iter()
             .map(|(e, g)| g.powi(2) * (e * (1.0 - e)))
@@ -98,10 +96,11 @@ fn update_glicko_rating(
 
     // Calculate estimated improvement
     let outcome = if won { 1.0 } else { 0.0 };
-    let delta = v * opponents_eg
-        .iter()
-        .map(|(e, g)| g * (outcome - e))
-        .sum::<f64>();
+    let delta = estimated_variance
+        * opponents_eg
+            .iter()
+            .map(|(e, g)| g * (outcome - e))
+            .sum::<f64>();
 
     let mut convergency = SimpleConvergency {
         eps: 1e-10f64,
@@ -109,16 +108,16 @@ fn update_glicko_rating(
     };
 
     let f = |x: f64| {
-        let numerator_1 = x.exp() * (delta.powi(2) - phi.powi(2) - v - x.exp());
-        let denominator_1 = 2.0 * (phi.powi(2) + v + x.exp()).powi(2);
+        let numerator_1 = x.exp() * (delta.powi(2) - phi.powi(2) - estimated_variance - x.exp());
+        let denominator_1 = 2.0 * (phi.powi(2) + estimated_variance + x.exp()).powi(2);
         let ratio_1 = numerator_1 / denominator_1;
         let ratio_2 = (x - sigma.powi(2).ln()) / config.tau.powi(2);
         ratio_1 - ratio_2
     };
 
     let a = (sigma * sigma).ln();
-    let b = if delta * delta > phi * phi + v {
-        (delta * delta - phi * phi - v).ln()
+    let b = if delta * delta > phi * phi + estimated_variance {
+        (delta * delta - phi * phi - estimated_variance).ln()
     } else {
         let mut k = 1.0;
         loop {
@@ -133,7 +132,8 @@ fn update_glicko_rating(
 
     let root = roots::find_root_regula_falsi(a, b, &f, &mut convergency).unwrap();
     let new_rating_sigma = root.exp().sqrt();
-    let new_rating_phi = 1. / (1. / (phi.powi(2) + new_rating_sigma.powi(2)) + 1. / v).sqrt();
+    let new_rating_phi =
+        1. / (1. / (phi.powi(2) + new_rating_sigma.powi(2)) + 1. / estimated_variance).sqrt();
     let new_rating_mu = rating_mu
         + new_rating_phi.powi(2)
             * opponents_eg
@@ -141,7 +141,7 @@ fn update_glicko_rating(
                 .map(|(e, g)| g * (outcome - e))
                 .sum::<f64>();
     Glicko2HistoryEntry {
-        account_id: *player,
+        account_id: player,
         match_id: match_.match_id,
         rating_mu: new_rating_mu.clamp(-8.6, 8.6),
         rating_phi: new_rating_phi.min(config.rating_phi_unrated),

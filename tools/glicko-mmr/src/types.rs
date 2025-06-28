@@ -20,12 +20,12 @@ impl Glicko2HistoryEntry {
     ) -> clickhouse::error::Result<Vec<Self>> {
         ch_client
             .query(
-                r#"
+                r"
                     SELECT ?fields FROM glicko
                     WHERE match_id < ?
                     ORDER BY match_id DESC
                     LIMIT 1 BY account_id
-                "#,
+                ",
             )
             .bind(match_id)
             .fetch_all()
@@ -53,7 +53,7 @@ impl CHMatch {
     ) -> clickhouse::error::Result<Vec<Self>> {
         ch_client
             .query(
-                r#"
+                r"
 SELECT match_id,
        any(mi.start_time)                       as start_time,
        groupArrayIf(account_id, team = 'Team0') as team0_players,
@@ -72,7 +72,7 @@ GROUP BY match_id
 HAVING length(team0_players) = 6 AND length(team1_players) = 6
 ORDER BY match_id
 LIMIT ?
-            "#,
+            ",
             )
             .bind(match_id)
             .bind(limit)
