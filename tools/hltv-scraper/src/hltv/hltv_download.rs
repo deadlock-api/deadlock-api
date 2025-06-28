@@ -15,7 +15,7 @@ use crate::hltv::{FragmentType, hltv_extract_meta::extract_meta_from_fragment};
 
 #[allow(unused)]
 #[derive(Debug)]
-pub struct HltvFragment {
+pub(crate) struct HltvFragment {
     pub match_id: u64,
     pub fragment_n: u64,
     pub fragment_contents: Arc<[u8]>,
@@ -25,7 +25,7 @@ pub struct HltvFragment {
 }
 
 #[derive(Error, Debug)]
-pub enum DownloadError {
+pub(crate) enum DownloadError {
     #[error("Network error: {0}")]
     NetworkError(#[from] reqwest::Error),
     #[error("JSON parsing error: {0}")]
@@ -85,12 +85,12 @@ struct SyncResponse {
 /// Fragment contents are the entire HTTP Get body of them.
 ///
 /// Here are some sample valid urls of the /sync and fragments:
-/// https://dist1-ord1.steamcontent.com/tv/17915135/sync
-/// https://dist1-ord1.steamcontent.com/tv/17915135/48/full
-/// https://dist1-ord1.steamcontent.com/tv/17915135/48/delta
-/// https://dist1-ord1.steamcontent.com/tv/17915135/49/delta
+/// <https://dist1-ord1.steamcontent.com/tv/17915135/sync>
+/// <https://dist1-ord1.steamcontent.com/tv/17915135/48/full>
+/// <https://dist1-ord1.steamcontent.com/tv/17915135/48/delta>
+/// <https://dist1-ord1.steamcontent.com/tv/17915135/49/delta>
 /// ...
-pub async fn download_match_mpsc(
+pub(crate) async fn download_match_mpsc(
     client: Client,
     prefix_url: String,
     match_id: u64,
@@ -130,37 +130,30 @@ async fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncRespons
     let start_time = Instant::now();
 
     loop {
-        match client.get(sync_url).send().await {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    counter!("hltv.initial_sync.http.2xx").increment(1);
-                    let sync_response = resp.json::<SyncResponse>().await?;
-                    trace!("Got successful /sync response {sync_url}");
-                    return Ok(sync_response);
-                } else if resp.status() == reqwest::StatusCode::NOT_FOUND
-                    || resp.status() == StatusCode::METHOD_NOT_ALLOWED
-                {
-                    counter!(format!("hltv.initial_sync.http.{}", resp.status().as_u16()))
-                        .increment(1);
-                    if Instant::now() - start_time >= Duration::from_secs(120) {
-                        return Err(DownloadError::SyncNotAvailable(
-                            resp.error_for_status().err(),
-                        ));
-                    }
-                    sleep(Duration::from_secs(10)).await;
-                    continue;
-                } else {
-                    return Err(DownloadError::UnexpectedStatusCode(resp.status()));
+        if let Ok(resp) = client.get(sync_url).send().await {
+            if resp.status().is_success() {
+                counter!("hltv.initial_sync.http.2xx").increment(1);
+                let sync_response = resp.json::<SyncResponse>().await?;
+                trace!("Got successful /sync response {sync_url}");
+                return Ok(sync_response);
+            } else if resp.status() == reqwest::StatusCode::NOT_FOUND
+                || resp.status() == StatusCode::METHOD_NOT_ALLOWED
+            {
+                counter!(format!("hltv.initial_sync.http.{}", resp.status().as_u16())).increment(1);
+                if start_time.elapsed() >= Duration::from_secs(120) {
+                    return Err(DownloadError::SyncNotAvailable(
+                        resp.error_for_status().err(),
+                    ));
                 }
-            }
-            Err(_) => {
-                if Instant::now() - start_time >= Duration::from_secs(30) {
-                    return Err(DownloadError::SyncNotAvailable(None));
-                }
-                sleep(Duration::from_secs(1)).await;
+                sleep(Duration::from_secs(10)).await;
                 continue;
             }
+            return Err(DownloadError::UnexpectedStatusCode(resp.status()));
         }
+        if start_time.elapsed() >= Duration::from_secs(30) {
+            return Err(DownloadError::SyncNotAvailable(None));
+        }
+        sleep(Duration::from_secs(1)).await;
     }
 }
 
@@ -265,13 +258,11 @@ async fn fragment_fetching_loop(
                                     break;
                                 }
                             }
-                            continue;
                         }
                         DownloadError::NetworkError(e) => {
                             counter!("hltv.fragment.error.network_error").increment(1);
                             error!("[{match_id} {fragment_n}] Network error: {e:?}");
                             sleep(Duration::from_secs(1)).await;
-                            continue;
                         }
                         _ => {
                             return Err(e);
@@ -296,56 +287,44 @@ async fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
     let start_time = Instant::now();
 
     loop {
-        match client.get(sync_url).send().await {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    return true;
-                } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
-                    counter!("hltv.sync.http.404").increment(1);
-                    if Instant::now() - start_time >= Duration::from_secs(20) {
-                        return false;
-                    }
-                    sleep(Duration::from_secs(2)).await;
-                    continue;
-                } else if resp.status() == reqwest::StatusCode::METHOD_NOT_ALLOWED {
-                    counter!("hltv.sync.http.405").increment(1);
-                    if Instant::now() - start_time >= Duration::from_secs(45) {
-                        return false;
-                    }
-                    sleep(Duration::from_secs(20)).await;
-                    continue;
-                } else {
-                    return false;
-                }
-            }
-            Err(_) => {
-                if Instant::now() - start_time >= Duration::from_secs(5) {
+        if let Ok(resp) = client.get(sync_url).send().await {
+            if resp.status().is_success() {
+                return true;
+            } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
+                counter!("hltv.sync.http.404").increment(1);
+                if start_time.elapsed() >= Duration::from_secs(20) {
                     return false;
                 }
                 sleep(Duration::from_secs(2)).await;
                 continue;
+            } else if resp.status() == reqwest::StatusCode::METHOD_NOT_ALLOWED {
+                counter!("hltv.sync.http.405").increment(1);
+                if start_time.elapsed() >= Duration::from_secs(45) {
+                    return false;
+                }
+                sleep(Duration::from_secs(20)).await;
+                continue;
             }
+            return false;
         }
+        if start_time.elapsed() >= Duration::from_secs(5) {
+            return false;
+        }
+        sleep(Duration::from_secs(2)).await;
     }
 }
 
 /// Download a specific fragment from a match
 ///
 /// Returns an error in case of a 404.
-pub async fn download_match_fragment(
+pub(crate) async fn download_match_fragment(
     prefix_url: String,
     match_id: u64,
     fragment_n: u64,
     fragment_type: FragmentType,
 ) -> Result<Vec<u8>, DownloadError> {
     let client = Client::new();
-    let fragment_url = format!(
-        "{}/{}/{}/{}",
-        prefix_url,
-        match_id,
-        fragment_n,
-        fragment_type.as_str()
-    );
+    let fragment_url = format!("{prefix_url}/{match_id}/{fragment_n}/{fragment_type}");
 
     trace!("Downloading match fragment: {fragment_url}");
     let resp = client.get(&fragment_url).send().await?;
@@ -365,12 +344,12 @@ pub async fn download_match_fragment(
     }
 }
 
-pub async fn check_fragment_has_end_command(fragment_contents: Arc<[u8]>) -> bool {
-    tokio::task::spawn_blocking(move || check_fragment_has_end_command_sync(fragment_contents))
+pub(crate) async fn check_fragment_has_end_command(fragment_contents: Arc<[u8]>) -> bool {
+    tokio::task::spawn_blocking(move || check_fragment_has_end_command_sync(&fragment_contents))
         .await
         .expect("Should not fail")
 }
-fn check_fragment_has_end_command_sync(fragment_contents: Arc<[u8]>) -> bool {
+fn check_fragment_has_end_command_sync(fragment_contents: &Arc<[u8]>) -> bool {
     let cursor = Cursor::new(&fragment_contents[..]);
 
     let mut demo_file = BroadcastFile::start_reading(cursor);
@@ -390,7 +369,7 @@ fn check_fragment_has_end_command_sync(fragment_contents: Arc<[u8]>) -> bool {
                         count, cmd_header.cmd, e
                     );
                     return false;
-                };
+                }
             }
             Err(err) => {
                 if demo_file.is_at_eof().unwrap_or_default() {

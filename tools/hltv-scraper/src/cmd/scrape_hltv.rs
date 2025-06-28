@@ -23,7 +23,7 @@ use crate::cmd::{
     run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType},
 };
 
-pub async fn run(spectate_server_url: String) -> anyhow::Result<()> {
+pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let spec_client = reqwest::Client::new();
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
@@ -129,7 +129,7 @@ fn download_task(
             .send()
             .await
         {
-            error!("[{label} {match_id}] Error marking match ended: {:?}", e)
+            error!("[{label} {match_id}] Error marking match ended: {:?}", e);
         }
         // info!("[{}] Finished and marked match as ended", match_id);
         currently_downloading.remove(&smi.match_id);
@@ -158,13 +158,13 @@ fn download_task(
                 )
                 .await
                 {
-                    Ok(_) => info!("[{label} {match_id}] Wrote meta to local store instead"),
+                    Ok(()) => info!("[{label} {match_id}] Wrote meta to local store instead"),
                     Err(e) => error!(
                         "[{label} {match_id}] Got error writing meta to local store: {:?}",
                         e
                     ),
                 }
-            };
+            }
         }
     });
 }

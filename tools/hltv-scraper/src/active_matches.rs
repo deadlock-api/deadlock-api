@@ -4,7 +4,7 @@ use tracing::info;
 use valveprotos::deadlock::ECitadelTeamObjective;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
-pub struct ActiveMatch {
+pub(crate) struct ActiveMatch {
     pub start_time: Option<u64>,
     pub match_id: u64,
     pub lobby_id: Option<u64>,
@@ -16,16 +16,19 @@ pub struct ActiveMatch {
 
 #[allow(unused)]
 impl ActiveMatch {
-    pub fn is_core_exposed(&self) -> bool {
-        use ECitadelTeamObjective::*;
+    pub(crate) fn is_core_exposed(&self) -> bool {
+        use ECitadelTeamObjective::KECitadelTeamObjectiveTitan;
         let t0 = self.objectives_mask_team0;
         let t1 = self.objectives_mask_team1;
 
         !has_objective(t0, KECitadelTeamObjectiveTitan)
             || !has_objective(t1, KECitadelTeamObjectiveTitan)
     }
-    pub fn is_titan_exposed(&self) -> bool {
-        use ECitadelTeamObjective::*;
+    pub(crate) fn is_titan_exposed(&self) -> bool {
+        use ECitadelTeamObjective::{
+            KECitadelTeamObjectiveTitanShieldGenerator1,
+            KECitadelTeamObjectiveTitanShieldGenerator2,
+        };
         let t0 = self.objectives_mask_team0;
         let t1 = self.objectives_mask_team1;
 
@@ -34,8 +37,11 @@ impl ActiveMatch {
             || (!has_objective(t1, KECitadelTeamObjectiveTitanShieldGenerator1)
                 && !has_objective(t1, KECitadelTeamObjectiveTitanShieldGenerator2))
     }
-    pub fn is_shrine_exposed(&self) -> bool {
-        use ECitadelTeamObjective::*;
+    pub(crate) fn is_shrine_exposed(&self) -> bool {
+        use ECitadelTeamObjective::{
+            KECitadelTeamObjectiveTitanShieldGenerator1,
+            KECitadelTeamObjectiveTitanShieldGenerator2,
+        };
         let t0 = self.objectives_mask_team0;
         let t1 = self.objectives_mask_team1;
 
@@ -51,7 +57,7 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
 }
 
 #[cached(result = true, time = 60, result_fallback = true)]
-pub async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
+pub(crate) async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
     let client = reqwest::Client::new();
     let res = client
         .get("https://api.deadlock-api.com/v1/matches/active")

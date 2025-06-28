@@ -2,10 +2,10 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response;
 
-pub type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
+pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Row)]
-pub struct PlayerMatchHistoryEntry {
+pub(crate) struct PlayerMatchHistoryEntry {
     pub account_id: u32,
     pub match_id: u64,
     pub hero_id: u32,
@@ -29,7 +29,7 @@ pub struct PlayerMatchHistoryEntry {
 }
 
 impl PlayerMatchHistoryEntry {
-    pub fn from_protobuf(
+    pub(crate) fn from_protobuf(
         account_id: u32,
         entry: c_msg_client_to_gc_get_match_history_response::Match,
     ) -> Option<Self> {

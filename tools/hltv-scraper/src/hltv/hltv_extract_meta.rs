@@ -19,7 +19,7 @@ fn process_post_match(details_buf: &[u8]) -> anyhow::Result<Vec<u8>> {
     Ok(meta_content)
 }
 
-pub async fn extract_meta_from_fragment(
+pub(crate) async fn extract_meta_from_fragment(
     fragment_buf: Arc<[u8]>,
 ) -> anyhow::Result<Option<Vec<u8>>> {
     tokio::task::spawn_blocking(move || extract_meta_from_fragment_sync(fragment_buf)).await?

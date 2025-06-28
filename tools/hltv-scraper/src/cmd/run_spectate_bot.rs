@@ -19,7 +19,7 @@ use std::{
     collections::{HashMap, HashSet},
     env,
     num::NonZeroUsize,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use tokio::time::sleep;
@@ -62,13 +62,13 @@ struct InvokeResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum SpectatedMatchType {
+pub(crate) enum SpectatedMatchType {
     ActiveMatch,
     GapMatch,
 }
 
 impl SpectatedMatchType {
-    pub fn label(&self) -> String {
+    pub(crate) fn label(&self) -> String {
         match self {
             SpectatedMatchType::ActiveMatch => "ACT".to_string(),
             SpectatedMatchType::GapMatch => "GAP".to_string(),
@@ -77,7 +77,7 @@ impl SpectatedMatchType {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SpectatedMatchInfo {
+pub(crate) struct SpectatedMatchInfo {
     pub match_type: SpectatedMatchType,
     pub match_id: u64,
     #[serde(with = "jiff::fmt::serde::timestamp::second::required")]
@@ -87,7 +87,7 @@ pub struct SpectatedMatchInfo {
 }
 
 impl SpectatedMatchInfo {
-    pub fn new(
+    pub(crate) fn new(
         match_type: SpectatedMatchType,
         match_id: u64,
         updated_at: Timestamp,
@@ -108,7 +108,7 @@ struct SpectatorBot {
     api_token: String,
     proxy_url: String,
     failed_spectates: Mutex<LruCache<u64, bool>>,
-    current_patch: Arc<RwLock<Option<u64>>>,
+    current_patch: Arc<Mutex<Option<u64>>>,
 }
 
 impl SpectatorBot {
@@ -121,7 +121,7 @@ impl SpectatorBot {
             api_token,
             proxy_url: proxy_api_url,
             failed_spectates: Mutex::new(LruCache::new(NonZeroUsize::new(1000).unwrap())),
-            current_patch: Arc::new(RwLock::new(None)),
+            current_patch: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -200,7 +200,6 @@ impl SpectatorBot {
     }
 
     fn find_gaps(
-        &self,
         active_match_ids: &[u64],
         recently_spectated: &HashMap<u64, SpectatedMatchInfo>,
         failed_spectating: &HashMap<u64, SpectatedMatchInfo>,
@@ -250,7 +249,7 @@ impl SpectatorBot {
         gaps
     }
 
-    async fn update_patch_version(&self, steam_inf: &str) -> Result<()> {
+    fn update_patch_version(&self, steam_inf: &str) -> Result<()> {
         let version = steam_inf
             .find("ClientVersion=")
             .and_then(|start| {
@@ -262,11 +261,13 @@ impl SpectatorBot {
             .and_then(|v| v.parse::<u64>().ok())
             .context("Failed to parse client version")?;
 
-        let mut v = self.current_patch.write().unwrap();
-        *v = env::var("CLIENT_VERSION")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .or(Some(version));
+        let v = self.current_patch.lock();
+        if let Ok(mut current) = v {
+            *current = env::var("CLIENT_VERSION")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .or(Some(version));
+        }
         Ok(())
     }
 
@@ -280,7 +281,7 @@ impl SpectatorBot {
 
         let current_patch = self
             .current_patch
-            .read()
+            .lock()
             .expect("Patch version should be set")
             .context("No current patch version available")?;
 
@@ -394,9 +395,9 @@ impl SpectatorBot {
         ).await;
 
         let mut prev_live_matches = Vec::new();
-        while (Instant::now() - start_time) < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
+        while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             let s = steam_inf.read().await.clone();
-            self.update_patch_version(&s).await?;
+            self.update_patch_version(&s)?;
             let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
             if live_matches != prev_live_matches {
                 let ms = live_matches
@@ -415,7 +416,7 @@ impl SpectatorBot {
                 self.mark_spectated_many(REDIS_SPEC_KEY, &ms, REDIS_EXPIRY)
                     .await?;
             }
-            prev_live_matches = live_matches.clone();
+            prev_live_matches.clone_from(&live_matches);
 
             if *NO_ACTIVE_SPECTATE {
                 sleep(Duration::from_secs(30)).await;
@@ -456,63 +457,55 @@ impl SpectatorBot {
                 })
                 .next();
 
-            match next_match {
-                Some(m) => {
-                    info!(
-                        "Spectating active match {:?} (score: {:?})",
-                        m.lobby_id, m.match_score
-                    );
-                    if let Err(e) = self
-                        .spectate_match(SpectatedMatchType::ActiveMatch, m.match_id)
-                        .await
-                    {
-                        error!("Failed to spectate match {}: {:?}", m.match_id, e);
-                    }
+            if let Some(m) = next_match {
+                info!(
+                    "Spectating active match {:?} (score: {:?})",
+                    m.lobby_id, m.match_score
+                );
+                if let Err(e) = self
+                    .spectate_match(SpectatedMatchType::ActiveMatch, m.match_id)
+                    .await
+                {
+                    error!("Failed to spectate match {}: {:?}", m.match_id, e);
                 }
-                None => {
-                    let fifteen_min_ago = jiff::Timestamp::now()
-                        .checked_sub(15.minutes())
-                        .unwrap()
-                        .as_second();
-                    let fifty_min_ago = jiff::Timestamp::now()
-                        .checked_sub(50.minutes())
-                        .unwrap()
-                        .as_second();
+            } else {
+                let fifteen_min_ago = jiff::Timestamp::now()
+                    .checked_sub(15.minutes())
+                    .unwrap()
+                    .as_second();
+                let fifty_min_ago = jiff::Timestamp::now()
+                    .checked_sub(50.minutes())
+                    .unwrap()
+                    .as_second();
 
-                    let match_ids: Vec<u64> = live_matches
-                        .iter()
-                        .filter(|x| {
-                            x.start_time.is_some_and(|x| {
-                                x <= fifteen_min_ago as u64 && x > fifty_min_ago as u64
-                            })
+                let match_ids: Vec<u64> = live_matches
+                    .iter()
+                    .filter(|x| {
+                        x.start_time.is_some_and(|x| {
+                            x <= fifteen_min_ago as u64 && x > fifty_min_ago as u64
                         })
-                        .map(|m| m.match_id)
-                        .sorted()
-                        .collect();
+                    })
+                    .map(|m| m.match_id)
+                    .sorted()
+                    .collect();
 
-                    let gaps = self.find_gaps(&match_ids, &recently_spectated, &failed_spectates);
+                let gaps = Self::find_gaps(&match_ids, &recently_spectated, &failed_spectates);
 
-                    if !gaps.is_empty() {
-                        info!(
-                            "No eligible matches found. Attempting to spectate {} gaps",
-                            gaps.len()
-                        );
-                        for gap_id in gaps.into_iter().take(5) {
-                            match self
-                                .spectate_match(SpectatedMatchType::GapMatch, gap_id)
-                                .await
-                            {
-                                Ok(true) => continue,
-                                Ok(false) => continue,
-                                Err(e) => {
-                                    error!("Error spectating gap match {gap_id}: {:?}", e);
-                                    continue;
-                                }
-                            }
+                if gaps.is_empty() {
+                    info!("No eligible matches or gaps found (spectated: {n_spectated})");
+                    sleep(Duration::from_secs(10)).await;
+                } else {
+                    info!(
+                        "No eligible matches found. Attempting to spectate {} gaps",
+                        gaps.len()
+                    );
+                    for gap_id in gaps.into_iter().take(5) {
+                        if let Err(e) = self
+                            .spectate_match(SpectatedMatchType::GapMatch, gap_id)
+                            .await
+                        {
+                            error!("Error spectating gap match {gap_id}: {:?}", e);
                         }
-                    } else {
-                        info!("No eligible matches or gaps found (spectated: {n_spectated})");
-                        sleep(Duration::from_secs(10)).await;
                     }
                 }
             }
@@ -591,7 +584,7 @@ async fn record_match_still_alive(
     Ok(())
 }
 
-pub async fn run_bot(proxy_url: String, proxy_api_token: String) -> Result<()> {
+pub(crate) async fn run_bot(proxy_url: String, proxy_api_token: String) -> Result<()> {
     let bot = Arc::new(SpectatorBot::new(proxy_url, proxy_api_token).await?);
     let _server = tokio::spawn(run_server(bot.clone()));
 

@@ -1,3 +1,4 @@
+use std::fmt::Write;
 use std::time::Instant;
 
 use anyhow::Context;
@@ -11,7 +12,7 @@ use crate::{
     hltv::{hltv_download, hltv_extract_meta::extract_meta_from_fragment},
 };
 
-pub async fn download_single_hltv_meta(
+pub(crate) async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
     match_id: u64,
 ) -> anyhow::Result<Option<CMsgMatchMetaData>> {
@@ -38,7 +39,7 @@ pub async fn download_single_hltv_meta(
     while let Some(fragment) = recv.recv().await {
         let byte_size = fragment.fragment_contents.len();
 
-        if fragment.fragment_n % 10 == 0 {
+        if fragment.fragment_n.is_multiple_of(10) {
             debug!(
                 "[{label} {match_id}] Got fragment {} {:?}",
                 fragment.fragment_n, fragment.fragment_type
@@ -77,7 +78,7 @@ pub async fn download_single_hltv_meta(
         fragment_count += 1;
         total_byte_size += byte_size;
     }
-    let diff_secs = (Instant::now() - start).as_secs();
+    let diff_secs = start.elapsed().as_secs();
     let dur = format_duration(diff_secs);
     info!("[{label} {match_id}] Finished downloading! Took {dur}, {fragment_count} fragments.");
 
@@ -105,13 +106,13 @@ fn format_duration(seconds: u64) -> String {
     let mut result = String::new();
 
     if hours > 0 {
-        result.push_str(&format!("{hours}h"));
+        write!(result, "{hours}h").unwrap();
     }
     if minutes > 0 {
-        result.push_str(&format!("{minutes}m"));
+        write!(result, "{minutes}m").unwrap();
     }
     if secs > 0 || result.is_empty() {
-        result.push_str(&format!("{secs}s"));
+        write!(result, "{secs}s").unwrap();
     }
 
     result

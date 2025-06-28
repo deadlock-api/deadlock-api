@@ -16,7 +16,7 @@ use tokio::{
 /// # Returns
 ///
 /// * `Arc<RwLock<String>>` - An atomic reference-counted pointer to the plaintext response data wrapped in a tokio read-write lock.
-pub async fn start_polling_text(
+pub(crate) async fn start_polling_text(
     url: String,
     interval: Duration,
 ) -> (AbortHandle, Arc<RwLock<String>>) {

@@ -3,13 +3,13 @@ use tracing::error;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-pub struct Cli {
+pub(crate) struct Cli {
     #[command(subcommand)]
     pub command: Commands,
 }
 
 #[derive(Subcommand)]
-pub enum Commands {
+pub(crate) enum Commands {
     /// Scrape HLTVs using deadlock-api live-matches with spectators > 0
     /// as the source of truth.
     ScrapeHltvMatches {
@@ -26,7 +26,7 @@ pub enum Commands {
     },
 }
 
-pub async fn run_cli() {
+pub(crate) async fn run_cli() {
     let cli = Cli::parse();
 
     match cli.command {

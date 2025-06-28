@@ -1,17 +1,19 @@
+use std::fmt::Display;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum FragmentType {
+pub(crate) enum FragmentType {
     Full = 0,
     Delta = 1,
 }
 
-impl FragmentType {
-    fn as_str(&self) -> &'static str {
+impl Display for FragmentType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FragmentType::Full => "full",
-            FragmentType::Delta => "delta",
+            FragmentType::Full => write!(f, "full"),
+            FragmentType::Delta => write!(f, "delta"),
         }
     }
 }
 
-pub mod hltv_download;
-pub mod hltv_extract_meta;
+pub(crate) mod hltv_download;
+pub(crate) mod hltv_extract_meta;

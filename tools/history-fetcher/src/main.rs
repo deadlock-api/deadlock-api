@@ -1,3 +1,10 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
+
 mod types;
 
 use crate::types::{PlayerMatchHistory, PlayerMatchHistoryEntry};
@@ -90,13 +97,13 @@ async fn update_account(
         .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account.id, r))
         .collect();
     match insert_match_history(ch_client, &match_history).await {
-        Ok(_) => {
+        Ok(()) => {
             counter!("history_fetcher.insert_match_history.success").increment(1);
-            info!("Inserted new matches {}", match_history.len(),)
+            info!("Inserted new matches {}", match_history.len(),);
         }
         Err(e) => {
             counter!("history_fetcher.insert_match_history.failure").increment(1);
-            error!("Failed to insert match history: {:?}", e)
+            error!("Failed to insert match history: {:?}", e);
         }
     }
 }
@@ -104,7 +111,7 @@ async fn update_account(
 async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Vec<Account>> {
     ch_client
         .query(
-            r#"
+            r"
 WITH players AS (SELECT DISTINCT account_id
                  FROM match_player
                  ORDER BY match_id DESC
@@ -124,7 +131,7 @@ GROUP BY account_id
 HAVING COUNT(DISTINCT match_id) > 50
 ORDER BY COUNT(DISTINCT match_id) DESC
 LIMIT 1000
-    "#,
+    ",
         )
         .fetch_all()
         .await
@@ -133,7 +140,7 @@ LIMIT 1000
 async fn fetch_account_match_history(
     http_client: &reqwest::Client,
     account: &Account,
-) -> reqwest::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
+) -> anyhow::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account.id.into(),
         continue_cursor: account.max_match_id.map(|a| a + 1),
