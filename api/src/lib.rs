@@ -77,9 +77,11 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add Middlewares
         .layer(from_fn(write_api_key_to_header))
         .layer(from_fn_with_state(state.clone(), feature_flags))
-        .layer(CacheControlMiddleware::new(Duration::from_secs(
-            DEFAULT_CACHE_TIME,
-        )))
+        .layer(
+            CacheControlMiddleware::new(Duration::from_secs(DEFAULT_CACHE_TIME))
+                .with_stale_if_error(Duration::from_secs(DEFAULT_CACHE_TIME))
+                .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
+        )
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::<DefaultPredicate>::default())
         .fallback(|uri: axum::http::Uri| async move {
