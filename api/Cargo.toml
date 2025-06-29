@@ -48,7 +48,7 @@ bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"
 rand = "0.9.1"
 url = { version = "2.5.4", features = ["serde"] }
-quick-xml = { version = "0.37.5", features = ["serde"] }
+quick-xml = { version = "0.38.0", features = ["serde", "serialize"] }
 
 [dev-dependencies]
 rstest = "0.25.0"
