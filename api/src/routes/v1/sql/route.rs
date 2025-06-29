@@ -57,9 +57,9 @@ Executes a SQL query on the database.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 10req/10s |
-| Key | 10req/10s |
-| Global | 100req/10s |
+| IP | 300req/5min |
+| Key | 300req/5min |
+| Global | 600req/60s |
     "
 )]
 pub(super) async fn sql(
