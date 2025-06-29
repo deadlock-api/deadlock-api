@@ -6,7 +6,6 @@ use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
-use futures::join;
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
@@ -126,7 +125,7 @@ impl RateLimitClient {
         }
 
         // If incrementing the key fails, we don't apply any limits
-        if let Err(e) = self.increment_key(key) {
+        if let Err(e) = self.increment_key(key).await {
             error!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
         }
