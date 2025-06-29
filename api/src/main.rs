@@ -1,3 +1,8 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::all)]
+#![deny(unreachable_pub)]
+#![deny(clippy::pedantic)]
+
 use axum::ServiceExt;
 use axum::extract::Request;
 use deadlock_api_rust::StartupError;
