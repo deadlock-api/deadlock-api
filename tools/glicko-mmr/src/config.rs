@@ -15,4 +15,7 @@ pub struct Config {
 
     #[arg(long, env, default_value_t = 0.5)]
     pub tau: f64,
+
+    #[arg(long, env, default_value_t = 0.9)]
+    pub regression_rate: f64,
 }

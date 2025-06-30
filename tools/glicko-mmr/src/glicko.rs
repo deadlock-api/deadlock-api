@@ -5,6 +5,7 @@ use chrono::Duration;
 use roots::SimpleConvergency;
 use std::collections::HashMap;
 use std::f64::consts::{E, PI};
+use tracing::debug;
 
 #[tracing::instrument(skip(player_ratings_before))]
 pub fn update_match(
@@ -18,6 +19,7 @@ pub fn update_match(
             config,
             match_,
             *p,
+            &match_.team0_players,
             &match_.team1_players,
             match_.winning_team == 0,
             match_.avg_badge_team0,
@@ -30,6 +32,7 @@ pub fn update_match(
             config,
             match_,
             *p,
+            &match_.team1_players,
             &match_.team0_players,
             match_.winning_team == 1,
             match_.avg_badge_team1,
@@ -40,22 +43,26 @@ pub fn update_match(
     updates
 }
 
+#[allow(clippy::too_many_lines)]
 #[allow(clippy::too_many_arguments)]
 fn update_glicko_rating(
     config: &Config,
     match_: &CHMatch,
     player: u32,
+    mates: &[u32],
     opponents: &[u32],
     won: bool,
     avg_badge_player: u32,
     avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> Glicko2HistoryEntry {
+    let avg_mu_player = 6. * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
+    let avg_mu_opponents = 6. * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.);
+
     // Get current rating mu
-    let rating_mu = player_ratings_before.get(&player).map_or_else(
-        || 6. * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.),
-        |entry| entry.rating_mu,
-    );
+    let rating_mu = player_ratings_before
+        .get(&player)
+        .map_or(avg_mu_player, |entry| entry.rating_mu);
     let phi = match player_ratings_before.get(&player) {
         Some(entry) => new_rating_phi(
             config,
@@ -73,13 +80,12 @@ fn update_glicko_rating(
     let opponents_eg = opponents
         .iter()
         .map(move |opponent_id| {
-            let opponent_mu = player_ratings_before.get(opponent_id).map_or(
-                6. * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.),
-                |entry| entry.rating_mu,
-            );
+            let opponent_mu = player_ratings_before
+                .get(opponent_id)
+                .map_or(avg_mu_opponents, |e| e.rating_mu);
             let opponent_phi = player_ratings_before
                 .get(opponent_id)
-                .map_or(config.rating_phi_unrated, |entry| entry.rating_phi);
+                .map_or(config.rating_phi_unrated, |e| e.rating_phi);
             (
                 e(rating_mu, opponent_mu, opponent_phi).clamp(1e-6, 1.0 - 1e-6),
                 g(opponent_phi),
@@ -140,10 +146,28 @@ fn update_glicko_rating(
                 .iter()
                 .map(|(e, g)| g * (outcome - e))
                 .sum::<f64>();
+
+    let sum_badge_team_pred: f64 = mates
+        .iter()
+        .filter(|p| *p != &player)
+        .map(|p| {
+            player_ratings_before
+                .get(p)
+                .map_or(avg_mu_player, |e| e.rating_mu)
+        })
+        .chain(std::iter::once(rating_mu))
+        .map(|mu| utils::rating_to_rank((mu + 6.) * 11. / 2.))
+        .sum::<u32>()
+        .into();
+    let avg_mu_team_pred = sum_badge_team_pred / mates.len() as f64;
+    let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
+    debug!("True Mu: {avg_mu_player}, Pred Mu: {avg_mu_team_pred}, Error: {error}");
+    let new_rating_mu = new_rating_mu - error * config.regression_rate;
+
     Glicko2HistoryEntry {
         account_id: player,
         match_id: match_.match_id,
-        rating_mu: new_rating_mu.clamp(-8.6, 8.6),
+        rating_mu: new_rating_mu,
         rating_phi: new_rating_phi.min(config.rating_phi_unrated),
         rating_sigma: new_rating_sigma.min(config.rating_sigma_unrated),
         start_time: match_.start_time,
