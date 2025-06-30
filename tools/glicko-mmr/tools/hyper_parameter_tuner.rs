@@ -29,7 +29,7 @@ fn new_random_config(rng: &mut ThreadRng) -> Config {
         rating_period_seconds: Duration::days(rng.random_range(1..=30)).num_seconds(),
         tau: rng.random_range(0.3..1.2),
         regression_rate: rng.random_range(0.8..1.2),
-        start_spread: rng.random_range(2.0..=8.6),
+        mu_spread: rng.random_range(2.0..=8.6),
     }
 }
 
