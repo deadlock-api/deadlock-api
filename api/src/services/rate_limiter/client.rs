@@ -146,12 +146,15 @@ impl RateLimitClient {
             .zrangebyscore(key, now_micros - period.as_micros(), now_micros)
             .await?;
         let num_requests = timestamps.len();
+        if num_requests == 0 {
+            return Ok((0, Utc::now()));
+        }
         let oldest_timestamp = timestamps
             .into_iter()
             .min()
             .and_then(DateTime::from_timestamp_micros)
             .unwrap_or_else(Utc::now);
-        Ok((num_requests, oldest_timestamp))
+        Ok((num_requests - 1, oldest_timestamp))
     }
 
     async fn increment_key(&self, key: &str) -> RedisResult<()> {
