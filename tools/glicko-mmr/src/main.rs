@@ -65,6 +65,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         inserter.end().await?;
-        debug!("Matches {num_matches}, Avg Error: {}", sum_error / 12. / num_matches as f64);
+        info!("{num_matches} Matches processed, Avg Error: {}", sum_error / 12. / num_matches as f64);
     }
 }
