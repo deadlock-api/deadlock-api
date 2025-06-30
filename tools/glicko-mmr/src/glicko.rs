@@ -157,13 +157,13 @@ fn update_glicko_rating(
         .chain(std::iter::once(new_rating_mu))
         .sum();
     let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
-    let mut error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
-    if won {
-        error += config.regression_bias;
-    } else {
-        error -= config.regression_bias;
-    }
+    let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
     new_rating_mu -= error * config.regression_rate;
+    if won {
+        new_rating_mu += config.regression_bias;
+    } else {
+        new_rating_mu -= config.regression_bias;
+    }
 
     (
         Glicko2HistoryEntry {
