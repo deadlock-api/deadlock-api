@@ -313,7 +313,7 @@ This endpoints lets you fetch multiple match metadata at once. The response is a
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 1req/s |
+| IP | 4req/s |
 | Key | - |
 | Global | 10req/s |
     "
@@ -329,7 +329,7 @@ pub(super) async fn bulk_metadata(
             &rate_limit_key,
             "match_metadata_bulk",
             &[
-                Quota::ip_limit(1, Duration::from_secs(4)),
+                Quota::ip_limit(4, Duration::from_secs(1)),
                 Quota::key_limit(10, Duration::from_secs(1)),
             ],
         )
