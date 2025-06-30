@@ -5,15 +5,14 @@ use chrono::Duration;
 use roots::SimpleConvergency;
 use std::collections::HashMap;
 use std::f64::consts::{E, PI};
-use tracing::debug;
 
 #[tracing::instrument(skip(player_ratings_before))]
 pub fn update_match(
     config: &Config,
     match_: &CHMatch,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
-) -> Vec<Glicko2HistoryEntry> {
-    let mut updates: Vec<Glicko2HistoryEntry> = Vec::with_capacity(36);
+) -> Vec<(Glicko2HistoryEntry, f64)> {
+    let mut updates: Vec<(Glicko2HistoryEntry, f64)> = Vec::with_capacity(36);
     for p in &match_.team0_players {
         updates.push(update_glicko_rating(
             config,
@@ -55,7 +54,7 @@ fn update_glicko_rating(
     avg_badge_player: u32,
     avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
-) -> Glicko2HistoryEntry {
+) -> (Glicko2HistoryEntry, f64) {
     let avg_mu_player = 6. * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
     let avg_mu_opponents = 6. * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.);
 
@@ -161,17 +160,19 @@ fn update_glicko_rating(
         .into();
     let avg_mu_team_pred = sum_badge_team_pred / mates.len() as f64;
     let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
-    debug!("True Mu: {avg_mu_player}, Pred Mu: {avg_mu_team_pred}, Error: {error}");
     let new_rating_mu = new_rating_mu - error * config.regression_rate;
 
-    Glicko2HistoryEntry {
-        account_id: player,
-        match_id: match_.match_id,
-        rating_mu: new_rating_mu,
-        rating_phi: new_rating_phi.min(config.rating_phi_unrated),
-        rating_sigma: new_rating_sigma.min(config.rating_sigma_unrated),
-        start_time: match_.start_time,
-    }
+    (
+        Glicko2HistoryEntry {
+            account_id: player,
+            match_id: match_.match_id,
+            rating_mu: new_rating_mu,
+            rating_phi: new_rating_phi.min(config.rating_phi_unrated),
+            rating_sigma: new_rating_sigma.min(config.rating_sigma_unrated),
+            start_time: match_.start_time,
+        },
+        error,
+    )
 }
 
 fn new_rating_phi(

@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
 use clap::Parser;
 use std::collections::HashMap;
-use tracing::info;
+use tracing::{debug, info};
 
 pub mod config;
 pub mod glicko;
@@ -54,12 +54,15 @@ async fn main() -> anyhow::Result<()> {
 
         let mut inserter = ch_client.insert("glicko")?;
         for match_ in matches_to_process {
-            let updates: Vec<Glicko2HistoryEntry> =
+            let updates: Vec<(Glicko2HistoryEntry, f64)> =
                 glicko::update_match(&config, &match_, &player_ratings_before);
-            for update in updates {
+            let mut sum_error = 0.0;
+            for (update, error) in updates {
+                sum_error += error;
                 inserter.write(&update).await?;
                 player_ratings_before.insert(update.account_id, update);
             }
+            debug!("Match {} Error: {}", match_.match_id, sum_error / 12.);
         }
         inserter.end().await?;
     }
