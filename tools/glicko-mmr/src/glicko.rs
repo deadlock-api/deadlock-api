@@ -146,7 +146,7 @@ fn update_glicko_rating(
                 .map(|(e, g)| g * (outcome - e))
                 .sum::<f64>();
 
-    let sum_badge_team_pred: f64 = mates
+    let sum_mu_team_pred: f64 = mates
         .iter()
         .filter(|p| *p != &player)
         .map(|p| {
@@ -154,11 +154,9 @@ fn update_glicko_rating(
                 .get(p)
                 .map_or(avg_mu_player, |e| e.rating_mu)
         })
-        .chain(std::iter::once(rating_mu))
-        .map(|mu| utils::rating_to_rank((mu + 6.) * 11. / 2.))
-        .sum::<u32>()
-        .into();
-    let avg_mu_team_pred = sum_badge_team_pred / mates.len() as f64;
+        .chain(std::iter::once(new_rating_mu))
+        .sum();
+    let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
     let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
     new_rating_mu -= error * config.regression_rate;
 
