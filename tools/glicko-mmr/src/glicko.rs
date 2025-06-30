@@ -139,7 +139,7 @@ fn update_glicko_rating(
     let new_rating_sigma = root.exp().sqrt();
     let new_rating_phi =
         1. / (1. / (phi.powi(2) + new_rating_sigma.powi(2)) + 1. / estimated_variance).sqrt();
-    let new_rating_mu = rating_mu
+    let mut new_rating_mu = rating_mu
         + new_rating_phi.powi(2)
             * opponents_eg
                 .iter()
@@ -160,13 +160,13 @@ fn update_glicko_rating(
         .into();
     let avg_mu_team_pred = sum_badge_team_pred / mates.len() as f64;
     let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
-    let new_rating_mu = new_rating_mu - error * config.regression_rate;
+    new_rating_mu -= error * config.regression_rate;
 
     (
         Glicko2HistoryEntry {
             account_id: player,
             match_id: match_.match_id,
-            rating_mu: new_rating_mu,
+            rating_mu: new_rating_mu.clamp(-8.6, 8.6),
             rating_phi: new_rating_phi.min(config.rating_phi_unrated),
             rating_sigma: new_rating_sigma.min(config.rating_sigma_unrated),
             start_time: match_.start_time,
