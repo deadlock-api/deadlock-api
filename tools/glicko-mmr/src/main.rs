@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
 use clap::Parser;
 use std::collections::HashMap;
-use tracing::{debug, info};
+use tracing::info;
 
 pub mod config;
 pub mod glicko;
@@ -65,6 +65,9 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         inserter.end().await?;
-        info!("{num_matches} Matches processed, Avg Error: {}", sum_error / 12. / num_matches as f64);
+        info!(
+            "{num_matches} Matches processed, Avg Error: {}",
+            sum_error / 12. / num_matches as f64
+        );
     }
 }
