@@ -55,3 +55,4 @@ rstest = "0.25.0"
 
 [patch.crates-io]
 axum-prometheus = { git = "https://github.com/Ptrskay3/axum-prometheus.git", rev = "2e8b39733efed5c5bbc6f710a42e045ae878fe15" }
+object_store = { git = "https://github.com/apache/arrow-rs-object-store.git", rev = "bbfdd704401cdfc8634a5534c9d17d2f479c6f11" }
