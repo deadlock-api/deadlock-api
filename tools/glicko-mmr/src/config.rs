@@ -21,4 +21,7 @@ pub struct Config {
 
     #[arg(long, env, default_value_t = 0.005)]
     pub regression_bias: f64,
+
+    #[arg(long, env, default_value_t = 3.)]
+    pub start_spread: f64,
 }
