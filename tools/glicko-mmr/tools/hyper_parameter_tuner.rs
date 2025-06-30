@@ -13,14 +13,12 @@ fn test_config(matches_to_process: &[CHMatch], config: &Config) -> anyhow::Resul
     let mut player_ratings_before = HashMap::new();
     for match_ in matches_to_process.iter() {
         let updates = glicko::update_match(config, match_, &player_ratings_before);
-        let mut match_error = 0.0;
         for (update, error) in updates {
-            match_error += error.abs();
+            squared_error += error * error;
             player_ratings_before.insert(update.account_id, update);
         }
-        squared_error += match_error * match_error / 12. / 12.;
     }
-    let mean_squared_error = squared_error / matches_to_process.len() as f64;
+    let mean_squared_error = squared_error / 12. / matches_to_process.len() as f64;
     Ok(mean_squared_error.sqrt())
 }
 
