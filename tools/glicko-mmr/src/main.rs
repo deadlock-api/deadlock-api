@@ -40,7 +40,8 @@ async fn main() -> anyhow::Result<()> {
         info!("Processing matches starting from {start_match_id}");
         let matches_to_process =
             CHMatch::query_matches_after(&ch_client, start_match_id, 100_000).await?;
-        if matches_to_process.is_empty() {
+        let num_matches = matches_to_process.len();
+        if num_matches == 0 {
             info!("No matches to process, sleeping...");
             interval.tick().await;
             continue;
@@ -52,18 +53,18 @@ async fn main() -> anyhow::Result<()> {
                 .map(|entry| (entry.account_id, entry))
                 .collect::<HashMap<_, _>>();
 
+        let mut sum_error = 0.0;
         let mut inserter = ch_client.insert("glicko")?;
         for match_ in matches_to_process {
             let updates: Vec<(Glicko2HistoryEntry, f64)> =
                 glicko::update_match(&config, &match_, &player_ratings_before);
-            let mut sum_error = 0.0;
             for (update, error) in updates {
                 sum_error += error;
                 inserter.write(&update).await?;
                 player_ratings_before.insert(update.account_id, update);
             }
-            debug!("Match {} Error: {}", match_.match_id, sum_error / 12.);
         }
         inserter.end().await?;
+        debug!("Matches {num_matches}, Avg Error: {}", sum_error / 12. / num_matches as f64);
     }
 }
