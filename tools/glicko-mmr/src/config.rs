@@ -10,12 +10,12 @@ pub struct Config {
     #[arg(long, env, default_value_t = 0.06)]
     pub rating_sigma_unrated: f64,
 
-    #[arg(long, env, default_value_t = Duration::days(7).num_seconds())]
+    #[arg(long, env, default_value_t = Duration::days(21).num_seconds())]
     pub rating_period_seconds: i64,
 
-    #[arg(long, env, default_value_t = 0.5)]
+    #[arg(long, env, default_value_t = 0.82)]
     pub tau: f64,
 
-    #[arg(long, env, default_value_t = 0.9)]
+    #[arg(long, env, default_value_t = 1.2)]
     pub regression_rate: f64,
 }

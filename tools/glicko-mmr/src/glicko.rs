@@ -12,7 +12,7 @@ pub fn update_match(
     match_: &CHMatch,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> Vec<(Glicko2HistoryEntry, f64)> {
-    let mut updates: Vec<(Glicko2HistoryEntry, f64)> = Vec::with_capacity(36);
+    let mut updates = Vec::with_capacity(12);
     for p in &match_.team0_players {
         updates.push(update_glicko_rating(
             config,

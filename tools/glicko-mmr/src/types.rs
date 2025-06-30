@@ -80,3 +80,45 @@ LIMIT ?
             .await
     }
 }
+
+pub async fn query_all_matches_after_cached(
+    ch_client: &Client,
+    match_id: u64,
+) -> anyhow::Result<Vec<CHMatch>> {
+    let cache_file = format!("data/matches_{match_id}.json");
+    if let Ok(result) = std::fs::read_to_string(&cache_file) {
+        return Ok(serde_json::from_str(&result)?);
+    }
+    let result = ch_client
+        .query(
+            r"
+SELECT match_id,
+       any(mi.start_time)                       as start_time,
+       groupArrayIf(account_id, team = 'Team0') as team0_players,
+       groupArrayIf(account_id, team = 'Team1') as team1_players,
+       any(assumeNotNull(average_badge_team0))  as avg_badge_team0,
+       any(assumeNotNull(average_badge_team1))  as avg_badge_team1,
+       any(winning_team)                        as winning_team
+FROM match_player FINAL
+    INNER JOIN match_info mi FINAL USING (match_id)
+WHERE match_mode IN ('Ranked', 'Unranked')
+  AND average_badge_team0 IS NOT NULL
+  AND average_badge_team1 IS NOT NULL
+  AND match_id >= ?
+  AND low_pri_pool != true
+GROUP BY match_id
+HAVING length(team0_players) = 6 AND length(team1_players) = 6
+ORDER BY match_id
+            ",
+        )
+        .bind(match_id)
+        .fetch_all()
+        .await;
+    match result {
+        Ok(result) => {
+            std::fs::write(&cache_file, serde_json::to_string(&result)?)?;
+            Ok(result)
+        }
+        Err(e) => Err(e.into()),
+    }
+}
