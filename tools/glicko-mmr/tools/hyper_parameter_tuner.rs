@@ -2,8 +2,10 @@ use chrono::Duration;
 use glicko_mmr::config::Config;
 use glicko_mmr::glicko;
 use glicko_mmr::types::{CHMatch, query_all_matches_after_cached};
+use rand::prelude::*;
+use rayon::prelude::*;
 use std::collections::HashMap;
-use tpe::TpeOptimizer;
+use std::sync::RwLock;
 use tracing::info;
 
 fn test_config(matches_to_process: &[CHMatch], config: &Config) -> anyhow::Result<f64> {
@@ -22,6 +24,17 @@ fn test_config(matches_to_process: &[CHMatch], config: &Config) -> anyhow::Resul
     Ok(mean_squared_error.sqrt())
 }
 
+fn new_random_config(rng: &mut ThreadRng) -> Config {
+    Config {
+        rating_phi_unrated: rng.random_range(1.0..3.0),
+        rating_sigma_unrated: rng.random_range(0.01..0.1),
+        rating_period_seconds: Duration::days(rng.random_range(1..=30)).num_seconds(),
+        tau: rng.random_range(0.3..1.2),
+        regression_rate: rng.random_range(0.8..1.2),
+        regression_bias: rng.random_range(0.0..0.2),
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     common::init_tracing();
@@ -34,32 +47,21 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow::anyhow!("No matches to process"));
     }
 
-    let mut min_error = f64::MAX;
+    let min_error = RwLock::new(f64::MAX);
     let mut rng = rand::rng();
-    let mut optim_tau = TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(0.3, 2.)?);
-    let mut optim_period_days = TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(1., 30.)?);
-    let mut optim_regression_rate =
-        TpeOptimizer::new(tpe::parzen_estimator(), tpe::range(0.1, 1.2)?);
-    for epoch in 1..=1000 {
-        let config = Config {
-            rating_phi_unrated: 2.,
-            rating_sigma_unrated: 0.06,
-            rating_period_seconds: Duration::days(optim_period_days.ask(&mut rng)? as i64)
-                .num_seconds(),
-            tau: optim_tau.ask(&mut rng)?,
-            regression_rate: optim_regression_rate.ask(&mut rng)?,
-        };
-        let error = test_config(&matches_to_process, &config).unwrap_or(f64::MAX);
-        optim_tau.tell(config.tau, error)?;
-        optim_period_days.tell(config.rating_period_seconds as f64 / 86400., error)?;
-        optim_regression_rate.tell(config.regression_rate, error)?;
-        if error < min_error {
-            min_error = error;
-            info!("[{epoch:04}] Error: {error:.5} NEW BEST {:?}", config);
-        } else {
-            info!("[{epoch:04}] Error: {error:.5} {:?}", config);
-        }
-    }
+    (0..1000)
+        .map(|_| new_random_config(&mut rng))
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(|config| (config, test_config(&matches_to_process, &config).unwrap()))
+        .for_each(|(config, error)| {
+            if error < *min_error.read().unwrap() {
+                *min_error.write().unwrap() = error;
+                info!("NEW BEST Error: {error:.5} {:?}", config);
+            } else {
+                info!("Error: {error:.5} {:?}", config);
+            }
+        });
 
     Ok(())
 }
