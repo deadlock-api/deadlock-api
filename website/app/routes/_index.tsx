@@ -14,24 +14,15 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  const { data } = useQuery<APIInfo>({
-    queryKey: ["api-info"],
-    queryFn: () => fetch(new URL("/v1/info", API_ORIGIN)).then((res) => res.json()),
-    staleTime: 60 * 60 * 1000, // 1 hour
-  });
-
-  const totalFetchedMatches = useMemo(() => data?.table_sizes?.match_info?.rows, [data]);
-
   return (
     <div className="container mx-auto space-y-12">
       <section className="text-center">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">Deadlock API</h1>
-        {data && (
-          <p className="text-lg text-muted-foreground mb-6">
-            Fetched Matches: {totalFetchedMatches?.toLocaleString()} (Last 24h:{" "}
-            {data?.fetched_matches_per_day?.toLocaleString()})
-          </p>
-        )}
+        <div className="flex flex-nowrap justify-between gap-4 max-w-sm mx-auto">
+          <h2 className="text-primary text-lg font-bold mb-2">Open Source</h2>
+          <h2 className="text-primary text-lg font-bold mb-2">Open Data</h2>
+          <h2 className="text-primary text-lg font-bold mb-2">Free to use</h2>
+        </div>
         <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
           The Deadlock API provides a comprehensive set of endpoints to access game data, including match history,
           player statistics, and more. Whether you are a developer looking to integrate game data into your application
