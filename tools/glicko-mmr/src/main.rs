@@ -53,13 +53,13 @@ async fn main() -> anyhow::Result<()> {
                 .map(|entry| (entry.account_id, entry))
                 .collect::<HashMap<_, _>>();
 
-        let mut sum_error = 0.0;
+        let mut squared_error = 0.0;
         let mut inserter = ch_client.insert("glicko")?;
         for match_ in matches_to_process {
             let updates: Vec<(Glicko2HistoryEntry, f64)> =
                 glicko::update_match(&config, &match_, &player_ratings_before);
             for (update, error) in updates {
-                sum_error += error.abs();
+                squared_error += error * error;
                 inserter.write(&update).await?;
                 player_ratings_before.insert(update.account_id, update);
             }
@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
         inserter.end().await?;
         info!(
             "{num_matches} Matches processed, Avg Error: {}",
-            sum_error / 12. / num_matches as f64
+            (squared_error / 12. / num_matches as f64).sqrt()
         );
     }
 }
