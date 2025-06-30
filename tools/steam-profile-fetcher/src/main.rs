@@ -87,7 +87,10 @@ async fn fetch_and_update_profiles(
         .collect_vec();
     match delete_profiles(ch_client, &unavailable_profiles).await {
         Ok(()) => {
-            info!("Deleted {} unavailable profiles", unavailable_profiles.len());
+            info!(
+                "Deleted {} unavailable profiles",
+                unavailable_profiles.len()
+            );
             counter!("steam_profile_fetcher.deleted_profiles.success")
                 .increment(unavailable_profiles.len() as u64);
         }
