@@ -55,10 +55,9 @@ fn update_glicko_rating(
     avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> (Glicko2HistoryEntry, f64) {
-    let avg_mu_player =
-        config.start_spread * utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.;
+    let avg_mu_player = config.mu_spread * utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.;
     let avg_mu_opponents =
-        config.start_spread * utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.;
+        config.mu_spread * utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.;
 
     // Get current rating mu
     let rating_mu = player_ratings_before
@@ -161,11 +160,6 @@ fn update_glicko_rating(
     let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
     let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
     new_rating_mu -= error * config.regression_rate;
-    if won {
-        new_rating_mu += config.regression_bias;
-    } else {
-        new_rating_mu -= config.regression_bias;
-    }
 
     (
         Glicko2HistoryEntry {

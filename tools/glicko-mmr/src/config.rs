@@ -13,15 +13,12 @@ pub struct Config {
     #[arg(long, env, default_value_t = Duration::days(7).num_seconds())]
     pub rating_period_seconds: i64,
 
-    #[arg(long, env, default_value_t = 0.8)]
+    #[arg(long, env, default_value_t = 0.6)]
     pub tau: f64,
 
     #[arg(long, env, default_value_t = 1.)]
     pub regression_rate: f64,
 
-    #[arg(long, env, default_value_t = 0.005)]
-    pub regression_bias: f64,
-
-    #[arg(long, env, default_value_t = 3.)]
-    pub start_spread: f64,
+    #[arg(long, env, default_value_t = 2.)]
+    pub mu_spread: f64,
 }
