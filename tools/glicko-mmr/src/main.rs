@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
             let updates: Vec<(Glicko2HistoryEntry, f64)> =
                 glicko::update_match(&config, &match_, &player_ratings_before);
             for (update, error) in updates {
-                sum_error += error;
+                sum_error += error.abs();
                 inserter.write(&update).await?;
                 player_ratings_before.insert(update.account_id, update);
             }
