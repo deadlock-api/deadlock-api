@@ -18,11 +18,35 @@ export default function Index() {
     <div className="container mx-auto space-y-12">
       <section className="text-center">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">Deadlock API</h1>
-        <div className="flex flex-nowrap justify-between gap-4 max-w-sm mx-auto">
-          <h2 className="text-primary text-lg font-bold mb-2">Open Source</h2>
-          <h2 className="text-primary text-lg font-bold mb-2">Open Data</h2>
-          <h2 className="text-primary text-lg font-bold mb-2">Free to use</h2>
-        </div>
+        <h2 className="flex flex-nowrap justify-between gap-4 max-w-sm mx-auto mb-2">
+          <a
+            href="https://github.com/deadlock-api/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
+            title="Open Source | Visit our GitHub Organization"
+          >
+            Open Source
+          </a>
+          <a
+            href="https://minio.deadlock-api.com/browser/db-snapshot/public%2F"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
+            title="Open Data | Daily Data Dumps provided"
+          >
+            Open Data
+          </a>
+          <a
+            href="https://www.patreon.com/user?u=68961896"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
+            title="Free to use | Based on Sponsoring"
+          >
+            Free to use
+          </a>
+        </h2>
         <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
           The Deadlock API provides a comprehensive set of endpoints to access game data, including match history,
           player statistics, and more. Whether you are a developer looking to integrate game data into your application
