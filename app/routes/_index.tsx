@@ -35,7 +35,7 @@ export default function Index() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Assets API</CardTitle>
+              <CardTitle className="text-center">Assets API</CardTitle>
             </CardHeader>
             <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
@@ -50,7 +50,7 @@ export default function Index() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Game Data API</CardTitle>
+              <CardTitle className="text-center">Game Data API</CardTitle>
             </CardHeader>
             <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
@@ -65,7 +65,7 @@ export default function Index() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Database Dumps</CardTitle>
+              <CardTitle className="text-center">Database Dumps</CardTitle>
             </CardHeader>
             <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
@@ -85,7 +85,7 @@ export default function Index() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Stream Kit</CardTitle>
+              <CardTitle className="text-center">Stream Kit</CardTitle>
             </CardHeader>
             <CardContent className="min-h-16">
               <p className="text-sm text-muted-foreground">
