@@ -158,6 +158,7 @@ pub struct ItemStats {
     players: u64,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: &ItemStatsQuery) -> String {
     /* ---------- match_info filters ---------- */
     let mut info_filters = Vec::new();

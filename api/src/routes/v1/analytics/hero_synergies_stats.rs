@@ -110,6 +110,7 @@ pub struct HeroSynergyStats {
     pub creeps2: u64,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroSynergyStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {

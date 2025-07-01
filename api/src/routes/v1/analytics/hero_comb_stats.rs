@@ -94,6 +94,7 @@ impl AddAssign for HeroCombStats {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroCombStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {

@@ -1,3 +1,6 @@
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::large_stack_arrays)]
+
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
@@ -107,6 +110,7 @@ pub(super) struct BulkMatchMetadataQuery {
     limit: u32,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if query.include_info {

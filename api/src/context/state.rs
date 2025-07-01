@@ -54,6 +54,7 @@ pub(crate) struct AppState {
 }
 
 impl AppState {
+    #[allow(clippy::too_many_lines)]
     pub(crate) async fn from_env() -> Result<AppState, AppStateError> {
         let config: Config = envy::from_env()?;
 

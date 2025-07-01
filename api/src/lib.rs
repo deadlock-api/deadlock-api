@@ -8,9 +8,6 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_possible_wrap)]
 #![allow(clippy::cast_precision_loss)]
-#![allow(clippy::too_many_lines)]
-#![allow(clippy::large_stack_arrays)]
-#![allow(clippy::struct_excessive_bools)]
 #![allow(clippy::needless_for_each)]
 
 mod api_doc;
