@@ -115,7 +115,7 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     decompressor.read_to_end(&mut buf).await?;
     let match_data = CMsgMatchMetaData::decode(buf.as_slice())?
         .match_details
-        .ok_or_else(|| APIError::internal("Failed to parse match metadata: No data".to_string()))?;
+        .ok_or_else(|| APIError::internal("Failed to parse match metadata: No data"))?;
     Ok(CMsgMatchMetaDataContents::decode(match_data.as_slice())?)
 }
 

@@ -28,7 +28,7 @@ async fn get_party_match_id(
         .await
         .map_err(|e| {
             warn!("Failed to get match id from redis: {e}");
-            APIError::status_msg(StatusCode::NOT_FOUND, "Can't find match id".to_string())
+            APIError::status_msg(StatusCode::NOT_FOUND, "Can't find match id")
         })?;
     match_id.parse::<u64>().map_err(|_| {
         warn!("Failed to parse match id from redis");
