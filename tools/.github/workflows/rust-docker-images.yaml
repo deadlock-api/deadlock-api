@@ -48,6 +48,18 @@ jobs:
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
 
+  deps:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update Rust toolchain to stable
+        run: |
+          rustup override set stable
+          rustup update stable
+      - name: Machete
+        uses: bnjbvr/cargo-machete@ba1bcd4047ee4a763273c5d2d47ba7a8f8a085a8
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
