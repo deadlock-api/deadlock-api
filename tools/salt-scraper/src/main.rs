@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
                                    FROM active_matches
                                    WHERE match_mode IN ('Ranked', 'Unranked')
                                      AND game_mode = 'Normal'
-                                     AND start_time BETWEEN now() - INTERVAL 1 WEEK AND now() - INTERVAL 2 HOUR
+                                     AND start_time BETWEEN now() - INTERVAL 2 WEEK AND now() - INTERVAL 2 HOUR
                                      AND match_id NOT IN t_known_matches)
         SELECT match_id
         FROM t_missing_matches
