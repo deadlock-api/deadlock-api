@@ -7,7 +7,7 @@ use anyhow::bail;
 use clickhouse::Client;
 use futures::StreamExt;
 use metrics::counter;
-use models::{MatchIdQueryResult, MatchSalt};
+use models::{MatchSalt};
 use std::sync::LazyLock;
 use std::time::Duration;
 use tracing::{debug, info, instrument, warn};
@@ -60,8 +60,7 @@ async fn main() -> anyhow::Result<()> {
         ORDER BY match_id DESC
         LIMIT 100
         ";
-        let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
-        let recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
+        let recent_matches: Vec<u64> = ch_client.query(query).fetch_all().await?;
         if recent_matches.is_empty() {
             info!("No new matches to fetch, sleeping 60s...");
             tokio::time::sleep(Duration::from_secs(60)).await;

@@ -1,11 +1,6 @@
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 
-#[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
-pub(crate) struct MatchIdQueryResult {
-    pub(crate) match_id: u64,
-}
-
 #[derive(Serialize, Deserialize, Debug, Row)]
 pub(crate) struct MatchSalt {
     pub(crate) match_id: u64,
