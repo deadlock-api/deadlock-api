@@ -2,10 +2,12 @@
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
 #![deny(clippy::pedantic)]
+#![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
+use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 use anyhow::bail;
 use async_compression::tokio::bufread::BzDecoder;
 use futures::StreamExt;
@@ -224,6 +226,14 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
     }
     match_info_insert.end().await?;
     match_player_insert.end().await?;
+
+    let mut player_match_history_insert = client.insert("player_match_history")?;
+    for p in &match_info.players {
+        if let Some(entry) = PlayerMatchHistoryEntry::from_info_and_player(match_info, p) {
+            player_match_history_insert.write(&entry).await?;
+        }
+    }
+    player_match_history_insert.end().await?;
     Ok(())
 }
 
