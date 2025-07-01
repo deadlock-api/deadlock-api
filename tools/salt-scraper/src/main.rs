@@ -7,7 +7,7 @@ use anyhow::bail;
 use clickhouse::Client;
 use futures::StreamExt;
 use metrics::counter;
-use models::{MatchSalt};
+use models::MatchSalt;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tracing::{debug, info, instrument, warn};
