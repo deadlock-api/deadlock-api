@@ -119,18 +119,6 @@ WITH players AS (SELECT DISTINCT account_id
 SELECT account_id as id, NULL AS max_match_id
 FROM players
 ORDER BY rand()
-
-UNION ALL
-
-SELECT account_id AS id, toNullable(max(match_id)) AS max_match_id
-FROM match_player
-WHERE account_id > 0
-  AND match_id > 31247321
-  AND (match_id, account_id) NOT IN (SELECT match_id, account_id FROM player_match_history WHERE match_id > 31247321)
-GROUP BY account_id
-HAVING COUNT(DISTINCT match_id) > 50
-ORDER BY COUNT(DISTINCT match_id) DESC
-LIMIT 1000
     ",
         )
         .fetch_all()
