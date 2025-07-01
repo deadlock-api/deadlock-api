@@ -7,7 +7,7 @@ repository = "https://github.com/deadlock-api/deadlock-api-rust"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.12.21", features = ["json"] }
+reqwest = { version = "0.12.22", features = ["json"] }
 tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 redis = { version = "0.32.3", default-features = false, features = ["tokio-comp"] }
