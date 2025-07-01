@@ -58,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
         SELECT match_id
         FROM t_missing_matches
         ORDER BY match_id DESC
+        LIMIT 100
         ";
         let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
         let recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
