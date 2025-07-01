@@ -21,7 +21,7 @@ use valveprotos::deadlock::{
     EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
 };
 
-const FIRST_MATCH_DECEMBER_2024: u64 = 30742540;
+const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
 
 #[derive(Deserialize, IntoParams, Default)]
 pub(super) struct SaltsQuery {
