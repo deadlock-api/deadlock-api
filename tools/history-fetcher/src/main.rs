@@ -7,22 +7,14 @@
 
 mod types;
 
-use crate::types::{PlayerMatchHistory, PlayerMatchHistoryEntry};
-use clickhouse::Row;
+use crate::types::PlayerMatchHistoryEntry;
 use metrics::{counter, gauge};
-use serde::Deserialize;
 use std::time::Duration;
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
 };
-
-#[derive(Debug, Row, Deserialize)]
-struct Account {
-    id: u32,
-    max_match_id: Option<u64>,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -50,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
                 continue;
             }
         };
-        for account in &accounts {
+        for account in accounts {
             interval.tick().await;
             update_account(&ch_client, &http_client, account).await;
             gauge!("history_fetcher.fetched_accounts").decrement(1);
@@ -62,16 +54,13 @@ async fn main() -> anyhow::Result<()> {
 async fn update_account(
     ch_client: &clickhouse::Client,
     http_client: &reqwest::Client,
-    account: &Account,
+    account: u32,
 ) {
     let match_history = match fetch_account_match_history(http_client, account).await {
         Ok((_, match_history)) => match_history,
         Err(e) => {
             counter!("history_fetcher.fetch_match_history.failure").increment(1);
-            error!(
-                "Failed to fetch match history for account {}, error: {:?}, skipping",
-                account.id, e
-            );
+            error!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
             return;
         }
     };
@@ -89,17 +78,16 @@ async fn update_account(
     }
     let match_history = match_history.matches;
     if match_history.is_empty() {
-        debug!("No new matches {}", account.id);
+        debug!("No new matches {account}");
         return;
     }
-    let match_history: PlayerMatchHistory = match_history
+    let match_history = match_history
         .into_iter()
-        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account.id, r))
-        .collect();
-    match insert_match_history(ch_client, &match_history).await {
+        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r));
+    match insert_match_history(ch_client, match_history).await {
         Ok(()) => {
             counter!("history_fetcher.insert_match_history.success").increment(1);
-            info!("Inserted new matches {}", match_history.len(),);
+            info!("Inserted new matches");
         }
         Err(e) => {
             counter!("history_fetcher.insert_match_history.failure").increment(1);
@@ -108,7 +96,7 @@ async fn update_account(
     }
 }
 
-async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Vec<Account>> {
+async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Vec<u32>> {
     ch_client
         .query(
             r"
@@ -116,7 +104,7 @@ WITH players AS (SELECT DISTINCT account_id
                  FROM match_player
                  ORDER BY match_id DESC
                  LIMIT 5000)
-SELECT account_id as id, NULL AS max_match_id
+SELECT account_id
 FROM players
 ORDER BY rand()
     ",
@@ -127,11 +115,10 @@ ORDER BY rand()
 
 async fn fetch_account_match_history(
     http_client: &reqwest::Client,
-    account: &Account,
+    account: u32,
 ) -> anyhow::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
     let msg = CMsgClientToGcGetMatchHistory {
-        account_id: account.id.into(),
-        continue_cursor: account.max_match_id.map(|a| a + 1),
+        account_id: account.into(),
         ..Default::default()
     };
     common::call_steam_proxy(
@@ -148,11 +135,11 @@ async fn fetch_account_match_history(
 
 async fn insert_match_history(
     ch_client: &clickhouse::Client,
-    match_history: &PlayerMatchHistory,
+    match_history: impl IntoIterator<Item = PlayerMatchHistoryEntry>,
 ) -> clickhouse::error::Result<()> {
     let mut inserter = ch_client.insert("player_match_history")?;
     for entry in match_history {
-        inserter.write(entry).await?;
+        inserter.write(&entry).await?;
     }
     inserter.end().await
 }
