@@ -190,7 +190,7 @@ fn new_rating_phi(
 ) -> f64 {
     let rating_period_fraction =
         time_since_last_match.num_seconds() as f64 / config.rating_period_seconds as f64;
-    (rating_phi.powi(2) + rating_sigma.powi(2) * rating_period_fraction).sqrt()
+    (rating_phi.powi(2) + rating_sigma.powi(2) * rating_period_fraction.min(1.)).sqrt()
 }
 
 fn e(mu: f64, opponent_mu: f64, opponent_phi: f64) -> f64 {
