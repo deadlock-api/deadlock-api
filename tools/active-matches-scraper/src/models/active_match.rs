@@ -27,7 +27,7 @@ pub(crate) struct ActiveMatch {
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct ActiveMatchPlayer {
-    pub account_id: u64,
+    pub account_id: u32,
     pub team: u8,
     pub abandoned: Option<bool>,
     pub hero_id: u8,
@@ -39,7 +39,7 @@ pub(crate) struct ClickHouseActiveMatch {
     pub winning_team: u8,
     pub match_id: u64,
     #[serde(rename = "players.account_id")]
-    pub players_account_id: Vec<u64>,
+    pub players_account_id: Vec<u32>,
     #[serde(rename = "players.team")]
     pub players_team: Vec<u8>,
     #[serde(rename = "players.abandoned")]

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS active_matches
     winning_team UInt8,
     match_id UInt64,
     players Nested (
-        account_id UInt64,
+        account_id UInt32,
         team UInt8,
         abandoned bool,
         hero_id UInt8
