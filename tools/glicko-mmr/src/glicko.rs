@@ -55,27 +55,26 @@ fn update_glicko_rating(
     avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> (Glicko2HistoryEntry, f64) {
-    let avg_mu_player =
-        config.mu_spread * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
+    let avg_mu_team = config.mu_spread * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
     let avg_mu_opponents =
         config.mu_spread * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.);
 
     // Get current rating mu
     let rating_mu = player_ratings_before
         .get(&player)
-        .map_or(avg_mu_player, |entry| entry.rating_mu);
+        .map_or(avg_mu_team, |e| e.rating_mu);
     let phi = match player_ratings_before.get(&player) {
-        Some(entry) => new_rating_phi(
+        Some(e) => new_rating_phi(
             config,
-            entry.rating_phi,
-            entry.rating_sigma,
-            match_.start_time - entry.start_time,
+            e.rating_phi,
+            e.rating_sigma,
+            match_.start_time - e.start_time,
         ),
         None => config.rating_phi_unrated, // If the player has no rating history, use the default rating mu
     };
     let sigma = player_ratings_before
         .get(&player)
-        .map_or(config.rating_sigma_unrated, |entry| entry.rating_sigma);
+        .map_or(config.rating_sigma_unrated, |e| e.rating_sigma);
 
     // Get opponent values
     let opponents_eg = opponents
@@ -139,15 +138,16 @@ fn update_glicko_rating(
 
     let root = roots::find_root_regula_falsi(a, b, &f, &mut convergency).unwrap();
     let new_rating_sigma = root.exp().sqrt();
-    let new_rating_phi =
-        1. / (1. / (phi.powi(2) + new_rating_sigma.powi(2)) + 1. / estimated_variance).sqrt();
-    let glicko_mu_update = new_rating_phi.powi(2)
-        * opponents_eg
-            .iter()
-            .map(|(e, g)| g * (outcome - e))
-            .sum::<f64>();
-
-    let mut new_rating_mu = rating_mu + glicko_mu_update;
+    let new_rating_phi = ((phi.powi(2) + new_rating_sigma.powi(2)).powi(-1)
+        + estimated_variance.powi(-1))
+    .sqrt()
+    .powi(-1);
+    let mut new_rating_mu = rating_mu
+        + new_rating_phi.powi(2)
+            * opponents_eg
+                .iter()
+                .map(|(e, g)| g * (outcome - e))
+                .sum::<f64>();
 
     let sum_mu_team_pred: f64 = mates
         .iter()
@@ -155,12 +155,12 @@ fn update_glicko_rating(
         .map(|p| {
             player_ratings_before
                 .get(p)
-                .map_or(avg_mu_player, |e| e.rating_mu)
+                .map_or(avg_mu_team, |e| e.rating_mu)
         })
         .chain(std::iter::once(new_rating_mu))
         .sum();
     let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
-    let error = (avg_mu_player - avg_mu_team_pred) / mates.len() as f64;
+    let error = (avg_mu_team - avg_mu_team_pred) / mates.len() as f64;
 
     // Only do regression if not ethernus 6, as there are some weird behaviours
     if avg_badge_player < 116 && avg_badge_opponents < 116 {
@@ -192,11 +192,11 @@ fn new_rating_phi(
 }
 
 fn e(mu: f64, opponent_mu: f64, opponent_phi: f64) -> f64 {
-    let denominator = 1.0 + E.powf(-g(opponent_phi) * (mu - opponent_mu));
-    1.0 / denominator
+    (1.0 + E.powf(-g(opponent_phi) * (mu - opponent_mu))).powi(-1)
 }
 
 fn g(opponent_phi: f64) -> f64 {
-    let denominator = (1.0 + (3.0 / PI.powi(2)) * opponent_phi.powi(2)).sqrt();
-    1.0 / denominator
+    (1.0 + (3.0 / PI.powi(2)) * opponent_phi.powi(2))
+        .sqrt()
+        .powi(-1)
 }
