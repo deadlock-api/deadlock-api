@@ -189,15 +189,6 @@ pub(super) struct ClickhouseSalts {
     pub(super) cluster_id: Option<u32>,
 }
 
-impl ClickhouseSalts {
-    pub(super) fn has_metadata_salt(&self) -> bool {
-        self.cluster_id.is_some() && self.metadata_salt.unwrap_or_default() != 0
-    }
-    pub(super) fn has_replay_salt(&self) -> bool {
-        self.cluster_id.is_some() && self.replay_salt.unwrap_or_default() != 0
-    }
-}
-
 impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {
     fn from(value: ClickhouseSalts) -> Self {
         Self {

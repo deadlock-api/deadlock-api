@@ -8,29 +8,20 @@ use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::time::Duration;
 use tracing::{debug, warn};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
     EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
 };
 
 const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
-
-#[derive(Deserialize, IntoParams, Default)]
-pub(super) struct SaltsQuery {
-    /// Whether the match needs a demo file or not
-    ///
-    /// Does not work for old matches, where Valve does not provide this information
-    #[serde(default)]
-    needs_demo: bool,
-}
 
 #[derive(Serialize, ToSchema)]
 struct MatchSaltsResponse {
@@ -66,12 +57,12 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
 }
 
 #[cached(
-    ty = "TimedCache<(u64, bool), CMsgClientToGcGetMatchMetaDataResponse>",
+    ty = "TimedCache<u64, CMsgClientToGcGetMatchMetaDataResponse>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
-    convert = "{ (match_id, needs_demo) }",
+    convert = "{ match_id }",
     sync_writes = "by_key",
-    key = "(u64, bool)"
+    key = "u64"
 )]
 pub(super) async fn fetch_match_salts(
     rate_limit_client: &RateLimitClient,
@@ -79,7 +70,6 @@ pub(super) async fn fetch_match_salts(
     steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
     match_id: u64,
-    needs_demo: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     if match_id < FIRST_MATCH_DECEMBER_2024 {
         return Err(APIError::status_msg(
@@ -94,10 +84,7 @@ pub(super) async fn fetch_match_salts(
         .bind(match_id)
         .fetch_one::<ClickhouseSalts>()
         .await;
-    if let Ok(salts) = salts
-        && salts.has_metadata_salt()
-        && (!needs_demo || salts.has_replay_salt())
-    {
+    if let Ok(salts) = salts {
         debug!("Match salts found in Clickhouse");
         return Ok(salts.into());
     }
@@ -113,7 +100,9 @@ pub(super) async fn fetch_match_salts(
         warn!("Blocking request for match salts for match {match_id} with metadata");
         return Err(APIError::status_msg(
             reqwest::StatusCode::NOT_FOUND,
-            format!("Match salts for match {match_id} not found"),
+            format!(
+                "Match salts for match {match_id} not wont be fetched, as it has metadata already"
+            ),
         ));
     }
 
@@ -174,7 +163,7 @@ pub(super) async fn fetch_match_salts(
 #[utoipa::path(
     get,
     path = "/{match_id}/salts",
-    params(MatchIdQuery, SaltsQuery),
+    params(MatchIdQuery),
     responses(
         (status = OK, body = MatchSaltsResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -198,7 +187,6 @@ This endpoints returns salts that can be used to fetch metadata and demofile for
 )]
 pub(super) async fn salts(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    Query(SaltsQuery { needs_demo }): Query<SaltsQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -209,7 +197,6 @@ pub(super) async fn salts(
             &state.steam_client,
             &state.ch_client,
             match_id,
-            needs_demo,
         )
     })
     .retries(3)

@@ -103,7 +103,6 @@ async fn fetch_match_metadata_raw(
         steam_client,
         ch_client,
         match_id,
-        false,
     )
     .await?;
     Ok(steam_client.fetch_metadata_file(match_id, salts).await?)
