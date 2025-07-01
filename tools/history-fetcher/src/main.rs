@@ -100,13 +100,34 @@ async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Re
     ch_client
         .query(
             r"
-WITH players AS (SELECT DISTINCT account_id
-                 FROM match_player
-                 ORDER BY match_id DESC
-                 LIMIT 5000)
-SELECT account_id
-FROM players
-ORDER BY rand()
+WITH t_matches AS (SELECT match_id
+                   FROM match_info
+                   WHERE start_time BETWEEN now() - INTERVAL 2 HOUR AND now() - INTERVAL 1 HOUR),
+     t_player_histories AS (SELECT account_id, match_id
+                            FROM player_match_history
+                            WHERE start_time BETWEEN now() - INTERVAL 2 HOUR AND now() - INTERVAL 1 HOUR
+                              AND match_id NOT in t_matches)
+SELECT DISTINCT account_id
+FROM active_matches
+         ARRAY JOIN players.account_id as account_id
+WHERE account_id > 0
+  AND match_mode IN ('Unranked', 'Ranked')
+  AND game_mode = 'Normal'
+  AND start_time BETWEEN now() - INTERVAL 2 HOUR AND now() - INTERVAL 1 HOUR
+  AND match_id NOT IN t_matches
+  AND (account_id, match_id) NOT IN t_player_histories
+ORDER BY match_id DESC
+
+UNION
+DISTINCT
+
+WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time < now() - INTERVAL 40 MINUTE)
+SELECT DISTINCT account_id
+FROM match_player
+WHERE match_id IN t_matches
+  AND account_id > 0
+ORDER BY match_id DESC
+LIMIT 1000
     ",
         )
         .fetch_all()
