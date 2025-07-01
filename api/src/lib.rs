@@ -11,7 +11,6 @@
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::large_stack_arrays)]
 #![allow(clippy::struct_excessive_bools)]
-#![allow(clippy::trivially_copy_pass_by_ref)]
 #![allow(clippy::needless_for_each)]
 
 mod api_doc;

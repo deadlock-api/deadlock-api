@@ -65,35 +65,25 @@ pub enum BucketQuery {
 }
 
 impl BucketQuery {
-    pub(super) fn get_select_clause(&self) -> String {
+    pub(super) fn get_select_clause(self) -> &'static str {
         match self {
-            Self::NoBucket => "NULL".to_string(),
-            Self::Hero => "toNullable(hero_id)".to_string(),
-            Self::Team => "toNullable(toUInt32(if(team = 'Team0', 0, 1)))".to_string(),
-            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
-            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
-            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))".to_string(),
-            Self::StartTimeMonth => {
-                "toNullable(toDateTime(toStartOfMonth(start_time)))".to_string()
-            }
-            Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))".to_string(),
+            Self::NoBucket => "NULL",
+            Self::Hero => "toNullable(hero_id)",
+            Self::Team => "toNullable(toUInt32(if(team = 'Team0', 0, 1)))",
+            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))",
+            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))",
+            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))",
+            Self::StartTimeMonth => "toNullable(toDateTime(toStartOfMonth(start_time)))",
+            Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))",
             Self::GameTimeNormalizedPercentage => {
-                "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))".to_string()
+                "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))"
             }
-            Self::NetWorthBy1000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 1000) * 1000))".to_string()
-            }
-            Self::NetWorthBy2000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 2000) * 2000))".to_string()
-            }
-            Self::NetWorthBy3000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 3000) * 3000))".to_string()
-            }
-            Self::NetWorthBy5000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 5000) * 5000))".to_string()
-            }
+            Self::NetWorthBy1000 => "toNullable(toUInt32(floor(net_worth_at_buy / 1000) * 1000))",
+            Self::NetWorthBy2000 => "toNullable(toUInt32(floor(net_worth_at_buy / 2000) * 2000))",
+            Self::NetWorthBy3000 => "toNullable(toUInt32(floor(net_worth_at_buy / 3000) * 3000))",
+            Self::NetWorthBy5000 => "toNullable(toUInt32(floor(net_worth_at_buy / 5000) * 5000))",
             Self::NetWorthBy10000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 10000) * 10000))".to_string()
+                "toNullable(toUInt32(floor(net_worth_at_buy / 10000) * 10000))"
             }
         }
     }

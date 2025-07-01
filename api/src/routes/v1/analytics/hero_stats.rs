@@ -33,15 +33,13 @@ pub enum BucketQuery {
 }
 
 impl BucketQuery {
-    pub(super) fn get_select_clause(&self) -> String {
+    pub(super) fn get_select_clause(self) -> &'static str {
         match self {
-            Self::NoBucket => "NULL".to_string(),
-            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))".to_string(),
-            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))".to_string(),
-            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))".to_string(),
-            Self::StartTimeMonth => {
-                "toNullable(toDateTime(toStartOfMonth(start_time)))".to_string()
-            }
+            Self::NoBucket => "NULL",
+            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))",
+            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))",
+            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))",
+            Self::StartTimeMonth => "toNullable(toDateTime(toStartOfMonth(start_time)))",
         }
     }
 }

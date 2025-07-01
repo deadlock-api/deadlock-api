@@ -113,7 +113,7 @@ impl Variable {
         self.into()
     }
 
-    pub(super) fn get_category(&self) -> VariableCategory {
+    pub(super) fn get_category(self) -> VariableCategory {
         match self {
             Self::LatestPatchnotesLink
             | Self::LatestPatchnotesTitle
@@ -163,7 +163,7 @@ impl Variable {
         }
     }
 
-    pub(super) fn get_description(&self) -> &str {
+    pub(super) fn get_description(self) -> &'static str {
         match self {
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
