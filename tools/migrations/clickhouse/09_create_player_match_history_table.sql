@@ -20,7 +20,8 @@ create table if not exists player_match_history
  match_result          UInt32 comment 'the winning team id',
  objectives_mask_team0 UInt32,
  objectives_mask_team1 UInt32,
- created_at            Nullable(DateTime) default now(),
+ source                Enum8('history_fetcher' = 1, 'match_player' = 2) default 'history_fetcher',
+ created_at            Nullable(DateTime)                               default now(),
 
  INDEX idx_match_id match_id TYPE minmax
 )
