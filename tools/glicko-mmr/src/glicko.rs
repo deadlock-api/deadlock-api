@@ -55,9 +55,9 @@ fn update_glicko_rating(
     avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> (Glicko2HistoryEntry, f64) {
-    let avg_mu_player = config.mu_spread * utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.;
+    let avg_mu_player = config.mu_spread * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
     let avg_mu_opponents =
-        config.mu_spread * utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.;
+        config.mu_spread * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.);
 
     // Get current rating mu
     let rating_mu = player_ratings_before
@@ -140,12 +140,11 @@ fn update_glicko_rating(
     let new_rating_sigma = root.exp().sqrt();
     let new_rating_phi =
         1. / (1. / (phi.powi(2) + new_rating_sigma.powi(2)) + 1. / estimated_variance).sqrt();
-    let mut new_rating_mu = rating_mu
-        + new_rating_phi.powi(2)
-            * opponents_eg
-                .iter()
-                .map(|(e, g)| g * (outcome - e))
-                .sum::<f64>();
+    let glicko_mu_update = new_rating_phi.powi(2)
+        * opponents_eg
+            .iter()
+            .map(|(e, g)| g * (outcome - e))
+            .sum::<f64>();
 
     let sum_mu_team_pred: f64 = mates
         .iter()
@@ -155,11 +154,20 @@ fn update_glicko_rating(
                 .get(p)
                 .map_or(avg_mu_player, |e| e.rating_mu)
         })
-        .chain(std::iter::once(new_rating_mu))
+        .chain(std::iter::once(rating_mu))
         .sum();
     let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
-    let error = (avg_mu_team_pred - avg_mu_player) / mates.len() as f64;
-    new_rating_mu -= error * config.regression_rate;
+    let error = (avg_mu_player - avg_mu_team_pred) / mates.len() as f64;
+    let regression_mu_update = error * config.regression_rate;
+
+    // Exclude Ethernus 6 parties as they are sometimes buggy
+    let new_rating_mu = rating_mu
+        + if avg_badge_player == 116 {
+            glicko_mu_update
+        } else {
+            config.glicko_weight * glicko_mu_update
+                + (1. - config.glicko_weight) * regression_mu_update
+        };
 
     (
         Glicko2HistoryEntry {

@@ -31,6 +31,7 @@ fn new_random_config(rng: &mut ThreadRng) -> Config {
         regression_rate: rng.random_range(0.8..1.2),
         mu_spread: rng.random_range(2.0..=8.6),
         max_spread: rng.random_range(8.0..=16.),
+        glicko_weight: rng.random_range(0.0..=1.),
     }
 }
 
