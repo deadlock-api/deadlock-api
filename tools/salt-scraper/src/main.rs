@@ -41,14 +41,23 @@ async fn main() -> anyhow::Result<()> {
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
-        SELECT DISTINCT match_id
-        FROM player_match_history
-        WHERE match_mode IN ('Ranked', 'Unranked')
-            AND start_time BETWEEN '2024-12-01' AND now() - INTERVAL 2 HOUR
-            AND match_id NOT IN (SELECT match_id FROM match_salts)
-            AND match_id NOT IN (SELECT match_id FROM match_info)
+        WITH t_known_matches AS (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info),
+             t_missing_matches AS (SELECT DISTINCT match_id
+                                   FROM player_match_history
+                                   WHERE match_mode IN ('Ranked', 'Unranked')
+                                     AND start_time BETWEEN '2024-12-01' AND now() - INTERVAL 2 HOUR
+                                     AND match_id NOT IN t_known_matches
+                                   UNION
+                                   DISTINCT
+                                   SELECT DISTINCT match_id
+                                   FROM active_matches
+                                   WHERE match_mode IN ('Ranked', 'Unranked')
+                                     AND game_mode = 'Normal'
+                                     AND start_time BETWEEN now() - INTERVAL 1 WEEK AND now() - INTERVAL 2 HOUR
+                                     AND match_id NOT IN t_known_matches)
+        SELECT match_id
+        FROM t_missing_matches
         ORDER BY match_id DESC
-        LIMIT 100
         ";
         let recent_matches: Vec<MatchIdQueryResult> = ch_client.query(query).fetch_all().await?;
         let recent_matches: Vec<u64> = recent_matches.into_iter().map(|m| m.match_id).collect();
