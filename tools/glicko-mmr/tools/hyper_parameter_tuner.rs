@@ -2,11 +2,12 @@ use chrono::Duration;
 use glicko_mmr::config::Config;
 use glicko_mmr::glicko;
 use glicko_mmr::types::{CHMatch, query_all_matches_after_cached};
+use rand::Rng;
 use rand::prelude::*;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use tracing::info;
+use tracing::{debug, info};
 
 fn test_config(matches_to_process: &[CHMatch], config: &Config) -> anyhow::Result<f64> {
     let mut squared_error = 0.0;
@@ -24,14 +25,13 @@ fn test_config(matches_to_process: &[CHMatch], config: &Config) -> anyhow::Resul
 
 fn new_random_config(rng: &mut ThreadRng) -> Config {
     Config {
-        rating_phi_unrated: rng.random_range(1.0..3.0),
-        rating_sigma_unrated: rng.random_range(0.01..0.1),
+        rating_phi_unrated: 2.0147,
+        rating_sigma_unrated: 0.06,
         rating_period_seconds: Duration::days(rng.random_range(1..=30)).num_seconds(),
         tau: rng.random_range(0.3..1.2),
-        regression_rate: rng.random_range(0.8..1.2),
+        regression_rate: rng.random_range(0.5..1.2),
         mu_spread: rng.random_range(2.0..=8.6),
-        max_spread: rng.random_range(8.0..=16.),
-        glicko_weight: rng.random_range(0.0..=1.),
+        max_spread: rng.random_range(8.0..=16.0),
     }
 }
 
@@ -57,9 +57,9 @@ async fn main() -> anyhow::Result<()> {
         .for_each(|(config, error)| {
             if error < *min_error.read().unwrap() {
                 *min_error.write().unwrap() = error;
-                info!("NEW BEST Error: {error:.5} {:?}", config);
+                info!("NEW BEST Error: {error:.5} {:#?}", config);
             } else {
-                info!("Error: {error:.5} {:?}", config);
+                debug!("Error: {error:.5} {:?}", config);
             }
         });
 

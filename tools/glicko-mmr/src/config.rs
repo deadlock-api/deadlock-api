@@ -24,7 +24,4 @@ pub struct Config {
 
     #[arg(long, env, default_value_t = 13.7)]
     pub max_spread: f64,
-
-    #[arg(long, env, default_value_t = 0.14)]
-    pub glicko_weight: f64,
 }

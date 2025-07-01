@@ -55,7 +55,8 @@ fn update_glicko_rating(
     avg_badge_opponents: u32,
     player_ratings_before: &HashMap<u32, Glicko2HistoryEntry>,
 ) -> (Glicko2HistoryEntry, f64) {
-    let avg_mu_player = config.mu_spread * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
+    let avg_mu_player =
+        config.mu_spread * (utils::rank_to_rating(avg_badge_player) / 66. * 2. - 1.);
     let avg_mu_opponents =
         config.mu_spread * (utils::rank_to_rating(avg_badge_opponents) / 66. * 2. - 1.);
 
@@ -146,6 +147,8 @@ fn update_glicko_rating(
             .map(|(e, g)| g * (outcome - e))
             .sum::<f64>();
 
+    let mut new_rating_mu = rating_mu + glicko_mu_update;
+
     let sum_mu_team_pred: f64 = mates
         .iter()
         .filter(|p| *p != &player)
@@ -154,20 +157,15 @@ fn update_glicko_rating(
                 .get(p)
                 .map_or(avg_mu_player, |e| e.rating_mu)
         })
-        .chain(std::iter::once(rating_mu))
+        .chain(std::iter::once(new_rating_mu))
         .sum();
     let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
     let error = (avg_mu_player - avg_mu_team_pred) / mates.len() as f64;
-    let regression_mu_update = error * config.regression_rate;
 
-    // Exclude Ethernus 6 parties as they are sometimes buggy
-    let new_rating_mu = rating_mu
-        + if avg_badge_player == 116 {
-            glicko_mu_update
-        } else {
-            config.glicko_weight * glicko_mu_update
-                + (1. - config.glicko_weight) * regression_mu_update
-        };
+    // Only do regression if not ethernus 6, as there are some weird behaviours
+    if avg_badge_player < 116 && avg_badge_opponents < 116 {
+        new_rating_mu += error * config.regression_rate;
+    }
 
     (
         Glicko2HistoryEntry {
