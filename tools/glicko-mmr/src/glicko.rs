@@ -165,7 +165,7 @@ fn update_glicko_rating(
         Glicko2HistoryEntry {
             account_id: player,
             match_id: match_.match_id,
-            rating_mu: new_rating_mu.clamp(-8.6, 8.6),
+            rating_mu: new_rating_mu.clamp(-config.max_spread, config.max_spread),
             rating_phi: new_rating_phi.min(config.rating_phi_unrated),
             rating_sigma: new_rating_sigma.min(config.rating_sigma_unrated),
             start_time: match_.start_time,

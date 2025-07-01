@@ -21,4 +21,7 @@ pub struct Config {
 
     #[arg(long, env, default_value_t = 2.)]
     pub mu_spread: f64,
+
+    #[arg(long, env, default_value_t = 10.)]
+    pub max_spread: f64,
 }
