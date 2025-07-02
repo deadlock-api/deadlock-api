@@ -392,7 +392,7 @@ pub(super) async fn match_history(
             FETCH_MATCH_HISTORY_FROM_CLICKHOUSE
                 .lock()
                 .await
-                .cache_clear();
+                .remove(&account_id);
         });
     }
 
