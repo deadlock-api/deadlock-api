@@ -393,7 +393,7 @@ impl Variable {
                 });
                 Ok(format!(
                     "{:.2}%",
-                    wins as f32 / matches.max(1) as f32 * 100.0
+                    f64::from(wins) / f64::from(matches.max(1)) * 100.0
                 ))
             }
             Self::WinsLossesToday => {
@@ -472,7 +472,7 @@ impl Variable {
                 let (kills, deaths) = matches.fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
-                Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
+                Ok(format!("{:.2}", f64::from(kills) / f64::from(deaths.max(1))))
             }
             Self::TotalKills => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
@@ -493,7 +493,7 @@ impl Variable {
                 });
                 Ok(format!(
                     "{:.2}%",
-                    wins as f32 / matches.max(1) as f32 * 100.0
+                    f64::from(wins) / f64::from(matches.max(1)) * 100.0
                 ))
             }
             Self::TotalWins => {
@@ -557,7 +557,7 @@ impl Variable {
                 let (kills, deaths) = hero_matches.fold((0, 0), |(kills, deaths), m| {
                     (kills + m.player_kills, deaths + m.player_deaths)
                 });
-                Ok(format!("{:.2}", kills as f32 / deaths.max(1) as f32))
+                Ok(format!("{:.2}", f64::from(kills) / f64::from(deaths.max(1))))
             }
             Self::HeroKills => {
                 let hero_matches = Self::get_hero_matches(
@@ -607,7 +607,7 @@ impl Variable {
                         total + 1,
                     )
                 });
-                Ok(format!("{:.2}%", wins as f32 / total.max(1) as f32 * 100.0))
+                Ok(format!("{:.2}%", f64::from(wins) / f64::from(total.max(1)) * 100.0))
             }
             Self::HeroWins => {
                 let hero_matches = Self::get_hero_matches(
