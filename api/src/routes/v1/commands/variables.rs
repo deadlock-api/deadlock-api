@@ -385,7 +385,7 @@ impl Variable {
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?;
                 let (wins, matches) = matches.iter().fold((0, 0), |(wins, matches), m| {
-                    if i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team) {
+                    if m.won() {
                         (wins + 1, matches + 1)
                     } else {
                         (wins, matches + 1)
@@ -401,7 +401,7 @@ impl Variable {
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?;
                 let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
-                    if i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team) {
+                    if m.won() {
                         (wins + 1, losses)
                     } else {
                         (wins, losses + 1)
@@ -422,7 +422,7 @@ impl Variable {
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?
                         .iter()
-                        .filter(|m| i8::try_from(m.match_result).is_ok_and(|r| r != m.player_team))
+                        .filter(|m| !m.won())
                         .count()
                         .to_string(),
                 )
@@ -432,7 +432,7 @@ impl Variable {
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?
                         .iter()
-                        .filter(|m| i8::try_from(m.match_result).is_ok_and(|r| r != m.player_team))
+                        .filter(|m| !m.won())
                         .count()
                         .to_string(),
                 )
@@ -488,7 +488,7 @@ impl Variable {
             Self::TotalWinrate => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let (wins, matches) = matches.fold((0, 0), |(wins, matches), m| {
-                    if i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team) {
+                    if m.won() {
                         (wins + 1, matches + 1)
                     } else {
                         (wins, matches + 1)
@@ -502,21 +502,18 @@ impl Variable {
             Self::TotalWins => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
-                    .filter(|m| i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team))
+                    .filter(super::super::players::match_history::PlayerMatchHistoryEntry::won)
                     .count()
                     .to_string())
             }
             Self::TotalLosses => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches
-                    .filter(|m| i8::try_from(m.match_result).is_ok_and(|r| r != m.player_team))
-                    .count()
-                    .to_string())
+                Ok(matches.filter(|m| !m.won()).count().to_string())
             }
             Self::TotalWinsLosses => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let (wins, losses) = matches.fold((0, 0), |(wins, losses), m| {
-                    if i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team) {
+                    if m.won() {
                         (wins + 1, losses)
                     } else {
                         (wins, losses + 1)
@@ -594,10 +591,7 @@ impl Variable {
                     extra_args,
                 )
                 .await?;
-                Ok(hero_matches
-                    .filter(|m| i8::try_from(m.match_result).is_ok_and(|r| r != m.player_team))
-                    .count()
-                    .to_string())
+                Ok(hero_matches.filter(|m| !m.won()).count().to_string())
             }
             Self::HeroWinrate => {
                 let hero_matches = Self::get_hero_matches(
@@ -608,12 +602,7 @@ impl Variable {
                 )
                 .await?;
                 let (wins, total) = hero_matches.fold((0, 0), |(wins, total), m| {
-                    (
-                        wins + i32::from(
-                            i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team),
-                        ),
-                        total + 1,
-                    )
+                    (wins + i32::from(m.won()), total + 1)
                 });
                 Ok(format!(
                     "{:.2}%",
@@ -629,7 +618,7 @@ impl Variable {
                 )
                 .await?;
                 Ok(hero_matches
-                    .filter(|m| i8::try_from(m.match_result).is_ok_and(|r| r == m.player_team))
+                    .filter(super::super::players::match_history::PlayerMatchHistoryEntry::won)
                     .count()
                     .to_string())
             }

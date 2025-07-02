@@ -38,7 +38,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub(crate) start_time: u32,
     game_mode: i8,
     pub(crate) match_mode: i8,
-    pub(crate) player_team: i8,
+    player_team: i8,
     pub(crate) player_kills: u32,
     pub(crate) player_deaths: u32,
     player_assists: u32,
@@ -48,7 +48,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     team_abandoned: Option<bool>,
     abandoned_time_s: Option<u32>,
     pub(crate) match_duration_s: u32,
-    pub(crate) match_result: u32,
+    match_result: u32,
     objectives_mask_team0: u32,
     objectives_mask_team1: u32,
 }
@@ -80,6 +80,10 @@ impl PlayerMatchHistoryEntry {
             objectives_mask_team0: u32::try_from(entry.objectives_mask_team0?).ok()?,
             objectives_mask_team1: u32::try_from(entry.objectives_mask_team1?).ok()?,
         })
+    }
+
+    pub(crate) fn won(&self) -> bool {
+        i8::try_from(self.match_result).is_ok_and(|r| r == self.player_team)
     }
 }
 
