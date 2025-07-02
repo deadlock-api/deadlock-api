@@ -10,8 +10,8 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TimedCache;
 use cached::proc_macro::cached;
+use cached::{Cached, TimedCache};
 use clickhouse::Row;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
@@ -388,6 +388,11 @@ pub(super) async fn match_history(
             if let Err(e) = result {
                 warn!("Failed to insert player match history to ClickHouse: {e:?}");
             }
+            // Purge Cache of `fetch_match_history_from_clickhouse`
+            FETCH_MATCH_HISTORY_FROM_CLICKHOUSE
+                .lock()
+                .await
+                .cache_clear();
         });
     }
 
