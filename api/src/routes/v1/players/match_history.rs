@@ -64,9 +64,9 @@ impl PlayerMatchHistoryEntry {
             hero_id: entry.hero_id?,
             hero_level: entry.hero_level?,
             start_time: entry.start_time?,
-            game_mode: entry.game_mode? as i8,
-            match_mode: entry.match_mode? as i8,
-            player_team: entry.player_team? as i8,
+            game_mode: i8::try_from(entry.game_mode?).ok()?,
+            match_mode: i8::try_from(entry.match_mode?).ok()?,
+            player_team: i8::try_from(entry.player_team?).ok()?,
             player_kills: entry.player_kills?,
             player_deaths: entry.player_deaths?,
             player_assists: entry.player_assists?,
@@ -77,8 +77,8 @@ impl PlayerMatchHistoryEntry {
             abandoned_time_s: entry.abandoned_time_s,
             match_duration_s: entry.match_duration_s?,
             match_result: entry.match_result?,
-            objectives_mask_team0: entry.objectives_mask_team0? as u32,
-            objectives_mask_team1: entry.objectives_mask_team1? as u32,
+            objectives_mask_team0: u32::try_from(entry.objectives_mask_team0?).ok()?,
+            objectives_mask_team1: u32::try_from(entry.objectives_mask_team1?).ok()?,
         })
     }
 }
@@ -313,7 +313,8 @@ pub(super) async fn match_history(
     if let Some(last_match) = last_match {
         // if newer than 40 min, check if there is a newer match, otherwise return the clickhouse data
         let is_newer_than_40_min = last_match.start_time
-            >= (chrono::Utc::now() - chrono::Duration::minutes(40)).timestamp() as u32;
+            >= u32::try_from((chrono::Utc::now() - chrono::Duration::minutes(40)).timestamp())
+                .unwrap_or_default();
         if is_newer_than_40_min {
             let exists_newer_match =
                 exists_newer_match_than(&state.ch_client_ro, account_id, last_match.match_id).await;
