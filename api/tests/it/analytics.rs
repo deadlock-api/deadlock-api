@@ -4,13 +4,13 @@ use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
-use deadlock_api_rust::routes::v1::analytics::hero_scoreboard::HeroScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
 use deadlock_api_rust::routes::v1::analytics::hero_synergies_stats::HeroSynergyStats;
 use deadlock_api_rust::routes::v1::analytics::item_stats::ItemStats;
-use deadlock_api_rust::routes::v1::analytics::player_scoreboard::PlayerScoreboardEntry;
 use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use deadlock_api_rust::routes::v1::analytics::{hero_stats, item_stats};
+use deadlock_api_rust::routes::v1::analytics::{
+    hero_scoreboard, hero_stats, item_stats, player_scoreboard,
+};
 use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
@@ -440,7 +440,7 @@ async fn test_hero_scoreboard(
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
     let response = request_endpoint("/v1/analytics/scoreboards/heroes", queries).await;
-    let hero_scoreboard: Vec<HeroScoreboardEntry> =
+    let hero_scoreboard: Vec<hero_scoreboard::Entry> =
         response.json().await.expect("Failed to parse response");
 
     // Verify min_matches requirement
@@ -459,7 +459,7 @@ async fn test_hero_scoreboard(
 
     // Verify sorting
     if hero_scoreboard.len() > 1 {
-        let check_sorted = |field_extractor: fn(&HeroScoreboardEntry) -> f64,
+        let check_sorted = |field_extractor: fn(&hero_scoreboard::Entry) -> f64,
                             desc: SortDirectionDesc| {
             let mut sorted = true;
             for i in 0..hero_scoreboard.len() - 1 {
@@ -472,7 +472,7 @@ async fn test_hero_scoreboard(
             }
             sorted
         };
-        let extractor = |entry: &HeroScoreboardEntry| entry.value;
+        let extractor = |entry: &hero_scoreboard::Entry| entry.value;
         assert!(check_sorted(extractor, sort_direction));
     }
 }
@@ -626,7 +626,7 @@ async fn test_player_scoreboard(
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
     let response = request_endpoint("/v1/analytics/scoreboards/players", queries).await;
-    let player_scoreboard: Vec<PlayerScoreboardEntry> =
+    let player_scoreboard: Vec<player_scoreboard::Entry> =
         response.json().await.expect("Failed to parse response");
 
     // Verify we don't get more entries than the limit
@@ -650,7 +650,7 @@ async fn test_player_scoreboard(
 
     // Verify sorting
     if player_scoreboard.len() > 1 {
-        let check_sorted = |field_extractor: fn(&PlayerScoreboardEntry) -> f64,
+        let check_sorted = |field_extractor: fn(&player_scoreboard::Entry) -> f64,
                             sort_direction: SortDirectionDesc| {
             let mut sorted = true;
             for i in 0..player_scoreboard.len() - 1 {
@@ -663,7 +663,7 @@ async fn test_player_scoreboard(
             }
             sorted
         };
-        let extractor = |entry: &PlayerScoreboardEntry| entry.value;
+        let extractor = |entry: &player_scoreboard::Entry| entry.value;
         assert!(check_sorted(extractor, sort_direction.unwrap_or_default()));
     }
 }

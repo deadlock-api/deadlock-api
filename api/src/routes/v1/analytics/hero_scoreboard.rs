@@ -56,7 +56,7 @@ pub(super) struct HeroScoreboardQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct HeroScoreboardEntry {
+pub struct Entry {
     /// See more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u64,
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
@@ -146,7 +146,7 @@ ORDER BY value {}
 }
 
 #[cached(
-    ty = "TimedCache<HeroScoreboardQuery, Vec<HeroScoreboardEntry>>",
+    ty = "TimedCache<HeroScoreboardQuery, Vec<Entry>>",
     create = "{ TimedCache::with_lifespan(60 * 60) }",
     result = true,
     convert = "{ query }",
@@ -156,7 +156,7 @@ ORDER BY value {}
 async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
     query: HeroScoreboardQuery,
-) -> APIResult<Vec<HeroScoreboardEntry>> {
+) -> APIResult<Vec<Entry>> {
     let query = build_query(&query);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
@@ -167,7 +167,7 @@ async fn get_hero_scoreboard(
     path = "/heroes",
     params(HeroScoreboardQuery),
     responses(
-        (status = OK, description = "Hero Scoreboard", body = [HeroScoreboardEntry]),
+        (status = OK, description = "Hero Scoreboard", body = [Entry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero scoreboard")
     ),

@@ -8,6 +8,7 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
+#![allow(clippy::wildcard_imports)]
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::cast_possible_wrap)]
@@ -32,7 +33,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 use context::state::AppState;
-use std::time::Duration;
+use core::time::Duration;
 use tower_http::compression::{CompressionLayer, DefaultPredicate};
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
