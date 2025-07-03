@@ -62,8 +62,8 @@ pub struct HeroStats {
         note = "This field is deprecated and will be removed in the future. Use `damage_per_min` instead."
     )]
     damage_mitigated_per_min: f64,
-    damage_mitigated_per_soul: f64,
     damage_taken_per_min: f64,
+    damage_taken_per_soul: f64,
     creeps_per_min: f64,
     obj_damage_per_min: f64,
     obj_damage_per_soul: f64,
