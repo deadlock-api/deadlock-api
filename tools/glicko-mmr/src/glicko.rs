@@ -2,9 +2,9 @@ use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
 use crate::utils;
 use chrono::Duration;
+use core::f64::consts::{E, PI};
 use roots::SimpleConvergency;
 use std::collections::HashMap;
-use std::f64::consts::{E, PI};
 
 #[tracing::instrument(skip(player_ratings_before))]
 pub fn update_match(
@@ -157,7 +157,7 @@ fn update_glicko_rating(
                 .get(p)
                 .map_or(avg_mu_team, |e| e.rating_mu)
         })
-        .chain(std::iter::once(new_rating_mu))
+        .chain(core::iter::once(new_rating_mu))
         .sum();
     let avg_mu_team_pred = sum_mu_team_pred / mates.len() as f64;
     let error = (avg_mu_team - avg_mu_team_pred) / mates.len() as f64;

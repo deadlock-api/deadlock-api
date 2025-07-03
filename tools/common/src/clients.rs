@@ -1,4 +1,5 @@
 use clickhouse::Compression;
+use core::time::Duration;
 use fred::clients::Client as RedisClient;
 use fred::interfaces::{ClientLike, FredResult};
 use fred::prelude::{Config as RedisConfig, ReconnectPolicy};
@@ -8,7 +9,6 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, Pool, Postgres};
 use std::env;
 use std::env::VarError;
-use std::time::Duration;
 use tracing::log::LevelFilter;
 
 pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {

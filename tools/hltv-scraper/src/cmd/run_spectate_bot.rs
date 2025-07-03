@@ -444,7 +444,7 @@ impl SpectatorBot {
                 .filter(|x| x.is_titan_exposed())
                 .sorted_by_key(|x| {
                     (
-                        std::cmp::Reverse(x.match_score.unwrap_or_default() / 100),
+                        core::cmp::Reverse(x.match_score.unwrap_or_default() / 100),
                         if x.is_titan_exposed() {
                             0
                         } else if x.is_shrine_exposed() {

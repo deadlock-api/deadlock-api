@@ -45,7 +45,7 @@ async fn start_polling_core<T, F, Fut>(
 where
     T: Send + Sync + 'static,
     F: Fn(reqwest::Response) -> Fut + Send + Sync + 'static,
-    Fut: std::future::Future<Output = Option<T>> + Send,
+    Fut: core::future::Future<Output = Option<T>> + Send,
 {
     let client = Client::new();
 

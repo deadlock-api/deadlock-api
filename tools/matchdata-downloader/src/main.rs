@@ -1,11 +1,18 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 #![allow(clippy::cast_precision_loss)]
 
 use cached::UnboundCache;
 use cached::proc_macro::cached;
+use core::time::Duration;
 use futures::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
@@ -13,7 +20,6 @@ use models::MatchSalts;
 use object_store::path::Path;
 use object_store::{ObjectStore, PutPayload};
 use std::collections::HashSet;
-use std::time::Duration;
 use tokio::time::sleep;
 use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info, instrument};

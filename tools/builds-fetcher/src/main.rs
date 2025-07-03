@@ -1,10 +1,17 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_wrap)]
 
+use core::time::Duration;
 use itertools::Itertools;
 use metrics::counter;
 use rand::prelude::SliceRandom;
@@ -12,7 +19,6 @@ use rand::rng;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::time::PrimitiveDateTime;
 use sqlx::{Pool, Postgres, QueryBuilder};
-use std::time::Duration;
 use time::OffsetDateTime;
 use tokio::time::sleep;
 use tracing::{debug, info, instrument, warn};

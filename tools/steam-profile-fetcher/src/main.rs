@@ -1,17 +1,23 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
 use anyhow::Result;
+use core::time::Duration;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use models::SteamPlayerSummary;
 use std::env;
-use std::time::Duration;
 use tokio::join;
 use tracing::{debug, error, info, instrument};
 

@@ -1,9 +1,10 @@
+use core::time::Duration;
 use haste::broadcast::BroadcastFile;
 use haste::demostream::DemoStream;
 use metrics::counter;
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::{io::Cursor, sync::Arc};
 use thiserror::Error;
 use tokio::sync::mpsc::{Receiver, Sender, channel};

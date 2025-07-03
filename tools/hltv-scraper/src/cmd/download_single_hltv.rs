@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use core::fmt::Write;
 use std::time::Instant;
 
 use anyhow::Context;

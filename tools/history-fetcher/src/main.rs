@@ -1,15 +1,21 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
 mod types;
 
 use crate::types::PlayerMatchHistoryEntry;
+use core::time::Duration;
 use metrics::{counter, gauge};
-use std::time::Duration;
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
 use valveprotos::deadlock::{

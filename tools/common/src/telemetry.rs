@@ -1,5 +1,5 @@
+use core::net::SocketAddrV4;
 use metrics_exporter_prometheus::PrometheusBuilder;
-use std::net::SocketAddrV4;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;

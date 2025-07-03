@@ -1,15 +1,21 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 
 use anyhow::bail;
 use clickhouse::Client;
+use core::time::Duration;
 use futures::StreamExt;
 use metrics::counter;
 use models::MatchSalt;
 use std::sync::LazyLock;
-use std::time::Duration;
 use tracing::{debug, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{

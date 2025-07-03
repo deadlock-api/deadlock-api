@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use core::fmt::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum FragmentType {
@@ -7,7 +7,7 @@ pub(crate) enum FragmentType {
 }
 
 impl Display for FragmentType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             FragmentType::Full => write!(f, "full"),
             FragmentType::Delta => write!(f, "delta"),

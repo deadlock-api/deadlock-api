@@ -1,12 +1,18 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 
 use crate::models::{ChHero, ChUpgradeItem};
+use core::time::Duration;
 use metrics::counter;
 use models::{Hero, UpgradeItem};
-use std::time::Duration;
 use tracing::{debug, error, info, instrument};
 
 mod models;

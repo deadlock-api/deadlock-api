@@ -1,16 +1,22 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
 #![deny(unreachable_pub)]
+#![deny(clippy::correctness)]
+#![deny(clippy::suspicious)]
+#![deny(clippy::style)]
+#![deny(clippy::complexity)]
+#![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 #![allow(clippy::cast_precision_loss)]
 
 mod models;
 
 use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
+use core::time::Duration;
 use delay_map::HashSetDelay;
 use metrics::{counter, gauge};
 use std::sync::LazyLock;
-use std::time::Duration;
 use tracing::{debug, error, info, instrument};
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {

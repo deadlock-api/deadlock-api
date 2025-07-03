@@ -1,6 +1,6 @@
 use clickhouse::Row;
+use core::fmt::Debug;
 use serde::Deserialize;
-use std::fmt::Debug;
 
 #[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
 pub(crate) struct MatchSalts {
@@ -12,7 +12,7 @@ pub(crate) struct MatchSalts {
 
 #[allow(clippy::missing_fields_in_debug)]
 impl Debug for MatchSalts {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("MatchSalts")
             .field("match_id", &self.match_id)
             .finish()
