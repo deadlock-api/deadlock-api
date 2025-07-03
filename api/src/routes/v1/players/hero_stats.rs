@@ -56,6 +56,10 @@ pub struct HeroStats {
     denies_per_min: f64,
     networth_per_min: f64,
     last_hits_per_min: f64,
+    damage_per_min: f64,
+    #[deprecated(
+        note = "This field is deprecated and will be removed in the future. Use `damage_per_min` instead."
+    )]
     damage_mitigated_per_min: f64,
     damage_taken_per_min: f64,
     creeps_per_min: f64,
@@ -124,6 +128,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         60 * avg(denies / duration_s) AS denies_per_min,
         60 * avg(net_worth / duration_s) AS networth_per_min,
         60 * avg(last_hits / duration_s) AS last_hits_per_min,
+        60 * avg(max_player_damage / duration_s) AS damage_per_min,
         60 * avg(max_player_damage / duration_s) AS damage_mitigated_per_min,
         60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min,
         60 * avg(max_creep_kills / duration_s) AS creeps_per_min,
@@ -328,9 +333,7 @@ mod test {
         assert!(sql.contains("60 * avg(denies / duration_s) AS denies_per_min"));
         assert!(sql.contains("60 * avg(net_worth / duration_s) AS networth_per_min"));
         assert!(sql.contains("60 * avg(last_hits / duration_s) AS last_hits_per_min"));
-        assert!(
-            sql.contains("60 * avg(max_player_damage / duration_s) AS damage_mitigated_per_min")
-        );
+        assert!(sql.contains("60 * avg(max_player_damage / duration_s) AS damage_per_min"));
         assert!(
             sql.contains("60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min")
         );
