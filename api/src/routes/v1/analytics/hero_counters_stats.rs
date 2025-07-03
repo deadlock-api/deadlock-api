@@ -148,7 +148,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     };
     let mut player_filters = vec![];
     if query.same_lane_filter.unwrap_or(true) {
-        player_filters.push("p1.assigned_lane = p2.assigned_lane".to_string());
+        player_filters.push("p1.assigned_lane = p2.assigned_lane".to_owned());
     }
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("p1.account_id = {account_id}"));

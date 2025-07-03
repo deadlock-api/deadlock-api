@@ -341,7 +341,7 @@ pub(super) async fn bulk_metadata(
     if query.limit > 10000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "limit must be between 1 and 1000".to_string(),
+            "limit must be between 1 and 1000".to_owned(),
         ));
     }
     debug!(?query);
@@ -351,7 +351,7 @@ pub(super) async fn bulk_metadata(
     if parsed_result.is_empty() {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
-            "No matches found".to_string(),
+            "No matches found".to_owned(),
         ));
     }
     Ok(Json(parsed_result))

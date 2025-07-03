@@ -148,7 +148,7 @@ async fn fetch_match_history_raw(
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchHistory,
             msg,
-            in_all_groups: Some(vec!["GetMatchHistory".to_string()]),
+            in_all_groups: Some(vec!["GetMatchHistory".to_owned()]),
             in_any_groups: None,
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 100), // 100req/day
             request_timeout: Duration::from_secs(3),
@@ -299,7 +299,7 @@ pub(super) async fn match_history(
     if query.force_refetch && query.only_stored_history {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "Cannot use both force_refetch and only_stored_history at the same time".to_string(),
+            "Cannot use both force_refetch and only_stored_history at the same time".to_owned(),
         ));
     }
 

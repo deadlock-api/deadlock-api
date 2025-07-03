@@ -87,7 +87,7 @@ pub struct Entry {
 
 fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut info_filters = vec![];
-    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -136,7 +136,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     if let Some(max_networth) = query.max_networth {
         player_filters.push(format!("net_worth <= {max_networth}"));
     }
-    player_filters.push("account_id > 0".to_string());
+    player_filters.push("account_id > 0".to_owned());
     if let Some(account_ids) = &query.account_ids {
         player_filters.push(format!(
             "has([{}], account_id)",

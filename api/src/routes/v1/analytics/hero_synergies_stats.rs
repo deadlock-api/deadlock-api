@@ -148,10 +148,10 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     };
     let mut player_filters = vec![];
     if query.same_lane_filter.unwrap_or(true) {
-        player_filters.push("p1.assigned_lane = p2.assigned_lane".to_string());
+        player_filters.push("p1.assigned_lane = p2.assigned_lane".to_owned());
     }
     if query.same_party_filter.unwrap_or(true) {
-        player_filters.push("p1.party = p2.party AND p1.party > 0".to_string());
+        player_filters.push("p1.party = p2.party AND p1.party > 0".to_owned());
     }
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("p1.account_id = {account_id}"));

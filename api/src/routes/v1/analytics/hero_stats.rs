@@ -188,7 +188,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         player_hero_filters.push(format!("COUNT(DISTINCT match_id) <= {max_hero_matches}"));
     }
     let player_hero_filters = if player_hero_filters.is_empty() {
-        "TRUE".to_string()
+        "TRUE".to_owned()
     } else {
         player_hero_filters.join(" AND ")
     };
@@ -254,7 +254,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             String::new()
         },
         match query.bucket {
-            BucketQuery::NoBucket => "TRUE".to_string(),
+            BucketQuery::NoBucket => "TRUE".to_owned(),
             _ => format!("m.bucket = {bucket}"),
         },
         if query.min_hero_matches.or(query.max_hero_matches).is_some() {

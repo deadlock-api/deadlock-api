@@ -119,7 +119,7 @@ async fn fetch_player_card_raw(
         .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetProfileCard,
             msg,
-            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_all_groups: Some(vec!["LowRateLimitApis".to_owned()]),
             in_any_groups: None,
             cooldown_time: Duration::from_secs(10),
             request_timeout: Duration::from_secs(2),

@@ -11,7 +11,7 @@ pub(crate) async fn feature_flags(
     request: Request,
     next: Next,
 ) -> Response {
-    let matched_path = matched_path.as_str().to_string();
+    let matched_path = matched_path.as_str().to_owned();
 
     let route_enabled = feature_flags.routes.get(&matched_path).unwrap_or(&true);
     if !route_enabled {

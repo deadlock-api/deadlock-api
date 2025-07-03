@@ -2,11 +2,11 @@ use crate::utils::parse::default_true;
 use serde::Deserialize;
 
 fn default_redis_url() -> String {
-    "redis://localhost:6379".to_string()
+    "redis://localhost:6379".to_owned()
 }
 
 fn default_clickhouse_host() -> String {
-    "localhost".to_string()
+    "localhost".to_owned()
 }
 
 fn default_clickhouse_http_port() -> u16 {
@@ -14,15 +14,15 @@ fn default_clickhouse_http_port() -> u16 {
 }
 
 fn default_clickhouse_username() -> String {
-    "default".to_string()
+    "default".to_owned()
 }
 
 fn default_clickhouse_dbname() -> String {
-    "default".to_string()
+    "default".to_owned()
 }
 
 fn default_postgres_host() -> String {
-    "localhost".to_string()
+    "localhost".to_owned()
 }
 
 fn default_postgres_port() -> u16 {
@@ -30,11 +30,11 @@ fn default_postgres_port() -> u16 {
 }
 
 fn default_postgres_username() -> String {
-    "postgres".to_string()
+    "postgres".to_owned()
 }
 
 fn default_postgres_dbname() -> String {
-    "postgres".to_string()
+    "postgres".to_owned()
 }
 
 fn default_postgres_pool_size() -> u32 {
@@ -42,7 +42,7 @@ fn default_postgres_pool_size() -> u32 {
 }
 
 fn default_assets_base_url() -> String {
-    "https://assets.deadlock-api.com".to_string()
+    "https://assets.deadlock-api.com".to_owned()
 }
 
 #[derive(Deserialize, Debug, Clone)]

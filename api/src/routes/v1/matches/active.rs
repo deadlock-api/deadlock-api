@@ -42,7 +42,7 @@ async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
         .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetActiveMatches,
             msg: CMsgClientToGcGetActiveMatches::default(),
-            in_all_groups: Some(vec!["LowRateLimitApis".to_string()]),
+            in_all_groups: Some(vec!["LowRateLimitApis".to_owned()]),
             in_any_groups: None,
             cooldown_time: Duration::from_secs(600),
             request_timeout: Duration::from_secs(2),

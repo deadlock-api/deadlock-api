@@ -128,7 +128,7 @@ pub(super) async fn fetch_match_salts(
         .call_steam_proxy(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
             msg,
-            in_all_groups: Some(vec!["GetMatchMetaData".to_string()]),
+            in_all_groups: Some(vec!["GetMatchMetaData".to_owned()]),
             in_any_groups: None,
             cooldown_time: Duration::from_secs(30 * 60),
             request_timeout: Duration::from_secs(2),

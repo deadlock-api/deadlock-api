@@ -53,8 +53,8 @@ pub(super) async fn spectate_match(
             msg,
             in_all_groups: None,
             in_any_groups: Some(vec![
-                "SpectateLobby".to_string(),
-                "SpectateLobbyOnDemand".to_string(),
+                "SpectateLobby".to_owned(),
+                "SpectateLobbyOnDemand".to_owned(),
             ]),
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
             request_timeout: Duration::from_secs(2),

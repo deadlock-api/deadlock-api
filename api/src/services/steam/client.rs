@@ -227,12 +227,12 @@ async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<
                 .nth(1)
                 .and_then(|v| v.parse().ok())
                 .ok_or(APIError::internal(
-                    "Failed to parse client version".to_string(),
+                    "Failed to parse client version".to_owned(),
                 ));
         }
     }
     Err(APIError::internal(
-        "Failed to fetch client version".to_string(),
+        "Failed to fetch client version".to_owned(),
     ))
 }
 

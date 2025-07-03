@@ -13,7 +13,7 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
         parse::querify(query)
             .into_iter()
             .find(|(key, _)| *key == "api_key")
-            .map(|(_, value)| value.to_string())
+            .map(|(_, value)| value.to_owned())
     });
     if let Some(api_key) = query_api_key
         && let Ok(api_key) = api_key.parse::<HeaderValue>()

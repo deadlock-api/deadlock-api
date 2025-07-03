@@ -67,7 +67,7 @@ pub struct Entry {
 
 fn build_query(query: &HeroScoreboardQuery) -> String {
     let mut info_filters = vec![];
-    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_string());
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }

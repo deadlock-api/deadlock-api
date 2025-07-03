@@ -222,7 +222,7 @@ async fn get_comb_stats(
         Some(x) if !(2..=6).contains(&x) => {
             return Err(APIError::status_msg(
                 StatusCode::BAD_REQUEST,
-                "Combination size must be between 2 and 6".to_string(),
+                "Combination size must be between 2 and 6".to_owned(),
             ));
         }
         Some(x) => x,

@@ -33,8 +33,8 @@ struct VariableDescription {
 impl From<Variable> for VariableDescription {
     fn from(v: Variable) -> Self {
         Self {
-            name: v.get_name().to_string(),
-            description: v.get_description().to_string(),
+            name: v.get_name().to_owned(),
+            description: v.get_description().to_owned(),
             default_label: v.get_default_label().map(ToString::to_string),
             extra_args: v.extra_args(),
             category: v.get_category(),
@@ -159,7 +159,7 @@ pub(super) async fn command_resolve(
 
     let mut extra_args = HashMap::new();
     if let Some(hero_name) = query.hero_name {
-        extra_args.insert("hero_name".to_string(), hero_name);
+        extra_args.insert("hero_name".to_owned(), hero_name);
     }
     let mut resolved_template = query.template.clone();
     let results = futures::future::join_all(
@@ -261,7 +261,7 @@ pub(super) async fn variables_resolve(
 
     let mut extra_args = HashMap::new();
     if let Some(hero_name) = query.hero_name {
-        extra_args.insert("hero_name".to_string(), hero_name);
+        extra_args.insert("hero_name".to_owned(), hero_name);
     }
     let variables_to_resolve = query.variables.split(',').map(str::trim).collect_vec();
     let results = futures::future::join_all(
@@ -279,7 +279,7 @@ pub(super) async fn variables_resolve(
                     )
                     .await
                 {
-                    Ok(resolved) => Some((v.get_name().to_string(), resolved)),
+                    Ok(resolved) => Some((v.get_name().to_owned(), resolved)),
                     Err(e) => {
                         warn!("Failed to resolve variable: {}, {e}", v.get_name());
                         None

@@ -237,7 +237,7 @@ impl Variable {
             | Self::HeroLosses
             | Self::HeroMatches
             | Self::HeroWinrate
-            | Self::HeroWins => vec!["hero_name".to_string()],
+            | Self::HeroWins => vec!["hero_name".to_owned()],
             _ => vec![],
         }
     }

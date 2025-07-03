@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn test_search_name() {
         let query = BuildsSearchQuery {
-            search_name: Some("Tank Build".to_string()),
+            search_name: Some("Tank Build".to_owned()),
             ..Default::default()
         };
 
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn test_search_name_case_insensitive() {
         let query = BuildsSearchQuery {
-            search_name: Some("TANK BUILD".to_string()),
+            search_name: Some("TANK BUILD".to_owned()),
             ..Default::default()
         };
 
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn test_search_description() {
         let query = BuildsSearchQuery {
-            search_description: Some("strength items".to_string()),
+            search_description: Some("strength items".to_owned()),
             ..Default::default()
         };
 
@@ -486,7 +486,7 @@ mod tests {
     #[test]
     fn test_combined_filters() {
         let query = BuildsSearchQuery {
-            search_name: Some("Tank".to_string()),
+            search_name: Some("Tank".to_owned()),
             hero_id: Some(42),
             sort_by: BuildsSearchQuerySortBy::UpdatedAt,
             sort_direction: SortDirectionDesc::Asc,
@@ -505,8 +505,8 @@ mod tests {
     #[test]
     fn test_multiple_search_conditions() {
         let query = BuildsSearchQuery {
-            search_name: Some("Tank".to_string()),
-            search_description: Some("Strength".to_string()),
+            search_name: Some("Tank".to_owned()),
+            search_description: Some("Strength".to_owned()),
             ..Default::default()
         };
 

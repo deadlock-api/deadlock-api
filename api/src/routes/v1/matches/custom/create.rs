@@ -356,14 +356,14 @@ pub(super) async fn create_custom(
 
     let account_id = account_id
         .parse()
-        .map_err(|_| APIError::internal("Failed to parse account id".to_string()))?;
+        .map_err(|_| APIError::internal("Failed to parse account id".to_owned()))?;
 
     switch_to_spectator_slot(&state.steam_client, username.clone(), party_id, account_id).await?;
     make_ready(&state.steam_client, username.clone(), party_id).await?;
 
     let response = CreateCustomResponse {
         party_id: party_id.to_string(),
-        party_code: party_code.to_string(),
+        party_code: party_code.to_owned(),
         callback_secret,
     };
     Ok(Json(response))
