@@ -257,7 +257,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     ]
     .contains(&query.bucket)
     {
-        r"
+        "
         , coalesce(
             arrayElementOrNull(
                 stats.net_worth,
@@ -283,7 +283,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
     /* ---------- final query ---------- */
     format!(
-        r"
+        "
 WITH
     /* 1. Relevant matches */
     t_matches AS (
@@ -362,7 +362,7 @@ async fn get_item_stats(
     ),
     tags = ["Analytics"],
     summary = "Item Stats",
-    description = r"
+    description = "
 Retrieves item statistics based on historical match data.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.

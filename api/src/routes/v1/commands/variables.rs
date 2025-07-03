@@ -679,7 +679,7 @@ impl Variable {
     ) -> clickhouse::error::Result<i64> {
         ch_client
             .query(
-                r"
+                "
                 SELECT max(ability_stats[?]) as max_ability_stat
                 FROM match_player
                     JOIN match_info USING match_id
@@ -737,7 +737,7 @@ impl Variable {
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
         let last_match_newer_than_40min = ch_client
             .query(
-                r"
+                "
                 SELECT match_id
                 FROM match_player
                 WHERE account_id = ? AND start_time >= now() - INTERVAL 40 MINUTE
@@ -843,7 +843,7 @@ async fn get_last_mmr_history(
 ) -> clickhouse::error::Result<MMRHistoryEntry> {
     ch_client
         .query(
-            r"
+            "
                 SELECT ?fields
                 FROM mmr_history
                 WHERE account_id = ?

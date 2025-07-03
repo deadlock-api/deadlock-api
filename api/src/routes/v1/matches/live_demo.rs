@@ -47,7 +47,7 @@ fn demo_stream(
     ),
     tags = ["Matches"],
     summary = "Live Demo",
-    description = r"
+    description = "
 Streams the live demo of a match.
 
 ### Rate Limits:

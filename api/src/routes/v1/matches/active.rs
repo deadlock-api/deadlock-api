@@ -75,7 +75,7 @@ fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     ),
     tags = ["Matches"],
     summary = "Active as Protobuf",
-    description = r"
+    description = "
 Returns active matches that are currently being played, serialized as protobuf message.
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
@@ -118,7 +118,7 @@ pub(super) async fn active_matches_raw(
     ),
     tags = ["Matches"],
     summary = "Active",
-    description = r"
+    description = "
 Returns active matches that are currently being played.
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.

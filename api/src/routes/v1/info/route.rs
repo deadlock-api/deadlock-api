@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
 
-const TABLE_SIZES_QUERY: &str = r"
+const TABLE_SIZES_QUERY: &str = "
 SELECT
     name                     AS table,
     toBool(parts IS NULL)    AS is_view,
@@ -27,7 +27,7 @@ WHERE database = 'default'
 ORDER BY table
 ";
 
-const FETCHED_MATCHES_LAST_24H_QUERY: &str = r"
+const FETCHED_MATCHES_LAST_24H_QUERY: &str = "
 WITH fetched_matches AS (
     SELECT match_id
     FROM match_info
@@ -42,7 +42,7 @@ SELECT COUNT() as fetched_matches_per_day
 FROM fetched_matches
 ";
 
-const MISSED_MATCHES_QUERY: &str = r"
+const MISSED_MATCHES_QUERY: &str = "
 SELECT COUNT(DISTINCT match_id)
 FROM player_match_history
 WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
@@ -142,7 +142,7 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     ),
     tags = ["Info"],
     summary = "API Info",
-    description = r"
+    description = "
 Returns information about the API.
 
 ### Rate Limits:

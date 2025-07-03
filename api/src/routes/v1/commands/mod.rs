@@ -9,7 +9,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Commands", description = r"
+#[openapi(tags((name = "Commands", description = "
 Integration endpoints for the [Deadlock Streamkit](https://streamkit.deadlock-api.com/).
 Provides functionality to resolve dynamic command templates and variables for streaming overlays and chat commands.
 Includes endpoints to retrieve available variables, resolve specific variables or command templates, and get widget version information.

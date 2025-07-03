@@ -161,7 +161,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         format!(" HAVING {} ", having_filters.join(" AND "))
     };
     format!(
-        r"
+        "
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches
 FROM match_player
 {player_filters}
@@ -206,7 +206,7 @@ async fn get_player_scoreboard(
     ),
     tags = ["Analytics"],
     summary = "Player Scoreboard",
-    description = r"
+    description = "
 This endpoint returns the player scoreboard.
 
 ### Rate Limits:

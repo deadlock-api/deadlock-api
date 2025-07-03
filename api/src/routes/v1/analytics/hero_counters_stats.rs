@@ -183,7 +183,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     format!(
-        r"
+        "
     WITH matches AS (SELECT match_id
                  FROM match_info
                  WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
@@ -247,7 +247,7 @@ async fn get_hero_counter_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Counter Stats",
-    description = r"
+    description = "
 Retrieves hero-versus-hero matchup statistics based on historical match data.
 
 This endpoint analyzes completed matches to calculate how often a specific hero (`hero_id`) wins against an enemy hero (`enemy_hero_id`) and the total number of times they have faced each other under the specified filter conditions.

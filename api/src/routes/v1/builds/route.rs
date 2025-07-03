@@ -45,7 +45,7 @@ async fn fetch_builds(
     ),
     tags = ["Builds"],
     summary = "Search",
-    description = r"
+    description = "
 Search for builds based on various criteria.
 
 ### Rate Limits:

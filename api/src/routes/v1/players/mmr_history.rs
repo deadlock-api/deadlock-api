@@ -34,7 +34,7 @@ pub struct MMRHistory {
 
 fn build_mmr_history_query(account_id: u32) -> String {
     format!(
-        r"
+        "
     SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
     FROM mmr_history FINAL
     JOIN match_info mi USING (match_id)
@@ -46,7 +46,7 @@ fn build_mmr_history_query(account_id: u32) -> String {
 
 fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     format!(
-        r"
+        "
     SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
     FROM hero_mmr_history FINAL
     JOIN match_info mi USING (match_id)
@@ -102,7 +102,7 @@ async fn get_hero_mmr_history(
     ),
     tags = ["Players"],
     summary = "MMR History",
-    description = r"
+    description = "
 # STOP! READ THIS FIRST!
 
 Please be very careful when using this endpoint and make yourself familiar with the way we calculate the MMR.
@@ -156,7 +156,7 @@ pub(super) async fn mmr_history(
     ),
     tags = ["Players"],
     summary = "Hero MMR History",
-    description = r"
+    description = "
 # STOP! READ THIS FIRST!
 
 Please be very careful when using this endpoint and make yourself familiar with the way we calculate the MMR.

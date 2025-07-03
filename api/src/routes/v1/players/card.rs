@@ -140,7 +140,7 @@ async fn fetch_player_card_raw(
     ),
     tags = ["Players"],
     summary = "Card as Protobuf",
-    description = r"
+    description = "
 This endpoint returns the player card for the given `account_id`, serialized as protobuf message.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
@@ -195,7 +195,7 @@ pub(super) async fn card_raw(
     ),
     tags = ["Players"],
     summary = "Card",
-    description = r"
+    description = "
 This endpoint returns the player card for the given `account_id`.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)

@@ -51,7 +51,7 @@ enum SQLQueryError {
     ),
     tags = ["SQL"],
     summary = "Query",
-    description = r"
+    description = "
 Executes a SQL query on the database.
 
 ### Rate Limits:
@@ -133,7 +133,7 @@ async fn run_sql(
     ),
     tags = ["SQL"],
     summary = "List Tables",
-    description = r"
+    description = "
 Lists all tables in the database.
 
 ### Rate Limits:
@@ -167,7 +167,7 @@ async fn fetch_list_tables(
 ) -> clickhouse::error::Result<Vec<String>> {
     ch_client
         .query(
-            r"
+            "
             SELECT name
             FROM system.tables
             WHERE database = 'default'
@@ -189,7 +189,7 @@ async fn fetch_list_tables(
     ),
     tags = ["SQL"],
     summary = "Table Schema",
-    description = r"
+    description = "
 Returns the schema of a table.
 
 ### Rate Limits:
@@ -230,7 +230,7 @@ async fn fetch_table_schema(
 ) -> clickhouse::error::Result<Vec<TableSchemaRow>> {
     ch_client
         .query(
-            r"
+            "
             SELECT name, type
             FROM system.columns
             WHERE database = 'default' AND table = ?

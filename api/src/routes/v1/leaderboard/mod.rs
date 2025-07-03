@@ -9,7 +9,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Leaderboard", description = r"
+#[openapi(tags((name = "Leaderboard", description = "
 Endpoints for retrieving global and hero-specific leaderboards.
 Supports filtering by region and provides data in both JSON and protobuf formats.
 ")))]

@@ -172,7 +172,7 @@ pub(super) async fn fetch_match_salts(
     ),
     tags = ["Matches"],
     summary = "Salts",
-    description = r"
+    description = "
 This endpoints returns salts that can be used to fetch metadata and demofile for a match.
 
 **Note:** We currently fetch many matches without salts, so for these matches we do not have salts stored.

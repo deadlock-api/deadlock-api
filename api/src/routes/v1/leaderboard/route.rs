@@ -91,7 +91,7 @@ pub(crate) async fn fetch_steam_names(
     let mut out = HashMap::new();
     for row in ch_client
         .query(
-            r"
+            "
                 SELECT DISTINCT assumeNotNull(name) as name, account_id
                 FROM steam_profiles
                 ARRAY JOIN [personaname, realname] AS name
@@ -119,7 +119,7 @@ pub(crate) async fn fetch_steam_names(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard as Protobuf",
-    description = r"
+    description = "
 Returns the leaderboard, serialized as protobuf message.
 
 ### Rate Limits:
@@ -153,7 +153,7 @@ pub(super) async fn leaderboard_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard as Protobuf",
-    description = r"
+    description = "
 Returns the leaderboard for a specific hero, serialized as protobuf message.
 
 ### Rate Limits:
@@ -193,7 +193,7 @@ pub(super) async fn leaderboard_hero_raw(
     ),
     tags = ["Leaderboard"],
     summary = "Leaderboard",
-    description = r"
+    description = "
 Returns the leaderboard.
 
 ### Rate Limits:
@@ -244,7 +244,7 @@ pub(super) async fn leaderboard(
     ),
     tags = ["Leaderboard"],
     summary = "Hero Leaderboard",
-    description = r"
+    description = "
 Returns the leaderboard for a specific hero.
 
 ### Rate Limits:

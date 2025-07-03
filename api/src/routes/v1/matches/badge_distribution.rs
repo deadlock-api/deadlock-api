@@ -50,7 +50,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         format!(" AND {}", filters.join(" AND "))
     };
     format!(
-        r"
+        "
     SELECT
         coalesce(t_badge_level, 0) as badge_level,
         COUNT() as total_matches
@@ -91,7 +91,7 @@ async fn get_badge_distribution(
     ),
     tags = ["Matches"],
     summary = "Badge Distribution",
-    description = r"
+    description = "
 This endpoint returns the player badge distribution.
 
 ### Rate Limits:

@@ -194,7 +194,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     };
     let bucket = query.bucket.get_select_clause();
     format!(
-        r"
+        "
     WITH t_matches AS (
             SELECT match_id, start_time
             FROM match_info
@@ -240,7 +240,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     ",
         if query.min_hero_matches.or(query.max_hero_matches).is_some() {
             format!(
-                r",
+                ",
         t_players AS (
             SELECT account_id, hero_id
             FROM match_player
@@ -293,7 +293,7 @@ async fn get_hero_stats(
     ),
     tags = ["Analytics"],
     summary = "Hero Stats",
-    description = r"
+    description = "
 Retrieves performance statistics for each hero based on historical match data.
 
 ### Rate Limits:

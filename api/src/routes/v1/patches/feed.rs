@@ -14,7 +14,7 @@ use axum::response::IntoResponse;
     ),
     tags = ["Patches"],
     summary = "Notes",
-    description = r"
+    description = "
 Returns the parsed result of the RSS Feed from the official Forum.
 
 RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss

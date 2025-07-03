@@ -30,7 +30,7 @@ async fn fetch_matches(pg_client: &sqlx::Pool<sqlx::Postgres>) -> sqlx::Result<V
     ),
     tags = ["E-Sports"],
     summary = "List Matches",
-    description = r"
+    description = "
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |

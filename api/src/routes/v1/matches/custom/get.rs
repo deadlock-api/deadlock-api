@@ -48,7 +48,7 @@ async fn get_party_match_id(
     ),
     tags = ["Custom Matches"],
     summary = "Get Match ID",
-    description = r"
+    description = "
 This endpoint allows you to get the match id of a custom match.
 
 ### Rate Limits:

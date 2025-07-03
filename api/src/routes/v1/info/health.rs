@@ -79,7 +79,7 @@ async fn check_health(
     ),
     tags = ["Info"],
     summary = "Health Check",
-    description = r"
+    description = "
 Checks the health of the services.
 
 ### Rate Limits:

@@ -51,7 +51,7 @@ impl From<Variable> for VariableDescription {
     ),
     tags = ["Commands"],
     summary = "Available Variables",
-    description = r"
+    description = "
 Returns a list of available variables that can be used in the command endpoint.
 
 ### Rate Limits:
@@ -80,7 +80,7 @@ pub(super) async fn available_variables() -> APIResult<impl IntoResponse> {
     ),
     tags = ["Commands"],
     summary = "Widget Versions",
-    description = r"
+    description = "
 Returns a map of str->int of widget versions.
 
 ### Rate Limits:
@@ -123,7 +123,7 @@ pub(super) struct CommandResolveQuery {
     ),
     tags = ["Commands"],
     summary = "Resolve Command",
-    description = r"
+    description = "
     Resolves a command and returns the resolved command.
 
 ### Rate Limits:
@@ -225,7 +225,7 @@ pub(super) struct VariablesResolveQuery {
     ),
     tags = ["Commands"],
     summary = "Resolve Variables",
-    description = r"
+    description = "
 Resolves variables and returns a map of variable name to resolved value.
 
 ### Rate Limits:

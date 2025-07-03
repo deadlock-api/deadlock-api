@@ -10,7 +10,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Builds", description = r"
+#[openapi(tags((name = "Builds", description = "
 Search and retrieve hero builds with comprehensive filtering options.
 ")))]
 struct ApiDoc;

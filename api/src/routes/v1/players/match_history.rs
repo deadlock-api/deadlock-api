@@ -248,7 +248,7 @@ async fn exists_newer_match_than(
     match_id: u64,
 ) -> bool {
     let query = format!(
-        r"
+        "
     SELECT match_id
     FROM match_player
     WHERE account_id = {account_id} AND match_id > {match_id}
@@ -271,7 +271,7 @@ async fn exists_newer_match_than(
     ),
     tags = ["Players"],
     summary = "Match History",
-    description = r"
+    description = "
 This endpoint returns the player match history for the given `account_id`.
 
 The player match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.

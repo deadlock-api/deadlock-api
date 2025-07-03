@@ -33,7 +33,7 @@ pub struct BuildItemStats {
 
 fn build_query(query: &BuildItemStatsQuery) -> String {
     let mut query_builder: QueryBuilder<Postgres> = QueryBuilder::default();
-    query_builder.push(r"
+    query_builder.push("
     SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds
     FROM hero_builds,
         LATERAL jsonb_array_elements(data -> 'hero_build' -> 'details' -> 'mod_categories') AS category_element,
@@ -91,7 +91,7 @@ async fn get_build_item_stats(
     ),
     tags = ["Analytics"],
     summary = "Build Item Stats",
-    description = r"
+    description = "
 Retrieves item statistics from hero builds.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.

@@ -6,7 +6,7 @@ use utoipa::{Modify, OpenApi};
     info(
         title = "Deadlock API",
         version = "0.1.0",
-        description = r"
+        description = "
 ## Support the Deadlock API
 
 Whether you're building your own database, developing data science projects, or enhancing your website with game and player analytics, the Deadlock API has the data you need.

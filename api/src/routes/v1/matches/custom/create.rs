@@ -255,7 +255,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
     ),
     tags = ["Custom Matches"],
     summary = "Create Match",
-    description = r"
+    description = "
 This endpoint allows you to create a custom match.
 
 ### Rate Limits:

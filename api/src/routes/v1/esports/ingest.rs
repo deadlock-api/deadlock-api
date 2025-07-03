@@ -24,7 +24,7 @@ use uuid::Uuid;
     ),
     tags = ["E-Sports"],
     summary = "Ingest",
-    description = r"
+    description = "
 To use this Endpoint you need to have special permissions.
 Please contact us if you organize E-Sports Matches and want to ingest them to us.
 

@@ -18,7 +18,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 #[derive(OpenApi)]
-#[openapi(tags((name = "Matches", description = r"
+#[openapi(tags((name = "Matches", description = "
 Comprehensive match data endpoints for retrieving detailed information about games.
 Provides access to active matches, match metadata, replay salts, and more.
 ")))]
