@@ -10,11 +10,9 @@ pub(crate) async fn check_api_key_is_esports_ingest_key(
         warn!("API-Key required!");
         return Ok(false);
     };
-    Ok(sqlx::query!(
+    let result = sqlx::query!(
         "SELECT COUNT(*) as count FROM api_keys WHERE key = $1 AND disabled IS false AND esports_ingest IS true",
         api_key
-    )    .fetch_one(pg_client)
-        .await?
-        .count
-        .is_some_and(|c| c > 0))
+    ).fetch_one(pg_client).await?;
+    Ok(result.count.is_some_and(|c| c > 0))
 }

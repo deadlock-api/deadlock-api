@@ -56,6 +56,7 @@ fn parse_active_matches_raw(raw_data: &[u8]) -> APIResult<Vec<ActiveMatch>> {
     if raw_data.len() < 7 {
         return Err(APIError::internal("Invalid active matches data"));
     }
+    #[allow(clippy::indexing_slicing)]
     let decompressed_data = snap::raw::Decoder::new().decompress_vec(&raw_data[7..])?;
     let decoded_message =
         CMsgClientToGcGetActiveMatchesResponse::decode(decompressed_data.as_ref())?;

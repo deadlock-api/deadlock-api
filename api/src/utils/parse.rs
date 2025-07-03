@@ -31,14 +31,13 @@ pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    u64::deserialize(deserializer)
+    let steam_id3 = u64::deserialize(deserializer)
         .map_err(serde::de::Error::custom)
-        .and_then(|s| steamid64_to_steamid3(s).map_err(serde::de::Error::custom))
-        .and_then(|steam_id| {
-            (steam_id > 0)
-                .then_some(steam_id)
-                .ok_or_else(|| serde::de::Error::custom("Invalid steam id"))
-        })
+        .and_then(|s| steamid64_to_steamid3(s).map_err(serde::de::Error::custom))?;
+    if steam_id3 == 0 {
+        return Err(serde::de::Error::custom("Invalid steam id"));
+    }
+    Ok(steam_id3)
 }
 
 pub(crate) fn parse_steam_id_option<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>

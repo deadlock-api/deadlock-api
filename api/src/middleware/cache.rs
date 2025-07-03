@@ -90,8 +90,8 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, request: Request) -> Self::Future {
-        let future = self.inner.call(request);
+    fn call(&mut self, req: Request) -> Self::Future {
+        let future = self.inner.call(req);
         let header = self.layer.header_value();
         Box::pin(async move {
             let mut response: Response = future.await?;

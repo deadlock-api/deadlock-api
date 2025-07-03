@@ -21,7 +21,6 @@ pub(crate) struct Quota {
 }
 
 impl Quota {
-    #[allow(dead_code)]
     pub(crate) fn ip_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
@@ -30,7 +29,6 @@ impl Quota {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn key_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,
@@ -39,7 +37,6 @@ impl Quota {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn global_limit(limit: usize, period: Duration) -> Self {
         Self {
             limit,

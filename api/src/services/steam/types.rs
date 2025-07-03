@@ -99,7 +99,7 @@ pub(crate) struct Channel {
 pub(crate) struct Patch {
     pub(crate) title: String,
     #[serde(deserialize_with = "parse_rfc2822_datetime")]
-    pub pub_date: DateTime<FixedOffset>,
+    pub(crate) pub_date: DateTime<FixedOffset>,
     pub(crate) link: String,
     pub(crate) guid: PatchGuid,
     pub(crate) author: String,
