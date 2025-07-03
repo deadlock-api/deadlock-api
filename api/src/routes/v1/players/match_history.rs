@@ -13,10 +13,10 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use core::time::Duration;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::time::Duration;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{

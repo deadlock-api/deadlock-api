@@ -6,7 +6,6 @@ use axum::http::Response;
 use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde_json::json;
-use std::{fmt, io};
 use thiserror::Error;
 use tracing::error;
 
@@ -17,7 +16,7 @@ pub enum StartupError {
     #[error("Server error: {0}")]
     Server(#[from] axum::Error),
     #[error("IO error: {0}")]
-    IO(#[from] io::Error),
+    IO(#[from] std::io::Error),
     #[error("Load app state error: {0}")]
     AppState(#[from] AppStateError),
 }
@@ -55,9 +54,9 @@ pub(super) enum APIError {
     #[error("Json De-/Serialization Error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("IO Error: {0}")]
-    Io(#[from] io::Error),
+    Io(#[from] std::io::Error),
     #[error("FMT Error: {0}")]
-    Fmt(#[from] fmt::Error),
+    Fmt(#[from] core::fmt::Error),
     #[error("Snappy Error: {0}")]
     Snappy(#[from] snap::Error),
 }
@@ -176,7 +175,7 @@ impl IntoResponse for APIError {
 mod tests {
     use super::*;
     use axum::http::StatusCode;
-    use std::time::Duration;
+    use core::time::Duration;
 
     #[test]
     fn test_api_error_status() {

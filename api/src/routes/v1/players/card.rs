@@ -15,9 +15,9 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use core::time::Duration;
 use itertools::Itertools;
 use serde::Serialize;
-use std::time::Duration;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
     CMsgCitadelProfileCard, CMsgClientToGcGetProfileCard, EgcCitadelClientMessages,

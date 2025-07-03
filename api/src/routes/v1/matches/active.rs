@@ -12,10 +12,10 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use core::time::Duration;
 use itertools::Itertools;
 use prost::Message;
 use serde::Deserialize;
-use std::time::Duration;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetActiveMatches, CMsgClientToGcGetActiveMatchesResponse,

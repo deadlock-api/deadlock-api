@@ -7,6 +7,7 @@
 #![deny(clippy::complexity)]
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
+#![deny(clippy::std_instead_of_core)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::wildcard_imports)]
 #![allow(clippy::cast_sign_loss)]

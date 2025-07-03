@@ -10,8 +10,8 @@ use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use core::time::Duration;
 use serde::Serialize;
-use std::time::Duration;
 use tracing::debug;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{

@@ -6,10 +6,10 @@ use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
+use core::time::Duration;
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
-use std::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 

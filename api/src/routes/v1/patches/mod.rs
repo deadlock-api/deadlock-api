@@ -3,7 +3,7 @@ pub(super) mod feed;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
-use std::time::Duration;
+use core::time::Duration;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;

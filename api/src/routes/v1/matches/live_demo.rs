@@ -9,9 +9,9 @@ use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use bytes::Bytes;
+use core::time::Duration;
 use futures::Stream;
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
-use std::time::Duration;
 use tracing::{error, info};
 
 fn demo_stream(

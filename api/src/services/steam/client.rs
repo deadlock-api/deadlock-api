@@ -11,11 +11,11 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use core::time::Duration;
 use metrics::counter;
 use prost::Message;
 use reqwest::Response;
 use serde_json::json;
-use std::time::Duration;
 use tracing::{debug, error};
 use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 

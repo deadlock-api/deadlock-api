@@ -1,7 +1,7 @@
 use crate::error::APIError;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use std::net::Ipv4Addr;
+use core::net::Ipv4Addr;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]

@@ -14,10 +14,10 @@ use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use core::time::Duration;
 use futures::join;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::time::Duration;
 use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{

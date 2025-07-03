@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset};
+use core::num::TryFromIntError;
+use core::str::FromStr;
 use serde::{Deserialize, Deserializer};
-use std::num::TryFromIntError;
-use std::str::FromStr;
 
 // Date Parsing
 pub(crate) fn parse_rfc2822_datetime<'de, D>(
@@ -60,7 +60,7 @@ where
 #[serde(untagged)]
 enum CommaSeparatedNum<T>
 where
-    T: std::fmt::Debug + FromStr,
+    T: core::fmt::Debug + FromStr,
 {
     /// A List of numbers in a single comma separated string, e.g. "1,2,3"
     CommaStringList(String),
@@ -77,7 +77,7 @@ pub(crate) fn comma_separated_num_deserialize_option<'de, D, T>(
 ) -> Result<Option<Vec<T>>, D::Error>
 where
     D: Deserializer<'de>,
-    T: FromStr + Deserialize<'de> + std::fmt::Debug,
+    T: FromStr + Deserialize<'de> + core::fmt::Debug,
 {
     let parsed: CommaSeparatedNum<T> = match Option::deserialize(deserializer)? {
         Some(v) => v,

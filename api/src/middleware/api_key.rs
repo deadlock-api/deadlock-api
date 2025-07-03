@@ -45,7 +45,7 @@ mod tests {
     use axum::http::{Request, StatusCode};
     use axum::response::IntoResponse;
     use axum::routing::get;
-    use std::str::FromStr;
+    use core::str::FromStr;
     use tower::ServiceExt;
     use uuid::Uuid;
 

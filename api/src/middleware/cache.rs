@@ -1,12 +1,12 @@
 use axum::http::HeaderValue;
 use axum::http::header::CACHE_CONTROL;
 use axum::{extract::Request, response::Response};
+use core::fmt::Write;
+use core::future::Future;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+use core::time::Duration;
 use reqwest::header::InvalidHeaderValue;
-use std::fmt::Write;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Duration;
 use tower_service::Service;
 
 /// A layer that adds a `Cache-Control` header to the response.
