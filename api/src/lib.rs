@@ -46,7 +46,7 @@ use utoipa_scalar::{Scalar, Servable};
 
 pub use error::*;
 
-const DEFAULT_CACHE_TIME: u64 = 60;
+const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 
 async fn favicon() -> impl IntoResponse {
     let favicon = include_bytes!("../public/favicon.ico");
