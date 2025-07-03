@@ -31,8 +31,8 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let mut delay_set = HashSetDelay::new(Duration::from_secs(2 * 60));
-    let mut interval = tokio::time::interval(Duration::from_secs(61));
+    let mut delay_set = HashSetDelay::new(Duration::from_secs(4 * 60));
+    let mut interval = tokio::time::interval(Duration::from_secs(2 * 60 + 1));
 
     loop {
         interval.tick().await;
