@@ -67,7 +67,7 @@ pub(super) async fn sql(
     Query(query): Query<SQLQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.config.allow_custom_queries {
+    if !state.config.clickhouse.allow_custom_queries {
         return Err(APIError::status_msg(
             StatusCode::FORBIDDEN,
             "Custom queries are disabled",
@@ -145,7 +145,7 @@ Lists all tables in the database.
     "
 )]
 pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
-    if !state.config.allow_custom_queries {
+    if !state.config.clickhouse.allow_custom_queries {
         return Err(APIError::status_msg(
             StatusCode::FORBIDDEN,
             "Custom queries are disabled",
@@ -204,7 +204,7 @@ pub(super) async fn table_schema(
     Path(TableQuery { table }): Path<TableQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if !state.config.allow_custom_queries {
+    if !state.config.clickhouse.allow_custom_queries {
         return Err(APIError::status_msg(
             StatusCode::FORBIDDEN,
             "Custom queries are disabled",

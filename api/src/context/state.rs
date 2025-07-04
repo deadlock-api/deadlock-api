@@ -25,7 +25,7 @@ pub enum AppStateError {
     #[error("PostgreSQL error: {0}")]
     PostgreSQL(#[from] sqlx::Error),
     #[error("Parsing error: {0}")]
-    ParsingConfig(#[from] envy::Error),
+    ParsingConfig(#[from] serde_env::Error),
     #[error("Parsing Json error: {0}")]
     ParsingJson(#[from] serde_json::Error),
     #[error("IO error: {0}")]
@@ -56,7 +56,7 @@ pub(crate) struct AppState {
 impl AppState {
     #[allow(clippy::too_many_lines)]
     pub(crate) async fn from_env() -> Result<AppState, AppStateError> {
-        let config: Config = envy::from_env()?;
+        let config = Config::from_env()?;
 
         // Create an HTTP client
         debug!("Creating HTTP client");
@@ -65,11 +65,11 @@ impl AppState {
         // Create an S3 client
         debug!("Creating S3 client");
         let s3_client = AmazonS3Builder::new()
-            .with_region(&config.s3_region)
-            .with_bucket_name(&config.s3_bucket)
-            .with_access_key_id(&config.s3_access_key_id)
-            .with_secret_access_key(&config.s3_secret_access_key)
-            .with_endpoint(&config.s3_endpoint)
+            .with_region(&config.s3.region)
+            .with_bucket_name(&config.s3.bucket)
+            .with_access_key_id(&config.s3.access_key_id)
+            .with_secret_access_key(&config.s3.secret_access_key)
+            .with_endpoint(&config.s3.endpoint)
             .with_allow_http(true)
             .with_client_options(
                 ClientOptions::default()
@@ -90,11 +90,11 @@ impl AppState {
         // Create an S3 cache client
         debug!("Creating S3 cache client");
         let s3_cache_client = AmazonS3Builder::new()
-            .with_region(&config.s3_cache_region)
-            .with_bucket_name(&config.s3_cache_bucket)
-            .with_access_key_id(&config.s3_cache_access_key_id)
-            .with_secret_access_key(&config.s3_cache_secret_access_key)
-            .with_endpoint(&config.s3_cache_endpoint)
+            .with_region(&config.s3_cache.region)
+            .with_bucket_name(&config.s3_cache.bucket)
+            .with_access_key_id(&config.s3_cache.access_key_id)
+            .with_secret_access_key(&config.s3_cache.secret_access_key)
+            .with_endpoint(&config.s3_cache.endpoint)
             .with_allow_http(true)
             .with_client_options(
                 ClientOptions::default()
@@ -114,7 +114,7 @@ impl AppState {
 
         // Create a Redis connection pool
         debug!("Creating Redis client");
-        let redis_client = redis::Client::open(config.redis_url.clone())?
+        let redis_client = redis::Client::open(config.redis.url.clone())?
             .get_multiplexed_async_connection()
             .await?;
 
@@ -123,11 +123,11 @@ impl AppState {
         let ch_client = clickhouse::Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                config.clickhouse_host, config.clickhouse_http_port
+                config.clickhouse.host, config.clickhouse.http_port
             ))
-            .with_user(&config.clickhouse_username)
-            .with_password(&config.clickhouse_password)
-            .with_database(&config.clickhouse_dbname)
+            .with_user(&config.clickhouse.username)
+            .with_password(&config.clickhouse.password)
+            .with_database(&config.clickhouse.dbname)
             .with_option("output_format_json_quote_64bit_integers", "0")
             .with_option("output_format_json_named_tuples_as_objects", "1")
             .with_option("enable_json_type", "1")
@@ -142,11 +142,11 @@ impl AppState {
         let ch_client_ro = clickhouse::Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                config.clickhouse_host, config.clickhouse_http_port
+                config.clickhouse.host, config.clickhouse.http_port
             ))
-            .with_user(&config.clickhouse_username)
-            .with_password(&config.clickhouse_password)
-            .with_database(&config.clickhouse_dbname)
+            .with_user(&config.clickhouse.username)
+            .with_password(&config.clickhouse.password)
+            .with_database(&config.clickhouse.dbname)
             .with_option("output_format_json_quote_64bit_integers", "0")
             .with_option("output_format_json_named_tuples_as_objects", "1")
             .with_option("enable_json_type", "1")
@@ -164,11 +164,11 @@ impl AppState {
         let ch_client_restricted = clickhouse::Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                config.clickhouse_host, config.clickhouse_http_port
+                config.clickhouse.host, config.clickhouse.http_port
             ))
-            .with_user(&config.clickhouse_restricted_username)
-            .with_password(&config.clickhouse_restricted_password)
-            .with_database(&config.clickhouse_dbname);
+            .with_user(&config.clickhouse.restricted_username)
+            .with_password(&config.clickhouse.restricted_password)
+            .with_database(&config.clickhouse.dbname);
         if let Err(e) = ch_client_restricted
             .query("SELECT 1")
             .fetch_one::<u8>()
@@ -180,13 +180,13 @@ impl AppState {
         // Create a Postgres connection pool
         debug!("Creating PostgreSQL client");
         let pg_options = PgConnectOptions::new_without_pgpass()
-            .host(&config.postgres_host)
-            .port(config.postgres_port)
-            .username(&config.postgres_username)
-            .password(&config.postgres_password)
-            .database(&config.postgres_dbname);
+            .host(&config.postgres.host)
+            .port(config.postgres.port)
+            .username(&config.postgres.username)
+            .password(&config.postgres.password)
+            .database(&config.postgres.dbname);
         let pg_client = PgPoolOptions::new()
-            .max_connections(config.postgres_pool_size)
+            .max_connections(config.postgres.pool_size)
             .connect_with(pg_options)
             .await?;
 
@@ -206,9 +206,9 @@ impl AppState {
         debug!("Creating Steam client");
         let steam_client = SteamClient::new(
             http_client.clone(),
-            config.steam_proxy_url.clone(),
-            config.steam_proxy_api_key.clone(),
-            config.steam_api_key.clone(),
+            config.steam.proxy_url.clone(),
+            config.steam.proxy_api_key.clone(),
+            config.steam.api_key.clone(),
         );
 
         // Create an Assets client
