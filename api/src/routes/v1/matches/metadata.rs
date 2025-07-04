@@ -11,7 +11,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use core::time::Duration;
-use futures::future::join;
+use futures::FutureExt;
 use metrics::counter;
 use object_store::ObjectStore;
 use object_store::aws::AmazonS3;
@@ -20,8 +20,8 @@ use tokio::io::AsyncReadExt;
 use tracing::debug;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
-async fn fetch_from_s3(s3: &AmazonS3, file: &str) -> object_store::Result<Vec<u8>> {
-    s3.get(&object_store::path::Path::from(file))
+async fn fetch_from_s3(s3: &AmazonS3, key: impl AsRef<str>) -> object_store::Result<Vec<u8>> {
+    s3.get(&object_store::path::Path::from(key.as_ref()))
         .await?
         .bytes()
         .await
@@ -51,19 +51,14 @@ async fn fetch_match_metadata_raw(
         .await?;
 
     // Try to fetch from the cache first
-    let results = join(
-        fetch_from_s3(s3_cache, &format!("{match_id}.meta.bz2")),
-        fetch_from_s3(s3_cache, &format!("{match_id}.meta_hltv.bz2")),
-    )
+    let results = futures::future::select_ok(vec![
+        fetch_from_s3(s3_cache, format!("{match_id}.meta.bz2")).boxed(),
+        fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")).boxed(),
+    ])
     .await;
-    if let Ok(data) = results.0 {
+    if let Ok((data, _)) = results {
         debug!("Match metadata found in cache");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
-        return Ok(data);
-    }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found in cache, hltv");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
+        counter!("metadata.fetch", "s3" => "minio").increment(1);
         return Ok(data);
     }
 
@@ -80,19 +75,14 @@ async fn fetch_match_metadata_raw(
         .await?;
 
     // If not in cache, fetch from S3
-    let results = join(
-        fetch_from_s3(s3, &format!("processed/metadata/{match_id}.meta.bz2")),
-        fetch_from_s3(s3, &format!("processed/metadata/{match_id}.meta_hltv.bz2")),
-    )
+    let results = futures::future::select_ok(vec![
+        fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta.bz2")).boxed(),
+        fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta_hltv.bz2")).boxed(),
+    ])
     .await;
-    if let Ok(data) = results.0 {
+    if let Ok((data, _)) = results {
         debug!("Match metadata found on s3");
-        counter!("metadata.fetch", "s3" => "hetzner", "source" => "salt").increment(1);
-        return Ok(data);
-    }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found on s3, hltv");
-        counter!("metadata.fetch", "s3" => "hetzner", "source" => "hltv").increment(1);
+        counter!("metadata.fetch", "s3" => "hetzner").increment(1);
         return Ok(data);
     }
 
