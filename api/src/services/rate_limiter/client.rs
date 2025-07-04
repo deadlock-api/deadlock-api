@@ -13,7 +13,7 @@ use sqlx::{Pool, Postgres};
 use tracing::error;
 use uuid::Uuid;
 
-const MAX_TTL_MICROS: u64 = 60 * 60 * 1000 * 1000;
+const MAX_TTL_MICROS: i64 = 60 * 60 * 1000 * 1000;
 
 #[derive(Clone)]
 pub(crate) struct RateLimitClient {
@@ -158,11 +158,11 @@ impl RateLimitClient {
     }
 
     async fn increment_key(&self, key: &str) -> RedisResult<()> {
-        let current_time = Utc::now().timestamp_micros() as u64;
+        let current_time = Utc::now().timestamp_micros();
         redis::pipe()
             .zrembyscore(key, 0, current_time - MAX_TTL_MICROS) // Remove old entries for the key
             .zadd(key, current_time, current_time) // Add current timestamp for the key
-            .expire(key, (MAX_TTL_MICROS / 1000 / 1000) as i64) // Set expiration time for the key
+            .expire(key, MAX_TTL_MICROS / 1000 / 1000) // Set expiration time for the key
             .exec_async(&mut self.redis_client.clone()) // Execute the pipeline
             .await
     }

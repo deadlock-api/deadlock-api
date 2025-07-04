@@ -874,7 +874,8 @@ async fn get_steam_account_name(
             );
             sqlx::query!(
                 "SELECT personaname FROM steam_profiles WHERE account_id = $1",
-                steam_id as i32
+                i32::try_from(steam_id)
+                    .map_err(|_| VariableResolveError::NoData("steam account id"))?
             )
             .fetch_one(pg_client)
             .await?
