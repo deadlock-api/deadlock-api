@@ -122,6 +122,7 @@ async fn wait_for_party_code(
     party_id: u64,
 ) -> RedisResult<Option<String>> {
     let mut retries_left = 100;
+    let mut interval = tokio::time::interval(Duration::from_millis(100));
     loop {
         match get_party_code(redis_client, party_id).await {
             Ok(Some(party_code)) => {
@@ -132,14 +133,14 @@ async fn wait_for_party_code(
                 if retries_left <= 0 {
                     return Ok(None);
                 }
-                sleep(Duration::from_millis(100)).await;
+                interval.tick().await;
             }
             Err(e) => {
                 retries_left -= 1;
                 if retries_left <= 0 {
                     return Err(e);
                 }
-                sleep(Duration::from_millis(100)).await;
+                interval.tick().await;
             }
         }
     }
