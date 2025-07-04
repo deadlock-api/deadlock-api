@@ -20,6 +20,7 @@ pub(crate) struct RedisConfig {
 
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct S3Config {
+    #[serde(default)]
     pub(super) region: String,
     pub(super) bucket: String,
     pub(super) access_key_id: String,
