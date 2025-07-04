@@ -4,8 +4,8 @@ export const PATCHES = [
   {
     id: "2025-06-17",
     name: "Latest Patch (2025-06-17)",
-    startDate: day("2025-06-17T20:34:00Z"),
-    endDate: day().startOf("day"),
+    startDate: day.utc("2025-06-17T20:34:00Z").local(),
+    endDate: day.utc().startOf("day").local(),
   },
   {
     id: "2025-05-08",
