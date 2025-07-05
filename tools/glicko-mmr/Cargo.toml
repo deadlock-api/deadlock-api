@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 clickhouse = { version = "0.13.3", features = ["chrono", "inserter"] }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.46.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
 anyhow = "1.0.98"
 common = { version = "0.1.0", path = "../common" }
 tracing = "0.1.41"
