@@ -1,10 +1,12 @@
+use core::f64::consts::{E, PI};
+use std::collections::HashMap;
+
+use chrono::Duration;
+use roots::SimpleConvergency;
+
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
 use crate::utils;
-use chrono::Duration;
-use core::f64::consts::{E, PI};
-use roots::SimpleConvergency;
-use std::collections::HashMap;
 
 #[tracing::instrument(skip(player_ratings_before))]
 pub fn update_match(

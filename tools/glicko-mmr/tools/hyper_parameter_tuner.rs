@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::RwLock;
+
 use chrono::Duration;
 use glicko_mmr::config::Config;
 use glicko_mmr::glicko;
@@ -5,8 +8,6 @@ use glicko_mmr::types::{CHMatch, query_all_matches_after_cached};
 use rand::Rng;
 use rand::prelude::*;
 use rayon::prelude::*;
-use std::collections::HashMap;
-use std::sync::RwLock;
 use tracing::{debug, info};
 
 fn test_config(matches_to_process: &[CHMatch], config: &Config) -> anyhow::Result<f64> {

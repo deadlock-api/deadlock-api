@@ -9,11 +9,13 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
 
-use crate::models::{ChHero, ChUpgradeItem};
 use core::time::Duration;
+
 use metrics::counter;
 use models::{Hero, UpgradeItem};
 use tracing::{debug, error, info, instrument};
+
+use crate::models::{ChHero, ChUpgradeItem};
 
 mod models;
 

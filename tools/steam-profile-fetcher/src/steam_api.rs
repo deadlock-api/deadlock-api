@@ -1,8 +1,9 @@
+use std::env;
+
 use anyhow::Result;
 use itertools::Itertools;
 use rand::rng;
 use rand::seq::IndexedRandom;
-use std::env;
 use tracing::instrument;
 
 use crate::models::{SteamPlayerSummary, SteamPlayerSummaryResponse};

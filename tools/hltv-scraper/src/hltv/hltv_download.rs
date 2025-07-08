@@ -1,18 +1,21 @@
 use core::time::Duration;
+use std::io::Cursor;
+use std::sync::Arc;
+use std::time::Instant;
+
 use haste::broadcast::BroadcastFile;
 use haste::demostream::DemoStream;
 use metrics::counter;
 use reqwest::{Client, StatusCode};
 use serde::Deserialize;
-use std::time::Instant;
-use std::{io::Cursor, sync::Arc};
 use thiserror::Error;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::time::sleep;
 use tracing::{error, trace};
 use valveprotos::common::EDemoCommands;
 
-use crate::hltv::{FragmentType, hltv_extract_meta::extract_meta_from_fragment};
+use crate::hltv::FragmentType;
+use crate::hltv::hltv_extract_meta::extract_meta_from_fragment;
 
 #[allow(unused)]
 #[derive(Debug)]

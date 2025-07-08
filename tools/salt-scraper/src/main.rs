@@ -9,13 +9,14 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
 
+use core::time::Duration;
+use std::sync::LazyLock;
+
 use anyhow::bail;
 use clickhouse::Client;
-use core::time::Duration;
 use futures::StreamExt;
 use metrics::counter;
 use models::MatchSalt;
-use std::sync::LazyLock;
 use tracing::{debug, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{

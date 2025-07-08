@@ -1,10 +1,9 @@
 use core::num::NonZeroUsize;
 use core::time::Duration;
-use std::path::Path;
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::{collections::HashSet, fs};
-use tokio::time::sleep;
 
 use anyhow::Context;
 use async_compression::tokio::write::BzEncoder;
@@ -17,13 +16,12 @@ use prost::Message;
 use reqwest::Url;
 use serde_json::json;
 use tokio::io::AsyncWriteExt as _;
+use tokio::time::sleep;
 use tracing::{error, info, warn};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
-use crate::cmd::{
-    download_single_hltv::download_single_hltv_meta,
-    run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType},
-};
+use crate::cmd::download_single_hltv::download_single_hltv_meta;
+use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
 pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
     let spec_client = reqwest::Client::new();
@@ -81,7 +79,8 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 
         let Some(smi) = chosen_match else {
             info!(
-                "no current match to watch... {current_count} in progress ({total_available_matches} total possible to spectate)"
+                "no current match to watch... {current_count} in progress \
+                 ({total_available_matches} total possible to spectate)"
             );
             sleep(Duration::from_millis(10000)).await;
             continue;

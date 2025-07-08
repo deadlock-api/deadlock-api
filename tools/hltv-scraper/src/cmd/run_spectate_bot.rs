@@ -1,10 +1,14 @@
-use crate::easy_poll::start_polling_text;
+use core::num::NonZeroUsize;
+use core::time::Duration;
+use std::collections::{HashMap, HashSet};
+use std::env;
+use std::sync::{Arc, LazyLock, Mutex};
+use std::time::Instant;
+
 use anyhow::{Context, Result};
-use axum::{
-    Json, Router,
-    extract::State,
-    routing::{get, post},
-};
+use axum::extract::State;
+use axum::routing::{get, post};
+use axum::{Json, Router};
 use base64::prelude::*;
 use fred::interfaces::HashesInterface;
 use fred::prelude::Client as RedisClient;
@@ -14,23 +18,15 @@ use lru::LruCache;
 use prost::Message;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
-use std::sync::LazyLock;
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    num::NonZeroUsize,
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
 use tokio::time::sleep;
 use tracing::{Span, debug, error, field, info, warn};
-use valveprotos::{
-    deadlock::{
-        CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse, EgcCitadelClientMessages,
-        c_msg_client_to_gc_spectate_user_response::EResponse,
-    },
-    gcsdk::EgcPlatform,
+use valveprotos::deadlock::c_msg_client_to_gc_spectate_user_response::EResponse;
+use valveprotos::deadlock::{
+    CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse, EgcCitadelClientMessages,
 };
+use valveprotos::gcsdk::EgcPlatform;
+
+use crate::easy_poll::start_polling_text;
 
 const MAX_SPECTATED_MATCHES: usize = 275;
 const BOT_RUNTIME_HOURS: u64 = 6;

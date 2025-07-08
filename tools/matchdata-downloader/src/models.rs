@@ -1,5 +1,6 @@
-use clickhouse::Row;
 use core::fmt::Debug;
+
+use clickhouse::Row;
 use serde::Deserialize;
 
 #[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]

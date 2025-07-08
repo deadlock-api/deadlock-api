@@ -12,6 +12,7 @@
 #![allow(clippy::cast_possible_wrap)]
 
 use core::time::Duration;
+
 use itertools::Itertools;
 use metrics::counter;
 use rand::prelude::SliceRandom;
@@ -128,7 +129,8 @@ async fn insert_builds(
     builds: Vec<HeroBuildResult>,
 ) -> sqlx::Result<PgQueryResult> {
     let mut query = QueryBuilder::new(
-        "INSERT INTO hero_builds(hero, build_id, version, author_id, weekly_favorites, favorites, ignores, reports, rollup_category, language, updated_at, published_at, data)",
+        "INSERT INTO hero_builds(hero, build_id, version, author_id, weekly_favorites, favorites, \
+         ignores, reports, rollup_category, language, updated_at, published_at, data)",
     );
     query.push_values(builds.into_iter(), |mut b, build| {
         let hero_build = build.hero_build.as_ref().unwrap();
@@ -162,7 +164,13 @@ async fn insert_builds(
             }))
             .push_bind(serde_json::to_value(build).unwrap());
     });
-    query.push("ON CONFLICT(hero, build_id, version) DO UPDATE SET author_id = EXCLUDED.author_id, weekly_favorites = EXCLUDED.weekly_favorites, rollup_category = EXCLUDED.rollup_category, favorites = EXCLUDED.favorites, ignores = EXCLUDED.ignores, reports = EXCLUDED.reports, language = EXCLUDED.language, updated_at = EXCLUDED.updated_at, published_at = EXCLUDED.published_at, data = EXCLUDED.data");
+    query.push(
+        "ON CONFLICT(hero, build_id, version) DO UPDATE SET author_id = EXCLUDED.author_id, \
+         weekly_favorites = EXCLUDED.weekly_favorites, rollup_category = \
+         EXCLUDED.rollup_category, favorites = EXCLUDED.favorites, ignores = EXCLUDED.ignores, \
+         reports = EXCLUDED.reports, language = EXCLUDED.language, updated_at = \
+         EXCLUDED.updated_at, published_at = EXCLUDED.published_at, data = EXCLUDED.data",
+    );
     let query = query.build();
     query.execute(pg_client).await
 }

@@ -1,8 +1,8 @@
-use crate::models::enums::{GameMode, MatchMode, MatchOutcome, Objective, Team};
 use clickhouse::Row;
 use serde::Serialize;
-use valveprotos::deadlock::c_msg_match_meta_data_contents::MatchInfo;
-use valveprotos::deadlock::c_msg_match_meta_data_contents::Players;
+use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players};
+
+use crate::models::enums::{GameMode, MatchMode, MatchOutcome, Objective, Team};
 
 #[derive(Row, Debug, Serialize)]
 pub(crate) struct ClickhouseMatchInfo {

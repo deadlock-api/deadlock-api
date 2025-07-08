@@ -1,6 +1,7 @@
-use crate::models::enums::{GameMode, MatchMode, RegionMode};
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+
+use crate::models::enums::{GameMode, MatchMode, RegionMode};
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct ActiveMatch {

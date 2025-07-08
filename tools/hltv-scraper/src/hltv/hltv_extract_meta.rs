@@ -1,13 +1,12 @@
-use std::{io::Cursor, sync::Arc};
+use std::io::Cursor;
+use std::sync::Arc;
 
 use anyhow::bail;
 use haste::broadcast::BroadcastFile;
 use haste::demostream::DemoStream;
 use prost::Message;
-use valveprotos::{
-    common::EDemoCommands,
-    deadlock::{CCitadelUserMsgPostMatchDetails, CitadelUserMessageIds},
-};
+use valveprotos::common::EDemoCommands;
+use valveprotos::deadlock::{CCitadelUserMsgPostMatchDetails, CitadelUserMessageIds};
 
 fn process_post_match(details_buf: &[u8]) -> anyhow::Result<Vec<u8>> {
     let details = CCitadelUserMsgPostMatchDetails::decode(details_buf)?;

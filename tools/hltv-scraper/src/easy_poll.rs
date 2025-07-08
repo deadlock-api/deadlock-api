@@ -1,10 +1,9 @@
-use reqwest::Client;
 use std::sync::Arc;
+
+use reqwest::Client;
 use tokio::sync::RwLock;
-use tokio::{
-    task::AbortHandle,
-    time::{Duration, interval},
-};
+use tokio::task::AbortHandle;
+use tokio::time::{Duration, interval};
 
 /// Starts polling a given URL at a specified interval, updating the shared state with the latest plaintext response.
 ///

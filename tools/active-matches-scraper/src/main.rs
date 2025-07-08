@@ -12,12 +12,14 @@
 
 mod models;
 
-use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
 use core::time::Duration;
+use std::sync::LazyLock;
+
 use delay_map::HashSetDelay;
 use metrics::{counter, gauge};
-use std::sync::LazyLock;
 use tracing::{debug, error, info, instrument};
+
+use crate::models::active_match::{ActiveMatch, ClickHouseActiveMatch};
 
 static ACTIVE_MATCHES_URL: LazyLock<String> = LazyLock::new(|| {
     std::env::var("ACTIVE_MATCHES_URL")

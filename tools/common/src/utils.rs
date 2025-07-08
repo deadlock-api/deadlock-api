@@ -1,11 +1,12 @@
+use core::time::Duration;
+use std::sync::LazyLock;
+
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use core::time::Duration;
 use metrics::counter;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::LazyLock;
 use tracing::instrument;
 use valveprotos::deadlock::EgcCitadelClientMessages;
 

@@ -9,11 +9,13 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::implicit_hasher)]
 
+use std::collections::HashMap;
+
+use clap::Parser;
+use tracing::info;
+
 use crate::config::Config;
 use crate::types::{CHMatch, Glicko2HistoryEntry};
-use clap::Parser;
-use std::collections::HashMap;
-use tracing::info;
 
 pub mod config;
 pub mod glicko;

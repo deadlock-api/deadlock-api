@@ -12,12 +12,13 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
-use anyhow::Result;
 use core::time::Duration;
+use std::env;
+
+use anyhow::Result;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use models::SteamPlayerSummary;
-use std::env;
 use tokio::join;
 use tracing::{debug, error, info, instrument};
 

@@ -12,11 +12,10 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
-use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
-use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
+use core::time::Duration;
+
 use anyhow::bail;
 use async_compression::tokio::bufread::BzDecoder;
-use core::time::Duration;
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use object_store::path::Path;
@@ -27,6 +26,9 @@ use tokio::time::timeout;
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
+
+use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
+use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
 mod models;
 

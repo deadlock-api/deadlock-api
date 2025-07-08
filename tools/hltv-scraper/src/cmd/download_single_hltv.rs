@@ -7,10 +7,9 @@ use reqwest::Client;
 use tracing::{debug, info, warn};
 use valveprotos::deadlock::CMsgMatchMetaData;
 
-use crate::{
-    cmd::run_spectate_bot::SpectatedMatchType,
-    hltv::{hltv_download, hltv_extract_meta::extract_meta_from_fragment},
-};
+use crate::cmd::run_spectate_bot::SpectatedMatchType;
+use crate::hltv::hltv_download;
+use crate::hltv::hltv_extract_meta::extract_meta_from_fragment;
 
 pub(crate) async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
@@ -90,7 +89,8 @@ pub(crate) async fn download_single_hltv_meta(
 
     if !did_receive_last_fragment {
         warn!(
-            "[{label} {match_id}] Download did not receive the last fragment, it expired before we got it."
+            "[{label} {match_id}] Download did not receive the last fragment, it expired before \
+             we got it."
         );
         counter!("hltv.done.incomplete").increment(1);
     }

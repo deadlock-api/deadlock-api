@@ -10,16 +10,17 @@
 #![deny(clippy::std_instead_of_core)]
 #![allow(clippy::cast_precision_loss)]
 
+use core::time::Duration;
+use std::collections::HashSet;
+
 use cached::UnboundCache;
 use cached::proc_macro::cached;
-use core::time::Duration;
 use futures::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use models::MatchSalts;
 use object_store::path::Path;
 use object_store::{ObjectStore, PutPayload};
-use std::collections::HashSet;
 use tokio::time::sleep;
 use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info, instrument};
@@ -40,7 +41,9 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         info!("Fetching match ids to download");
-        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND created_at > now() - INTERVAL 1 MONTH";
+        let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM \
+                     match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND \
+                     created_at > now() - INTERVAL 1 MONTH";
         let match_ids_to_fetch: Vec<MatchSalts> = ch_client.query(query).fetch_all().await?;
         let match_ids_to_fetch = match_ids_to_fetch
             .into_iter()

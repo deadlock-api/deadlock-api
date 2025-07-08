@@ -1,5 +1,8 @@
-use clickhouse::Compression;
 use core::time::Duration;
+use std::env;
+use std::env::VarError;
+
+use clickhouse::Compression;
 use fred::clients::Client as RedisClient;
 use fred::interfaces::{ClientLike, FredResult};
 use fred::prelude::{Config as RedisConfig, ReconnectPolicy};
@@ -7,8 +10,6 @@ use object_store::ClientOptions;
 use object_store::aws::AmazonS3Builder;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, Pool, Postgres};
-use std::env;
-use std::env::VarError;
 use tracing::log::LevelFilter;
 
 pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {

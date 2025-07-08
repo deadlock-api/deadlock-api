@@ -1,4 +1,5 @@
 use core::net::SocketAddrV4;
+
 use metrics_exporter_prometheus::PrometheusBuilder;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -6,7 +7,8 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 pub fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info",
+        "debug,h2=warn,hyper_util=warn,reqwest=warn,rustls=warn,sqlx=warn,steam_vent=info,\
+         opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info",
     ));
     let fmt_layer = tracing_subscriber::fmt::layer();
 
