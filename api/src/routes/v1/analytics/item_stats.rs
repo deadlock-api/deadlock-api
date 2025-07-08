@@ -1,8 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::utils::parse::{
-    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
-};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -14,6 +9,12 @@ use serde::{Deserialize, Serialize};
 use strum_macros::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::utils::parse::{
+    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+};
 
 fn default_min_matches() -> Option<u32> {
     20.into()
@@ -384,8 +385,9 @@ pub(crate) async fn item_stats(
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use itertools::Itertools;
+
+    use super::*;
 
     #[test]
     fn test_build_item_stats_query_min_unix_timestamp() {
@@ -461,7 +463,8 @@ mod test {
         };
         let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
-            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
+            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= \
+             {min_average_badge}"
         )));
     }
 
@@ -474,7 +477,8 @@ mod test {
         };
         let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
-            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
+            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= \
+             {max_average_badge}"
         )));
     }
 

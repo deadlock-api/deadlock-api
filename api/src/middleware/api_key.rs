@@ -1,6 +1,9 @@
-use crate::utils::parse;
+use axum::extract::Request;
 use axum::http::HeaderValue;
-use axum::{extract::Request, middleware::Next, response::Response};
+use axum::middleware::Next;
+use axum::response::Response;
+
+use crate::utils::parse;
 
 pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) -> Response {
     // Check if API-Key is already set
@@ -39,15 +42,17 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use core::str::FromStr;
+
     use axum::Router;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use axum::response::IntoResponse;
     use axum::routing::get;
-    use core::str::FromStr;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    use super::*;
 
     async fn test_handler(req: Request<Body>) -> impl IntoResponse {
         // Simple handler that returns the request headers as a response

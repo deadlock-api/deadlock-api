@@ -1,16 +1,10 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::MatchIdQuery;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use core::time::Duration;
 use serde::Serialize;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -20,6 +14,14 @@ use valveprotos::deadlock::{
     c_msg_client_to_gc_spectate_user_response,
 };
 use valveprotos::gcsdk::EgcPlatform;
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::SteamProxyQuery;
 
 #[derive(Serialize, ToSchema)]
 struct MatchSpectateResponse {
@@ -112,7 +114,10 @@ pub(super) async fn live_url(
     // Check if the match could be live, by checking the match id from a match 4 hours ago
     let match_id_2_hours_ago = state
         .ch_client
-        .query("SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 4 HOUR ORDER BY match_id DESC LIMIT 1")
+        .query(
+            "SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 4 HOUR ORDER BY \
+             match_id DESC LIMIT 1",
+        )
         .fetch_one::<u64>()
         .await?;
 

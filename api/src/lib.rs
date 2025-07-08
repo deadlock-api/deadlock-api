@@ -22,10 +22,8 @@ pub mod routes;
 mod services;
 pub mod utils;
 
-use crate::api_doc::ApiDoc;
-use crate::middleware::api_key::write_api_key_to_header;
-use crate::middleware::cache::CacheControlMiddleware;
-use crate::middleware::feature_flags::feature_flags;
+use core::time::Duration;
+
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect};
@@ -33,7 +31,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 use context::state::AppState;
-use core::time::Duration;
+pub use error::*;
 use tower_http::compression::{CompressionLayer, DefaultPredicate};
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
@@ -43,7 +41,10 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 
-pub use error::*;
+use crate::api_doc::ApiDoc;
+use crate::middleware::api_key::write_api_key_to_header;
+use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::feature_flags::feature_flags;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 

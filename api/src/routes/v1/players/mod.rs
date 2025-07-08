@@ -6,14 +6,16 @@ pub mod mate_stats;
 pub mod mmr_history;
 pub mod party_stats;
 
-use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
-use crate::utils::parse::parse_steam_id;
 use core::time::Duration;
+
 use serde::Deserialize;
 use utoipa::{IntoParams, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+use crate::context::AppState;
+use crate::middleware::cache::CacheControlMiddleware;
+use crate::utils::parse::parse_steam_id;
 
 #[derive(Deserialize, IntoParams, Default)]
 pub(crate) struct AccountIdQuery {

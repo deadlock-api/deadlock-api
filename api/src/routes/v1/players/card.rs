@@ -1,13 +1,5 @@
-use crate::error::APIResult;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
+use core::time::Duration;
 
-use crate::context::AppState;
-use crate::routes::v1::players::AccountIdQuery;
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::{
-    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
-};
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
@@ -15,13 +7,22 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use core::time::Duration;
 use itertools::Itertools;
 use serde::Serialize;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
     CMsgCitadelProfileCard, CMsgClientToGcGetProfileCard, EgcCitadelClientMessages,
     c_msg_citadel_profile_card,
+};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::players::AccountIdQuery;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::{
+    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

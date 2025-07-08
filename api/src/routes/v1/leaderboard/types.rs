@@ -1,10 +1,11 @@
-use crate::error::APIError;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
     CMsgClientToGcGetLeaderboardResponse, c_msg_client_to_gc_get_leaderboard_response,
 };
+
+use crate::error::APIError;
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Eq, PartialEq, Hash)]
 #[repr(i32)]

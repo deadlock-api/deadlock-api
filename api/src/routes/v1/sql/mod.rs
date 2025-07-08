@@ -1,9 +1,10 @@
 pub mod route;
 
-use crate::context::AppState;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+use crate::context::AppState;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "SQL", description = "

@@ -1,10 +1,6 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::{
-    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
-};
+use core::time::Duration;
+use std::collections::HashMap;
+
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -14,14 +10,20 @@ use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use core::time::Duration;
 use futures::join;
 use serde::Deserialize;
-use std::collections::HashMap;
 use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse, EgcCitadelClientMessages,
+};
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::{
+    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
 
 #[derive(Debug, Deserialize, IntoParams)]

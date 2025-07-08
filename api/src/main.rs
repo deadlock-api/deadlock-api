@@ -3,11 +3,11 @@
 #![deny(unreachable_pub)]
 #![deny(clippy::pedantic)]
 
+use std::net::{Ipv4Addr, SocketAddr};
+
 use axum::ServiceExt;
 use axum::extract::Request;
-use deadlock_api_rust::StartupError;
-use deadlock_api_rust::router;
-use std::net::{Ipv4Addr, SocketAddr};
+use deadlock_api_rust::{StartupError, router};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;

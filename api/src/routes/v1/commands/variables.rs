@@ -1,17 +1,5 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
-use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
-use crate::routes::v1::players::match_history::{
-    PlayerMatchHistory, PlayerMatchHistoryEntry, insert_match_history_to_ch,
-};
-use crate::routes::v1::players::match_history::{
-    fetch_match_history_from_clickhouse, fetch_steam_match_history,
-};
-use crate::services::assets::client::AssetsClient;
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyResponse;
+use std::collections::HashMap;
+
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Duration;
@@ -20,12 +8,24 @@ use futures::future::join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
-use std::collections::HashMap;
 use strum_macros::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
 use tracing::warn;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchMode};
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
+use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
+use crate::routes::v1::players::match_history::{
+    PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
+    fetch_steam_match_history, insert_match_history_to_ch,
+};
+use crate::services::assets::client::AssetsClient;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::SteamProxyResponse;
 
 #[derive(Debug, Error)]
 pub(super) enum VariableResolveError {

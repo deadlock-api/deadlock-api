@@ -1,8 +1,3 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::utils::parse::{
-    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
-};
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
@@ -14,6 +9,12 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::utils::parse::{
+    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+};
 
 fn default_comb_size() -> Option<u8> {
     2.into()
@@ -175,7 +176,8 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                 FROM match_info
                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
             t_items AS (SELECT id from items),
-            t_players AS (SELECT arrayFilter(x -> x IN t_items, arrayDistinct(items.item_id)) as p_items, won
+            t_players AS (SELECT arrayFilter(x -> x IN t_items, arrayDistinct(items.item_id)) as \
+             p_items, won
                 FROM match_player
                 WHERE match_id IN t_matches {player_filters})
         SELECT [{intersect_array}] AS item_ids,
@@ -332,7 +334,8 @@ mod test {
         };
         let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
-            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= {min_average_badge}"
+            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= \
+             {min_average_badge}"
         )));
     }
 
@@ -345,7 +348,8 @@ mod test {
         };
         let query_str = build_query(&query);
         assert!(query_str.contains(&format!(
-            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= {max_average_badge}"
+            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= \
+             {max_average_badge}"
         )));
     }
 

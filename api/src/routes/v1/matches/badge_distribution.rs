@@ -1,5 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -9,6 +7,9 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct BadgeDistributionQuery {

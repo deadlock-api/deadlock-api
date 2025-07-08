@@ -1,6 +1,3 @@
-use crate::context::AppStateError;
-use crate::services::rate_limiter;
-use crate::services::steam::types::SteamProxyError;
 use axum::body::Body;
 use axum::http::Response;
 use axum::response::IntoResponse;
@@ -8,6 +5,10 @@ use reqwest::StatusCode;
 use serde_json::json;
 use thiserror::Error;
 use tracing::error;
+
+use crate::context::AppStateError;
+use crate::services::rate_limiter;
+use crate::services::steam::types::SteamProxyError;
 
 pub(super) type APIResult<T> = Result<T, APIError>;
 
@@ -173,9 +174,11 @@ impl IntoResponse for APIError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use axum::http::StatusCode;
     use core::time::Duration;
+
+    use axum::http::StatusCode;
+
+    use super::*;
 
     #[test]
     fn test_api_error_status() {

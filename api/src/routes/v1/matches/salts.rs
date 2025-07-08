@@ -1,18 +1,10 @@
-use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimitClient};
+use core::time::Duration;
 
-use crate::context::AppState;
-use crate::routes::v1::matches::ingest_salts;
-use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use core::time::Duration;
 use serde::Serialize;
 use tracing::{debug, warn};
 use utoipa::ToSchema;
@@ -20,6 +12,15 @@ use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
     EgcCitadelClientMessages, c_msg_client_to_gc_get_match_meta_data_response,
 };
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::ingest_salts;
+use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimitClient};
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::SteamProxyQuery;
 
 const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
 

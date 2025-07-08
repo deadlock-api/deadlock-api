@@ -1,5 +1,6 @@
-use crate::utils::parse::default_true;
 use serde::Deserialize;
+
+use crate::utils::parse::default_true;
 
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct SteamConfig {

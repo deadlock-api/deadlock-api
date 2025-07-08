@@ -1,11 +1,13 @@
-use axum::http::HeaderValue;
-use axum::http::header::CACHE_CONTROL;
-use axum::{extract::Request, response::Response};
 use core::fmt::Write;
 use core::future::Future;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use core::time::Duration;
+
+use axum::extract::Request;
+use axum::http::HeaderValue;
+use axum::http::header::CACHE_CONTROL;
+use axum::response::Response;
 use reqwest::header::InvalidHeaderValue;
 use tower_service::Service;
 
@@ -117,14 +119,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use axum::{
-        Router,
-        body::Body,
-        http::{Request, StatusCode},
-        routing::get,
-    };
+    use axum::Router;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use axum::routing::get;
     use tower::ServiceExt;
+
+    use super::*;
 
     async fn test_handler() -> &'static str {
         "Hello, world!"

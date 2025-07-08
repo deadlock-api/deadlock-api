@@ -1,6 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -10,6 +7,10 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::players::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct PartyStatsQuery {
@@ -82,12 +83,15 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
         "
     WITH players AS (SELECT DISTINCT match_id, team, party
                      FROM match_player
-                     WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
+                     WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM \
+         match_info WHERE TRUE {info_filters})),
          parties AS (SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
                      FROM match_player
-                     WHERE account_id = {account_id} or (match_id, team, party) IN (SELECT match_id, team, party FROM players WHERE party != 0)
+                     WHERE account_id = {account_id} or (match_id, team, party) IN (SELECT \
+         match_id, team, party FROM players WHERE party != 0)
                      GROUP BY match_id)
-    SELECT length(account_ids) as party_size, sum(won) as wins, COUNT(DISTINCT match_id) as matches_played, groupUniqArray(match_id) as matches
+    SELECT length(account_ids) as party_size, sum(won) as wins, COUNT(DISTINCT match_id) as \
+         matches_played, groupUniqArray(match_id) as matches
     FROM parties
     GROUP BY party_size
     ORDER BY party_size

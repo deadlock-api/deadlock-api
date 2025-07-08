@@ -1,7 +1,5 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -9,11 +7,15 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::query::BytesCursor;
-use core::time::Duration;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, Lines};
 use tracing::{debug, error};
 use utoipa::IntoParams;
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 pub(super) struct SQLQuery {

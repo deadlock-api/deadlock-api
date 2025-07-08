@@ -1,16 +1,16 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::utils::parse::default_last_month_timestamp;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
-use sqlx::{Execute, Pool, Postgres, QueryBuilder};
+use sqlx::{Execute, Pool, Postgres, QueryBuilder, Row};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct BuildItemStatsQuery {
@@ -33,13 +33,16 @@ pub struct BuildItemStats {
 
 fn build_query(query: &BuildItemStatsQuery) -> String {
     let mut query_builder: QueryBuilder<Postgres> = QueryBuilder::default();
-    query_builder.push("
+    query_builder.push(
+        "
     SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds
     FROM hero_builds,
-        LATERAL jsonb_array_elements(data -> 'hero_build' -> 'details' -> 'mod_categories') AS category_element,
+        LATERAL jsonb_array_elements(data -> 'hero_build' -> 'details' -> 'mod_categories') AS \
+         category_element,
         LATERAL jsonb_array_elements(category_element -> 'mods') AS mod_element
     WHERE TRUE
-    ");
+    ",
+    );
     if let Some(hero_id) = query.hero_id {
         query_builder.push(" AND hero = ");
         query_builder.push(hero_id.to_string());

@@ -1,9 +1,10 @@
-use crate::utils::parse::parse_steam_id_option;
-use crate::utils::types::SortDirectionDesc;
 use serde::Deserialize;
 use sqlx::{Execute, QueryBuilder};
 use strum_macros::Display;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::utils::parse::parse_steam_id_option;
+use crate::utils::types::SortDirectionDesc;
 
 fn default_limit() -> Option<u32> {
     100.into()
@@ -106,7 +107,11 @@ impl Default for BuildsSearchQuery {
 
 pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
-    query_builder.push(" WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE");
+    query_builder.push(
+        " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+         reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+         version DESC) as rn FROM hero_builds WHERE TRUE",
+    );
     if let Some(tag) = params.tag {
         query_builder.push(" AND data->'hero_build'->'tags' @> '");
         query_builder.push(tag.to_string());
@@ -213,7 +218,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -227,7 +235,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND \
+             lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM \
+             hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -241,7 +253,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND data->'hero_build'->'tags' @> '1' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND data->'hero_build'->'tags' @> \
+             '1' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -255,7 +270,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND \
+             lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM \
+             hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -269,7 +288,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'description') LIKE '%strength items%' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND \
+             lower(data->'hero_build'->>'description') LIKE '%strength items%' ) SELECT builds \
+             FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -283,7 +306,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND language = 1 ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND language = 1 ) SELECT builds \
+             FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -297,7 +323,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND build_id = 12345 ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND build_id = 12345 ) SELECT builds \
+             FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -311,7 +340,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND version = 2 ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND version = 2 ) SELECT builds FROM \
+             hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -325,7 +357,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND hero = 23 ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND hero = 23 ) SELECT builds FROM \
+             hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -339,7 +374,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND author_id = 74963221 ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND author_id = 74963221 ) SELECT \
+             builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -353,7 +391,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -367,7 +408,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY ignores desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY ignores desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -381,7 +425,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY reports desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY reports desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -395,7 +442,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY updated_at desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY updated_at desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -409,7 +459,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY published_at desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY published_at desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -423,7 +476,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY version desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY version desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -437,7 +493,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -451,7 +510,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites asc NULLS FIRST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites asc NULLS FIRST LIMIT 100"
         );
     }
 
@@ -465,7 +527,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 50"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites desc NULLS LAST LIMIT 50"
         );
     }
 
@@ -479,7 +544,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100 OFFSET 10"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites desc NULLS LAST LIMIT 100 OFFSET 10"
         );
     }
 
@@ -498,7 +566,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank%' AND hero = 42 ) SELECT builds FROM hero_builds ORDER BY updated_at asc NULLS FIRST LIMIT 25 OFFSET 5"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND \
+             lower(data->'hero_build'->>'name') LIKE '%tank%' AND hero = 42 ) SELECT builds FROM \
+             hero_builds ORDER BY updated_at asc NULLS FIRST LIMIT 25 OFFSET 5"
         );
     }
 
@@ -513,7 +585,12 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND lower(data->'hero_build'->>'name') LIKE '%tank%' AND lower(data->'hero_build'->>'description') LIKE '%strength%' ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND \
+             lower(data->'hero_build'->>'name') LIKE '%tank%' AND \
+             lower(data->'hero_build'->>'description') LIKE '%strength%' ) SELECT builds FROM \
+             hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
 
@@ -527,7 +604,10 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE ) SELECT builds FROM hero_builds \
+             ORDER BY favorites desc NULLS LAST"
         );
     }
 
@@ -541,7 +621,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at >= \
+             to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc \
+             NULLS LAST LIMIT 100"
         );
     }
 
@@ -555,7 +639,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND updated_at <= \
+             to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc \
+             NULLS LAST LIMIT 100"
         );
     }
 
@@ -569,7 +657,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at >= to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND published_at >= \
+             to_timestamp(1672531200) ) SELECT builds FROM hero_builds ORDER BY favorites desc \
+             NULLS LAST LIMIT 100"
         );
     }
 
@@ -583,7 +675,11 @@ mod tests {
         let sql = sql_query(&query);
         assert_eq!(
             sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY version DESC) as rn FROM hero_builds WHERE TRUE AND published_at <= to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
+            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
+             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+             version DESC) as rn FROM hero_builds WHERE TRUE AND published_at <= \
+             to_timestamp(1675209599) ) SELECT builds FROM hero_builds ORDER BY favorites desc \
+             NULLS LAST LIMIT 100"
         );
     }
 }

@@ -1,13 +1,15 @@
-use crate::utils::parse::parse_rfc2822_datetime;
+use core::time::Duration;
+
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use chrono::{DateTime, FixedOffset};
-use core::time::Duration;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use utoipa::ToSchema;
 use valveprotos::deadlock::EgcCitadelClientMessages;
+
+use crate::utils::parse::parse_rfc2822_datetime;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SteamProxyQuery<M: Message> {

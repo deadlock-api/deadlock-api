@@ -1,6 +1,7 @@
-use chrono::{DateTime, FixedOffset};
 use core::num::TryFromIntError;
 use core::str::FromStr;
+
+use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Deserializer};
 
 // Date Parsing
@@ -148,10 +149,11 @@ pub(crate) fn querify(string: &str) -> QueryParams<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use chrono::Utc;
     use rstest::rstest;
     use serde::Deserialize;
+
+    use super::*;
 
     #[derive(Deserialize)]
     struct SteamIdTestStruct {

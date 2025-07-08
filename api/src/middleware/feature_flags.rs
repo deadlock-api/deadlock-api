@@ -1,9 +1,10 @@
-use crate::context::AppState;
-use crate::error::APIError;
 use axum::extract::{MatchedPath, Request, State};
 use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+
+use crate::context::AppState;
+use crate::error::APIError;
 
 pub(crate) async fn feature_flags(
     State(AppState { feature_flags, .. }): State<AppState>,

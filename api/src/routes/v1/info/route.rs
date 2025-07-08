@@ -1,4 +1,5 @@
-use crate::context::AppState;
+use std::collections::HashMap;
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -7,8 +8,9 @@ use cached::proc_macro::cached;
 use clickhouse::Row;
 use futures::future::join3;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use utoipa::ToSchema;
+
+use crate::context::AppState;
 
 const TABLE_SIZES_QUERY: &str = "
 SELECT

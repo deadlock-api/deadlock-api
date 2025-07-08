@@ -1,6 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -10,6 +7,10 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::players::AccountIdQuery;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryQuery {

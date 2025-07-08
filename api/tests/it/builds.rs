@@ -1,11 +1,12 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::builds::query::BuildsSearchQuerySortBy;
 use deadlock_api_rust::routes::v1::builds::structs::Build;
 use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
+
+use crate::request_endpoint;
 
 #[rstest]
 #[case(

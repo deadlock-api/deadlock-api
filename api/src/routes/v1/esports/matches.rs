@@ -1,11 +1,12 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::esports::types::ESportsMatch;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::esports::types::ESportsMatch;
 
 #[cached(
     ty = "TimedCache<u8, Vec<ESportsMatch>>",

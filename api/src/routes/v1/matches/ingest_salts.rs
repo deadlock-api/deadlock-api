@@ -1,12 +1,13 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::ClickhouseSalts;
 use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use serde_json::json;
 use tracing::debug;
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::ClickhouseSalts;
 
 pub(super) async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,

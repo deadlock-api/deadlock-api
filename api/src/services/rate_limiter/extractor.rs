@@ -1,8 +1,10 @@
-use crate::error::APIError;
+use core::net::Ipv4Addr;
+
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use core::net::Ipv4Addr;
 use uuid::Uuid;
+
+use crate::error::APIError;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RateLimitKey {
@@ -41,10 +43,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use axum::http;
     use axum::http::HeaderMap;
     use rstest::rstest;
+
+    use super::*;
 
     #[rstest]
     #[case(Some("1.2.3.4"), Some("HEXE-d887508b-036e-42b5-89f3-0754617036bb"), Ipv4Addr::new(1, 2, 3, 4), Some(Uuid::parse_str("d887508b-036e-42b5-89f3-0754617036bb").unwrap()))]

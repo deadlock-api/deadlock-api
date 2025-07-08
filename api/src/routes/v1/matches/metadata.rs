@@ -1,16 +1,9 @@
-use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimitClient};
+use core::time::Duration;
 
-use crate::context::AppState;
-use crate::routes::v1::matches::salts::fetch_match_salts;
-use crate::routes::v1::matches::types::MatchIdQuery;
-use crate::services::steam::client::SteamClient;
 use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use core::time::Duration;
 use futures::future::join;
 use metrics::counter;
 use object_store::ObjectStore;
@@ -19,6 +12,14 @@ use prost::Message;
 use tokio::io::AsyncReadExt;
 use tracing::debug;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimitClient};
+use crate::services::steam::client::SteamClient;
 
 async fn fetch_from_s3(s3: &AmazonS3, key: impl AsRef<str>) -> object_store::Result<Vec<u8>> {
     s3.get(&object_store::path::Path::from(key.as_ref()))

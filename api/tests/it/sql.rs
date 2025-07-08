@@ -1,6 +1,7 @@
-use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::sql::route::TableSchemaRow;
 use rstest::rstest;
+
+use crate::request_endpoint;
 
 #[tokio::test]
 async fn test_list_tables() {

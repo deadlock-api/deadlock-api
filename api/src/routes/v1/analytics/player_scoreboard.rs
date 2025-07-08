@@ -1,8 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::utils::parse::comma_separated_num_deserialize_option;
-use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -13,6 +8,12 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
+use crate::utils::parse::comma_separated_num_deserialize_option;
+use crate::utils::types::SortDirectionDesc;
 
 fn default_limit() -> Option<u32> {
     100.into()
@@ -162,7 +163,8 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     };
     format!(
         "
-SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct match_id) as matches
+SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct \
+         match_id) as matches
 FROM match_player
 {player_filters}
 GROUP BY account_id

@@ -1,11 +1,5 @@
-use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
+use core::time::Duration;
 
-use crate::context::AppState;
-use crate::routes::v1::players::AccountIdQuery;
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -13,7 +7,6 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use core::time::Duration;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -23,6 +16,14 @@ use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
     c_msg_client_to_gc_get_match_history_response,
 };
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::AccountIdQuery;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::SteamProxyQuery;
 
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 
@@ -126,9 +127,11 @@ pub(crate) async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
     account_id: u32,
 ) -> clickhouse::error::Result<PlayerMatchHistory> {
-    ch_client.query(
-        "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? ORDER BY match_id DESC"
-    )
+    ch_client
+        .query(
+            "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? \
+             ORDER BY match_id DESC",
+        )
         .bind(account_id)
         .fetch_all()
         .await

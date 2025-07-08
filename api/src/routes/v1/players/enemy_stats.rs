@@ -1,6 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -10,6 +7,10 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::players::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct EnemyStatsQuery {
@@ -101,11 +102,13 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         "
     WITH players AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
                      FROM match_player
-                     WHERE team IN ('Team0', 'Team1') AND account_id = {account_id}  AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
+                     WHERE team IN ('Team0', 'Team1') AND account_id = {account_id}  AND match_id \
+         IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
          enemies AS (SELECT DISTINCT match_id, won, account_id
                    FROM match_player
                    WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM players))
-    SELECT account_id as enemy_id, sum(not won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+    SELECT account_id as enemy_id, sum(not won) as wins, count() as matches_played, \
+         groupUniqArray(match_id) as matches
     FROM enemies
     GROUP BY enemy_id
     {having_clause}

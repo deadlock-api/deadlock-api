@@ -1,5 +1,3 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -10,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{Pool, Postgres};
 use utoipa::ToSchema;
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct StatusServices {

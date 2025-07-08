@@ -1,26 +1,28 @@
 #![allow(clippy::struct_excessive_bools)]
 #![allow(clippy::large_stack_arrays)]
 
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::parse::{comma_separated_num_deserialize_option, default_true};
-use crate::utils::types::SortDirectionAsc;
+use core::fmt::Write;
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
-use core::fmt::Write;
-use core::time::Duration;
 use itertools::Itertools;
 use serde::Deserialize;
 use strum_macros::Display;
 use tokio::io::Lines;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::parse::{comma_separated_num_deserialize_option, default_true};
+use crate::utils::types::SortDirectionAsc;
 
 fn default_limit() -> u32 {
     1000
@@ -267,7 +269,10 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     query.push_str("SELECT ");
     query.push_str(&select_fields.join(", "));
     if has_player_fields {
-        query.push_str(" FROM match_player INNER JOIN match_info USING (match_id) WHERE match_id IN t_matches ");
+        query.push_str(
+            " FROM match_player INNER JOIN match_info USING (match_id) WHERE match_id IN \
+             t_matches ",
+        );
     } else {
         query.push_str(" FROM match_info WHERE match_id IN t_matches ");
     }

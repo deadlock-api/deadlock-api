@@ -1,8 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
-use crate::utils::types::SortDirectionDesc;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -12,6 +7,12 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
+use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
+use crate::utils::types::SortDirectionDesc;
 
 #[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
 pub(super) struct HeroScoreboardQuery {
@@ -133,7 +134,8 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     };
     format!(
         "
-SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct match_id) as matches
+SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct \
+         match_id) as matches
 FROM match_player
 {player_filters}
 GROUP BY hero_id

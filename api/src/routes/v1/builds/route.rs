@@ -1,8 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::builds::query;
-use crate::routes::v1::builds::query::BuildsSearchQuery;
-use crate::routes::v1::builds::structs::Build;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -10,6 +5,12 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use sqlx::Row;
 use tracing::debug;
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::builds::query;
+use crate::routes::v1::builds::query::BuildsSearchQuery;
+use crate::routes::v1::builds::structs::Build;
 
 #[cached(
     ty = "TimedCache<String, Vec<Build>>",

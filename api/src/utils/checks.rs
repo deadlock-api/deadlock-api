@@ -1,6 +1,7 @@
-use crate::services::rate_limiter::extractor::RateLimitKey;
 use sqlx::{Pool, Postgres};
 use tracing::warn;
+
+use crate::services::rate_limiter::extractor::RateLimitKey;
 
 pub(crate) async fn check_api_key_is_esports_ingest_key(
     pg_client: &Pool<Postgres>,
@@ -11,8 +12,11 @@ pub(crate) async fn check_api_key_is_esports_ingest_key(
         return Ok(false);
     };
     let result = sqlx::query!(
-        "SELECT COUNT(*) as count FROM api_keys WHERE key = $1 AND disabled IS false AND esports_ingest IS true",
+        "SELECT COUNT(*) as count FROM api_keys WHERE key = $1 AND disabled IS false AND \
+         esports_ingest IS true",
         api_key
-    ).fetch_one(pg_client).await?;
+    )
+    .fetch_one(pg_client)
+    .await?;
     Ok(result.count.is_some_and(|c| c > 0))
 }

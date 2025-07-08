@@ -1,6 +1,7 @@
-use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::info::health::Status;
 use deadlock_api_rust::routes::v1::info::route::APIInfo;
+
+use crate::request_endpoint;
 
 #[tokio::test]
 async fn test_info() {

@@ -1,7 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
-use crate::utils::parse::default_true;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -11,6 +7,11 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::players::AccountIdQuery;
+use crate::utils::parse::default_true;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct MateStatsQuery {
@@ -107,11 +108,14 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             "
             WITH players AS (SELECT DISTINCT match_id, team, party
                              FROM match_player
-                             WHERE account_id = {account_id} AND party != 0 AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
+                             WHERE account_id = {account_id} AND party != 0 AND match_id IN \
+             (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
                  mates AS (SELECT DISTINCT match_id, won, account_id
                            FROM match_player
-                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM players) AND account_id != {account_id})
-            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM \
+             players) AND account_id != {account_id})
+            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, \
+             groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
             {having_clause}
@@ -123,11 +127,14 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             "
             WITH players AS (SELECT DISTINCT match_id, team
                              FROM match_player
-                             WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
+                             WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM \
+             match_info WHERE TRUE {info_filters})),
                  mates AS (SELECT DISTINCT match_id, won, account_id
                            FROM match_player
-                           WHERE (match_id, team) IN (SELECT match_id, team FROM players) AND account_id != {account_id})
-            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, groupUniqArray(match_id) as matches
+                           WHERE (match_id, team) IN (SELECT match_id, team FROM players) AND \
+             account_id != {account_id})
+            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, \
+             groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
             {having_clause}

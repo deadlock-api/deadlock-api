@@ -1,10 +1,5 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::ActiveMatch;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::types::SteamProxyQuery;
-use crate::utils::parse::parse_steam_id_option;
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
@@ -12,7 +7,6 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use core::time::Duration;
 use itertools::Itertools;
 use prost::Message;
 use serde::Deserialize;
@@ -21,6 +15,14 @@ use valveprotos::deadlock::{
     CMsgClientToGcGetActiveMatches, CMsgClientToGcGetActiveMatchesResponse,
     EgcCitadelClientMessages,
 };
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::ActiveMatch;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::types::SteamProxyQuery;
+use crate::utils::parse::parse_steam_id_option;
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct ActiveMatchesQuery {

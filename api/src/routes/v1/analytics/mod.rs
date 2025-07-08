@@ -9,12 +9,14 @@ pub mod item_stats;
 pub mod player_scoreboard;
 pub mod scoreboard_types;
 
-use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
 use core::time::Duration;
+
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+use crate::context::AppState;
+use crate::middleware::cache::CacheControlMiddleware;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Analytics", description = "

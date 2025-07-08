@@ -1,7 +1,8 @@
-use crate::services::assets::types::{AssetsHero, AssetsRanks};
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use tracing::debug;
+
+use crate::services::assets::types::{AssetsHero, AssetsRanks};
 
 /// Client for interacting with the Deadlock assets API
 #[derive(Clone)]

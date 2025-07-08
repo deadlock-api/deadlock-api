@@ -1,6 +1,5 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::request_endpoint;
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
@@ -14,6 +13,8 @@ use deadlock_api_rust::routes::v1::analytics::{
 use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
+
+use crate::request_endpoint;
 
 #[rstest]
 #[tokio::test]

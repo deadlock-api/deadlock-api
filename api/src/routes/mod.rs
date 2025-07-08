@@ -1,7 +1,3 @@
-use crate::context::AppState;
-use crate::routes::v1::analytics::{hero_comb_stats, hero_stats, item_stats, player_scoreboard};
-use crate::routes::v1::players::match_history;
-use crate::utils::parse;
 use axum::extract::Request;
 use axum::routing::get;
 use tower_http::trace;
@@ -9,6 +5,11 @@ use tower_http::trace::TraceLayer;
 use tracing::{Level, span};
 use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
+
+use crate::context::AppState;
+use crate::routes::v1::analytics::{hero_comb_stats, hero_stats, item_stats, player_scoreboard};
+use crate::routes::v1::players::match_history;
+use crate::utils::parse;
 
 pub mod v1;
 

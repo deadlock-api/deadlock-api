@@ -1,9 +1,5 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::State;
 use axum::extract::rejection::JsonRejection;
@@ -11,7 +7,6 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_URL_SAFE;
-use core::time::Duration;
 use itertools::Itertools;
 use rand::RngCore;
 use rand::prelude::ThreadRng;
@@ -32,6 +27,13 @@ use valveprotos::deadlock::{
     cso_citadel_party,
 };
 use valveprotos::gcsdk::EgcPlatform;
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam::client::SteamClient;
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct CreateCustomRequest {

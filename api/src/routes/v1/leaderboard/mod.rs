@@ -1,12 +1,14 @@
 pub(super) mod route;
 pub(super) mod types;
 
-use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
 use core::time::Duration;
+
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+use crate::context::AppState;
+use crate::middleware::cache::CacheControlMiddleware;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Leaderboard", description = "

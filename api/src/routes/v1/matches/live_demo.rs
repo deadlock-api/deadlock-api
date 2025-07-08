@@ -1,18 +1,20 @@
+use core::time::Duration;
+
+use async_stream::try_stream;
+use axum::body::Body;
+use axum::extract::{Path, State};
+use axum::response::IntoResponse;
+use bytes::Bytes;
+use futures::Stream;
+use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
+use tracing::{error, info};
+
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::live_url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use async_stream::try_stream;
-use axum::body::Body;
-use axum::extract::{Path, State};
-use axum::response::IntoResponse;
-use bytes::Bytes;
-use core::time::Duration;
-use futures::Stream;
-use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
-use tracing::{error, info};
 
 fn demo_stream(
     match_id: u64,

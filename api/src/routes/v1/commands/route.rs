@@ -1,3 +1,15 @@
+use std::collections::HashMap;
+
+use axum::Json;
+use axum::extract::{Query, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use itertools::Itertools;
+use serde::{Deserialize, Serialize};
+use strum::VariantArray;
+use tracing::warn;
+use utoipa::{IntoParams, ToSchema};
+
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::commands::variables::{Variable, VariableCategory};
@@ -5,16 +17,6 @@ use crate::routes::v1::leaderboard::types::LeaderboardRegion;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
-use axum::Json;
-use axum::extract::{Query, State};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use itertools::Itertools;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use strum::VariantArray;
-use tracing::warn;
-use utoipa::{IntoParams, ToSchema};
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 struct VariableDescription {

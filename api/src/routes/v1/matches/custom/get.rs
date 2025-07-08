@@ -1,5 +1,3 @@
-use crate::context::AppState;
-use crate::error::{APIError, APIResult};
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -8,6 +6,9 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::{APIError, APIResult};
 
 #[derive(Serialize, ToSchema)]
 struct GetCustomMatchIdResponse {

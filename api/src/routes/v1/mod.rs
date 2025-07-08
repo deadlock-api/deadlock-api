@@ -1,5 +1,6 @@
-use crate::context::AppState;
 use utoipa_axum::router::OpenApiRouter;
+
+use crate::context::AppState;
 
 pub mod analytics;
 pub mod builds;

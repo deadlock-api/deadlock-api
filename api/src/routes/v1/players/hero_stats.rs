@@ -1,6 +1,3 @@
-use crate::context::AppState;
-use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
@@ -10,6 +7,10 @@ use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
+
+use crate::context::AppState;
+use crate::error::APIResult;
+use crate::routes::v1::players::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct HeroStatsQuery {
@@ -59,7 +60,8 @@ pub struct HeroStats {
     damage_per_min: f64,
     damage_per_soul: f64,
     #[deprecated(
-        note = "This field is deprecated and will be removed in the future. Use `damage_per_min` instead."
+        note = "This field is deprecated and will be removed in the future. Use `damage_per_min` \
+                instead."
     )]
     damage_mitigated_per_min: f64,
     damage_taken_per_min: f64,
@@ -140,7 +142,8 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         60 * avg(max_neutral_damage / duration_s) AS obj_damage_per_min,
         avg(max_neutral_damage / net_worth) AS obj_damage_per_soul,
         avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy,
-        avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)) AS crit_shot_rate,
+        avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
+         max_hero_bullets_hit)) AS crit_shot_rate,
         groupUniqArray(mi.match_id) as matches
     FROM match_player mp FINAL
         INNER JOIN match_info mi USING (match_id)
@@ -351,7 +354,10 @@ mod test {
         assert!(sql.contains(
             "avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy"
         ));
-        assert!(sql.contains("avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)) AS crit_shot_rate"));
+        assert!(sql.contains(
+            "avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
+             max_hero_bullets_hit)) AS crit_shot_rate"
+        ));
         assert!(sql.contains("groupUniqArray(mi.match_id) as matches"));
     }
 
