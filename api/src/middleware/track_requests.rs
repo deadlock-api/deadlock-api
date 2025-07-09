@@ -1,4 +1,3 @@
-use std::borrow::ToOwned;
 use std::time::Instant;
 
 use axum::extract::{MatchedPath, Request};
@@ -13,12 +12,11 @@ pub(crate) async fn track_requests(req: Request, next: Next) -> impl IntoRespons
     } else {
         req.uri().path().to_owned()
     };
-    let query = req.uri().query().map_or(String::new(), ToOwned::to_owned);
     let method = req.method().clone();
     let api_key = if let Some(api_key) = extract_api_key(&req)
         && let Ok(api_key) = api_key.to_str()
     {
-        api_key.strip_prefix("HEXE-").unwrap_or(api_key).to_owned()
+        api_key.to_owned()
     } else {
         "unknown".to_owned()
     };
@@ -28,7 +26,6 @@ pub(crate) async fn track_requests(req: Request, next: Next) -> impl IntoRespons
     let labels = [
         ("method", method.to_string()),
         ("endpoint", endpoint),
-        ("query", query),
         ("status", response.status().to_string()),
         ("api_key", api_key),
     ];
