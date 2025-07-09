@@ -5,6 +5,7 @@ create table api_keys
  disabled       boolean   default false,
  esports_ingest boolean   default false,
  comment        text,
+ user_id        uuid      default gen_random_uuid() not null,
  created_at     timestamp default current_timestamp
 );
 
