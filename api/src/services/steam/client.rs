@@ -90,7 +90,6 @@ impl SteamClient {
         query: &SteamProxyQuery<M>,
         body: &T,
     ) -> reqwest::Result<SteamProxyRawResponse> {
-        counter!("call_steam_proxy", "msg_type" => query.msg_type.as_str_name()).increment(1);
         self.http_client
             .post(&self.steam_proxy_url)
             .bearer_auth(&self.steam_proxy_api_key)
