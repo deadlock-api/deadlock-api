@@ -20,6 +20,11 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
 }
 
 pub(super) fn extract_api_key(request: &Request) -> Option<HeaderValue> {
+    // Check if API-Key is in header x-api-key
+    if let Some(api_key) = request.headers().get("x-api-key") {
+        return Some(api_key.clone());
+    }
+
     // Check if API-Key is in query parameters
     let query_api_key = request.uri().query().and_then(|query| {
         parse::querify(query)
