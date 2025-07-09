@@ -19,8 +19,6 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::SteamProxyQuery;
 use crate::utils::parse::parse_steam_id_option;
 
@@ -88,26 +86,13 @@ Fetched from the watch tab in game, which is limited to the **top 200 matches**.
 | ---- | ----- |
 | IP | 100req/s |
 | Key | - |
-| Global | 10req/s |
+| Global | - |
     "
 )]
 pub(super) async fn active_matches_raw(
-    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "active_matches",
-            &[Quota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
-        )
-        .await?;
-
-    tryhard::retry_fn(|| fetch_active_matches_raw(&state))
-        .retries(3)
-        .fixed_backoff(Duration::from_millis(10))
-        .await
+    fetch_active_matches_raw(&state).await
 }
 
 #[utoipa::path(
@@ -131,30 +116,15 @@ Fetched from the watch tab in game, which is limited to the **top 200 matches**.
 | ---- | ----- |
 | IP | 100req/s |
 | Key | - |
-| Global | 10req/s |
+| Global | - |
     "
 )]
 pub(super) async fn active_matches(
     Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
-    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "active_matches",
-            &[Quota::global_limit(10, Duration::from_secs(1))], // To protect massive amount of calls, during steam downtime
-        )
-        .await?;
-
-    let mut active_matches = tryhard::retry_fn(|| async {
-        let raw_data = fetch_active_matches_raw(&state).await?;
-        parse_active_matches_raw(&raw_data)
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
-    .await?;
+    let raw_data = fetch_active_matches_raw(&state).await?;
+    let mut active_matches = parse_active_matches_raw(&raw_data)?;
 
     // Filter by account id if provided
     if let Some(account_id) = account_id {
