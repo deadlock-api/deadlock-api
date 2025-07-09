@@ -74,7 +74,13 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add application routes
         .merge(routes::router())
         // Add prometheus metrics route
-        .route("/metrics", get(|| async move { metric_handle.render() }))
+        .route("/metrics", get(|| async move {
+            let mut headers = HeaderMap::new();
+            if let Ok(value) = "no-cache".parse() {
+                headers.append(header::CACHE_CONTROL, value);
+            }
+            (headers, metric_handle.render())
+        }))
         .layer(prometheus_layer)
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
