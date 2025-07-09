@@ -265,7 +265,7 @@ This endpoint allows you to create a custom match.
 | Type | Limit |
 | ---- | ----- |
 | IP | API-Key ONLY |
-| Key | 100req/h |
+| Key | 100req/30min |
 | Global | 1000req/h |
 "
 )]
@@ -280,7 +280,7 @@ pub(super) async fn create_custom(
             &rate_limit_key,
             "create_custom",
             &[
-                Quota::key_limit(100, Duration::from_secs(60 * 60)),
+                Quota::key_limit(100, Duration::from_secs(30 * 60)),
                 Quota::global_limit(1000, Duration::from_secs(60 * 60)),
             ],
         )
