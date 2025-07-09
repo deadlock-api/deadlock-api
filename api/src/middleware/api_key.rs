@@ -11,15 +11,6 @@ pub(crate) async fn write_api_key_to_header(mut request: Request, next: Next) ->
         return next.run(request).await;
     }
 
-    if let Some(api_key) = extract_api_key(&request) {
-        request.headers_mut().insert("x-api-key", api_key);
-        return next.run(request).await;
-    }
-
-    next.run(request).await
-}
-
-pub(super) fn extract_api_key(request: &Request) -> Option<HeaderValue> {
     // Check if API-Key is in query parameters
     let query_api_key = request.uri().query().and_then(|query| {
         parse::querify(query)
@@ -30,19 +21,23 @@ pub(super) fn extract_api_key(request: &Request) -> Option<HeaderValue> {
     if let Some(api_key) = query_api_key
         && let Ok(api_key) = api_key.parse::<HeaderValue>()
     {
-        return Some(api_key);
+        request.headers_mut().insert("x-api-key", api_key);
+        return next.run(request).await;
     }
 
     // Check if API-Key is set as a bearer token
     if let Some(api_key) = request.headers().get("authorization")
-        && let Ok(auth_str) = api_key.to_str()
-        && let Some(api_key) = auth_str.strip_prefix("Bearer ")
+        && let Some(api_key) = api_key
+            .to_str()
+            .ok()
+            .and_then(|s| s.strip_prefix("Bearer "))
         && let Ok(api_key) = api_key.parse::<HeaderValue>()
     {
-        return Some(api_key);
+        request.headers_mut().insert("x-api-key", api_key);
+        return next.run(request).await;
     }
 
-    None
+    next.run(request).await
 }
 
 #[cfg(test)]
