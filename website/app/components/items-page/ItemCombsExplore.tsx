@@ -90,10 +90,7 @@ export default function ItemCombsExplore({
   );
 
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
-  const displayData = useMemo(
-    () => getDisplayItemStats(limitedData, assetsItems || []),
-    [limitedData, assetsItems],
-  );
+  const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
 
   if (isLoadingItemAssets) {
     return (
