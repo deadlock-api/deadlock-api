@@ -1,5 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
@@ -7,7 +5,6 @@ import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
-import type { APIInfo } from "~/types/api_info";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Deadlock API" }, { name: "description", content: "Match Data, Player Data, and more" }];
