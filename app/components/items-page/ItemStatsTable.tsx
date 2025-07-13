@@ -46,7 +46,12 @@ export interface ItemStatsTableDisplayProps {
     rowWins,
     rowLosses,
     rowTotal,
-  }: { itemId: number; rowWins: number; rowLosses: number; rowTotal: number }) => ReactNode;
+  }: {
+    itemId: number;
+    rowWins: number;
+    rowLosses: number;
+    rowTotal: number;
+  }) => ReactNode;
 }
 
 export interface DisplayItemStats {
@@ -85,7 +90,12 @@ interface ItemStatsTableRowProps {
     rowWins,
     rowLosses,
     rowTotal,
-  }: { itemId: number; rowWins: number; rowLosses: number; rowTotal: number }) => ReactNode;
+  }: {
+    itemId: number;
+    rowWins: number;
+    rowLosses: number;
+    rowTotal: number;
+  }) => ReactNode;
 }
 
 function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, number] {

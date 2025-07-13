@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import * as React from "react";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
-import { ItemStatsTableDisplay, getDisplayItemStats } from "~/components/items-page/ItemStatsTable";
+import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { serializers, useQSSet, useQSString } from "~/hooks/useQSState";

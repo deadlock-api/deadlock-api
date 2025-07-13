@@ -1,7 +1,7 @@
 import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
-import MMRChart from "~/components/players-page/MMRChart";
 import MatchHistoryTable from "~/components/players-page/MatchHistoryTable";
+import MMRChart from "~/components/players-page/MMRChart";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
