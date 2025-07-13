@@ -116,7 +116,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
   const minMatches = rowTotalMatches && rowTotalMatches > 500 ? 20 : rowTotalMatches && rowTotalMatches > 250 ? 10 : 2;
 
-  const { data: itemsData, isLoading: isLoadingItems } = useQuery<AssetsItem[]>({
+  const { data: itemsData } = useQuery<AssetsItem[]>({
     queryKey: ["assets-items-upgrades"],
     queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
     staleTime: Number.POSITIVE_INFINITY,

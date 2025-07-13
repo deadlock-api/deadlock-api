@@ -24,7 +24,13 @@ export function ProgressBarWithLabel({
   max,
   color,
   label,
-}: { value?: number; min?: number; max?: number; color?: Color; label?: string }) {
+}: {
+  value?: number;
+  min?: number;
+  max?: number;
+  color?: Color;
+  label?: string;
+}) {
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
   return (
     <div className="flex flex-col gap-2  min-w-16">

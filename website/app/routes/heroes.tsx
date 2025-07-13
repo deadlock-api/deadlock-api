@@ -1,5 +1,4 @@
 import type { MetaFunction } from "react-router";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -10,6 +9,7 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
