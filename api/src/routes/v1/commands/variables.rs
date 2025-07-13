@@ -422,7 +422,7 @@ impl Variable {
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?
                         .iter()
-                        .filter(|m| !m.won())
+                        .filter(|m| m.won())
                         .count()
                         .to_string(),
                 )
