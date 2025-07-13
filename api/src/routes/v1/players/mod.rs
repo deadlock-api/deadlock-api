@@ -5,6 +5,7 @@ pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr_history;
 pub mod party_stats;
+mod steam;
 
 use core::time::Duration;
 
@@ -42,6 +43,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(enemy_stats::enemy_stats))
                 .routes(routes!(party_stats::party_stats))
                 .routes(routes!(hero_stats::hero_stats))
+                .routes(routes!(steam::steam))
                 .layer(
                     CacheControlMiddleware::new(Duration::from_secs(60 * 60))
                         .with_stale_while_revalidate(Duration::from_secs(60 * 60))

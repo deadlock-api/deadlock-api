@@ -11,7 +11,7 @@ reqwest = { version = "0.12.22", features = ["json"] }
 tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 redis = { version = "0.32.3", default-features = false, features = ["tokio-comp"] }
-clickhouse = "0.13.3"
+clickhouse = { version = "0.13.3", features = ["chrono"] }
 sqlx = { version = "0.8.6", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.17.0", features = ["serde", "v4"] }
 cached = { version = "0.55.1", features = ["async", "serde"] }
