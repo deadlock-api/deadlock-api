@@ -145,6 +145,7 @@ async fn demo_event_stream(
                 Some(Ok(_)) => {
                     if let Err(e) = parser.run_to_end().await {
                         error!("Error while parsing demo stream: {e}");
+                        return;
                     }
                 }
                 Some(Err(err)) => {
