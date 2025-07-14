@@ -68,7 +68,7 @@ pub(super) async fn spectate_match(
 
 #[utoipa::path(
     get,
-    path = "/{match_id}/live-url",
+    path = "/url",
     params(MatchIdQuery),
     responses(
         (status = OK, body = MatchSpectateResponse),
@@ -93,7 +93,7 @@ Example Parsers:
 | Global | 100req/10s |
     "
 )]
-pub(super) async fn live_url(
+pub(super) async fn url(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,

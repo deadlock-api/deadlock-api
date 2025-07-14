@@ -32,7 +32,7 @@ axum-prometheus = "0.8.0"
 itertools = "0.14.0"
 futures = "0.3.31"
 snap = "1.1.1"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "dd0a663eae1c53db66265443a5d818bb1db4f79c", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "70e8288b02102cc1d4c181253fe6179da5186293", features = ["gc-client", "serde", "user-msgs", "game-msgs"] }
 prost = "0.14.1"
 base64 = "0.22.1"
 tryhard = "0.5.2"
@@ -41,7 +41,7 @@ strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.2"
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "6b826ad857dcaa2bc0d6370cae221a36b37cfba8" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "74c1b748fab299bce8505a776b44bf26e03bf1a3" }
 async-stream = "0.3.6"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"
@@ -50,6 +50,7 @@ url = { version = "2.5.4", features = ["serde"] }
 quick-xml = { version = "0.38.0", features = ["serde", "serialize"] }
 serde-env = "0.2.0"
 regex = "1.11.1"
+axum-core = "0.5.2"
 
 [dev-dependencies]
 rstest = "0.25.0"

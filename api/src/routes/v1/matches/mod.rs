@@ -3,8 +3,7 @@ mod badge_distribution;
 mod bulk_metadata;
 mod custom;
 mod ingest_salts;
-mod live_demo;
-mod live_url;
+mod live;
 mod metadata;
 mod recently_fetched;
 mod salts;
@@ -30,7 +29,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(active::active_matches))
         .routes(routes!(active::active_matches_raw))
-        .routes(routes!(live_demo::live_demo))
         .routes(routes!(ingest_salts::ingest_salts))
         .routes(routes!(recently_fetched::recently_fetched))
         .routes(routes!(bulk_metadata::bulk_metadata))
@@ -48,7 +46,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(metadata::metadata))
                 .routes(routes!(metadata::metadata_raw))
                 .routes(routes!(salts::salts))
-                .routes(routes!(live_url::live_url))
                 .layer(
                     CacheControlMiddleware::new(Duration::from_secs(60 * 60))
                         .with_stale_while_revalidate(Duration::from_secs(60 * 60))
@@ -60,4 +57,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 ),
         )
         .nest("/custom", custom::router())
+        .nest("/{match_id}/live", live::router())
 }

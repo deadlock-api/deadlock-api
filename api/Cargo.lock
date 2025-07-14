@@ -600,6 +600,7 @@ dependencies = [
  "async-compression",
  "async-stream",
  "axum",
+ "axum-core",
  "axum-extra",
  "axum-prometheus",
  "base64",
@@ -686,7 +687,7 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 [[package]]
 name = "dungers"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=3aab4cd1564740fff90a253b96fee68d058dc149#3aab4cd1564740fff90a253b96fee68d058dc149"
+source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
 dependencies = [
  "dungers_bitbuf",
  "dungers_charsor",
@@ -696,20 +697,24 @@ dependencies = [
 [[package]]
 name = "dungers_bitbuf"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=3aab4cd1564740fff90a253b96fee68d058dc149#3aab4cd1564740fff90a253b96fee68d058dc149"
+source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
 dependencies = [
  "dungers_varint",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
 name = "dungers_charsor"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=3aab4cd1564740fff90a253b96fee68d058dc149#3aab4cd1564740fff90a253b96fee68d058dc149"
+source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
 
 [[package]]
 name = "dungers_varint"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=3aab4cd1564740fff90a253b96fee68d058dc149#3aab4cd1564740fff90a253b96fee68d058dc149"
+source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
+dependencies = [
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "dyn-clone"
@@ -1059,7 +1064,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
+source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1068,7 +1073,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
+source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1087,7 +1092,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
+source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
 dependencies = [
  "anyhow",
  "dungers",
@@ -1098,6 +1103,7 @@ dependencies = [
  "nohash",
  "prost 0.14.1",
  "snap",
+ "sync-unsafe-cell",
  "thiserror 2.0.12",
  "valveprotos",
 ]
@@ -1105,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=6b826ad857dcaa2bc0d6370cae221a36b37cfba8#6b826ad857dcaa2bc0d6370cae221a36b37cfba8"
+source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
 dependencies = [
  "dungers",
  "thiserror 2.0.12",
@@ -3169,6 +3175,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "sync-unsafe-cell"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8deaecba5382c095cb432cd1e21068dadb144208f057b13720e76bf89749beb4"
+
+[[package]]
 name = "sync_wrapper"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3675,7 +3687,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=dd0a663eae1c53db66265443a5d818bb1db4f79c#dd0a663eae1c53db66265443a5d818bb1db4f79c"
+source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=70e8288b02102cc1d4c181253fe6179da5186293#70e8288b02102cc1d4c181253fe6179da5186293"
 dependencies = [
  "heck",
  "prost 0.14.1",

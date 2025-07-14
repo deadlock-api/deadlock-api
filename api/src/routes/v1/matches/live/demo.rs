@@ -1,17 +1,17 @@
 use core::time::Duration;
 
 use async_stream::try_stream;
-use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::response::IntoResponse;
+use axum_core::body::Body;
+use axum_core::response::IntoResponse;
 use bytes::Bytes;
 use futures::Stream;
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
-use tracing::{error, info};
+use tracing::info;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::live_url::spectate_match;
+use crate::routes::v1::matches::live::url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -21,16 +21,10 @@ fn demo_stream(
 ) -> impl Stream<Item = Result<Bytes, BroadcastHttpClientError<reqwest::Error>>> {
     let client = reqwest::Client::new();
     try_stream! {
-        let mut demofile = match BroadcastHttp::start_streaming(
+        let mut demofile = BroadcastHttp::start_streaming(
             client,
             format!("https://dist1-ord1.steamcontent.com/tv/{match_id}"),
-        ).await{
-            Ok(demofile) => Ok(demofile),
-            Err(e) => {
-                error!("Failed to start streaming: {e:?}");
-                Err(e)
-            }
-        }?;
+        ).await?;
         while let Some(chunk) = demofile.next_packet().await {
             info!("Received chunk");
             yield chunk?;
@@ -40,7 +34,7 @@ fn demo_stream(
 
 #[utoipa::path(
     get,
-    path = "/{match_id}/demo/live",
+    path = "/demo",
     params(MatchIdQuery),
     responses(
         (status = OK, body = [u8], description = "Live demo stream."),
@@ -60,7 +54,7 @@ Streams the live demo of a match.
 | Global | 100req/10s |
     "
 )]
-pub(super) async fn live_demo(
+pub(crate) async fn demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
@@ -82,8 +76,8 @@ pub(super) async fn live_demo(
 
     // Wait for the demo to be available
     tryhard::retry_fn(|| state.steam_client.live_demo_exists(match_id))
-        .retries(20)
-        .fixed_backoff(Duration::from_millis(200))
+        .retries(60)
+        .fixed_backoff(Duration::from_millis(500))
         .await?;
 
     let stream = demo_stream(match_id);
