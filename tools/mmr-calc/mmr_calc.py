@@ -143,7 +143,7 @@ def get_matches_starting_from(client, start_id: int = 28626948) -> list[Match]:
 def get_regression_starting_id(client) -> int:
     min_created_at_query = """
     SELECT start_time
-    FROM mmr_history2 FINAL
+    FROM mmr_history FINAL
     INNER JOIN match_info FINAL USING (match_id)
     WHERE match_outcome = 'TeamWin'
       AND match_mode IN ('Ranked', 'Unranked')
@@ -180,7 +180,7 @@ def get_regression_starting_id(client) -> int:
 def get_all_player_mmrs(client, at_match_id: int) -> dict[int, float]:
     query = f"""
     SELECT account_id, player_score
-    FROM mmr_history2 FINAL
+    FROM mmr_history FINAL
     WHERE match_id <= {at_match_id}
     ORDER BY account_id, match_id DESC
     LIMIT 1 BY account_id;
@@ -192,7 +192,7 @@ def get_all_player_mmrs(client, at_match_id: int) -> dict[int, float]:
 def set_player_mmr(client, data: list[tuple[int, dict[int, float]]]):
     client.execute(
         """
-        INSERT INTO mmr_history2 (account_id, match_id, player_score)
+        INSERT INTO mmr_history (account_id, match_id, player_score)
         VALUES
         """,
         [
@@ -215,12 +215,6 @@ def run_regression(
 ) -> (dict[int, float], float):
     assert len(match.teams) == 2, "Match must have exactly two teams"
 
-    if (
-        match.teams[0].average_badge_team == 116
-        and match.teams[1].average_badge_team == 116
-    ):
-        return {}, 0
-
     avg_team0_rank_true = RANKS.index(match.teams[0].average_badge_team)
     avg_team1_rank_true = RANKS.index(match.teams[1].average_badge_team)
 
@@ -235,8 +229,16 @@ def run_regression(
 
     avg_team0_rank_pred = sum(team0_ranks.values()) / len(team0_ranks)
     avg_team1_rank_pred = sum(team1_ranks.values()) / len(team1_ranks)
-    error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
-    error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
+
+    if (
+        match.teams[0].average_badge_team == 116
+        and match.teams[1].average_badge_team == 116
+    ):
+        error0 = (avg_team1_rank_pred - avg_team0_rank_pred) / len(team0_ranks) / 2
+        error1 = (avg_team0_rank_pred - avg_team1_rank_pred) / len(team1_ranks) / 2
+    else:
+        error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
+        error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
 
     expected0 = expected_outcome(avg_team0_rank_pred, avg_team1_rank_pred)
     outcome0 = 1 if match.teams[0].won else 0
@@ -251,8 +253,15 @@ def run_regression(
 
     avg_team0_rank_pred = sum(team0_ranks.values()) / len(team0_ranks)
     avg_team1_rank_pred = sum(team1_ranks.values()) / len(team1_ranks)
-    new_error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
-    new_error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
+    if (
+        match.teams[0].average_badge_team == 116
+        and match.teams[1].average_badge_team == 116
+    ):
+        new_error0 = (avg_team1_rank_pred - avg_team0_rank_pred) / len(team0_ranks) / 2
+        new_error1 = (avg_team0_rank_pred - avg_team1_rank_pred) / len(team1_ranks) / 2
+    else:
+        new_error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
+        new_error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
 
     updates = {
         **{i: r + learning_rate * new_error0 for i, r in team0_ranks.items()},

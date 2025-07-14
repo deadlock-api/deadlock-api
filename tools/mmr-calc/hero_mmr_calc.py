@@ -220,12 +220,6 @@ def run_regression(
 ) -> (dict[tuple[int, int], float], float):
     assert len(match.teams) == 2, "Match must have exactly two teams"
 
-    if (
-        match.teams[0].average_badge_team == 116
-        and match.teams[1].average_badge_team == 116
-    ):
-        return {}, 0
-
     avg_team0_rank_true = RANKS.index(match.teams[0].average_badge_team)
     avg_team1_rank_true = RANKS.index(match.teams[1].average_badge_team)
 
@@ -240,8 +234,15 @@ def run_regression(
 
     avg_team0_rank_pred = sum(team0_ranks.values()) / len(team0_ranks)
     avg_team1_rank_pred = sum(team1_ranks.values()) / len(team1_ranks)
-    error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
-    error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
+    if (
+        match.teams[0].average_badge_team == 116
+        and match.teams[1].average_badge_team == 116
+    ):
+        error0 = (avg_team1_rank_pred - avg_team0_rank_pred) / len(team0_ranks) / 2
+        error1 = (avg_team0_rank_pred - avg_team1_rank_pred) / len(team1_ranks) / 2
+    else:
+        error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
+        error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
 
     expected0 = expected_outcome(avg_team0_rank_pred, avg_team1_rank_pred)
     outcome0 = 1 if match.teams[0].won else 0
@@ -256,8 +257,15 @@ def run_regression(
 
     avg_team0_rank_pred = sum(team0_ranks.values()) / len(team0_ranks)
     avg_team1_rank_pred = sum(team1_ranks.values()) / len(team1_ranks)
-    new_error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
-    new_error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
+    if (
+        match.teams[0].average_badge_team == 116
+        and match.teams[1].average_badge_team == 116
+    ):
+        new_error0 = (avg_team1_rank_pred - avg_team0_rank_pred) / len(team0_ranks) / 2
+        new_error1 = (avg_team0_rank_pred - avg_team1_rank_pred) / len(team1_ranks) / 2
+    else:
+        new_error0 = (avg_team0_rank_true - avg_team0_rank_pred) / len(team0_ranks)
+        new_error1 = (avg_team1_rank_true - avg_team1_rank_pred) / len(team1_ranks)
 
     updates = {
         **{k: r + learning_rate * new_error0 for k, r in team0_ranks.items()},
