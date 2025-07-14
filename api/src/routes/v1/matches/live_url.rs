@@ -79,7 +79,7 @@ pub(super) async fn spectate_match(
     tags = ["Matches"],
     summary = "Live Broadcast URL",
     description = "
-This endpoints specates a match and returns the live URL to be used in any demofile broadcast parser.
+This endpoints spectates a match and returns the live URL to be used in any demofile broadcast parser.
 
 Example Parsers:
 - [Demofile-Net](https://github.com/saul/demofile-net)
