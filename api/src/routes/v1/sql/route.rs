@@ -7,6 +7,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::query::BytesCursor;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, Lines};
 use tracing::{debug, error};
@@ -96,9 +97,18 @@ pub(super) async fn sql(
     run_sql(&state.ch_client_restricted, &query)
         .await
         .map(Json)
-        .map_err(|e| {
-            error!("Failed to execute query: {e}");
-            APIError::internal(format!("Failed to execute query: {e}"))
+        .map_err(|sql_error| {
+            error!("Failed to execute query: {sql_error}");
+            let error_message = match Regex::new(r"version [\d.]+") {
+                Ok(r) => r
+                    .replace_all(&sql_error.to_string(), "version [REDACTED]")
+                    .to_string(),
+                Err(regex_error) => {
+                    error!("Failed to create regex for redacting version: {regex_error}");
+                    sql_error.to_string()
+                }
+            };
+            APIError::internal(error_message)
         })
 }
 

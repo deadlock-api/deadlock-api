@@ -616,6 +616,7 @@ dependencies = [
  "quick-xml",
  "rand 0.9.1",
  "redis",
+ "regex",
  "reqwest",
  "rstest",
  "serde",

@@ -49,6 +49,7 @@ rand = "0.9.1"
 url = { version = "2.5.4", features = ["serde"] }
 quick-xml = { version = "0.38.0", features = ["serde", "serialize"] }
 serde-env = "0.2.0"
+regex = "1.11.1"
 
 [dev-dependencies]
 rstest = "0.25.0"
