@@ -194,6 +194,7 @@ export default function HeroStatsOverTimeChart({
           minTickGap={2}
           tickCount={10}
           stroke="#9ca3af"
+          allowDataOverflow
         />
         <Tooltip
           labelFormatter={(label) => day(label).format("YYYY-MM-DD")}

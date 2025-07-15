@@ -110,6 +110,7 @@ export default function MMRChart({
           domain={[minRank - 5, maxRank + 5]}
           tick={{ fontSize: 14, width: 96 }}
           stroke="#9ca3af"
+          allowDataOverflow
         />
         <Tooltip
           labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
