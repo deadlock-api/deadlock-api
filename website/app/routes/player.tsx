@@ -100,8 +100,8 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                     <div>
                       <h4 className="font-bold text-lg">Context</h4>
                       <p className="ml-4 w-fit max-w-72">
-                        Since December 2024, we've been using average rank (per-team) data directly from Valve of teams
-                        in each match. Our system uses this to estimate the rank for every player.
+                        Since December 2024, we've been collecting average rank (per-team) data directly from Valve of
+                        teams in each match. Our system uses this to estimate the rank for every player.
                       </p>
                     </div>
                     <div>
