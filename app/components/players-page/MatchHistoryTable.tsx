@@ -90,8 +90,7 @@ export default function MatchHistoryTable({
       const res = await fetch(url);
       const data = await res.json();
 
-      const resParsed = z.array(APIMatchMetadataSchema).parse(data);
-      return resParsed;
+      return z.array(APIMatchMetadataSchema).parse(data);
     },
     throwOnError: true,
     staleTime: 20 * 60 * 1000, // 5 minutes
