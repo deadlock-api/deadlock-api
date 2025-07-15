@@ -361,6 +361,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                 label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
                 tickFormatter={(v) => `${v?.toFixed(0)}%`}
                 tickCount={10}
+                allowDataOverflow
               />
               <ChartTooltip
                 content={({ active, payload }) => {
