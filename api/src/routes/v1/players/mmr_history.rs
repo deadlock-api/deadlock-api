@@ -1,5 +1,5 @@
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -11,9 +11,14 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::AccountIdQuery;
+use crate::utils::parse::parse_steam_id;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryQuery {
+    /// The players `SteamID3`
+    #[serde(default)]
+    #[serde(deserialize_with = "parse_steam_id")]
+    account_id: u32,
     /// The hero ID to fetch the MMR history for. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: u8,
 }
@@ -75,19 +80,19 @@ async fn get_mmr_history(
 }
 
 #[cached(
-    ty = "TimedCache<(u32, HeroMMRHistoryQuery), Vec<MMRHistory>>",
+    ty = "TimedCache<(u32, u8), Vec<MMRHistory>>",
     create = "{ TimedCache::with_lifespan(5 * 60) }",
     result = true,
-    convert = "{ (account_id, query) }",
+    convert = "{ (account_id, hero_id) }",
     sync_writes = "by_key",
-    key = "(u32, HeroMMRHistoryQuery)"
+    key = "(u32, u8)"
 )]
 async fn get_hero_mmr_history(
     ch_client: &clickhouse::Client,
     account_id: u32,
-    query: HeroMMRHistoryQuery,
+    hero_id: u8,
 ) -> APIResult<Vec<MMRHistory>> {
-    let query = build_hero_mmr_history_query(account_id, query.hero_id);
+    let query = build_hero_mmr_history_query(account_id, hero_id);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
@@ -192,11 +197,13 @@ So to get the rank we get the closest index from the player score.
     ",
 )]
 pub(super) async fn hero_mmr_history(
-    Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    Query(query): Query<HeroMMRHistoryQuery>,
+    Path(HeroMMRHistoryQuery {
+        account_id,
+        hero_id,
+    }): Path<HeroMMRHistoryQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_mmr_history(&state.ch_client_ro, account_id, query)
+    get_hero_mmr_history(&state.ch_client_ro, account_id, hero_id)
         .await
         .map(Json)
 }
