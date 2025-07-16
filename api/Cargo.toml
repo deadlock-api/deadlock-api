@@ -21,7 +21,7 @@ utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
 serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 serde_json = "1.0.140"
-object_store = { version = "0.12.2", features = ["aws"], default-features = false }
+object_store = { version = "0.12.3", features = ["aws"], default-features = false }
 tower = "0.5.2"
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
@@ -56,4 +56,3 @@ rstest = "0.25.0"
 
 [patch.crates-io]
 axum-prometheus = { git = "https://github.com/Ptrskay3/axum-prometheus.git", rev = "2e8b39733efed5c5bbc6f710a42e045ae878fe15" }
-object_store = { git = "https://github.com/apache/arrow-rs-object-store.git", rev = "bbfdd704401cdfc8634a5534c9d17d2f479c6f11" }
