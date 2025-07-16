@@ -41,7 +41,7 @@ strum = { version = "0.27.1", features = ["derive"] }
 strum_macros = "0.27.1"
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.2"
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "74c1b748fab299bce8505a776b44bf26e03bf1a3" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "611000f4c6207a95393c3c8b3774a6a75a69d12f" }
 async-stream = "0.3.6"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"

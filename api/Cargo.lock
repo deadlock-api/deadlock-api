@@ -294,6 +294,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 
 [[package]]
+name = "bytemuck"
+version = "1.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c76a5792e44e4abe34d3abf15636779261d45a7450612059293d1d2cfc63422"
+
+[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -687,7 +693,7 @@ checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 [[package]]
 name = "dungers"
 version = "0.0.0"
-source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
+source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
 dependencies = [
  "dungers_bitbuf",
  "dungers_charsor",
@@ -697,23 +703,24 @@ dependencies = [
 [[package]]
 name = "dungers_bitbuf"
 version = "0.0.0"
-source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
+source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
 dependencies = [
+ "bytemuck",
  "dungers_varint",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
 name = "dungers_charsor"
 version = "0.0.0"
-source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
+source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
 
 [[package]]
 name = "dungers_varint"
 version = "0.0.0"
-source = "git+https://github.com/blukai/dungers.git?rev=5419784ef771089369bdce5463a6cf6da35d3a79#5419784ef771089369bdce5463a6cf6da35d3a79"
+source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
 dependencies = [
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -1064,7 +1071,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
+source = "git+https://github.com/deadlock-api/haste.git?rev=611000f4c6207a95393c3c8b3774a6a75a69d12f#611000f4c6207a95393c3c8b3774a6a75a69d12f"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1073,7 +1080,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
+source = "git+https://github.com/deadlock-api/haste.git?rev=611000f4c6207a95393c3c8b3774a6a75a69d12f#611000f4c6207a95393c3c8b3774a6a75a69d12f"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1092,14 +1099,13 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
+source = "git+https://github.com/deadlock-api/haste.git?rev=611000f4c6207a95393c3c8b3774a6a75a69d12f#611000f4c6207a95393c3c8b3774a6a75a69d12f"
 dependencies = [
  "anyhow",
  "dungers",
  "dyn-clone",
  "hashbrown 0.15.4",
  "haste_vartype",
- "lazy_static",
  "nohash",
  "prost 0.14.1",
  "snap",
@@ -1111,7 +1117,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=74c1b748fab299bce8505a776b44bf26e03bf1a3#74c1b748fab299bce8505a776b44bf26e03bf1a3"
+source = "git+https://github.com/deadlock-api/haste.git?rev=611000f4c6207a95393c3c8b3774a6a75a69d12f#611000f4c6207a95393c3c8b3774a6a75a69d12f"
 dependencies = [
  "dungers",
  "thiserror 2.0.12",
