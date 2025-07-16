@@ -29,7 +29,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
-  const [samePartyFilter, setSamePartyFilter] = useQSBoolean("same_party", true);
+  const [samePartyFilter, setSamePartyFilter] = useQSBoolean("same_party", false);
   const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
     PATCHES[0].startDate,
     PATCHES[0].endDate,
