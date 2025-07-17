@@ -132,6 +132,8 @@ impl Visitor for MyVisitor {
             let hero_damage: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHeroDamage"));
             let objective_damage: Option<i32> =
                 entity.get_value(&fxhash::hash_bytes(b"m_iObjectiveDamage"));
+            let ultimate_cooldown_end: Option<f32> =
+                entity.get_value(&fxhash::hash_bytes(b"m_flUltimateCooldownEnd"));
             let upgrade_hash = fxhash::hash_bytes(b"m_vecUpgrades");
             let num_upgrades: u64 = entity.get_value(&upgrade_hash).unwrap_or_default();
             let upgrades = (0..num_upgrades)
@@ -162,6 +164,7 @@ impl Visitor for MyVisitor {
                         "self_healing": self_healing,
                         "hero_damage": hero_damage,
                         "objective_damage": objective_damage,
+                        "ultimate_cooldown_end": ultimate_cooldown_end,
                         "upgrades": upgrades,
                     }))?
                     .event("controller_entity_update"),
