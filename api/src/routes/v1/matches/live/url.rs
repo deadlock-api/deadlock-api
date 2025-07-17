@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use serde::Serialize;
-use tracing::{debug, info};
+use tracing::debug;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
     CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse,
