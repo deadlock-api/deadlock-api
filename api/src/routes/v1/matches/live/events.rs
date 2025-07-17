@@ -17,7 +17,7 @@ use haste::parser::{Context, Parser, Visitor};
 use serde_json::json;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::error::SendError;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -228,7 +228,7 @@ async fn demo_event_stream(
     )
     .await?;
     let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
-    let visitor = MyVisitor::new(sender);
+    let visitor = MyVisitor::new(sender.clone());
     let mut parser = Parser::from_stream_with_visitor(demo_stream, visitor)?;
     tokio::spawn(async move {
         loop {
@@ -246,6 +246,9 @@ async fn demo_event_stream(
                 }
                 None => {
                     debug!("Demo stream ended");
+                    if let Err(e) = sender.send(Event::default().data("end").event("end")) {
+                        warn!("Failed to send end event: {e}");
+                    }
                     break;
                 }
             }
@@ -277,7 +280,7 @@ pub(super) async fn events(
     State(AppState { steam_client, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     // Check if Match is already spectated, if not, spectate it
-    if let Err(_) = steam_client.live_demo_exists(match_id).await {
+    if steam_client.live_demo_exists(match_id).await.is_err() {
         info!("Spectating match {match_id}");
         spectate_match(&steam_client, match_id).await?;
         // Wait for the demo to be available
