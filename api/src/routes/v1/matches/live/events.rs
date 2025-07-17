@@ -90,7 +90,7 @@ impl Visitor for MyVisitor {
 
     async fn on_entity(
         &mut self,
-        _ctx: &Context,
+        ctx: &Context,
         _delta_header: DeltaHeader,
         entity: &Entity,
     ) -> Result<(), Self::Error> {
@@ -133,6 +133,7 @@ impl Visitor for MyVisitor {
             self.sender.send(
                 Event::default()
                     .json_data(json!({
+                        "tick": ctx.tick(),
                         "entity": entity.index(),
                         "pawn": pawn,
                         "steam_id": steam_id,
@@ -173,6 +174,7 @@ impl Visitor for MyVisitor {
             self.sender.send(
                 Event::default()
                     .json_data(json!({
+                        "tick": ctx.tick(),
                         "entity": entity.index(),
                         "controller": controller,
                         "team": team,
