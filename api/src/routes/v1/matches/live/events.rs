@@ -127,6 +127,10 @@ impl Visitor for MyVisitor {
             let last_hits: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLastHits"));
             let hero_healing: Option<i32> =
                 entity.get_value(&fxhash::hash_bytes(b"m_iHeroHealing"));
+            let health_regen: Option<f32> =
+                entity.get_value(&fxhash::hash_bytes(b"m_flHealthRegen"));
+            let ultimate_trained: Option<bool> =
+                entity.get_value(&fxhash::hash_bytes(b"m_bUltimateTrained"));
             let self_healing: Option<i32> =
                 entity.get_value(&fxhash::hash_bytes(b"m_iSelfHealing"));
             let hero_damage: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHeroDamage"));
@@ -155,6 +159,8 @@ impl Visitor for MyVisitor {
                         "assigned_lane": assigned_lane,
                         "original_assigned_lane": original_assigned_lane,
                         "net_worth": net_worth,
+                        "health_regen": health_regen,
+                        "ultimate_trained": ultimate_trained,
                         "kills": kills,
                         "assists": assists,
                         "deaths": deaths,
