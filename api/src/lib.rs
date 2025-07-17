@@ -49,6 +49,12 @@ use crate::middleware::track_requests::track_requests;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 
+const ROBOTS_TXT: &str = r"
+User-agent: *
+Disallow: /
+Allow: /docs
+";
+
 async fn favicon() -> impl IntoResponse {
     let favicon = include_bytes!("../public/favicon.ico");
     let mut headers = HeaderMap::new();
@@ -82,6 +88,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
             (headers, metric_handle.render())
         }))
         .layer(prometheus_layer)
+        // Add robots.txt
+        .route("/robots.txt", get(async || ROBOTS_TXT))
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(write_api_key_to_header))
