@@ -8,7 +8,9 @@ use futures::{Stream, TryStreamExt};
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
 use haste::demofile::DemoHeaderError;
 use haste::demostream::{CmdHeader, DecodeCmdError, ReadCmdError, ReadCmdHeaderError};
-use haste::entities::{DeltaHeader, Entity};
+use haste::entities::{
+    DeltaHeader, Entity, deadlock_coord_from_cell, ehandle_to_index, fkey_from_path,
+};
 use haste::flattenedserializers::FlattenedSerializersError;
 use haste::fxhash;
 use haste::parser::{Context, Parser, Visitor};
@@ -60,6 +62,29 @@ impl MyVisitor {
     }
 }
 
+fn get_entity_coord(entity: &Entity, cell_key: u64, vec_key: u64) -> Option<f32> {
+    let cell: u16 = entity.get_value(&cell_key)?;
+    let vec: f32 = entity.get_value(&vec_key)?;
+    let coord = deadlock_coord_from_cell(cell, vec);
+    Some(coord)
+}
+
+fn get_entity_position(entity: &Entity) -> Option<[f32; 3]> {
+    const CX: u64 = fkey_from_path(&["CBodyComponent", "m_cellX"]);
+    const CY: u64 = fkey_from_path(&["CBodyComponent", "m_cellY"]);
+    const CZ: u64 = fkey_from_path(&["CBodyComponent", "m_cellZ"]);
+
+    const VX: u64 = fkey_from_path(&["CBodyComponent", "m_vecX"]);
+    const VY: u64 = fkey_from_path(&["CBodyComponent", "m_vecY"]);
+    const VZ: u64 = fkey_from_path(&["CBodyComponent", "m_vecZ"]);
+
+    let x = get_entity_coord(entity, CX, VX)?;
+    let y = get_entity_coord(entity, CY, VY)?;
+    let z = get_entity_coord(entity, CZ, VZ)?;
+
+    Some([x, y, z])
+}
+
 impl Visitor for MyVisitor {
     type Error = StreamParseError;
 
@@ -71,27 +96,93 @@ impl Visitor for MyVisitor {
     ) -> Result<(), Self::Error> {
         // TODO: All the Hashes should be constants
         if entity.serializer_name_heq(fxhash::hash_bytes(b"CCitadelPlayerController")) {
-            let steam_id: u64 = entity
-                .get_value(&fxhash::hash_bytes(b"m_steamID"))
-                .unwrap_or_default();
-            if steam_id == 0 {
+            let pawn: Option<i32> = entity
+                .get_value(&fxhash::hash_bytes(b"m_hPawn"))
+                .map(ehandle_to_index);
+            let steam_id: Option<u64> = entity.get_value(&fxhash::hash_bytes(b"m_steamID"));
+            if steam_id.is_none_or(|s| s == 0) {
                 return Ok(());
             }
-            let steam_name: String = entity
-                .get_value(&fxhash::hash_bytes(b"m_iszPlayerName"))
-                .unwrap_or_default();
-            let hero_build_id: u64 = entity
-                .get_value(&fxhash::hash_bytes(b"m_unHeroBuildID"))
-                .unwrap_or_default();
+            let steam_name: Option<String> =
+                entity.get_value(&fxhash::hash_bytes(b"m_iszPlayerName"));
+            let hero_build_id: Option<u64> =
+                entity.get_value(&fxhash::hash_bytes(b"m_unHeroBuildID"));
+            let player_slot: Option<u8> =
+                entity.get_value(&fxhash::hash_bytes(b"m_unLobbyPlayerSlot"));
+            let team = entity
+                .get_value::<u8>(&fxhash::hash_bytes(b"m_iTeamNum"))
+                .map(|t| t - 2);
+            let assigned_lane: Option<i8> =
+                entity.get_value(&fxhash::hash_bytes(b"m_nAssignedLane"));
+            let original_assigned_lane: Option<i8> =
+                entity.get_value(&fxhash::hash_bytes(b"m_nOriginalLaneAssignment"));
+            let hero_id: Option<u32> = entity.get_value(&fxhash::hash_bytes(b"m_nHeroID"));
+            let net_worth: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iGoldNetWorth"));
+            let kills: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iPlayerKills"));
+            let assists: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iPlayerAssists"));
+            let deaths: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iDeaths"));
+            let denies: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iDenies"));
+            let last_hits: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLastHits"));
+            let hero_healing: Option<i32> =
+                entity.get_value(&fxhash::hash_bytes(b"m_iHeroHealing"));
+            let self_healing: Option<i32> =
+                entity.get_value(&fxhash::hash_bytes(b"m_iSelfHealing"));
+            let hero_damage: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHeroDamage"));
+            let objective_damage: Option<i32> =
+                entity.get_value(&fxhash::hash_bytes(b"m_iObjectiveDamage"));
             self.sender.send(
                 Event::default()
                     .json_data(json!({
-                        "entity_id": entity.index(),
+                        "entity": entity.index(),
+                        "pawn": pawn,
                         "steam_id": steam_id,
                         "steam_name": steam_name,
+                        "team": team,
+                        "hero_id": hero_id,
                         "hero_build_id": hero_build_id,
+                        "player_slot": player_slot,
+                        "assigned_lane": assigned_lane,
+                        "original_assigned_lane": original_assigned_lane,
+                        "net_worth": net_worth,
+                        "kills": kills,
+                        "assists": assists,
+                        "deaths": deaths,
+                        "denies": denies,
+                        "last_hits": last_hits,
+                        "hero_healing": hero_healing,
+                        "self_healing": self_healing,
+                        "hero_damage": hero_damage,
+                        "objective_damage": objective_damage,
                     }))?
-                    .event("entity_update"),
+                    .event("controller_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CCitadelPlayerPawn")) {
+            let controller: Option<i32> = entity
+                .get_value(&fxhash::hash_bytes(b"m_hController"))
+                .map(ehandle_to_index);
+            let level: i32 = entity
+                .get_value(&fxhash::hash_bytes(b"m_nLevel"))
+                .unwrap_or_default();
+            let max_health: i32 = entity
+                .get_value(&fxhash::hash_bytes(b"m_iMaxHealth"))
+                .unwrap_or_default();
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let hero_id: Option<u32> = entity.get_value(&fxhash::hash_bytes(b"m_nHeroID"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "entity": entity.index(),
+                        "controller": controller,
+                        "team": team,
+                        "hero_id": hero_id,
+                        "level": level,
+                        "max_health": max_health,
+                        "health": health,
+                        "position": position,
+                    }))?
+                    .event("pawn_entity_update"),
             )?;
         }
         Ok(())
