@@ -13,6 +13,7 @@ use haste::entities::{
 };
 use haste::flattenedserializers::FlattenedSerializersError;
 use haste::fxhash;
+use haste::fxhash::add_u64_to_hash;
 use haste::parser::{Context, Parser, Visitor};
 use serde_json::json;
 use tokio::sync::mpsc::UnboundedSender;
@@ -88,6 +89,7 @@ fn get_entity_position(entity: &Entity) -> Option<[f32; 3]> {
 impl Visitor for MyVisitor {
     type Error = StreamParseError;
 
+    #[allow(clippy::too_many_lines)]
     async fn on_entity(
         &mut self,
         ctx: &Context,
@@ -130,6 +132,12 @@ impl Visitor for MyVisitor {
             let hero_damage: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHeroDamage"));
             let objective_damage: Option<i32> =
                 entity.get_value(&fxhash::hash_bytes(b"m_iObjectiveDamage"));
+            let upgrade_hash = fxhash::hash_bytes(b"m_vecUpgrades");
+            let num_upgrades: u64 = entity.get_value(&upgrade_hash).unwrap_or_default();
+            let upgrades = (0..num_upgrades)
+                .map(|i| add_u64_to_hash(upgrade_hash, add_u64_to_hash(0, i)))
+                .filter_map(|h| entity.get_value(&h))
+                .collect::<Vec<u64>>();
             self.sender.send(
                 Event::default()
                     .json_data(json!({
@@ -154,6 +162,7 @@ impl Visitor for MyVisitor {
                         "self_healing": self_healing,
                         "hero_damage": hero_damage,
                         "objective_damage": objective_damage,
+                        "upgrades": upgrades,
                     }))?
                     .event("controller_entity_update"),
             )?;
