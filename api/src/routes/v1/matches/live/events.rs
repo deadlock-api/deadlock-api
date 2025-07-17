@@ -274,14 +274,18 @@ pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     State(AppState { steam_client, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    spectate_match(&steam_client, match_id).await?;
+    // Check if Match is already spectated, if not, spectate it
+    if let Err(_) = steam_client.live_demo_exists(match_id).await {
+        info!("Spectating match {match_id}");
+        spectate_match(&steam_client, match_id).await?;
+        // Wait for the demo to be available
+        tryhard::retry_fn(|| steam_client.live_demo_exists(match_id))
+            .retries(60)
+            .fixed_backoff(Duration::from_millis(500))
+            .await?;
+    }
 
-    // Wait for the demo to be available
-    tryhard::retry_fn(|| steam_client.live_demo_exists(match_id))
-        .retries(60)
-        .fixed_backoff(Duration::from_millis(500))
-        .await?;
-
+    info!("Demo available for match {match_id}");
     let stream = demo_event_stream(match_id)
         .await
         .map_err(|e| APIError::internal(e.to_string()))?
