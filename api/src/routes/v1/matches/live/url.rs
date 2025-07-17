@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use serde::Serialize;
-use tracing::debug;
+use tracing::{debug, info};
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
     CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse,
@@ -112,7 +112,7 @@ pub(super) async fn url(
         .await?;
 
     // Check if the match could be live, by checking the match id from a match 4 hours ago
-    let match_id_2_hours_ago = state
+    let match_id_4_hours_ago = state
         .ch_client
         .query(
             "SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 4 HOUR ORDER BY \
@@ -121,7 +121,7 @@ pub(super) async fn url(
         .fetch_one::<u64>()
         .await?;
 
-    if match_id < match_id_2_hours_ago {
+    if match_id < match_id_4_hours_ago {
         return Err(APIError::status_msg(
             reqwest::StatusCode::BAD_REQUEST,
             format!("Match {match_id} cannot be live"),

@@ -277,14 +277,31 @@ async fn demo_event_stream(
 )]
 pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    State(AppState { steam_client, .. }): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    // Check if the match could be live, by checking the match id from a match 4 hours ago
+    let match_id_4_hours_ago = state
+        .ch_client
+        .query(
+            "SELECT match_id FROM match_info WHERE created_at < now() - INTERVAL 4 HOUR ORDER BY \
+             match_id DESC LIMIT 1",
+        )
+        .fetch_one::<u64>()
+        .await?;
+
+    if match_id < match_id_4_hours_ago {
+        return Err(APIError::status_msg(
+            reqwest::StatusCode::BAD_REQUEST,
+            format!("Match {match_id} cannot be live"),
+        ));
+    }
+
     // Check if Match is already spectated, if not, spectate it
-    if steam_client.live_demo_exists(match_id).await.is_err() {
+    if state.steam_client.live_demo_exists(match_id).await.is_err() {
         info!("Spectating match {match_id}");
-        spectate_match(&steam_client, match_id).await?;
+        spectate_match(&state.steam_client, match_id).await?;
         // Wait for the demo to be available
-        tryhard::retry_fn(|| steam_client.live_demo_exists(match_id))
+        tryhard::retry_fn(|| state.steam_client.live_demo_exists(match_id))
             .retries(60)
             .fixed_backoff(Duration::from_millis(500))
             .await?;
