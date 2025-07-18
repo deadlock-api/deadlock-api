@@ -1,5 +1,6 @@
 use haste::entities::{Entity, deadlock_coord_from_cell};
 
+#[allow(clippy::wildcard_imports)]
 use crate::routes::v1::matches::live::parser::hashes::*;
 
 fn get_entity_coord(entity: &Entity, cell_key: u64, vec_key: u64) -> Option<f32> {

@@ -9,7 +9,6 @@
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
 #![allow(clippy::unreadable_literal)]
-#![allow(clippy::wildcard_imports)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::needless_for_each)] // This is currently caused by an issue in utoipa, see: https://github.com/juhaku/utoipa/pull/1423
 

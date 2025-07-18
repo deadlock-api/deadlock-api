@@ -6,6 +6,7 @@ use serde::Serialize;
 use strum_macros::{Display, FromRepr};
 use utoipa::ToSchema;
 
+#[allow(clippy::wildcard_imports)]
 use crate::routes::v1::matches::live::parser::hashes::*;
 use crate::routes::v1::matches::live::parser::types::Delta;
 use crate::routes::v1::matches::live::parser::utils;
