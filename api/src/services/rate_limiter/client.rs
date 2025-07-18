@@ -214,7 +214,9 @@ async fn get_custom_quotas(pg_client: &Pool<Postgres>, api_key: Uuid, path: &str
     .map(|rows| {
         rows.iter()
             .map(|row| Quota {
+                #[allow(clippy::cast_sign_loss)]
                 limit: row.rate_limit as usize,
+                #[allow(clippy::cast_sign_loss)]
                 period: Duration::from_micros(row.rate_period.microseconds as u64),
                 r#type: QuotaType::Key,
             })
