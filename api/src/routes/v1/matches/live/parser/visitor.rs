@@ -27,21 +27,22 @@ impl Visitor for EventVisitor {
         delta_header: DeltaHeader,
         entity: &Entity,
     ) -> Result<(), Self::Error> {
-        let entity_type = EntityType::from(entity);
-        let entity_update =
-            EntityUpdateEvents::from_entity_update(ctx, delta_header.into(), entity_type, entity);
-        let Some(entity_update) = entity_update else {
+        let Some(entity_type) = EntityType::from_opt(entity) else {
             return Ok(());
         };
-        let event = DemoEventPayload::EntityUpdate {
-            delta: delta_header.into(),
-            entity_index: entity.index(),
-            entity_type,
-            entity_update,
+        let Some(entity_update) =
+            EntityUpdateEvents::from_update(ctx, delta_header.into(), entity_type, entity)
+        else {
+            return Ok(());
         };
         let demo_event = DemoEvent {
             tick: ctx.tick(),
-            event,
+            event: DemoEventPayload::EntityUpdate {
+                delta: delta_header.into(),
+                entity_index: entity.index(),
+                entity_type,
+                entity_update,
+            },
         };
         self.sender.send(demo_event.try_into()?)?;
         Ok(())

@@ -131,7 +131,7 @@ impl EntityUpdateEvent for NPCEvent {
     }
 }
 
-#[derive(Serialize, Debug, Clone, Default, ToSchema)]
+#[derive(Serialize, Debug, Clone, ToSchema)]
 #[serde(untagged)]
 pub(crate) enum EntityUpdateEvents {
     PlayerController(Box<PlayerControllerEvent>),
@@ -145,53 +145,51 @@ pub(crate) enum EntityUpdateEvents {
     TrooperBarrackBoss(Box<NPCEvent>),
     BossTier2(Box<NPCEvent>),
     BossTier3(Box<NPCEvent>),
-    #[serde(skip_serializing)]
-    #[default]
-    Unknown,
 }
 
 impl EntityUpdateEvents {
-    pub(crate) fn from_entity_update(
+    pub(crate) fn from_update(
         ctx: &Context,
-        dh: Delta,
-        ent_type: EntityType,
-        ent: &Entity,
+        delta: Delta,
+        entity_type: EntityType,
+        entity: &Entity,
     ) -> Option<Self> {
-        match ent_type {
-            EntityType::PlayerController => PlayerControllerEvent::from_entity_update(ctx, dh, ent)
-                .map(Box::new)
-                .map(Self::PlayerController),
-            EntityType::PlayerPawn => PlayerPawnEvent::from_entity_update(ctx, dh, ent)
+        match entity_type {
+            EntityType::PlayerController => {
+                PlayerControllerEvent::from_entity_update(ctx, delta, entity)
+                    .map(Box::new)
+                    .map(Self::PlayerController)
+            }
+            EntityType::PlayerPawn => PlayerPawnEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::PlayerPawn),
-            EntityType::MidBoss => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::MidBoss => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::MidBoss),
-            EntityType::TrooperNeutral => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::TrooperNeutral => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::TrooperNeutral),
-            EntityType::Trooper => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::Trooper => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::Trooper),
-            EntityType::TrooperBoss => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::TrooperBoss => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::TrooperBoss),
-            EntityType::ShieldedSentry => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::ShieldedSentry => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::ShieldedSentry),
-            EntityType::BaseDefenseSentry => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::BaseDefenseSentry => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::BaseDefenseSentry),
-            EntityType::TrooperBarrackBoss => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::TrooperBarrackBoss => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::TrooperBarrackBoss),
-            EntityType::BossTier2 => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::BossTier2 => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::BossTier2),
-            EntityType::BossTier3 => NPCEvent::from_entity_update(ctx, dh, ent)
+            EntityType::BossTier3 => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::BossTier3),
-            EntityType::Unknown => None,
         }
     }
 }

@@ -76,7 +76,7 @@ impl From<DeltaHeader> for Delta {
     }
 }
 
-#[derive(FromRepr, Serialize, Debug, Clone, Copy, PartialEq, Eq, Default, Display, ToSchema)]
+#[derive(FromRepr, Serialize, Debug, Clone, Copy, PartialEq, Eq, Display, ToSchema)]
 #[repr(u64)]
 #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
@@ -92,13 +92,10 @@ pub(crate) enum EntityType {
     TrooperBarrackBoss = fxhash::hash_bytes(b"CNPC_TrooperBarrackBoss"),
     BossTier2 = fxhash::hash_bytes(b"CNPC_Boss_Tier2"),
     BossTier3 = fxhash::hash_bytes(b"CNPC_Boss_Tier3"),
-    #[serde(skip_serializing)]
-    #[default]
-    Unknown,
 }
 
-impl From<&Entity> for EntityType {
-    fn from(entity: &Entity) -> Self {
-        Self::from_repr(entity.serializer().serializer_name.hash).unwrap_or_default()
+impl EntityType {
+    pub(crate) fn from_opt(entity: &Entity) -> Option<Self> {
+        Self::from_repr(entity.serializer().serializer_name.hash)
     }
 }
