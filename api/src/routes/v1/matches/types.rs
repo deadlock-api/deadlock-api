@@ -1,11 +1,12 @@
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use strum_macros::FromRepr;
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
 
-#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
+#[derive(FromRepr, Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 enum ActiveMatchTeam {
     #[default]
@@ -16,15 +17,11 @@ enum ActiveMatchTeam {
 
 impl From<i32> for ActiveMatchTeam {
     fn from(value: i32) -> Self {
-        match value {
-            1 => Self::Team1,
-            16 => Self::Spectator,
-            _ => Self::Team0,
-        }
+        Self::from_repr(value).unwrap_or_default()
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
+#[derive(FromRepr, Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 enum ActiveMatchMode {
     #[default]
@@ -39,20 +36,11 @@ enum ActiveMatchMode {
 }
 impl From<i32> for ActiveMatchMode {
     fn from(value: i32) -> Self {
-        match value {
-            1 => Self::Unranked,
-            2 => Self::PrivateLobby,
-            3 => Self::CoopBot,
-            4 => Self::Ranked,
-            5 => Self::ServerTest,
-            6 => Self::Tutorial,
-            7 => Self::HeroLabs,
-            _ => Self::Invalid,
-        }
+        Self::from_repr(value).unwrap_or_default()
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
+#[derive(FromRepr, Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 enum ActiveMatchGameMode {
     #[default]
@@ -64,16 +52,11 @@ enum ActiveMatchGameMode {
 
 impl From<i32> for ActiveMatchGameMode {
     fn from(value: i32) -> Self {
-        match value {
-            1 => Self::KECitadelGameModeNormal,
-            2 => Self::KECitadelGameMode1v1Test,
-            3 => Self::KECitadelGameModeSandbox,
-            _ => Self::KECitadelGameModeInvalid,
-        }
+        Self::from_repr(value).unwrap_or_default()
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, ToSchema, Default)]
+#[derive(FromRepr, Debug, Clone, Copy, Serialize, ToSchema, Default)]
 #[repr(i32)]
 enum ActiveMatchRegionMode {
     #[default]
@@ -87,14 +70,7 @@ enum ActiveMatchRegionMode {
 
 impl From<i32> for ActiveMatchRegionMode {
     fn from(value: i32) -> Self {
-        match value {
-            1 => Self::Europe,
-            2 => Self::SeAsia,
-            3 => Self::SAmerica,
-            4 => Self::Russia,
-            5 => Self::Oceania,
-            _ => Self::Row,
-        }
+        Self::from_repr(value).unwrap_or_default()
     }
 }
 
