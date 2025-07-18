@@ -117,11 +117,11 @@ where
     })
 }
 
-pub(crate) fn default_last_month_timestamp() -> Option<u64> {
+pub(crate) fn default_last_month_timestamp() -> Option<i64> {
     let now = chrono::Utc::now().date_naive();
     let last_month = now - chrono::Duration::days(30);
     let last_month = last_month.and_hms_opt(0, 0, 0)?;
-    Some(last_month.and_utc().timestamp() as u64)
+    last_month.and_utc().timestamp().into()
 }
 
 pub(crate) fn default_true_option() -> Option<bool> {
@@ -260,7 +260,7 @@ mod tests {
         let result = default_last_month_timestamp();
         assert!(result.is_some());
 
-        let now = Utc::now().timestamp() as u64;
+        let now = Utc::now().timestamp();
         let one_month_ago = now - (30 * 24 * 60 * 60); // 30 days in seconds
 
         // The result should be approximately one month ago (allowing for some difference due to time of day)

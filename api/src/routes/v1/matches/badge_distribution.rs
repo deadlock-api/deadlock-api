@@ -14,9 +14,9 @@ use crate::error::APIResult;
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct BadgeDistributionQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<i64>,
     /// Filter matches based on their ID.
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.

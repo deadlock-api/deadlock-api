@@ -16,9 +16,9 @@ use crate::utils::parse::default_true;
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct MateStatsQuery {
     /// Filter matches based on their start time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<i64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,

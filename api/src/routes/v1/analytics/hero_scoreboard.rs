@@ -28,9 +28,9 @@ pub(super) struct HeroScoreboardQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<i64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,

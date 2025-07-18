@@ -55,10 +55,10 @@ async fn test_builds(
     #[case] version: Option<u32>,
     #[case] hero_id: Option<u32>,
     #[case] author_id: Option<u32>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
-    #[case] min_published_unix_timestamp: Option<u64>,
-    #[case] max_published_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
+    #[case] min_published_unix_timestamp: Option<i64>,
+    #[case] max_published_unix_timestamp: Option<i64>,
     #[case] tag: Option<u32>,
 ) {
     let mut queries = vec![];
@@ -189,28 +189,28 @@ async fn test_builds(
             assert!(
                 hero_build
                     .last_updated_timestamp
-                    .is_some_and(|t| t as u64 >= min_unix_timestamp)
+                    .is_some_and(|t| t >= min_unix_timestamp)
             );
         }
         if let Some(max_unix_timestamp) = max_unix_timestamp {
             assert!(
                 hero_build
                     .last_updated_timestamp
-                    .is_some_and(|t| t as u64 <= max_unix_timestamp)
+                    .is_some_and(|t| t <= max_unix_timestamp)
             );
         }
         if let Some(min_published_unix_timestamp) = min_published_unix_timestamp {
             assert!(
                 hero_build
                     .publish_timestamp
-                    .is_some_and(|t| t as u64 >= min_published_unix_timestamp)
+                    .is_some_and(|t| t >= min_published_unix_timestamp)
             );
         }
         if let Some(max_published_unix_timestamp) = max_published_unix_timestamp {
             assert!(
                 hero_build
                     .publish_timestamp
-                    .is_some_and(|t| t as u64 <= max_published_unix_timestamp)
+                    .is_some_and(|t| t <= max_published_unix_timestamp)
             );
         }
     }

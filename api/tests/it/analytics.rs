@@ -20,8 +20,8 @@ use crate::request_endpoint;
 #[tokio::test]
 async fn test_build_item_stats(
     #[values(None, Some(1))] hero_id: Option<u32>,
-    #[values(None, Some(1746057600))] min_last_updated_unix_timestamp: Option<u64>,
-    #[values(None, Some(1748736000))] max_last_updated_unix_timestamp: Option<u64>,
+    #[values(None, Some(1746057600))] min_last_updated_unix_timestamp: Option<i64>,
+    #[values(None, Some(1748736000))] max_last_updated_unix_timestamp: Option<i64>,
 ) {
     let mut queries = vec![];
     if let Some(hero_id) = hero_id {
@@ -82,8 +82,8 @@ async fn test_hero_comb_stats(
     #[case] max_matches: Option<u64>,
     #[case] include_hero_ids: Option<Vec<u32>>,
     #[case] exclude_hero_ids: Option<Vec<u32>>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,
@@ -205,8 +205,8 @@ async fn test_hero_comb_stats(
 async fn test_hero_counters_stats(
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,
@@ -382,8 +382,8 @@ async fn test_hero_scoreboard(
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
     #[case] sort_direction: SortDirectionDesc,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,
@@ -565,8 +565,8 @@ async fn test_player_scoreboard(
     sort_direction: Option<SortDirectionDesc>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,
@@ -684,8 +684,8 @@ async fn test_hero_stats(
         Some(hero_stats::BucketQuery::StartTimeMonth)
     )]
     bucket: Option<hero_stats::BucketQuery>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,
@@ -796,8 +796,8 @@ async fn test_hero_stats(
 async fn test_hero_synergies_stats(
     #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
     #[values(None, Some(true), Some(false))] same_party_filter: Option<bool>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,
@@ -986,8 +986,8 @@ async fn test_item_stats(
     )]
     bucket: Option<item_stats::BucketQuery>,
     #[case] hero_ids: Option<Vec<u32>>,
-    #[case] min_unix_timestamp: Option<u64>,
-    #[case] max_unix_timestamp: Option<u64>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_networth: Option<u64>,

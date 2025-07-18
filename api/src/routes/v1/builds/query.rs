@@ -36,13 +36,13 @@ pub enum BuildsSearchQuerySortBy {
 #[serde(rename_all = "snake_case")]
 pub(super) struct BuildsSearchQuery {
     /// Filter builds based on their `last_updated` time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<i64>,
     /// Filter builds based on their `last_updated` time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<i64>,
     /// Filter builds based on their published time (Unix timestamp).
-    min_published_unix_timestamp: Option<u64>,
+    min_published_unix_timestamp: Option<i64>,
     /// Filter builds based on their published time (Unix timestamp).
-    max_published_unix_timestamp: Option<u64>,
+    max_published_unix_timestamp: Option<i64>,
     /// The field to sort the builds by.
     #[serde(default)]
     #[param(inline)]

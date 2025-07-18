@@ -19,9 +19,9 @@ pub(super) struct BuildItemStatsQuery {
     /// Filter builds based on their last updated time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
-    min_last_updated_unix_timestamp: Option<u64>,
+    min_last_updated_unix_timestamp: Option<i64>,
     /// Filter builds based on their last updated time (Unix timestamp).
-    max_last_updated_unix_timestamp: Option<u64>,
+    max_last_updated_unix_timestamp: Option<i64>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, ToSchema, Eq, PartialEq, Hash)]

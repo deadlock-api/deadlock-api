@@ -68,9 +68,9 @@ pub(super) struct BulkMatchMetadataQuery {
     #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
     match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
-    min_unix_timestamp: Option<u64>,
+    min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
-    max_unix_timestamp: Option<u64>,
+    max_unix_timestamp: Option<i64>,
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
