@@ -15,7 +15,9 @@ use haste::flattenedserializers::FlattenedSerializersError;
 use haste::fxhash;
 use haste::fxhash::add_u64_to_hash;
 use haste::parser::{Context, Parser, Visitor};
+use serde::Serialize;
 use serde_json::json;
+use strum_macros::FromRepr;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::error::SendError;
 use tracing::{debug, error, info, warn};
@@ -86,6 +88,46 @@ fn get_entity_position(entity: &Entity) -> Option<[f32; 3]> {
     Some([x, y, z])
 }
 
+//     pub const UPDATE: Self = Self(0b00);
+//
+//     /// entity came back into pvs, create new entity if one doesn't exist.
+//     //
+//     // false -> true; FHDR_ENTERPVS
+//     pub const CREATE: Self = Self(0b10);
+//
+//     /// entity left pvs
+//     //
+//     // true -> false; FHDR_LEAVEPVS
+//     pub const LEAVE: Self = Self(0b01);
+//
+//     /// Entity left pvs and can be deleted
+//     //
+//     // true -> true; FHDR_LEAVEPVS and FHDR_DELETE
+//     pub const DELETE: Self = Self(0b11);
+#[derive(FromRepr, Serialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+enum Delta {
+    #[default]
+    #[serde(skip)]
+    INVALID,
+    UPDATE,
+    LEAVE,
+    CREATE,
+    DELETE,
+}
+
+impl From<DeltaHeader> for Delta {
+    fn from(delta_header: DeltaHeader) -> Self {
+        match delta_header {
+            DeltaHeader::UPDATE => Self::UPDATE,
+            DeltaHeader::LEAVE => Self::LEAVE,
+            DeltaHeader::CREATE => Self::CREATE,
+            DeltaHeader::DELETE => Self::DELETE,
+            _ => Self::default(),
+        }
+    }
+}
+
 impl Visitor for MyVisitor {
     type Error = StreamParseError;
 
@@ -93,9 +135,10 @@ impl Visitor for MyVisitor {
     async fn on_entity(
         &mut self,
         ctx: &Context,
-        _delta_header: DeltaHeader,
+        delta_header: DeltaHeader,
         entity: &Entity,
     ) -> Result<(), Self::Error> {
+        let delta = Delta::from(delta_header);
         // TODO: All the Hashes should be constants
         // TODO: Refactor
         if entity.serializer_name_heq(fxhash::hash_bytes(b"CCitadelPlayerController")) {
@@ -150,6 +193,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "pawn": pawn,
                         "steam_id": steam_id,
                         "steam_name": steam_name,
@@ -191,6 +235,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "controller": controller,
                         "team": team,
                         "hero_id": hero_id,
@@ -211,6 +256,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "health": health,
                         "max_health": max_health,
                         "create_time": create_time,
@@ -230,6 +276,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "health": health,
                         "max_health": max_health,
                         "create_time": create_time,
@@ -250,6 +297,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
@@ -271,6 +319,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
@@ -291,6 +340,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
@@ -310,6 +360,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
@@ -330,6 +381,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
@@ -351,6 +403,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
@@ -372,6 +425,7 @@ impl Visitor for MyVisitor {
                     .json_data(json!({
                         "tick": ctx.tick(),
                         "entity": entity.index(),
+                        "delta": delta,
                         "team": team,
                         "health": health,
                         "max_health": max_health,
