@@ -47,7 +47,7 @@ impl EntityUpdateEvent for PlayerControllerEvent {
             pawn: entity.get_value(&PAWN_HASH).map(ehandle_to_index),
             steam_id: entity.get_value(&STEAM_ID_HASH),
             steam_name: entity.get_value(&STEAM_NAME_HASH),
-            team: entity.get_value::<u8>(&TEAM_HASH).map(|t| t - 2),
+            team: entity.get_value::<u8>(&TEAM_HASH),
             hero_build_id: entity.get_value(&HERO_BUILD_ID_HASH),
             player_slot: entity.get_value(&PLAYER_SLOT_HASH),
             assigned_lane: entity.get_value(&ASSIGNED_LANE_HASH),
@@ -90,7 +90,7 @@ impl EntityUpdateEvent for PlayerPawnEvent {
     fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             controller: entity.get_value(&CONTROLLER_HASH).map(ehandle_to_index),
-            team: entity.get_value::<u8>(&TEAM_HASH).map(|t| t - 2),
+            team: entity.get_value::<u8>(&TEAM_HASH),
             hero_id: entity.get_value(&HERO_ID_HASH),
             level: entity.get_value(&LEVEL_HASH),
             max_health: entity.get_value(&MAX_HEALTH_HASH),
@@ -120,7 +120,7 @@ impl EntityUpdateEvent for NPCEvent {
             create_time: entity.get_value(&CREATE_TIME_HASH),
             lane: entity.get_value(&LANE_HASH),
             shield_active: entity.get_value(&SHIELD_ACTIVE_HASH),
-            team: entity.get_value::<u8>(&TEAM_HASH).map(|t| t - 2),
+            team: entity.get_value::<u8>(&TEAM_HASH),
             position: utils::get_entity_position(entity),
         }
         .into()
