@@ -141,15 +141,20 @@ impl RateLimitClient {
         key: &str,
         period: Duration,
     ) -> RedisResult<(usize, DateTime<Utc>)> {
-        let now_micros = Utc::now().timestamp_micros() as u128;
+        let current_time = Utc::now();
+        let period_start = current_time - period;
         let timestamps: Vec<i64> = self
             .redis_client
             .clone()
-            .zrangebyscore(key, now_micros - period.as_micros(), now_micros)
+            .zrangebyscore(
+                key,
+                period_start.timestamp_micros(),
+                current_time.timestamp_micros(),
+            )
             .await?;
         let num_requests = timestamps.len();
         if num_requests == 0 {
-            return Ok((0, Utc::now()));
+            return Ok((0, current_time));
         }
         let oldest_timestamp = timestamps
             .into_iter()
