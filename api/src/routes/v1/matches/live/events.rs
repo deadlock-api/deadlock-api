@@ -204,6 +204,29 @@ impl Visitor for MyVisitor {
                     }))?
                     .event("pawn_entity_update"),
             )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_MidBoss")) {
+            let health: i32 = entity
+                .get_value(&fxhash::hash_bytes(b"m_iHealth"))
+                .unwrap_or_default();
+            let max_health: i32 = entity
+                .get_value(&fxhash::hash_bytes(b"m_iMaxHealth"))
+                .unwrap_or_default();
+            let create_time: f32 = entity
+                .get_value(&fxhash::hash_bytes(b"m_flCreateTime"))
+                .unwrap_or_default();
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "position": position,
+                    }))?
+                    .event("mid_boss_entity_update"),
+            )?;
         }
         Ok(())
     }
