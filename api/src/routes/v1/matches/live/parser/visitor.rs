@@ -4,9 +4,9 @@ use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{Context, Visitor};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::routes::v1::matches::live::parser::entity_events::EntityUpdateEvents;
+use crate::routes::v1::matches::live::parser::entity_events::{EntityType, EntityUpdateEvents};
 use crate::routes::v1::matches::live::parser::error::StreamParseError;
-use crate::routes::v1::matches::live::parser::types::{DemoEvent, DemoEventPayload, EntityType};
+use crate::routes::v1::matches::live::parser::types::{DemoEvent, DemoEventPayload};
 
 pub(crate) struct EventVisitor {
     sender: UnboundedSender<Event>,
