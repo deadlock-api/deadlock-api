@@ -462,13 +462,13 @@ async fn demo_event_stream(
     path = "/demo/events",
     params(MatchIdQuery),
     responses(
-        (status = OK, body = [u8], description = "Live demo stream."),
+        (status = OK, description = "Live demo events stream over SSE."),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR)
     ),
     tags = ["Matches"],
     summary = "Live Demo",
-    description = "Streams the live demo of a match."
+    description = "Streams events from the spectator stream over SSE."
 )]
 pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
