@@ -11,7 +11,8 @@ use tracing::{debug, error, info, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::live::parser::StreamParseError;
+use crate::routes::v1::matches::live::parser::error::StreamParseError;
+use crate::routes::v1::matches::live::parser::types::DemoEvent;
 use crate::routes::v1::matches::live::parser::visitor::EventVisitor;
 use crate::routes::v1::matches::live::url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
@@ -65,12 +66,12 @@ async fn demo_event_stream(
     path = "/demo/events",
     params(MatchIdQuery),
     responses(
-        (status = OK, description = "Live demo events stream over SSE."),
+        (status = OK, body = [DemoEvent], description = "Live demo events stream over SSE."),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR)
     ),
     tags = ["Matches"],
-    summary = "Live Demo",
+    summary = "Live Demo Events",
     description = "Streams events from the spectator stream over SSE."
 )]
 pub(super) async fn events(
