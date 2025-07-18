@@ -97,6 +97,7 @@ impl Visitor for MyVisitor {
         entity: &Entity,
     ) -> Result<(), Self::Error> {
         // TODO: All the Hashes should be constants
+        // TODO: Refactor
         if entity.serializer_name_heq(fxhash::hash_bytes(b"CCitadelPlayerController")) {
             let pawn: Option<i32> = entity
                 .get_value(&fxhash::hash_bytes(b"m_hPawn"))
@@ -179,12 +180,8 @@ impl Visitor for MyVisitor {
             let controller: Option<i32> = entity
                 .get_value(&fxhash::hash_bytes(b"m_hController"))
                 .map(ehandle_to_index);
-            let level: i32 = entity
-                .get_value(&fxhash::hash_bytes(b"m_nLevel"))
-                .unwrap_or_default();
-            let max_health: i32 = entity
-                .get_value(&fxhash::hash_bytes(b"m_iMaxHealth"))
-                .unwrap_or_default();
+            let level: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_nLevel"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
             let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
             let hero_id: Option<u32> = entity.get_value(&fxhash::hash_bytes(b"m_nHeroID"));
             let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
@@ -205,15 +202,9 @@ impl Visitor for MyVisitor {
                     .event("pawn_entity_update"),
             )?;
         } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_MidBoss")) {
-            let health: i32 = entity
-                .get_value(&fxhash::hash_bytes(b"m_iHealth"))
-                .unwrap_or_default();
-            let max_health: i32 = entity
-                .get_value(&fxhash::hash_bytes(b"m_iMaxHealth"))
-                .unwrap_or_default();
-            let create_time: f32 = entity
-                .get_value(&fxhash::hash_bytes(b"m_flCreateTime"))
-                .unwrap_or_default();
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
             let position = get_entity_position(entity);
             self.sender.send(
                 Event::default()
@@ -226,6 +217,169 @@ impl Visitor for MyVisitor {
                         "position": position,
                     }))?
                     .event("mid_boss_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_TrooperNeutral")) {
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let shield_active: Option<bool> =
+                entity.get_value(&fxhash::hash_bytes(b"m_bShieldActive"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "shield_active": shield_active,
+                        "position": position,
+                    }))?
+                    .event("trooper_neutral_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_Trooper")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let lane: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLane"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "lane": lane,
+                        "position": position,
+                    }))?
+                    .event("trooper_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_TrooperBoss")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let lane: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLane"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "lane": lane,
+                        "position": position,
+                    }))?
+                    .event("trooper_boss_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_ShieldedSentry")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "position": position,
+                    }))?
+                    .event("shielded_sentry_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_BaseDefenseSentry")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "position": position,
+                    }))?
+                    .event("base_defense_sentry_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_TrooperBarrackBoss")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let lane: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLane"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "lane": lane,
+                        "position": position,
+                    }))?
+                    .event("trooper_barrack_boss_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_Boss_Tier2")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let lane: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLane"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "lane": lane,
+                        "position": position,
+                    }))?
+                    .event("boss_tier_2_entity_update"),
+            )?;
+        } else if entity.serializer_name_heq(fxhash::hash_bytes(b"CNPC_Boss_Tier3")) {
+            let team: Option<u8> = entity.get_value(&fxhash::hash_bytes(b"m_iTeamNum"));
+            let health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iHealth"));
+            let max_health: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iMaxHealth"));
+            let create_time: Option<f32> = entity.get_value(&fxhash::hash_bytes(b"m_flCreateTime"));
+            let lane: Option<i32> = entity.get_value(&fxhash::hash_bytes(b"m_iLane"));
+            let position = get_entity_position(entity);
+            self.sender.send(
+                Event::default()
+                    .json_data(json!({
+                        "tick": ctx.tick(),
+                        "entity": entity.index(),
+                        "team": team,
+                        "health": health,
+                        "max_health": max_health,
+                        "create_time": create_time,
+                        "lane": lane,
+                        "position": position,
+                    }))?
+                    .event("boss_tier_3_entity_update"),
             )?;
         }
         Ok(())
