@@ -1,5 +1,6 @@
 mod demo;
 mod events;
+mod parser;
 mod url;
 
 use utoipa::OpenApi;
