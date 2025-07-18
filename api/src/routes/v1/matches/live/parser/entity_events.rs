@@ -43,13 +43,9 @@ pub(crate) struct PlayerControllerEvent {
 
 impl EntityUpdateEvent for PlayerControllerEvent {
     fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
-        let steam_id: Option<u64> = entity.get_value(&STEAM_ID_HASH);
-        if steam_id.is_none_or(|s| s == 0) {
-            return None;
-        }
         Self {
             pawn: entity.get_value(&PAWN_HASH).map(ehandle_to_index),
-            steam_id,
+            steam_id: entity.get_value(&STEAM_ID_HASH),
             steam_name: entity.get_value(&STEAM_NAME_HASH),
             team: entity.get_value::<u8>(&TEAM_HASH).map(|t| t - 2),
             hero_build_id: entity.get_value(&HERO_BUILD_ID_HASH),
