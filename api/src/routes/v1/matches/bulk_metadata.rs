@@ -21,7 +21,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::parse::{comma_separated_num_deserialize_option, default_true};
+use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 
 fn default_limit() -> u32 {
@@ -65,7 +65,7 @@ pub(super) struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
     #[serde(default)]
-    #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(deserialize_with = "comma_separated_deserialize_option")]
     match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,
@@ -95,7 +95,7 @@ pub(super) struct BulkMatchMetadataQuery {
     is_new_player_pool: Option<bool>,
     /// Filter matches by account IDs of players that participated in the match.
     #[serde(default)]
-    #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.

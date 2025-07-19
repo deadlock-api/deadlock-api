@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::utils::parse::{
-    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
 fn default_min_matches() -> Option<u32> {
@@ -98,7 +98,7 @@ pub(crate) struct ItemStatsQuery {
     bucket: BucketQuery,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     hero_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]
@@ -130,10 +130,10 @@ pub(crate) struct ItemStatsQuery {
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
     /// Comma separated list of item ids to include. See more: <https://assets.deadlock-api.com/v2/items>
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude. See more: <https://assets.deadlock-api.com/v2/items>
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]

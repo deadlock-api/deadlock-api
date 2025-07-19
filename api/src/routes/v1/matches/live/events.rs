@@ -19,13 +19,13 @@ use crate::routes::v1::matches::live::parser::types::DemoEvent;
 use crate::routes::v1::matches::live::parser::visitor::SendingVisitor;
 use crate::routes::v1::matches::live::url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
-use crate::utils::parse::comma_separated_num_deserialize_option;
+use crate::utils::parse::comma_separated_deserialize_option;
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct DemoEventsQuery {
     /// Comma separated list of entities to subscribe to.
     #[param(default, inline)]
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     pub(super) subscribed_entities: Option<Vec<EntityType>>,
 }
 

@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::utils::parse::{
-    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
 fn default_comb_size() -> Option<u8> {
@@ -23,14 +23,14 @@ fn default_comb_size() -> Option<u8> {
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct ItemPermutationStatsQuery {
     /// Comma separated list of item ids. See more: <https://assets.deadlock-api.com/v2/items>
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     item_ids: Option<Vec<u32>>,
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
     comb_size: Option<u8>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     hero_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]

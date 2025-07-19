@@ -17,7 +17,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::utils::parse::{
-    comma_separated_num_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
 fn default_min_matches() -> Option<u32> {
@@ -60,10 +60,10 @@ pub(crate) struct HeroCombStatsQuery {
     #[serde(default, deserialize_with = "parse_steam_id_option")]
     account_id: Option<u32>,
     /// Comma separated list of hero ids to include. See more: <https://assets.deadlock-api.com/v2/heroes>
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     include_hero_ids: Option<Vec<u32>>,
     /// Comma separated list of hero ids to exclude. See more: <https://assets.deadlock-api.com/v2/heroes>
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     exclude_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]

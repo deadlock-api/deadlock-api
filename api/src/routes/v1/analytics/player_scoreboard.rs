@@ -12,7 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::utils::parse::comma_separated_num_deserialize_option;
+use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
 
 fn default_limit() -> Option<u32> {
@@ -73,7 +73,7 @@ pub(crate) struct PlayerScoreboardQuery {
     #[param(inline, default = "100", maximum = 10000, minimum = 1)]
     limit: Option<u32>,
     /// Comma separated list of account ids to include
-    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
 }
 

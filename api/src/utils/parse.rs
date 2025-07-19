@@ -58,7 +58,7 @@ where
 // Query Parameter Parsing
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum CommaSeparatedNum<T>
+enum CommaSeparated<T>
 where
     T: core::fmt::Debug + FromStr,
 {
@@ -72,22 +72,22 @@ where
     List(Vec<T>),
 }
 
-pub(crate) fn comma_separated_num_deserialize_option<'de, D, T>(
+pub(crate) fn comma_separated_deserialize_option<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<Vec<T>>, D::Error>
 where
     D: Deserializer<'de>,
     T: FromStr + Deserialize<'de> + core::fmt::Debug,
 {
-    let parsed: CommaSeparatedNum<T> = match Option::deserialize(deserializer)? {
+    let parsed: CommaSeparated<T> = match Option::deserialize(deserializer)? {
         Some(v) => v,
         None => return Ok(None),
     };
 
     Ok(match parsed {
-        CommaSeparatedNum::List(vec) => Some(vec),
-        CommaSeparatedNum::Single(val) => Some(vec![val]),
-        CommaSeparatedNum::StringList(val) => {
+        CommaSeparated::List(vec) => Some(vec),
+        CommaSeparated::Single(val) => Some(vec![val]),
+        CommaSeparated::StringList(val) => {
             let mut out = vec![];
             for s in val {
                 let parsed = s
@@ -97,7 +97,7 @@ where
             }
             if out.is_empty() { None } else { Some(out) }
         }
-        CommaSeparatedNum::CommaStringList(str) => {
+        CommaSeparated::CommaStringList(str) => {
             let str = str.replace(['[', ']'], "");
 
             // If the string is empty, return None
@@ -196,7 +196,7 @@ mod tests {
 
     #[derive(Deserialize, Debug)]
     struct CommaSeparatedTestStruct {
-        #[serde(deserialize_with = "comma_separated_num_deserialize_option")]
+        #[serde(deserialize_with = "comma_separated_deserialize_option")]
         ids: Option<Vec<u32>>,
     }
 
@@ -211,7 +211,7 @@ mod tests {
     #[case("{\"ids\": \"1,2, 3\"}", Some(vec![1, 2, 3]))] // Mixed spaces and no spaces
     #[case("{\"ids\": \"\"}", None)] // Empty string
     #[case("{\"ids\": []}", None)] // Empty array
-    fn test_comma_separated_num_deserialize_option(
+    fn test_comma_separated_deserialize_option(
         #[case] json: &str,
         #[case] expected: Option<Vec<u32>>,
     ) {
@@ -227,7 +227,7 @@ mod tests {
     #[case("{\"ids\": [1, 2, \"oops\"]}")]
     #[case("{\"ids\": [18446744073709551615u64]}")] // u64 that overflows u32
     #[case("{\"ids\": \"1,\"2\", 3\"}")] // Mixed numbers and strings, do we want to support this?
-    fn test_comma_separated_num_deserialize_option_invalid(#[case] json: &str) {
+    fn test_comma_separated_deserialize_option_invalid(#[case] json: &str) {
         let result = serde_json::from_str::<CommaSeparatedTestStruct>(json);
         assert!(result.is_err());
     }
