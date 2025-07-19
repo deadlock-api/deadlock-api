@@ -1,24 +1,37 @@
 use core::time::Duration;
 
 use async_stream::try_stream;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Sse};
 use futures::{Stream, TryStreamExt};
 use haste::broadcast::BroadcastHttp;
 use haste::parser::Parser;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info, warn};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::live::parser::entity_events::EntityType;
 use crate::routes::v1::matches::live::parser::error::StreamParseError;
 use crate::routes::v1::matches::live::parser::types::DemoEvent;
-use crate::routes::v1::matches::live::parser::visitor::EventVisitor;
+use crate::routes::v1::matches::live::parser::visitor::SendingVisitor;
 use crate::routes::v1::matches::live::url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::utils::parse::comma_separated_num_deserialize_option;
+
+#[derive(Serialize, Deserialize, IntoParams, ToSchema)]
+pub(super) struct DemoEventsQuery {
+    /// Comma separated list of entities to subscribe to.
+    #[param(default, inline)]
+    #[serde(default, deserialize_with = "comma_separated_num_deserialize_option")]
+    pub(super) subscribed_entities: Option<Vec<EntityType>>,
+}
 
 async fn demo_event_stream(
     match_id: u64,
+    query: DemoEventsQuery,
 ) -> Result<impl Stream<Item = Result<Event, StreamParseError>>, StreamParseError> {
     let client = reqwest::Client::new();
     let demo_stream = BroadcastHttp::start_streaming(
@@ -27,7 +40,7 @@ async fn demo_event_stream(
     )
     .await?;
     let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
-    let visitor = EventVisitor::new(sender.clone());
+    let visitor = SendingVisitor::new(sender.clone(), query.subscribed_entities);
     let mut parser = Parser::from_stream_with_visitor(demo_stream, visitor)?;
     tokio::spawn(async move {
         loop {
@@ -64,7 +77,7 @@ async fn demo_event_stream(
 #[utoipa::path(
     get,
     path = "/demo/events",
-    params(MatchIdQuery),
+    params(MatchIdQuery, DemoEventsQuery),
     responses(
         (status = OK, body = [DemoEvent], description = "Live demo events stream over SSE."),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -76,6 +89,7 @@ async fn demo_event_stream(
 )]
 pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
+    Query(body): Query<DemoEventsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     // Check if the match could be live, by checking the match id from a match 4 hours ago
@@ -107,7 +121,7 @@ pub(super) async fn events(
     }
 
     info!("Demo available for match {match_id}");
-    let stream = demo_event_stream(match_id)
+    let stream = demo_event_stream(match_id, body)
         .await
         .map_err(|e| APIError::internal(e.to_string()))?
         .inspect_err(|e| error!("Error in demo event stream: {e}"));

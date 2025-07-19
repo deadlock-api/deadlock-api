@@ -2,8 +2,8 @@ use haste::entities::{Entity, ehandle_to_index};
 use haste::fxhash;
 use haste::fxhash::add_u64_to_hash;
 use haste::parser::Context;
-use serde::Serialize;
-use strum_macros::{Display, FromRepr};
+use serde::{Deserialize, Serialize};
+use strum_macros::{Display, EnumString, FromRepr};
 use utoipa::ToSchema;
 
 #[allow(clippy::wildcard_imports)]
@@ -11,7 +11,20 @@ use crate::routes::v1::matches::live::parser::hashes::*;
 use crate::routes::v1::matches::live::parser::types::Delta;
 use crate::routes::v1::matches::live::parser::utils;
 
-#[derive(FromRepr, Serialize, Debug, Clone, Copy, PartialEq, Eq, Display, ToSchema)]
+#[derive(
+    FromRepr,
+    Deserialize,
+    Serialize,
+    Debug,
+    Clone,
+    Copy,
+    Hash,
+    PartialEq,
+    Eq,
+    Display,
+    ToSchema,
+    EnumString,
+)]
 #[repr(u64)]
 #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "snake_case")]

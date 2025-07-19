@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::response::sse::Event;
 use haste::demostream::CmdHeader;
 use haste::entities::{DeltaHeader, Entity};
@@ -8,17 +10,24 @@ use crate::routes::v1::matches::live::parser::entity_events::{EntityType, Entity
 use crate::routes::v1::matches::live::parser::error::StreamParseError;
 use crate::routes::v1::matches::live::parser::types::{DemoEvent, DemoEventPayload};
 
-pub(crate) struct EventVisitor {
+pub(crate) struct SendingVisitor {
     sender: UnboundedSender<Event>,
+    subscribed_entities: Option<HashSet<EntityType>>,
 }
 
-impl EventVisitor {
-    pub(crate) fn new(sender: UnboundedSender<Event>) -> Self {
-        EventVisitor { sender }
+impl SendingVisitor {
+    pub(crate) fn new(
+        sender: UnboundedSender<Event>,
+        subscribed_entities: Option<impl IntoIterator<Item = EntityType>>,
+    ) -> Self {
+        Self {
+            sender,
+            subscribed_entities: subscribed_entities.map(|iter| iter.into_iter().collect()),
+        }
     }
 }
 
-impl Visitor for EventVisitor {
+impl Visitor for SendingVisitor {
     type Error = StreamParseError;
 
     async fn on_entity(
@@ -30,6 +39,13 @@ impl Visitor for EventVisitor {
         let Some(entity_type) = EntityType::from_opt(entity) else {
             return Ok(());
         };
+        if self
+            .subscribed_entities
+            .as_ref()
+            .is_none_or(|subscribed_entity_events| !subscribed_entity_events.contains(&entity_type))
+        {
+            return Ok(());
+        }
         let Some(entity_update) =
             EntityUpdateEvents::from_update(ctx, delta_header.into(), entity_type, entity)
         else {
@@ -44,7 +60,8 @@ impl Visitor for EventVisitor {
                 entity_update,
             },
         };
-        self.sender.send(demo_event.try_into()?)?;
+        let sse_event = demo_event.try_into()?;
+        self.sender.send(sse_event)?;
         Ok(())
     }
 
