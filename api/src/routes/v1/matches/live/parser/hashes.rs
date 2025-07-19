@@ -32,6 +32,7 @@ pub(crate) const UPGRADES_HASH: u64 = fxhash::hash_bytes(b"m_vecUpgrades");
 pub(crate) const CREATE_TIME_HASH: u64 = fxhash::hash_bytes(b"m_flCreateTime");
 pub(crate) const LANE_HASH: u64 = fxhash::hash_bytes(b"m_iLane");
 pub(crate) const SHIELD_ACTIVE_HASH: u64 = fxhash::hash_bytes(b"m_bShieldActive");
+pub(crate) const ACTIVE_HASH: u64 = fxhash::hash_bytes(b"m_bActive");
 pub(crate) const CX: u64 = fkey_from_path(&["CBodyComponent", "m_cellX"]);
 pub(crate) const CY: u64 = fkey_from_path(&["CBodyComponent", "m_cellY"]);
 pub(crate) const CZ: u64 = fkey_from_path(&["CBodyComponent", "m_cellZ"]);

@@ -27,6 +27,11 @@ pub(crate) enum EntityType {
     TrooperBarrackBoss = fxhash::hash_bytes(b"CNPC_TrooperBarrackBoss"),
     BossTier2 = fxhash::hash_bytes(b"CNPC_Boss_Tier2"),
     BossTier3 = fxhash::hash_bytes(b"CNPC_Boss_Tier3"),
+    BreakableProp = fxhash::hash_bytes(b"CCitadel_BreakableProp"),
+    BreakablePropModifierPickup = fxhash::hash_bytes(b"CCitadel_BreakablePropModifierPickup"),
+    BreakablePropGoldPickup = fxhash::hash_bytes(b"CCitadel_BreakablePropGoldPickup"),
+    PunchablePowerup = fxhash::hash_bytes(b"CCitadel_PunchablePowerup"),
+    DestroyableBuilding = fxhash::hash_bytes(b"CCitadel_Destroyable_Building"),
 }
 
 impl EntityType {
@@ -154,6 +159,56 @@ impl EntityUpdateEvent for NPCEvent {
     }
 }
 
+#[derive(Serialize, Debug, Clone, Default, ToSchema)]
+pub(crate) struct DestroyableBuilding {
+    health: Option<i32>,
+    max_health: Option<i32>,
+    team: Option<u8>,
+    position: Option<[f32; 3]>,
+}
+
+impl EntityUpdateEvent for DestroyableBuilding {
+    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+        Self {
+            health: entity.get_value(&HEALTH_HASH),
+            max_health: entity.get_value(&MAX_HEALTH_HASH),
+            team: entity.get_value(&TEAM_HASH),
+            position: utils::get_entity_position(entity),
+        }
+        .into()
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Default, ToSchema)]
+pub(crate) struct PositionActiveEntity {
+    active: bool,
+    position: Option<[f32; 3]>,
+}
+
+impl EntityUpdateEvent for PositionActiveEntity {
+    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+        Self {
+            active: entity.get_value(&ACTIVE_HASH).unwrap_or_default(),
+            position: utils::get_entity_position(entity),
+        }
+        .into()
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Default, ToSchema)]
+pub(crate) struct PositionEntity {
+    position: Option<[f32; 3]>,
+}
+
+impl EntityUpdateEvent for PositionEntity {
+    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+        Self {
+            position: utils::get_entity_position(entity),
+        }
+        .into()
+    }
+}
+
 #[derive(Serialize, Debug, Clone, ToSchema)]
 #[serde(untagged)]
 pub(crate) enum EntityUpdateEvents {
@@ -168,6 +223,11 @@ pub(crate) enum EntityUpdateEvents {
     TrooperBarrackBoss(Box<NPCEvent>),
     BossTier2(Box<NPCEvent>),
     BossTier3(Box<NPCEvent>),
+    BreakableProp(Box<PositionEntity>),
+    BreakablePropModifierPickup(Box<PositionActiveEntity>),
+    BreakablePropGoldPickup(Box<PositionActiveEntity>),
+    PunchablePowerup(Box<PositionEntity>),
+    DestroyableBuilding(Box<DestroyableBuilding>),
 }
 
 impl EntityUpdateEvents {
@@ -213,6 +273,27 @@ impl EntityUpdateEvents {
             EntityType::BossTier3 => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::BossTier3),
+            EntityType::BreakableProp => PositionEntity::from_entity_update(ctx, delta, entity)
+                .map(Box::new)
+                .map(Self::BreakableProp),
+            EntityType::BreakablePropGoldPickup => {
+                PositionActiveEntity::from_entity_update(ctx, delta, entity)
+                    .map(Box::new)
+                    .map(Self::BreakablePropGoldPickup)
+            }
+            EntityType::BreakablePropModifierPickup => {
+                PositionActiveEntity::from_entity_update(ctx, delta, entity)
+                    .map(Box::new)
+                    .map(Self::BreakablePropModifierPickup)
+            }
+            EntityType::PunchablePowerup => PositionEntity::from_entity_update(ctx, delta, entity)
+                .map(Box::new)
+                .map(Self::PunchablePowerup),
+            EntityType::DestroyableBuilding => {
+                DestroyableBuilding::from_entity_update(ctx, delta, entity)
+                    .map(Box::new)
+                    .map(Self::DestroyableBuilding)
+            }
         }
     }
 }
