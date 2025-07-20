@@ -1,3 +1,4 @@
+pub mod ability_order_stats;
 pub mod build_item_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
@@ -29,6 +30,7 @@ struct ApiDoc;
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi()).merge(
         OpenApiRouter::new()
+            .routes(routes!(ability_order_stats::ability_order_stats))
             .routes(routes!(hero_stats::hero_stats))
             .routes(routes!(item_stats::item_stats))
             .routes(routes!(item_permutation_stats::item_permutation_stats))
