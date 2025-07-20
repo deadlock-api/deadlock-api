@@ -176,7 +176,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                 FROM match_info
                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
             t_upgrades AS (SELECT id from items WHERE type = 'upgrade'),
-            t_players AS (SELECT arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id)) \
+            t_players AS (SELECT arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))
              as p_items, won
                 FROM match_player
                 WHERE match_id IN t_matches {player_filters})
