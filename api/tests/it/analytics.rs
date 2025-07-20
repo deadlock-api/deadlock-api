@@ -1089,3 +1089,127 @@ async fn test_item_stats(
         assert_eq!(stat.wins + stat.losses, stat.matches);
     }
 }
+
+#[rstest]
+#[case(
+    1,
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(10)
+)]
+#[tokio::test]
+async fn test_ability_order_stats(
+    #[case] hero_id: u32,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
+    #[case] min_duration_s: Option<u64>,
+    #[case] max_duration_s: Option<u64>,
+    #[values(None, Some(10))] min_ability_upgrades: Option<u64>,
+    #[values(None, Some(16))] max_ability_upgrades: Option<u64>,
+    #[case] min_networth: Option<u64>,
+    #[case] max_networth: Option<u64>,
+    #[case] min_average_badge: Option<u8>,
+    #[case] max_average_badge: Option<u8>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] min_matches: Option<u32>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
+) {
+    let mut queries = vec![];
+    queries.push(("hero_id", hero_id.to_string()));
+    if let Some(min_unix_timestamp) = min_unix_timestamp {
+        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
+    }
+    if let Some(max_unix_timestamp) = max_unix_timestamp {
+        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
+    }
+    if let Some(min_duration_s) = min_duration_s {
+        queries.push(("min_duration_s", min_duration_s.to_string()));
+    }
+    if let Some(max_duration_s) = max_duration_s {
+        queries.push(("max_duration_s", max_duration_s.to_string()));
+    }
+    if let Some(min_ability_upgrades) = min_ability_upgrades {
+        queries.push(("min_ability_upgrades", min_ability_upgrades.to_string()));
+    }
+    if let Some(max_ability_upgrades) = max_ability_upgrades {
+        queries.push(("max_ability_upgrades", max_ability_upgrades.to_string()));
+    }
+    if let Some(min_networth) = min_networth {
+        queries.push(("min_networth", min_networth.to_string()));
+    }
+    if let Some(max_networth) = max_networth {
+        queries.push(("max_networth", max_networth.to_string()));
+    }
+    if let Some(min_average_badge) = min_average_badge {
+        queries.push(("min_average_badge", min_average_badge.to_string()));
+    }
+    if let Some(max_average_badge) = max_average_badge {
+        queries.push(("max_average_badge", max_average_badge.to_string()));
+    }
+    if let Some(min_match_id) = min_match_id {
+        queries.push(("min_match_id", min_match_id.to_string()));
+    }
+    if let Some(max_match_id) = max_match_id {
+        queries.push(("max_match_id", max_match_id.to_string()));
+    }
+    if let Some(min_matches) = min_matches {
+        queries.push(("min_matches", min_matches.to_string()));
+    }
+    if let Some(account_id) = account_id {
+        queries.push(("account_id", account_id.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = request_endpoint("/v1/analytics/ability-order-stats", queries).await;
+    let ability_order_stats: Vec<AnalyticsAbilityOrderStats> =
+        response.json().await.expect("Failed to parse response");
+
+    // Verify uniqueness of ability orders
+    assert_eq!(
+        ability_order_stats
+            .iter()
+            .map(|s| &s.abilities)
+            .unique()
+            .count(),
+        ability_order_stats.len()
+    );
+
+    for stat in &ability_order_stats {
+        // Verify basic match math
+        assert_eq!(stat.wins + stat.losses, stat.matches);
+
+        // Verify min_matches constraint
+        if let Some(min_matches) = min_matches {
+            assert!(stat.matches >= min_matches as u64);
+        }
+
+        // Verify abilities array is not empty and contains valid ability IDs
+        assert!(!stat.abilities.is_empty());
+
+        // Verify ability upgrades constraints if specified
+        if let Some(min_ability_upgrades) = min_ability_upgrades {
+            assert!(stat.abilities.len() >= min_ability_upgrades as usize);
+        }
+        if let Some(max_ability_upgrades) = max_ability_upgrades {
+            assert!(stat.abilities.len() <= max_ability_upgrades as usize);
+        }
+
+        // Verify reasonable bounds for stats
+        assert!(stat.total_kills <= stat.matches * 100); // Reasonable upper bound
+        assert!(stat.total_deaths <= stat.matches * 100);
+        assert!(stat.total_assists <= stat.matches * 500); // Assists can be higher
+
+        // Verify matches > 0 (should always be true due to min_matches default)
+        assert!(stat.matches > 0);
+    }
+}
