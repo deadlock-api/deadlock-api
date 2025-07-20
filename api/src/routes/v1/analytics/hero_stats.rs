@@ -166,13 +166,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
     }
     if let Some(include_item_ids) = &query.include_item_ids {
         player_filters.push(format!(
-            "hasAll(items, [{}])",
+            "hasAll(items.item_id, [{}])",
             include_item_ids.iter().map(ToString::to_string).join(", ")
         ));
     }
     if let Some(exclude_item_ids) = &query.exclude_item_ids {
         player_filters.push(format!(
-            "not hasAny(items, [{}])",
+            "not hasAny(items.item_id, [{}])",
             exclude_item_ids.iter().map(ToString::to_string).join(", ")
         ));
     }
@@ -245,7 +245,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         t_players AS (
             SELECT account_id, hero_id
             FROM match_player
-            WHERE match_id IN t_matches
+            WHERE match_id IN (SELECT match_id FROM t_matches)
                 {player_filters}
             GROUP BY account_id, hero_id
             HAVING {player_hero_filters}
@@ -434,7 +434,7 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("hasAll(items, [1, 2, 3])"));
+        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
     }
 
     #[test]
@@ -444,7 +444,7 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("not hasAny(items, [4, 5, 6])"));
+        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
     }
 
     #[test]
@@ -455,7 +455,7 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("hasAll(items, [1, 2, 3])"));
-        assert!(sql.contains("not hasAny(items, [4, 5, 6])"));
+        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
+        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
     }
 }
