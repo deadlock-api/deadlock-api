@@ -139,7 +139,7 @@ pub(crate) fn querify(string: &str) -> QueryParams<'_> {
     for pair in string.split('&') {
         let mut it = pair.split('=').take(2);
         let kv = match (it.next(), it.next()) {
-            (Some(k), Some(v)) => (k, v),
+            (Some(k), Some(v)) if !k.is_empty() && !v.is_empty() => (k, v),
             _ => continue,
         };
         v.push(kv);
@@ -279,5 +279,29 @@ mod tests {
     #[test]
     fn test_default_true() {
         assert!(default_true());
+    }
+
+    #[test]
+    fn test_querify() {
+        assert_eq!(
+            querify("a=1&b=2&c=3"),
+            vec![("a", "1"), ("b", "2"), ("c", "3")]
+        );
+        assert_eq!(
+            querify("a=1&b=2&c=3&"),
+            vec![("a", "1"), ("b", "2"), ("c", "3")]
+        );
+        assert_eq!(
+            querify("a=1&b=2&c=3&d"),
+            vec![("a", "1"), ("b", "2"), ("c", "3")]
+        );
+        assert_eq!(
+            querify("a=1&b=2&c=3&d="),
+            vec![("a", "1"), ("b", "2"), ("c", "3")]
+        );
+        assert_eq!(
+            querify("a=1&b=2&c=3&d=4"),
+            vec![("a", "1"), ("b", "2"), ("c", "3"), ("d", "4")]
+        );
     }
 }
