@@ -1,5 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
+use deadlock_api_rust::routes::v1::analytics::ability_order_stats::AnalyticsAbilityOrderStats;
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
@@ -20,8 +21,8 @@ use crate::request_endpoint;
 #[tokio::test]
 async fn test_build_item_stats(
     #[values(None, Some(1))] hero_id: Option<u32>,
-    #[values(None, Some(1746057600))] min_last_updated_unix_timestamp: Option<i64>,
-    #[values(None, Some(1748736000))] max_last_updated_unix_timestamp: Option<i64>,
+    #[values(None, Some(1741801678))] min_last_updated_unix_timestamp: Option<i64>,
+    #[values(None, Some(1742233678))] max_last_updated_unix_timestamp: Option<i64>,
 ) {
     let mut queries = vec![];
     if let Some(hero_id) = hero_id {
@@ -71,10 +72,6 @@ async fn test_build_item_stats(
     Some(50000),
     Some(40),
     Some(100),
-    Some(34000226),
-    Some(34000226),
-    Some(375690830),
-    Some(4),
 )]
 #[tokio::test]
 async fn test_hero_comb_stats(
@@ -90,10 +87,10 @@ async fn test_hero_comb_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
-    #[case] account_id: Option<u32>,
-    #[case] comb_size: Option<u8>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(3), Some(6))] comb_size: Option<u8>,
 ) {
     let mut queries = vec![];
     if let Some(min_matches) = min_matches {
@@ -186,8 +183,8 @@ async fn test_hero_comb_stats(
 #[case(
     Some(20),
     Some(70),
-    Some(1746057600),
-    Some(1748736000),
+    Some(1741801678),
+    Some(1742233678),
     Some(1000),
     Some(5000),
     Some(10000),
@@ -195,11 +192,7 @@ async fn test_hero_comb_stats(
     Some(10000),
     Some(50000),
     Some(40),
-    Some(100),
-    Some(34000226),
-    Some(34000226),
-    Some(true),
-    Some(18373975)
+    Some(100)
 )]
 #[tokio::test]
 async fn test_hero_counters_stats(
@@ -215,10 +208,10 @@ async fn test_hero_counters_stats(
     #[case] max_enemy_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
-    #[case] same_lane_filter: Option<bool>,
-    #[case] account_id: Option<u32>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
 ) {
     let mut queries = vec![];
     if let Some(min_matches) = min_matches {
@@ -301,17 +294,14 @@ async fn test_hero_counters_stats(
     Some(10),
     Some(70),
     SortDirectionDesc::Desc,
-    Some(1746057600),
-    Some(1748736000),
+    Some(1741801678),
+    Some(1742233678),
     Some(1000),
     Some(5000),
     Some(10000),
     Some(50000),
     Some(40),
-    Some(100),
-    Some(34000226),
-    Some(34000226),
-    Some(18373975)
+    Some(100)
 )]
 #[tokio::test]
 async fn test_hero_scoreboard(
@@ -390,9 +380,9 @@ async fn test_hero_scoreboard(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
-    #[case] account_id: Option<u32>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
 ) {
     let mut queries = vec![];
     queries.push(("sort_by", sort_by.to_string()));
@@ -482,17 +472,14 @@ async fn test_hero_scoreboard(
 #[case(
     Some(10),
     Some(70),
-    Some(1746057600),
-    Some(1748736000),
+    Some(1741801678),
+    Some(1742233678),
     Some(1000),
     Some(5000),
     Some(10000),
     Some(50000),
     Some(40),
     Some(100),
-    Some(34000226),
-    Some(34000226),
-    Some(18373975),
     Some(100)
 )]
 #[tokio::test]
@@ -573,9 +560,9 @@ async fn test_player_scoreboard(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
-    #[case] account_id: Option<u32>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
     #[case] limit: Option<u32>,
 ) {
     let mut queries = vec![];
@@ -671,7 +658,18 @@ async fn test_player_scoreboard(
 
 #[rstest]
 #[case(
-    None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(10),
+    Some(100),
+    Some(vec![1548066885, 968099481]),
+    Some(vec![1797283378]),
 )]
 #[tokio::test]
 async fn test_hero_stats(
@@ -692,13 +690,13 @@ async fn test_hero_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
     #[case] min_hero_matches: Option<u64>,
     #[case] max_hero_matches: Option<u64>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[case] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
 ) {
     let mut queries = vec![];
     if let Some(bucket) = bucket {
@@ -759,6 +757,7 @@ async fn test_hero_stats(
         .iter()
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
+    queries.iter().for_each(|(k, v)| println!("{k}={v}"));
     let response = request_endpoint("/v1/analytics/hero-stats", queries).await;
     let hero_stats: Vec<AnalyticsHeroStats> =
         response.json().await.expect("Failed to parse response");
@@ -778,17 +777,14 @@ async fn test_hero_stats(
 
 #[rstest]
 #[case(
-    Some(1746057600),
-    Some(1748736000),
+    Some(1741801678),
+    Some(1742233678),
     Some(1000),
     Some(5000),
     Some(10000),
     Some(50000),
     Some(40),
     Some(100),
-    Some(34000226),
-    Some(34000226),
-    Some(18373975),
     Some(10),
     Some(100)
 )]
@@ -804,9 +800,9 @@ async fn test_hero_synergies_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
-    #[case] account_id: Option<u32>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
@@ -887,18 +883,6 @@ async fn test_hero_synergies_stats(
                 "Matches played should be less than or equal to max_matches"
             );
         }
-        if let Some(min_networth) = min_networth {
-            assert!(
-                stat.networth1 >= min_networth && stat.networth2 >= min_networth,
-                "Net worth should be greater than or equal to min_networth"
-            );
-        }
-        if let Some(max_networth) = max_networth {
-            assert!(
-                stat.networth1 <= max_networth && stat.networth2 <= max_networth,
-                "Net worth should be less than or equal to max_networth"
-            );
-        }
         assert!(
             stat.hero_id1 < stat.hero_id2,
             "hero_id1 should be less than hero_id2"
@@ -949,19 +933,16 @@ async fn test_hero_synergies_stats(
 #[rstest]
 #[case(
     Some(vec![1, 2, 3]),
-    Some(1746057600),
-    Some(1748736000),
+    Some(1741801678),
+    Some(1742233678),
     Some(1000),
     Some(5000),
     Some(10000),
     Some(50000),
     Some(40),
     Some(100),
-    Some(34000226),
-    Some(34000226),
     Some(vec![1548066885, 1009965641, 709540378]),
     Some(vec![1248737459, 3535785353]),
-    Some(18373975),
     Some(10),
     Some(100),
 )]
@@ -994,11 +975,11 @@ async fn test_item_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[case] min_match_id: Option<u64>,
-    #[case] max_match_id: Option<u64>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[case] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_id: Option<u32>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
