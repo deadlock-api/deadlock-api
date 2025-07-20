@@ -22,7 +22,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [hero, setHero] = useQSNumber("hero");
-  const [minMatches, setMinMatches] = useQSNumber("min_matches", 20);
+  const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
   const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
     PATCHES[0].startDate,
     PATCHES[0].endDate,

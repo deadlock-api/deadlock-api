@@ -28,8 +28,8 @@ export default function HeroCombStatsTable({
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
-  const [minMatchesFilter, setMinMatchesFilter] = useQSNumber("min_matches", 100);
-  const [minMatchesFilterT, setMinMatchesFilterT] = useState<number>(100);
+  const [minMatchesFilter, setMinMatchesFilter] = useQSNumber("min_matches", 10);
+  const [minMatchesFilterT, setMinMatchesFilterT] = useState<number>(10);
   const [combSizeFilter, setCombSizeFilter] = useQSNumber("comb_size", 2);
   const [combSizeFilterT, setCombSizeFilterT] = useState<number>(2);
   const [combsToShow, setCombsToShow] = useQSNumber("combs_to_show", limit ?? 50);
@@ -51,7 +51,7 @@ export default function HeroCombStatsTable({
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-comb-stats", API_ORIGIN);
       url.searchParams.set("comb_size", combSizeFilter.toString());
-      url.searchParams.set("min_matches", (minMatchesFilter ?? 100).toString());
+      url.searchParams.set("min_matches", (minMatchesFilter ?? 10).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
