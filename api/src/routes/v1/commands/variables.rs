@@ -8,7 +8,7 @@ use futures::future::join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
-use strum_macros::{EnumString, IntoStaticStr, VariantArray};
+use strum::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
 use tracing::warn;
 use utoipa::ToSchema;

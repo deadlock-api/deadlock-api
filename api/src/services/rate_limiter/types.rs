@@ -2,7 +2,7 @@ use core::time::Duration;
 
 use axum::http::HeaderMap;
 use chrono::{DateTime, Utc};
-use strum_macros::EnumIs;
+use strum::EnumIs;
 use tracing::error;
 
 use crate::error::{APIError, APIResult};

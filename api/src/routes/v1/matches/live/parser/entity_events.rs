@@ -3,7 +3,7 @@ use haste::fxhash;
 use haste::fxhash::add_u64_to_hash;
 use haste::parser::Context;
 use serde::{Deserialize, Serialize};
-use strum_macros::{Display, EnumString, FromRepr};
+use strum::{Display, EnumString, FromRepr};
 use utoipa::ToSchema;
 
 #[allow(clippy::wildcard_imports)]

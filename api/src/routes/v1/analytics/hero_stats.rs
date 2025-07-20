@@ -6,7 +6,7 @@ use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use strum_macros::Display;
+use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 

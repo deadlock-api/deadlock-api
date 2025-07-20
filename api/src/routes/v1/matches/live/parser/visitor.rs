@@ -42,7 +42,9 @@ impl Visitor for SendingVisitor {
         if self
             .subscribed_entities
             .as_ref()
-            .is_some_and(|subscribed_entity_events| !subscribed_entity_events.contains(&entity_type))
+            .is_some_and(|subscribed_entity_events| {
+                !subscribed_entity_events.contains(&entity_type)
+            })
         {
             return Ok(());
         }

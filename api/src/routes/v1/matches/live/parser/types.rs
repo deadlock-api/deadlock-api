@@ -3,7 +3,7 @@ use core::fmt::{Display, Formatter};
 use axum::response::sse::Event;
 use haste::entities::DeltaHeader;
 use serde::Serialize;
-use strum_macros::{Display, FromRepr};
+use strum::{Display, FromRepr};
 use utoipa::ToSchema;
 
 use crate::routes::v1::matches::live::parser::entity_events::{EntityType, EntityUpdateEvents};

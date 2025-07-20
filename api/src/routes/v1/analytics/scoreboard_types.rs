@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use strum_macros::Display;
+use strum::Display;
 use utoipa::ToSchema;
 
 #[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash, Default)]

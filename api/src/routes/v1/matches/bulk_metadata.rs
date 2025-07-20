@@ -12,7 +12,7 @@ use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
 use itertools::Itertools;
 use serde::Deserialize;
-use strum_macros::Display;
+use strum::Display;
 use tokio::io::Lines;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};

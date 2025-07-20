@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use sqlx::{Execute, QueryBuilder};
-use strum_macros::Display;
+use strum::Display;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::utils::parse::parse_steam_id_option;
