@@ -286,7 +286,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     format!(
         "
 WITH
-    t_items AS (SELECT id FROM items WHERE type = 'upgrade'),
+    t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'),
 
     /* 1. Relevant matches */
     t_matches AS (
@@ -316,7 +316,7 @@ WITH
             ARRAY JOIN items AS it
         WHERE TRUE
             AND (account_id, match_id) IN (SELECT account_id, match_id FROM filtered_players)
-            AND it.item_id IN t_items
+            AND it.item_id IN t_upgrades
             AND it.game_time_s > 0
     )
 

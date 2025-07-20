@@ -140,9 +140,9 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
         ),
-        item_ids AS (SELECT id FROM items WHERE type = 'ability')
+        ability_ids AS (SELECT id FROM items WHERE type = 'ability')
     SELECT
-        arrayFilter(x -> x in item_ids, items.item_id) as abilities,
+        arrayFilter(x -> x in ability_ids, items.item_id) as abilities,
         sum(won) AS wins,
         sum(not won) AS losses,
         wins + losses AS matches,
