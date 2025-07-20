@@ -1,27 +1,56 @@
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[derive(Deserialize, Serialize, Row)]
-pub(crate) struct UpgradeItem {
+pub(crate) struct Item {
     pub id: u32,
     pub name: String,
-    pub item_tier: u8,
+    #[serde(default, rename = "item_tier")]
+    pub tier: Option<u8>,
+    #[serde(default)]
     pub shopable: Option<bool>,
+    pub r#type: ItemType,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum ItemType {
+    Upgrade,
+    Ability,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
+pub(crate) enum CHItemType {
+    Upgrade,
+    Ability,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Serialize, Row)]
-pub(crate) struct ChUpgradeItem {
+pub(crate) struct ChItem {
     pub id: u32,
     pub name: String,
-    pub tier: u8,
+    pub tier: Option<u8>,
+    pub r#type: CHItemType,
 }
 
-impl From<UpgradeItem> for ChUpgradeItem {
-    fn from(value: UpgradeItem) -> Self {
+impl From<Item> for ChItem {
+    fn from(value: Item) -> Self {
         Self {
             id: value.id,
             name: value.name,
-            tier: value.item_tier,
+            tier: value.tier,
+            r#type: match value.r#type {
+                ItemType::Upgrade => CHItemType::Upgrade,
+                ItemType::Ability => CHItemType::Ability,
+                ItemType::Unknown => unreachable!(),
+            },
         }
     }
 }

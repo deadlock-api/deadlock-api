@@ -12,10 +12,10 @@
 use core::time::Duration;
 
 use metrics::counter;
-use models::{Hero, UpgradeItem};
+use models::{Hero, Item};
 use tracing::{debug, error, info, instrument};
 
-use crate::models::{ChHero, ChUpgradeItem};
+use crate::models::{ChHero, ChItem, ItemType};
 
 mod models;
 
@@ -86,26 +86,24 @@ async fn update_items(
     http_client: &reqwest::Client,
 ) -> anyhow::Result<()> {
     info!("Updating items");
-    let items: Vec<UpgradeItem> = http_client
-        .get("https://assets.deadlock-api.com/v2/items/by-type/upgrade")
+    let items = http_client
+        .get("https://assets.deadlock-api.com/v2/items")
         .send()
         .await?
         .error_for_status()?
-        .json()
-        .await?;
+        .json::<Vec<Item>>()
+        .await?
+        .into_iter()
+        .filter(|i| i.shopable.is_none_or(|s| s))
+        .filter(|i| i.r#type != ItemType::Unknown);
 
     // Truncate table
     ch_client.query("TRUNCATE TABLE items").execute().await?;
 
-    let mut insert = ch_client.insert("items")?;
+    let mut insert = ch_client.insert::<ChItem>("items")?;
     for item in items {
-        if item.shopable.is_none_or(|s| !s) {
-            debug!("Item {} is not shopable, skipping", item.name);
-            continue;
-        }
         debug!("Inserting item {}", item.name);
-        let ch_item: ChUpgradeItem = item.into();
-        insert.write(&ch_item).await?;
+        insert.write(&item.into()).await?;
         counter!("assets_updater.items.updated").increment(1);
     }
     insert.end().await?;

@@ -4091,6 +4091,7 @@ dependencies = [
  "metrics",
  "reqwest",
  "serde",
+ "serde_repr",
  "tokio",
  "tracing",
 ]
