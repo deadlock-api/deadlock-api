@@ -17,7 +17,7 @@ pub(crate) struct DemoEvent {
 }
 
 impl TryInto<Event> for DemoEvent {
-    type Error = axum_core::Error;
+    type Error = axum::Error;
 
     fn try_into(self) -> Result<Event, Self::Error> {
         let event = self.event.to_string();

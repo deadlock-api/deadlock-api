@@ -49,7 +49,6 @@ url = { version = "2.5.4", features = ["serde"] }
 quick-xml = { version = "0.38.0", features = ["serde", "serialize"] }
 serde-env = "0.2.0"
 regex = "1.11.1"
-axum-core = "0.5.2"
 
 [dev-dependencies]
 rstest = "0.25.0"

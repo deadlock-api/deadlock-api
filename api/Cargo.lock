@@ -606,7 +606,6 @@ dependencies = [
  "async-compression",
  "async-stream",
  "axum",
- "axum-core",
  "axum-extra",
  "axum-prometheus",
  "base64",

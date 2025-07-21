@@ -1,9 +1,9 @@
 use core::time::Duration;
 
 use async_stream::try_stream;
+use axum::body::Body;
 use axum::extract::{Path, State};
-use axum_core::body::Body;
-use axum_core::response::IntoResponse;
+use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures::Stream;
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};

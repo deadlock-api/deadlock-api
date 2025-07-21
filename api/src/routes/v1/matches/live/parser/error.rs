@@ -30,5 +30,5 @@ pub(crate) enum StreamParseError {
     #[error(transparent)]
     FlattenedSerializers(#[from] FlattenedSerializersError),
     #[error(transparent)]
-    SSEEvent(#[from] axum_core::Error),
+    SSEEvent(#[from] axum::Error),
 }
