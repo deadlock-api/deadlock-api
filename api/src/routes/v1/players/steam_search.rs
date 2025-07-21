@@ -33,7 +33,7 @@ pub(super) struct SteamProfile {
 
 #[cached(
     ty = "TimedCache<String, Vec<SteamProfile>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = r#"{ format!("{}", search_query) }"#,
     sync_writes = "by_key",

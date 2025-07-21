@@ -163,7 +163,7 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
 
 #[cached(
     ty = "TimedCache<AbilityOrderStatsQuery, Vec<AnalyticsAbilityOrderStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = "{ query }",
     sync_writes = "by_key",

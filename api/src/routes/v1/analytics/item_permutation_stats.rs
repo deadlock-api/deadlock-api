@@ -195,7 +195,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
 
 #[cached(
     ty = "TimedCache<String, Vec<ItemPermutationStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",

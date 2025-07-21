@@ -159,7 +159,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
 
 #[cached(
     ty = "TimedCache<(u32, HeroStatsQuery), Vec<HeroStats>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(10 * 60) }",
     result = true,
     convert = "{ (account_id, query) }",
     sync_writes = "by_key",
