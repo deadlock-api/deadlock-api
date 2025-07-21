@@ -11,10 +11,10 @@ use itertools::Itertools;
 use rand::RngCore;
 use rand::prelude::ThreadRng;
 use redis::{AsyncTypedCommands, RedisResult};
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 use tracing::{debug, error, info};
-use url::Url;
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{

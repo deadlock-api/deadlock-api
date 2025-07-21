@@ -640,7 +640,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tryhard",
- "url",
  "utoipa",
  "utoipa-axum",
  "utoipa-scalar",
@@ -3610,7 +3609,6 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
- "serde",
 ]
 
 [[package]]
