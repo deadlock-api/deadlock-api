@@ -2,12 +2,16 @@ use core::time::Duration;
 
 use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
+use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
+use bytes::Bytes;
 use futures::future::join;
+use futures::stream::BoxStream;
 use metrics::counter;
-use object_store::ObjectStore;
 use object_store::aws::AmazonS3;
+use object_store::path::Path as S3Path;
+use object_store::{GetResult, ObjectStore};
 use prost::Message;
 use tokio::io::AsyncReadExt;
 use tracing::debug;
@@ -21,12 +25,8 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
 
-async fn fetch_from_s3(s3: &AmazonS3, key: impl AsRef<str>) -> object_store::Result<Vec<u8>> {
-    s3.get(&object_store::path::Path::from(key.as_ref()))
-        .await?
-        .bytes()
-        .await
-        .map(|r| r.to_vec())
+async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
+    s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -36,36 +36,26 @@ async fn fetch_match_metadata_raw(
     steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
     s3: &AmazonS3,
-    s3_cache: &AmazonS3,
+    s3_cache: Option<&AmazonS3>,
     match_id: u64,
 ) -> APIResult<Vec<u8>> {
-    rate_limit_client
-        .apply_limits(
-            rate_limit_key,
-            "match_metadata_s3_cache",
-            &[
-                Quota::ip_limit(500, Duration::from_secs(10)),
-                Quota::key_limit(500, Duration::from_secs(1)),
-                Quota::global_limit(1000, Duration::from_secs(1)),
-            ],
-        )
-        .await?;
-
     // Try to fetch from the cache first
-    let results = join(
-        fetch_from_s3(s3_cache, format!("{match_id}.meta.bz2")),
-        fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")),
-    )
-    .await;
-    if let Ok(data) = results.0 {
-        debug!("Match metadata found in cache");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
-        return Ok(data);
-    }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found in cache, hltv");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
-        return Ok(data);
+    if let Some(s3_cache) = s3_cache {
+        let results = join(
+            fetch_from_s3(s3_cache, format!("{match_id}.meta.bz2")),
+            fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")),
+        )
+        .await;
+        if let Ok(data) = results.0 {
+            debug!("Match metadata found in cache");
+            counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
+            return Ok(data);
+        }
+        if let Ok(data) = results.1 {
+            debug!("Match metadata found in cache, hltv");
+            counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
+            return Ok(data);
+        }
     }
 
     rate_limit_client
@@ -146,9 +136,9 @@ Relevant Protobuf Messages:
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | From Cache: 500req/10s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
-| Key | From Cache: 500req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
-| Global | From Cache: 1000req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
+| IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
+| Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
+| Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
     "
 )]
 pub(super) async fn metadata_raw(
@@ -156,16 +146,39 @@ pub(super) async fn metadata_raw(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    async fn fetch_from_s3_stream<T: Into<S3Path>>(
+        s3: &AmazonS3,
+        key: T,
+    ) -> object_store::Result<BoxStream<'static, object_store::Result<Bytes>>> {
+        s3.get(&key.into()).await.map(GetResult::into_stream)
+    }
+
+    let results = join(
+        fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta.bz2")),
+        fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta_hltv.bz2")),
+    )
+    .await;
+    if let Ok(data) = results.0 {
+        debug!("Match metadata found in cache");
+        counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
+        return Ok(Body::from_stream(data));
+    }
+    if let Ok(data) = results.1 {
+        debug!("Match metadata found in cache, hltv");
+        counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
+        return Ok(Body::from_stream(data));
+    }
     fetch_match_metadata_raw(
         &state.rate_limit_client,
         &rate_limit_key,
         &state.steam_client,
         &state.ch_client,
         &state.s3_client,
-        &state.s3_cache_client,
+        None, // Skip cache
         match_id,
     )
     .await
+    .map(Body::from)
 }
 
 #[utoipa::path(
@@ -193,9 +206,9 @@ Relevant Protobuf Messages:
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | From Cache: 500req/10s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
-| Key | From Cache: 500req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
-| Global | From Cache: 1000req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
+| IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
+| Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
+| Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
     "
 )]
 pub(super) async fn metadata(
@@ -209,7 +222,7 @@ pub(super) async fn metadata(
         &state.steam_client,
         &state.ch_client,
         &state.s3_client,
-        &state.s3_cache_client,
+        Some(&state.s3_cache_client),
         match_id,
     )
     .await?;
