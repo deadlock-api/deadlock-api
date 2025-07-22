@@ -28,6 +28,14 @@ impl CacheControlMiddleware {
         }
     }
 
+    pub(crate) fn no_cache() -> Self {
+        Self {
+            max_age: Duration::from_secs(0),
+            stale_while_revalidate: None,
+            stale_if_error: None,
+        }
+    }
+
     pub(crate) fn with_stale_while_revalidate(mut self, stale_while_revalidate: Duration) -> Self {
         self.stale_while_revalidate = Some(stale_while_revalidate);
         self
@@ -40,6 +48,9 @@ impl CacheControlMiddleware {
 
     fn header_value(&self) -> Result<HeaderValue, InvalidHeaderValue> {
         let mut header_value = String::new();
+        if self.max_age.as_secs() == 0 {
+            return Ok(HeaderValue::from_static("no-cache"));
+        }
         write!(&mut header_value, "public").ok();
         write!(&mut header_value, ", max-age={}", self.max_age.as_secs()).ok();
         if let Some(stale_while_revalidate) = self.stale_while_revalidate {
@@ -129,6 +140,20 @@ mod tests {
 
     async fn test_handler() -> &'static str {
         "Hello, world!"
+    }
+
+    #[tokio::test]
+    async fn test_no_cache() {
+        let layer = CacheControlMiddleware::no_cache();
+        let app = Router::new().route("/", get(test_handler)).layer(layer);
+
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers().get(CACHE_CONTROL).unwrap(), "no-cache");
     }
 
     #[tokio::test]

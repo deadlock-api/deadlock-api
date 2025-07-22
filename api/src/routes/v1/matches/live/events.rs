@@ -2,6 +2,7 @@ use core::time::Duration;
 
 use async_stream::try_stream;
 use axum::extract::{Path, Query, State};
+use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Sse};
 use futures::{Stream, TryStreamExt};
@@ -126,5 +127,14 @@ pub(super) async fn events(
         .map_err(|e| APIError::internal(e.to_string()))?
         .inspect_err(|e| error!("Error in demo event stream: {e}"));
 
-    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+    let headers = HeaderMap::from_iter([
+        (
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/event-stream"),
+        ),
+        (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
+        (header::CONNECTION, HeaderValue::from_static("keep-alive")),
+    ]);
+
+    Ok((headers, Sse::new(stream).keep_alive(KeepAlive::default())))
 }
