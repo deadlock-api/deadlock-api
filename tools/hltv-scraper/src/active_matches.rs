@@ -1,3 +1,4 @@
+use cached::TimedCache;
 use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -56,7 +57,13 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
     mask & (1 << (objective as u32)) != 0
 }
 
-#[cached(result = true, time = 60, result_fallback = true)]
+#[cached(
+    ty = "TimedCache<u8, Vec<ActiveMatch>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
 pub(crate) async fn fetch_active_matches_cached() -> anyhow::Result<Vec<ActiveMatch>> {
     let client = reqwest::Client::new();
     let res = client
