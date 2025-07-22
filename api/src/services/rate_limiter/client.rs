@@ -178,7 +178,7 @@ impl RateLimitClient {
 // Helper functions outside the impl block since cached macros cannot be used directly on methods
 #[cached(
     ty = "TimedCache<Uuid, bool>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     convert = "{ api_key }",
     sync_writes = "by_key",
     key = "Uuid"
@@ -197,7 +197,7 @@ async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> bool {
 
 #[cached(
     ty = "TimedCache<String, Vec<Quota>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     convert = r#"{ format!("{api_key}-{path}") }"#,
     sync_writes = "by_key",
     key = "String"

@@ -59,7 +59,7 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
 
 #[cached(
     ty = "TimedCache<u64, CMsgClientToGcGetMatchMetaDataResponse>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ match_id }",
     sync_writes = "by_key",

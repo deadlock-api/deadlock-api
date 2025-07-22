@@ -10,7 +10,7 @@ use crate::routes::v1::esports::types::ESportsMatch;
 
 #[cached(
     ty = "TimedCache<u8, Vec<ESportsMatch>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

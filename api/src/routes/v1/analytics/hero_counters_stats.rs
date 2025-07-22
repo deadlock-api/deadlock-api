@@ -222,7 +222,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
 
 #[cached(
     ty = "TimedCache<HeroCounterStatsQuery, Vec<HeroCounterStats>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = "{ query }",
     sync_writes = "by_key",

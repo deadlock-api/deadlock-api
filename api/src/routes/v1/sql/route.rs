@@ -114,7 +114,7 @@ pub(super) async fn sql(
 
 #[cached(
     ty = "TimedCache<String, Vec<serde_json::Value>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",
@@ -169,7 +169,7 @@ pub(super) async fn list_tables(State(state): State<AppState>) -> APIResult<impl
 
 #[cached(
     ty = "TimedCache<u8, Vec<String>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -230,7 +230,7 @@ pub(super) async fn table_schema(
 
 #[cached(
     ty = "TimedCache<String, Vec<TableSchemaRow>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = r#"{ format!("{}", table) }"#,
     sync_writes = "by_key",

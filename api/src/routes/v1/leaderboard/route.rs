@@ -46,7 +46,7 @@ pub(super) struct LeaderboardHeroQuery {
 
 #[cached(
     ty = "TimedCache<(LeaderboardRegion, Option<u32>), SteamProxyRawResponse>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = "{ (region, hero_id) }",
     sync_writes = "by_key",
@@ -76,7 +76,7 @@ pub(crate) async fn fetch_leaderboard_raw(
 
 #[cached(
     ty = "TimedCache<u8, HashMap<String, Vec<u32>>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

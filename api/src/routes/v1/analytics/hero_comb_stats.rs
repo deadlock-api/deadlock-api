@@ -206,7 +206,7 @@ ORDER BY wins / greatest(1, matches) DESC
 
 #[cached(
     ty = "TimedCache<String, Vec<HeroCombStats>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = r#"{ format!("{:?}", query) }"#,
     sync_writes = "by_key",

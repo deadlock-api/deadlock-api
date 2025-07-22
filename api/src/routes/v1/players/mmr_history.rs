@@ -64,7 +64,7 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
 
 #[cached(
     ty = "TimedCache<u32, Vec<MMRHistory>>",
-    create = "{ TimedCache::with_lifespan(5 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
@@ -81,7 +81,7 @@ async fn get_mmr_history(
 
 #[cached(
     ty = "TimedCache<(u32, u8), Vec<MMRHistory>>",
-    create = "{ TimedCache::with_lifespan(5 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
     result = true,
     convert = "{ (account_id, hero_id) }",
     sync_writes = "by_key",

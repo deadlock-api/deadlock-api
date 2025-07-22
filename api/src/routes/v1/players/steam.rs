@@ -40,7 +40,7 @@ fn build_query(account_id: u32) -> String {
 
 #[cached(
     ty = "TimedCache<u32, SteamProfile>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",

@@ -109,7 +109,7 @@ pub struct APIInfo {
 
 #[cached(
     ty = "TimedCache<u8, APIInfo>",
-    create = "{ TimedCache::with_lifespan(5 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
     convert = "{ 0 }",
     sync_writes = "default"
 )]

@@ -68,7 +68,7 @@ impl AssetsClient {
 // Private cached helper functions
 #[cached(
     ty = "TimedCache<u8, Vec<AssetsHero>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ 0 }"
 )]
@@ -86,7 +86,7 @@ async fn fetch_heroes_cached(
 
 #[cached(
     ty = "TimedCache<u8, Vec<AssetsRanks>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

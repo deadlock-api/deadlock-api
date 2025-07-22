@@ -117,7 +117,7 @@ pub(crate) async fn insert_match_history_to_ch(
 
 #[cached(
     ty = "TimedCache<u32, PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
@@ -185,7 +185,7 @@ async fn fetch_match_history_raw(
 
 #[cached(
     ty = "TimedCache<(u32, bool), PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = "{ (account_id, force_refetch) }",
     sync_writes = "by_key",

@@ -61,7 +61,7 @@ fn build_query(query: &BuildItemStatsQuery) -> String {
 
 #[cached(
     ty = "TimedCache<BuildItemStatsQuery, Vec<BuildItemStats>>",
-    create = "{ TimedCache::with_lifespan(10 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = "{ query }",
     sync_writes = "by_key",

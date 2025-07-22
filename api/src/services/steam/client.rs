@@ -179,7 +179,7 @@ impl SteamClient {
 
 #[cached(
     ty = "TimedCache<u8, Vec<Patch>>",
-    create = "{ TimedCache::with_lifespan(30 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(30 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -209,7 +209,7 @@ pub(crate) async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResul
 
 #[cached(
     ty = "TimedCache<u8, u32>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -239,7 +239,7 @@ async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<
 
 #[cached(
     ty = "TimedCache<u32, String>",
-    create = "{ TimedCache::with_lifespan(24 * 60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ steam_id }",
     sync_writes = "by_key",

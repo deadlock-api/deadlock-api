@@ -54,7 +54,7 @@ pub(crate) async fn track_requests(
 
 #[cached(
     ty = "TimedCache<Uuid, Option<String>>",
-    create = "{ TimedCache::with_lifespan(60 * 60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     convert = "{ api_key }",
     sync_writes = "by_key",
     key = "Uuid"

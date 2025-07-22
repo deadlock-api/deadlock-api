@@ -831,7 +831,7 @@ struct MMRHistoryEntry {
 
 #[cached(
     ty = "TimedCache<u32, MMRHistoryEntry>",
-    create = "{ TimedCache::with_lifespan(60) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ steam_id }",
     sync_writes = "by_key",
