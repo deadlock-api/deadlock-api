@@ -1,5 +1,7 @@
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
+import PlayerName from "~/components/PlayerName";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { Dayjs } from "~/dayjs";
@@ -203,16 +205,17 @@ export default function MatchCard({ matchData, itemsMap, heroesMap, setSteamId }
               {(players || []).map((p) => (
                 <div key={p.account_id} className="flex items-center gap-2">
                   {heroesMap?.[p.hero_id] ? (
-                    <HeroImage heroId={p.hero_id} className="w-5 h-5 rounded-full border border-border" />
+                    <HeroImage heroId={p.hero_id} className="w-6 h-6 rounded-full border border-border" />
                   ) : (
-                    <div className="w-5 h-5 bg-border rounded-full" />
+                    <div className="w-6 h-6 bg-border rounded-full" />
                   )}
-                  <span
-                    className="truncate text-muted-foreground text-xs hover:underline hover:cursor-pointer"
+                  <Button
+                    variant="ghost"
+                    className="text-left p-0 h-6 w-fit truncate text-muted-foreground text-xs hover:underline hover:cursor-pointer"
                     onClick={() => setSteamId?.(p.account_id)}
                   >
-                    Player {p.account_id}
-                  </span>
+                    <PlayerName accountId={p.account_id} />
+                  </Button>
                 </div>
               ))}
             </div>

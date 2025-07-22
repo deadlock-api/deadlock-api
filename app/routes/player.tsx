@@ -1,5 +1,6 @@
 import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import PlayerName from "~/components/PlayerName";
 import MatchHistoryTable from "~/components/players-page/MatchHistoryTable";
 import MMRChart from "~/components/players-page/MMRChart";
 import HeroSelector from "~/components/selectors/HeroSelector";
@@ -46,6 +47,11 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                 onChange={(e) => setSteamId(Number(e.target.value))}
                 placeholder="Steam ID3 (required)"
               />
+              {steamId && (
+                <div className="text-nowrap truncate w-56 pl-2 text-right pr-4 md:pr-8 text-sm text-muted-foreground">
+                  <PlayerName accountId={steamId} />
+                </div>
+              )}
             </div>
             <HeroSelector onHeroSelected={(x) => setHero(x || undefined)} selectedHero={hero} allowSelectNull={true} />
             <div className="flex justify-center md:justify-start">
