@@ -59,7 +59,7 @@ async fn demo_event_stream(
                 }
                 None => {
                     debug!("Demo stream ended");
-                    if let Err(e) = sender.send(Event::default().data("end").event("end")) {
+                    if let Err(e) = sender.send(Event::default().event("end").data("end")) {
                         warn!("Failed to send end event: {e}");
                     }
                     break;
