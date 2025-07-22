@@ -30,7 +30,8 @@ use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 use context::state::AppState;
 pub use error::*;
-use tower_http::compression::{CompressionLayer, DefaultPredicate};
+use tower_http::compression::predicate::NotForContentType;
+use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
 use tower_http::cors::CorsLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_layer::Layer;
@@ -98,7 +99,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
                 .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
         )
         .layer(CorsLayer::permissive())
-        .layer(CompressionLayer::<DefaultPredicate>::default())
+        .layer(CompressionLayer::new().compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))))
         .fallback(|uri: axum::http::Uri| async move {
             APIResult::<()>::Err(APIError::status_msg(
                 StatusCode::NOT_FOUND,
