@@ -3,7 +3,6 @@ mod events;
 mod parser;
 mod url;
 
-
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
