@@ -47,11 +47,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(metadata::metadata_raw))
                 .routes(routes!(salts::salts))
                 .layer(
-                    CacheControlMiddleware::new(Duration::from_secs(60 * 60))
-                        .with_stale_while_revalidate(Duration::from_secs(60 * 60))
-                        .with_stale_if_error(Duration::from_secs(60 * 60)),
-                )
-                .layer(
                     CacheControlMiddleware::new(Duration::from_secs(7 * 24 * 60 * 60))
                         .with_stale_if_error(Duration::from_secs(24 * 60 * 60)),
                 ),
