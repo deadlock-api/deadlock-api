@@ -20,6 +20,8 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::live::url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::demo_parser::entity_events::EntityType;
 use crate::utils::demo_parser::error::DemoParseError;
 use crate::utils::demo_parser::types::DemoEvent;
@@ -120,6 +122,7 @@ async fn demo_event_stream(
 pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     Query(body): Query<DemoEventsQuery>,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     // Check if the match could be live, by checking the match id from a match 4 hours ago
@@ -138,6 +141,19 @@ pub(super) async fn events(
             format!("Match {match_id} cannot be live"),
         ));
     }
+
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "demo_events",
+            &[
+                Quota::ip_limit(10, Duration::from_secs(60 * 60)),
+                Quota::key_limit(90, Duration::from_secs(60 * 60)),
+                Quota::global_limit(200, Duration::from_secs(60 * 60)),
+            ],
+        )
+        .await?;
 
     // Check if Match is already spectated, if not, spectate it
     if state.steam_client.live_demo_exists(match_id).await.is_err() {
