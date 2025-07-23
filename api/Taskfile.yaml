@@ -85,5 +85,5 @@ tasks:
     deps:
       - task: start-test-env
     cmds:
-      - cargo nextest run --locked
+      - cargo nextest run --locked --status-level fail
       - task: teardown-test-env

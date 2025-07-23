@@ -117,7 +117,7 @@ jobs:
       ##         Test Code         ##
       ###############################
       - name: Unit Tests
-        run: cargo nextest run --locked --lib
+        run: cargo nextest run --locked --lib --status-level fail
 
       ###############################
       ##           Build           ##
