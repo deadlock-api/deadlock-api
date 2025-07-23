@@ -30,6 +30,7 @@ use crate::utils::demo_parser::utils;
 #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EntityType {
+    GameRulesProxy = fxhash::hash_bytes(b"CCitadelGameRulesProxy"),
     PlayerController = fxhash::hash_bytes(b"CCitadelPlayerController"),
     PlayerPawn = fxhash::hash_bytes(b"CCitadelPlayerPawn"),
     MidBoss = fxhash::hash_bytes(b"CNPC_MidBoss"),
@@ -58,6 +59,26 @@ pub(crate) trait EntityUpdateEvent: Serialize + ToSchema {
     fn from_entity_update(ctx: &Context, delta_header: Delta, entity: &Entity) -> Option<Self>
     where
         Self: Sized;
+}
+
+#[derive(Serialize, Debug, Clone, Default, ToSchema)]
+pub(crate) struct GameRulesProxyEvent {
+    pub(crate) game_start_time: Option<f32>,
+    game_paused: Option<bool>,
+    pause_start_tick: Option<i32>,
+    pub(crate) total_paused_ticks: Option<i32>,
+}
+
+impl EntityUpdateEvent for GameRulesProxyEvent {
+    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+        Self {
+            game_start_time: entity.get_value(&START_TIME_HASH),
+            game_paused: entity.get_value(&PAUSED_HASH),
+            pause_start_tick: entity.get_value(&PAUSE_START_TICK_HASH),
+            total_paused_ticks: entity.get_value(&PAUSED_TICKS_HASH),
+        }
+        .into()
+    }
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
@@ -252,6 +273,10 @@ impl EntityUpdateEvents {
         entity: &Entity,
     ) -> Option<Self> {
         match entity_type {
+            EntityType::GameRulesProxy => {
+                // This will be manually parsed for game time calculation.
+                None
+            }
             EntityType::PlayerController => {
                 PlayerControllerEvent::from_entity_update(ctx, delta, entity)
                     .map(Box::new)

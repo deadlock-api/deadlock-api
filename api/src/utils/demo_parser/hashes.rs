@@ -39,3 +39,8 @@ pub(crate) const CZ: u64 = fkey_from_path(&["CBodyComponent", "m_cellZ"]);
 pub(crate) const VX: u64 = fkey_from_path(&["CBodyComponent", "m_vecX"]);
 pub(crate) const VY: u64 = fkey_from_path(&["CBodyComponent", "m_vecY"]);
 pub(crate) const VZ: u64 = fkey_from_path(&["CBodyComponent", "m_vecZ"]);
+pub(crate) const START_TIME_HASH: u64 = fkey_from_path(&["m_pGameRules", "m_flGameStartTime"]);
+pub(crate) const PAUSED_HASH: u64 = fkey_from_path(&["m_pGameRules", "m_bGamePaused"]);
+pub(crate) const PAUSE_START_TICK_HASH: u64 =
+    fkey_from_path(&["m_pGameRules", "m_nPauseStartTick"]);
+pub(crate) const PAUSED_TICKS_HASH: u64 = fkey_from_path(&["m_pGameRules", "m_nTotalPausedTicks"]);

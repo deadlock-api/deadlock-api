@@ -11,6 +11,7 @@ use crate::utils::demo_parser::entity_events::{EntityType, EntityUpdateEvents};
 #[derive(Serialize, Debug, Clone, ToSchema)]
 pub(crate) struct DemoEvent {
     pub tick: i32,
+    pub game_time: f32,
 
     #[serde(flatten)]
     pub event: DemoEventPayload,
