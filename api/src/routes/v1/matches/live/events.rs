@@ -1,14 +1,18 @@
 use core::time::Duration;
+use std::string::ToString;
 
 use async_stream::try_stream;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::sse::{Event, KeepAlive};
 use axum::response::{IntoResponse, Sse};
+use cached::proc_macro::once;
 use futures::{Stream, TryStreamExt};
 use haste::broadcast::BroadcastHttp;
 use haste::parser::Parser;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use strum::VariantArray;
 use tracing::{debug, error, info, warn};
 use utoipa::{IntoParams, ToSchema};
 
@@ -28,6 +32,30 @@ pub(super) struct DemoEventsQuery {
     #[param(default, inline)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     pub(super) subscribed_entities: Option<Vec<EntityType>>,
+}
+
+#[once]
+fn all_sse_events() -> Vec<String> {
+    EntityType::VARIANTS
+        .iter()
+        .flat_map(|e| {
+            [
+                format!("{e}_entity_created"),
+                format!("{e}_entity_updated"),
+                format!("{e}_entity_deleted"),
+            ]
+        })
+        .chain(["tick_end", "end"].into_iter().map(ToString::to_string))
+        .collect()
+}
+
+fn send_info_event() -> Result<Event, axum::Error> {
+    Event::default().event("message").json_data(json!({
+        "status": "connected",
+        "message": "Connected to demo event stream.",
+        "eventsource_disclaimer": "Server-Sent Events use various event names, so the onmessage event listener won't catch them because it only listens to the default 'message' event. I recommend using a library like sse.js.",
+        "all_event_names": all_sse_events(),
+    }))
 }
 
 async fn demo_event_stream(
@@ -69,6 +97,7 @@ async fn demo_event_stream(
     });
     Ok(try_stream! {
         info!("Starting to parse demo stream for match {match_id}");
+        yield send_info_event()?;
         while let Some(event) = receiver.recv().await {
             yield event;
         }

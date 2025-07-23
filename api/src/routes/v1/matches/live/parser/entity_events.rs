@@ -3,7 +3,7 @@ use haste::fxhash;
 use haste::fxhash::add_u64_to_hash;
 use haste::parser::Context;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString, FromRepr};
+use strum::{Display, EnumString, FromRepr, VariantArray};
 use utoipa::ToSchema;
 
 #[allow(clippy::wildcard_imports)]
@@ -24,6 +24,7 @@ use crate::routes::v1::matches::live::parser::utils;
     Display,
     ToSchema,
     EnumString,
+    VariantArray,
 )]
 #[repr(u64)]
 #[strum(serialize_all = "snake_case")]
