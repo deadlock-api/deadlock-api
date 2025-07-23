@@ -90,14 +90,21 @@ pub(crate) async fn demo(
     }
 
     // Check if Match is already spectated, if not, spectate it
-    if state.steam_client.live_demo_exists(match_id).await.is_err() {
+    if !state.steam_client.live_demo_exists(match_id).await {
         info!("Spectating match {match_id}");
         spectate_match(&state.steam_client, match_id).await?;
         // Wait for the demo to be available
-        tryhard::retry_fn(|| state.steam_client.live_demo_exists(match_id))
-            .retries(60)
-            .fixed_backoff(Duration::from_millis(500))
-            .await?;
+        tryhard::retry_fn(|| async {
+            state
+                .steam_client
+                .live_demo_exists(match_id)
+                .await
+                .then_some(())
+                .ok_or(())
+        })
+        .retries(60)
+        .fixed_backoff(Duration::from_millis(500))
+        .await?;
     }
 
     let stream = demo_stream(match_id);
