@@ -21,7 +21,7 @@ impl TryInto<Event> for DemoEvent {
 
     fn try_into(self) -> Result<Event, Self::Error> {
         let event = self.event.to_string();
-        Ok(Event::default().event(event).json_data(self)?)
+        Event::default().event(event).json_data(self)
     }
 }
 
