@@ -247,6 +247,7 @@ impl EntityUpdateEvent for PositionEntity {
 #[derive(Serialize, Debug, Clone, ToSchema)]
 #[serde(untagged)]
 pub(crate) enum EntityUpdateEvents {
+    GameRulesProxy(Box<GameRulesProxyEvent>),
     PlayerController(Box<PlayerControllerEvent>),
     PlayerPawn(Box<PlayerPawnEvent>),
     MidBoss(Box<NPCEvent>),
@@ -274,8 +275,9 @@ impl EntityUpdateEvents {
     ) -> Option<Self> {
         match entity_type {
             EntityType::GameRulesProxy => {
-                // This will be manually parsed for game time calculation.
-                None
+                GameRulesProxyEvent::from_entity_update(ctx, delta, entity)
+                    .map(Box::new)
+                    .map(Self::GameRulesProxy)
             }
             EntityType::PlayerController => {
                 PlayerControllerEvent::from_entity_update(ctx, delta, entity)
