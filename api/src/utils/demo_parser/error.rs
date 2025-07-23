@@ -6,7 +6,13 @@ use haste::flattenedserializers::FlattenedSerializersError;
 use tokio::sync::mpsc::error::SendError;
 
 #[derive(thiserror::Error, Debug)]
-pub(crate) enum StreamParseError {
+pub(crate) enum DemoParseError {
+    #[error("Demo file not found")]
+    DemoFileNotFound,
+    #[error(transparent)]
+    Request(#[from] reqwest::Error),
+    #[error(transparent)]
+    AsyncTempFile(#[from] async_tempfile::Error),
     #[error(transparent)]
     Send(#[from] SendError<Event>),
     #[error(transparent)]

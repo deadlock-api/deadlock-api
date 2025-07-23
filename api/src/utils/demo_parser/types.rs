@@ -6,7 +6,7 @@ use serde::Serialize;
 use strum::{Display, FromRepr};
 use utoipa::ToSchema;
 
-use crate::routes::v1::matches::live::parser::entity_events::{EntityType, EntityUpdateEvents};
+use crate::utils::demo_parser::entity_events::{EntityType, EntityUpdateEvents};
 
 #[derive(Serialize, Debug, Clone, ToSchema)]
 pub(crate) struct DemoEvent {

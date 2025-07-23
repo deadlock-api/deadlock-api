@@ -18,12 +18,12 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::live::parser::entity_events::EntityType;
-use crate::routes::v1::matches::live::parser::error::StreamParseError;
-use crate::routes::v1::matches::live::parser::types::DemoEvent;
-use crate::routes::v1::matches::live::parser::visitor::SendingVisitor;
 use crate::routes::v1::matches::live::url::spectate_match;
 use crate::routes::v1::matches::types::MatchIdQuery;
+use crate::utils::demo_parser::entity_events::EntityType;
+use crate::utils::demo_parser::error::DemoParseError;
+use crate::utils::demo_parser::types::DemoEvent;
+use crate::utils::demo_parser::visitor::SendingVisitor;
 use crate::utils::parse::comma_separated_deserialize_option;
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
@@ -61,7 +61,7 @@ fn send_info_event() -> Result<Event, axum::Error> {
 async fn demo_event_stream(
     match_id: u64,
     query: DemoEventsQuery,
-) -> Result<impl Stream<Item = Result<Event, StreamParseError>>, StreamParseError> {
+) -> Result<impl Stream<Item = Result<Event, DemoParseError>>, DemoParseError> {
     let client = reqwest::Client::new();
     let demo_stream = BroadcastHttp::start_streaming(
         client,

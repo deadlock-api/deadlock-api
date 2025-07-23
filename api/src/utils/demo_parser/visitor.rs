@@ -6,9 +6,9 @@ use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{Context, Visitor};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::routes::v1::matches::live::parser::entity_events::{EntityType, EntityUpdateEvents};
-use crate::routes::v1::matches::live::parser::error::StreamParseError;
-use crate::routes::v1::matches::live::parser::types::{DemoEvent, DemoEventPayload};
+use crate::utils::demo_parser::entity_events::{EntityType, EntityUpdateEvents};
+use crate::utils::demo_parser::error::DemoParseError;
+use crate::utils::demo_parser::types::{DemoEvent, DemoEventPayload};
 
 pub(crate) struct SendingVisitor {
     sender: UnboundedSender<Event>,
@@ -28,7 +28,7 @@ impl SendingVisitor {
 }
 
 impl Visitor for SendingVisitor {
-    type Error = StreamParseError;
+    type Error = DemoParseError;
 
     async fn on_entity(
         &mut self,
