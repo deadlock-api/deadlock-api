@@ -148,8 +148,8 @@ pub(super) async fn events(
             &rate_limit_key,
             "demo_events",
             &[
-                Quota::ip_limit(10, Duration::from_secs(60 * 60)),
-                Quota::key_limit(90, Duration::from_secs(60 * 60)),
+                Quota::ip_limit(10, Duration::from_secs(10 * 60)),
+                Quota::key_limit(120, Duration::from_secs(60 * 60)),
                 Quota::global_limit(200, Duration::from_secs(60 * 60)),
             ],
         )
