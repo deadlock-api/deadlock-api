@@ -6,6 +6,8 @@ use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use bytes::Bytes;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use futures::future::join;
 use futures::stream::BoxStream;
 use metrics::counter;
@@ -25,8 +27,47 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
 
-async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
+async fn fetch_file_from_s3<T: Into<S3Path>>(
+    s3: &AmazonS3,
+    key: T,
+) -> object_store::Result<Vec<u8>> {
     s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())
+}
+
+#[cached(
+    ty = "TimedCache<u64, bool>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    convert = "{ match_id }",
+    sync_writes = "by_key",
+    key = "u64"
+)]
+async fn has_salts(ch_client: &clickhouse::Client, match_id: u64) -> bool {
+    ch_client
+        .query("SELECT match_id FROM match_salts WHERE match_id = ? LIMIT 1")
+        .bind(match_id)
+        .fetch_one::<u64>()
+        .await
+        .is_ok()
+}
+
+async fn fetch_metadata_from_s3(
+    ch_client: &clickhouse::Client,
+    s3: &AmazonS3,
+    match_id: u64,
+    prefix: &str,
+) -> object_store::Result<Option<Vec<u8>>> {
+    let (first, second) = if has_salts(ch_client, match_id).await {
+        ("meta", "meta_hltv")
+    } else {
+        ("meta_hltv", "meta")
+    };
+    if let Ok(data) = fetch_file_from_s3(s3, format!("{prefix}{match_id}.{first}.bz2")).await {
+        return Ok(Some(data));
+    }
+    if let Ok(data) = fetch_file_from_s3(s3, format!("{prefix}{match_id}.{second}.bz2")).await {
+        return Ok(Some(data));
+    }
+    Ok(None)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -39,23 +80,12 @@ async fn fetch_match_metadata_raw(
     s3_cache: Option<&AmazonS3>,
     match_id: u64,
 ) -> APIResult<Vec<u8>> {
-    // Try to fetch from the cache first
-    if let Some(s3_cache) = s3_cache {
-        let results = join(
-            fetch_from_s3(s3_cache, format!("{match_id}.meta.bz2")),
-            fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")),
-        )
-        .await;
-        if let Ok(data) = results.0 {
-            debug!("Match metadata found in cache");
-            counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
-            return Ok(data);
-        }
-        if let Ok(data) = results.1 {
-            debug!("Match metadata found in cache, hltv");
-            counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
-            return Ok(data);
-        }
+    if let Some(s3_cache) = s3_cache
+        && let Ok(Some(data)) = fetch_metadata_from_s3(ch_client, s3_cache, match_id, "").await
+    {
+        debug!("Match metadata found in cache");
+        counter!("metadata.fetch", "s3" => "minio").increment(1);
+        return Ok(data);
     }
 
     rate_limit_client
@@ -70,20 +100,11 @@ async fn fetch_match_metadata_raw(
         )
         .await?;
 
-    // If not in cache, fetch from S3
-    let results = join(
-        fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta.bz2")),
-        fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta_hltv.bz2")),
-    )
-    .await;
-    if let Ok(data) = results.0 {
+    if let Ok(Some(data)) =
+        fetch_metadata_from_s3(ch_client, s3, match_id, "processed/metadata/").await
+    {
         debug!("Match metadata found on s3");
-        counter!("metadata.fetch", "s3" => "hetzner", "source" => "salt").increment(1);
-        return Ok(data);
-    }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found on s3, hltv");
-        counter!("metadata.fetch", "s3" => "hetzner", "source" => "hltv").increment(1);
+        counter!("metadata.fetch", "s3" => "hetzner").increment(1);
         return Ok(data);
     }
 
@@ -153,21 +174,33 @@ pub(super) async fn metadata_raw(
         s3.get(&key.into()).await.map(GetResult::into_stream)
     }
 
-    let results = join(
-        fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta.bz2")),
-        fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta_hltv.bz2")),
-    )
-    .await;
-    if let Ok(data) = results.0 {
+    async fn fetch_metadata_from_s3_stream(
+        ch_client: &clickhouse::Client,
+        s3: &AmazonS3,
+        match_id: u64,
+    ) -> object_store::Result<Option<BoxStream<'static, object_store::Result<Bytes>>>> {
+        let (first, second) = if has_salts(ch_client, match_id).await {
+            ("meta", "meta_hltv")
+        } else {
+            ("meta_hltv", "meta")
+        };
+        if let Ok(data) = fetch_from_s3_stream(s3, format!("{match_id}.{first}.bz2")).await {
+            return Ok(Some(data));
+        }
+        if let Ok(data) = fetch_from_s3_stream(s3, format!("{match_id}.{second}.bz2")).await {
+            return Ok(Some(data));
+        }
+        Ok(None)
+    }
+
+    if let Ok(Some(data)) =
+        fetch_metadata_from_s3_stream(&state.ch_client, &state.s3_cache_client, match_id).await
+    {
         debug!("Match metadata found in cache");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
+        counter!("metadata.fetch", "s3" => "minio").increment(1);
         return Ok(Body::from_stream(data));
     }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found in cache, hltv");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
-        return Ok(Body::from_stream(data));
-    }
+
     fetch_match_metadata_raw(
         &state.rate_limit_client,
         &rate_limit_key,
