@@ -117,7 +117,16 @@ async fn demo_event_stream(
     ),
     tags = ["Matches"],
     summary = "Live Demo Events",
-    description = "Streams events from the spectator stream over SSE."
+    description = "
+    Streams events from the spectator stream over SSE.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 10req/10min |
+| Key | 120req/h |
+| Global | 200req/h |
+    "
 )]
 pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
