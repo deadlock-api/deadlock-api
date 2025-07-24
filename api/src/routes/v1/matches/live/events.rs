@@ -173,7 +173,8 @@ pub(super) async fn events(
         })
         .retries(60)
         .fixed_backoff(Duration::from_millis(500))
-        .await?;
+        .await
+        .map_err(|()| APIError::internal("Failed to spectate match"))?;
     }
 
     info!("Demo available for match {match_id}");

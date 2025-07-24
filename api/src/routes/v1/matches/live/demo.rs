@@ -104,7 +104,8 @@ pub(crate) async fn demo(
         })
         .retries(60)
         .fixed_backoff(Duration::from_millis(500))
-        .await?;
+        .await
+        .map_err(|()| APIError::internal("Failed to spectate match"))?;
     }
 
     let stream = demo_stream(match_id);
