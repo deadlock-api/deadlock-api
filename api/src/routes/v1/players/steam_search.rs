@@ -49,16 +49,20 @@ async fn search_steam(
         WHERE hasSubsequence(lower(personaname), lower(?))
             OR hasSubsequence(lower(realname), lower(?))
             OR hasSubsequence(toString(account_id), lower(?))
+            OR hasSubsequence(toString(toUInt64(account_id) + 76561197960265728), lower(?))
         ORDER BY least(
             editDistanceUTF8(lower(personaname), lower(?)),
             editDistanceUTF8(lower(realname), lower(?)),
-            editDistanceUTF8(toString(account_id), lower(?))
+            editDistanceUTF8(toString(account_id), lower(?)),
+            editDistanceUTF8(toString(toUInt64(account_id) + 76561197960265728), lower(?))
         )
         LIMIT 1 BY account_id
     ";
     debug!(?query);
     match ch_client
         .query(query)
+        .bind(&search_query)
+        .bind(&search_query)
         .bind(&search_query)
         .bind(&search_query)
         .bind(&search_query)
