@@ -24,15 +24,16 @@ where
 {
     type Rejection = APIError;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let ip = parts
-            .headers
+    async fn from_request_parts(
+        Parts { headers, .. }: &mut Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        let ip = headers
             .get("CF-Connecting-IP")
-            .or(parts.headers.get("X-Real-IP"))
+            .or(headers.get("X-Real-IP"))
             .and_then(|v| v.to_str().ok().and_then(|s| s.parse().ok()))
             .unwrap_or(Ipv4Addr::UNSPECIFIED);
-        let api_key = parts
-            .headers
+        let api_key = headers
             .get("X-API-Key")
             .and_then(|v| v.to_str().ok())
             .map(String::from)
