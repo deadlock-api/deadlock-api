@@ -208,7 +208,7 @@ pub(crate) async fn ability_order_stats(
     if !state.assets_client.validate_hero_id(query.hero_id).await {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            format!("Invalid hero_id: {hero_id}"),
+            format!("Invalid hero_id: {}", query.hero_id),
         ));
     }
     get_ability_order_stats(&state.ch_client_ro, query)
