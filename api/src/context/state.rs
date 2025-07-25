@@ -208,7 +208,13 @@ impl AppState {
         debug!("Creating Steam client");
         let steam_client = SteamClient::new(
             http_client.clone(),
-            config.steam.proxy_url.clone(),
+            config
+                .steam
+                .proxy_url
+                .split(',')
+                .map(str::trim)
+                .map(String::from)
+                .collect(),
             config.steam.proxy_api_key.clone(),
             config.steam.api_key.clone(),
         );

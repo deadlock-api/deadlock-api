@@ -66,6 +66,8 @@ pub(crate) type SteamProxyResult<T> = Result<T, SteamProxyError>;
 /// Error type for Steam proxy calls
 #[derive(Debug, Error)]
 pub(crate) enum SteamProxyError {
+    #[error("No base url set")]
+    NoBaseUrl,
     #[error("Failed to call Steam proxy: {0}")]
     Request(#[from] reqwest::Error),
     #[error("Failed to decode base64 data: {0}")]

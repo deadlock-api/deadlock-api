@@ -613,6 +613,7 @@ dependencies = [
  "cached",
  "chrono",
  "clickhouse",
+ "fastrand",
  "futures",
  "haste",
  "itertools",

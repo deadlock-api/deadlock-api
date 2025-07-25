@@ -153,6 +153,9 @@ impl IntoResponse for APIError {
                 SteamProxyError::Protobuf(_) => {
                     Self::internal("Failed to parse protobuf message from Steam.").into_response()
                 }
+                SteamProxyError::NoBaseUrl => {
+                    Self::internal("No Steam proxy URL configured.").into_response()
+                }
             },
             Self::Protobuf(_) => {
                 Self::internal("Failed to parse protobuf message.").into_response()

@@ -16,8 +16,8 @@ use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
-    GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError, SteamProxyQuery,
-    SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+    GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError, SteamProxyError,
+    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
 
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
@@ -26,7 +26,7 @@ const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/
 #[derive(Clone)]
 pub(crate) struct SteamClient {
     http_client: reqwest::Client,
-    steam_proxy_url: String,
+    steam_proxy_urls: Vec<String>,
     steam_proxy_api_key: String,
     steam_api_key: String,
 }
@@ -34,13 +34,13 @@ pub(crate) struct SteamClient {
 impl SteamClient {
     pub(crate) fn new(
         http_client: reqwest::Client,
-        steam_proxy_url: String,
+        steam_proxy_urls: Vec<String>,
         steam_proxy_api_key: String,
         steam_api_key: String,
     ) -> Self {
         Self {
             http_client,
-            steam_proxy_url,
+            steam_proxy_urls,
             steam_proxy_api_key,
             steam_api_key,
         }
@@ -80,7 +80,7 @@ impl SteamClient {
             Err(e) => {
                 error!("Failed to call Steam proxy: {e}");
                 counter!("steam.proxy.call", "msg_type" => query.msg_type.as_str_name(), "error" => "true").increment(1);
-                Err(e.into())
+                Err(e)
             }
         }
     }
@@ -89,9 +89,16 @@ impl SteamClient {
         &self,
         query: &SteamProxyQuery<M>,
         body: &T,
-    ) -> reqwest::Result<SteamProxyRawResponse> {
+    ) -> SteamProxyResult<SteamProxyRawResponse> {
+        let url = if self.steam_proxy_urls.len() == 1 {
+            #[allow(clippy::indexing_slicing, reason = "We checked the length")]
+            &self.steam_proxy_urls[0]
+        } else {
+            fastrand::choice(self.steam_proxy_urls.iter()).ok_or(SteamProxyError::NoBaseUrl)?
+        };
+
         self.http_client
-            .post(&self.steam_proxy_url)
+            .post(url)
             .bearer_auth(&self.steam_proxy_api_key)
             .timeout(query.request_timeout)
             .json(&body)
@@ -100,6 +107,7 @@ impl SteamClient {
             .error_for_status()?
             .json()
             .await
+            .map_err(Into::into)
     }
 
     /// Get the current client version from the Steam Database
