@@ -12,6 +12,7 @@ pub(super) const HEALTH_HASH: u64 = fxhash::hash_bytes(b"m_iHealth");
 pub(super) const MAX_HEALTH_HASH: u64 = fxhash::hash_bytes(b"m_iMaxHealth");
 pub(super) const HERO_ID_HASH: u64 = fxhash::hash_bytes(b"m_nHeroID");
 pub(super) const PLAYER_SLOT_HASH: u64 = fxhash::hash_bytes(b"m_unLobbyPlayerSlot");
+pub(super) const RANK_HASH: u64 = fxhash::hash_bytes(b"m_nCurrentRank");
 pub(super) const ASSIGNED_LANE_HASH: u64 = fxhash::hash_bytes(b"m_nAssignedLane");
 pub(super) const ORIGINAL_ASSIGNED_LANE_HASH: u64 =
     fxhash::hash_bytes(b"m_nOriginalLaneAssignment");

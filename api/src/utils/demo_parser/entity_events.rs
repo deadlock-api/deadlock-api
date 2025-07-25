@@ -90,6 +90,7 @@ pub(super) struct PlayerControllerEvent {
     hero_id: Option<u32>,
     hero_build_id: Option<u64>,
     player_slot: Option<u8>,
+    rank: Option<i32>, // Currently always 0 or None, as Valve hides rank data
     assigned_lane: Option<i8>,
     original_assigned_lane: Option<i8>,
     net_worth: Option<i32>,
@@ -117,6 +118,7 @@ impl EntityUpdateEvent for PlayerControllerEvent {
             team: entity.get_value(&TEAM_HASH),
             hero_build_id: entity.get_value(&HERO_BUILD_ID_HASH),
             player_slot: entity.get_value(&PLAYER_SLOT_HASH),
+            rank: entity.get_value(&RANK_HASH),
             assigned_lane: entity.get_value(&ASSIGNED_LANE_HASH),
             original_assigned_lane: entity.get_value(&ORIGINAL_ASSIGNED_LANE_HASH),
             hero_id: entity.get_value(&HERO_ID_HASH),
