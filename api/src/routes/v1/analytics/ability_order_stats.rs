@@ -1,5 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -9,7 +10,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
 
 fn default_min_matches() -> Option<u32> {
@@ -204,6 +205,12 @@ pub(crate) async fn ability_order_stats(
     Query(query): Query<AbilityOrderStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if !state.assets_client.validate_hero_id(query.hero_id).await {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Invalid hero_id: {hero_id}"),
+        ));
+    }
     get_ability_order_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
