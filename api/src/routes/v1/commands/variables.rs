@@ -265,7 +265,11 @@ impl Variable {
                 ranks
                     .iter()
                     .find(|r| r.tier == rank)
-                    .and_then(|r| r.images.get(&format!("small_subrank{subrank}")))
+                    .and_then(|r| {
+                        r.images
+                            .get(&format!("large_subrank{subrank}"))
+                            .or(r.images.get(&format!("small_subrank{subrank}")))
+                    })
                     .cloned()
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
@@ -664,7 +668,8 @@ impl Variable {
                     .find(|r| r.tier == mmr_history.division)
                     .and_then(|r| {
                         r.images
-                            .get(&format!("small_subrank{}", mmr_history.division_tier))
+                            .get(&format!("large_subrank{subrank}"))
+                            .or(r.images.get(&format!("small_subrank{subrank}")))
                     })
                     .cloned()
                     .ok_or(VariableResolveError::NoData("rank img"))
