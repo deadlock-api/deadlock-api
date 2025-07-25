@@ -1,4 +1,4 @@
-mod card;
+// mod card;
 pub mod enemy_stats;
 pub mod hero_stats;
 pub(crate) mod match_history;
@@ -26,8 +26,9 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(match_history::match_history))
         .routes(routes!(mmr_history::mmr_history))
         .routes(routes!(mmr_history::hero_mmr_history))
-        .routes(routes!(card::card_raw))
-        .routes(routes!(card::card))
+        // Card endpoints are commented out, as these endpoints have no useful data yet (ranks are friends-only)
+        // .routes(routes!(card::card_raw))
+        // .routes(routes!(card::card))
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(mate_stats::mate_stats))
