@@ -12,9 +12,9 @@ use tracing::info;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::live::url::spectate_match;
-use crate::routes::v1::matches::types::MatchIdQuery;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::types::MatchIdQuery;
 
 fn demo_stream(
     match_id: u64,

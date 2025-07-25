@@ -17,13 +17,13 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
     SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
+use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
 struct PlayerCardSlotStat {

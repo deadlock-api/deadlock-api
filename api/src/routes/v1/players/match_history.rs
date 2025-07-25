@@ -19,11 +19,11 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::AccountIdQuery;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
+use crate::utils::types::AccountIdQuery;
 
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 

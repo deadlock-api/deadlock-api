@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
+use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct EnemyStatsQuery {

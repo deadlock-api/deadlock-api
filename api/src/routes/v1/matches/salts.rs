@@ -17,11 +17,12 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::ingest_salts;
-use crate::routes::v1::matches::types::{ClickhouseSalts, MatchIdQuery};
+use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
+use crate::utils::types::MatchIdQuery;
 
 const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
 
@@ -192,17 +193,13 @@ pub(super) async fn salts(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    tryhard::retry_fn(|| {
-        fetch_match_salts(
-            &state.rate_limit_client,
-            &rate_limit_key,
-            &state.steam_client,
-            &state.ch_client,
-            match_id,
-        )
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
+    fetch_match_salts(
+        &state.rate_limit_client,
+        &rate_limit_key,
+        &state.steam_client,
+        &state.ch_client,
+        match_id,
+    )
     .await
     .map(|salts| (match_id, salts).into())
     .map(|s: MatchSaltsResponse| Json(s))

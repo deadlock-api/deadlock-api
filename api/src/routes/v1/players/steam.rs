@@ -12,7 +12,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::AccountIdQuery;
+use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub(super) struct SteamProfile {

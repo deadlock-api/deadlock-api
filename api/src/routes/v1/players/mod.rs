@@ -10,22 +10,12 @@ mod steam_search;
 
 use core::time::Duration;
 
-use serde::Deserialize;
-use utoipa::{IntoParams, OpenApi};
+use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
-use crate::utils::parse::parse_steam_id;
-
-#[derive(Deserialize, IntoParams, Default)]
-pub(crate) struct AccountIdQuery {
-    /// The players `SteamID3`
-    #[serde(default)]
-    #[serde(deserialize_with = "parse_steam_id")]
-    account_id: u32,
-}
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Players", description = "Player related endpoints")))]

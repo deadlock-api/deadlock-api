@@ -19,7 +19,6 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::live::url::spectate_match;
-use crate::routes::v1::matches::types::MatchIdQuery;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::demo_parser::entity_events::EntityType;
@@ -27,6 +26,7 @@ use crate::utils::demo_parser::error::DemoParseError;
 use crate::utils::demo_parser::types::DemoEvent;
 use crate::utils::demo_parser::visitor::SendingVisitor;
 use crate::utils::parse::comma_separated_deserialize_option;
+use crate::utils::types::MatchIdQuery;
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct DemoEventsQuery {

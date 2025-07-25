@@ -152,11 +152,6 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
     }
 }
 
-#[derive(Deserialize, IntoParams)]
-pub(super) struct MatchIdQuery {
-    pub(super) match_id: u64,
-}
-
 #[derive(Debug, Clone, Copy, IntoParams, ToSchema, Row, Serialize, Deserialize)]
 pub(super) struct ClickhouseSalts {
     pub(super) match_id: u64,

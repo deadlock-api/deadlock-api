@@ -20,10 +20,10 @@ use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::fetch_match_salts;
-use crate::routes::v1::matches::types::MatchIdQuery;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
+use crate::utils::types::MatchIdQuery;
 
 async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
     s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())

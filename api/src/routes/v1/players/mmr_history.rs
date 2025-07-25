@@ -10,8 +10,8 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::AccountIdQuery;
 use crate::utils::parse::parse_steam_id;
+use crate::utils::types::AccountIdQuery;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryQuery {
