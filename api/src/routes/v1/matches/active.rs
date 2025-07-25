@@ -81,6 +81,13 @@ Returns active matches that are currently being played, serialized as protobuf m
 
 Fetched from the watch tab in game, which is limited to the **top 200 matches**.
 
+You have to decode the protobuf message.
+
+Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
+
+Relevant Protobuf Message:
+- CMsgClientToGcGetActiveMatchesResponse
+
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
