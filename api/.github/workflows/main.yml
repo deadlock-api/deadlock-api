@@ -52,6 +52,21 @@ jobs:
       - name: Machete
         uses: bnjbvr/cargo-machete@ba1bcd4047ee4a763273c5d2d47ba7a8f8a085a8
 
+  typos:
+    name: Typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update Rust toolchain to stable
+        run: |
+          rustup override set stable
+          rustup update stable
+      - uses: taiki-e/cache-cargo-install-action@v2
+        with:
+          tool: typos-cli
+      - name: Typos Check
+        run: typos src/
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
