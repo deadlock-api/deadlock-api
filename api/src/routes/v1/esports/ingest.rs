@@ -52,7 +52,10 @@ pub(super) async fn ingest_match(
         )),
         Err(e) => {
             warn!("Failed to validate API-Key: {e}");
-            Err(APIError::internal("Failed to validate API-Key!"))
+            Err(APIError::status_msg(
+                StatusCode::FORBIDDEN,
+                "Failed to validate API-Key!",
+            ))
         }
     }?;
 
