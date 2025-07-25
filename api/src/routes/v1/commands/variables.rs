@@ -651,25 +651,25 @@ impl Variable {
                     .map_err(Into::into)
             }
             Self::MMRHistoryRank => {
-                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
+                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank_name = ranks
                     .iter()
-                    .find(|r| r.tier == mmr_history.division)
+                    .find(|r| r.tier == mmr.division)
                     .map(|r| r.name.clone())
                     .ok_or(VariableResolveError::NoData("rank name"))?;
-                Ok(format!("{rank_name} {}", mmr_history.division_tier))
+                Ok(format!("{rank_name} {}", mmr.division_tier))
             }
             Self::MMRHistoryRankImg => {
-                let mmr_history = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
+                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 ranks
                     .iter()
-                    .find(|r| r.tier == mmr_history.division)
+                    .find(|r| r.tier == mmr.division)
                     .and_then(|r| {
                         r.images
-                            .get(&format!("large_subrank{subrank}"))
-                            .or(r.images.get(&format!("small_subrank{subrank}")))
+                            .get(&format!("large_subrank{}", mmr.division_tier))
+                            .or(r.images.get(&format!("small_subrank{}", mmr.division_tier)))
                     })
                     .cloned()
                     .ok_or(VariableResolveError::NoData("rank img"))
