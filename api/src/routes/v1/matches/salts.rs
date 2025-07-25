@@ -2,6 +2,7 @@ use core::time::Duration;
 
 use axum::Json;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -74,7 +75,7 @@ pub(super) async fn fetch_match_salts(
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     if match_id < FIRST_MATCH_DECEMBER_2024 {
         return Err(APIError::status_msg(
-            reqwest::StatusCode::NOT_FOUND,
+            StatusCode::BAD_REQUEST,
             format!("Match salts for match {match_id} cannot be fetched"),
         ));
     }
@@ -100,7 +101,7 @@ pub(super) async fn fetch_match_salts(
     if has_metadata {
         warn!("Blocking request for match salts for match {match_id} with metadata");
         return Err(APIError::status_msg(
-            reqwest::StatusCode::NOT_FOUND,
+            StatusCode::BAD_REQUEST,
             format!(
                 "Match salts for match {match_id} not wont be fetched, as it has metadata already"
             ),
@@ -141,7 +142,7 @@ pub(super) async fn fetch_match_salts(
         r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
     }) {
         return Err(APIError::status_msg(
-            reqwest::StatusCode::NOT_FOUND,
+            StatusCode::NOT_FOUND,
             format!("Failed to fetch match salts for match {match_id}"),
         ));
     }
@@ -156,7 +157,7 @@ pub(super) async fn fetch_match_salts(
         return Ok(salts);
     }
     Err(APIError::status_msg(
-        reqwest::StatusCode::NOT_FOUND,
+        StatusCode::NOT_FOUND,
         format!("Match salts for match {match_id} not found"),
     ))
 }
