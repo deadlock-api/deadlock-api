@@ -1,4 +1,4 @@
-pub mod checks;
-pub mod demo_parser;
-pub mod parse;
+pub(super) mod checks;
+pub(super) mod demo_parser;
+pub(super) mod parse;
 pub mod types;

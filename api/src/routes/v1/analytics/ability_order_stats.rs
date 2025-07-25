@@ -18,9 +18,9 @@ fn default_min_matches() -> Option<u32> {
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub(crate) struct AbilityOrderStatsQuery {
+pub(super) struct AbilityOrderStatsQuery {
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
-    pub hero_id: u32,
+    hero_id: u32,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -201,7 +201,7 @@ Retrieves statistics for the ability order of a hero.
 | Global | - |
     "
 )]
-pub(crate) async fn ability_order_stats(
+pub(super) async fn ability_order_stats(
     Query(query): Query<AbilityOrderStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {

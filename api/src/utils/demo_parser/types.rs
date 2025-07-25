@@ -10,11 +10,11 @@ use crate::utils::demo_parser::entity_events::{EntityType, EntityUpdateEvents};
 
 #[derive(Serialize, Debug, Clone, ToSchema)]
 pub(crate) struct DemoEvent {
-    pub tick: i32,
-    pub game_time: f32,
+    pub(super) tick: i32,
+    pub(super) game_time: f32,
 
     #[serde(flatten)]
-    pub event: DemoEventPayload,
+    pub(super) event: DemoEventPayload,
 }
 
 impl TryInto<Event> for DemoEvent {
@@ -29,7 +29,7 @@ impl TryInto<Event> for DemoEvent {
 #[derive(Serialize, Debug, Clone, ToSchema)]
 #[serde(tag = "event_type")]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum DemoEventPayload {
+pub(super) enum DemoEventPayload {
     EntityUpdate {
         delta: Delta,
         entity_index: i32,
@@ -54,7 +54,7 @@ impl Display for DemoEventPayload {
 #[derive(FromRepr, Serialize, Debug, Clone, Copy, PartialEq, Eq, Default, Display, ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub(crate) enum Delta {
+pub(super) enum Delta {
     #[default]
     #[serde(skip)]
     Invalid,

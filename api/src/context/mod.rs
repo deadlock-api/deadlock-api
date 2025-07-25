@@ -1,4 +1,4 @@
 mod config;
-pub(super) mod state;
+mod state;
 
 pub(super) use state::{AppState, AppStateError};

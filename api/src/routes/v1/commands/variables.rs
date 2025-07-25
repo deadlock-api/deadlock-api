@@ -64,7 +64,7 @@ pub(super) enum VariableCategory {
 )]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-pub enum Variable {
+pub(super) enum Variable {
     MaxBombStacks,
     MaxSpiritSnareStacks,
     MaxBonusHealthPerKill,

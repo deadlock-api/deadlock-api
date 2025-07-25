@@ -34,7 +34,7 @@ pub enum BucketQuery {
 }
 
 impl BucketQuery {
-    pub(super) fn get_select_clause(self) -> &'static str {
+    fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "NULL",
             Self::StartTimeHour => "toNullable(toStartOfHour(start_time))",
@@ -96,11 +96,11 @@ pub(crate) struct HeroStatsQuery {
 pub struct AnalyticsHeroStats {
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_id: u32,
-    pub bucket: Option<u32>,
+    bucket: Option<u32>,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
-    pub matches_per_bucket: u64,
+    matches_per_bucket: u64,
     players: u64,
     pub total_kills: u64,
     pub total_deaths: u64,

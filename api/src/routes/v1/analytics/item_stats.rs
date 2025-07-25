@@ -66,7 +66,7 @@ pub enum BucketQuery {
 }
 
 impl BucketQuery {
-    pub(super) fn get_select_clause(self) -> &'static str {
+    fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "NULL",
             Self::Hero => "toNullable(hero_id)",

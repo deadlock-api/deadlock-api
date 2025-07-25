@@ -155,9 +155,9 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
 #[derive(Debug, Clone, Copy, IntoParams, ToSchema, Row, Serialize, Deserialize)]
 pub(super) struct ClickhouseSalts {
     pub(super) match_id: u64,
-    pub(super) metadata_salt: Option<u32>,
+    metadata_salt: Option<u32>,
     replay_salt: Option<u32>,
-    pub(super) cluster_id: Option<u32>,
+    cluster_id: Option<u32>,
 }
 
 impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {

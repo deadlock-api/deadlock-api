@@ -15,7 +15,7 @@ use crate::error::{APIError, APIResult};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub(super) struct SteamProfile {
+struct SteamProfile {
     account_id: u32,
     personaname: String,
     profileurl: String,

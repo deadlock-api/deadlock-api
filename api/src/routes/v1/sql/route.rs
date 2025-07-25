@@ -32,8 +32,8 @@ pub(super) struct TableQuery {
 
 #[derive(Debug, Clone, Deserialize, Serialize, clickhouse::Row)]
 pub struct TableSchemaRow {
-    pub name: String,
-    pub r#type: String,
+    name: String,
+    r#type: String,
 }
 
 #[derive(thiserror::Error, Debug)]

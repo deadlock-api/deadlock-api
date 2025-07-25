@@ -192,7 +192,7 @@ impl SteamClient {
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-pub(crate) async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
+async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
     let response = http_client.get(RSS_ENDPOINT).send().await.map_err(|e| {
         APIError::status_msg(
             reqwest::StatusCode::INTERNAL_SERVER_ERROR,

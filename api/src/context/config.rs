@@ -3,7 +3,7 @@ use serde::Deserialize;
 use crate::utils::parse::default_true;
 
 #[derive(Deserialize, Debug, Clone)]
-pub(crate) struct SteamConfig {
+pub(super) struct SteamConfig {
     pub(super) api_key: String,
     pub(super) proxy_url: String,
     pub(super) proxy_api_key: String,
@@ -14,13 +14,13 @@ fn default_redis_url() -> String {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub(crate) struct RedisConfig {
+pub(super) struct RedisConfig {
     #[serde(default = "default_redis_url")]
     pub(super) url: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub(crate) struct S3Config {
+pub(super) struct S3Config {
     #[serde(default)]
     pub(super) region: String,
     pub(super) bucket: String,
@@ -84,7 +84,7 @@ fn default_postgres_pool_size() -> u32 {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub(crate) struct PostgresConfig {
+pub(super) struct PostgresConfig {
     #[serde(default = "default_postgres_host")]
     pub(super) host: String,
     #[serde(default = "default_postgres_port")]
@@ -107,7 +107,7 @@ pub(crate) struct Config {
     #[serde(default)]
     pub(super) emergency_mode: bool,
     pub(crate) internal_api_key: String,
-    pub(crate) steam: SteamConfig,
+    pub(super) steam: SteamConfig,
     pub(super) redis: RedisConfig,
     pub(super) s3: S3Config,
     pub(super) s3_cache: S3Config,
@@ -119,7 +119,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn from_env() -> Result<Self, serde_env::Error> {
+    pub(super) fn from_env() -> Result<Self, serde_env::Error> {
         serde_env::from_env()
     }
 }

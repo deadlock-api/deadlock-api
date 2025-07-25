@@ -24,7 +24,7 @@ pub(crate) struct LeaderboardEntry {
     pub(crate) account_name: Option<String>,
     /// The possible account IDs of the player. **CAVEAT: This is not always correct, as Steam account names are not unique.**
     #[serde(default)]
-    pub(crate) possible_account_ids: Vec<u32>,
+    pub(super) possible_account_ids: Vec<u32>,
     /// The rank of the player. See more: <https://assets.deadlock-api.com/v2/ranks>
     pub(crate) rank: Option<u32>,
     /// The top hero IDs of the player. See more: <https://assets.deadlock-api.com/v2/heroes>

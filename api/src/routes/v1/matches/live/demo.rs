@@ -54,7 +54,7 @@ Streams the live demo of a match.
 | Global | 100req/10s |
     "
 )]
-pub(crate) async fn demo(
+pub(super) async fn demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,

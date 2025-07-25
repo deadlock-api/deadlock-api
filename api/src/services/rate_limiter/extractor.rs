@@ -9,11 +9,11 @@ use crate::error::APIError;
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RateLimitKey {
     pub(crate) api_key: Option<Uuid>,
-    pub(crate) ip: Ipv4Addr, // We do not have to take care of IPv6, as we use Cloudflare Pseudo IPv4
+    pub(super) ip: Ipv4Addr, // We do not have to take care of IPv6, as we use Cloudflare Pseudo IPv4
 }
 
 impl RateLimitKey {
-    pub(crate) fn new(api_key: Option<Uuid>, ip: Ipv4Addr) -> Self {
+    fn new(api_key: Option<Uuid>, ip: Ipv4Addr) -> Self {
         Self { api_key, ip }
     }
 }

@@ -1,5 +1,5 @@
 mod demo;
-pub(crate) mod events;
+mod events;
 mod url;
 
 use utoipa::OpenApi;

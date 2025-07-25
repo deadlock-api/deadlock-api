@@ -11,7 +11,7 @@ mod utils;
 pub(crate) mod visitor;
 
 #[once]
-pub fn all_sse_events() -> Vec<String> {
+fn all_sse_events() -> Vec<String> {
     EntityType::VARIANTS
         .iter()
         .flat_map(|e| {

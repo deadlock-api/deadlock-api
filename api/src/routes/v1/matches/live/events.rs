@@ -33,7 +33,7 @@ pub(super) struct DemoEventsQuery {
     /// Comma separated list of entities to subscribe to.
     #[param(default, inline)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
-    pub(super) subscribed_entities: Option<Vec<EntityType>>,
+    subscribed_entities: Option<Vec<EntityType>>,
 }
 
 #[once]

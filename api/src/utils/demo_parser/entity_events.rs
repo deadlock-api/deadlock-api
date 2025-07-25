@@ -50,23 +50,23 @@ pub(crate) enum EntityType {
 }
 
 impl EntityType {
-    pub(crate) fn from_opt(entity: &Entity) -> Option<Self> {
+    pub(super) fn from_opt(entity: &Entity) -> Option<Self> {
         Self::from_repr(entity.serializer().serializer_name.hash)
     }
 }
 
-pub(crate) trait EntityUpdateEvent: Serialize + ToSchema {
+pub(super) trait EntityUpdateEvent: Serialize + ToSchema {
     fn from_entity_update(ctx: &Context, delta_header: Delta, entity: &Entity) -> Option<Self>
     where
         Self: Sized;
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct GameRulesProxyEvent {
-    pub(crate) game_start_time: Option<f32>,
+pub(super) struct GameRulesProxyEvent {
+    pub(super) game_start_time: Option<f32>,
     game_paused: Option<bool>,
     pause_start_tick: Option<i32>,
-    pub(crate) total_paused_ticks: Option<i32>,
+    pub(super) total_paused_ticks: Option<i32>,
 }
 
 impl EntityUpdateEvent for GameRulesProxyEvent {
@@ -82,7 +82,7 @@ impl EntityUpdateEvent for GameRulesProxyEvent {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct PlayerControllerEvent {
+pub(super) struct PlayerControllerEvent {
     pawn: Option<i32>,
     steam_id: Option<u64>,
     steam_name: Option<String>,
@@ -143,7 +143,7 @@ impl EntityUpdateEvent for PlayerControllerEvent {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct PlayerPawnEvent {
+pub(super) struct PlayerPawnEvent {
     controller: Option<i32>,
     team: Option<u8>,
     hero_id: Option<u32>,
@@ -169,7 +169,7 @@ impl EntityUpdateEvent for PlayerPawnEvent {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct NPCEvent {
+pub(super) struct NPCEvent {
     health: Option<i32>,
     max_health: Option<i32>,
     create_time: Option<f32>,
@@ -195,7 +195,7 @@ impl EntityUpdateEvent for NPCEvent {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct DestroyableBuilding {
+pub(super) struct DestroyableBuilding {
     health: Option<i32>,
     max_health: Option<i32>,
     team: Option<u8>,
@@ -215,7 +215,7 @@ impl EntityUpdateEvent for DestroyableBuilding {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct PositionActiveEntity {
+pub(super) struct PositionActiveEntity {
     active: bool,
     position: Option<[f32; 3]>,
 }
@@ -231,7 +231,7 @@ impl EntityUpdateEvent for PositionActiveEntity {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
-pub(crate) struct PositionEntity {
+pub(super) struct PositionEntity {
     position: Option<[f32; 3]>,
 }
 
@@ -246,7 +246,7 @@ impl EntityUpdateEvent for PositionEntity {
 
 #[derive(Serialize, Debug, Clone, ToSchema)]
 #[serde(untagged)]
-pub(crate) enum EntityUpdateEvents {
+pub(super) enum EntityUpdateEvents {
     GameRulesProxy(Box<GameRulesProxyEvent>),
     PlayerController(Box<PlayerControllerEvent>),
     PlayerPawn(Box<PlayerPawnEvent>),
@@ -267,7 +267,7 @@ pub(crate) enum EntityUpdateEvents {
 }
 
 impl EntityUpdateEvents {
-    pub(crate) fn from_update(
+    pub(super) fn from_update(
         ctx: &Context,
         delta: Delta,
         entity_type: EntityType,
