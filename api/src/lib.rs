@@ -22,13 +22,13 @@ pub mod utils;
 
 use core::time::Duration;
 
+use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
-use context::state::AppState;
 pub use error::*;
 use tower_http::compression::predicate::NotForContentType;
 use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
@@ -41,10 +41,12 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::api_doc::ApiDoc;
+use crate::context::AppState;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::track_requests::track_requests;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
 
@@ -79,12 +81,19 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add application routes
         .merge(routes::router())
         // Add prometheus metrics route
-        .route("/metrics", get(|| async move {
+        .route("/metrics", get(|rk: RateLimitKey, State(AppState{config, ..}): State<AppState>| async move {
+            let internal_key = config.internal_api_key.strip_prefix("HEXE-").unwrap_or(&config.internal_api_key);
+            if rk.api_key.is_none_or(|k| k.to_string() != internal_key) {
+                return Err(APIError::status_msg(
+                    StatusCode::FORBIDDEN,
+                    "API key is required for this endpoint",
+                ));
+            }
             let mut headers = HeaderMap::new();
             if let Ok(value) = "no-cache".parse() {
                 headers.append(header::CACHE_CONTROL, value);
             }
-            (headers, metric_handle.render())
+            Ok((headers, metric_handle.render()))
         }))
         .layer(prometheus_layer)
         // Add robots.txt
