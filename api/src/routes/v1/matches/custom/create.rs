@@ -37,6 +37,7 @@ use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct CreateCustomRequest {
+    /// If a callback url is provided, we will send a POST request to this url when the match starts.
     #[serde(default)]
     #[param(default)]
     pub(super) callback_url: Option<String>,

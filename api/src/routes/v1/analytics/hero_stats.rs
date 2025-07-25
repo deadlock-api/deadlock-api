@@ -47,7 +47,7 @@ impl BucketQuery {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct HeroStatsQuery {
-    /// Bucket the stats.
+    /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
     #[param(inline)]
     bucket: BucketQuery,

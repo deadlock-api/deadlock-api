@@ -20,11 +20,13 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[derive(Debug, Deserialize, Serialize, IntoParams)]
 pub(super) struct SQLQuery {
+    /// The SQL query to execute. It must follow the Clickhouse SQL syntax.
     query: String,
 }
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(super) struct TableQuery {
+    /// The name of the table to fetch the schema for.
     table: String,
 }
 

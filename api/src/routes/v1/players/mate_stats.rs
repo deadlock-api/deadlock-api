@@ -41,7 +41,7 @@ pub(super) struct MateStatsQuery {
     /// Filter based on the number of matches played.
     #[serde(default)]
     max_matches_played: Option<u64>,
-    /// Filter based on the number of matches played.
+    /// Filter based on whether the mates were on the same party.
     #[serde(default = "default_true")]
     #[param(default = true)]
     same_party: bool,
