@@ -103,7 +103,7 @@ pub(super) async fn fetch_match_salts(
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             format!(
-                "Match salts for match {match_id} not wont be fetched, as it has metadata already"
+                "Match salts for match {match_id} won't be fetched, as it has metadata already"
             ),
         ));
     }
