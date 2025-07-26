@@ -1,13 +1,13 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
   "vcs": {
-    "enabled": false,
+    "enabled": true,
     "clientKind": "git",
     "useIgnoreFile": true
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/node_modules", "!**/build", "!**/.react-router", "!**/app/components/ui"]
+    "includes": ["**", "!**/node_modules", "!**/build", "!**/.react-router"]
   },
   "formatter": {
     "enabled": true,
