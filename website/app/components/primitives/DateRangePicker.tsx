@@ -94,7 +94,7 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="start">
           <Calendar
-            initialFocus
+            autoFocus={true}
             mode="range"
             defaultMonth={startDate?.toDate()}
             selected={dateRange}
