@@ -8,7 +8,7 @@ license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.12.22", features = ["json", "http2", "zstd", "gzip"] }
-tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.0", features = ["macros", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 redis = { version = "0.32.4", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.13.3", features = ["chrono"] }
