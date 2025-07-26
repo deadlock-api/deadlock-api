@@ -13,6 +13,13 @@ export default function NavHeader() {
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-6 gap-y-12">
           <nav className="flex items-center gap-6 flex-wrap">
             <Link
+              to="/"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+            >
+              Home
+            </Link>
+            <Link
               to="/heroes"
               prefetch="intent"
               className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
