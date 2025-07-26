@@ -11,6 +11,8 @@ pub(crate) struct Item {
     #[serde(default)]
     pub shopable: Option<bool>,
     pub r#type: ItemType,
+    #[serde(default, rename = "item_slot_type")]
+    pub slot_type: Option<SlotType>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -22,14 +24,31 @@ pub(crate) enum ItemType {
     Unknown,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum SlotType {
+    Weapon,
+    Vitality,
+    Spirit,
+}
+
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
 #[serde(rename_all = "snake_case")]
 #[repr(u8)]
 pub(crate) enum CHItemType {
-    Upgrade,
-    Ability,
+    Upgrade = 0,
+    Ability = 1,
     #[serde(other)]
-    Unknown,
+    Unknown = 2,
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
+pub(crate) enum CHSlotType {
+    Weapon = 0,
+    Vitality = 1,
+    Spirit = 2,
 }
 
 #[derive(Serialize, Row)]
@@ -38,6 +57,7 @@ pub(crate) struct ChItem {
     pub name: String,
     pub tier: Option<u8>,
     pub r#type: CHItemType,
+    pub slot_type: Option<CHSlotType>,
 }
 
 impl From<Item> for ChItem {
@@ -50,6 +70,12 @@ impl From<Item> for ChItem {
                 ItemType::Upgrade => CHItemType::Upgrade,
                 ItemType::Ability => CHItemType::Ability,
                 ItemType::Unknown => unreachable!(),
+            },
+            slot_type: match value.slot_type {
+                Some(SlotType::Weapon) => Some(CHSlotType::Weapon),
+                Some(SlotType::Vitality) => Some(CHSlotType::Vitality),
+                Some(SlotType::Spirit) => Some(CHSlotType::Spirit),
+                None => None,
             },
         }
     }
