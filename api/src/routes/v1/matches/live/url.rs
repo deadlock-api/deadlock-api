@@ -31,7 +31,7 @@ struct MatchSpectateResponse {
 
 #[cached(
     ty = "TimedCache<u64, CMsgClientToGcSpectateLobbyResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ match_id }",
     sync_writes = "by_key",

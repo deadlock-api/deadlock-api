@@ -6,8 +6,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -204,14 +202,6 @@ ORDER BY wins / greatest(1, matches) DESC
     )
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<HeroCombStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn get_comb_stats(
     ch_client: &clickhouse::Client,
     query: HeroCombStatsQuery,

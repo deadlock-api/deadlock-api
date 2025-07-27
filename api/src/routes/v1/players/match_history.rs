@@ -115,14 +115,6 @@ pub(crate) async fn insert_match_history_to_ch(
     inserter.end().await
 }
 
-#[cached(
-    ty = "TimedCache<u32, PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }", // High cache lifespan is ok, as the player match history gets enhanced by Steam API
-    result = true,
-    convert = "{ account_id }",
-    sync_writes = "by_key",
-    key = "u32"
-)]
 pub(crate) async fn fetch_match_history_from_clickhouse(
     ch_client: &clickhouse::Client,
     account_id: u32,
@@ -389,20 +381,10 @@ pub(super) async fn match_history(
         .filter(|e| !ch_match_ids.contains(&e.match_id))
         .copied()
         .collect_vec();
-    if !ch_missing_entries.is_empty() {
-        let ch_client = state.ch_client;
-        tokio::spawn(async move {
-            let result = insert_match_history_to_ch(&ch_client, &ch_missing_entries).await;
-            if let Err(e) = result {
-                warn!("Failed to insert player match history to ClickHouse: {e:?}");
-            }
-            // Purge Cache of `fetch_match_history_from_clickhouse`
-            FETCH_MATCH_HISTORY_FROM_CLICKHOUSE
-                .lock()
-                .await
-                .remove(&account_id);
-        });
-    }
+    if !ch_missing_entries.is_empty()
+        && let Err(e) = insert_match_history_to_ch(&state.ch_client, &ch_missing_entries).await {
+            warn!("Failed to insert player match history to ClickHouse: {e:?}");
+        }
 
     // Combine and return player match history
     let combined_match_history = chain!(ch_match_history, steam_match_history)

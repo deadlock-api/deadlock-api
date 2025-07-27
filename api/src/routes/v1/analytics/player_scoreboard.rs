@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -180,14 +178,6 @@ LIMIT {} OFFSET {}
     )
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<Entry>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
     query: &PlayerScoreboardQuery,

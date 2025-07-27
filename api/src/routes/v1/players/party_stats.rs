@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -99,14 +97,6 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
     )
 }
 
-#[cached(
-    ty = "TimedCache<(u32, PartyStatsQuery), Vec<PartyStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = "{ (account_id, query) }",
-    sync_writes = "by_key",
-    key = "(u32, PartyStatsQuery)"
-)]
 async fn get_party_stats(
     ch_client: &clickhouse::Client,
     account_id: u32,

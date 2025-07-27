@@ -2,8 +2,6 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use chrono::Utc;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
@@ -31,14 +29,6 @@ struct SteamProfile {
     last_updated: chrono::DateTime<Utc>,
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<SteamProfile>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{}", search_query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn search_steam(
     ch_client: &clickhouse::Client,
     search_query: String,

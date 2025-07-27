@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, Pool, Postgres, QueryBuilder, Row};
 use tracing::debug;
@@ -59,14 +57,6 @@ fn build_query(query: &BuildItemStatsQuery) -> String {
     query_builder.build().sql().into()
 }
 
-#[cached(
-    ty = "TimedCache<BuildItemStatsQuery, Vec<BuildItemStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = "{ query }",
-    sync_writes = "by_key",
-    key = "BuildItemStatsQuery"
-)]
 async fn get_build_item_stats(
     pg_client: &Pool<Postgres>,
     query: BuildItemStatsQuery,

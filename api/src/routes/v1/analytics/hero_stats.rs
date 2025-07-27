@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -266,14 +264,6 @@ fn build_query(query: &HeroStatsQuery) -> String {
     )
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<AnalyticsHeroStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     query: HeroStatsQuery,

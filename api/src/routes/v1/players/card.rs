@@ -101,7 +101,7 @@ impl From<CMsgCitadelProfileCard> for PlayerCard {
 
 #[cached(
     ty = "TimedCache<u32, SteamProxyRawResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",

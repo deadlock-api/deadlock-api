@@ -2,8 +2,6 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -193,14 +191,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     }
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<ItemPermutationStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn get_item_permutation_stats(
     ch_client: &clickhouse::Client,
     query: ItemPermutationStatsQuery,

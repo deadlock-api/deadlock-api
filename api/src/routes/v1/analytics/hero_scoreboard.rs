@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -147,14 +145,6 @@ ORDER BY value {}
     )
 }
 
-#[cached(
-    ty = "TimedCache<HeroScoreboardQuery, Vec<Entry>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = "{ query }",
-    sync_writes = "by_key",
-    key = "HeroScoreboardQuery"
-)]
 async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
     query: HeroScoreboardQuery,

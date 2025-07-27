@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use sqlx::Row;
 use tracing::debug;
 
@@ -12,14 +10,6 @@ use crate::routes::v1::builds::query;
 use crate::routes::v1::builds::query::BuildsSearchQuery;
 use crate::routes::v1::builds::structs::Build;
 
-#[cached(
-    ty = "TimedCache<String, Vec<Build>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn fetch_builds(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     query: &BuildsSearchQuery,

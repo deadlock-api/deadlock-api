@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -64,14 +62,6 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     )
 }
 
-#[cached(
-    ty = "TimedCache<BadgeDistributionQuery, Vec<BadgeDistribution>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = "{ query }",
-    sync_writes = "by_key",
-    key = "BadgeDistributionQuery"
-)]
 async fn get_badge_distribution(
     ch_client: &clickhouse::Client,
     query: BadgeDistributionQuery,

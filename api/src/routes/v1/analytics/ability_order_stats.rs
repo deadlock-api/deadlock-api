@@ -2,8 +2,6 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -162,14 +160,6 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     )
 }
 
-#[cached(
-    ty = "TimedCache<AbilityOrderStatsQuery, Vec<AnalyticsAbilityOrderStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = "{ query }",
-    sync_writes = "by_key",
-    key = "AbilityOrderStatsQuery"
-)]
 async fn get_ability_order_stats(
     ch_client: &clickhouse::Client,
     query: AbilityOrderStatsQuery,

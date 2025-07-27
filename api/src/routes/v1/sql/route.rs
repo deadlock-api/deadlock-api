@@ -114,14 +114,6 @@ pub(super) async fn sql(
         })
 }
 
-#[cached(
-    ty = "TimedCache<String, Vec<serde_json::Value>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
-    result = true,
-    convert = r#"{ format!("{:?}", query) }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
 async fn run_sql(
     ch_client: &clickhouse::Client,
     query: &str,

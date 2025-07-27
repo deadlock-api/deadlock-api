@@ -1,8 +1,6 @@
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -62,14 +60,6 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     )
 }
 
-#[cached(
-    ty = "TimedCache<u32, Vec<MMRHistory>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
-    result = true,
-    convert = "{ account_id }",
-    sync_writes = "by_key",
-    key = "u32"
-)]
 async fn get_mmr_history(
     ch_client: &clickhouse::Client,
     account_id: u32,
@@ -79,14 +69,6 @@ async fn get_mmr_history(
     Ok(ch_client.query(&query).fetch_all().await?)
 }
 
-#[cached(
-    ty = "TimedCache<(u32, u8), Vec<MMRHistory>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
-    result = true,
-    convert = "{ (account_id, hero_id) }",
-    sync_writes = "by_key",
-    key = "(u32, u8)"
-)]
 async fn get_hero_mmr_history(
     ch_client: &clickhouse::Client,
     account_id: u32,

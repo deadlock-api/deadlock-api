@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use clickhouse::Row;
 use futures::future::join3;
 use serde::{Deserialize, Serialize};
@@ -107,12 +105,6 @@ pub struct APIInfo {
     pub table_sizes: Option<HashMap<String, TableSize>>,
 }
 
-#[cached(
-    ty = "TimedCache<u8, APIInfo>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
 async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     let (table_sizes, fetched_matches_per_day, missed_matches) = join3(
         ch_client
