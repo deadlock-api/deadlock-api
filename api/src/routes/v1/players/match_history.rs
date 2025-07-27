@@ -382,9 +382,10 @@ pub(super) async fn match_history(
         .copied()
         .collect_vec();
     if !ch_missing_entries.is_empty()
-        && let Err(e) = insert_match_history_to_ch(&state.ch_client, &ch_missing_entries).await {
-            warn!("Failed to insert player match history to ClickHouse: {e:?}");
-        }
+        && let Err(e) = insert_match_history_to_ch(&state.ch_client, &ch_missing_entries).await
+    {
+        warn!("Failed to insert player match history to ClickHouse: {e:?}");
+    }
 
     // Combine and return player match history
     let combined_match_history = chain!(ch_match_history, steam_match_history)
