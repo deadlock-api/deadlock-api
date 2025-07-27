@@ -117,6 +117,46 @@ where
     })
 }
 
+pub(crate) fn comma_separated_deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: FromStr + Deserialize<'de> + core::fmt::Debug,
+{
+    let parsed = CommaSeparated::deserialize(deserializer)?;
+
+    Ok(match parsed {
+        CommaSeparated::List(vec) => vec,
+        CommaSeparated::Single(val) => vec![val],
+        CommaSeparated::StringList(val) => {
+            let mut out = vec![];
+            for s in val {
+                let parsed = s
+                    .parse()
+                    .map_err(|_| serde::de::Error::custom("Failed to parse list item"))?;
+                out.push(parsed);
+            }
+            if out.is_empty() { vec![] } else { out }
+        }
+        CommaSeparated::CommaStringList(str) => {
+            let str = str.replace(['[', ']'], "");
+
+            // If the string is empty, return None
+            if str.is_empty() {
+                return Ok(vec![]);
+            }
+
+            let mut out = vec![];
+            for s in str.split(',') {
+                let parsed = s.trim().parse().map_err(|_| {
+                    serde::de::Error::custom("Failed to parse comma separated list")
+                })?;
+                out.push(parsed);
+            }
+            if out.is_empty() { vec![] } else { out }
+        }
+    })
+}
+
 pub(crate) fn default_last_month_timestamp() -> Option<i64> {
     let now = chrono::Utc::now().date_naive();
     let last_month = now - chrono::Duration::days(30);
@@ -195,7 +235,7 @@ mod tests {
     }
 
     #[derive(Deserialize, Debug)]
-    struct CommaSeparatedTestStruct {
+    struct CommaSeparatedOptionTestStruct {
         #[serde(deserialize_with = "comma_separated_deserialize_option")]
         ids: Option<Vec<u32>>,
     }
@@ -215,7 +255,7 @@ mod tests {
         #[case] json: &str,
         #[case] expected: Option<Vec<u32>>,
     ) {
-        let result: CommaSeparatedTestStruct = serde_json::from_str(json).unwrap();
+        let result: CommaSeparatedOptionTestStruct = serde_json::from_str(json).unwrap();
         assert_eq!(result.ids, expected);
     }
 
@@ -228,6 +268,38 @@ mod tests {
     #[case("{\"ids\": [18446744073709551615u64]}")] // u64 that overflows u32
     #[case("{\"ids\": \"1,\"2\", 3\"}")] // Mixed numbers and strings, do we want to support this?
     fn test_comma_separated_deserialize_option_invalid(#[case] json: &str) {
+        let result = serde_json::from_str::<CommaSeparatedOptionTestStruct>(json);
+        assert!(result.is_err());
+    }
+
+    #[derive(Deserialize)]
+    struct CommaSeparatedTestStruct {
+        #[serde(deserialize_with = "comma_separated_deserialize")]
+        ids: Vec<u32>,
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"1,2,3\"}", vec![1, 2, 3])] // Comma-separated string
+    #[case("{\"ids\": [1, 2, 3]}", vec![1, 2, 3])] // Array
+    #[case("{\"ids\": 1}", vec![1])] // Single value
+    #[case("{\"ids\": [\"1\", \"2\", \"3\"]}", vec![1, 2, 3])] // String array
+    #[case("{\"ids\": \"[1,2,3]\"}", vec![1, 2, 3])] // Brackets
+    #[case("{\"ids\": \"1, 2, 3\"}", vec![1, 2, 3])] // Spaces
+    #[case("{\"ids\": \"1,2, 3\"}", vec![1, 2, 3])] // Mixed spaces and no spaces
+    fn test_comma_separated_deserialize(#[case] json: &str, #[case] expected: Vec<u32>) {
+        let result: CommaSeparatedTestStruct = serde_json::from_str(json).unwrap();
+        assert_eq!(result.ids, expected);
+    }
+
+    #[rstest]
+    #[case("{\"ids\": \"a\"}")]
+    #[case("{\"ids\": \"a,b,c\"}")]
+    #[case("{\"ids\": [\"a\", \"b\", \"c\"]}")]
+    #[case("{\"ids\": \"1,2,notanumber\"}")]
+    #[case("{\"ids\": [1, 2, \"oops\"]}")]
+    #[case("{\"ids\": [18446744073709551615]}")] // u64 that overflows u32
+    #[case("{\"ids\": \"1,\"2\", 3\"}")] // Mixed numbers and strings, do we want to support this?
+    fn test_comma_separated_deserialize_invalid(#[case] json: &str) {
         let result = serde_json::from_str::<CommaSeparatedTestStruct>(json);
         assert!(result.is_err());
     }
