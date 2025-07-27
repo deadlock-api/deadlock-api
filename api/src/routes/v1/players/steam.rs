@@ -1,5 +1,5 @@
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
@@ -8,10 +8,11 @@ use chrono::Utc;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -91,7 +92,60 @@ See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(
 )]
 pub(super) async fn steam(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    State(state): State<AppState>,
+    State(AppState { ch_client_ro, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_steam(&state.ch_client_ro, account_id).await.map(Json)
+    get_steam(&ch_client_ro, account_id).await.map(Json)
+}
+
+#[derive(Deserialize, IntoParams, Clone)]
+pub(crate) struct AccountIdsQuery {
+    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    #[serde(deserialize_with = "comma_separated_deserialize")]
+    pub(crate) account_ids: Vec<u64>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/steam",
+    params(AccountIdsQuery),
+    responses(
+        (status = OK, description = "Steam Profiles", body = [SteamProfile]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = NOT_FOUND, description = "No Steam profile found."),
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profiles.")
+    ),
+    tags = ["Players"],
+    summary = "Batch Steam Profile",
+    description = "
+This endpoint returns Steam profiles of players.
+
+See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "
+)]
+pub(super) async fn steam_batch(
+    Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
+    State(AppState { ch_client_ro, .. }): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    let account_ids = account_ids
+        .into_iter()
+        .filter_map(|s| steamid64_to_steamid3(s).ok())
+        .collect::<Vec<_>>();
+    if account_ids.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "No valid account ids provided.",
+        ));
+    }
+    futures::future::join_all(account_ids.into_iter().map(|a| get_steam(&ch_client_ro, a)))
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()
+        .map(Json)
 }

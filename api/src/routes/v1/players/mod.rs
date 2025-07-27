@@ -36,6 +36,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(party_stats::party_stats))
                 .routes(routes!(hero_stats::hero_stats))
                 .routes(routes!(steam::steam))
+                .routes(routes!(steam::steam_batch))
                 .routes(routes!(steam_search::steam_search))
                 .layer(
                     CacheControlMiddleware::new(Duration::from_secs(60 * 60))

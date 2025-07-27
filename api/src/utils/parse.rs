@@ -19,7 +19,7 @@ where
 // Steam ID Parsing
 const STEAM_ID_64_IDENT: u64 = 76561197960265728;
 
-fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntError> {
+pub(crate) fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntError> {
     // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
     if steam_id < STEAM_ID_64_IDENT {
         return u32::try_from(steam_id);
