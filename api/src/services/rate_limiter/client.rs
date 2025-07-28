@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
-use tracing::error;
+use tracing::warn;
 use uuid::Uuid;
 
 use crate::error::{APIError, APIResult};
@@ -80,7 +80,7 @@ impl RateLimitClient {
         let prefixed_key = format!("{prefix}:{key}");
         // If incrementing the key fails, we don't apply any limits
         if let Err(e) = self.increment_key(&prefixed_key).await {
-            error!("Failed to increment rate limit key: {e}, will not apply limits");
+            warn!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
         }
 
@@ -114,7 +114,7 @@ impl RateLimitClient {
             let Ok((requests, oldest_request)) =
                 self.check_requests(prefixed_key, quota.period).await
             else {
-                error!("Failed to check rate limit key: {prefixed_key}, will not apply limits");
+                warn!("Failed to check rate limit key: {prefixed_key}, will not apply limits");
                 continue;
             };
             let status = Status {
@@ -128,7 +128,7 @@ impl RateLimitClient {
 
         // If incrementing the key fails, we don't apply any limits
         if let Err(e) = self.increment_key(key).await {
-            error!("Failed to increment rate limit key: {e}, will not apply limits");
+            warn!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
         }
 

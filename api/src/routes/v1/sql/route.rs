@@ -10,7 +10,7 @@ use clickhouse::query::BytesCursor;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, Lines};
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use utoipa::IntoParams;
 
 use crate::context::AppState;
@@ -101,7 +101,7 @@ pub(super) async fn sql(
         .await
         .map(Json)
         .map_err(|sql_error| {
-            error!("Failed to execute query: {sql_error}");
+            warn!("Failed to execute query: {sql_error}");
             let error_message = match Regex::new(r"version [\d.]+") {
                 Ok(r) => r
                     .replace_all(&sql_error.to_string(), "version [REDACTED]")
