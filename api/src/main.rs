@@ -8,10 +8,14 @@ use std::net::{Ipv4Addr, SocketAddr};
 use axum::ServiceExt;
 use axum::extract::Request;
 use deadlock_api_rust::{StartupError, router};
+use mimalloc::MiMalloc;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 const PORT: u16 = 3000;
 
