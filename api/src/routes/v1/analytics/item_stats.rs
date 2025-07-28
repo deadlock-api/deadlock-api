@@ -310,7 +310,7 @@ WITH
             it.item_id AS item_id
             {buy_time_expr}
             {net_worth_expr}
-        FROM match_player FINAL
+        FROM match_player
             ARRAY JOIN items AS it
         WHERE TRUE
             AND (account_id, match_id) IN (SELECT account_id, match_id FROM filtered_players)

@@ -150,7 +150,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             sum(won)      AS wins,
             sum(not won)  AS losses,
             wins + losses AS matches
-        FROM match_player FINAL
+        FROM match_player
         WHERE hasAll(items.item_id, {items_list})
             AND match_id IN t_matches
             {player_filters}

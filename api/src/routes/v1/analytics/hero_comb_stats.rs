@@ -182,7 +182,7 @@ WITH hero_combinations AS (
         groupArraySorted(6)(hero_id) AS hero_ids,
         groupArray(account_id) AS account_ids,
         any(won) AS won
-    FROM match_player FINAL
+    FROM match_player
     INNER JOIN match_info mi USING (match_id)
     WHERE mi.match_mode IN ('Ranked', 'Unranked') {player_filters} {info_filters}
     GROUP BY match_id, team

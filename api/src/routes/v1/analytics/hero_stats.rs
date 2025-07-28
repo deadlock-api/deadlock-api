@@ -228,7 +228,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_max_health) AS total_max_health,
         sum(max_shots_hit) AS total_shots_hit,
         sum(max_shots_missed) AS total_shots_missed
-    FROM match_player FINAL
+    FROM match_player
     INNER JOIN t_matches USING (match_id)
     INNER JOIN t_matches_per_bucket m ON {}
     WHERE TRUE {player_filters}
