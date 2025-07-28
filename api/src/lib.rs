@@ -109,12 +109,6 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         )
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new().compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))))
-        .fallback(|uri: axum::http::Uri| async move {
-            APIResult::<()>::Err(APIError::status_msg(
-                StatusCode::NOT_FOUND,
-                format!("No route found for {uri}"),
-            ))
-        })
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {
