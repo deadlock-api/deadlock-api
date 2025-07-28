@@ -39,9 +39,8 @@ pub struct MMRHistory {
 fn build_mmr_history_query(account_id: u32) -> String {
     format!(
         "
-    SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
+    SELECT match_id, start_time, player_score, rank, division, division_tier
     FROM mmr_history FINAL
-    JOIN match_info mi USING (match_id)
     WHERE account_id = {account_id}
     ORDER BY match_id
     "
@@ -51,9 +50,8 @@ fn build_mmr_history_query(account_id: u32) -> String {
 fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     format!(
         "
-    SELECT match_id, mi.start_time AS start_time, player_score, rank, division, division_tier
+    SELECT match_id, start_time, player_score, rank, division, division_tier
     FROM hero_mmr_history FINAL
-    JOIN match_info mi USING (match_id)
     WHERE account_id = {account_id} AND hero_id = {hero_id}
     ORDER BY match_id
     "
