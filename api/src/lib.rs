@@ -30,9 +30,11 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 pub use error::*;
+use tower::limit::ConcurrencyLimitLayer;
 use tower_http::compression::predicate::NotForContentType;
 use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
 use tower_http::cors::CorsLayer;
+use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_layer::Layer;
 use tracing::debug;
@@ -109,6 +111,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         )
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new().compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))))
+        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB limit
+        .layer(ConcurrencyLimitLayer::new(100))
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {
