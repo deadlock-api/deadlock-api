@@ -133,25 +133,25 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     };
     format!(
         "
-    WITH t_matches AS (
-            SELECT match_id, start_time
+    WITH
+        (SELECT groupArray(id) FROM items WHERE type = 'ability') AS ability_ids_array,
+        t_matches AS (
+            SELECT match_id
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
-        ),
-        ability_ids AS (SELECT id FROM items WHERE type = 'ability')
+        )
     SELECT
-        arrayFilter(x -> x in ability_ids, items.item_id) as abilities,
-        sum(won) AS wins,
-        sum(not won) AS losses,
+        arrayFilter(x -> has(ability_ids_array, x), items.item_id) as abilities,
+        countIf(won) AS wins,
+        countIf(not won) AS losses,
         wins + losses AS matches,
-        count(DISTINCT account_id) AS players,
+        uniq(account_id) AS players,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists
-    FROM match_player FINAL
-    INNER JOIN t_matches USING (match_id)
-    WHERE TRUE {player_filters}
+    FROM match_player
+    WHERE match_id IN t_matches {player_filters}
     GROUP BY abilities
     HAVING matches >= {}
     ORDER BY matches DESC
