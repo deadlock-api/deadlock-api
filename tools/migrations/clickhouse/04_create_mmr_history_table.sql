@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS mmr_history
   116
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
  division      UInt32 ALIAS floor(rank / 10),
- division_tier UInt32 ALIAS rank % 10
+ division_tier UInt32 ALIAS rank % 10,
+  start_time DATETIME
 ) ENGINE = ReplacingMergeTree
    ORDER BY (account_id, match_id)
    SETTINGS allow_nullable_key = 1;
@@ -158,7 +159,8 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
   116
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
  division      UInt32 ALIAS floor(rank / 10),
- division_tier UInt32 ALIAS rank % 10
+ division_tier UInt32 ALIAS rank % 10,
+ start_time DATETIME
 ) ENGINE = ReplacingMergeTree
    ORDER BY (hero_id, account_id, match_id)
    SETTINGS allow_nullable_key = 1;
@@ -250,4 +252,4 @@ ALTER TABLE glicko
   116
   ][toUInt8(clamp(player_score, 0, 66) + 1)],
  ADD COLUMN division      UInt32 ALIAS floor(rank / 10),
- ADD COLUMN division_tier UInt32 ALIAS rank % 10
+ ADD COLUMN division_tier UInt32 ALIAS rank % 10;
