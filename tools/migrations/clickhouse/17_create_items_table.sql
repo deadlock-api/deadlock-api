@@ -13,5 +13,6 @@ CREATE TABLE IF NOT EXISTS items
   'weapon' = 0,
   'vitality' = 1,
   'spirit' = 2,
- ))
+ )),
+ cost Nullable(UInt32)
 ) ENGINE = ReplacingMergeTree ORDER BY (id);

@@ -13,6 +13,7 @@ pub(crate) struct Item {
     pub r#type: ItemType,
     #[serde(default, rename = "item_slot_type")]
     pub slot_type: Option<SlotType>,
+    pub cost: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -58,6 +59,7 @@ pub(crate) struct ChItem {
     pub tier: Option<u8>,
     pub r#type: CHItemType,
     pub slot_type: Option<CHSlotType>,
+    pub cost: Option<u32>,
 }
 
 impl From<Item> for ChItem {
@@ -77,6 +79,7 @@ impl From<Item> for ChItem {
                 Some(SlotType::Spirit) => Some(CHSlotType::Spirit),
                 None => None,
             },
+            cost: value.cost,
         }
     }
 }
