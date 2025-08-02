@@ -28,8 +28,6 @@ export default function HeroCombStatsTable({
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
-  const [minMatchesFilter, setMinMatchesFilter] = useQSNumber("min_matches", 10);
-  const [minMatchesFilterT, setMinMatchesFilterT] = useState<number>(10);
   const [combSizeFilter, setCombSizeFilter] = useQSNumber("comb_size", 2);
   const [combSizeFilterT, setCombSizeFilterT] = useState<number>(2);
   const [combsToShow, setCombsToShow] = useQSNumber("combs_to_show", limit ?? 50);
@@ -39,19 +37,10 @@ export default function HeroCombStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery<APIHeroCombStats[]>({
-    queryKey: [
-      "api-hero-comb-stats",
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      minMatchesFilter,
-      combSizeFilter,
-    ],
+    queryKey: ["api-hero-comb-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, combSizeFilter],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-comb-stats", API_ORIGIN);
       url.searchParams.set("comb_size", combSizeFilter.toString());
-      url.searchParams.set("min_matches", (minMatchesFilter ?? 10).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
@@ -98,25 +87,7 @@ export default function HeroCombStatsTable({
             <span className="ml-2 ">{combSizeFilterT}</span>
           </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="min-matches" className="text-nowrap text-sm text-muted-foreground">
-            Min Matches
-          </label>
-          <div className="flex items-center gap-2">
-            <Slider
-              id="min-matches"
-              min={1}
-              step={10}
-              max={1000}
-              value={[minMatchesFilterT]}
-              defaultValue={[minMatchesFilter]}
-              onValueCommit={([val]) => setMinMatchesFilter(val)}
-              onValueChange={([val]) => setMinMatchesFilterT(val)}
-              className="w-full"
-            />
-            <span className="ml-2">{minMatchesFilterT}</span>
-          </div>
-        </div>
+
         <div className="flex flex-col gap-1.5">
           <label htmlFor="combs-to-show" className="text-nowrap text-sm text-muted-foreground">
             Combinations to Show
