@@ -37,12 +37,10 @@ async fn search_steam(
         SELECT ?fields
         FROM steam_profiles
         WHERE hasSubsequence(lower(personaname), lower(?))
-            OR hasSubsequence(lower(realname), lower(?))
             OR hasSubsequence(toString(account_id), lower(?))
             OR hasSubsequence(toString(toUInt64(account_id) + 76561197960265728), lower(?))
         ORDER BY least(
             editDistanceUTF8(lower(personaname), lower(?)),
-            editDistanceUTF8(lower(realname), lower(?)),
             editDistanceUTF8(toString(account_id), lower(?)),
             editDistanceUTF8(toString(toUInt64(account_id) + 76561197960265728), lower(?))
         )
@@ -90,7 +88,7 @@ async fn search_steam(
     tags = ["Players"],
     summary = "Steam Profile Search",
     description = "
-This endpoint lets you search for Steam profiles by account_id, realname or personaname.
+This endpoint lets you search for Steam profiles by account_id or personaname.
 
 See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
 
