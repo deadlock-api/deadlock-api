@@ -56,8 +56,6 @@ async fn search_steam(
         .bind(&search_query)
         .bind(&search_query)
         .bind(&search_query)
-        .bind(&search_query)
-        .bind(&search_query)
         .fetch_all()
         .await
     {
