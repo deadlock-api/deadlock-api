@@ -47,6 +47,7 @@ async fn search_steam(
             editDistanceUTF8(toString(toUInt64(account_id) + 76561197960265728), lower(?))
         )
         LIMIT 1 BY account_id
+        LIMIT 100
     ";
     debug!(?query);
     match ch_client
