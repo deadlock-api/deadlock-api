@@ -43,6 +43,7 @@ pub struct HeroStats {
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_id: u32,
     matches_played: u64,
+    last_played: u32,
     time_played: u64,
     wins: u64,
     ending_level: f64,
@@ -120,6 +121,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     SELECT
         hero_id,
         COUNT() AS matches_played,
+        max(start_time) AS last_played,
         sum(duration_s) AS time_played,
         sum(won) AS wins,
         avg(max_level) AS ending_level,
@@ -212,6 +214,7 @@ mod test {
         assert!(sql.contains("SELECT"));
         assert!(sql.contains("hero_id"));
         assert!(sql.contains("COUNT() AS matches_played"));
+        assert!(sql.contains("max(start_time) AS last_played"));
         assert!(sql.contains("sum(duration_s) AS time_played"));
         assert!(sql.contains("sum(won) AS wins"));
         assert!(sql.contains("FROM match_player mp FINAL"));
