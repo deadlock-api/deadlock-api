@@ -43,7 +43,7 @@ FROM fetched_matches
 ";
 
 const MISSED_MATCHES_QUERY: &str = "
-SELECT COUNT(DISTINCT match_id)
+SELECT uniq(match_id)
 FROM player_match_history
 WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
     AND match_mode IN ('Ranked', 'Unranked')

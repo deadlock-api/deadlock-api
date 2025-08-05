@@ -181,10 +181,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
     };
     let mut player_hero_filters = vec![];
     if let Some(min_hero_matches) = query.min_hero_matches {
-        player_hero_filters.push(format!("COUNT(DISTINCT match_id) >= {min_hero_matches}"));
+        player_hero_filters.push(format!("uniq(match_id) >= {min_hero_matches}"));
     }
     if let Some(max_hero_matches) = query.max_hero_matches {
-        player_hero_filters.push(format!("COUNT(DISTINCT match_id) <= {max_hero_matches}"));
+        player_hero_filters.push(format!("uniq(match_id) <= {max_hero_matches}"));
     }
     let player_hero_filters = if player_hero_filters.is_empty() {
         "TRUE".to_owned()
@@ -213,7 +213,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(not won) AS losses,
         wins + losses AS matches,
         any(m.matches_per_bucket) AS matches_per_bucket,
-        count(DISTINCT account_id) AS players,
+        uniq(account_id) AS players,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
         sum(assists) AS total_assists,

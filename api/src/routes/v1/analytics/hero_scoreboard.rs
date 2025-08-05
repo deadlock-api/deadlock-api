@@ -123,7 +123,7 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     };
     let mut player_having = vec![];
     if let Some(min_matches) = query.min_matches {
-        player_having.push(format!("count(distinct match_id) >= {min_matches}"));
+        player_having.push(format!("uniq(match_id) >= {min_matches}"));
     }
     let player_having = if player_having.is_empty() {
         String::new()
@@ -132,8 +132,7 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     };
     format!(
         "
-SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, count(distinct \
-         match_id) as matches
+SELECT rowNumberInAllBlocks() + 1 as rank, hero_id, toFloat64({}) as value, uniq(match_id) as matches
 FROM match_player
 {player_filters}
 GROUP BY hero_id
@@ -282,7 +281,7 @@ mod test {
         };
         let sql = build_query(&query);
         assert!(sql.contains("account_id = 18373975"));
-        assert!(sql.contains("count(distinct match_id) >= 10"));
+        assert!(sql.contains("uniq(match_id) >= 10"));
     }
 
     #[test]

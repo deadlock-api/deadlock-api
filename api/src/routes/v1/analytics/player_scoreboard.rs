@@ -149,10 +149,10 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     };
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("count(distinct match_id) >= {min_matches}"));
+        having_filters.push(format!("uniq(match_id) >= {min_matches}"));
     }
     if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("count(distinct match_id) <= {max_matches}"));
+        having_filters.push(format!("uniq(match_id) <= {max_matches}"));
     }
     let having_clause = if having_filters.is_empty() {
         String::new()
@@ -161,7 +161,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     };
     format!(
         "
-SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, count(distinct \
+SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, uniq(\
          match_id) as matches
 FROM match_player
 {player_filters}
@@ -309,7 +309,7 @@ mod test {
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains("count(distinct match_id) >= 10"));
+        assert!(query_str.contains("uniq(match_id) >= 10"));
     }
 
     #[test]
@@ -321,7 +321,7 @@ mod test {
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains("count(distinct match_id) <= 100"));
+        assert!(query_str.contains("uniq(match_id) <= 100"));
     }
 
     #[test]
