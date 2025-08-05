@@ -53,6 +53,7 @@ pub struct MateStats {
     matches: Vec<u64>,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
