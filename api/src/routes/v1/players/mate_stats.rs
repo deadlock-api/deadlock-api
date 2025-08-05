@@ -112,7 +112,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
                 players AS (
                     SELECT DISTINCT match_id, team, party
                     FROM match_player
-                    WHERE party != 0 AND match_id IN t_matches
+                    WHERE party != 0 AND match_id IN t_matches AND account_id = {account_id}
                 ),
                 mates AS (
                     SELECT DISTINCT match_id, won, account_id
