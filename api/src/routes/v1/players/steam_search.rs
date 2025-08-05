@@ -34,31 +34,21 @@ async fn search_steam(
     search_query: String,
 ) -> APIResult<Vec<SteamProfile>> {
     let query = "
+        WITH ? as query
         SELECT ?fields
         FROM steam_profiles
-        WHERE hasSubsequence(lower(personaname), lower(?))
-            OR hasSubsequence(toString(account_id), lower(?))
-            OR hasSubsequence(toString(toUInt64(account_id) + 76561197960265728), lower(?))
-        ORDER BY least(
-            editDistanceUTF8(lower(personaname), lower(?)),
-            editDistanceUTF8(toString(account_id), lower(?)),
-            editDistanceUTF8(toString(toUInt64(account_id) + 76561197960265728), lower(?))
-        )
+        WHERE personaname IS NOT NULL
+          AND not empty(personaname)
+        ORDER BY greatest(
+            jaroWinklerSimilarity(lower(personaname), lower(query)),
+            jaroWinklerSimilarity(toString(account_id), lower(query)),
+            jaroWinklerSimilarity(toString(toUInt64(account_id) + 76561197960265728), lower(query))
+        ) DESC
         LIMIT 1 BY account_id
         LIMIT 100
     ";
     debug!(?query);
-    match ch_client
-        .query(query)
-        .bind(&search_query)
-        .bind(&search_query)
-        .bind(&search_query)
-        .bind(&search_query)
-        .bind(&search_query)
-        .bind(&search_query)
-        .fetch_all()
-        .await
-    {
+    match ch_client.query(query).bind(&search_query).fetch_all().await {
         Ok(profiles) if !profiles.is_empty() => Ok(profiles),
         Ok(_) => Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
