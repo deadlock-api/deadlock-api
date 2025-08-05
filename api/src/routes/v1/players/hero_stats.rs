@@ -76,6 +76,7 @@ pub struct HeroStats {
 
 fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     let mut filters = vec![];
+    filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -118,6 +119,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     let account_filter = format!("account_id = {account_id}");
     format!(
         "
+    WITH t_histories AS (SELECT match_id FROM player_match_history WHERE {account_filter})
     SELECT
         hero_id,
         COUNT() AS matches_played,
@@ -149,8 +151,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         groupUniqArray(mi.match_id) as matches
     FROM match_player mp FINAL
         INNER JOIN match_info mi USING (match_id)
-    PREWHERE {account_filter}
-    WHERE match_mode IN ('Ranked', 'Unranked') {filters}
+    WHERE match_id IN t_histories {filters}
     GROUP BY hero_id
     ORDER BY hero_id
     "
@@ -219,8 +220,8 @@ mod test {
         assert!(sql.contains("sum(won) AS wins"));
         assert!(sql.contains("FROM match_player mp FINAL"));
         assert!(sql.contains("INNER JOIN match_info mi USING (match_id)"));
-        assert!(sql.contains("PREWHERE account_id = 12345"));
-        assert!(sql.contains("WHERE match_mode IN ('Ranked', 'Unranked')"));
+        assert!(sql.contains("account_id = 12345"));
+        assert!(sql.contains("match_mode IN ('Ranked', 'Unranked')"));
         assert!(sql.contains("GROUP BY hero_id"));
         assert!(sql.contains("ORDER BY hero_id"));
         // Should not contain any filters

@@ -44,6 +44,7 @@ pub struct PartyStats {
 
 fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
     let mut info_filters = vec![];
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -79,17 +80,22 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
     };
     format!(
         "
-    WITH players AS (SELECT DISTINCT match_id, team, party
-                     FROM match_player
-                     WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM \
-         match_info WHERE TRUE {info_filters})),
-         parties AS (SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
-                     FROM match_player
-                     WHERE account_id = {account_id} or (match_id, team, party) IN (SELECT \
-         match_id, team, party FROM players WHERE party != 0)
-                     GROUP BY match_id)
-    SELECT length(account_ids) as party_size, sum(won) as wins, COUNT(DISTINCT match_id) as \
-         matches_played, groupUniqArray(match_id) as matches
+    WITH
+        t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
+        t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
+        players AS (SELECT DISTINCT match_id, team, party FROM match_player WHERE match_id IN t_matches AND party != 0),
+        parties AS (
+            SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
+            FROM match_player
+            WHERE match_id IN t_matches
+                AND (account_id = {account_id} OR (match_id, team, party) IN (SELECT match_id, team, party FROM players))
+            GROUP BY match_id
+        )
+    SELECT
+        length(account_ids) as party_size,
+        sum(won) as wins,
+        uniq(match_id) as matches_played,
+        groupUniqArray(match_id) as matches
     FROM parties
     GROUP BY party_size
     ORDER BY party_size
@@ -151,8 +157,8 @@ mod test {
         };
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("WITH players AS"));
-        assert!(sql.contains("SELECT length(account_ids) as party_size"));
+        assert!(sql.contains("players AS"));
+        assert!(sql.contains("length(account_ids) as party_size"));
         assert!(sql.contains("GROUP BY party_size"));
         assert!(sql.contains("ORDER BY party_size"));
         // Should not contain any filters

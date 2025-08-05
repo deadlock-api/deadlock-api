@@ -51,6 +51,7 @@ pub struct EnemyStats {
 
 fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     let mut info_filters = vec![];
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -98,15 +99,24 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     };
     format!(
         "
-    WITH players AS (SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
-                     FROM match_player
-                     WHERE team IN ('Team0', 'Team1') AND account_id = {account_id}  AND match_id \
-         IN (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
-         enemies AS (SELECT DISTINCT match_id, won, account_id
-                   FROM match_player
-                   WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM players))
-    SELECT account_id as enemy_id, sum(not won) as wins, count() as matches_played, \
-         groupUniqArray(match_id) as matches
+    WITH
+        t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
+        t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
+        players AS (
+            SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
+            FROM match_player
+            WHERE team IN ('Team0', 'Team1') AND match_id IN t_matches
+        ),
+        enemies AS (
+            SELECT DISTINCT match_id, won, account_id
+            FROM match_player
+            WHERE (match_id, team) IN (SELECT match_id, enemy_team FROM players)
+        )
+    SELECT
+        account_id as enemy_id,
+        sum(not won) as wins,
+        count() as matches_played,
+        groupUniqArray(match_id) as matches
     FROM enemies
     GROUP BY enemy_id
     {having_clause}
@@ -169,10 +179,9 @@ mod test {
         };
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("WITH players AS"));
         assert!(sql.contains("if(team = 'Team1', 'Team0', 'Team1') as enemy_team"));
         assert!(sql.contains("team IN ('Team0', 'Team1')"));
-        assert!(sql.contains("SELECT account_id as enemy_id"));
+        assert!(sql.contains("account_id as enemy_id"));
         assert!(sql.contains("sum(not won) as wins"));
         assert!(sql.contains("count() as matches_played"));
         assert!(sql.contains("groupUniqArray(match_id) as matches"));

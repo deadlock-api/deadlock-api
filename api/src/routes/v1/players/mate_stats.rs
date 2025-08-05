@@ -55,6 +55,7 @@ pub struct MateStats {
 
 fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     let mut info_filters = vec![];
+    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -104,16 +105,26 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     if query.same_party {
         format!(
             "
-            WITH players AS (SELECT DISTINCT match_id, team, party
-                             FROM match_player
-                             WHERE account_id = {account_id} AND party != 0 AND match_id IN \
-             (SELECT match_id FROM match_info WHERE TRUE {info_filters})),
-                 mates AS (SELECT DISTINCT match_id, won, account_id
-                           FROM match_player
-                           WHERE (match_id, team, party) IN (SELECT match_id, team, party FROM \
-             players) AND account_id != {account_id})
-            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, \
-             groupUniqArray(match_id) as matches
+            WITH
+                t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
+                t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
+                players AS (
+                    SELECT DISTINCT match_id, team, party
+                    FROM match_player
+                    WHERE party != 0 AND match_id IN t_matches
+                ),
+                mates AS (
+                    SELECT DISTINCT match_id, won, account_id
+                    FROM match_player
+                    WHERE TRUE
+                        AND (match_id, team, party) IN (SELECT match_id, team, party FROM players)
+                        AND account_id != {account_id}
+                )
+            SELECT
+                account_id as mate_id,
+                sum(won) as wins,
+                count() as matches_played,
+                groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
             {having_clause}
@@ -123,16 +134,26 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     } else {
         format!(
             "
-            WITH players AS (SELECT DISTINCT match_id, team
-                             FROM match_player
-                             WHERE account_id = {account_id} AND match_id IN (SELECT match_id FROM \
-             match_info WHERE TRUE {info_filters})),
-                 mates AS (SELECT DISTINCT match_id, won, account_id
-                           FROM match_player
-                           WHERE (match_id, team) IN (SELECT match_id, team FROM players) AND \
-             account_id != {account_id})
-            SELECT account_id as mate_id, sum(won) as wins, count() as matches_played, \
-             groupUniqArray(match_id) as matches
+            WITH
+                t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
+                t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
+                players AS (
+                    SELECT DISTINCT match_id, team
+                    FROM match_player
+                    WHERE match_id IN t_matches
+                ),
+                mates AS (
+                    SELECT DISTINCT match_id, won, account_id
+                    FROM match_player
+                    WHERE TRUE
+                        AND (match_id, team) IN (SELECT match_id, team FROM players)
+                        AND account_id != {account_id}
+                )
+            SELECT
+                account_id as mate_id,
+                sum(won) as wins,
+                count() as matches_played,
+                groupUniqArray(match_id) as matches
             FROM mates
             GROUP BY mate_id
             {having_clause}
@@ -197,10 +218,9 @@ mod test {
         };
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("WITH players AS"));
         assert!(sql.contains("party != 0"));
         assert!(sql.contains("account_id != 12345"));
-        assert!(sql.contains("SELECT account_id as mate_id"));
+        assert!(sql.contains("account_id as mate_id"));
         assert!(sql.contains("GROUP BY mate_id"));
         assert!(sql.contains("ORDER BY matches_played DESC"));
         // Should not contain any filters
@@ -220,10 +240,9 @@ mod test {
         };
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("WITH players AS"));
         assert!(!sql.contains("party != 0")); // Should not filter by party
         assert!(sql.contains("account_id != 12345"));
-        assert!(sql.contains("SELECT account_id as mate_id"));
+        assert!(sql.contains("account_id as mate_id"));
         assert!(sql.contains("GROUP BY mate_id"));
         assert!(sql.contains("ORDER BY matches_played DESC"));
     }
