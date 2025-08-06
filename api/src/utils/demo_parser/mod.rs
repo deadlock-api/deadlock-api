@@ -1,5 +1,3 @@
-
-
 pub(crate) mod entity_events;
 pub(crate) mod error;
 mod hashes;
