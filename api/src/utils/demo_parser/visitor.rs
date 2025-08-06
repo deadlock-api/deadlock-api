@@ -113,20 +113,21 @@ impl Visitor for SendingVisitor {
     ) -> Result<(), Self::Error> {
         if self.subscribed_chat_messages
             && packet_type == CitadelUserMessageIds::KEUserMsgChatMsg as u32
-            && let Ok(msg) = CCitadelUserMsgChatMsg::decode(data) {
-                let demo_event = DemoEvent {
-                    tick: ctx.tick(),
-                    game_time: self.game_time,
-                    event: DemoEventPayload::ChatMessage {
-                        player_slot: msg.player_slot,
-                        text: msg.text,
-                        all_chat: msg.all_chat,
-                        lane_color: msg.lane_color,
-                    },
-                };
-                let sse_event = demo_event.try_into()?;
-                self.sender.send(sse_event)?;
-            }
+            && let Ok(msg) = CCitadelUserMsgChatMsg::decode(data)
+        {
+            let demo_event = DemoEvent {
+                tick: ctx.tick(),
+                game_time: self.game_time,
+                event: DemoEventPayload::ChatMessage {
+                    player_slot: msg.player_slot,
+                    text: msg.text,
+                    all_chat: msg.all_chat,
+                    lane_color: msg.lane_color,
+                },
+            };
+            let sse_event = demo_event.try_into()?;
+            self.sender.send(sse_event)?;
+        }
         Ok(())
     }
 
