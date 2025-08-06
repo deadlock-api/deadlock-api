@@ -1,19 +1,20 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde::Deserialize;
 use tracing::debug;
 use utoipa::IntoParams;
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::utils::parse::comma_separated_deserialize;
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct AccountIdsQuery {
     /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
-    #[param(inline, min_items = 1, max_items = 10_000)]
+    #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u32>,
 }
@@ -94,6 +95,12 @@ pub(super) async fn mmr(
     Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if account_ids.len() > 1_000 {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Too many account ids provided.",
+        ));
+    }
     get_mmr(&state.ch_client_ro, &account_ids).await.map(Json)
 }
 
@@ -115,6 +122,12 @@ pub(super) async fn hero_mmr(
     Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if account_ids.len() > 1_000 {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Too many account ids provided.",
+        ));
+    }
     get_hero_mmr(&state.ch_client_ro, &account_ids, hero_id)
         .await
         .map(Json)

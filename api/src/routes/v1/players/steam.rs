@@ -102,7 +102,7 @@ pub(super) async fn steam(
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct AccountIdsQuery {
     /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
-    #[param(inline, min_items = 1, max_items = 10_000)]
+    #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u64>,
 }
@@ -146,7 +146,7 @@ pub(super) async fn steam_batch(
             "No valid account ids provided.",
         ));
     }
-    if account_ids.len() > 10_000 {
+    if account_ids.len() > 1_000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "Too many account ids provided.",
