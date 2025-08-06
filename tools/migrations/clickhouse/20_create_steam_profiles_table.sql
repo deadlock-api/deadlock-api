@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS steam_profiles
  personaname  String,
  profileurl   String,
  avatar       String,
+ avatarmedium String,
+ avatarfull   String,
  personastate Enum8(
   'Offline' = 0,
   'Online' = 1,
