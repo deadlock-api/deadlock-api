@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 use crate::utils::demo_parser::hashes::*;
 use crate::utils::demo_parser::types::Delta;
 use crate::utils::demo_parser::utils;
+use crate::utils::parse::steamid64_to_steamid3;
 
 #[derive(
     FromRepr,
@@ -84,7 +85,7 @@ impl EntityUpdateEvent for GameRulesProxyEvent {
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
 pub(super) struct PlayerControllerEvent {
     pawn: Option<i32>,
-    steam_id: Option<u64>,
+    steam_id: Option<u32>,
     steam_name: Option<String>,
     team: Option<u8>,
     hero_id: Option<u32>,
@@ -113,7 +114,9 @@ impl EntityUpdateEvent for PlayerControllerEvent {
     fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
         Self {
             pawn: entity.get_value(&PAWN_HASH).map(ehandle_to_index),
-            steam_id: entity.get_value(&STEAM_ID_HASH),
+            steam_id: entity
+                .get_value(&STEAM_ID_HASH)
+                .and_then(|s| steamid64_to_steamid3(s).ok()),
             steam_name: entity.get_value(&STEAM_NAME_HASH),
             team: entity.get_value(&TEAM_HASH),
             hero_build_id: entity.get_value(&HERO_BUILD_ID_HASH),
