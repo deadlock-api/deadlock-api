@@ -3,6 +3,7 @@ pub mod enemy_stats;
 pub mod hero_stats;
 pub(crate) mod match_history;
 pub mod mate_stats;
+mod mmr;
 pub mod mmr_history;
 pub mod party_stats;
 mod steam;
@@ -24,6 +25,8 @@ struct ApiDoc;
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))
+        .routes(routes!(mmr::mmr))
+        .routes(routes!(mmr::hero_mmr))
         .routes(routes!(mmr_history::mmr_history))
         .routes(routes!(mmr_history::hero_mmr_history))
         // Card endpoints are commented out, as these endpoints have no useful data yet (ranks are friends-only)

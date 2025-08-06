@@ -1,94 +1,93 @@
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use clickhouse::Row;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::debug;
-use utoipa::{IntoParams, ToSchema};
+use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::utils::parse::parse_steam_id;
-use crate::utils::types::AccountIdQuery;
+use crate::routes::v1::players::mmr_history::MMRHistory;
+use crate::utils::parse::comma_separated_deserialize;
 
-#[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub(super) struct HeroMMRHistoryQuery {
-    /// The players `SteamID3`
-    #[serde(default)]
-    #[serde(deserialize_with = "parse_steam_id")]
-    account_id: u32,
+#[derive(Deserialize, IntoParams, Clone)]
+pub(crate) struct AccountIdsQuery {
+    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    #[param(inline, min_items = 1, max_items = 10_000)]
+    #[serde(deserialize_with = "comma_separated_deserialize")]
+    pub(crate) account_ids: Vec<u32>,
+}
+
+#[derive(Deserialize, IntoParams, Default, Clone, Eq, PartialEq, Hash)]
+pub(super) struct HeroMMRQuery {
     /// The hero ID to fetch the MMR history for. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: u8,
 }
 
-#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct MMRHistory {
-    account_id: u32,
-    match_id: u64,
-    /// Start time of the match
-    pub start_time: u32,
-    /// Player Score is the index for the rank array (internally used for the rank regression)
-    player_score: f64,
-    /// The Player Rank. See more: <https://assets.deadlock-api.com/v2/ranks>
-    rank: u32,
-    /// Extracted from the rank the division (rank // 10)
-    division: u32,
-    /// Extracted from the rank the division tier (rank % 10)
-    division_tier: u32,
-}
-
-fn build_mmr_history_query(account_id: u32) -> String {
+fn build_mmr_query(account_ids: &[u32]) -> String {
+    let account_ids = account_ids
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
     format!(
         "
     SELECT account_id, match_id, start_time, player_score, rank, division, division_tier
-    FROM mmr_history FINAL
-    WHERE account_id = {account_id}
-    ORDER BY match_id
+    FROM mmr_history
+    WHERE account_id IN ({account_ids})
+    ORDER BY match_id DESC
+    LIMIT 1 BY account_id
     "
     )
 }
 
-fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
+fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8) -> String {
+    let account_ids = account_ids
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
     format!(
         "
     SELECT account_id, match_id, start_time, player_score, rank, division, division_tier
-    FROM hero_mmr_history FINAL
-    WHERE account_id = {account_id} AND hero_id = {hero_id}
-    ORDER BY match_id
+    FROM hero_mmr_history
+    WHERE hero_id = {hero_id} AND account_id IN ({account_ids})
+    ORDER BY match_id DESC
+    LIMIT 1 BY account_id
     "
     )
 }
 
-async fn get_mmr_history(
+async fn get_mmr(
     ch_client: &clickhouse::Client,
-    account_id: u32,
+    account_ids: &[u32],
 ) -> APIResult<Vec<MMRHistory>> {
-    let query = build_mmr_history_query(account_id);
+    let query = build_mmr_query(account_ids);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
 
-async fn get_hero_mmr_history(
+async fn get_hero_mmr(
     ch_client: &clickhouse::Client,
-    account_id: u32,
+    account_ids: &[u32],
     hero_id: u8,
 ) -> APIResult<Vec<MMRHistory>> {
-    let query = build_hero_mmr_history_query(account_id, hero_id);
+    let query = build_hero_mmr_query(account_ids, hero_id);
     debug!(?query);
     Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(
     get,
-    path = "/{account_id}/mmr-history",
-    params(AccountIdQuery),
+    path = "/mmr",
+    params(AccountIdsQuery),
     responses(
-        (status = OK, description = "MMR History", body = [MMRHistory]),
+        (status = OK, description = "MMR", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr history")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr")
     ),
     tags = ["Players"],
-    summary = "MMR History",
+    summary = "MMR",
     description = "
 # STOP! READ THIS FIRST!
 
@@ -123,26 +122,24 @@ So to get the rank we get the closest index from the player score.
 | Global | - |
     ",
 )]
-pub(super) async fn mmr_history(
-    Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
+pub(super) async fn mmr(
+    Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_mmr_history(&state.ch_client_ro, account_id)
-        .await
-        .map(Json)
+    get_mmr(&state.ch_client_ro, &account_ids).await.map(Json)
 }
 
 #[utoipa::path(
     get,
-    path = "/{account_id}/mmr-history/{hero_id}",
-    params(AccountIdQuery, HeroMMRHistoryQuery),
+    path = "/mmr/{hero_id}",
+    params(AccountIdsQuery, HeroMMRQuery),
     responses(
-        (status = OK, description = "Hero MMR History", body = [MMRHistory]),
+        (status = OK, description = "Hero MMR", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr history")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr")
     ),
     tags = ["Players"],
-    summary = "Hero MMR History",
+    summary = "Hero MMR",
     description = "
 # STOP! READ THIS FIRST!
 
@@ -177,14 +174,12 @@ So to get the rank we get the closest index from the player score.
 | Global | - |
     ",
 )]
-pub(super) async fn hero_mmr_history(
-    Path(HeroMMRHistoryQuery {
-        account_id,
-        hero_id,
-    }): Path<HeroMMRHistoryQuery>,
+pub(super) async fn hero_mmr(
+    Path(HeroMMRQuery { hero_id }): Path<HeroMMRQuery>,
+    Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_hero_mmr_history(&state.ch_client_ro, account_id, hero_id)
+    get_hero_mmr(&state.ch_client_ro, &account_ids, hero_id)
         .await
         .map(Json)
 }
