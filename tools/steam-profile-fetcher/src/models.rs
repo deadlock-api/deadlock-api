@@ -19,6 +19,8 @@ pub(crate) struct SteamPlayerSummary {
     pub personaname: String,
     pub profileurl: String,
     pub avatar: String,
+    pub avatarmedium: String,
+    pub avatarfull: String,
     pub personastate: PersonaState,
     pub realname: Option<String>,
     #[serde(alias = "loccountrycode")]
