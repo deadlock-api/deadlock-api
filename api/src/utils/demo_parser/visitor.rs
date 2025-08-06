@@ -4,9 +4,11 @@ use axum::response::sse::Event;
 use haste::demostream::CmdHeader;
 use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{Context, Visitor};
+use prost::Message;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, info};
 use valveprotos::common::EDemoCommands;
+use valveprotos::deadlock::{CCitadelUserMsgChatMsg, CitadelUserMessageIds};
 
 use crate::utils::demo_parser::entity_events::{
     EntityType, EntityUpdateEvent, EntityUpdateEvents, GameRulesProxyEvent,
@@ -16,6 +18,7 @@ use crate::utils::demo_parser::types::{DemoEvent, DemoEventPayload};
 
 pub(crate) struct SendingVisitor {
     sender: UnboundedSender<Event>,
+    subscribed_chat_messages: bool,
     subscribed_entities: Option<HashSet<EntityType>>,
     game_time: f32,
     tick_interval: f32,
@@ -25,10 +28,12 @@ pub(crate) struct SendingVisitor {
 impl SendingVisitor {
     pub(crate) fn new(
         sender: UnboundedSender<Event>,
+        subscribed_chat_messages: bool,
         subscribed_entities: Option<impl IntoIterator<Item = EntityType>>,
     ) -> Self {
         Self {
             sender,
+            subscribed_chat_messages,
             subscribed_entities: subscribed_entities.map(|iter| iter.into_iter().collect()),
             game_time: 0.0,
             tick_interval: 1.0 / 60.0,
@@ -102,10 +107,26 @@ impl Visitor for SendingVisitor {
 
     async fn on_packet(
         &mut self,
-        _ctx: &Context,
-        _packet_type: u32,
-        _data: &[u8],
+        ctx: &Context,
+        packet_type: u32,
+        data: &[u8],
     ) -> Result<(), Self::Error> {
+        if self.subscribed_chat_messages
+            && packet_type == CitadelUserMessageIds::KEUserMsgChatMsg as u32
+            && let Ok(msg) = CCitadelUserMsgChatMsg::decode(data) {
+                let demo_event = DemoEvent {
+                    tick: ctx.tick(),
+                    game_time: self.game_time,
+                    event: DemoEventPayload::ChatMessage {
+                        player_slot: msg.player_slot,
+                        text: msg.text,
+                        all_chat: msg.all_chat,
+                        lane_color: msg.lane_color,
+                    },
+                };
+                let sse_event = demo_event.try_into()?;
+                self.sender.send(sse_event)?;
+            }
         Ok(())
     }
 

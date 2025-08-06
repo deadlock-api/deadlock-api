@@ -37,6 +37,12 @@ pub(super) enum DemoEventPayload {
         #[serde(flatten)]
         entity_update: EntityUpdateEvents,
     },
+    ChatMessage {
+        player_slot: Option<i32>,
+        text: Option<String>,
+        all_chat: Option<bool>,
+        lane_color: Option<i32>,
+    },
     TickEnd,
 }
 
@@ -46,6 +52,7 @@ impl Display for DemoEventPayload {
             Self::EntityUpdate {
                 delta, entity_type, ..
             } => write!(f, "{entity_type}_entity_{delta}"),
+            Self::ChatMessage { .. } => write!(f, "chat_message"),
             Self::TickEnd => write!(f, "tick_end"),
         }
     }

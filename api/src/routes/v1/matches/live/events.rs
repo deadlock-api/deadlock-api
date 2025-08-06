@@ -30,6 +30,10 @@ use crate::utils::types::MatchIdQuery;
 
 #[derive(Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct DemoEventsQuery {
+    /// Subscribe to chat messages.
+    #[param(default, inline)]
+    #[serde(default)]
+    subscribed_chat_messages: Option<bool>,
     /// Comma separated list of entities to subscribe to.
     #[param(default, inline)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -71,7 +75,11 @@ async fn demo_event_stream(
     )
     .await?;
     let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
-    let visitor = SendingVisitor::new(sender.clone(), query.subscribed_entities);
+    let visitor = SendingVisitor::new(
+        sender.clone(),
+        query.subscribed_chat_messages.unwrap_or_default(),
+        query.subscribed_entities,
+    );
     let mut parser = Parser::from_stream_with_visitor(demo_stream, visitor)?;
     tokio::spawn(async move {
         loop {
