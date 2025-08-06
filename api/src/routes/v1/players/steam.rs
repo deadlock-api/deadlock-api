@@ -16,15 +16,17 @@ use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct SteamProfile {
-    account_id: u32,
-    personaname: String,
-    profileurl: String,
-    avatar: String,
-    realname: Option<String>,
-    countrycode: Option<String>,
+pub(super) struct SteamProfile {
+    pub(super) account_id: u32,
+    pub(super) personaname: String,
+    pub(super) profileurl: String,
+    pub(super) avatar: String,
+    pub(super) avatarmedium: String,
+    pub(super) avatarfull: String,
+    pub(super) realname: Option<String>,
+    pub(super) countrycode: Option<String>,
     #[serde(with = "clickhouse::serde::chrono::datetime")]
-    last_updated: chrono::DateTime<Utc>,
+    pub(super) last_updated: chrono::DateTime<Utc>,
 }
 
 fn build_query(account_id: u32) -> String {

@@ -2,31 +2,18 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use chrono::Utc;
-use clickhouse::Row;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::{debug, warn};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::steam::SteamProfile;
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(super) struct SteamSearchQuery {
     /// Search query for Steam profiles.
     search_query: String,
-}
-
-#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct SteamProfile {
-    account_id: u32,
-    personaname: String,
-    profileurl: String,
-    avatar: String,
-    realname: Option<String>,
-    countrycode: Option<String>,
-    #[serde(with = "clickhouse::serde::chrono::datetime")]
-    last_updated: chrono::DateTime<Utc>,
 }
 
 async fn search_steam(
