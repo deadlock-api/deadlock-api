@@ -1,7 +1,7 @@
 use deadlock_api_rust::routes::v1::players::enemy_stats::EnemyStats;
 use deadlock_api_rust::routes::v1::players::hero_stats::HeroStats;
 use deadlock_api_rust::routes::v1::players::mate_stats::MateStats;
-use deadlock_api_rust::routes::v1::players::mmr_history::MMRHistory;
+use deadlock_api_rust::routes::v1::players::mmr::mmr_history::MMRHistory;
 use deadlock_api_rust::routes::v1::players::party_stats::PartyStats;
 use itertools::Itertools;
 use rstest::rstest;
