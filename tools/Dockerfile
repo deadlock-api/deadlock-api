@@ -1,4 +1,4 @@
-FROM rust:1.88.0-slim-bookworm AS chef
+FROM rust:1.89.0-slim-trixie AS chef
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
@@ -29,7 +29,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --all-features
 
 # We do not need the Rust toolchain to run the binary!
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 \
     && rm -rf /var/lib/apt/lists/*
