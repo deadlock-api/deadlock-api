@@ -1,6 +1,6 @@
 ARG EXE_NAME=deadlock-api-rust
 
-FROM rust:1.88.0-slim-bookworm AS chef
+FROM rust:1.89.0-slim-trixie AS chef
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl mold
 RUN cargo install --locked cargo-chef
@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --bin ${EXE_NAME}
 
 # We do not need the Rust toolchain to run the binary!
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 ARG EXE_NAME
 ENV exe_name=$EXE_NAME
 RUN apt-get update \
