@@ -179,7 +179,7 @@ pub(super) struct TeamEvent {
     team: Option<u8>,
     score: Option<i32>,
     teamname: Option<String>,
-    flex_unlocked: Option<bool>,
+    flex_unlocked: Option<u8>,
 }
 
 impl EntityUpdateEvent for TeamEvent {
@@ -276,6 +276,7 @@ pub(super) enum EntityUpdateEvents {
     GameRulesProxy(Box<GameRulesProxyEvent>),
     PlayerController(Box<PlayerControllerEvent>),
     PlayerPawn(Box<PlayerPawnEvent>),
+    Team(Box<TeamEvent>),
     MidBoss(Box<NPCEvent>),
     TrooperNeutral(Box<NPCEvent>),
     Trooper(Box<NPCEvent>),
