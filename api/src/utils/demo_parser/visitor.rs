@@ -6,7 +6,7 @@ use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{Context, Visitor};
 use prost::Message;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{debug, info};
+use tracing::debug;
 use valveprotos::common::EDemoCommands;
 use valveprotos::deadlock::{CCitadelUserMsgChatMsg, CitadelUserMessageIds};
 
@@ -59,7 +59,7 @@ impl Visitor for SendingVisitor {
             && let Some(rules) =
                 GameRulesProxyEvent::from_entity_update(ctx, delta_header.into(), entity)
         {
-            info!("Updating game rules");
+            debug!("Updating game rules");
             self.rules = rules;
         }
 
