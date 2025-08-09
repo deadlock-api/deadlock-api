@@ -34,6 +34,7 @@ pub(crate) enum EntityType {
     GameRulesProxy = fxhash::hash_bytes(b"CCitadelGameRulesProxy"),
     PlayerController = fxhash::hash_bytes(b"CCitadelPlayerController"),
     PlayerPawn = fxhash::hash_bytes(b"CCitadelPlayerPawn"),
+    Team = fxhash::hash_bytes(b"CCitadelTeam"),
     MidBoss = fxhash::hash_bytes(b"CNPC_MidBoss"),
     TrooperNeutral = fxhash::hash_bytes(b"CNPC_TrooperNeutral"),
     Trooper = fxhash::hash_bytes(b"CNPC_Trooper"),
@@ -174,6 +175,26 @@ impl EntityUpdateEvent for PlayerPawnEvent {
 }
 
 #[derive(Serialize, Debug, Clone, Default, ToSchema)]
+pub(super) struct TeamEvent {
+    team: Option<u8>,
+    score: Option<i32>,
+    teamname: Option<String>,
+    flex_unlocked: Option<bool>,
+}
+
+impl EntityUpdateEvent for TeamEvent {
+    fn from_entity_update(_ctx: &Context, _delta_header: Delta, entity: &Entity) -> Option<Self> {
+        Self {
+            team: entity.get_value(&TEAM_HASH),
+            score: entity.get_value(&SCORE_HASH),
+            teamname: entity.get_value(&TEAMNAME_HASH),
+            flex_unlocked: entity.get_value(&FLEX_UNLOCKED_HASH),
+        }
+        .into()
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Default, ToSchema)]
 pub(super) struct NPCEvent {
     health: Option<i32>,
     max_health: Option<i32>,
@@ -292,6 +313,9 @@ impl EntityUpdateEvents {
             EntityType::PlayerPawn => PlayerPawnEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::PlayerPawn),
+            EntityType::Team => TeamEvent::from_entity_update(ctx, delta, entity)
+                .map(Box::new)
+                .map(Self::Team),
             EntityType::MidBoss => NPCEvent::from_entity_update(ctx, delta, entity)
                 .map(Box::new)
                 .map(Self::MidBoss),
