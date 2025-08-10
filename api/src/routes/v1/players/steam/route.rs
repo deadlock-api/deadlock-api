@@ -15,6 +15,20 @@ use crate::error::{APIError, APIResult};
 use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
+#[derive(Deserialize, IntoParams, Clone)]
+pub(crate) struct AccountIdsQuery {
+    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
+    #[param(inline, min_items = 1, max_items = 1_000)]
+    #[serde(deserialize_with = "comma_separated_deserialize")]
+    pub(crate) account_ids: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+pub(super) struct SteamSearchQuery {
+    /// Search query for Steam profiles.
+    search_query: String,
+}
+
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub(super) struct SteamProfile {
     pub(super) account_id: u32,
@@ -99,14 +113,6 @@ pub(super) async fn steam(
     get_steam(&ch_client_ro, account_id).await.map(Json)
 }
 
-#[derive(Deserialize, IntoParams, Clone)]
-pub(crate) struct AccountIdsQuery {
-    /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
-    #[param(inline, min_items = 1, max_items = 1_000)]
-    #[serde(deserialize_with = "comma_separated_deserialize")]
-    pub(crate) account_ids: Vec<u64>,
-}
-
 #[utoipa::path(
     get,
     path = "/steam",
@@ -156,5 +162,75 @@ pub(super) async fn steam_batch(
         .await
         .into_iter()
         .collect::<Result<Vec<_>, _>>()
+        .map(Json)
+}
+
+async fn search_steam(
+    ch_client: &clickhouse::Client,
+    search_query: String,
+) -> APIResult<Vec<SteamProfile>> {
+    let query = "
+        WITH ? as query
+        SELECT ?fields
+        FROM steam_profiles
+        WHERE personaname IS NOT NULL
+          AND not empty(personaname)
+        ORDER BY greatest(
+          2 * startsWith(lower(personaname), lower(query))
+          +if(positionCaseInsensitiveUTF8(personaname, query) > 0, 1, 0)
+          +jaroWinklerSimilarity(lower(personaname), lower(query))
+          +jaroWinklerSimilarity(toString(account_id), lower(query))
+          +jaroWinklerSimilarity(toString(toUInt64(account_id) + 76561197960265728), lower(query))
+        ) DESC
+        LIMIT 1 BY account_id
+        LIMIT 100
+    ";
+    debug!(?query);
+    match ch_client.query(query).bind(&search_query).fetch_all().await {
+        Ok(profiles) if !profiles.is_empty() => Ok(profiles),
+        Ok(_) => Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "No Steam profiles found.",
+        )),
+        Err(e) => {
+            warn!("Failed to fetch steam profiles for search query {search_query}: {e}");
+            Err(APIError::InternalError {
+                message: "Failed to fetch steam profiles".to_string(),
+            })
+        }
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/steam-search",
+    params(SteamSearchQuery),
+    responses(
+        (status = OK, description = "Steam Profile Search", body = [SteamProfile]),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = NOT_FOUND, description = "No Steam profiles found."),
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profiles.")
+    ),
+    tags = ["Players"],
+    summary = "Steam Profile Search",
+    description = "
+This endpoint lets you search for Steam profiles by account_id or personaname.
+
+See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "
+)]
+pub(super) async fn steam_search(
+    Query(SteamSearchQuery { search_query }): Query<SteamSearchQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    search_steam(&state.ch_client_ro, search_query)
+        .await
         .map(Json)
 }

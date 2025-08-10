@@ -5,8 +5,7 @@ pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
 pub mod party_stats;
-mod steam;
-mod steam_search;
+pub mod steam;
 
 use core::time::Duration;
 
@@ -33,9 +32,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(enemy_stats::enemy_stats))
                 .routes(routes!(party_stats::party_stats))
                 .routes(routes!(hero_stats::hero_stats))
-                .routes(routes!(steam::steam))
-                .routes(routes!(steam::steam_batch))
-                .routes(routes!(steam_search::steam_search))
                 .layer(
                     CacheControlMiddleware::new(Duration::from_secs(60 * 60))
                         .with_stale_while_revalidate(Duration::from_secs(60 * 60))
@@ -43,4 +39,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 ),
         )
         .merge(mmr::router())
+        .merge(steam::router())
 }
