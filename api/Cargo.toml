@@ -40,7 +40,7 @@ async-compression = { version = "0.4.27", features = ["bzip2", "tokio"] }
 strum = { version = "0.27.2", features = ["derive"] }
 axum-extra = { version = "0.10.1", features = ["query"] }
 metrics = "0.24.2"
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "e25c9c4c85e04e33f53329548ba4529af7c758ee" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "64d3fa514dd1b3453e62e8e09b06c4d153db8eb5" }
 async-stream = "0.3.6"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.12"
