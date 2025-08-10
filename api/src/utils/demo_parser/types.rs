@@ -38,7 +38,8 @@ pub(super) enum DemoEventPayload {
         entity_update: EntityUpdateEvents,
     },
     ChatMessage {
-        player_slot: Option<i32>,
+        steam_name: Option<String>,
+        steam_id: Option<u32>,
         text: Option<String>,
         all_chat: Option<bool>,
         lane_color: Option<i32>,

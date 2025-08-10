@@ -4,10 +4,11 @@ use axum::response::sse::Event;
 use haste::demostream::CmdHeader;
 use haste::entities::{DeltaHeader, Entity};
 use haste::parser::{Context, Visitor};
+use haste::stringtables::StringTableItem;
 use prost::Message;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::debug;
-use valveprotos::common::EDemoCommands;
+use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
 use valveprotos::deadlock::{CCitadelUserMsgChatMsg, CitadelUserMessageIds};
 
 use crate::utils::demo_parser::entity_events::{
@@ -15,6 +16,7 @@ use crate::utils::demo_parser::entity_events::{
 };
 use crate::utils::demo_parser::error::DemoParseError;
 use crate::utils::demo_parser::types::{DemoEvent, DemoEventPayload};
+use crate::utils::parse::steamid64_to_steamid3;
 
 pub(crate) struct SendingVisitor {
     sender: UnboundedSender<Event>,
@@ -114,12 +116,21 @@ impl Visitor for SendingVisitor {
         if self.subscribed_chat_messages
             && packet_type == CitadelUserMessageIds::KEUserMsgChatMsg as u32
             && let Ok(msg) = CCitadelUserMsgChatMsg::decode(data)
+            && let Some(tables) = ctx.string_tables()
+            && let Some(table) = tables.find_table("userinfo")
+            && let Some(player_slot) = msg.player_slot
         {
+            let user_info = table.get_item(&player_slot);
+            let user_data = user_info.and_then(StringTableItem::get_user_data);
+            let user_info = user_data.and_then(|d| CMsgPlayerInfo::decode(d.as_ref()).ok());
             let demo_event = DemoEvent {
                 tick: ctx.tick(),
                 game_time: self.game_time,
                 event: DemoEventPayload::ChatMessage {
-                    player_slot: msg.player_slot,
+                    steam_name: user_info.as_ref().and_then(|u| u.name.clone()),
+                    steam_id: user_info
+                        .and_then(|u| u.steamid)
+                        .and_then(|s| steamid64_to_steamid3(s).ok()),
                     text: msg.text,
                     all_chat: msg.all_chat,
                     lane_color: msg.lane_color,
