@@ -176,7 +176,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         "
 WITH hero_combinations AS (
     SELECT
-        groupArraySorted(6)(hero_id) AS hero_ids,
+        arraySort(groupUniqArray(6)(hero_id)) AS hero_ids,
         groupArray(account_id) AS account_ids,
         any(won) AS won
     FROM match_player
