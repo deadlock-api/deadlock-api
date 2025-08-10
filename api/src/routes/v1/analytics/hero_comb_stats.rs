@@ -207,7 +207,7 @@ async fn get_comb_stats(
     query: HeroCombStatsQuery,
 ) -> APIResult<Vec<HeroCombStats>> {
     let ch_query = build_query(&query);
-    debug!(?query);
+    debug!(?ch_query);
     let comb_stats: Vec<HeroCombStats> = ch_client.query(&ch_query).fetch_all().await?;
     let comb_size = match query.comb_size {
         Some(6) | None => return Ok(comb_stats),
