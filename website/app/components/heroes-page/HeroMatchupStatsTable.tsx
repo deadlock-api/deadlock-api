@@ -13,6 +13,7 @@ export default function HeroMatchupStatsTable({
   hideHeader,
   minRankId,
   maxRankId,
+  minMatches,
   minDate,
   maxDate,
   sameLaneFilter,
@@ -21,6 +22,7 @@ export default function HeroMatchupStatsTable({
   hideHeader?: boolean;
   minRankId?: number;
   maxRankId?: number;
+  minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
   sameLaneFilter?: boolean;
@@ -30,9 +32,10 @@ export default function HeroMatchupStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHero } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minMatches],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-stats", API_ORIGIN);
+      url.searchParams.set("min_hero_matches", (minMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
@@ -52,11 +55,13 @@ export default function HeroMatchupStatsTable({
       maxDateTimestamp,
       sameLaneFilter,
       samePartyFilter,
+      minMatches,
     ],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-synergy-stats", API_ORIGIN);
       url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
       url.searchParams.set("same_party_filter", samePartyFilter?.toString() || "false");
+      url.searchParams.set("min_matches", (minMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
@@ -76,11 +81,13 @@ export default function HeroMatchupStatsTable({
       maxDateTimestamp,
       sameLaneFilter,
       samePartyFilter,
+      minMatches,
     ],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-counter-stats", API_ORIGIN);
       url.searchParams.set("same_lane_filter", sameLaneFilter?.toString() || "false");
       url.searchParams.set("same_party_filter", samePartyFilter?.toString() || "false");
+      url.searchParams.set("min_matches", (minMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());

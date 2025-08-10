@@ -16,6 +16,7 @@ export default function HeroCombStatsTable({
   hideIndex,
   minRankId,
   maxRankId,
+  minMatches: minHeroMatches,
   minDate,
   maxDate,
 }: {
@@ -25,6 +26,7 @@ export default function HeroCombStatsTable({
   hideIndex?: boolean;
   minRankId?: number;
   maxRankId?: number;
+  minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
@@ -37,10 +39,19 @@ export default function HeroCombStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery<APIHeroCombStats[]>({
-    queryKey: ["api-hero-comb-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, combSizeFilter],
+    queryKey: [
+      "api-hero-comb-stats",
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      combSizeFilter,
+      minHeroMatches,
+    ],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-comb-stats", API_ORIGIN);
       url.searchParams.set("comb_size", combSizeFilter.toString());
+      url.searchParams.set("min_matches", (minHeroMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());

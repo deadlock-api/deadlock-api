@@ -14,6 +14,7 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { serializers, useQSArray, useQSBoolean, useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
@@ -26,6 +27,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
+  const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
@@ -48,6 +50,32 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start text-center">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+              <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
+                <Label htmlFor="minMatches" className="h-8">
+                  Min Matches
+                </Label>
+                <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
+                  <button
+                    type="button"
+                    aria-label="Decrease min matches"
+                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
+                    onClick={() => setMinMatches(Math.max(1, minMatches - 10))}
+                  >
+                    -
+                  </button>
+                  <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>
+                    {minMatches}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Increase min matches"
+                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
+                    onClick={() => setMinMatches(minMatches + 10)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
@@ -81,6 +109,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               maxRankId={maxRankId}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
+              minMatches={minMatches}
               fullWidth
             />
           </div>
@@ -119,6 +148,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               heroTimeInterval={heroTimeInterval}
               minRankId={minRankId}
               maxRankId={maxRankId}
+              minMatches={minMatches}
               minDate={startDate}
               maxDate={endDate}
             />
@@ -155,6 +185,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 maxRankId={maxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
+                minMatches={minMatches}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
               />
@@ -170,6 +201,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               maxRankId={maxRankId}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
+              minMatches={minMatches}
             />
           </div>
         </TabsContent>
@@ -231,6 +263,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 }}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
+                minMatches={minMatches}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -250,6 +283,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 }}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
+                minMatches={minMatches}
               />
             </div>
           </div>
