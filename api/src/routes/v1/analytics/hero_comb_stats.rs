@@ -164,6 +164,12 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         format!(" AND {}", grouped_filters.join(" AND "))
     };
     let mut having_filters = vec![];
+    if let Some(min_matches) = query.min_matches {
+        having_filters.push(format!(
+            "({} < 6 OR matches >= {min_matches})",
+            query.comb_size.unwrap_or(6)
+        ));
+    }
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
