@@ -50,7 +50,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                     type="button"
                     aria-label="Decrease min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches(Math.max(1, minMatches - 10))}
+                    onClick={() => setMinMatches(Math.max(0, minMatches - 10))}
                   >
                     -
                   </button>
