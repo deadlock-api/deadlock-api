@@ -66,6 +66,7 @@ export default function HeroStatsOverTimeChart({
   heroTimeInterval,
   minRankId,
   maxRankId,
+  minMatches,
   minDate,
   maxDate,
 }: {
@@ -74,6 +75,7 @@ export default function HeroStatsOverTimeChart({
   heroTimeInterval: string;
   minRankId?: number;
   maxRankId?: number;
+  minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
@@ -81,10 +83,19 @@ export default function HeroStatsOverTimeChart({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats-over-time", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, heroTimeInterval],
+    queryKey: [
+      "api-hero-stats-over-time",
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      heroTimeInterval,
+      minMatches,
+    ],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
       if (heroTimeInterval) url.searchParams.set("bucket", heroTimeInterval);
+      url.searchParams.set("min_hero_matches", (minMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());

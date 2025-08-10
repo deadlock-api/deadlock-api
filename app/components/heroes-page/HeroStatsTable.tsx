@@ -16,6 +16,7 @@ export default function HeroStatsTable({
   sortBy,
   minRankId,
   maxRankId,
+  minMatches: minHeroMatches,
   minDate,
   maxDate,
   fullWidth,
@@ -27,6 +28,7 @@ export default function HeroStatsTable({
   sortBy?: keyof APIHeroStats | "winrate";
   minRankId?: number;
   maxRankId?: number;
+  minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
   fullWidth?: boolean;
@@ -35,9 +37,10 @@ export default function HeroStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery<APIHeroStats[]>({
-    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp],
+    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minHeroMatches],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-stats", API_ORIGIN);
+      url.searchParams.set("min_hero_matches", (minHeroMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
