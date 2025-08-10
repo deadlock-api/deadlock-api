@@ -66,8 +66,11 @@ export default function HeroCombStatsTable({
   const minMatches = useMemo(() => Math.min(...(heroData || []).map((item) => item.matches)), [heroData]);
   const maxMatches = useMemo(() => Math.max(...(heroData || []).map((item) => item.matches)), [heroData]);
   const sortedData = useMemo(
-    () => [...(heroData || [])].sort((a, b) => b?.wins / b?.matches - a?.wins / a?.matches),
-    [heroData],
+    () =>
+      [...(heroData || [])]
+        .filter((row) => new Set(row.hero_ids).size === combSizeFilter)
+        .sort((a, b) => b?.wins / b?.matches - a?.wins / a?.matches),
+    [heroData, combSizeFilter],
   );
   const minWinrate = useMemo(
     () => sortedData[sortedData.length - 1]?.wins / sortedData[sortedData.length - 1]?.matches || 0,
