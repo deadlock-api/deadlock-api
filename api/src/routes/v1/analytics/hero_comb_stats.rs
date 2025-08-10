@@ -164,9 +164,6 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         format!(" AND {}", grouped_filters.join(" AND "))
     };
     let mut having_filters = vec![];
-    if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("matches >= {min_matches}"));
-    }
     if let Some(max_matches) = query.max_matches {
         having_filters.push(format!("matches <= {max_matches}"));
     }
@@ -432,27 +429,5 @@ mod test {
             "not hasAny(hero_ids, [{}])",
             exclude_hero_ids.iter().map(ToString::to_string).join(", ")
         )));
-    }
-
-    #[test]
-    fn test_build_query_min_matches() {
-        let min_matches = Some(1);
-        let comb_query = HeroCombStatsQuery {
-            min_matches,
-            ..Default::default()
-        };
-        let query = build_query(&comb_query);
-        assert!(query.contains("matches >= 1"));
-    }
-
-    #[test]
-    fn test_build_query_max_matches() {
-        let max_matches = Some(1000);
-        let comb_query = HeroCombStatsQuery {
-            max_matches,
-            ..Default::default()
-        };
-        let query = build_query(&comb_query);
-        assert!(query.contains("matches <= 1000"));
     }
 }
