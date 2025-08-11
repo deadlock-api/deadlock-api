@@ -172,17 +172,11 @@ async fn search_steam(
     let query = "
         WITH ? as query
         SELECT ?fields
-        FROM steam_profiles
-        WHERE personaname IS NOT NULL
-          AND not empty(personaname)
-        ORDER BY greatest(
-          2 * startsWith(lower(personaname), lower(query))
-          +if(positionCaseInsensitiveUTF8(personaname, query) > 0, 1, 0)
-          +jaroWinklerSimilarity(lower(personaname), lower(query))
-          +jaroWinklerSimilarity(toString(account_id), lower(query))
-          +jaroWinklerSimilarity(toString(toUInt64(account_id) + 76561197960265728), lower(query))
-        ) DESC
-        LIMIT 1 BY account_id
+        FROM steam_profiles FINAL
+        WHERE personaname IS NOT NULL AND not empty(personaname)
+        ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
+                 if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
+                 jaroWinklerSimilarity(lower(personaname), lower(query)) DESC
         LIMIT 100
     ";
     debug!(?query);
