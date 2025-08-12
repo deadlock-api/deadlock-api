@@ -118,6 +118,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
     };
     format!(
         "
+    WITH t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id})
     SELECT
         hero_id,
         COUNT() AS matches_played,
@@ -149,7 +150,7 @@ fn build_query(account_id: u32, query: &HeroStatsQuery) -> String {
         groupUniqArray(mi.match_id) as matches
     FROM match_player mp FINAL
         INNER JOIN match_info mi USING (match_id)
-    WHERE account_id = {account_id} {filters}
+    WHERE match_id IN t_histories AND account_id = {account_id} {filters}
     GROUP BY hero_id
     ORDER BY hero_id
     "

@@ -100,7 +100,8 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     format!(
         "
     WITH
-        t_matches AS (SELECT match_id FROM match_info WHERE TRUE {info_filters}),
+        t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
+        t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
         players AS (
             SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
             FROM match_player
