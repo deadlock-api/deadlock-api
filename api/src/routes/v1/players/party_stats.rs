@@ -81,7 +81,7 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
     format!(
         "
     WITH
-        t_matches AS (SELECT match_id FROM match_info WHERE {info_filters}),
+        t_matches AS (SELECT match_id FROM match_info WHERE TRUE {info_filters}),
         players AS (SELECT DISTINCT match_id, team, party FROM match_player WHERE match_id IN t_matches AND party != 0 AND account_id = {account_id}),
         parties AS (
             SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids

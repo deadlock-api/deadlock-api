@@ -107,7 +107,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
         format!(
             "
             WITH
-                t_matches AS (SELECT match_id FROM match_info WHERE {info_filters}),
+                t_matches AS (SELECT match_id FROM match_info WHERE TRUE {info_filters}),
                 players AS (
                     SELECT DISTINCT match_id, team, party
                     FROM match_player
@@ -135,7 +135,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
         format!(
             "
             WITH
-                t_matches AS (SELECT match_id FROM match_info WHERE {info_filters}),
+                t_matches AS (SELECT match_id FROM match_info WHERE TRUE {info_filters}),
                 players AS (
                     SELECT DISTINCT match_id, team
                     FROM match_player
