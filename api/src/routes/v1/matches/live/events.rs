@@ -167,7 +167,7 @@ pub(super) async fn events(
             &[
                 Quota::ip_limit(10, Duration::from_secs(10 * 60)),
                 Quota::key_limit(120, Duration::from_secs(60 * 60)),
-                Quota::global_limit(200, Duration::from_secs(60 * 60)),
+                Quota::global_limit(1000, Duration::from_secs(60 * 60)),
             ],
         )
         .await?;
