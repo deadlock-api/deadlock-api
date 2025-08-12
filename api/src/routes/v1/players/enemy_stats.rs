@@ -44,9 +44,9 @@ pub(super) struct EnemyStatsQuery {
 pub struct EnemyStats {
     pub enemy_id: u32,
     /// The amount of matches won against the enemy.
-    wins: u64,
-    matches_played: u64,
-    matches: Vec<u64>,
+    pub wins: u64,
+    pub matches_played: u64,
+    pub matches: Vec<u64>,
 }
 
 fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
@@ -100,8 +100,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     format!(
         "
     WITH
-        t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
-        t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
+        t_matches AS (SELECT match_id FROM match_info WHERE {info_filters}),
         players AS (
             SELECT DISTINCT match_id, if(team = 'Team1', 'Team0', 'Team1') as enemy_team
             FROM match_player
