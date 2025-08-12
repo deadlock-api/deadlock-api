@@ -415,7 +415,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                   data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
                   type="monotone"
                   stroke={randomColorHex(itemId)}
-                  dot={false}
+                  dot={{ r: 4, className: "fill-primary" }}
                   activeDot={{ r: 6 }}
                   strokeWidth={2}
                   name={itemNameMap?.[itemId]}

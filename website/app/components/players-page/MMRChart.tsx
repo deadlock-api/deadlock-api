@@ -121,7 +121,7 @@ export default function MMRChart({
           type="monotone"
           dataKey="mmr"
           stroke="#fa4454"
-          dot={{ r: 3, className: "fill-primary" }}
+          dot={{ r: 4, className: "fill-primary" }}
           activeDot={{ r: 6 }}
           strokeWidth={1}
         />
