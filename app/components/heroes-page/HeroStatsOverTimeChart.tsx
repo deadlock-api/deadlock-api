@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Select,
   SelectContent,
@@ -217,7 +217,7 @@ export default function HeroStatsOverTimeChart({
             type="monotone"
             dataKey={heroId}
             stroke={heroIdMap[heroId]?.color || "#ffffff"}
-            dot={false}
+            dot={{ r: 4, className: "fill-primary" }}
             activeDot={{ r: 6 }}
             strokeWidth={2}
             name={heroIdMap[heroId]?.name}
