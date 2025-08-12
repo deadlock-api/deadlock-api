@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update Rust toolchain
         run: |
           rustup override set stable
@@ -52,7 +52,7 @@ jobs:
     name: Dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -64,7 +64,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Protocol Buffers compiler
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
@@ -85,7 +85,7 @@ jobs:
   build-base:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to GitHub Container Registry
@@ -121,7 +121,7 @@ jobs:
           - update-assets-tables
           - glicko-mmr
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Filter changed paths
         id: changes
         uses: dorny/paths-filter@v3
