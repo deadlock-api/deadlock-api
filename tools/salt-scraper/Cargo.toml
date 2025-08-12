@@ -11,7 +11,7 @@ metrics = "0.24.2"
 tracing = "0.1.41"
 clickhouse = "0.13.3"
 tryhard = "0.5.2"
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 common = { version = "0.1.0", path = "../common" }
 futures = "0.3.31"
 reqwest = "0.12.22"

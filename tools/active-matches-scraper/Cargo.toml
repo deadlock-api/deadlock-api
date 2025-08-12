@@ -13,4 +13,4 @@ delay_map = "0.4.1"
 metrics = "0.24.2"
 tracing = "0.1.41"
 common = { version = "0.1.0", path = "../common" }
-anyhow = "1.0.98"
+anyhow = "1.0.99"
