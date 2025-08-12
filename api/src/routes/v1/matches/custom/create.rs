@@ -35,12 +35,30 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 
-#[derive(Serialize, Deserialize, IntoParams, ToSchema)]
+#[derive(Clone, Serialize, Deserialize, IntoParams, ToSchema)]
 pub(super) struct CreateCustomRequest {
     /// If a callback url is provided, we will send a POST request to this url when the match starts.
     #[serde(default)]
     #[param(default)]
     callback_url: Option<String>,
+    #[serde(default)]
+    #[param(default, minimum = 1, maximum = 12)]
+    min_roster_size: Option<u32>,
+    #[serde(default)]
+    #[param(default)]
+    randomize_lanes: Option<bool>,
+    #[serde(default)]
+    #[param(default)]
+    is_publicly_visible: Option<bool>,
+    #[serde(default)]
+    #[param(default)]
+    cheats_enabled: Option<bool>,
+    #[serde(default)]
+    #[param(default)]
+    duplicate_heroes_enabled: Option<bool>,
+    #[serde(default)]
+    #[param(default)]
+    experimental_heroes_enabled: Option<bool>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -61,6 +79,7 @@ fn generate_callback_secret(length_bytes: usize) -> String {
 
 async fn create_party(
     state: &AppState,
+    settings: Option<CreateCustomRequest>,
 ) -> APIResult<SteamProxyResponse<CMsgClientToGcPartyCreateResponse>> {
     let msg = CMsgClientToGcPartyCreate {
         party_mm_info: CMsgPartyMmInfo {
@@ -85,15 +104,17 @@ async fn create_party(
         server_search_key: None,
         mm_preference: (ECitadelMmPreference::KECitadelMmPreferenceCasual as i32).into(),
         private_lobby_settings: cso_citadel_party::PrivateLobbySettings {
-            min_roster_size: None,
+            min_roster_size: settings.as_ref().and_then(|m| m.min_roster_size),
             match_slots: vec![],
-            randomize_lanes: false.into(),
+            randomize_lanes: settings.as_ref().and_then(|m| m.randomize_lanes),
             server_region: None,
-            is_publicly_visible: true.into(),
-            cheats_enabled: false.into(),
+            is_publicly_visible: settings.as_ref().and_then(|m| m.is_publicly_visible),
+            cheats_enabled: settings.as_ref().and_then(|m| m.cheats_enabled),
             available_regions: vec![],
-            duplicate_heroes_enabled: false.into(),
-            experimental_heroes_enabled: false.into(),
+            duplicate_heroes_enabled: settings.as_ref().and_then(|m| m.duplicate_heroes_enabled),
+            experimental_heroes_enabled: settings
+                .as_ref()
+                .and_then(|m| m.experimental_heroes_enabled),
         }
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),
@@ -287,12 +308,12 @@ pub(super) async fn create_custom(
         )
         .await?;
 
-    let callback_url = payload.ok().and_then(|p| p.0.callback_url);
+    let callback_url = payload.as_ref().ok().and_then(|p| p.0.callback_url.clone());
 
     let SteamProxyResponse {
         username,
         msg: created_party,
-    } = tryhard::retry_fn(|| create_party(&state))
+    } = tryhard::retry_fn(|| create_party(&state, payload.as_ref().ok().map(|p| p.0.clone())))
         .retries(5)
         .linear_backoff(Duration::from_millis(100))
         .await?;
