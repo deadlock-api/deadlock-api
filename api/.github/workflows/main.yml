@@ -31,7 +31,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -44,7 +44,7 @@ jobs:
     name: Dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -56,7 +56,7 @@ jobs:
     name: Typos
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -71,7 +71,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Protocol Buffers compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
@@ -107,7 +107,7 @@ jobs:
       ###############################
       ##           Setup           ##
       ###############################
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup go-task
         run: if [ ! -f "~/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
       - name: Set up Docker Buildx
