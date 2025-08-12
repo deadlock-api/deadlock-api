@@ -98,7 +98,7 @@ pub struct AnalyticsHeroStats {
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
-    matches_per_bucket: Option<u64>,
+    matches_per_bucket: u64,
     players: u64,
     pub total_kills: u64,
     pub total_deaths: u64,
@@ -207,7 +207,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(won) AS wins,
         sum(not won) AS losses,
         wins + losses AS matches,
-        {}
+        sum(count(distinct match_id)) OVER (PARTITION BY {bucket}) AS matches_per_bucket,
         uniq(account_id) AS players,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
@@ -225,7 +225,6 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_shots_missed) AS total_shots_missed
     FROM match_player
     INNER JOIN t_matches USING (match_id)
-    {}
     WHERE TRUE {player_filters}
         {}
     GROUP BY hero_id, bucket
@@ -244,26 +243,6 @@ fn build_query(query: &HeroStatsQuery) -> String {
             HAVING {player_hero_filters}
         )"
             )
-        } else {
-            format!(
-                ",
-        t_matches_per_bucket AS (
-            SELECT {bucket} AS bucket, count() AS matches_per_bucket
-            FROM t_matches
-            GROUP BY bucket
-        )"
-            )
-        },
-        if query.min_hero_matches.or(query.max_hero_matches).is_some() {
-            "toUInt64OrNull(NULL) AS matches_per_bucket,"
-        } else {
-            "toNullable(any(m.matches_per_bucket)) AS matches_per_bucket,"
-        },
-        if query.min_hero_matches.or(query.max_hero_matches).is_none() {
-            match query.bucket {
-                BucketQuery::NoBucket => "INNER JOIN t_matches_per_bucket m ON TRUE".to_owned(),
-                _ => format!("INNER JOIN t_matches_per_bucket m ON m.bucket = {bucket}"),
-            }
         } else {
             String::new()
         },
