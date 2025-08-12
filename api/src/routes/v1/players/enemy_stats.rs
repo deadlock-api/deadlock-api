@@ -44,9 +44,9 @@ pub(super) struct EnemyStatsQuery {
 pub struct EnemyStats {
     pub enemy_id: u32,
     /// The amount of matches won against the enemy.
-    pub wins: u64,
-    pub matches_played: u64,
-    pub matches: Vec<u64>,
+    wins: u64,
+    matches_played: u64,
+    matches: Vec<u64>,
 }
 
 fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
