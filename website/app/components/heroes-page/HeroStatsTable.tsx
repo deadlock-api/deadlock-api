@@ -16,7 +16,7 @@ export default function HeroStatsTable({
   sortBy,
   minRankId,
   maxRankId,
-  minMatches: minHeroMatches,
+  minHeroMatches,
   minDate,
   maxDate,
   fullWidth,
@@ -28,7 +28,7 @@ export default function HeroStatsTable({
   sortBy?: keyof APIHeroStats | "winrate";
   minRankId?: number;
   maxRankId?: number;
-  minMatches?: number;
+  minHeroMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
   fullWidth?: boolean;

@@ -44,7 +44,6 @@ export default function HeroMatchupDetailsStatsTable({
     queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minMatches],
     queryFn: async () => {
       const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
-      url.searchParams.set("min_hero_matches", (minMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());

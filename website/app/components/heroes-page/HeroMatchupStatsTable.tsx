@@ -35,7 +35,6 @@ export default function HeroMatchupStatsTable({
     queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minMatches],
     queryFn: async () => {
       const url = new URL("/v1/analytics/hero-stats", API_ORIGIN);
-      url.searchParams.set("min_hero_matches", (minMatches ?? 0).toString());
       url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
       url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
       if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
