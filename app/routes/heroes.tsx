@@ -18,6 +18,7 @@ import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { serializers, useQSArray, useQSBoolean, useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
+import { cn } from "~/lib/utils";
 import type { HERO_STATS } from "~/types/api_hero_stats";
 
 export const meta: MetaFunction = () => {
@@ -60,10 +61,17 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                     aria-label="Decrease min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
                     onClick={() => setMinMatches(Math.max(0, minMatches - 10))}
+                    disabled={["stats", "stats-over-time"].includes(tab)}
                   >
                     -
                   </button>
-                  <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>
+                  <span
+                    className={cn(
+                      "flex-1 text-center select-none",
+                      ["stats", "stats-over-time"].includes(tab) && "text-muted-foreground",
+                    )}
+                    style={{ minWidth: 32 }}
+                  >
                     {minMatches}
                   </span>
                   <button
@@ -71,6 +79,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                     aria-label="Increase min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
                     onClick={() => setMinMatches(minMatches + 10)}
+                    disabled={["stats", "stats-over-time"].includes(tab)}
                   >
                     +
                   </button>
@@ -109,7 +118,6 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               maxRankId={maxRankId}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
-              minMatches={minMatches}
               fullWidth
             />
           </div>
@@ -148,7 +156,6 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               heroTimeInterval={heroTimeInterval}
               minRankId={minRankId}
               maxRankId={maxRankId}
-              minMatches={minMatches}
               minDate={startDate}
               maxDate={endDate}
             />
