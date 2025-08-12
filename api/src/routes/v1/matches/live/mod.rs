@@ -14,6 +14,7 @@ use crate::middleware::cache::CacheControlMiddleware;
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
+    #[allow(deprecated)]
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(url::url))
         .routes(routes!(demo::demo))

@@ -54,6 +54,9 @@ Streams the live demo of a match.
 | Global | 100req/10s |
     "
 )]
+#[deprecated(
+    note = "Switch to the self-hosted: https://github.com/deadlock-api/deadlock-live-events"
+)]
 pub(super) async fn demo(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,

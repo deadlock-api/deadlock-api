@@ -136,6 +136,9 @@ async fn demo_event_stream(
 | Global | 200req/h |
     "
 )]
+#[deprecated(
+    note = "Switch to the self-hosted: https://github.com/deadlock-api/deadlock-live-events"
+)]
 pub(super) async fn events(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     Query(body): Query<DemoEventsQuery>,
