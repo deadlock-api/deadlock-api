@@ -14,7 +14,6 @@ use object_store::path::Path as S3Path;
 use object_store::{GetResult, ObjectStore};
 use prost::Message;
 use tokio::io::AsyncReadExt;
-use tokio::sync::OnceCell;
 use tracing::debug;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
