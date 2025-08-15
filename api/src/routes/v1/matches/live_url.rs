@@ -68,7 +68,7 @@ pub(super) async fn spectate_match(
 
 #[utoipa::path(
     get,
-    path = "/url",
+    path = "/{match_id}/live/url",
     params(MatchIdQuery),
     responses(
         (status = OK, body = MatchSpectateResponse),

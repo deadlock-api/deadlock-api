@@ -3,7 +3,7 @@ mod badge_distribution;
 mod bulk_metadata;
 mod custom;
 mod ingest_salts;
-mod live;
+mod live_url;
 mod metadata;
 mod recently_fetched;
 mod salts;
@@ -32,6 +32,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(ingest_salts::ingest_salts))
         .routes(routes!(recently_fetched::recently_fetched))
         .routes(routes!(bulk_metadata::bulk_metadata))
+        .routes(routes!(live_url::url))
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(badge_distribution::badge_distribution))
@@ -52,5 +53,4 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 ),
         )
         .nest("/custom", custom::router())
-        .nest("/{match_id}/live", live::router())
 }

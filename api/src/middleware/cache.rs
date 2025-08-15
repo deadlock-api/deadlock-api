@@ -28,14 +28,6 @@ impl CacheControlMiddleware {
         }
     }
 
-    pub(crate) fn no_cache() -> Self {
-        Self {
-            max_age: Duration::from_secs(0),
-            stale_while_revalidate: None,
-            stale_if_error: None,
-        }
-    }
-
     pub(crate) fn with_stale_while_revalidate(mut self, stale_while_revalidate: Duration) -> Self {
         self.stale_while_revalidate = Some(stale_while_revalidate);
         self
@@ -140,20 +132,6 @@ mod tests {
 
     async fn test_handler() -> &'static str {
         "Hello, world!"
-    }
-
-    #[tokio::test]
-    async fn test_no_cache() {
-        let layer = CacheControlMiddleware::no_cache();
-        let app = Router::new().route("/", get(test_handler)).layer(layer);
-
-        let response = app
-            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(response.headers().get(CACHE_CONTROL).unwrap(), "no-cache");
     }
 
     #[tokio::test]

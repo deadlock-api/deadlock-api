@@ -82,28 +82,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-stream"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476"
-dependencies = [
- "async-stream-impl",
- "futures-core",
- "pin-project-lite",
-]
-
-[[package]]
-name = "async-stream-impl"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "async-trait"
 version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -293,12 +271,6 @@ name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
-
-[[package]]
-name = "bytemuck"
-version = "1.23.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3995eaeebcdf32f91f980d360f78732ddc061097ab4e39991ae7a6ace9194677"
 
 [[package]]
 name = "byteorder"
@@ -605,7 +577,6 @@ name = "deadlock-api-rust"
 version = "0.1.0"
 dependencies = [
  "async-compression",
- "async-stream",
  "axum",
  "axum-extra",
  "axum-prometheus",
@@ -616,7 +587,6 @@ dependencies = [
  "clickhouse",
  "fastrand",
  "futures",
- "haste",
  "itertools",
  "metrics",
  "mimalloc",
@@ -689,45 +659,6 @@ name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
-
-[[package]]
-name = "dungers"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
-dependencies = [
- "dungers_bitbuf",
- "dungers_charsor",
- "dungers_varint",
-]
-
-[[package]]
-name = "dungers_bitbuf"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
-dependencies = [
- "bytemuck",
- "dungers_varint",
- "thiserror 2.0.14",
-]
-
-[[package]]
-name = "dungers_charsor"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
-
-[[package]]
-name = "dungers_varint"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/dungers.git?rev=5e1e2aac76a027987911de3ef3d23ecfd992a7fb#5e1e2aac76a027987911de3ef3d23ecfd992a7fb"
-dependencies = [
- "thiserror 2.0.14",
-]
-
-[[package]]
-name = "dyn-clone"
-version = "1.0.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "either"
@@ -1056,61 +987,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7382cf6263419f2d8df38c55d7da83da5c18aef87fc7a7fc1fb1e344edfe14c1"
 dependencies = [
  "hashbrown",
-]
-
-[[package]]
-name = "haste"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=64d3fa514dd1b3453e62e8e09b06c4d153db8eb5#64d3fa514dd1b3453e62e8e09b06c4d153db8eb5"
-dependencies = [
- "haste_broadcast",
- "haste_core",
-]
-
-[[package]]
-name = "haste_broadcast"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=64d3fa514dd1b3453e62e8e09b06c4d153db8eb5#64d3fa514dd1b3453e62e8e09b06c4d153db8eb5"
-dependencies = [
- "anyhow",
- "bytes",
- "haste_core",
- "http",
- "log",
- "prost 0.14.1",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 2.0.14",
- "tokio",
- "valveprotos",
-]
-
-[[package]]
-name = "haste_core"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=64d3fa514dd1b3453e62e8e09b06c4d153db8eb5#64d3fa514dd1b3453e62e8e09b06c4d153db8eb5"
-dependencies = [
- "anyhow",
- "dungers",
- "dyn-clone",
- "hashbrown",
- "haste_vartype",
- "nohash",
- "prost 0.14.1",
- "snap",
- "sync-unsafe-cell",
- "thiserror 2.0.14",
- "valveprotos",
-]
-
-[[package]]
-name = "haste_vartype"
-version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=64d3fa514dd1b3453e62e8e09b06c4d153db8eb5#64d3fa514dd1b3453e62e8e09b06c4d153db8eb5"
-dependencies = [
- "dungers",
- "thiserror 2.0.14",
 ]
 
 [[package]]
@@ -1729,12 +1605,6 @@ dependencies = [
  "security-framework-sys",
  "tempfile",
 ]
-
-[[package]]
-name = "nohash"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0f889fb66f7acdf83442c35775764b51fed3c606ab9cee51500dbde2cf528ca"
 
 [[package]]
 name = "nu-ansi-term"
@@ -3197,12 +3067,6 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
-
-[[package]]
-name = "sync-unsafe-cell"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8deaecba5382c095cb432cd1e21068dadb144208f057b13720e76bf89749beb4"
 
 [[package]]
 name = "sync_wrapper"
