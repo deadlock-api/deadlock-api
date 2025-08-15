@@ -50,7 +50,7 @@ jobs:
           rustup override set stable
           rustup update stable
       - name: Machete
-        uses: bnjbvr/cargo-machete@373b106eaae5b70d4fe6591515056e5b0fde15e3
+        uses: bnjbvr/cargo-machete@7959c845782fed02ee69303126d4a12d64f1db18
 
   typos:
     name: Typos
