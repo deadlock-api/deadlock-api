@@ -80,7 +80,7 @@ impl AppState {
             )
             .with_retry(RetryConfig {
                 backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(10),
+                    init_backoff: Duration::from_millis(200),
                     max_backoff: Duration::from_secs(3),
                     base: 2.,
                 },
@@ -105,7 +105,7 @@ impl AppState {
             )
             .with_retry(RetryConfig {
                 backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(10),
+                    init_backoff: Duration::from_millis(200),
                     max_backoff: Duration::from_secs(3),
                     base: 2.,
                 },
