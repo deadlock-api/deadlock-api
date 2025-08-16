@@ -14,6 +14,7 @@ use object_store::path::Path as S3Path;
 use object_store::{GetResult, ObjectStore};
 use prost::Message;
 use tokio::io::AsyncReadExt;
+use tokio::sync::OnceCell;
 use tracing::debug;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
@@ -24,6 +25,18 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
 use crate::utils::types::MatchIdQuery;
+
+static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
+
+async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
+    MIN_MATCH_ID_IN_CACHE
+        .get_or_init(|| async { ch_client
+            .query("SELECT min(match_id) FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK")
+            .fetch_one()
+            .await
+            .unwrap_or_default() })
+        .await
+}
 
 async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
     s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())
@@ -40,7 +53,9 @@ async fn fetch_match_metadata_raw(
     match_id: u64,
 ) -> APIResult<Vec<u8>> {
     // Try to fetch from the cache first
-    if let Some(s3_cache) = s3_cache {
+    if match_id >= *min_cache_match_id(ch_client).await
+        && let Some(s3_cache) = s3_cache
+    {
         let results = join(
             fetch_from_s3(s3_cache, format!("{match_id}.meta.bz2")),
             fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")),
@@ -153,20 +168,22 @@ pub(super) async fn metadata_raw(
         s3.get(&key.into()).await.map(GetResult::into_stream)
     }
 
-    let results = join(
-        fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta.bz2")),
-        fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta_hltv.bz2")),
-    )
-    .await;
-    if let Ok(data) = results.0 {
-        debug!("Match metadata found in cache");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
-        return Ok(Body::from_stream(data));
-    }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found in cache, hltv");
-        counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
-        return Ok(Body::from_stream(data));
+    if match_id >= *min_cache_match_id(&state.ch_client).await {
+        let results = join(
+            fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta.bz2")),
+            fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta_hltv.bz2")),
+        )
+        .await;
+        if let Ok(data) = results.0 {
+            debug!("Match metadata found in cache");
+            counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
+            return Ok(Body::from_stream(data));
+        }
+        if let Ok(data) = results.1 {
+            debug!("Match metadata found in cache, hltv");
+            counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
+            return Ok(Body::from_stream(data));
+        }
     }
 
     fetch_match_metadata_raw(
