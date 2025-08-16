@@ -19,4 +19,4 @@ CREATE USER api_readonly_user IDENTIFIED BY 'testing'
 GRANT SELECT ON default.* TO api_readonly_user;
 GRANT SHOW ON default.* TO api_readonly_user;
 REVOKE SELECT ON default.match_salts FROM api_readonly_user;
-GRANT SELECT (match_id, cluster_id, metadata_salt, replay_salt) ON default.match_salts TO api_readonly_user;
+GRANT SELECT (match_id, cluster_id, metadata_salt, replay_salt, created_at) ON default.match_salts TO api_readonly_user;
