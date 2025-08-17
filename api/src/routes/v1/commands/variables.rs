@@ -506,7 +506,7 @@ impl Variable {
             Self::TotalWins => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 Ok(matches
-                    .filter(super::super::players::match_history::PlayerMatchHistoryEntry::won)
+                    .filter(PlayerMatchHistoryEntry::won)
                     .count()
                     .to_string())
             }
@@ -622,7 +622,7 @@ impl Variable {
                 )
                 .await?;
                 Ok(hero_matches
-                    .filter(super::super::players::match_history::PlayerMatchHistoryEntry::won)
+                    .filter(PlayerMatchHistoryEntry::won)
                     .count()
                     .to_string())
             }
