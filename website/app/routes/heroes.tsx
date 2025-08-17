@@ -29,6 +29,7 @@ export const meta: MetaFunction = () => {
 };
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
+  const [minHeroMatches, setMinHeroMatches] = useQSNumber("min_hero_matches", 0);
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
@@ -53,33 +54,33 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
               <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
                 <Label htmlFor="minMatches" className="h-8">
-                  Min Matches
+                  {["stats", "stats-over-time"].includes(tab) ? "Min Hero Matches" : "Min Matches"}
                 </Label>
                 <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
                   <button
                     type="button"
                     aria-label="Decrease min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches(Math.max(0, minMatches - 10))}
-                    disabled={["stats", "stats-over-time"].includes(tab)}
+                    onClick={() => {
+                      if (["stats", "stats-over-time"].includes(tab)) {
+                        setMinHeroMatches(Math.max(0, minHeroMatches - 10));
+                      } else setMinMatches(Math.max(0, minMatches - 10));
+                    }}
                   >
                     -
                   </button>
-                  <span
-                    className={cn(
-                      "flex-1 text-center select-none",
-                      ["stats", "stats-over-time"].includes(tab) && "text-muted-foreground",
-                    )}
-                    style={{ minWidth: 32 }}
-                  >
-                    {minMatches}
+                  <span className={"flex-1 text-center select-none text-muted-foreground"} style={{ minWidth: 32 }}>
+                    {["stats", "stats-over-time"].includes(tab) ? minHeroMatches : minMatches}
                   </span>
                   <button
                     type="button"
                     aria-label="Increase min matches"
                     className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches(minMatches + 10)}
-                    disabled={["stats", "stats-over-time"].includes(tab)}
+                    onClick={() => {
+                      if (["stats", "stats-over-time"].includes(tab)) {
+                        setMinHeroMatches(Math.max(0, minHeroMatches + 10));
+                      } else setMinMatches(Math.max(0, minMatches + 10));
+                    }}
                   >
                     +
                   </button>
@@ -116,6 +117,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               sortBy="winrate"
               minRankId={minRankId}
               maxRankId={maxRankId}
+              minHeroMatches={minHeroMatches}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
               fullWidth
@@ -156,6 +158,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               heroTimeInterval={heroTimeInterval}
               minRankId={minRankId}
               maxRankId={maxRankId}
+              minHeroMatches={minHeroMatches}
               minDate={startDate}
               maxDate={endDate}
             />
