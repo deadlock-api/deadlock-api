@@ -310,11 +310,11 @@ pub(super) async fn match_history(
 
     let mut force_update = false;
     if let Some(last_match) = last_match {
-        // if newer than 40 min, check if there is a newer match, otherwise return the clickhouse data
-        let is_newer_than_40_min = last_match.start_time
-            >= u32::try_from((chrono::Utc::now() - chrono::Duration::minutes(40)).timestamp())
+        // if newer than 30 min, check if there is a newer match, otherwise return the clickhouse data
+        let is_newer_than_30_min = last_match.start_time
+            >= u32::try_from((chrono::Utc::now() - chrono::Duration::minutes(30)).timestamp())
                 .unwrap_or_default();
-        if is_newer_than_40_min {
+        if is_newer_than_30_min {
             let exists_newer_match =
                 exists_newer_match_than(&state.ch_client_ro, account_id, last_match.match_id).await;
             if exists_newer_match {
