@@ -78,3 +78,16 @@ CREATE TABLE IF NOT EXISTS match_info
 ) ENGINE = ReplacingMergeTree
       PARTITION BY toStartOfMonth(start_time)
       ORDER BY (toStartOfMonth(start_time), match_mode, match_id);
+
+ALTER TABLE match_info
+MODIFY COLUMN match_mode Enum8 (
+    'Invalid' = 0,
+    'Unranked' = 1,
+    'PrivateLobby' = 2,
+    'CoopBot' = 3,
+    'Ranked' = 4,
+    'ServerTest' = 5,
+    'Tutorial' = 6,
+    'HeroLabs' = 7,
+    'Calibration' = 8,
+);

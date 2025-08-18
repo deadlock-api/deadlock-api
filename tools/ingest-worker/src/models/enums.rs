@@ -46,6 +46,7 @@ pub(crate) enum MatchMode {
     ServerTest = 5,
     Tutorial = 6,
     HeroLabs = 7,
+    Calibration = 8,
 }
 
 impl From<ECitadelMatchMode> for MatchMode {
@@ -59,6 +60,7 @@ impl From<ECitadelMatchMode> for MatchMode {
             ECitadelMatchMode::KECitadelMatchModeServerTest => Self::ServerTest,
             ECitadelMatchMode::KECitadelMatchModeTutorial => Self::Tutorial,
             ECitadelMatchMode::KECitadelMatchModeHeroLabs => Self::HeroLabs,
+            ECitadelMatchMode::KECitadelMatchModeCalibration => Self::Calibration,
         }
     }
 }
