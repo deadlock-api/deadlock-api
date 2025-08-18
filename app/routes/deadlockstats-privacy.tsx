@@ -109,6 +109,26 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
+          <h2 className="text-2xl font-bold text-white mt-8 mb-3 pb-2 border-b border-gray-700">
+            AI Assistant Chatbot
+          </h2>
+          <p>
+            For enhanced protection against bots and abuse, DeadlockStats uses{" "}
+            <a href="https://www.cloudflare.com/products/turnstile/" target="_blank" rel="noopener noreferrer">
+              Cloudflare Turnstile
+            </a>{" "}
+            as a privacy-first captcha solution. Turnstile helps verify genuine users transparently and securely,
+            without tracking or cross-site profiling. Additionally, our AI Chatbot feature is powered by the{" "}
+            <a href="https://ai.google.dev/gemini-api/docs/" target="_blank" rel="noopener noreferrer">
+              Google Gemini API
+            </a>
+            , which enables advanced conversational capabilities. When using the chatbot, user queries are securely sent
+            to Google for processing, and results are delivered directly in the app; no queries are stored or used for
+            advertising purposes by DeadlockStats.
+          </p>
+        </section>
+
+        <section>
           <h2 className="text-2xl font-bold text-white mt-8 mb-3 pb-2 border-b border-gray-700">Legal Compliance</h2>
           <p className="leading-relaxed mb-4">This Privacy Policy has been designed to comply with:</p>
           <ul className="list-disc list-inside space-y-2 pl-4">
