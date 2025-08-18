@@ -118,6 +118,8 @@ async fn create_party(
         }
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),
+        dev_force_hideout: None,
+        hideout_search_key: None,
     };
     let result: SteamProxyResponse<CMsgClientToGcPartyCreateResponse> = state
         .steam_client
