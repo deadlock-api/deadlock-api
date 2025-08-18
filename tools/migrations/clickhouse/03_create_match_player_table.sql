@@ -84,8 +84,13 @@ CREATE TABLE IF NOT EXISTS match_player
         heal_prevented UInt32,
         heal_lost UInt32,
         damage_mitigated UInt32,
-        level UInt32
+        level UInt32,
+        player_barriering UInt32,
+        teammate_healing UInt32,
+        teammate_barriering UInt32,
+        self_damage UInt32
     ),
+    rewards_eligible Bool DEFAULT FALSE,
     max_level UInt32 MATERIALIZED arrayMax(stats.level),
     max_player_damage UInt32 MATERIALIZED arrayMax(stats.player_damage),
     max_player_damage_taken UInt32 MATERIALIZED arrayMax(stats.player_damage_taken),

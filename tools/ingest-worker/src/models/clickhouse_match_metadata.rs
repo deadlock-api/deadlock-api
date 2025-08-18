@@ -20,6 +20,7 @@ pub(crate) struct ClickhouseMatchInfo {
     pub new_player_pool: Option<bool>,
     pub average_badge_team0: Option<u32>,
     pub average_badge_team1: Option<u32>,
+    pub rewards_eligible: bool,
     pub game_mode_version: Option<u32>,
     #[serde(rename = "objectives.destroyed_time_s")]
     pub objectives_destroyed_time_s: Vec<u32>,
@@ -61,6 +62,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             average_badge_team0: value.average_badge_team0,
             average_badge_team1: value.average_badge_team1,
             game_mode_version: value.game_mode_version,
+            rewards_eligible: value.rewards_eligible(),
             objectives_destroyed_time_s: value
                 .objectives
                 .iter()
@@ -251,6 +253,17 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_damage_mitigated: Vec<u32>,
     #[serde(rename = "stats.level")]
     pub stats_level: Vec<u32>,
+    #[serde(rename = "stats.player_barriering")]
+    pub stats_player_barriering: Vec<u32>,
+    #[serde(rename = "stats.teammate_healing")]
+    pub stats_teammate_healing: Vec<u32>,
+    #[serde(rename = "stats.teammate_barriering")]
+    pub stats_teammate_barriering: Vec<u32>,
+    #[serde(rename = "stats.self_damage")]
+    pub stats_self_damage: Vec<u32>,
+    pub rewards_eligible: bool,
+    pub hero_xp: u32,
+    pub hero_equips: Vec<u64>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -370,6 +383,10 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             stats_heal_lost: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::heal_lost).collect(),
             stats_damage_mitigated: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::damage_mitigated).collect(),
             stats_level: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::level).collect(),
+            stats_player_barriering: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::player_barriering).collect(),
+            stats_teammate_healing: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::teammate_healing).collect(),
+            stats_teammate_barriering: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::teammate_barriering).collect(),
+            stats_self_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::self_damage).collect(),
             team: Team::from(value.team()),
             kills: value.kills(),
             deaths: value.deaths(),
@@ -392,6 +409,9 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             book_reward_xp_amount: value.book_rewards.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::BookReward::xp_amount).collect(),
             book_reward_book_id: value.book_rewards.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::BookReward::book_id).collect(),
             abandon_match_time_s: value.abandon_match_time_s(),
+            rewards_eligible: value.rewards_eligible(),
+            hero_xp: value.hero_data.as_ref().and_then(|h| h.hero_xp).unwrap_or_default(),
+            hero_equips: value.hero_data.as_ref().and_then(|h| h.hero_equips.as_ref().map(|e| e.items.iter().filter_map(|i| i.id).collect())).unwrap_or_default(),
         }
     }
 }

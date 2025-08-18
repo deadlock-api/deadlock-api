@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS match_info
         'Ranked' = 4,
         'ServerTest' = 5,
         'Tutorial' = 6,
-        'HeroLabs' = 7
+        'HeroLabs' = 7,
+         'Calibration' = 8
     ),
     game_mode Enum8 (
         'Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3
@@ -74,20 +75,8 @@ CREATE TABLE IF NOT EXISTS match_info
     destroyed_time_s UInt32),
     average_badge_team0 Nullable (UInt32),
     average_badge_team1 Nullable (UInt32),
+    rewards_eligible Bool DEFAULT FALSE,
     created_at timestamp DEFAULT current_timestamp()
 ) ENGINE = ReplacingMergeTree
       PARTITION BY toStartOfMonth(start_time)
       ORDER BY (toStartOfMonth(start_time), match_mode, match_id);
-
-ALTER TABLE match_info
-MODIFY COLUMN match_mode Enum8 (
-    'Invalid' = 0,
-    'Unranked' = 1,
-    'PrivateLobby' = 2,
-    'CoopBot' = 3,
-    'Ranked' = 4,
-    'ServerTest' = 5,
-    'Tutorial' = 6,
-    'HeroLabs' = 7,
-    'Calibration' = 8,
-);
