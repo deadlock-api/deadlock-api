@@ -374,7 +374,7 @@ export default function HeroMatchupStatsTable({
                       max={heroMaxBestSynergyWinrate}
                       value={heroBestSynergies[heroId]?.rel_winrate}
                       color={"#ff00ff"}
-                      label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
+                      label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     />
                   </div>
                 </div>
@@ -391,7 +391,7 @@ export default function HeroMatchupStatsTable({
                       max={heroMaxWorstSynergyWinrate}
                       value={heroWorstSynergies[heroId]?.rel_winrate}
                       color={"#ff00ff"}
-                      label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
+                      label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     />
                   </div>
                 </div>
@@ -425,7 +425,7 @@ export default function HeroMatchupStatsTable({
                       max={heroMaxWorstAgainstWinrate}
                       value={heroWorstAgainst[heroId]?.rel_winrate}
                       color={"#00ffff"}
-                      label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
+                      label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     />
                   </div>
                 </div>

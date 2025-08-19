@@ -115,7 +115,7 @@ export default function HeroStatsTable({
                     max={maxWinrate}
                     value={row.wins / row.matches}
                     color={"#ff00ff"}
-                    label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                    label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
                   />
                 </td>
               )}
@@ -129,7 +129,7 @@ export default function HeroStatsTable({
                     max={maxMatches}
                     value={row.matches}
                     color={"#00ffff"}
-                    label={`${(Math.round(12 * (row.matches / sumMatches) * 100 * 100) / 100).toFixed(2)}% `}
+                    label={`${(Math.round(12 * (row.matches / sumMatches) * 100)).toFixed(0)}% `}
                   />
                 </td>
               )}
