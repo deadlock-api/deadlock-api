@@ -4,6 +4,7 @@ use axum::response::IntoResponse;
 use crate::error::APIResult;
 
 const BIG_PATCH_DAYS: &[&str] = &[
+    "2025-08-18T20:43:52Z",
     "2025-07-29T22:22:52Z",
     "2025-07-04T20:03:43Z",
     "2025-05-08T19:43:20Z",
