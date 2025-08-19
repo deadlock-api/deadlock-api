@@ -259,7 +259,7 @@ export default function HeroMatchupDetailsStatsTable({
                     max={maxSynergyWinrate}
                     value={synergy.rel_winrate}
                     color={"#ff00ff"}
-                    label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
+                    label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100)).toFixed(0)}% `}
                   />
                 </td>
               )}
@@ -273,7 +273,7 @@ export default function HeroMatchupDetailsStatsTable({
                     max={maxCounterWinrate}
                     value={counter.rel_winrate}
                     color={"#00ffff"}
-                    label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100 * 100) / 100).toFixed(2)}% `}
+                    label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100)).toFixed(0)}% `}
                   />
                 </td>
               )}

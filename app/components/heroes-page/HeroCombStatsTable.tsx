@@ -170,7 +170,7 @@ export default function HeroCombStatsTable({
                         max={maxWinrate}
                         value={row.wins / row.matches}
                         color={"#ff00ff"}
-                        label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                        label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
                       />
                     </td>
                   )}
@@ -184,7 +184,7 @@ export default function HeroCombStatsTable({
                         max={maxMatches}
                         value={row.matches}
                         color={"#00ffff"}
-                        label={`${(Math.round((row.wins / row.matches) * 100 * 100) / 100).toFixed(2)}% `}
+                        label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
                       />
                     </td>
                   )}
