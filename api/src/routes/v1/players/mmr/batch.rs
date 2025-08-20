@@ -1,7 +1,8 @@
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use serde::Deserialize;
 use tracing::debug;
 use utoipa::IntoParams;

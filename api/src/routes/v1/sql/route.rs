@@ -1,9 +1,10 @@
 use core::time::Duration;
 
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::query::BytesCursor;

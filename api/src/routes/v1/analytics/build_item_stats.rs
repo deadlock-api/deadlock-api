@@ -1,6 +1,7 @@
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use serde::{Deserialize, Serialize};
 use sqlx::{Execute, Pool, Postgres, QueryBuilder, Row};
 use tracing::debug;

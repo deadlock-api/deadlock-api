@@ -1,6 +1,7 @@
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;

@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
