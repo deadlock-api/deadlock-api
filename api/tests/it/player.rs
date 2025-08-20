@@ -10,8 +10,24 @@ use crate::request_endpoint;
 
 #[rstest]
 #[tokio::test]
-async fn test_player_hero_stats(#[values(18373975)] account_id: u32) {
+async fn test_player_hero_stats_old(#[values(18373975)] account_id: u32) {
     let response = request_endpoint(&format!("/v1/players/{account_id}/hero-stats"), []).await;
+    let stats: Vec<HeroStats> = response.json().await.expect("Failed to parse response");
+    assert!(stats.iter().all(|s| s.hero_id > 0));
+    assert_eq!(
+        stats.iter().map(|s| s.hero_id).unique().count(),
+        stats.len()
+    );
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_player_hero_stats(#[values(18373975)] account_id: u32) {
+    let response = request_endpoint(
+        "/v1/players/hero-stats",
+        [("account_ids", account_id.to_string().as_str())],
+    )
+    .await;
     let stats: Vec<HeroStats> = response.json().await.expect("Failed to parse response");
     assert!(stats.iter().all(|s| s.hero_id > 0));
     assert_eq!(
