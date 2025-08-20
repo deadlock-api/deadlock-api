@@ -19,8 +19,12 @@ pub(crate) async fn track_requests(
     next: Next,
 ) -> impl IntoResponse {
     let method = req.method().clone();
-    let api_key =
-        extract_api_key(&req).and_then(|s| s.to_str().ok().map(std::borrow::ToOwned::to_owned));
+    let user_agent = req
+        .headers()
+        .get("user-agent")
+        .and_then(|v| v.to_str().ok())
+        .map(ToOwned::to_owned);
+    let api_key = extract_api_key(&req).and_then(|s| s.to_str().ok().map(ToOwned::to_owned));
     let user_id = if let Some(ref api_key) = api_key
         && let Ok(api_key) = Uuid::from_str(api_key.strip_prefix("HEXE-").unwrap_or(api_key))
     {
@@ -28,11 +32,7 @@ pub(crate) async fn track_requests(
     } else {
         None
     };
-    let mut query = req
-        .uri()
-        .query()
-        .map(std::borrow::ToOwned::to_owned)
-        .unwrap_or_default();
+    let mut query = req.uri().query().map(ToOwned::to_owned).unwrap_or_default();
     if let Some(ref api_key) = api_key {
         query = query.replace(api_key, "HEXE-<API_KEY>");
     }
@@ -45,6 +45,7 @@ pub(crate) async fn track_requests(
         ("endpoint", matched_path.as_str().to_owned()),
         ("query", query),
         ("status", response.status().to_string()),
+        ("user_agent", user_agent.unwrap_or("unknown".to_owned())),
         ("user_id", user_id.unwrap_or("unknown".to_owned())),
     ];
     metrics::counter!("api_requests", &labels).increment(1);
