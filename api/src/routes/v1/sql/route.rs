@@ -34,6 +34,7 @@ pub(super) struct TableQuery {
 pub struct TableSchemaRow {
     name: String,
     r#type: String,
+    comment: Option<String>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -238,7 +239,7 @@ async fn fetch_table_schema(
     ch_client
         .query(
             "
-            SELECT name, type
+            SELECT name, type, nullIf(comment, '') AS comment
             FROM system.columns
             WHERE database = 'default' AND table = ?
         ",
