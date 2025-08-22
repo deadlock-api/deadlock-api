@@ -300,6 +300,7 @@ impl SpectatorBot {
                 "bot_in_all_groups": ["SpectateLobby"],
                 "rate_limit_cooldown_millis": 2 * 24 * 60 * 60 * 1000 / 25,
                 "job_cooldown_millis": 24 * 60 * 60 * 1000 / 25,
+                "soft_cooldown_millis": 24 * 60 * 60 * 1000 / 50,
                 "data": BASE64_STANDARD.encode(data),
             }))
             .send()
