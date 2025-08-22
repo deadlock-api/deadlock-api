@@ -63,6 +63,7 @@ impl SteamClient {
             "message_kind": query.msg_type as i32,
             "job_cooldown_millis": query.cooldown_time.as_millis(),
             "rate_limit_cooldown_millis": 2 * query.cooldown_time.as_millis(),
+            "soft_cooldown_millis": query.cooldown_time.as_millis() / 2,
             "bot_in_all_groups": query.in_all_groups,
             "bot_in_any_groups": query.in_any_groups,
             "data": encoded_message,
