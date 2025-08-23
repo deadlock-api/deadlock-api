@@ -60,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
 
         if objs_to_ingest.is_empty() {
             info!("No files to fetch");
+            tokio::time::sleep(Duration::from_secs(30)).await;
             continue;
         }
 
