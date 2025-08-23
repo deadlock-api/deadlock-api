@@ -120,7 +120,7 @@ async fn ingest_object(
     {
         let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
         move_object(store, key, &new_path).await?;
-        bail!("Match outcome is error moved to fail folder");
+        bail!("[{:?}] Match outcome is error moved to fail folder", match_info.match_id);
     }
     match insert_match(ch_client, &match_info).await {
         Ok(()) => {
