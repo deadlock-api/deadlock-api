@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
              t_missing_matches AS (SELECT DISTINCT match_id
                                    FROM player_match_history
                                    WHERE match_mode IN ('Ranked', 'Unranked')
-                                     AND start_time BETWEEN '2024-12-01' AND now() - INTERVAL 2 HOUR
+                                     AND start_time BETWEEN '2024-11-15' AND now() - INTERVAL 2 HOUR
                                      AND match_id NOT IN t_known_matches
                                    UNION
                                    DISTINCT
