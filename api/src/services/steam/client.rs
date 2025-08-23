@@ -6,6 +6,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use metrics::counter;
 use prost::Message;
+use rand::prelude::IndexedRandom;
 use reqwest::Response;
 use serde_json::json;
 use tracing::{debug, error};
@@ -95,7 +96,9 @@ impl SteamClient {
             #[allow(clippy::indexing_slicing, reason = "We checked the length")]
             &self.steam_proxy_urls[0]
         } else {
-            fastrand::choice(self.steam_proxy_urls.iter()).ok_or(SteamProxyError::NoBaseUrl)?
+            self.steam_proxy_urls
+                .choose(&mut rand::rng())
+                .ok_or(SteamProxyError::NoBaseUrl)?
         };
 
         self.http_client
