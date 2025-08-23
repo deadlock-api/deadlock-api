@@ -119,12 +119,12 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
     }
     if let Some(search_name) = &params.search_name {
         query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE '%");
-        query_builder.push(search_name.to_lowercase());
+        query_builder.push_bind(search_name.to_lowercase());
         query_builder.push("%'");
     }
     if let Some(search_description) = &params.search_description {
         query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE '%");
-        query_builder.push(search_description.to_lowercase());
+        query_builder.push_bind(search_description.to_lowercase());
         query_builder.push("%'");
     }
     if let Some(language) = params.language {
