@@ -118,13 +118,14 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push("'");
     }
     if let Some(search_name) = &params.search_name {
-        let search_name = urlencoding::decode(search_name).unwrap_or_default();
+        let search_name = urlencoding::decode(search_name).unwrap_or(search_name.into());
         query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE '%");
         query_builder.push(search_name.to_lowercase());
         query_builder.push("%'");
     }
     if let Some(search_description) = &params.search_description {
-        let search_description = urlencoding::decode(search_description).unwrap_or_default();
+        let search_description =
+            urlencoding::decode(search_description).unwrap_or(search_description.into());
         query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE '%");
         query_builder.push(search_description.to_lowercase());
         query_builder.push("%'");
