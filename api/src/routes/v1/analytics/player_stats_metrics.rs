@@ -423,7 +423,7 @@ impl Metric {
             },
             Self::PlayerDamageTakenPerMin => MetricValues {
                 avg: row.avg_player_damage_taken_per_min,
-                std: row.std_playerdamage_taken_per_min,
+                std: row.std_player_damage_taken_per_min,
                 percentile1: row.quantiles_player_damage_taken_per_min[0],
                 percentile5: row.quantiles_player_damage_taken_per_min[1],
                 percentile10: row.quantiles_player_damage_taken_per_min[2],
