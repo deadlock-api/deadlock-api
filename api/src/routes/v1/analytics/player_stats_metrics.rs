@@ -16,7 +16,7 @@ use crate::error::APIResult;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub(crate) struct PlayerStatsMatricsQuery {
+pub(crate) struct PlayerStatsMetricsQuery {
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -373,7 +373,7 @@ pub(super) struct AnalyticsPlayerStatsMetricsRow {
 }
 
 #[allow(clippy::too_many_lines)]
-fn build_query(query: &PlayerStatsMatricsQuery) -> String {
+fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -470,7 +470,7 @@ fn build_query(query: &PlayerStatsMatricsQuery) -> String {
 
 async fn get_player_stats_metrics(
     ch_client: &clickhouse::Client,
-    query: PlayerStatsMatricsQuery,
+    query: PlayerStatsMetricsQuery,
 ) -> APIResult<AnalyticsPlayerStatsMetricsRow> {
     let query_str = build_query(&query);
     debug!(?query_str);
@@ -480,7 +480,7 @@ async fn get_player_stats_metrics(
 #[utoipa::path(
     get,
     path = "/player-stats/metrics",
-    params(PlayerStatsMatricsQuery),
+    params(PlayerStatsMetricsQuery),
     responses(
         (status = OK, description = "Hero Stats", body = [AnalyticsPlayerStatsMetrics]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -500,7 +500,7 @@ Retrieves metrics for all players.
     "
 )]
 pub(crate) async fn player_stats_metrics(
-    Query(query): Query<PlayerStatsMatricsQuery>,
+    Query(query): Query<PlayerStatsMetricsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     get_player_stats_metrics(&state.ch_client_ro, query)
@@ -521,7 +521,7 @@ mod test {
 
     #[test]
     fn test_build_query_min_unix_timestamp() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             min_unix_timestamp: Some(1672531200),
             ..Default::default()
         };
@@ -531,7 +531,7 @@ mod test {
 
     #[test]
     fn test_build_query_max_unix_timestamp() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             max_unix_timestamp: Some(1675209599),
             ..Default::default()
         };
@@ -541,7 +541,7 @@ mod test {
 
     #[test]
     fn test_build_query_min_duration_s() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             min_duration_s: Some(600),
             ..Default::default()
         };
@@ -551,7 +551,7 @@ mod test {
 
     #[test]
     fn test_build_query_max_duration_s() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             max_duration_s: Some(1800),
             ..Default::default()
         };
@@ -561,7 +561,7 @@ mod test {
 
     #[test]
     fn test_build_query_min_networth() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             min_networth: Some(1000),
             ..Default::default()
         };
@@ -571,7 +571,7 @@ mod test {
 
     #[test]
     fn test_build_query_max_networth() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             max_networth: Some(10000),
             ..Default::default()
         };
@@ -581,7 +581,7 @@ mod test {
 
     #[test]
     fn test_build_query_min_average_badge() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             min_average_badge: Some(1),
             ..Default::default()
         };
@@ -591,7 +591,7 @@ mod test {
 
     #[test]
     fn test_build_query_max_average_badge() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             max_average_badge: Some(116),
             ..Default::default()
         };
@@ -601,7 +601,7 @@ mod test {
 
     #[test]
     fn test_build_query_min_match_id() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             min_match_id: Some(10000),
             ..Default::default()
         };
@@ -611,7 +611,7 @@ mod test {
 
     #[test]
     fn test_build_query_max_match_id() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             max_match_id: Some(1000000),
             ..Default::default()
         };
@@ -621,7 +621,7 @@ mod test {
 
     #[test]
     fn test_build_query_account_id() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             account_ids: Some(vec![18373975]),
             ..Default::default()
         };
@@ -631,7 +631,7 @@ mod test {
 
     #[test]
     fn test_build_query_include_item_ids() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             include_item_ids: Some(vec![1, 2, 3]),
             ..Default::default()
         };
@@ -641,7 +641,7 @@ mod test {
 
     #[test]
     fn test_build_query_exclude_item_ids() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             exclude_item_ids: Some(vec![4, 5, 6]),
             ..Default::default()
         };
@@ -651,7 +651,7 @@ mod test {
 
     #[test]
     fn test_build_query_include_and_exclude_item_ids() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             include_item_ids: Some(vec![1, 2, 3]),
             exclude_item_ids: Some(vec![4, 5, 6]),
             ..Default::default()
@@ -663,7 +663,7 @@ mod test {
 
     #[test]
     fn test_build_query_selects() {
-        let query = PlayerStatsMatricsQuery {
+        let query = PlayerStatsMetricsQuery {
             ..Default::default()
         };
         let sql = build_query(&query);
