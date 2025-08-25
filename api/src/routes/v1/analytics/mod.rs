@@ -8,6 +8,7 @@ pub mod hero_synergies_stats;
 mod item_permutation_stats;
 pub mod item_stats;
 pub mod player_scoreboard;
+mod player_stats_metrics;
 pub mod scoreboard_types;
 
 use core::time::Duration;
@@ -31,7 +32,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi()).merge(
         OpenApiRouter::new()
             .routes(routes!(ability_order_stats::ability_order_stats))
-            // .routes(routes!(player_stats::player_stats))
+            .routes(routes!(player_stats_metrics::player_stats_metrics))
             .routes(routes!(hero_stats::hero_stats))
             .routes(routes!(item_stats::item_stats))
             .routes(routes!(item_permutation_stats::item_permutation_stats))
