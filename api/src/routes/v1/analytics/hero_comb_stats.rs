@@ -54,9 +54,6 @@ pub(crate) struct HeroCombStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// Filter for matches with a specific player account ID.
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
-    account_id: Option<u32>,
     /// Comma separated list of hero ids to include. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     include_hero_ids: Option<Vec<u32>>,
@@ -75,6 +72,13 @@ pub(crate) struct HeroCombStatsQuery {
     #[serde(default = "default_comb_size")]
     #[param(minimum = 2, maximum = 6, default = 6)]
     comb_size: Option<u8>,
+    /// Filter for matches with a specific player account ID.
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[deprecated]
+    account_id: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -143,8 +147,15 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         format!(" AND {}", player_filters.join(" AND "))
     };
     let mut grouped_filters = vec![];
+    #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         grouped_filters.push(format!("has(account_ids, {account_id})"));
+    }
+    if let Some(account_ids) = &query.account_ids {
+        grouped_filters.push(format!(
+            "hasAny(account_ids, [{}])",
+            account_ids.iter().map(ToString::to_string).join(", ")
+        ));
     }
     if let Some(include_hero_ids) = &query.include_hero_ids {
         grouped_filters.push(format!(
@@ -400,13 +411,12 @@ mod test {
 
     #[test]
     fn test_build_query_account_id() {
-        let account_id = Some(18373975);
         let comb_query = HeroCombStatsQuery {
-            account_id,
+            account_ids: Some(vec![18373975]),
             ..Default::default()
         };
         let query = build_query(&comb_query);
-        assert!(query.contains("has(account_ids, 18373975)"));
+        assert!(query.contains("hasAny(account_ids, [18373975])"));
     }
 
     #[test]

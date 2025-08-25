@@ -89,7 +89,7 @@ async fn test_hero_comb_stats(
     #[case] max_average_badge: Option<u8>,
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_idss: Option<u32>,
     #[values(None, Some(3), Some(6))] comb_size: Option<u8>,
 ) {
     let mut queries = vec![];
@@ -141,8 +141,8 @@ async fn test_hero_comb_stats(
     if let Some(max_match_id) = max_match_id {
         queries.push(("max_match_id", max_match_id.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_idss) = account_idss {
+        queries.push(("account_idss", account_idss.to_string()));
     }
     if let Some(comb_size) = comb_size {
         queries.push(("comb_size", comb_size.to_string()));
@@ -211,7 +211,7 @@ async fn test_hero_counters_stats(
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
     #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
     let mut queries = vec![];
     if let Some(min_matches) = min_matches {
@@ -259,8 +259,8 @@ async fn test_hero_counters_stats(
     if let Some(same_lane_filter) = same_lane_filter {
         queries.push(("same_lane_filter", same_lane_filter.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
     let queries = queries
         .iter()
@@ -382,7 +382,7 @@ async fn test_hero_scoreboard(
     #[case] max_average_badge: Option<u8>,
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
     let mut queries = vec![];
     queries.push(("sort_by", sort_by.to_string()));
@@ -423,8 +423,8 @@ async fn test_hero_scoreboard(
     if let Some(max_match_id) = max_match_id {
         queries.push(("max_match_id", max_match_id.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
     let queries = queries
         .iter()
@@ -562,7 +562,7 @@ async fn test_player_scoreboard(
     #[case] max_average_badge: Option<u8>,
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
     #[case] limit: Option<u32>,
 ) {
     let mut queries = vec![];
@@ -606,8 +606,8 @@ async fn test_player_scoreboard(
     if let Some(max_match_id) = max_match_id {
         queries.push(("max_match_id", max_match_id.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
     let queries = queries
         .iter()
@@ -696,7 +696,7 @@ async fn test_hero_stats(
     #[case] max_hero_matches: Option<u64>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
     let mut queries = vec![];
     if let Some(bucket) = bucket {
@@ -750,8 +750,8 @@ async fn test_hero_stats(
             exclude_item_ids.iter().map(ToString::to_string).join(","),
         ));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
     let queries = queries
         .iter()
@@ -802,7 +802,7 @@ async fn test_hero_synergies_stats(
     #[case] max_average_badge: Option<u8>,
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
@@ -843,8 +843,8 @@ async fn test_hero_synergies_stats(
     if let Some(max_match_id) = max_match_id {
         queries.push(("max_match_id", max_match_id.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
@@ -979,7 +979,7 @@ async fn test_item_stats(
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
@@ -1053,8 +1053,8 @@ async fn test_item_stats(
     if let Some(max_matches) = max_matches {
         queries.push(("max_matches", max_matches.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
 
     let queries = queries
@@ -1119,7 +1119,7 @@ async fn test_ability_order_stats(
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
     #[case] min_matches: Option<u32>,
-    #[values(None, Some(18373975))] account_id: Option<u32>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
     let mut queries = vec![];
     queries.push(("hero_id", hero_id.to_string()));
@@ -1162,8 +1162,8 @@ async fn test_ability_order_stats(
     if let Some(min_matches) = min_matches {
         queries.push(("min_matches", min_matches.to_string()));
     }
-    if let Some(account_id) = account_id {
-        queries.push(("account_id", account_id.to_string()));
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
     }
 
     let queries = queries

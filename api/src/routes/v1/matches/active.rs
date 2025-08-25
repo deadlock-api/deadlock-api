@@ -21,13 +21,17 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ActiveMatch;
 use crate::services::steam::types::SteamProxyQuery;
-use crate::utils::parse::parse_steam_id_option;
+use crate::utils::parse::{comma_separated_deserialize_option, parse_steam_id_option};
 
 #[derive(Deserialize, IntoParams)]
 pub(super) struct ActiveMatchesQuery {
     /// The account ID to filter active matches by (`SteamID3`)
     #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[deprecated]
     account_id: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[cached(
@@ -128,18 +132,26 @@ Fetched from the watch tab in game, which is limited to the **top 200 matches**.
     "
 )]
 pub(super) async fn active_matches(
-    Query(ActiveMatchesQuery { account_id }): Query<ActiveMatchesQuery>,
+    Query(query): Query<ActiveMatchesQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let raw_data = fetch_active_matches_raw(&state).await?;
     let mut active_matches = parse_active_matches_raw(&raw_data)?;
 
     // Filter by account id if provided
-    if let Some(account_id) = account_id {
+    #[allow(deprecated)]
+    if let Some(account_id) = query.account_id {
         active_matches.retain(|m| {
             m.players
                 .iter()
                 .any(|p| p.account_id.is_some_and(|a| a == account_id))
+        });
+    }
+    if let Some(account_ids) = query.account_ids {
+        active_matches.retain(|m| {
+            m.players
+                .iter()
+                .any(|p| p.account_id.is_some_and(|a| account_ids.contains(&a)))
         });
     }
 

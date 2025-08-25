@@ -4,19 +4,22 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
+use crate::utils::parse::{
+    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+};
 
 fn default_min_matches() -> Option<u32> {
     10.into()
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct AbilityOrderStatsQuery {
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: u32,
@@ -58,7 +61,11 @@ pub(super) struct AbilityOrderStatsQuery {
     min_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[deprecated]
     account_id: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -112,8 +119,15 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     };
     let mut player_filters = vec![];
     player_filters.push(format!("hero_id = {}", query.hero_id));
+    #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
+    }
+    if let Some(account_ids) = &query.account_ids {
+        player_filters.push(format!(
+            "account_id IN ({})",
+            account_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
     if let Some(min_networth) = query.min_networth {
         player_filters.push(format!("net_worth >= {min_networth}"));
@@ -313,13 +327,13 @@ mod test {
     }
 
     #[test]
-    fn test_build_query_account_id() {
+    fn test_build_query_account_ids() {
         let query = AbilityOrderStatsQuery {
-            account_id: Some(18373975),
+            account_ids: Some(vec![18373975]),
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("account_id = 18373975"));
+        assert!(sql.contains("account_id IN (18373975)"));
     }
 
     #[test]

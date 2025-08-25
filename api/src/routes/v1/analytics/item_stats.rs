@@ -144,7 +144,11 @@ pub(crate) struct ItemStatsQuery {
     max_matches: Option<u32>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[deprecated]
     account_id: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -209,8 +213,15 @@ fn build_query(query: &ItemStatsQuery) -> String {
             hero_ids.iter().map(u32::to_string).join(", ")
         ));
     }
+    #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
+    }
+    if let Some(account_ids) = &query.account_ids {
+        player_filters.push(format!(
+            "account_id IN ({})",
+            account_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
     if let Some(min_networth) = query.min_networth {
         player_filters.push(format!("net_worth >= {min_networth}"));
@@ -501,11 +512,11 @@ mod test {
     fn test_build_item_stats_query_account_id() {
         let account_id = 18373975;
         let query = ItemStatsQuery {
-            account_id: account_id.into(),
+            account_ids: Some(vec![account_id]),
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("account_id = {account_id}")));
+        assert!(query_str.contains(&format!("account_id IN ({account_id})")));
     }
 
     #[test]

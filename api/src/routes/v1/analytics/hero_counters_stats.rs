@@ -3,6 +3,7 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -10,14 +11,15 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::utils::parse::{
-    default_last_month_timestamp, default_true_option, parse_steam_id_option,
+    comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
+    parse_steam_id_option,
 };
 
 fn default_min_matches() -> Option<u64> {
     20.into()
 }
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct HeroCounterStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -53,9 +55,6 @@ pub(super) struct HeroCounterStatsQuery {
     #[serde(default = "default_true_option")]
     #[param(default = true)]
     same_lane_filter: Option<bool>,
-    /// Filter for matches with a specific player account ID.
-    #[serde(default, deserialize_with = "parse_steam_id_option")]
-    account_id: Option<u32>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
@@ -64,6 +63,13 @@ pub(super) struct HeroCounterStatsQuery {
     #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,
+    /// Filter for matches with a specific player account ID.
+    #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[deprecated]
+    account_id: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -150,8 +156,15 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     if query.same_lane_filter.unwrap_or(true) {
         player_filters.push("p1.assigned_lane = p2.assigned_lane".to_owned());
     }
+    #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("p1.account_id = {account_id}"));
+    }
+    if let Some(account_ids) = &query.account_ids {
+        player_filters.push(format!(
+            "p1.account_id IN ({})",
+            account_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
     if let Some(min_networth) = query.min_networth {
         player_filters.push(format!("p1.net_worth >= {min_networth}"));
@@ -411,11 +424,11 @@ mod test {
     #[test]
     fn test_build_hero_counters_stats_query_account_id() {
         let query = HeroCounterStatsQuery {
-            account_id: Some(18373975),
+            account_ids: Some(vec![18373975]),
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("account_id = 18373975"));
+        assert!(sql.contains("account_id IN (18373975)"));
     }
 
     #[test]

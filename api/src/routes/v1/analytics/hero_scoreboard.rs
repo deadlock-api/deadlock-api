@@ -3,6 +3,7 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -10,10 +11,12 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
-use crate::utils::parse::{default_last_month_timestamp, parse_steam_id_option};
+use crate::utils::parse::{
+    comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
+};
 use crate::utils::types::SortDirectionDesc;
 
-#[derive(Copy, Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
+#[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
 pub(super) struct HeroScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]
@@ -52,7 +55,11 @@ pub(super) struct HeroScoreboardQuery {
     max_match_id: Option<u64>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
+    #[deprecated]
     account_id: Option<u32>,
+    /// Comma separated list of account ids to include
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -108,8 +115,15 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
             "match_id IN (SELECT match_id FROM match_info {info_filters}) "
         ));
     }
+    #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));
+    }
+    if let Some(account_ids) = &query.account_ids {
+        player_filters.push(format!(
+            "account_id IN ({})",
+            account_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
     if let Some(min_networth) = query.min_networth {
         player_filters.push(format!("net_worth >= {min_networth}"));
@@ -274,14 +288,14 @@ mod test {
     #[test]
     fn test_build_hero_scoreboard_query_account_id_and_min_matches() {
         let query = HeroScoreboardQuery {
-            account_id: Some(18373975),
+            account_ids: Some(vec![18373975]),
             sort_by: ScoreboardQuerySortBy::Matches,
             min_matches: Some(10),
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("account_id = 18373975"));
+        assert!(sql.contains("account_id IN (18373975)"));
         assert!(sql.contains("uniq(match_id) >= 10"));
     }
 
