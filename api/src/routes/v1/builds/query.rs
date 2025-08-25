@@ -238,7 +238,7 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE '%$1%' ) SELECT builds FROM \
              hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
@@ -261,24 +261,6 @@ mod tests {
     }
 
     #[test]
-    fn test_search_name_case_insensitive() {
-        let query = BuildsSearchQuery {
-            search_name: Some("TANK BUILD".to_owned()),
-            ..Default::default()
-        };
-
-        let sql = sql_query(&query);
-        assert_eq!(
-            sql,
-            " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
-             reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
-             version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank build%' ) SELECT builds FROM \
-             hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
-        );
-    }
-
-    #[test]
     fn test_search_description() {
         let query = BuildsSearchQuery {
             search_description: Some("strength items".to_owned()),
@@ -291,7 +273,7 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'description') LIKE '%strength items%' ) SELECT builds \
+             lower(data->'hero_build'->>'description') LIKE '%$1%' ) SELECT builds \
              FROM hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
@@ -569,7 +551,7 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank%' AND hero = 42 ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE '%$1%' AND hero = 42 ) SELECT builds FROM \
              hero_builds ORDER BY updated_at asc NULLS FIRST LIMIT 25 OFFSET 5"
         );
     }
@@ -588,8 +570,8 @@ mod tests {
             " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
              reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
              version DESC) as rn FROM hero_builds WHERE TRUE AND \
-             lower(data->'hero_build'->>'name') LIKE '%tank%' AND \
-             lower(data->'hero_build'->>'description') LIKE '%strength%' ) SELECT builds FROM \
+             lower(data->'hero_build'->>'name') LIKE '%$1%' AND \
+             lower(data->'hero_build'->>'description') LIKE '%$2%' ) SELECT builds FROM \
              hero_builds ORDER BY favorites desc NULLS LAST LIMIT 100"
         );
     }
