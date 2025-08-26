@@ -136,12 +136,16 @@ fn build_query(query: &HeroStatsQuery) -> String {
     if let Some(max_match_id) = query.max_match_id {
         info_filters.push(format!("match_id <= {max_match_id}"));
     }
-    if let Some(min_badge_level) = query.min_average_badge {
+    if let Some(min_badge_level) = query.min_average_badge
+        && min_badge_level > 11
+    {
         info_filters.push(format!(
             "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
         ));
     }
-    if let Some(max_badge_level) = query.max_average_badge {
+    if let Some(max_badge_level) = query.max_average_badge
+        && max_badge_level < 116
+    {
         info_filters.push(format!(
             "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
         ));
