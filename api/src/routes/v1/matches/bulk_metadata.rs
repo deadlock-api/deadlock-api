@@ -5,10 +5,9 @@ use core::fmt::Write;
 use core::time::Duration;
 
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum_extra::extract::Query;
 use clickhouse::query::BytesCursor;
 use itertools::Itertools;
 use serde::Deserialize;
