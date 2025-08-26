@@ -114,7 +114,7 @@ impl Metric {
             Self::Deaths => "deaths",
             Self::Assists => "assists",
             Self::NetWorth => "net_worth",
-            Self::NetWorthPerMin => "net_worth / greatest(1, duration_s) * 60",
+            Self::NetWorthPerMin => "net_worth / duration_m",
             Self::Denies => "denies",
             Self::LastHits => "last_hits",
             Self::CritShotRate => {
@@ -126,22 +126,18 @@ impl Metric {
             Self::KillsPlusAssists => "kills + assists",
             Self::PlayerDamage => "max_player_damage",
             Self::PlayerDamagePerHealth => "max_player_damage / greatest(1, max_max_health)",
-            Self::PlayerDamagePerMin => "max_player_damage / greatest(1, duration_s) * 60",
-            Self::PlayerDamageTakenPerMin => {
-                "max_player_damage_taken / greatest(1, duration_s) * 60"
-            }
+            Self::PlayerDamagePerMin => "max_player_damage / duration_m",
+            Self::PlayerDamageTakenPerMin => "max_player_damage_taken / duration_m",
             Self::NeutralDamage => "max_neutral_damage",
-            Self::NeutralDamagePerMin => "max_neutral_damage / greatest(1, duration_s) * 60",
+            Self::NeutralDamagePerMin => "max_neutral_damage / duration_m",
             Self::BossDamage => "max_boss_damage",
-            Self::BossDamagePerMin => "max_boss_damage / greatest(1, duration_s) * 60",
+            Self::BossDamagePerMin => "max_boss_damage / duration_m",
             Self::SelfHealing => "max_self_healing",
             Self::PlayerHealing => "max_player_healing",
             Self::Healing => "max_self_healing + max_player_healing",
-            Self::SelfHealingPerMin => "max_self_healing / greatest(1, duration_s) * 60",
-            Self::PlayerHealingPerMin => "max_player_healing / greatest(1, duration_s) * 60",
-            Self::HealingPerMin => {
-                "(max_self_healing + max_player_healing) / greatest(1, duration_s) * 60"
-            }
+            Self::SelfHealingPerMin => "max_self_healing / duration_m",
+            Self::PlayerHealingPerMin => "max_player_healing / duration_m",
+            Self::HealingPerMin => "(max_self_healing + max_player_healing) / duration_m",
         }
     }
 
@@ -657,7 +653,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     format!(
         "
     WITH t_matches AS (
-            SELECT match_id, duration_s
+            SELECT match_id, greatest(1, duration_s) / 60 as duration_m
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
