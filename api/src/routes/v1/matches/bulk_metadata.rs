@@ -296,9 +296,10 @@ fn fetch_lines(
         .map(tokio::io::AsyncBufReadExt::lines)
 }
 
-async fn parse_lines(mut lines: Lines<BytesCursor>) -> serde_json::Result<Vec<serde_json::Value>> {
+async fn parse_lines(mut lines: Lines<BytesCursor>) -> APIResult<Vec<serde_json::Value>> {
     let mut parsed_result: Vec<serde_json::Value> = vec![];
-    while let Ok(Some(line)) = lines.next_line().await {
+    while let Some(line) = lines.next_line().await? {
+        debug!(?line);
         let value: serde_json::Value = serde_json::de::from_str(&line)?;
         parsed_result.push(value);
     }
