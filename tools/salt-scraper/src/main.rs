@@ -48,22 +48,19 @@ async fn main() -> anyhow::Result<()> {
     loop {
         // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
         let query = r"
-        WITH t_known_matches AS (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info),
-             t_missing_matches AS (SELECT DISTINCT match_id
+        WITH t_missing_matches AS (SELECT match_id
                                    FROM player_match_history
                                    WHERE match_mode IN ('Ranked', 'Unranked')
                                      AND start_time BETWEEN '2024-11-15' AND now() - INTERVAL 2 HOUR
-                                     AND match_id NOT IN t_known_matches
-                                   UNION
-                                   DISTINCT
+                                   UNION ALL
                                    SELECT DISTINCT match_id
                                    FROM active_matches
                                    WHERE match_mode IN ('Ranked', 'Unranked')
                                      AND game_mode = 'Normal'
-                                     AND start_time BETWEEN now() - INTERVAL 2 WEEK AND now() - INTERVAL 2 HOUR
-                                     AND match_id NOT IN t_known_matches)
-        SELECT match_id
+                                     AND start_time BETWEEN now() - INTERVAL 2 WEEK AND now() - INTERVAL 2 HOUR)
+        SELECT DISTINCT match_id
         FROM t_missing_matches
+        WHERE match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info)
         ORDER BY match_id DESC
         LIMIT 100
         ";
