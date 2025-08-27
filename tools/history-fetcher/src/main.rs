@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let mut interval = tokio::time::interval(Duration::from_secs(10));
+    let mut interval = tokio::time::interval(Duration::from_secs(6));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
@@ -125,6 +125,7 @@ WHERE account_id > 0
   AND match_id NOT IN t_matches
   AND (account_id, match_id) NOT IN t_player_histories
 ORDER BY match_id DESC
+LIMIT 100
 
 UNION
 DISTINCT
