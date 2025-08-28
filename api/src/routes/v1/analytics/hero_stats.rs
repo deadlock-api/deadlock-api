@@ -225,7 +225,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(won) AS wins,
         sum(not won) AS losses,
         wins + losses AS matches,
-        sum(count(distinct match_id)) OVER (PARTITION BY {bucket}) AS matches_per_bucket,
+        {} AS matches_per_bucket,
         uniq(account_id) AS players,
         sum(kills) AS total_kills,
         sum(deaths) AS total_deaths,
@@ -267,6 +267,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
             )
         } else {
             String::new()
+        },
+        if query.bucket == BucketQuery::NoBucket {
+            "matches".to_owned()
+        } else {
+            format!("sum(count(distinct match_id)) OVER (PARTITION BY {bucket})")
         },
         if query
             .min_hero_matches
