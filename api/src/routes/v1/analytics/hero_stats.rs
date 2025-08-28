@@ -2,6 +2,8 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -278,13 +280,30 @@ fn build_query(query: &HeroStatsQuery) -> String {
     )
 }
 
+#[cached(
+    ty = "TimedCache<String, Vec<AnalyticsHeroStats>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
+    result = true,
+    convert = "{ query_str }",
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: String,
+) -> clickhouse::error::Result<Vec<AnalyticsHeroStats>> {
+    ch_client.query(&query_str).fetch_all().await
+}
+
 async fn get_hero_stats(
     ch_client: &clickhouse::Client,
-    query: HeroStatsQuery,
+    mut query: HeroStatsQuery,
 ) -> APIResult<Vec<AnalyticsHeroStats>> {
+    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
+    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
     let query_str = build_query(&query);
     debug!(?query_str);
-    Ok(ch_client.query(&query_str).fetch_all().await?)
+    Ok(run_query(ch_client, query_str).await?)
 }
 
 #[utoipa::path(
