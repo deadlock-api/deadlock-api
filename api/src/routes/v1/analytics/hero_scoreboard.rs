@@ -2,6 +2,8 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -163,13 +165,30 @@ ORDER BY value {}
     )
 }
 
+#[cached(
+    ty = "TimedCache<String, Vec<Entry>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
+    result = true,
+    convert = "{ query_str.to_string() }",
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<Entry>> {
+    ch_client.query(query_str).fetch_all().await
+}
+
 async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
-    query: HeroScoreboardQuery,
+    mut query: HeroScoreboardQuery,
 ) -> APIResult<Vec<Entry>> {
+    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
+    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
     let query = build_query(&query);
     debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    Ok(run_query(ch_client, &query).await?)
 }
 
 #[utoipa::path(

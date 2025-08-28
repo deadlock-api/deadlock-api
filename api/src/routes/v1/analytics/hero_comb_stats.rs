@@ -6,6 +6,8 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -220,13 +222,30 @@ ORDER BY wins / greatest(1, matches) DESC
     )
 }
 
+#[cached(
+    ty = "TimedCache<String, Vec<HeroCombStats>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
+    result = true,
+    convert = "{ query_str.to_string() }",
+    sync_writes = "by_key",
+    key = "String"
+)]
+async fn run_query(
+    ch_client: &clickhouse::Client,
+    query_str: &str,
+) -> clickhouse::error::Result<Vec<HeroCombStats>> {
+    ch_client.query(query_str).fetch_all().await
+}
+
 async fn get_comb_stats(
     ch_client: &clickhouse::Client,
-    query: HeroCombStatsQuery,
+    mut query: HeroCombStatsQuery,
 ) -> APIResult<Vec<HeroCombStats>> {
+    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
+    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
     let ch_query = build_query(&query);
     debug!(?ch_query);
-    let comb_stats: Vec<HeroCombStats> = ch_client.query(&ch_query).fetch_all().await?;
+    let comb_stats: Vec<HeroCombStats> = run_query(ch_client, &ch_query).await?;
     let comb_size = match query.comb_size {
         Some(6) | None => return Ok(comb_stats),
         Some(x) if !(2..=6).contains(&x) => {
