@@ -661,18 +661,18 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
-            ORDER BY rand()
-            LIMIT 1000000 --Sample 1 Million Matches
         ),
-        t_players AS (
-            SELECT *
-            FROM match_player
-            WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
+        t_data AS (
+            SELECT mp.*, duration_m
+            FROM match_player mp
+                INNER JOIN t_matches USING (match_id)
+            WHERE TRUE {player_filters}
+            ORDER BY rand()
+            LIMIT 1000000
             SETTINGS asterisk_include_materialized_columns = 1
         )
     SELECT {selects}
-    FROM t_players
-        INNER JOIN t_matches USING (match_id)
+    FROM t_data
     "
     )
 }
