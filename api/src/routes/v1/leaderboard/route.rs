@@ -76,12 +76,12 @@ pub(crate) async fn fetch_leaderboard_raw(
 
 #[cached(
     ty = "TimedCache<u8, HashMap<String, Vec<u32>>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(2 * 60 * 60)) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-async fn fetch_steam_names(
+async fn fetch_all_steam_names(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<HashMap<String, Vec<u32>>> {
     #[derive(serde::Deserialize, Row)]
@@ -226,7 +226,7 @@ pub(super) async fn leaderboard(
 ) -> APIResult<impl IntoResponse> {
     let (raw_leaderboard, steam_names) = join!(
         fetch_leaderboard_raw(&state.steam_client, region, None),
-        fetch_steam_names(&state.ch_client_ro),
+        fetch_all_steam_names(&state.ch_client_ro),
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
@@ -283,7 +283,7 @@ pub(super) async fn leaderboard_hero(
     }
     let (raw_leaderboard, steam_names) = join!(
         fetch_leaderboard_raw(&state.steam_client, region, hero_id.into()),
-        fetch_steam_names(&state.ch_client_ro),
+        fetch_all_steam_names(&state.ch_client_ro),
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
