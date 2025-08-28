@@ -247,7 +247,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
     HAVING COUNT() > 1
     ORDER BY hero_id, bucket
     ",
-        if query.min_hero_matches.or(query.max_hero_matches).is_some() {
+        if query
+            .min_hero_matches
+            .or(query.max_hero_matches)
+            .is_some_and(|v| v > 1)
+        {
             format!(
                 ",
         t_players AS (
@@ -262,7 +266,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
         } else {
             String::new()
         },
-        if query.min_hero_matches.or(query.max_hero_matches).is_some() {
+        if query
+            .min_hero_matches
+            .or(query.max_hero_matches)
+            .is_some_and(|v| v > 1)
+        {
             "AND (account_id, hero_id) IN t_players"
         } else {
             ""
