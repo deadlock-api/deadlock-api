@@ -275,8 +275,8 @@ mod test {
 
     #[test]
     fn test_build_player_scoreboard_query_badge_levels() {
-        let min_average_badge = Some(1);
-        let max_average_badge = Some(116);
+        let min_average_badge = Some(61);
+        let max_average_badge = Some(112);
         let query = PlayerScoreboardQuery {
             min_average_badge,
             max_average_badge,
@@ -285,8 +285,8 @@ mod test {
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
-        assert!(query_str.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
+        assert!(query_str.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
+        assert!(query_str.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 
     #[test]

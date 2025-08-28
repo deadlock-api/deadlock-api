@@ -371,24 +371,24 @@ mod test {
 
     #[test]
     fn test_build_query_min_average_badge() {
-        let min_average_badge = Some(1);
+        let min_average_badge = Some(61);
         let comb_query = HeroCombStatsQuery {
             min_average_badge,
             ..Default::default()
         };
         let query = build_query(&comb_query);
-        assert!(query.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
+        assert!(query.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
     }
 
     #[test]
     fn test_build_query_max_average_badge() {
-        let max_average_badge = Some(116);
+        let max_average_badge = Some(112);
         let comb_query = HeroCombStatsQuery {
             max_average_badge,
             ..Default::default()
         };
         let query = build_query(&comb_query);
-        assert!(query.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
+        assert!(query.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 
     #[test]

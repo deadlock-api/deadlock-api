@@ -333,7 +333,7 @@ mod test {
 
     #[test]
     fn test_build_item_stats_query_min_average_badge() {
-        let min_average_badge = 1;
+        let min_average_badge = 61;
         let query = ItemPermutationStatsQuery {
             min_average_badge: min_average_badge.into(),
             ..Default::default()
@@ -347,7 +347,7 @@ mod test {
 
     #[test]
     fn test_build_item_stats_query_max_average_badge() {
-        let max_average_badge = 116;
+        let max_average_badge = 112;
         let query = ItemPermutationStatsQuery {
             max_average_badge: max_average_badge.into(),
             ..Default::default()

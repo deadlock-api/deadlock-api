@@ -248,22 +248,22 @@ mod test {
     fn test_build_query_min_average_badge() {
         let account_id = 12345;
         let query = EnemyStatsQuery {
-            min_average_badge: Some(5),
+            min_average_badge: Some(61),
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
-        assert!(sql.contains("average_badge_team0 >= 5 AND average_badge_team1 >= 5"));
+        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
     }
 
     #[test]
     fn test_build_query_max_average_badge() {
         let account_id = 12345;
         let query = EnemyStatsQuery {
-            max_average_badge: Some(100),
+            max_average_badge: Some(112),
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
-        assert!(sql.contains("average_badge_team0 <= 100 AND average_badge_team1 <= 100"));
+        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 
     #[test]
@@ -285,8 +285,8 @@ mod test {
         let query = EnemyStatsQuery {
             min_unix_timestamp: Some(1672531200),
             max_unix_timestamp: Some(1675209599),
-            min_average_badge: Some(10),
-            max_average_badge: Some(90),
+            min_average_badge: Some(61),
+            max_average_badge: Some(112),
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             min_matches_played: Some(3),
@@ -299,8 +299,8 @@ mod test {
         assert!(sql.contains("start_time <= 1675209599"));
         assert!(sql.contains("match_id >= 5000"));
         assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("average_badge_team0 >= 10 AND average_badge_team1 >= 10"));
-        assert!(sql.contains("average_badge_team0 <= 90 AND average_badge_team1 <= 90"));
+        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
+        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
         assert!(sql.contains("matches_played >= 3"));
         assert!(sql.contains("matches_played <= 100"));
     }

@@ -264,15 +264,15 @@ mod test {
     #[test]
     fn test_build_hero_scoreboard_query_min_max_average_badge() {
         let query = HeroScoreboardQuery {
-            min_average_badge: Some(1),
-            max_average_badge: Some(116),
+            min_average_badge: Some(61),
+            max_average_badge: Some(112),
             sort_by: ScoreboardQuerySortBy::Matches,
             sort_direction: SortDirectionDesc::Asc,
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
-        assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
+        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
+        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 
     #[test]

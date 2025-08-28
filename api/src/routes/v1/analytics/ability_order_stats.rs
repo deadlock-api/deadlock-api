@@ -293,21 +293,21 @@ mod test {
     #[test]
     fn test_build_query_min_average_badge() {
         let query = AbilityOrderStatsQuery {
-            min_average_badge: Some(1),
+            min_average_badge: Some(61),
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("average_badge_team0 >= 1 AND average_badge_team1 >= 1"));
+        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
     }
 
     #[test]
     fn test_build_query_max_average_badge() {
         let query = AbilityOrderStatsQuery {
-            max_average_badge: Some(116),
+            max_average_badge: Some(112),
             ..Default::default()
         };
         let sql = build_query(&query);
-        assert!(sql.contains("average_badge_team0 <= 116 AND average_badge_team1 <= 116"));
+        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 
     #[test]
