@@ -74,6 +74,13 @@ pub(crate) async fn fetch_leaderboard_raw(
         .await
 }
 
+#[cached(
+    ty = "TimedCache<u8, HashMap<String, Vec<u32>>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(2 * 60 * 60)) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
 async fn fetch_steam_names(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<HashMap<String, Vec<u32>>> {
@@ -84,7 +91,7 @@ async fn fetch_steam_names(
     }
 
     let mut out = HashMap::new();
-    for row in ch_client
+    let results = ch_client
         .query(
             "
                 SELECT DISTINCT assumeNotNull(name) as name, account_id
@@ -94,8 +101,8 @@ async fn fetch_steam_names(
             ",
         )
         .fetch_all::<CHResponse>()
-        .await?
-    {
+        .await?;
+    for row in results {
         out.entry(row.name)
             .or_insert_with(Vec::new)
             .push(row.account_id);
