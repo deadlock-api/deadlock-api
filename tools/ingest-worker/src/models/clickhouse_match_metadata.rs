@@ -21,6 +21,7 @@ pub(crate) struct ClickhouseMatchInfo {
     pub average_badge_team0: Option<u32>,
     pub average_badge_team1: Option<u32>,
     pub rewards_eligible: bool,
+    pub not_scored: Option<bool>,
     pub game_mode_version: Option<u32>,
     #[serde(rename = "objectives.destroyed_time_s")]
     pub objectives_destroyed_time_s: Vec<u32>,
@@ -116,6 +117,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
                 .iter()
                 .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::destroyed_time_s)
                 .collect(),
+            not_scored: value.not_scored,
         }
     }
 }

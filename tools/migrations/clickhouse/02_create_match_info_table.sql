@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS match_info
     average_badge_team0 Nullable (UInt32),
     average_badge_team1 Nullable (UInt32),
     rewards_eligible Bool DEFAULT FALSE,
+    not_scored Nullable(Bool) DEFAULT NULL,
     created_at timestamp DEFAULT current_timestamp()
 ) ENGINE = ReplacingMergeTree
       PARTITION BY toStartOfMonth(start_time)
