@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
         info!("Fetching match ids to download");
         let query = "SELECT DISTINCT match_id, cluster_id, metadata_salt, replay_salt FROM \
                      match_salts WHERE match_id NOT IN (SELECT match_id FROM match_info) AND \
-                     created_at > now() - INTERVAL 1 MONTH";
+                     created_at > now() - INTERVAL 1 WEEK";
         let match_ids_to_fetch: Vec<MatchSalts> = ch_client.query(query).fetch_all().await?;
         let match_ids_to_fetch = match_ids_to_fetch
             .into_iter()
