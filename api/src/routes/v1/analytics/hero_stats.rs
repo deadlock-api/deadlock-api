@@ -213,7 +213,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     format!(
         "
     WITH t_matches AS (
-            SELECT match_id, start_time
+            SELECT match_id {}
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
@@ -246,9 +246,13 @@ fn build_query(query: &HeroStatsQuery) -> String {
     WHERE TRUE {player_filters}
         {}
     GROUP BY hero_id, bucket
-    HAVING COUNT() > 1
     ORDER BY hero_id, bucket
     ",
+        if query.bucket == BucketQuery::NoBucket {
+            ""
+        } else {
+            ", start_time"
+        },
         if query
             .min_hero_matches
             .or(query.max_hero_matches)
