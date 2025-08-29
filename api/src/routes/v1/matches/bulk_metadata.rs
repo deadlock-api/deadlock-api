@@ -130,6 +130,8 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(average_badge_team0) as average_badge_team0".to_owned(),
             "any(average_badge_team1) as average_badge_team1".to_owned(),
             "any(game_mode_version) as game_mode_version".to_owned(),
+            "any(rewards_eligible) as rewards_eligible".to_owned(),
+            "any(not_scored) as not_scored".to_owned(),
         ]);
     }
     if query.include_mid_boss {
