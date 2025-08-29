@@ -55,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
           AND match_id NOT IN (SELECT match_id FROM match_salts)
           AND match_id NOT IN (SELECT match_id FROM match_info)
         ORDER BY match_id DESC
-        LIMIT 100
+        LIMIT 1000
         ";
         let recent_matches: Vec<u64> = ch_client.query(query).fetch_all().await?;
         if recent_matches.is_empty() {
