@@ -306,42 +306,36 @@ WITH
 
     /* 1. Relevant matches */
     t_matches AS (
-        SELECT match_id, start_time, duration_s, winning_team
+        SELECT match_id, start_time, duration_s
         FROM match_info
         WHERE match_mode IN ('Ranked', 'Unranked'){info_filters}
     ),
 
-    /* 2. Filtered players — *single* scan of `match_player` */
-    filtered_players AS (
-        SELECT match_id, account_id
-        FROM match_player
-        WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
-    ),
-
-    /* 3. Explode items only after filtering */
+    /* 2. Explode items only after filtering */
     exploded_players AS (
         SELECT
             match_id,
             team,
             account_id,
             hero_id,
-            it.item_id AS item_id
+            it.item_id AS item_id,
+            won
             {buy_time_expr}
             {net_worth_expr}
         FROM match_player
             ARRAY JOIN items AS it
-        WHERE TRUE
-            AND (account_id, match_id) IN (SELECT account_id, match_id FROM filtered_players)
+        WHERE match_id IN (SELECT match_id FROM t_matches)
             AND it.item_id IN t_upgrades
             AND it.game_time_s > 0
+            {player_filters}
     )
 
-/* 4. Aggregation */
+/* 3. Aggregation */
 SELECT
     item_id,
     {bucket_expr}              AS bucket,
-    SUM(winning_team = team)   AS wins,
-    SUM(winning_team != team)  AS losses,
+    sum(won)                   AS wins,
+    sum(not won)               AS losses,
     wins + losses              AS matches,
     uniqExact(account_id)      AS players
 FROM exploded_players
