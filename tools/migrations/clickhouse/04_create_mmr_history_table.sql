@@ -78,8 +78,8 @@ CREATE TABLE IF NOT EXISTS mmr_history
  division_tier UInt32 ALIAS rank % 10,
   start_time DATETIME
 ) ENGINE = ReplacingMergeTree
-   ORDER BY (account_id, match_id)
-   SETTINGS allow_nullable_key = 1;
+  PARTITION BY toUInt64(floor(match_id / 1000000))
+   ORDER BY (toUInt64(floor(match_id / 1000000)), account_id, match_id);
 
 DROP TABLE IF EXISTS hero_mmr_history;
 
@@ -162,8 +162,8 @@ CREATE TABLE IF NOT EXISTS hero_mmr_history
  division_tier UInt32 ALIAS rank % 10,
  start_time DATETIME
 ) ENGINE = ReplacingMergeTree
-   ORDER BY (hero_id, account_id, match_id)
-   SETTINGS allow_nullable_key = 1;
+   PARTITION BY toUInt64(floor(match_id / 1000000))
+   ORDER BY (hero_id, toUInt64(floor(match_id / 1000000)), account_id, match_id);
 
 DROP TABLE IF EXISTS glicko;
 
