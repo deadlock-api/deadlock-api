@@ -262,7 +262,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     query.push_str("WITH ");
     write!(
         &mut query,
-        "t_matches AS (SELECT match_id FROM match_info FINAL {info_filters} {order} {limit})"
+        "t_matches AS (SELECT match_id FROM match_info {info_filters} {order} {limit})"
     )?;
 
     // SELECT
