@@ -19,6 +19,7 @@ on:
       - 'matchdata-downloader/**'
       - 'active-matches-scraper/**'
       - 'builds-fetcher/**'
+      - 'friends-rank-fetcher/**'
       - 'history-fetcher/**'
       - 'steam-profile-fetcher/**'
       - 'update-assets-tables/**'

@@ -19,8 +19,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use models::SteamPlayerSummary;
-use tokio::join;
-use tracing::{debug, error, info, instrument};
+use tracing::{error, info, instrument};
 
 mod models;
 mod steam_api;

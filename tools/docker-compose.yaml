@@ -77,6 +77,13 @@ services:
     environment:
       RUST_LOG: info
 
+  friends-rank-fetcher:
+    build:
+      args:
+        EXE_NAME: friends-rank-fetcher
+    restart: always
+    env_file: .env
+
   hltv-spectator:
     build:
       args:

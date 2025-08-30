@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT DISTINCT account_id FROM steam_profiles WHERE last_updated > now() - INTERVAL '2 weeks'",
+  "query": "SELECT friend_id FROM bot_friends",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "account_id",
+        "name": "friend_id",
         "type_info": "Int4"
       }
     ],
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "8686dc4c3c65cafe2799c396264fd33804693bf86b6d9edcf922b5508a7197cd"
+  "hash": "6aaa1e82f92e15782193c87a3f15387243fa72a11db412373fca3d45430dcb02"
 }

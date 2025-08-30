@@ -1144,6 +1144,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "friends-rank-fetcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "common",
+ "reqwest",
+ "sqlx",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "fs_extra"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

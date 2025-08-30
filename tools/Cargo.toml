@@ -1,3 +1,3 @@
 [workspace]
-members = ["glicko-mmr", "salt-scraper", "hltv-scraper", "ingest-worker", "matchdata-downloader", "active-matches-scraper", "builds-fetcher", "common", "history-fetcher", "steam-profile-fetcher", "update-assets-tables"]
+members = ["glicko-mmr", "salt-scraper", "hltv-scraper", "ingest-worker", "matchdata-downloader", "active-matches-scraper", "builds-fetcher", "common", "history-fetcher", "steam-profile-fetcher", "update-assets-tables", "friends-rank-fetcher"]
 resolver = "2"
