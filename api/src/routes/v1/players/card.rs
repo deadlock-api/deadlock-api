@@ -239,12 +239,7 @@ pub(super) async fn card(
     {
         Ok(r) => r.bot_id,
         Err(sqlx::Error::RowNotFound) => {
-            let invite_keys = state
-                .redis_client
-                .keys("invite_link:*")
-                .await?
-                .into_iter()
-                .collect::<Vec<_>>();
+            let invite_keys = state.redis_client.keys("invite_link:*").await?;
             let mut invites = vec![];
             for invite_key in invite_keys {
                 if let Ok(Some(invite)) = state.redis_client.get(&invite_key).await {
