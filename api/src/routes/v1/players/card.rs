@@ -194,6 +194,10 @@ pub(crate) async fn fetch_player_card_raw(
     description = "
 This endpoint returns the player card for the given `account_id`.
 
+You have to be friend with one of the bots to use this endpoint.
+On first use this endpoint will return an error with a list of invite links to add the bot as friend.
+From then on you can use this endpoint.
+
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
 Relevant Protobuf Messages:
