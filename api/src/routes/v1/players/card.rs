@@ -122,32 +122,27 @@ impl From<PlayerCard> for PlayerCardClickhouse {
             slots_hero_id: value
                 .slots
                 .iter()
-                .map(|s| s.hero.as_ref().map(|h| h.id))
-                .flatten()
+                .filter_map(|s| s.hero.as_ref().map(|h| h.id))
                 .collect(),
             slots_hero_kills: value
                 .slots
                 .iter()
-                .map(|s| s.hero.as_ref().map(|h| h.kills))
-                .flatten()
+                .filter_map(|s| s.hero.as_ref().map(|h| h.kills))
                 .collect(),
             slots_hero_wins: value
                 .slots
                 .iter()
-                .map(|s| s.hero.as_ref().map(|h| h.wins))
-                .flatten()
+                .filter_map(|s| s.hero.as_ref().map(|h| h.wins))
                 .collect(),
             slots_stat_id: value
                 .slots
                 .iter()
-                .map(|s| s.stat.as_ref().map(|h| h.stat_id))
-                .flatten()
+                .filter_map(|s| s.stat.as_ref().map(|h| h.stat_id))
                 .collect(),
             slots_stat_score: value
                 .slots
                 .iter()
-                .map(|s| s.stat.as_ref().map(|h| h.stat_score))
-                .flatten()
+                .filter_map(|s| s.stat.as_ref().map(|h| h.stat_score))
                 .collect(),
         }
     }
@@ -249,7 +244,6 @@ pub(super) async fn card(
                 .keys("invite_link:*")
                 .await?
                 .into_iter()
-                .map(|k| k.to_string())
                 .collect::<Vec<_>>();
             let mut invites = vec![];
             for invite_key in invite_keys {
