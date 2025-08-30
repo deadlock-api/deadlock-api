@@ -260,7 +260,7 @@ pub(super) async fn card(
             return Err(APIError::StatusMsgJson {
                 status: StatusCode::BAD_REQUEST,
                 message: json!({
-                    "error": "Account ID is not a friend of any bot. Please add the bot as friend first using one of these invites.",
+                    "message": "Account ID is not a friend of any bot. Please add the bot as friend first using one of these invites.",
                     "invites": invites,
                 }),
             });
