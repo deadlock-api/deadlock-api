@@ -18,6 +18,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
+use crate::routes::v1::players::card::get_player_card;
 use crate::routes::v1::players::match_history::{
     PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
     fetch_steam_match_history, insert_match_history_to_ch,
@@ -96,6 +97,8 @@ pub(super) enum Variable {
     MostPlayedHero,
     MostPlayedHeroCount,
     SteamAccountName,
+    Rank,
+    RankImg,
     TotalKd,
     TotalKills,
     TotalMatches,
@@ -119,7 +122,9 @@ impl Variable {
             | Self::LatestPatchnotesTitle
             | Self::SteamAccountName
             | Self::MMRHistoryRank
-            | Self::MMRHistoryRankImg => VariableCategory::General,
+            | Self::MMRHistoryRankImg
+            | Self::Rank
+            | Self::RankImg => VariableCategory::General,
 
             Self::LossesToday
             | Self::MatchesToday
@@ -165,6 +170,7 @@ impl Variable {
 
     pub(super) fn get_description(self) -> &'static str {
         match self {
+            Self::Rank | Self::RankImg => "Get the rank",
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
             }
@@ -252,6 +258,65 @@ impl Variable {
         extra_args: &HashMap<String, String>,
     ) -> Result<String, VariableResolveError> {
         match self {
+            Self::Rank => {
+                let bot_username = sqlx::query!(
+                    "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
+                    i32::try_from(steam_id).map_err(|_| VariableResolveError::NoData("bot id"))?
+                )
+                .fetch_one(&state.pg_client)
+                .await?
+                .bot_id;
+                let player_card = get_player_card(
+                    &state.steam_client,
+                    &state.ch_client_ro,
+                    steam_id,
+                    bot_username,
+                )
+                .await?;
+                let (rank, subrank) = (
+                    player_card.ranked_rank.unwrap_or_default(),
+                    player_card.ranked_subrank.unwrap_or_default(),
+                );
+                let ranks = state.assets_client.fetch_ranks().await?;
+                let rank = ranks
+                    .iter()
+                    .find(|r| r.tier == rank)
+                    .ok_or(VariableResolveError::NoData("leaderboard rank"))?;
+                Ok(format!("{} {subrank}", rank.name))
+            }
+            Self::RankImg => {
+                let bot_username = sqlx::query!(
+                    "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
+                    i32::try_from(steam_id).map_err(|_| VariableResolveError::NoData("bot id"))?
+                )
+                .fetch_one(&state.pg_client)
+                .await?
+                .bot_id;
+                let player_card = get_player_card(
+                    &state.steam_client,
+                    &state.ch_client_ro,
+                    steam_id,
+                    bot_username,
+                )
+                .await?;
+                let (rank, subrank) = (
+                    player_card.ranked_rank.unwrap_or_default(),
+                    player_card.ranked_subrank.unwrap_or_default(),
+                );
+                state
+                    .assets_client
+                    .fetch_ranks()
+                    .await?
+                    .iter()
+                    .find(|r| r.tier == rank)
+                    .and_then(|r| {
+                        r.images
+                            .get(&format!("large_subrank{subrank}"))
+                            .or(r.images.get(&format!("small_subrank{subrank}")))
+                    })
+                    .cloned()
+                    .ok_or(VariableResolveError::NoData("leaderboard rank img"))
+            }
             Self::LeaderboardRankImg => {
                 let leaderboard_entry =
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)

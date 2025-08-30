@@ -1,4 +1,4 @@
-mod card;
+pub mod card;
 pub mod enemy_stats;
 pub mod hero_stats;
 pub(crate) mod match_history;

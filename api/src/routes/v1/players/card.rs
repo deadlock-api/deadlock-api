@@ -28,9 +28,9 @@ use crate::services::steam::types::{
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-struct PlayerCardSlotStat {
-    stat_id: Option<i32>,
-    stat_score: Option<u32>,
+pub(crate) struct PlayerCardSlotStat {
+    pub(crate) stat_id: Option<i32>,
+    pub(crate) stat_score: Option<u32>,
 }
 
 impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
@@ -43,11 +43,11 @@ impl From<c_msg_citadel_profile_card::slot::Stat> for PlayerCardSlotStat {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-struct PlayerCardSlotHero {
+pub(crate) struct PlayerCardSlotHero {
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
-    id: Option<u32>,
-    kills: Option<u32>,
-    wins: Option<u32>,
+    pub(crate) id: Option<u32>,
+    pub(crate) kills: Option<u32>,
+    pub(crate) wins: Option<u32>,
 }
 
 impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
@@ -61,10 +61,10 @@ impl From<c_msg_citadel_profile_card::slot::Hero> for PlayerCardSlotHero {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-struct PlayerCardSlot {
-    slot_id: Option<u32>,
-    hero: Option<PlayerCardSlotHero>,
-    stat: Option<PlayerCardSlotStat>,
+pub(crate) struct PlayerCardSlot {
+    pub(crate) slot_id: Option<u32>,
+    pub(crate) hero: Option<PlayerCardSlotHero>,
+    pub(crate) stat: Option<PlayerCardSlotStat>,
 }
 
 impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
@@ -78,15 +78,15 @@ impl From<c_msg_citadel_profile_card::Slot> for PlayerCardSlot {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-struct PlayerCard {
-    account_id: u32,
+pub(crate) struct PlayerCard {
+    pub(crate) account_id: u32,
     /// See more: <https://assets.deadlock-api.com/v2/ranks>
-    ranked_badge_level: Option<u32>,
+    pub(crate) ranked_badge_level: Option<u32>,
     /// See more: <https://assets.deadlock-api.com/v2/ranks>
-    ranked_rank: Option<u32>,
+    pub(crate) ranked_rank: Option<u32>,
     /// See more: <https://assets.deadlock-api.com/v2/ranks>
-    ranked_subrank: Option<u32>,
-    slots: Vec<PlayerCardSlot>,
+    pub(crate) ranked_subrank: Option<u32>,
+    pub(crate) slots: Vec<PlayerCardSlot>,
 }
 
 impl From<CMsgCitadelProfileCard> for PlayerCard {
@@ -179,6 +179,33 @@ pub(crate) async fn fetch_player_card_raw(
         .await
 }
 
+pub(crate) async fn get_player_card(
+    steam_client: &SteamClient,
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    bot_username: String,
+) -> APIResult<PlayerCard> {
+    let raw_data =
+        tryhard::retry_fn(|| fetch_player_card_raw(steam_client, account_id, bot_username.clone()))
+            .retries(3)
+            .fixed_backoff(Duration::from_millis(10))
+            .await?;
+    let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
+    let player_card: PlayerCard = proto_player_card.msg.into();
+    let ch_player_card: PlayerCardClickhouse = player_card.clone().into();
+    let Ok(mut inserter) = ch_client.insert::<PlayerCardClickhouse>("player_card") else {
+        warn!("Failed to create inserter for player card");
+        return Ok(player_card);
+    };
+    if let Err(e) = inserter.write(&ch_player_card).await {
+        warn!("Failed to insert player card into Clickhouse: {e:?}");
+    }
+    if let Err(e) = inserter.end().await {
+        warn!("Failed to insert player card into Clickhouse: {e:?}");
+    }
+    Ok(player_card)
+}
+
 #[utoipa::path(
     get,
     path = "/{account_id}/card",
@@ -261,29 +288,12 @@ pub(super) async fn card(
         Err(e) => return Err(e.into()),
     };
 
-    let raw_data = tryhard::retry_fn(|| {
-        fetch_player_card_raw(&state.steam_client, account_id, bot_username.clone())
-    })
-    .retries(3)
-    .fixed_backoff(Duration::from_millis(10))
+    let player_card = get_player_card(
+        &state.steam_client,
+        &state.ch_client,
+        account_id,
+        bot_username,
+    )
     .await?;
-    let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
-    let player_card: PlayerCard = proto_player_card.msg.into();
-    let ch_player_card: PlayerCardClickhouse = player_card.clone().into();
-    tokio::spawn(async move {
-        let Ok(mut inserter) = state
-            .ch_client
-            .insert::<PlayerCardClickhouse>("player_card")
-        else {
-            warn!("Failed to create inserter for player card");
-            return;
-        };
-        if let Err(e) = inserter.write(&ch_player_card).await {
-            warn!("Failed to insert player card into Clickhouse: {e:?}");
-        }
-        if let Err(e) = inserter.end().await {
-            warn!("Failed to insert player card into Clickhouse: {e:?}");
-        }
-    });
     Ok(Json(player_card))
 }
