@@ -29,7 +29,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                 .routes(routes!(mate_stats::mate_stats))
                 .routes(routes!(enemy_stats::enemy_stats))
                 .routes(routes!(party_stats::party_stats))
-                .routes(routes!(hero_stats::hero_stats))
+                .routes(routes!(hero_stats::player_hero_stats))
                 .layer(
                     CacheControlMiddleware::new(Duration::from_secs(60 * 60))
                         .with_stale_while_revalidate(Duration::from_secs(60 * 60))

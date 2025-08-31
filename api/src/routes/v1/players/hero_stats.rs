@@ -218,7 +218,7 @@ This endpoint returns statistics for each hero played by a given player account.
 | Global | - |
     "
 )]
-pub(super) async fn hero_stats(
+pub(super) async fn player_hero_stats(
     Query(query): Query<HeroStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
