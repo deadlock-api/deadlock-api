@@ -103,7 +103,7 @@ pub(super) async fn mmr_history(
 #[utoipa::path(
     get,
     path = "/{account_id}/mmr-history/{hero_id}",
-    params(AccountIdQuery, HeroMMRHistoryQuery),
+    params(HeroMMRHistoryQuery),
     responses(
         (status = OK, description = "Hero MMR History", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
