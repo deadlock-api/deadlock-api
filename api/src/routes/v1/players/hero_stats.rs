@@ -199,7 +199,7 @@ async fn get_hero_stats(
 #[utoipa::path(
     get,
     path = "/hero-stats",
-    params(AccountIdQuery, HeroStatsQuery),
+    params(HeroStatsQuery),
     responses(
         (status = OK, description = "Hero Stats", body = [HeroStats]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
