@@ -192,6 +192,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
             exclude_item_ids.iter().map(ToString::to_string).join(", ")
         ));
     }
+    if query.bucket == BucketQuery::NoBucket {
+        player_filters.push("match_id IN t_matches".to_owned());
+    }
     let player_filters = if player_filters.is_empty() {
         String::new()
     } else {
@@ -242,7 +245,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_shots_hit) AS total_shots_hit,
         sum(max_shots_missed) AS total_shots_missed
     FROM match_player
-    INNER JOIN t_matches USING (match_id)
+    {}
     WHERE TRUE {player_filters}
         {}
     GROUP BY hero_id, bucket
@@ -276,6 +279,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
             "matches".to_owned()
         } else {
             format!("sum(count(distinct match_id)) OVER (PARTITION BY {bucket})")
+        },
+        if query.bucket == BucketQuery::NoBucket {
+            ""
+        } else {
+            "INNER JOIN t_matches USING (match_id)"
         },
         if query
             .min_hero_matches
