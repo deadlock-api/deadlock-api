@@ -7,6 +7,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use rand::seq::SliceRandom;
 use redis::AsyncTypedCommands;
 use serde::Serialize;
 use serde_json::json;
@@ -277,6 +278,8 @@ pub(super) async fn card(
                     invites.push(invite);
                 }
             }
+            // Shuffle so the invites get used more equally (hopefully)
+            invites.shuffle(&mut rand::rng());
             return Err(APIError::StatusMsgJson {
                 status: StatusCode::BAD_REQUEST,
                 message: json!({
