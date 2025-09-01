@@ -710,7 +710,7 @@ async fn get_player_stats_metrics(
     path = "/player-stats/metrics",
     params(PlayerStatsMetricsQuery),
     responses(
-        (status = OK, description = "Hero Stats", body = [AnalyticsPlayerStatsMetrics]),
+        (status = OK, description = "Hero Stats", body = AnalyticsPlayerStatsMetrics),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player stats metrics")
     ),
