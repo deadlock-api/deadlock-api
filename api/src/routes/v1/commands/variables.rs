@@ -18,7 +18,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
-use crate::routes::v1::players::card::get_player_card;
+use crate::routes::v1::players::card::{PlayerCard, get_player_card};
 use crate::routes::v1::players::match_history::{
     PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
     fetch_steam_match_history, insert_match_history_to_ch,
@@ -259,24 +259,13 @@ impl Variable {
     ) -> Result<String, VariableResolveError> {
         match self {
             Self::Rank => {
-                let bot_username = sqlx::query!(
-                    "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
-                    i32::try_from(steam_id).map_err(|_| VariableResolveError::NoData("bot id"))?
-                )
-                .fetch_one(&state.pg_client)
-                .await?
-                .bot_id;
-                let player_card = get_player_card(
+                let (rank, subrank) = Self::fetch_card_ranks(
+                    &state.pg_client,
                     &state.steam_client,
                     &state.ch_client_ro,
                     steam_id,
-                    bot_username,
                 )
                 .await?;
-                let (rank, subrank) = (
-                    player_card.ranked_rank.unwrap_or_default(),
-                    player_card.ranked_subrank.unwrap_or_default(),
-                );
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank = ranks
                     .iter()
@@ -285,24 +274,13 @@ impl Variable {
                 Ok(format!("{} {subrank}", rank.name))
             }
             Self::RankImg => {
-                let bot_username = sqlx::query!(
-                    "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
-                    i32::try_from(steam_id).map_err(|_| VariableResolveError::NoData("bot id"))?
-                )
-                .fetch_one(&state.pg_client)
-                .await?
-                .bot_id;
-                let player_card = get_player_card(
+                let (rank, subrank) = Self::fetch_card_ranks(
+                    &state.pg_client,
                     &state.steam_client,
                     &state.ch_client_ro,
                     steam_id,
-                    bot_username,
                 )
                 .await?;
-                let (rank, subrank) = (
-                    player_card.ranked_rank.unwrap_or_default(),
-                    player_card.ranked_subrank.unwrap_or_default(),
-                );
                 state
                     .assets_client
                     .fetch_ranks()
@@ -318,16 +296,33 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
             Self::LeaderboardRankImg => {
-                let leaderboard_entry =
-                    Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
-                        .await?
-                        .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
-                let badge_level = leaderboard_entry
-                    .badge_level
-                    .ok_or(VariableResolveError::NoData("leaderboard badge level"))?;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                let (rank, subrank) = (badge_level / 10, badge_level % 10);
-                ranks
+                let (rank, subrank) = match Self::get_leaderboard_entry(
+                    rate_limit_key,
+                    state,
+                    steam_id,
+                    region,
+                    None,
+                )
+                .await?
+                .and_then(|l| l.badge_level)
+                .map(|b| (b / 10, b % 10))
+                {
+                    Some((rank, subrank)) => (rank, subrank),
+                    None => {
+                        let (rank, subrank) = Self::fetch_card_ranks(
+                            &state.pg_client,
+                            &state.steam_client,
+                            &state.ch_client_ro,
+                            steam_id,
+                        )
+                        .await?;
+                        (rank, subrank)
+                    }
+                };
+                state
+                    .assets_client
+                    .fetch_ranks()
+                    .await?
                     .iter()
                     .find(|r| r.tier == rank)
                     .and_then(|r| {
@@ -339,16 +334,33 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("leaderboard rank img"))
             }
             Self::LeaderboardRank => {
-                let leaderboard_entry =
-                    Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
-                        .await?
-                        .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
-                let badge_level = leaderboard_entry
-                    .badge_level
-                    .ok_or(VariableResolveError::NoData("leaderboard badge level"))?;
-                let ranks = state.assets_client.fetch_ranks().await?;
-                let (rank, subrank) = (badge_level / 10, badge_level % 10);
-                let rank = ranks
+                let (rank, subrank) = match Self::get_leaderboard_entry(
+                    rate_limit_key,
+                    state,
+                    steam_id,
+                    region,
+                    None,
+                )
+                .await?
+                .and_then(|l| l.badge_level)
+                .map(|b| (b / 10, b % 10))
+                {
+                    Some((rank, subrank)) => (rank, subrank),
+                    None => {
+                        let (rank, subrank) = Self::fetch_card_ranks(
+                            &state.pg_client,
+                            &state.steam_client,
+                            &state.ch_client_ro,
+                            steam_id,
+                        )
+                        .await?;
+                        (rank, subrank)
+                    }
+                };
+                let rank = state
+                    .assets_client
+                    .fetch_ranks()
+                    .await?
                     .iter()
                     .find(|r| r.tier == rank)
                     .ok_or(VariableResolveError::NoData("leaderboard rank"))?;
@@ -740,6 +752,37 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("rank img"))
             }
         }
+    }
+
+    async fn fetch_card_ranks(
+        pg_client: &Pool<Postgres>,
+        steam_client: &SteamClient,
+        ch_client: &clickhouse::Client,
+        steam_id: u32,
+    ) -> Result<(u32, u32), VariableResolveError> {
+        let player_card = Self::fetch_card(pg_client, steam_client, ch_client, steam_id).await?;
+        Ok((
+            player_card.ranked_rank.unwrap_or_default(),
+            player_card.ranked_subrank.unwrap_or_default(),
+        ))
+    }
+
+    async fn fetch_card(
+        pg_client: &Pool<Postgres>,
+        steam_client: &SteamClient,
+        ch_client: &clickhouse::Client,
+        steam_id: u32,
+    ) -> Result<PlayerCard, VariableResolveError> {
+        let bot_username = sqlx::query!(
+            "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
+            i32::try_from(steam_id).map_err(|_| VariableResolveError::NoData("bot id"))?
+        )
+        .fetch_one(&pg_client)
+        .await?
+        .bot_id;
+        let player_card =
+            get_player_card(&steam_client, &ch_client, steam_id, bot_username).await?;
+        Ok(player_card)
     }
 
     async fn get_max_ability_stat(
