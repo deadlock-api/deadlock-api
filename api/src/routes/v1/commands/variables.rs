@@ -373,11 +373,12 @@ impl Variable {
                 Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
             }
             Self::LeaderboardPlace => {
-                let leaderboard_entry =
+                Ok(
                     Self::get_leaderboard_entry(rate_limit_key, state, steam_id, region, None)
                         .await?
-                        .ok_or(VariableResolveError::NoData("leaderboard entry"))?;
-                Ok(format!("#{}", leaderboard_entry.rank.unwrap_or_default()))
+                        .and_then(|entry| entry.rank)
+                        .map_or("N/A".to_owned(), |rank| format!("#{rank}")),
+                )
             }
             Self::SteamAccountName => {
                 get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id).await
