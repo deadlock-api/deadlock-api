@@ -180,6 +180,14 @@ pub(crate) async fn fetch_player_card_raw(
         .await
 }
 
+#[cached(
+    ty = "TimedCache<u32, PlayerCard>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5*60)) }",
+    result = true,
+    convert = "{ account_id }",
+    sync_writes = "by_key",
+    key = "u32"
+)]
 pub(crate) async fn get_player_card(
     steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
