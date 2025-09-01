@@ -1,4 +1,4 @@
-mod route;
+pub(crate) mod route;
 
 use core::time::Duration;
 
@@ -16,7 +16,6 @@ struct ApiDoc;
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::steam_search))
-        .routes(routes!(route::steam_batch))
         .routes(routes!(route::steam))
         .layer(
             CacheControlMiddleware::new(Duration::from_secs(60 * 60))

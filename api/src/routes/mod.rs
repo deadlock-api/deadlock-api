@@ -26,6 +26,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             get(players::hero_stats::hero_stats_single),
         )
         .route(
+            "/v1/players/{account_id}/steam",
+            get(players::steam::route::steam_single),
+        )
+        .route(
             "/v1/analytics/hero-win-loss-stats",
             get(hero_stats::hero_stats),
         )

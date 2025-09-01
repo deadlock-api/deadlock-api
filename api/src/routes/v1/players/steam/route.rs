@@ -82,32 +82,7 @@ async fn get_steam(ch_client: &clickhouse::Client, account_id: u32) -> APIResult
     }
 }
 
-#[utoipa::path(
-    get,
-    path = "/{account_id}/steam",
-    params(AccountIdQuery),
-    responses(
-        (status = OK, description = "Steam Profile", body = SteamProfile),
-        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = NOT_FOUND, description = "Steam profile not found."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profile.")
-    ),
-    tags = ["Players"],
-    summary = "Steam Profile",
-    description = "
-This endpoint returns the Steam profile of a player.
-
-See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
-
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
-    "
-)]
-pub(super) async fn steam(
+pub(crate) async fn steam_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(AppState { ch_client_ro, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -139,7 +114,7 @@ See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(
 | Global | - |
     "
 )]
-pub(super) async fn steam_batch(
+pub(super) async fn steam(
     Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
     State(AppState { ch_client_ro, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
