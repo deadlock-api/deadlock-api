@@ -15,6 +15,8 @@ pub(crate) enum Commands {
     ScrapeHltvMatches {
         #[arg(long, env = "SPECTATE_BOT_URL")]
         spectate_bot_url: String,
+        #[arg(long, env = "MAX_CONCURRENT_SCRAPING",)]
+        max_concurrent_scraping: Option<usize>,
     },
     /// Run spectate bot v2
     RunSpectateBot {
@@ -32,9 +34,10 @@ pub(crate) async fn run_cli() {
     match cli.command {
         Commands::ScrapeHltvMatches {
             spectate_bot_url: spectate_server_url,
+            max_concurrent_scraping,
         } => {
             common::init_metrics().expect("Failed to initialize metrics server");
-            if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url).await {
+            if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url, max_concurrent_scraping).await {
                 error!("Command failed: {:#?}", e);
             }
         }
