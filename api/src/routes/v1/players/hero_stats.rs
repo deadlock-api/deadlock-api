@@ -160,8 +160,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
         60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min,
         avg(max_player_damage_taken / net_worth) AS damage_taken_per_soul,
         60 * avg(max_creep_kills / duration_s) AS creeps_per_min,
-        60 * avg(max_neutral_damage / duration_s) AS obj_damage_per_min,
-        avg(max_neutral_damage / net_worth) AS obj_damage_per_soul,
+        60 * avg(max_boss_damage / duration_s) AS obj_damage_per_min,
+        avg(max_boss_damage / net_worth) AS obj_damage_per_soul,
         avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy,
         avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
          max_hero_bullets_hit)) AS crit_shot_rate,
@@ -427,8 +427,8 @@ mod test {
         );
         assert!(sql.contains("avg(max_player_damage_taken / net_worth) AS damage_taken_per_soul"));
         assert!(sql.contains("60 * avg(max_creep_kills / duration_s) AS creeps_per_min"));
-        assert!(sql.contains("60 * avg(max_neutral_damage / duration_s) AS obj_damage_per_min"));
-        assert!(sql.contains("avg(max_neutral_damage / net_worth) AS obj_damage_per_soul"));
+        assert!(sql.contains("60 * avg(max_boss_damage / duration_s) AS obj_damage_per_min"));
+        assert!(sql.contains("avg(max_boss_damage / net_worth) AS obj_damage_per_soul"));
         assert!(sql.contains(
             "avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy"
         ));
