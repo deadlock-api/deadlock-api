@@ -15,7 +15,7 @@ pub(crate) enum Commands {
     ScrapeHltvMatches {
         #[arg(long, env = "SPECTATE_BOT_URL")]
         spectate_bot_url: String,
-        #[arg(long, env = "MAX_CONCURRENT_SCRAPING",)]
+        #[arg(long, env = "MAX_CONCURRENT_SCRAPING")]
         max_concurrent_scraping: Option<usize>,
     },
     /// Run spectate bot v2
