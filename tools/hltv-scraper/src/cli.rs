@@ -37,7 +37,9 @@ pub(crate) async fn run_cli() {
             max_concurrent_scraping,
         } => {
             common::init_metrics().expect("Failed to initialize metrics server");
-            if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url, max_concurrent_scraping).await {
+            if let Err(e) =
+                crate::cmd::scrape_hltv::run(spectate_server_url, max_concurrent_scraping).await
+            {
                 error!("Command failed: {:#?}", e);
             }
         }

@@ -23,7 +23,10 @@ use valveprotos::deadlock::CMsgMatchMetaData;
 use crate::cmd::download_single_hltv::download_single_hltv_meta;
 use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
-pub(crate) async fn run(spectate_server_url: String, max_concurrent_scraping: Option<usize>) -> anyhow::Result<()> {
+pub(crate) async fn run(
+    spectate_server_url: String,
+    max_concurrent_scraping: Option<usize>,
+) -> anyhow::Result<()> {
     let spec_client = reqwest::Client::new();
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
@@ -44,7 +47,8 @@ pub(crate) async fn run(spectate_server_url: String, max_concurrent_scraping: Op
     loop {
         let current_count = currently_downloading.len();
         if let Some(max_concurrent_scraping) = max_concurrent_scraping
-            && current_count > max_concurrent_scraping {
+            && current_count > max_concurrent_scraping
+        {
             info!("Already downloading {current_count} matches, waiting...");
             sleep(Duration::from_secs(5)).await;
             continue;
