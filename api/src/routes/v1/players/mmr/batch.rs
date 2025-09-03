@@ -19,7 +19,7 @@ use crate::routes::v1::players::mmr::mmr_history::WINDOW_SIZE;
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct MMRBatchQuery {
     /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
-    #[param(inline, min_items = 1, max_items = 1_000)]
+    #[param(inline, min_items = 1, max_items = 100)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u32>,
     /// Filter matches based on their ID.
@@ -142,7 +142,7 @@ pub(super) async fn mmr(
     }): Query<MMRBatchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if account_ids.len() > 1_000 {
+    if account_ids.len() > 100 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "Too many account ids provided.",
