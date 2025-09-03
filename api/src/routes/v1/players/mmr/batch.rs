@@ -47,29 +47,45 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
         {SOLO_MATCH_WEIGHT_FACTOR} as solo_multiplier,
-        per_match_data AS (
+        player_history_arrays AS (
             SELECT
-                match_id,
                 account_id,
+                match_id,
                 start_time,
-                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0))                  AS current_match_badge,
-                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)                       AS current_match_mmr,
-                if(party = 0, solo_multiplier, 1) * 1.0 / pow(row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC), k) AS weight
+                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
+                row_number() OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS rn,
+                groupArray((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS all_mmrs,
+                party = 0 as is_solo
             FROM match_player FINAL
                 INNER JOIN match_info USING (match_id)
-            WHERE current_match_badge > 0 AND account_id IN ({account_ids}) AND match_mode IN ('Ranked', 'Unranked') {match_id_filter}
+            WHERE current_match_badge > 0
+                AND account_id IN ({account_ids})
+                AND match_mode IN ('Ranked', 'Unranked')
+                {match_id_filter}
+        ),
+        mmr_data AS (
+            SELECT
+                account_id,
+                match_id,
+                start_time,
+                arraySlice(all_mmrs, greatest(1, rn - window_size + 1), if(rn < window_size, rn, window_size)) AS mmr_window,
+                arrayReverse(mmr_window) AS reversed_mmr_window,
+                arrayMap(x -> if(is_solo, solo_multiplier, 1) * pow(x, -k), range(1, length(reversed_mmr_window) + 1)) AS weights,
+                dotProduct(reversed_mmr_window, weights) / arraySum(weights) AS player_score,
+                toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+                toUInt32(floor(rank / 10)) AS division,
+                toUInt32(rank % 10) AS division_tier
+            FROM player_history_arrays
         )
     SELECT
         account_id,
         match_id,
         start_time,
-        sum(current_match_mmr * weight) OVER (PARTITION BY account_id ROWS BETWEEN window_size PRECEDING AND CURRENT ROW) /
-            sum(weight) OVER (PARTITION BY account_id ROWS BETWEEN window_size PRECEDING AND CURRENT ROW)                             AS player_score,
-        toUInt32(if(clamp(player_score, 0, 66) = 0, 0,
-            10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
-        toUInt32(floor(rank / 10))                                                                             AS division,
-        toUInt32(rank % 10)                                                                                    AS division_tier
-    FROM per_match_data
+        player_score,
+        rank,
+        division,
+        division_tier
+    FROM mmr_data
     ORDER BY match_id DESC
     LIMIT 1 BY account_id
     "
@@ -91,30 +107,46 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
         {SOLO_MATCH_WEIGHT_FACTOR} as solo_multiplier,
-        per_match_data AS (
+        player_history_arrays AS (
             SELECT
-                match_id,
                 account_id,
+                match_id,
                 start_time,
-                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0))                  AS current_match_badge,
-                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)                       AS current_match_mmr,
-                if(party = 0, solo_multiplier, 1) * 1.0 / pow(row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC), k) AS weight
+                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
+                row_number() OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS rn,
+                groupArray((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS all_mmrs,
+                party = 0 as is_solo
             FROM match_player FINAL
                 INNER JOIN match_info USING (match_id)
-            WHERE current_match_badge > 0 AND account_id IN ({account_ids}) AND hero_id = {hero_id} AND match_mode IN ('Ranked', 'Unranked')
+            WHERE current_match_badge > 0
+                AND account_id IN ({account_ids})
+                AND hero_id = {hero_id}
+                AND match_mode IN ('Ranked', 'Unranked')
+                {match_id_filter}
+        ),
+        mmr_data AS (
+            SELECT
+                account_id,
+                match_id,
+                start_time,
+                arraySlice(all_mmrs, greatest(1, rn - window_size + 1), if(rn < window_size, rn, window_size)) AS mmr_window,
+                arrayReverse(mmr_window) AS reversed_mmr_window,
+                arrayMap(x -> if(is_solo, solo_multiplier, 1) * pow(x, -k), range(1, length(reversed_mmr_window) + 1)) AS weights,
+                dotProduct(reversed_mmr_window, weights) / arraySum(weights) AS player_score,
+                toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+                toUInt32(floor(rank / 10)) AS division,
+                toUInt32(rank % 10) AS division_tier
+            FROM player_history_arrays
         )
     SELECT
         account_id,
         match_id,
         start_time,
-        sum(current_match_mmr * weight) OVER (PARTITION BY account_id ROWS BETWEEN window_size PRECEDING AND CURRENT ROW) /
-            sum(weight) OVER (PARTITION BY account_id ROWS BETWEEN window_size PRECEDING AND CURRENT ROW)                             AS player_score,
-        toUInt32(if(clamp(player_score, 0, 66) = 0, 0,
-            10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
-        toUInt32(floor(rank / 10))                                                                             AS division,
-        toUInt32(rank % 10)                                                                                    AS division_tier
-    FROM per_match_data
-    WHERE TRUE {match_id_filter}
+        player_score,
+        rank,
+        division,
+        division_tier
+    FROM mmr_data
     ORDER BY match_id DESC
     LIMIT 1 BY account_id
     "
