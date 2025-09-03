@@ -11,7 +11,7 @@ use crate::error::APIResult;
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
-pub const WINDOW_SIZE: usize = 20;
+pub const WINDOW_SIZE: usize = 50;
 pub const SMOOTHING_FACTOR: f32 = 0.4;
 pub const SOLO_MATCH_WEIGHT_FACTOR: f32 = 4.0;
 
