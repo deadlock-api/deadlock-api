@@ -18,6 +18,7 @@ pub(crate) struct SteamProxyQuery<M: Message> {
     pub(crate) in_all_groups: Option<Vec<String>>,
     pub(crate) in_any_groups: Option<Vec<String>>,
     pub(crate) cooldown_time: Duration,
+    pub(crate) soft_cooldown_millis: Option<Duration>,
     pub(crate) request_timeout: Duration,
     pub(crate) username: Option<String>,
 }

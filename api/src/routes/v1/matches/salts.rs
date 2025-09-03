@@ -73,6 +73,7 @@ pub(super) async fn fetch_match_salts(
     steam_client: &SteamClient,
     ch_client: &clickhouse::Client,
     match_id: u64,
+    is_custom: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     if match_id < FIRST_MATCH_DECEMBER_2024 {
         return Err(APIError::status_msg(
@@ -136,6 +137,7 @@ pub(super) async fn fetch_match_salts(
             cooldown_time: Duration::from_secs(30 * 60),
             request_timeout: Duration::from_secs(2),
             username: None,
+            soft_cooldown_millis: is_custom.then_some(Duration::from_secs(30 * 60)),
         })
         .await?
         .msg;
@@ -199,6 +201,7 @@ pub(super) async fn salts(
         &state.steam_client,
         &state.ch_client,
         match_id,
+        false,
     )
     .await
     .map(|salts| (match_id, salts).into())

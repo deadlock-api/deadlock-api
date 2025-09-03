@@ -5,6 +5,7 @@ use axum::Json;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
+use axum_extra::extract::Query;
 use bytes::Bytes;
 use futures::future::join;
 use futures::stream::BoxStream;
@@ -13,9 +14,11 @@ use object_store::aws::AmazonS3;
 use object_store::path::Path as S3Path;
 use object_store::{GetResult, ObjectStore};
 use prost::Message;
+use serde::Deserialize;
 use tokio::io::AsyncReadExt;
 use tokio::sync::OnceCell;
 use tracing::debug;
+use utoipa::IntoParams;
 use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
 
 use crate::context::AppState;
@@ -38,6 +41,11 @@ async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
         .await
 }
 
+#[derive(Deserialize, IntoParams)]
+pub(super) struct MetadataQuery {
+    is_custom: Option<bool>,
+}
+
 async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
     s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())
 }
@@ -51,6 +59,7 @@ async fn fetch_match_metadata_raw(
     s3: &AmazonS3,
     s3_cache: Option<&AmazonS3>,
     match_id: u64,
+    is_custom: bool,
 ) -> APIResult<Vec<u8>> {
     // Try to fetch from the cache first
     if match_id >= *min_cache_match_id(ch_client).await
@@ -109,6 +118,7 @@ async fn fetch_match_metadata_raw(
         steam_client,
         ch_client,
         match_id,
+        is_custom,
     )
     .await?;
     Ok(steam_client.fetch_metadata_file(match_id, salts).await?)
@@ -127,7 +137,7 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
 #[utoipa::path(
     get,
     path = "/{match_id}/metadata/raw",
-    params(MatchIdQuery),
+    params(MatchIdQuery, MetadataQuery),
     responses(
         (status = OK, body = [u8]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -158,6 +168,7 @@ Relevant Protobuf Messages:
 )]
 pub(super) async fn metadata_raw(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
+    Query(MetadataQuery { is_custom }): Query<MetadataQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -194,6 +205,7 @@ pub(super) async fn metadata_raw(
         &state.s3_client,
         None, // Skip cache
         match_id,
+        is_custom.unwrap_or_default(),
     )
     .await
     .map(Body::from)
@@ -202,7 +214,7 @@ pub(super) async fn metadata_raw(
 #[utoipa::path(
     get,
     path = "/{match_id}/metadata",
-    params(MatchIdQuery),
+    params(MatchIdQuery, MetadataQuery),
     responses(
         (status = OK, description = "Match metadata, see protobuf type: CMsgMatchMetaDataContents"),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -231,6 +243,7 @@ Relevant Protobuf Messages:
 )]
 pub(super) async fn metadata(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
+    Query(MetadataQuery { is_custom }): Query<MetadataQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -242,6 +255,7 @@ pub(super) async fn metadata(
         &state.s3_client,
         Some(&state.s3_cache_client),
         match_id,
+        is_custom.unwrap_or_default(),
     )
     .await?;
     parse_match_metadata_raw(&raw_data).await.map(Json)

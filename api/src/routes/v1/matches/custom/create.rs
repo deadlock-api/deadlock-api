@@ -131,6 +131,7 @@ async fn create_party(
             cooldown_time: Duration::from_secs(2 * 60 * 60),
             request_timeout: Duration::from_secs(2),
             username: None,
+            soft_cooldown_millis: None,
         })
         .await?;
     Ok(result)
@@ -194,6 +195,7 @@ async fn switch_to_spectator_slot(
             cooldown_time: Duration::from_secs(0),
             request_timeout: Duration::from_secs(2),
             username: username.into(),
+            soft_cooldown_millis: None,
         })
         .await?
         .msg;
@@ -223,6 +225,7 @@ async fn make_ready(steam_client: &SteamClient, username: String, party_id: u64)
             cooldown_time: Duration::from_secs(0),
             request_timeout: Duration::from_secs(2),
             username: username.clone().into(),
+            soft_cooldown_millis: None,
         })
         .await?
         .msg;
@@ -253,6 +256,7 @@ async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64
             cooldown_time: Duration::from_secs(0),
             request_timeout: Duration::from_secs(2),
             username: username.clone().into(),
+            soft_cooldown_millis: None,
         })
         .await?
         .msg;

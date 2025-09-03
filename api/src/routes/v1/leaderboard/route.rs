@@ -69,6 +69,7 @@ pub(crate) async fn fetch_leaderboard_raw(
             in_any_groups: None,
             cooldown_time: Duration::from_secs(60),
             request_timeout: Duration::from_secs(2),
+            soft_cooldown_millis: None,
             username: None,
         })
         .await

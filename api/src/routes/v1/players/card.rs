@@ -176,6 +176,7 @@ pub(crate) async fn fetch_player_card_raw(
             cooldown_time: Duration::from_secs(10),
             request_timeout: Duration::from_secs(2),
             username: bot_username.into(),
+            soft_cooldown_millis: None,
         })
         .await
 }

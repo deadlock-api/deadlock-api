@@ -52,6 +52,7 @@ async fn fetch_active_matches_raw(state: &AppState) -> APIResult<Vec<u8>> {
             cooldown_time: Duration::from_secs(600),
             request_timeout: Duration::from_secs(2),
             username: None,
+            soft_cooldown_millis: None,
         })
         .await?;
     Ok(BASE64_STANDARD.decode(&steam_response.data)?)
