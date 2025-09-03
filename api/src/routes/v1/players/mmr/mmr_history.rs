@@ -11,6 +11,10 @@ use crate::error::APIResult;
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
+pub const WINDOW_SIZE: usize = 20;
+pub const SMOOTHING_FACTOR: f32 = 0.4;
+pub const SOLO_MATCH_WEIGHT_FACTOR: f32 = 4.0;
+
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryQuery {
     /// The players `SteamID3`
@@ -40,9 +44,33 @@ pub struct MMRHistory {
 fn build_mmr_history_query(account_id: u32) -> String {
     format!(
         "
-    SELECT account_id, match_id, start_time, player_score, rank, division, division_tier
-    FROM mmr_history FINAL
-    WHERE account_id = {account_id}
+    WITH
+        {WINDOW_SIZE} as window_size,
+        {SMOOTHING_FACTOR} as k,
+        {SOLO_MATCH_WEIGHT_FACTOR} as solo_multiplier,
+        per_match_data AS (
+            SELECT
+                match_id,
+                account_id,
+                start_time,
+                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0))                  AS current_match_badge,
+                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)                       AS current_match_mmr,
+                if(party = 0, solo_multiplier, 1) * 1.0 / pow(row_number() OVER (ORDER BY match_id DESC), k) AS weight
+            FROM match_player FINAL
+                INNER JOIN match_info USING (match_id)
+            WHERE current_match_badge > 0 AND account_id = {account_id} AND match_mode IN ('Ranked', 'Unranked')
+        )
+    SELECT
+        account_id,
+        match_id,
+        start_time,
+        sum(current_match_mmr * weight) OVER (ROWS BETWEEN window_size PRECEDING AND CURRENT ROW) /
+            sum(weight) OVER (ROWS BETWEEN window_size PRECEDING AND CURRENT ROW)                             AS player_score,
+        toUInt32(if(clamp(player_score, 0, 66) = 0, 0,
+            10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+        toUInt32(floor(rank / 10))                                                                             AS division,
+        toUInt32(rank % 10)                                                                                    AS division_tier
+    FROM per_match_data
     ORDER BY match_id
     "
     )
@@ -51,9 +79,33 @@ fn build_mmr_history_query(account_id: u32) -> String {
 fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     format!(
         "
-    SELECT account_id, match_id, start_time, player_score, rank, division, division_tier
-    FROM hero_mmr_history FINAL
-    WHERE account_id = {account_id} AND hero_id = {hero_id}
+    WITH
+        {WINDOW_SIZE} as window_size,
+        {SMOOTHING_FACTOR} as k,
+        {SOLO_MATCH_WEIGHT_FACTOR} as solo_multiplier,
+        per_match_data AS (
+            SELECT
+                match_id,
+                account_id,
+                start_time,
+                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0))                  AS current_match_badge,
+                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)                       AS current_match_mmr,
+                if(party = 0, solo_multiplier, 1) * 1.0 / pow(row_number() OVER (ORDER BY match_id DESC), k) AS weight
+            FROM match_player FINAL
+                INNER JOIN match_info USING (match_id)
+            WHERE current_match_badge > 0 AND account_id = {account_id} AND hero_id = {hero_id} AND match_mode IN ('Ranked', 'Unranked')
+        )
+    SELECT
+        account_id,
+        match_id,
+        start_time,
+        sum(current_match_mmr * weight) OVER (ROWS BETWEEN window_size PRECEDING AND CURRENT ROW) /
+            sum(weight) OVER (ROWS BETWEEN window_size PRECEDING AND CURRENT ROW)                             AS player_score,
+        toUInt32(if(clamp(player_score, 0, 66) = 0, 0,
+            10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+        toUInt32(floor(rank / 10))                                                                             AS division,
+        toUInt32(rank % 10)                                                                                    AS division_tier
+    FROM per_match_data
     ORDER BY match_id
     "
     )
