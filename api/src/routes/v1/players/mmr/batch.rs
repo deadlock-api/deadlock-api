@@ -9,12 +9,10 @@ use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
+use crate::routes::v1::players::mmr::mmr_history::{
+    MMRHistory, SMOOTHING_FACTOR, SOLO_MATCH_WEIGHT_FACTOR, WINDOW_SIZE,
+};
 use crate::utils::parse::comma_separated_deserialize;
-
-use crate::routes::v1::players::mmr::mmr_history::SMOOTHING_FACTOR;
-use crate::routes::v1::players::mmr::mmr_history::SOLO_MATCH_WEIGHT_FACTOR;
-use crate::routes::v1::players::mmr::mmr_history::WINDOW_SIZE;
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct MMRBatchQuery {
