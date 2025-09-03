@@ -57,7 +57,7 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
                 if(party = 0, solo_multiplier, 1) * 1.0 / pow(row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC), k) AS weight
             FROM match_player FINAL
                 INNER JOIN match_info USING (match_id)
-            WHERE current_match_badge > 0 AND account_id IN ({account_ids}) AND match_mode IN ('Ranked', 'Unranked')
+            WHERE current_match_badge > 0 AND account_id IN ({account_ids}) AND match_mode IN ('Ranked', 'Unranked') {match_id_filter}
         )
     SELECT
         account_id,
@@ -70,7 +70,6 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
         toUInt32(floor(rank / 10))                                                                             AS division,
         toUInt32(rank % 10)                                                                                    AS division_tier
     FROM per_match_data
-    WHERE TRUE {match_id_filter}
     ORDER BY match_id DESC
     LIMIT 1 BY account_id
     "
