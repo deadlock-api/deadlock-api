@@ -13,8 +13,8 @@ use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
 pub const WINDOW_SIZE: usize = 50;
-pub const SMOOTHING_FACTOR: f32 = 0.4;
-pub const SOLO_MATCH_WEIGHT_FACTOR: f32 = 4.0;
+pub const SMOOTHING_FACTOR: f32 = 1.0;
+pub const SOLO_MATCH_WEIGHT_FACTOR: f32 = 2.0;
 
 fn default_limit() -> Option<u32> {
     100.into()
