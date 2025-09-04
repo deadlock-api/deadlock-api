@@ -115,17 +115,29 @@ async fn ingest_object(
     };
 
     // Ingest to Clickhouse
-    let match_info = parse_match_data(data)?;
-    if let Some(match_outcome) = match_info.match_outcome
-        && match_outcome == EMatchOutcome::KEOutcomeError as i32
-    {
-        let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
-        move_object(store, key, &new_path).await?;
-        bail!(
-            "[{:?}] Match outcome is error moved to fail folder",
-            match_info.match_id
-        );
-    }
+    let match_info = parse_match_data(data);
+    let match_info = match match_info {
+        Ok(m)
+            if m.match_outcome
+                .is_some_and(|m| m == EMatchOutcome::KEOutcomeError as i32) =>
+        {
+            let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
+            move_object(store, key, &new_path).await?;
+            bail!(
+                "[{:?}] Match outcome is error moved to fail folder",
+                m.match_id
+            );
+        }
+        Err(e) => {
+            let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
+            move_object(store, key, &new_path).await?;
+            bail!(
+                "[{:?}] Error parsing match data: {e}",
+                key.filename().unwrap()
+            );
+        }
+        Ok(m) => m,
+    };
     match insert_match(ch_client, &match_info).await {
         Ok(()) => {
             counter!("ingest_worker.insert_match.success").increment(1);
