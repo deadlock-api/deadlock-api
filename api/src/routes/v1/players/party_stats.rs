@@ -157,9 +157,7 @@ mod test {
     #[test]
     fn test_build_query_default() {
         let account_id = 12345;
-        let query = PartyStatsQuery {
-            ..Default::default()
-        };
+        let query = PartyStatsQuery::default();
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
         assert!(sql.contains("players AS"));

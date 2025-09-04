@@ -895,9 +895,7 @@ mod test {
 
     #[test]
     fn test_build_query_selects() {
-        let query = PlayerStatsMetricsQuery {
-            ..Default::default()
-        };
+        let query = PlayerStatsMetricsQuery::default();
         let sql = build_query(&query);
         for metric in Metric::VARIANTS {
             assert!(sql.contains(&format!(

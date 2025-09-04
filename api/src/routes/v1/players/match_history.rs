@@ -165,12 +165,13 @@ async fn fetch_match_history_raw(
             .matches
             .into_iter()
             .filter_map(|e| {
-                if let Some(entry) = PlayerMatchHistoryEntry::from_protobuf(account_id, e) {
-                    Some(entry)
-                } else {
-                    warn!("Failed to parse player match history entry: {:?}", e);
-                    None
-                }
+                PlayerMatchHistoryEntry::from_protobuf(account_id, e).map_or_else(
+                    || {
+                        warn!("Failed to parse player match history entry: {:?}", e);
+                        None
+                    },
+                    Some,
+                )
             })
             .collect(),
         response.continue_cursor,

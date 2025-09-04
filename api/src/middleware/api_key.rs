@@ -71,11 +71,12 @@ mod tests {
             .get("x-api-key")
             .and_then(|v| v.to_str().ok().and_then(|s| Uuid::from_str(s).ok()));
         let has_api_key = api_key_value.is_some();
-        if let Some(api_key_value) = api_key_value {
-            format!("has_api_key={has_api_key}, value={api_key_value}",)
-        } else {
-            format!("has_api_key={has_api_key}, value=none")
-        }
+        format!(
+            "has_api_key={has_api_key}, value={}",
+            api_key_value
+                .as_ref()
+                .map_or("none".to_string(), ToString::to_string)
+        )
     }
 
     fn app() -> Router {

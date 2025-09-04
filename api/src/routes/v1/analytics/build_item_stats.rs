@@ -113,9 +113,7 @@ mod test {
 
     #[test]
     fn test_build_query_default() {
-        let query = BuildItemStatsQuery {
-            ..Default::default()
-        };
+        let query = BuildItemStatsQuery::default();
         let sql = build_query(&query);
         assert!(sql.contains(
             "SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds"
