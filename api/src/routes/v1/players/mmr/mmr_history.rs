@@ -59,6 +59,7 @@ fn build_mmr_history_query(account_id: u32) -> String {
             FROM match_player
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
+            AND not_scored != true
             AND account_id = {account_id}
             AND match_mode IN ('Ranked', 'Unranked')
         ),
@@ -107,6 +108,7 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
             FROM match_player
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
+            AND not_scored != true
             AND account_id = {account_id}
             AND hero_id = {hero_id}
             AND match_mode IN ('Ranked', 'Unranked')

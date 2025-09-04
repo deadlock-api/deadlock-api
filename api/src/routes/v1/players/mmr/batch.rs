@@ -54,6 +54,7 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
             FROM match_player
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
+            AND not_scored != true
             AND account_id IN ({account_ids})
             AND match_mode IN ('Ranked', 'Unranked')
             {match_id_filter}
@@ -112,6 +113,7 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
             FROM match_player
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
+            AND not_scored != true
             AND account_id IN ({account_ids})
             AND hero_id = {hero_id}
             AND match_mode IN ('Ranked', 'Unranked')
