@@ -32,10 +32,6 @@ pub(crate) async fn track_requests(
     } else {
         None
     };
-    let mut query = req.uri().query().map(ToOwned::to_owned).unwrap_or_default();
-    if let Some(ref api_key) = api_key {
-        query = query.replace(api_key, "HEXE-<API_KEY>");
-    }
 
     let start = Instant::now();
     let response = next.run(req).await;
