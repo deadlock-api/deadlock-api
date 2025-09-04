@@ -43,7 +43,6 @@ pub(crate) async fn track_requests(
     let labels = [
         ("method", method.to_string()),
         ("endpoint", matched_path.as_str().to_owned()),
-        ("query", query),
         ("status", response.status().to_string()),
         ("user_agent", user_agent.unwrap_or("unknown".to_owned())),
         ("user_id", user_id.unwrap_or("unknown".to_owned())),
