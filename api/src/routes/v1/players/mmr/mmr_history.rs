@@ -1,7 +1,6 @@
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use axum_extra::extract::Query;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -16,22 +15,8 @@ pub const WINDOW_SIZE: usize = 65;
 pub const SMOOTHING_FACTOR: f32 = 1.1;
 pub const SOLO_MATCH_WEIGHT_FACTOR: f32 = 2.75;
 
-fn default_limit() -> Option<u32> {
-    100.into()
-}
-
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub(super) struct MMRHistoryQuery {
-    /// The index of the first match to return.
-    start: Option<u32>,
-    /// The maximum number of matches to return.
-    #[serde(default = "default_limit")]
-    #[param(inline, default = "100", maximum = 10000, minimum = 1)]
-    limit: Option<u32>,
-}
-
-#[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub(super) struct HeroMMRHistoryPath {
+pub(super) struct HeroMMRHistoryQuery {
     /// The players `SteamID3`
     #[serde(default)]
     #[serde(deserialize_with = "parse_steam_id")]
@@ -56,7 +41,7 @@ pub struct MMRHistory {
     division_tier: u32,
 }
 
-fn build_mmr_history_query(account_id: u32, start: u32, limit: u32) -> String {
+fn build_mmr_history_query(account_id: u32) -> String {
     format!(
         "
     WITH
@@ -99,14 +84,12 @@ fn build_mmr_history_query(account_id: u32, start: u32, limit: u32) -> String {
         division,
         division_tier
     FROM mmr_data
-    ORDER BY match_id DESC
-    LIMIT {limit}
-    OFFSET {start}
+    ORDER BY match_id
     "
     )
 }
 
-fn build_hero_mmr_history_query(account_id: u32, hero_id: u8, start: u32, limit: u32) -> String {
+fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
     format!(
         "
     WITH
@@ -150,17 +133,34 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8, start: u32, limit:
         division,
         division_tier
     FROM mmr_data
-    ORDER BY match_id DESC
-    LIMIT {limit}
-    OFFSET {start}
+    ORDER BY match_id
     "
     )
+}
+
+async fn get_mmr_history(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+) -> APIResult<Vec<MMRHistory>> {
+    let query = build_mmr_history_query(account_id);
+    debug!(?query);
+    Ok(ch_client.query(&query).fetch_all().await?)
+}
+
+async fn get_hero_mmr_history(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+    hero_id: u8,
+) -> APIResult<Vec<MMRHistory>> {
+    let query = build_hero_mmr_history_query(account_id, hero_id);
+    debug!(?query);
+    Ok(ch_client.query(&query).fetch_all().await?)
 }
 
 #[utoipa::path(
     get,
     path = "/{account_id}/mmr-history",
-    params(AccountIdQuery, MMRHistoryQuery),
+    params(AccountIdQuery),
     responses(
         (status = OK, description = "MMR History", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -172,27 +172,17 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8, start: u32, limit:
 )]
 pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    Query(MMRHistoryQuery { limit, start }): Query<MMRHistoryQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let query = build_mmr_history_query(
-        account_id,
-        start.unwrap_or_default(),
-        limit.or_else(default_limit).unwrap_or(100),
-    );
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<MMRHistory>()
+    get_mmr_history(&state.ch_client_ro, account_id)
         .await
-        .map(Json)?)
+        .map(Json)
 }
 
 #[utoipa::path(
     get,
     path = "/{account_id}/mmr-history/{hero_id}",
-    params(HeroMMRHistoryPath, MMRHistoryQuery),
+    params(HeroMMRHistoryQuery),
     responses(
         (status = OK, description = "Hero MMR History", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -203,24 +193,13 @@ pub(super) async fn mmr_history(
     description = "Player Hero MMR History",
 )]
 pub(super) async fn hero_mmr_history(
-    Path(HeroMMRHistoryPath {
+    Path(HeroMMRHistoryQuery {
         account_id,
         hero_id,
-    }): Path<HeroMMRHistoryPath>,
-    Query(MMRHistoryQuery { limit, start }): Query<MMRHistoryQuery>,
+    }): Path<HeroMMRHistoryQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let query = build_hero_mmr_history_query(
-        account_id,
-        hero_id,
-        start.unwrap_or_default(),
-        limit.or_else(default_limit).unwrap_or(100),
-    );
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<MMRHistory>()
+    get_hero_mmr_history(&state.ch_client_ro, account_id, hero_id)
         .await
-        .map(Json)?)
+        .map(Json)
 }
