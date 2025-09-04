@@ -63,6 +63,7 @@ fn build_mmr_history_query(account_id: u32, start: u32, limit: u32) -> String {
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
         {SOLO_MATCH_WEIGHT_FACTOR} as solo_multiplier,
+        arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         player_history_arrays AS (
             SELECT
                 account_id,
@@ -83,9 +84,8 @@ fn build_mmr_history_query(account_id: u32, start: u32, limit: u32) -> String {
                 account_id,
                 match_id,
                 start_time,
-                arraySlice(all_mmrs, greatest(1, rn - window_size + 1), if(rn < window_size, rn, window_size)) AS mmr_window,
-                arrayReverse(mmr_window) AS reversed_mmr_window, arrayMap(x -> if(is_solo, solo_multiplier, 1) * pow(x, -k), range(1, length(reversed_mmr_window) + 1)) AS weights,
-                dotProduct(reversed_mmr_window, weights) / arraySum(weights) AS player_score, toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+                arrayReverse(arraySlice(all_mmrs, greatest(1, rn - window_size + 1), if(rn < window_size, rn, window_size))) AS reversed_mmr_window,
+                arraySlice(arrayMap(x -> x * if(is_solo, solo_multiplier, 1), exp_weights), 1, length(reversed_mmr_window)) AS weights,                dotProduct(reversed_mmr_window, weights) / arraySum(weights) AS player_score, toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM player_history_arrays
@@ -113,6 +113,7 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8, start: u32, limit:
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
         {SOLO_MATCH_WEIGHT_FACTOR} as solo_multiplier,
+        arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         player_history_arrays AS (
             SELECT
                 account_id,
@@ -134,8 +135,8 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8, start: u32, limit:
                 account_id,
                 match_id,
                 start_time,
-                arraySlice(all_mmrs, greatest(1, rn - window_size + 1), if(rn < window_size, rn, window_size)) AS mmr_window,
-                arrayReverse(mmr_window) AS reversed_mmr_window, arrayMap(x -> if(is_solo, solo_multiplier, 1) * pow(x, -k), range(1, length(reversed_mmr_window) + 1)) AS weights,
+                arrayReverse(arraySlice(all_mmrs, greatest(1, rn - window_size + 1), if(rn < window_size, rn, window_size))) AS reversed_mmr_window,
+                arraySlice(arrayMap(x -> x * if(is_solo, solo_multiplier, 1), exp_weights), 1, length(reversed_mmr_window)) AS weights,
                 dotProduct(reversed_mmr_window, weights) / arraySum(weights) AS player_score, toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
