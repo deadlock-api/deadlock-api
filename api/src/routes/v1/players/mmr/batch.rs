@@ -52,7 +52,7 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
                 start_time,
                 assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
                 row_number() OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS rn,
-                groupArray((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS all_mmrs,
+                groupArray((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) OVER (PARTITION BY account_id ORDER BY start_time, match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS all_mmrs,
                 party = 0 as is_solo
             FROM match_player FINAL
                 INNER JOIN match_info USING (match_id)
@@ -112,7 +112,7 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
                 start_time,
                 assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
                 row_number() OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS rn,
-                groupArray((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) OVER (PARTITION BY account_id ORDER BY start_time, match_id) AS all_mmrs,
+                groupArray((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) OVER (PARTITION BY account_id ORDER BY start_time, match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS all_mmrs,
                 party = 0 as is_solo
             FROM match_player FINAL
                 INNER JOIN match_info USING (match_id)
