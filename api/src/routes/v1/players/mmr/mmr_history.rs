@@ -47,7 +47,7 @@ fn build_mmr_history_query(account_id: u32) -> String {
     WITH
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
-        {WIN_BOOST} as won_boost,
+        {WIN_BOOST} as win_boost,
         arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         t_matches AS (
             SELECT

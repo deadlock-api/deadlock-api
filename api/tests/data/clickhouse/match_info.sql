@@ -27,8 +27,9 @@ CREATE TABLE match_info
     new_player_pool                      Nullable(Bool),
     average_badge_team0                  Nullable(UInt32),
     average_badge_team1                  Nullable(UInt32),
-    created_at                           DateTime default now(),
-    game_mode_version                    Nullable(UInt32)
+    created_at                           DateTime       default now(),
+    game_mode_version                    Nullable(UInt32),
+    not_scored                           Nullable(Bool) default false
 ) engine = ReplacingMergeTree PRIMARY KEY match_id
       ORDER BY match_id
       SETTINGS index_granularity = 8192;
