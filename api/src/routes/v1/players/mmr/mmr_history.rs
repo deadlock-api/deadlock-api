@@ -36,9 +36,9 @@ pub struct MMRHistory {
     /// The Player Rank. See more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u32,
     /// Extracted from the rank the division (rank // 10)
-    division: u32,
+    pub(crate) division: u32,
     /// Extracted from the rank the division tier (rank % 10)
-    division_tier: u32,
+    pub(crate) division_tier: u32,
 }
 
 fn build_mmr_history_query(account_id: u32) -> String {

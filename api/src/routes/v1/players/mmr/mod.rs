@@ -1,6 +1,5 @@
-mod batch;
+pub(crate) mod batch;
 pub mod mmr_history;
-
 
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;

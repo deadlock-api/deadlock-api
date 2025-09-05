@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use chrono::Duration;
-use clickhouse::Row;
 use futures::future::join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -23,6 +20,8 @@ use crate::routes::v1::players::match_history::{
     PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
     fetch_steam_match_history, insert_match_history_to_ch,
 };
+use crate::routes::v1::players::mmr;
+use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -695,7 +694,9 @@ impl Variable {
                     .map_err(Into::into)
             }
             Self::MMRHistoryRank => {
-                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
+                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id)
+                    .await?
+                    .ok_or(VariableResolveError::NoData("mmr history"))?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 let rank_name = ranks
                     .iter()
@@ -705,7 +706,9 @@ impl Variable {
                 Ok(format!("{rank_name} {}", mmr.division_tier))
             }
             Self::MMRHistoryRankImg => {
-                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id).await?;
+                let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id)
+                    .await?
+                    .ok_or(VariableResolveError::NoData("mmr history"))?;
                 let ranks = state.assets_client.fetch_ranks().await?;
                 ranks
                     .iter()
@@ -902,39 +905,14 @@ impl Variable {
     }
 }
 
-#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct MMRHistoryEntry {
-    /// Extracted from the rank the division (rank // 10)
-    division: u32,
-    /// Extracted from the rank the division tier (rank % 10)
-    division_tier: u32,
-}
-
-#[cached(
-    ty = "TimedCache<u32, MMRHistoryEntry>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
-    result = true,
-    convert = "{ steam_id }",
-    sync_writes = "by_key",
-    key = "u32"
-)]
 async fn get_last_mmr_history(
     ch_client: &clickhouse::Client,
     steam_id: u32,
-) -> clickhouse::error::Result<MMRHistoryEntry> {
-    ch_client
-        .query(
-            "
-                SELECT ?fields
-                FROM mmr_history
-                WHERE account_id = ?
-                ORDER BY match_id DESC
-                LIMIT 1
-                ",
-        )
-        .bind(steam_id)
-        .fetch_one()
-        .await
+) -> clickhouse::error::Result<Option<MMRHistory>> {
+    Ok(mmr::batch::get_mmr(ch_client, &[steam_id], None)
+        .await?
+        .first()
+        .cloned())
 }
 
 async fn get_steam_account_name(

@@ -3,6 +3,8 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use serde::Deserialize;
 use tracing::debug;
 use utoipa::IntoParams;
@@ -149,6 +151,24 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
     )
 }
 
+#[cached(
+    ty = "TimedCache<String, Vec<MMRHistory>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    result = true,
+    convert = r#"{ format!("{account_ids:?}-{max_match_id:?}") }"#,
+    sync_writes = "by_key",
+    key = "String"
+)]
+pub(crate) async fn get_mmr(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+    max_match_id: Option<u64>,
+) -> clickhouse::error::Result<Vec<MMRHistory>> {
+    let query = build_mmr_query(account_ids, max_match_id);
+    debug!(?query);
+    ch_client.query(&query).fetch_all::<MMRHistory>().await
+}
+
 #[utoipa::path(
     get,
     path = "/mmr",
@@ -175,12 +195,7 @@ pub(super) async fn mmr(
             "Too many account ids provided.",
         ));
     }
-    let query = build_mmr_query(&account_ids, max_match_id);
-    debug!(?query);
-    Ok(state
-        .ch_client_ro
-        .query(&query)
-        .fetch_all::<MMRHistory>()
+    Ok(get_mmr(&state.ch_client_ro, &account_ids, max_match_id)
         .await
         .map(Json)?)
 }
