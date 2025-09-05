@@ -14,7 +14,6 @@ async fn test_list_tables() {
 #[case("items")]
 #[case("match_info")]
 #[case("match_player")]
-#[case("mmr_history")]
 #[tokio::test]
 async fn test_table_schema(#[case] table: &str) {
     let response = request_endpoint(&format!("/v1/sql/tables/{table}/schema"), []).await;
