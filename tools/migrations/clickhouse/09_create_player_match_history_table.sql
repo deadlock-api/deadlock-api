@@ -6,7 +6,7 @@ create table if not exists player_match_history
  hero_level            UInt32,
  start_time            DateTime,
  game_mode             Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3),
- match_mode            Enum8('Unranked' = 1, 'CoopBot' = 3, 'Tutorial' = 6, 'HeroLabs' = 7, 'PrivateLobby' = 2, 'ServerTest' = 5, 'Ranked' = 4, 'Invalid' = 0),
+ match_mode            Enum8('Unranked' = 1, 'CoopBot' = 3, 'Tutorial' = 6, 'HeroLabs' = 7, 'PrivateLobby' = 2, 'ServerTest' = 5, 'Ranked' = 4, 'Invalid' = 0, 'Calibration' = 8),
  player_team           Enum8('Team0' = 0, 'Team1' = 1, 'Spectator' = 16) comment 'player team id',
  player_kills          UInt32,
  player_deaths         UInt32,
