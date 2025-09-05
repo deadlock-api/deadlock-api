@@ -49,6 +49,10 @@ pub(crate) struct PlayerStatsMetricsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
+    /// The maximum number of matches to analyze.
+    #[serde(default)]
+    #[param(minimum = 1)]
+    max_matches: Option<u32>,
     /// Comma separated list of item ids to include (only heroes who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
@@ -656,6 +660,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             "avg({expr}) AS avg_{name}, std({expr}) AS std_{name}, {quantiles}({expr}) AS quantiles_{name}"
         )
     }).join(",\n");
+    let match_limit = query.max_matches.unwrap_or(1000000);
     format!(
         "
     WITH t_matches AS (
@@ -669,8 +674,8 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             FROM match_player mp
                 INNER JOIN t_matches USING (match_id)
             WHERE TRUE {player_filters}
-            ORDER BY rand()
-            LIMIT 1000000
+            ORDER BY match_id DESC
+            LIMIT {match_limit}
             SETTINGS asterisk_include_materialized_columns = 1
         )
     SELECT {selects}
