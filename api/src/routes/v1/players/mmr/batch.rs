@@ -9,7 +9,9 @@ use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::mmr::mmr_history::{MMRHistory, SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::routes::v1::players::mmr::mmr_history::{
+    MMRHistory, SMOOTHING_FACTOR, WIN_BOOST, WINDOW_SIZE,
+};
 use crate::utils::parse::comma_separated_deserialize;
 
 #[derive(Deserialize, IntoParams, Clone)]
