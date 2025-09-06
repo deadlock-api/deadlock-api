@@ -14,7 +14,7 @@
 mod types;
 
 use core::time::Duration;
-
+use std::sync::LazyLock;
 use metrics::{counter, gauge};
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
@@ -24,6 +24,12 @@ use valveprotos::deadlock::{
 
 use crate::types::PlayerMatchHistoryEntry;
 
+static FETCH_INTERVAL_MILLIS: LazyLock<u64> = LazyLock::new(|| {
+    std::env::var("FETCH_INTERVAL_MILLIS")
+        .map(|x| x.parse().expect("FETCH_INTERVAL_MILLIS must be a number"))
+        .unwrap_or(10_000)
+});
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     common::init_tracing();
@@ -32,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let mut interval = tokio::time::interval(Duration::from_secs(8));
+    let mut interval = tokio::time::interval(Duration::from_millis(*FETCH_INTERVAL_MILLIS));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
