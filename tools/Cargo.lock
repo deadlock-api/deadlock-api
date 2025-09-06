@@ -1447,11 +1447,13 @@ dependencies = [
  "anyhow",
  "clickhouse",
  "common",
+ "futures",
  "metrics",
  "reqwest",
  "serde",
  "tokio",
  "tracing",
+ "tryhard",
  "valveprotos",
 ]
 

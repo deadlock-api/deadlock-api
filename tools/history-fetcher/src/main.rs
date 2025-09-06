@@ -14,22 +14,17 @@
 mod types;
 
 use core::time::Duration;
-use std::sync::LazyLock;
 
+use anyhow::bail;
+use futures::StreamExt;
 use metrics::{counter, gauge};
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
 };
 
 use crate::types::PlayerMatchHistoryEntry;
-
-static FETCH_INTERVAL_MILLIS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("FETCH_INTERVAL_MILLIS")
-        .map(|x| x.parse().expect("FETCH_INTERVAL_MILLIS must be a number"))
-        .unwrap_or(10_000)
-});
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -38,8 +33,6 @@ async fn main() -> anyhow::Result<()> {
 
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
-
-    let mut interval = tokio::time::interval(Duration::from_millis(*FETCH_INTERVAL_MILLIS));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
@@ -57,11 +50,27 @@ async fn main() -> anyhow::Result<()> {
                 continue;
             }
         };
-        for account in accounts {
-            interval.tick().await;
-            update_account(&ch_client, &http_client, account).await;
-            gauge!("history_fetcher.fetched_accounts").decrement(1);
-        }
+
+        futures::stream::iter(accounts)
+            .map(|account| {
+                let ch_client = ch_client.clone();
+                let http_client = http_client.clone();
+                async move {
+                    match update_account(&ch_client, &http_client, account).await {
+                        Ok(()) => {
+                            info!("Fetched account {account}");
+                            counter!("history_fetcher.fetch_match_history.success").increment(1);
+                        }
+                        Err(e) => {
+                            counter!("history_fetcher.fetch_match_history.failure").increment(1);
+                            warn!("Failed to fetch account {account}: {e:?}");
+                        }
+                    }
+                }
+            })
+            .buffer_unordered(2)
+            .collect::<Vec<_>>()
+            .await;
     }
 }
 
@@ -70,45 +79,31 @@ async fn update_account(
     ch_client: &clickhouse::Client,
     http_client: &reqwest::Client,
     account: u32,
-) {
-    let (username, match_history) = match fetch_account_match_history(http_client, account).await {
-        Ok((username, match_history)) => (username, match_history),
-        Err(e) => {
-            counter!("history_fetcher.fetch_match_history.failure").increment(1);
-            error!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
-            return;
-        }
-    };
+) -> anyhow::Result<()> {
+    let (username, match_history) =
+        tryhard::retry_fn(|| fetch_account_match_history(http_client, account))
+            .retries(30)
+            .exponential_backoff(Duration::from_secs(1))
+            .await?;
     counter!("history_fetcher.fetch_match_history.status", "status" => match_history.result.unwrap_or_default().to_string()).increment(1);
     if match_history
         .result
         .is_none_or(|r| r != EResult::KEResultSuccess as i32)
     {
-        counter!("history_fetcher.fetch_match_history.failure").increment(1);
-        error!(
+        bail!(
             "Failed to fetch match history, result: {:?}, skipping",
             match_history.result
         );
-        return;
     }
     let match_history = match_history.matches;
     if match_history.is_empty() {
         debug!("No new matches {account}");
-        return;
+        return Ok(());
     }
     let match_history = match_history
         .into_iter()
         .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r, username.clone()));
-    match insert_match_history(ch_client, match_history).await {
-        Ok(()) => {
-            counter!("history_fetcher.insert_match_history.success").increment(1);
-            info!("Inserted new matches");
-        }
-        Err(e) => {
-            counter!("history_fetcher.insert_match_history.failure").increment(1);
-            error!("Failed to insert match history: {:?}", e);
-        }
-    }
+    Ok(insert_match_history(ch_client, match_history).await?)
 }
 
 async fn fetch_accounts(ch_client: &clickhouse::Client) -> clickhouse::error::Result<Vec<u32>> {
