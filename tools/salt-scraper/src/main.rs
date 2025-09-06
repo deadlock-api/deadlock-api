@@ -56,6 +56,17 @@ async fn main() -> anyhow::Result<()> {
           AND match_id NOT IN (SELECT match_id FROM match_info)
         ORDER BY match_id DESC
         LIMIT 1000
+
+        UNION DISTINCT
+
+        SELECT DISTINCT match_id
+        FROM active_matches
+        WHERE match_mode IN ('Ranked', 'Unranked')
+          AND match_id NOT IN (SELECT match_id FROM match_salts)
+          AND match_id NOT IN (SELECT match_id FROM match_info)
+          AND start_time BETWEEN '2024-11-15' AND now() - INTERVAL 2 HOUR
+        ORDER BY match_id DESC
+        LIMIT 1000
         ";
         let recent_matches: Vec<u64> = ch_client.query(query).fetch_all().await?;
         if recent_matches.is_empty() {
