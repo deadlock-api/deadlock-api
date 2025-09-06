@@ -132,12 +132,20 @@ LIMIT 100
 UNION
 DISTINCT
 
-WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 4 HOUR)
-SELECT DISTINCT account_id
+WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 2 DAY),
+     t_existing_histories AS (SELECT match_id
+                              FROM player_match_history
+                              WHERE source = 'history_fetcher'
+                                AND account_id > 0
+                                AND start_time > now() - INTERVAL 2 DAY)
+SELECT account_id
 FROM match_player
-WHERE match_id IN t_matches
-  AND account_id > 0
-ORDER BY match_id DESC
+WHERE account_id > 0
+  AND match_id IN t_matches
+  AND match_id NOT IN t_existing_histories
+GROUP BY account_id
+HAVING uniq(match_id) >= 5
+ORDER BY uniq(match_id) DESC
 LIMIT 1000
     ",
         )
