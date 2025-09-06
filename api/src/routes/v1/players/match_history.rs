@@ -146,7 +146,7 @@ async fn fetch_match_history_raw(
             msg,
             in_all_groups: Some(vec!["GetMatchHistory".to_owned()]),
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 100), // 100req/day
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50), // 50req/day
             request_timeout: Duration::from_secs(3),
             username: None,
             soft_cooldown_millis: None,
@@ -336,7 +336,7 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history_refetch",
                 &[
-                    Quota::ip_limit(5, Duration::from_secs(60 * 60)),
+                    Quota::ip_limit(2, Duration::from_secs(60 * 60)),
                     Quota::key_limit(5, Duration::from_secs(60 * 60)),
                     Quota::global_limit(10, Duration::from_secs(60 * 60)),
                 ],
@@ -351,7 +351,7 @@ pub(super) async fn match_history(
                 &[
                     Quota::ip_limit(5, Duration::from_secs(60)),
                     Quota::key_limit(50, Duration::from_secs(60)),
-                    Quota::key_limit(1000, Duration::from_secs(60 * 60)),
+                    Quota::key_limit(800, Duration::from_secs(60 * 60)),
                     Quota::global_limit(2000, Duration::from_secs(60 * 60)),
                 ],
             )
