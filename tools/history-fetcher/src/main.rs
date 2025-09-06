@@ -64,8 +64,8 @@ async fn update_account(
     http_client: &reqwest::Client,
     account: u32,
 ) {
-    let match_history = match fetch_account_match_history(http_client, account).await {
-        Ok((_, match_history)) => match_history,
+    let (username, match_history) = match fetch_account_match_history(http_client, account).await {
+        Ok((username, match_history)) => (username, match_history),
         Err(e) => {
             counter!("history_fetcher.fetch_match_history.failure").increment(1);
             error!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
@@ -91,7 +91,7 @@ async fn update_account(
     }
     let match_history = match_history
         .into_iter()
-        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r));
+        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r, username.clone()));
     match insert_match_history(ch_client, match_history).await {
         Ok(()) => {
             counter!("history_fetcher.insert_match_history.success").increment(1);

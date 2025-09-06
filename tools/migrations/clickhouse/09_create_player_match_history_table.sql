@@ -22,6 +22,7 @@ create table if not exists player_match_history
  objectives_mask_team1 UInt32,
  source                Enum8('history_fetcher' = 1, 'match_player' = 2) default 'history_fetcher',
  created_at            Nullable(DateTime)                               default now(),
+ username              Nullable(String),
 
  INDEX idx_match_id match_id TYPE minmax
 )

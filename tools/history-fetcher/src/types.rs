@@ -24,12 +24,14 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub match_result: u32,
     pub objectives_mask_team0: u32,
     pub objectives_mask_team1: u32,
+    pub username: Option<String>,
 }
 
 impl PlayerMatchHistoryEntry {
     pub(crate) fn from_protobuf(
         account_id: u32,
         entry: c_msg_client_to_gc_get_match_history_response::Match,
+        username: String
     ) -> Option<Self> {
         Some(Self {
             account_id,
@@ -52,6 +54,7 @@ impl PlayerMatchHistoryEntry {
             match_result: entry.match_result?,
             objectives_mask_team0: entry.objectives_mask_team0? as u32,
             objectives_mask_team1: entry.objectives_mask_team1? as u32,
+            username: Some(username),
         })
     }
 }
