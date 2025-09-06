@@ -305,7 +305,7 @@ pub(super) async fn match_history(
         fetch_match_history_from_clickhouse(&state.ch_client_ro, account_id).await?;
 
     // If only stored history is requested, we can just return the data from ClickHouse
-    if query.only_stored_history {
+    if query.only_stored_history || state.config.only_stored_history {
         return Ok(Json(ch_match_history));
     }
 

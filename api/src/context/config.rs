@@ -105,7 +105,9 @@ fn default_assets_base_url() -> String {
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct Config {
     #[serde(default)]
-    pub(super) emergency_mode: bool,
+    pub(crate) emergency_mode: bool,
+    #[serde(default)]
+    pub(crate) only_stored_history: bool,
     pub(crate) internal_api_key: String,
     pub(super) steam: SteamConfig,
     pub(super) redis: RedisConfig,
