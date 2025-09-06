@@ -14,7 +14,7 @@
 mod types;
 
 use core::time::Duration;
-
+use std::sync::LazyLock;
 use metrics::{counter, gauge};
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
@@ -23,6 +23,12 @@ use valveprotos::deadlock::{
 };
 
 use crate::types::PlayerMatchHistoryEntry;
+
+static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
+    std::env::var("HISTORY_COOLDOWN_MILLIS")
+        .map(|x| x.parse().expect("HISTORY_COOLDOWN_MILLIS must be a number"))
+        .unwrap_or(24 * 60 * 60 * 1000 / 45)
+});
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -165,7 +171,7 @@ async fn fetch_account_match_history(
         &msg,
         Some(&["GetMatchHistory"]),
         None,
-        Duration::from_secs(24 * 60 * 60 / 50), // 50 requests per day
+        Duration::from_millis(*HISTORY_COOLDOWN_MILLIS),
         Duration::from_secs(5),
     )
     .await
