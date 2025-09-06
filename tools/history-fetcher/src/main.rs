@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let mut interval = tokio::time::interval(Duration::from_secs(4));
+    let mut interval = tokio::time::interval(Duration::from_secs(8));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
