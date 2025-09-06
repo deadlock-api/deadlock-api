@@ -132,7 +132,7 @@ LIMIT 100
 UNION
 DISTINCT
 
-WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time < now() - INTERVAL 40 MINUTE)
+WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 4 HOUR)
 SELECT DISTINCT account_id
 FROM match_player
 WHERE match_id IN t_matches
