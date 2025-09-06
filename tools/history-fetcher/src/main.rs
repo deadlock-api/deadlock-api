@@ -134,7 +134,7 @@ DISTINCT
 
 WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - INTERVAL 2 DAY),
      t_existing_histories AS (SELECT match_id
-                              FROM player_match_history
+                              FROM player_match_history FINAL
                               WHERE source = 'history_fetcher'
                                 AND account_id > 0
                                 AND start_time > now() - INTERVAL 2 DAY)
