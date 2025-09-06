@@ -31,7 +31,7 @@ impl PlayerMatchHistoryEntry {
     pub(crate) fn from_protobuf(
         account_id: u32,
         entry: c_msg_client_to_gc_get_match_history_response::Match,
-        username: String
+        username: String,
     ) -> Option<Self> {
         Some(Self {
             account_id,
