@@ -29,7 +29,7 @@ mod models;
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("SALTS_COOLDOWN_MILLIS")
         .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
-        .unwrap_or(36_000)
+        .unwrap_or(24 * 60 * 60 * 1000 / 45)
 });
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
