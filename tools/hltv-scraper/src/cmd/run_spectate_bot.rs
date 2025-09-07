@@ -44,6 +44,17 @@ static NO_ACTIVE_SPECTATE: LazyLock<bool> = LazyLock::new(|| {
         .unwrap_or_default()
 });
 
+// Percentile (0.0 - 1.0) used to choose where to start
+// filling gaps between the min and max match id range. Defaults to 0.5 (50%).
+static GAP_PERCENTILE: LazyLock<f64> = LazyLock::new(|| {
+    let p = env::var("GAP_PERCENTILE")
+        .ok()
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.5);
+
+    p.clamp(0.0, 1.0)
+});
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PoolLimitInfo {
     ready_bots: u32,
@@ -205,12 +216,14 @@ impl SpectatorBot {
 
         let min_id = active_match_ids.iter().min().unwrap();
         let max_id = active_match_ids.iter().max().unwrap();
-        let avg = (min_id + max_id) / 2;
-        assert!(avg < *max_id);
 
-        // we prioritise from avg to max first, then avg to min
+        let span = *max_id - *min_id;
+        let start = *min_id + ((span as f64) * *GAP_PERCENTILE) as u64;
+        assert!(start <= *max_id);
+
+        // we prioritise from start to max first, then start to min
         // cause the very old matches might be already over and result in KENotInGame Errors
-        let potential_ids = (avg..*max_id).chain(*min_id..avg);
+        let potential_ids = (start..*max_id).chain(*min_id..start);
         potential_ids
             .filter(|x| !recently_spectated.contains_key(x))
             .filter(|x| !failed_spectating.contains_key(x))
