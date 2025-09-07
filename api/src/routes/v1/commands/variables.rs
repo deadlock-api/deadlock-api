@@ -46,6 +46,7 @@ pub(super) enum VariableCategory {
     General,
     Daily,
     Hero,
+    Item,
     Leaderboard,
     Overall,
 }
@@ -69,6 +70,7 @@ pub(super) enum Variable {
     MaxSpiritSnareStacks,
     MaxBonusHealthPerKill,
     MaxGuidedOwlStacks,
+    MaxTrophyCollectorStacks,
     HeroHoursPlayed,
     HeroKd,
     HeroKills,
@@ -164,6 +166,7 @@ impl Variable {
             | Self::MaxSpiritSnareStacks
             | Self::MaxBonusHealthPerKill
             | Self::MaxGuidedOwlStacks => VariableCategory::Hero,
+            Self::MaxTrophyCollectorStacks => VariableCategory::Item,
         }
     }
 
@@ -212,6 +215,7 @@ impl Variable {
             Self::MaxSpiritSnareStacks => "Get the max spirit snare stacks on Grey Talon",
             Self::MaxBonusHealthPerKill => "Get the max bonus health per kill on Mo & Krill",
             Self::MaxGuidedOwlStacks => "Get the max guided owl stacks on Grey Talon",
+            Self::MaxTrophyCollectorStacks => "Get the max stacks on Trophy Collector",
             Self::MMRHistoryRank | Self::MMRHistoryRankImg => "Get the MMR history rank",
         }
     }
@@ -689,6 +693,12 @@ impl Variable {
             }
             Self::MaxGuidedOwlStacks => {
                 Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 3242902780)
+                    .await
+                    .map(|r| r.to_string())
+                    .map_err(Into::into)
+            }
+            Self::MaxTrophyCollectorStacks => {
+                Self::get_max_ability_stat(&state.ch_client_ro, steam_id, 3074274290)
                     .await
                     .map(|r| r.to_string())
                     .map_err(Into::into)
