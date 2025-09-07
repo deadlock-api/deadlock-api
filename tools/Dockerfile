@@ -27,6 +27,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
     cargo build --release --all-features
+# Collect only built binaries into a temporary directory
+RUN mkdir -p /tmp/release-bin \
+    && find /app/target/release -maxdepth 1 -type f -executable -exec cp {} /tmp/release-bin/ \;
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:trixie-slim AS runtime
@@ -34,4 +37,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /app/target/release/* /usr/local/bin
+
+# Copy only the compiled binaries, not any other build artifacts
+COPY --from=builder /tmp/release-bin/* /usr/local/bin
