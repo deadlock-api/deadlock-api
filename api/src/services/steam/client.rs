@@ -14,6 +14,7 @@ use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
@@ -162,12 +163,12 @@ impl SteamClient {
     pub(crate) async fn metadata_file_exists(
         &self,
         match_id: u64,
-        salts: CMsgClientToGcGetMatchMetaDataResponse,
+        salts: &ClickhouseSalts,
     ) -> reqwest::Result<()> {
         self.http_client
             .head(format!(
                 "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
-                salts.replay_group_id.unwrap_or_default(),
+                salts.cluster_id.unwrap_or_default(),
                 salts.metadata_salt.unwrap_or_default()
             ))
             .timeout(Duration::from_secs(5))

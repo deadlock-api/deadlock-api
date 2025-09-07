@@ -70,7 +70,7 @@ pub(super) async fn ingest_salts(
         for salt in match_salts {
             if state
                 .steam_client
-                .metadata_file_exists(salt.match_id, salt.into())
+                .metadata_file_exists(salt.match_id, &salt)
                 .await
                 .is_ok()
             {

@@ -21,7 +21,7 @@ use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
-use crate::services::steam::types::SteamProxyQuery;
+use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
 
 const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
@@ -128,8 +128,8 @@ pub(super) async fn fetch_match_salts(
         metadata_salt: None,
         target_account_id: None,
     };
-    let salts: CMsgClientToGcGetMatchMetaDataResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
+    let result = steam_client
+        .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
             msg,
             in_all_groups: Some(vec!["GetMatchMetaData".to_owned()]),
@@ -139,8 +139,10 @@ pub(super) async fn fetch_match_salts(
             username: None,
             soft_cooldown_millis: is_custom.then_some(Duration::from_secs(30 * 60)),
         })
-        .await?
-        .msg;
+        .await?;
+    let username = result.username.clone();
+    let salts: SteamProxyResponse<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
+    let salts = salts.msg;
     if salts.result.is_none_or(|r| {
         r != c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultSuccess as i32
     }) {
@@ -152,7 +154,8 @@ pub(super) async fn fetch_match_salts(
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
         // Insert into Clickhouse
         if let Err(e) =
-            ingest_salts::insert_salts_to_clickhouse(ch_client, vec![(match_id, salts)]).await
+            ingest_salts::insert_salts_to_clickhouse(ch_client, vec![(match_id, salts, username)])
+                .await
         {
             warn!("Failed to insert match salts into Clickhouse: {e}");
         }

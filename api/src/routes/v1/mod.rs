@@ -8,7 +8,7 @@ mod commands;
 mod esports;
 pub mod info;
 mod leaderboard;
-mod matches;
+pub mod matches;
 mod patches;
 pub mod players;
 pub mod sql;

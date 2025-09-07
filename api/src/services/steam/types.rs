@@ -26,7 +26,7 @@ pub(crate) struct SteamProxyQuery<M: Message> {
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct SteamProxyRawResponse {
     pub(crate) data: String,
-    username: String,
+    pub(crate) username: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
