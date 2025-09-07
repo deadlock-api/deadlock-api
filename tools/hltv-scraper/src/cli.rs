@@ -23,6 +23,9 @@ pub(crate) enum Commands {
 
         #[arg(long, env = "PROXY_URL")]
         proxy_url: String,
+
+        #[arg(long, env = "MAX_SPECTATING_MATCHES")]
+        max_spectating_matches: Option<usize>,
     },
 }
 
@@ -41,8 +44,14 @@ pub(crate) async fn run_cli() {
         Commands::RunSpectateBot {
             proxy_url,
             proxy_api_token,
+            max_spectating_matches,
         } => {
-            if let Err(e) = crate::cmd::run_spectate_bot::run_bot(proxy_url, proxy_api_token).await
+            if let Err(e) = crate::cmd::run_spectate_bot::run_bot(
+                proxy_url,
+                proxy_api_token,
+                max_spectating_matches,
+            )
+            .await
             {
                 error!("Command failed: {:#?}", e);
             }

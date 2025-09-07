@@ -28,7 +28,6 @@ use valveprotos::gcsdk::EgcPlatform;
 
 use crate::easy_poll::start_polling_text;
 
-const MAX_SPECTATED_MATCHES: usize = 275;
 const BOT_RUNTIME_HOURS: u64 = 6;
 const SPECTATE_COOLDOWN: Duration = Duration::from_millis(10);
 const ERROR_COOLDOWN: Duration = Duration::from_secs(5);
@@ -383,7 +382,7 @@ impl SpectatorBot {
         }
     }
 
-    async fn run(&self) -> Result<()> {
+    async fn run(&self, max_spectating_matches: Option<usize>) -> Result<()> {
         let start_time = Instant::now();
 
         let (abort_handle, steam_inf) = start_polling_text(
@@ -423,7 +422,9 @@ impl SpectatorBot {
             let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
             let n_spectated = recently_spectated.len();
 
-            if n_spectated > MAX_SPECTATED_MATCHES {
+            if let Some(max_spectating_matches) = max_spectating_matches
+                && n_spectated > max_spectating_matches
+            {
                 info!("Maximum spectated matches reached ({n_spectated}), waiting...");
                 sleep(Duration::from_secs(5)).await;
                 continue;
@@ -496,7 +497,7 @@ impl SpectatorBot {
                         "No eligible matches found. Attempting to spectate {} gaps",
                         gaps.len()
                     );
-                    for gap_id in gaps.into_iter().take(5) {
+                    for gap_id in gaps.into_iter().take(10) {
                         if let Err(e) = self
                             .spectate_match(SpectatedMatchType::GapMatch, gap_id)
                             .await
@@ -581,12 +582,16 @@ async fn record_match_still_alive(
     Ok(())
 }
 
-pub(crate) async fn run_bot(proxy_url: String, proxy_api_token: String) -> Result<()> {
+pub(crate) async fn run_bot(
+    proxy_url: String,
+    proxy_api_token: String,
+    max_spectating_matches: Option<usize>,
+) -> Result<()> {
     let bot = Arc::new(SpectatorBot::new(proxy_url, proxy_api_token).await?);
     let _server = tokio::spawn(run_server(bot.clone()));
 
     loop {
-        if let Err(e) = bot.run().await {
+        if let Err(e) = bot.run(max_spectating_matches).await {
             error!("Bot error, restarting in 2 minutes: {:?}", e);
             sleep(Duration::from_secs(120)).await;
         }
