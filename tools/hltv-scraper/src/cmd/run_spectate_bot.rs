@@ -1,6 +1,6 @@
 use core::num::NonZeroUsize;
 use core::time::Duration;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Instant;
@@ -31,7 +31,7 @@ use crate::easy_poll::start_polling_text;
 const BOT_RUNTIME_HOURS: u64 = 6;
 const SPECTATE_COOLDOWN: Duration = Duration::from_millis(10);
 const ERROR_COOLDOWN: Duration = Duration::from_secs(5);
-const MAX_GAP_SIZE: u64 = 100;
+const MAX_GAP_SIZE: usize = 100;
 const REDIS_SPEC_KEY: &str = "spectated_matches";
 const REDIS_FAILED_KEY: &str = "failed_spectated_matches";
 const REDIS_EXTRA_KEY: &str = "extra_spectated_matches";
@@ -203,45 +203,20 @@ impl SpectatorBot {
             return vec![];
         }
 
-        let mut gaps = Vec::new();
-        let match_set: HashSet<_> = active_match_ids.iter().collect();
-
         let min_id = active_match_ids.iter().min().unwrap();
         let max_id = active_match_ids.iter().max().unwrap();
         let avg = (min_id + max_id) / 2;
         assert!(avg < *max_id);
 
-        for potential_id in (avg..*max_id).step_by(1) {
-            if !match_set.contains(&potential_id)
-                && !recently_spectated.contains_key(&potential_id)
-                && !failed_spectating.contains_key(&potential_id)
-            {
-                gaps.push(potential_id);
-            }
-
-            if gaps.len() >= MAX_GAP_SIZE as usize {
-                break;
-            }
-        }
-
-        if gaps.len() < MAX_GAP_SIZE as usize {
-            for potential_id in (*min_id..*max_id).step_by(1) {
-                if !match_set.contains(&potential_id)
-                    && !recently_spectated.contains_key(&potential_id)
-                    && !failed_spectating.contains_key(&potential_id)
-                {
-                    gaps.push(potential_id);
-                }
-
-                if gaps.len() >= MAX_GAP_SIZE as usize {
-                    break;
-                }
-            }
-        }
-
-        // gaps.reverse();
-
-        gaps
+        // we prioritise from avg to max first, then avg to min
+        // cause the very old matches might be already over and result in KENotInGame Errors
+        let potential_ids = (avg..*max_id).chain(*min_id..avg);
+        potential_ids
+            .filter(|x| !recently_spectated.contains_key(x))
+            .filter(|x| !failed_spectating.contains_key(x))
+            .filter(|x| !active_match_ids.contains(x))
+            .take(MAX_GAP_SIZE)
+            .collect()
     }
 
     fn update_patch_version(&self, steam_inf: &str) -> Result<()> {
