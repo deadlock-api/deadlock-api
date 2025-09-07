@@ -7,23 +7,23 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'master'
+      - "master"
     paths:
-      - 'Dockerfile'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'common/**'
-      - 'salt-scraper/**'
-      - 'hltv-scraper/**'
-      - 'ingest-worker/**'
-      - 'matchdata-downloader/**'
-      - 'active-matches-scraper/**'
-      - 'builds-fetcher/**'
-      - 'friends-rank-fetcher/**'
-      - 'history-fetcher/**'
-      - 'steam-profile-fetcher/**'
-      - 'update-assets-tables/**'
-      - 'glicko-mmr/**'
+      - "Dockerfile"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "common/**"
+      - "salt-scraper/**"
+      - "hltv-scraper/**"
+      - "ingest-worker/**"
+      - "matchdata-downloader/**"
+      - "active-matches-scraper/**"
+      - "builds-fetcher/**"
+      - "friends-rank-fetcher/**"
+      - "history-fetcher/**"
+      - "steam-profile-fetcher/**"
+      - "update-assets-tables/**"
+      - "glicko-mmr/**"
 
 permissions:
   contents: read
@@ -84,11 +84,11 @@ jobs:
         run: cargo clippy --all-targets --locked --all-features -- -D warnings
 
   build-base:
-    runs-on: ubuntu-24.04-arm
+    runs-on: blacksmith-4vcpu-ubuntu-2404-arm
     steps:
       - uses: actions/checkout@v5
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -97,13 +97,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build Base Image
         id: build-base
-        uses: docker/build-push-action@v6
+        uses: useblacksmith/build-push-action@v2
         with:
           platforms: linux/arm64
           push: true
           tags: ghcr.io/${{ github.repository }}/rust-base:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   push-components:
     runs-on: ubuntu-24.04-arm
