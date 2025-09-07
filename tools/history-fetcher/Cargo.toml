@@ -13,5 +13,3 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 metrics = "0.24.2"
 tracing = "0.1.41"
 serde = { version = "1.0.219", features = ["derive"] }
-futures = "0.3.31"
-tryhard = "0.5.2"
