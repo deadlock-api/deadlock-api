@@ -167,7 +167,7 @@ async fn fetch_salts(
         &HTTP_CLIENT,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         &msg,
-        Some(&["GetMatchMetaData"]),
+        None,
         None,
         Duration::from_millis(*SALTS_COOLDOWN_MILLIS),
         Duration::from_secs(5),
