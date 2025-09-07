@@ -1,6 +1,6 @@
 use core::num::NonZeroUsize;
 use core::time::Duration;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Instant;
@@ -200,48 +200,25 @@ impl SpectatorBot {
         failed_spectating: &HashMap<u64, SpectatedMatchInfo>,
     ) -> Vec<u64> {
         if active_match_ids.is_empty() {
+            // We can't find gaps if no active matches are available
             return vec![];
         }
 
-        let mut gaps = Vec::new();
-        let match_set: HashSet<_> = active_match_ids.iter().collect();
+        let Some(min_id) = active_match_ids.iter().min() else {
+            return vec![];
+        };
+        let Some(max_id) = active_match_ids.iter().max() else {
+            return vec![];
+        };
 
-        let min_id = active_match_ids.iter().min().unwrap();
-        let max_id = active_match_ids.iter().max().unwrap();
-        let avg = (min_id + max_id) / 2;
-        assert!(avg < *max_id);
-
-        for potential_id in (avg..*max_id).step_by(1) {
-            if !match_set.contains(&potential_id)
-                && !recently_spectated.contains_key(&potential_id)
-                && !failed_spectating.contains_key(&potential_id)
-            {
-                gaps.push(potential_id);
-            }
-
-            if gaps.len() >= MAX_GAP_SIZE as usize {
-                break;
-            }
-        }
-
-        if gaps.len() < MAX_GAP_SIZE as usize {
-            for potential_id in (*min_id..*max_id).step_by(1) {
-                if !match_set.contains(&potential_id)
-                    && !recently_spectated.contains_key(&potential_id)
-                    && !failed_spectating.contains_key(&potential_id)
-                {
-                    gaps.push(potential_id);
-                }
-
-                if gaps.len() >= MAX_GAP_SIZE as usize {
-                    break;
-                }
-            }
-        }
-
-        // gaps.reverse();
-
-        gaps
+        // go from min to max id from active matches
+        // filtering out active matches, recently spectated matches, and failed spectates
+        (*min_id..*max_id)
+            .filter(|x| !active_match_ids.contains(x))
+            .filter(|x| !recently_spectated.contains_key(x))
+            .filter(|x| !failed_spectating.contains_key(x))
+            .take(MAX_GAP_SIZE as usize)
+            .collect()
     }
 
     fn update_patch_version(&self, steam_inf: &str) -> Result<()> {
@@ -468,12 +445,10 @@ impl SpectatorBot {
                 }
             } else {
                 let fifteen_min_ago = jiff::Timestamp::now()
-                    .checked_sub(15.minutes())
-                    .unwrap()
+                    .checked_sub(15.minutes())?
                     .as_second();
                 let fifty_min_ago = jiff::Timestamp::now()
-                    .checked_sub(50.minutes())
-                    .unwrap()
+                    .checked_sub(50.minutes())?
                     .as_second();
 
                 let match_ids: Vec<u64> = live_matches
