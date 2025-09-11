@@ -143,7 +143,9 @@ async fn create_party(
             server_region: settings
                 .as_ref()
                 .and_then(|m| m.region_mode.map(Into::into)),
-            is_publicly_visible: settings.as_ref().and_then(|m| m.is_publicly_visible),
+            is_publicly_visible: settings
+                .as_ref()
+                .map(|m| m.is_publicly_visible.unwrap_or(true)),
             cheats_enabled: settings.as_ref().and_then(|m| m.cheats_enabled),
             available_regions: vec![],
             duplicate_heroes_enabled: settings.as_ref().and_then(|m| m.duplicate_heroes_enabled),
