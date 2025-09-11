@@ -13,6 +13,7 @@ use rand::prelude::ThreadRng;
 use redis::{AsyncTypedCommands, RedisResult};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 use utoipa::{IntoParams, ToSchema};
@@ -35,12 +36,15 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 
-#[derive(Clone, Serialize, Deserialize, IntoParams, ToSchema)]
+#[derive(Clone, Deserialize, IntoParams, ToSchema)]
 pub(super) struct CreateCustomRequest {
     /// If a callback url is provided, we will send a POST request to this url when the match starts.
     #[serde(default)]
     #[param(default)]
     callback_url: Option<String>,
+    #[serde(default)]
+    #[param(default)]
+    region_mode: Option<RegionMode>,
     #[serde(default)]
     #[param(default, minimum = 1, maximum = 12)]
     min_roster_size: Option<u32>,
@@ -59,6 +63,31 @@ pub(super) struct CreateCustomRequest {
     #[serde(default)]
     #[param(default)]
     experimental_heroes_enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Display, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+#[repr(i32)]
+enum RegionMode {
+    Row = 0,
+    Europe = 1,
+    SeAsia = 2,
+    SAmerica = 3,
+    Russia = 4,
+    Oceania = 5,
+}
+
+impl From<RegionMode> for i32 {
+    fn from(val: RegionMode) -> Self {
+        val as i32
+    }
+}
+
+impl From<RegionMode> for u32 {
+    fn from(val: RegionMode) -> Self {
+        val as u32
+    }
 }
 
 #[derive(Serialize, ToSchema)]
@@ -94,20 +123,26 @@ async fn create_party(
                 .get_current_client_version()
                 .await?
                 .into(),
-            region_mode: None,
+            region_mode: settings
+                .as_ref()
+                .and_then(|m| m.region_mode.map(Into::into)),
         }
         .into(),
         invite_account_id: None,
         disable_party_code: false.into(),
         is_private_lobby: true.into(),
-        region_mode: None,
+        region_mode: settings
+            .as_ref()
+            .and_then(|m| m.region_mode.map(Into::into)),
         server_search_key: None,
         mm_preference: (ECitadelMmPreference::KECitadelMmPreferenceCasual as i32).into(),
         private_lobby_settings: cso_citadel_party::PrivateLobbySettings {
             min_roster_size: settings.as_ref().and_then(|m| m.min_roster_size),
             match_slots: vec![],
             randomize_lanes: settings.as_ref().and_then(|m| m.randomize_lanes),
-            server_region: None,
+            server_region: settings
+                .as_ref()
+                .and_then(|m| m.region_mode.map(Into::into)),
             is_publicly_visible: settings.as_ref().and_then(|m| m.is_publicly_visible),
             cheats_enabled: settings.as_ref().and_then(|m| m.cheats_enabled),
             available_regions: vec![],
