@@ -134,11 +134,11 @@ pub(super) async fn fetch_match_salts(
             msg,
             in_all_groups: Some(vec!["GetMatchMetaData".to_owned()]),
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 20),
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 10),
             request_timeout: Duration::from_secs(2),
             username: None,
             soft_cooldown_millis: if is_custom {
-                Duration::from_secs(24 * 60 * 60 / 50)
+                Duration::from_secs(24 * 60 * 60 / 20)
             } else {
                 Duration::default()
             }
