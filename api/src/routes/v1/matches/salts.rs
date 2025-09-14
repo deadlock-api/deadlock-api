@@ -137,12 +137,7 @@ pub(super) async fn fetch_match_salts(
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 10),
             request_timeout: Duration::from_secs(2),
             username: None,
-            soft_cooldown_millis: if is_custom {
-                Duration::from_secs(24 * 60 * 60 / 20)
-            } else {
-                Duration::default()
-            }
-            .into(),
+            soft_cooldown_millis: is_custom.then_some(Duration::from_secs(24 * 60 * 60 / 20)),
         })
         .await?;
     let username = result.username.clone();
