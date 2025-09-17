@@ -42,8 +42,8 @@ async fn main() -> anyhow::Result<()> {
     loop {
         info!("Fetching match ids to download");
         let query = "
-WITH t_salts AS (SELECT match_id, cluster_id, metadata_salt FROM match_salts WHERE created_at > \
-                     now() - INTERVAL 1 WEEK),
+WITH t_salts AS (SELECT match_id, cluster_id, metadata_salt FROM match_salts WHERE created_at >
+                     now() - INTERVAL 2 DAY),
      t_matches AS (SELECT match_id FROM match_info WHERE match_id IN (SELECT match_id FROM \
                      t_salts))
 SELECT DISTINCT match_id, cluster_id, metadata_salt
