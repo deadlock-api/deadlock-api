@@ -38,9 +38,10 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join(",");
-    let match_id_filter = max_match_id
-        .map(|max_match_id| format!("AND match_id <= {max_match_id}"))
-        .unwrap_or_default();
+    let match_id_filter = max_match_id.map_or(
+        "AND start_time > now() - INTERVAL 90 DAY".to_string(),
+        |m| format!("AND match_id <= {m}"),
+    );
     format!(
         "
     WITH
@@ -94,9 +95,10 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join(",");
-    let match_id_filter = max_match_id
-        .map(|max_match_id| format!("AND match_id <= {max_match_id}"))
-        .unwrap_or_default();
+    let match_id_filter = max_match_id.map_or(
+        "AND start_time > now() - INTERVAL 90 DAY".to_string(),
+        |m| format!("AND match_id <= {m}"),
+    );
     format!(
         "
     WITH
@@ -174,7 +176,11 @@ pub(crate) async fn get_mmr(
     ),
     tags = ["MMR"],
     summary = "MMR",
-    description = "Batch Player MMR",
+    description = "
+Batch Player MMR
+
+Filters for the last 90 days if no `max_match_id` is provided.
+",
 )]
 pub(super) async fn mmr(
     Query(MMRBatchQuery {
@@ -205,7 +211,11 @@ pub(super) async fn mmr(
     ),
     tags = ["MMR"],
     summary = "Hero MMR",
-    description = "Batch Player Hero MMR",
+    description = "
+Batch Player Hero MMR
+
+Filters for the last 90 days if no `max_match_id` is provided.
+",
 )]
 pub(super) async fn hero_mmr(
     Path(HeroMMRQuery { hero_id }): Path<HeroMMRQuery>,
