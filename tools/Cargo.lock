@@ -2053,7 +2053,6 @@ dependencies = [
  "clickhouse",
  "common",
  "futures",
- "itertools 0.14.0",
  "metrics",
  "object_store",
  "reqwest",

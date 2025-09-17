@@ -16,7 +16,6 @@ use std::collections::HashSet;
 use cached::UnboundCache;
 use cached::proc_macro::cached;
 use futures::StreamExt;
-use itertools::Itertools;
 use metrics::{counter, gauge};
 use models::MatchSalts;
 use object_store::path::Path;
@@ -42,34 +41,28 @@ async fn main() -> anyhow::Result<()> {
     loop {
         info!("Fetching match ids to download");
         let query = "
-WITH
-    t_salts AS (
-        SELECT
-            match_id,
-            cluster_id,
-            metadata_salt
-        FROM match_salts
-        WHERE created_at > now() - INTERVAL 2 DAY
-        ORDER BY created_at
-    ),
-    t_matches AS (
-        SELECT
-            match_id
-        FROM match_info
-        WHERE match_id IN (SELECT match_id FROM t_salts)
-    )
-SELECT DISTINCT match_id, cluster_id, metadata_salt
+WITH t_salts AS (SELECT match_id,
+                        cluster_id,
+                        metadata_salt
+                 FROM match_salts FINAL
+                 WHERE created_at > now() - INTERVAL 2 DAY
+                 ORDER BY created_at),
+     t_matches AS (SELECT match_id
+                   FROM match_info
+                   WHERE match_id IN (SELECT match_id FROM t_salts))
+SELECT match_id, cluster_id, metadata_salt
 FROM t_salts
 WHERE match_id NOT IN t_matches
         ";
-        let match_ids_to_fetch: Vec<MatchSalts> = ch_client.query(query).fetch_all().await?;
-        let match_ids_to_fetch = match_ids_to_fetch
+        let match_ids_to_fetch = ch_client
+            .query(query)
+            .fetch_all::<MatchSalts>()
+            .await?
             .into_iter()
             .filter(|salts| !failed.contains(&salts.match_id))
             .filter(|salts| !uploaded.contains(&salts.match_id))
             .filter(|salts| salts.cluster_id.is_some() && salts.metadata_salt.is_some())
-            .unique_by(|salts| salts.match_id)
-            .collect_vec();
+            .collect::<Vec<_>>();
 
         gauge!("matchdata_downloader.matches_to_download").set(match_ids_to_fetch.len() as f64);
 
