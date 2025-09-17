@@ -75,6 +75,8 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM t_matches
+            ORDER BY match_id DESC
+            LIMIT 1 BY account_id
         )
     SELECT
         account_id,
@@ -85,8 +87,6 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
         division,
         division_tier
     FROM mmr_data
-    ORDER BY match_id DESC
-    LIMIT 1 BY account_id
     "
     )
 }
@@ -135,6 +135,8 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM t_matches
+            ORDER BY match_id DESC
+            LIMIT 1 BY account_id
         )
     SELECT
         account_id,
@@ -145,8 +147,6 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
         division,
         division_tier
     FROM mmr_data
-    ORDER BY match_id DESC
-    LIMIT 1 BY account_id
     "
     )
 }
