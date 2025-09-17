@@ -7,6 +7,6 @@ CREATE TABLE match_salts
     created_at    DateTime         DEFAULT now(),
     username      Nullable(String)
 )
- ENGINE = ReplacingMergeTree
+ ENGINE = CoalescingMergeTree()
   PARTITION BY toStartOfMonth(created_at)
   ORDER BY (toStartOfMonth(created_at), match_id);
