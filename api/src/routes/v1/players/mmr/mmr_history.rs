@@ -62,14 +62,14 @@ fn build_mmr_history_query(account_id: u32) -> String {
             AND (not_scored is NULL OR not_scored != true)
             AND account_id = {account_id}
             AND match_mode IN ('Ranked', 'Unranked')
-            ORDER BY account_id, match_id DESC
+            ORDER BY account_id, match_id
         ),
         mmr_data AS (
             SELECT
                 account_id,
                 match_id,
                 start_time,
-                groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id DESC ROWS BETWEEN CURRENT ROW AND window_size - 1 FOLLOWING) AS mmr_window,
+                groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
                 arraySlice(exp_weights, 1, length(mmr_window)) AS weights,
                 dotProduct(mmr_window, weights) / arraySum(weights) AS player_score,
                 toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
@@ -113,14 +113,14 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
             AND account_id = {account_id}
             AND hero_id = {hero_id}
             AND match_mode IN ('Ranked', 'Unranked')
-            ORDER BY account_id, match_id DESC
+            ORDER BY account_id, match_id
         ),
         mmr_data AS (
             SELECT
                 account_id,
                 match_id,
                 start_time,
-                groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id DESC ROWS BETWEEN CURRENT ROW AND window_size - 1 FOLLOWING) AS mmr_window,
+                groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
                 arraySlice(exp_weights, 1, length(mmr_window)) AS weights,
                 dotProduct(mmr_window, weights) / arraySum(weights) AS player_score,
                 toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
