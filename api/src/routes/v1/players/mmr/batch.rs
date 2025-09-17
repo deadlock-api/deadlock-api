@@ -71,8 +71,8 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
                 start_time,
                 groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
                 arraySlice(exp_weights, 1, length(mmr_window)) AS weights,
-                dotProduct(mmr_window, weights) / arraySum(weights) AS player_score,
-                toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+                clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66) AS player_score,
+                toUInt32(if(player_score = 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM t_matches
@@ -132,8 +132,8 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
                 start_time,
                 groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
                 arraySlice(exp_weights, 1, length(mmr_window)) AS weights,
-                dotProduct(mmr_window, weights) / arraySum(weights) AS player_score,
-                toUInt32(if(clamp(player_score, 0, 66) = 0, 0, 10 * intDiv(clamp(player_score, 0, 66) - 1, 6) + 11 + modulo(clamp(player_score, 0, 66) - 1, 6))) AS rank,
+                clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66) AS player_score,
+                toUInt32(if(player_score = 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM t_matches
