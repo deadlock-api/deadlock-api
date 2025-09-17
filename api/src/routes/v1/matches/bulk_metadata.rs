@@ -97,6 +97,10 @@ pub(super) struct BulkMatchMetadataQuery {
     #[serde(default)]
     #[serde(deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
+    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    hero_ids: Option<Vec<u32>>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
     #[serde(default)]
@@ -240,6 +244,14 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         player_filters.push(format!(
             "account_id IN ({})",
             account_ids.iter().map(ToString::to_string).join(",")
+        ));
+    }
+    if let Some(hero_ids) = query.hero_ids
+        && !hero_ids.is_empty()
+    {
+        player_filters.push(format!(
+            "hero_id IN ({})",
+            hero_ids.iter().map(ToString::to_string).join(",")
         ));
     }
 
