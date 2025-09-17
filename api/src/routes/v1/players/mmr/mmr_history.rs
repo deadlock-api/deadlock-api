@@ -62,6 +62,7 @@ fn build_mmr_history_query(account_id: u32) -> String {
             AND (not_scored is NULL OR not_scored != true)
             AND account_id = {account_id}
             AND match_mode IN ('Ranked', 'Unranked')
+            ORDER BY account_id, match_id DESC
         ),
         mmr_data AS (
             SELECT
@@ -75,6 +76,7 @@ fn build_mmr_history_query(account_id: u32) -> String {
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM t_matches
+            ORDER BY match_id
         )
     SELECT
         account_id,
@@ -85,7 +87,6 @@ fn build_mmr_history_query(account_id: u32) -> String {
         division,
         division_tier
     FROM mmr_data
-    ORDER BY match_id
     "
     )
 }
@@ -112,6 +113,7 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
             AND account_id = {account_id}
             AND hero_id = {hero_id}
             AND match_mode IN ('Ranked', 'Unranked')
+            ORDER BY account_id, match_id DESC
         ),
         mmr_data AS (
             SELECT
@@ -125,6 +127,7 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
                 toUInt32(floor(rank / 10)) AS division,
                 toUInt32(rank % 10) AS division_tier
             FROM t_matches
+            ORDER BY match_id
         )
     SELECT
         account_id,
@@ -135,7 +138,6 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
         division,
         division_tier
     FROM mmr_data
-    ORDER BY match_id
     "
     )
 }

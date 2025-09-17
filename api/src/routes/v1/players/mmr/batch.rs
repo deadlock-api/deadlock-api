@@ -62,6 +62,7 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
             AND account_id IN ({account_ids})
             AND match_mode IN ('Ranked', 'Unranked')
             {match_id_filter}
+            ORDER BY account_id, match_id DESC
         ),
         mmr_data AS (
             SELECT
@@ -122,6 +123,7 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
             AND hero_id = {hero_id}
             AND match_mode IN ('Ranked', 'Unranked')
             {match_id_filter}
+            ORDER BY account_id, match_id DESC
         ),
         mmr_data AS (
             SELECT
