@@ -829,36 +829,19 @@ impl Variable {
         steam_client: &SteamClient,
         account_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let last_match_newer_than_40min = ch_client
-            .query(
-                "
-                SELECT match_id
-                FROM match_player
-                WHERE account_id = ? AND start_time >= now() - INTERVAL 40 MINUTE
-                LIMIT 1
-                ",
-            )
-            .bind(account_id)
-            .fetch_one::<u32>()
-            .await
-            .is_ok();
-        let matches = if last_match_newer_than_40min {
-            fetch_match_history_from_clickhouse(ch_client, account_id).await?
-        } else {
-            match fetch_steam_match_history(steam_client, account_id, false).await {
-                Ok(m) => {
-                    let ch_client = ch_client.clone();
-                    let matches = m.clone();
-                    tokio::spawn(async move {
-                        let result = insert_match_history_to_ch(&ch_client, &matches).await;
-                        if let Err(e) = result {
-                            warn!("Failed to insert player match history to ClickHouse: {e:?}");
-                        }
-                    });
-                    m
-                }
-                Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id).await?,
+        let matches = match fetch_steam_match_history(steam_client, account_id, false).await {
+            Ok(m) => {
+                let ch_client = ch_client.clone();
+                let matches = m.clone();
+                tokio::spawn(async move {
+                    let result = insert_match_history_to_ch(&ch_client, &matches).await;
+                    if let Err(e) = result {
+                        warn!("Failed to insert player match history to ClickHouse: {e:?}");
+                    }
+                });
+                m
             }
+            Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id).await?,
         };
 
         let first_match = matches
