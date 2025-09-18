@@ -28,4 +28,4 @@ create table if not exists player_match_history
 )
  engine = ReplacingMergeTree
   PARTITION BY (toStartOfMonth(start_time), match_mode)
-  ORDER BY (toStartOfMonth(start_time), match_mode, account_id, match_id);
+  ORDER BY (account_id, match_id);
