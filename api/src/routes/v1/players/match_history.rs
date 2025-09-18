@@ -2,15 +2,13 @@ use core::time::Duration;
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use axum::http::{HeaderMap, StatusCode};
 use axum_extra::extract::Query;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::{
@@ -180,7 +178,7 @@ async fn fetch_match_history_raw(
 
 #[cached(
     ty = "TimedCache<(u32, bool), PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(8 * 60)) }",
     result = true,
     convert = "{ (account_id, force_refetch) }",
     sync_writes = "by_key",
@@ -240,23 +238,6 @@ pub(crate) async fn fetch_steam_match_history(
         .collect_vec())
 }
 
-async fn exists_newer_match_than(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-    match_id: u64,
-) -> bool {
-    let query = format!(
-        "
-    SELECT match_id
-    FROM match_player
-    WHERE account_id = {account_id} AND match_id > {match_id}
-    ORDER BY match_id DESC
-    LIMIT 1
-    "
-    );
-    ch_client.query(&query).fetch_one::<u64>().await.is_ok()
-}
-
 #[utoipa::path(
     get,
     path = "/{account_id}/match-history",
@@ -293,7 +274,7 @@ pub(super) async fn match_history(
     Query(query): Query<MatchHistoryQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
-) -> APIResult<Json<PlayerMatchHistory>> {
+) -> APIResult<(HeaderMap, Json<PlayerMatchHistory>)> {
     if query.force_refetch && query.only_stored_history {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -309,25 +290,6 @@ pub(super) async fn match_history(
         let mut headers = HeaderMap::new();
         headers.insert("called_steam", "false".parse().unwrap());
         return Ok((headers, Json(ch_match_history)));
-    }
-
-    let last_match = ch_match_history.iter().max_by_key(|h| h.match_id);
-
-    let mut force_update = false;
-    if let Some(last_match) = last_match {
-        // if newer than 30 min, check if there is a newer match, otherwise return the clickhouse data
-        let is_newer_than_30_min = last_match.start_time
-            >= u32::try_from((chrono::Utc::now() - chrono::Duration::minutes(30)).timestamp())
-                .unwrap_or_default();
-        if is_newer_than_30_min {
-            let exists_newer_match =
-                exists_newer_match_than(&state.ch_client_ro, account_id, last_match.match_id).await;
-            if exists_newer_match {
-                force_update = true; // force update if there is a newer match
-            } else {
-                return Ok(Json(ch_match_history));
-            }
-        }
     }
 
     // Apply rate limits based on the query parameters
@@ -365,19 +327,15 @@ pub(super) async fn match_history(
     }
 
     // Fetch player match history from Steam and ClickHouse
-    let steam_match_history = if force_update {
-        fetch_steam_match_history_no_cache(&state.steam_client, account_id, query.force_refetch)
-            .await
-    } else {
-        fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch).await
-    };
-    let steam_match_history = match steam_match_history {
-        Ok(r) => r,
-        Err(e) => {
-            warn!("Failed to fetch player match history from Steam: {e:?}");
-            vec![]
-        }
-    };
+    let steam_match_history =
+        match fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch).await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                warn!("Failed to fetch player match history from Steam: {e:?}");
+                vec![]
+            }
+        };
 
     // Insert missing entries to ClickHouse
     let ch_match_ids = ch_match_history.iter().map(|e| e.match_id).collect_vec();
@@ -398,5 +356,7 @@ pub(super) async fn match_history(
         .rev()
         .unique_by(|e| e.match_id)
         .collect_vec();
-    Ok(Json(combined_match_history))
+    let mut headers = HeaderMap::new();
+    headers.insert("called_steam", "true".parse().unwrap());
+    Ok((headers, Json(combined_match_history)))
 }
