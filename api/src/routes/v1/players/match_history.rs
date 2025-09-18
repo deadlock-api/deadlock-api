@@ -400,14 +400,3 @@ pub(super) async fn match_history(
         .collect_vec();
     Ok(Json(combined_match_history))
 }
-
-pub(crate) async fn match_history_v2(
-    path: Path<AccountIdQuery>,
-    query: Query<MatchHistoryQuery>,
-    rate_limit_key: RateLimitKey,
-    state: State<AppState>,
-) -> APIResult<impl IntoResponse> {
-    match_history(path, query, rate_limit_key, state)
-        .await
-        .map(|r| Json(json!({"cursor": 0, "matches": r.0})))
-}

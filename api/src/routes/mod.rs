@@ -11,18 +11,12 @@ use crate::routes::v1::analytics::{
     badge_distribution, hero_comb_stats, hero_stats, item_stats, player_scoreboard,
 };
 use crate::routes::v1::players;
-use crate::routes::v1::players::match_history;
 use crate::utils::parse;
 
 pub mod v1;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        // V2 Match History Endpoint for Backwards Compatibility with data.deadlock-api.com
-        .route(
-            "/v2/players/{account_id}/match-history",
-            get(match_history::match_history_v2),
-        )
         .route(
             "/v1/players/{account_id}/hero-stats",
             get(players::hero_stats::hero_stats_single),
