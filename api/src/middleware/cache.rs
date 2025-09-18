@@ -103,6 +103,9 @@ where
 
             // Do not cache non-success responses
             if !response.status().is_success() {
+                response
+                    .headers_mut()
+                    .insert(CACHE_CONTROL, HeaderValue::from_static("no-cache"));
                 return Ok(response);
             }
 
