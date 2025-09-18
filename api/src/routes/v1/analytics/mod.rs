@@ -1,4 +1,5 @@
 pub mod ability_order_stats;
+pub mod badge_distribution;
 pub mod build_item_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
@@ -40,6 +41,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             .routes(routes!(hero_synergies_stats::hero_synergies_stats))
             .routes(routes!(hero_comb_stats::hero_comb_stats))
             .routes(routes!(build_item_stats::build_item_stats))
+            .routes(routes!(badge_distribution::badge_distribution))
             .nest(
                 "/scoreboards",
                 OpenApiRouter::with_openapi(ApiDoc::openapi())

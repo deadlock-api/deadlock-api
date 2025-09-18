@@ -1,5 +1,4 @@
 mod active;
-mod badge_distribution;
 mod bulk_metadata;
 mod custom;
 mod ingest_salts;
@@ -33,15 +32,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(recently_fetched::recently_fetched))
         .routes(routes!(bulk_metadata::bulk_metadata))
         .routes(routes!(live_url::url))
-        .merge(
-            OpenApiRouter::new()
-                .routes(routes!(badge_distribution::badge_distribution))
-                .layer(
-                    CacheControlMiddleware::new(Duration::from_secs(60 * 60))
-                        .with_stale_while_revalidate(Duration::from_secs(60 * 60))
-                        .with_stale_if_error(Duration::from_secs(60 * 60)),
-                ),
-        )
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(metadata::metadata))

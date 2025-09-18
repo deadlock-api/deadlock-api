@@ -9,13 +9,28 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
-pub(super) struct BadgeDistributionQuery {
-    /// Filter matches based on their start time (Unix timestamp).
+pub(crate) struct BadgeDistributionQuery {
+    /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
+    #[serde(default = "default_last_month_timestamp")]
+    #[param(default = default_last_month_timestamp)]
     min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<i64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
+    #[param(maximum = 7000)]
+    min_duration_s: Option<u64>,
+    /// Filter matches based on their duration in seconds (up to 7000s).
+    #[param(maximum = 7000)]
+    max_duration_s: Option<u64>,
+    /// Filter matches based on whether they are in the high skill range.
+    is_high_skill_range_parties: Option<bool>,
+    /// Filter matches based on whether they are in the low priority pool.
+    is_low_pri_pool: Option<bool>,
+    /// Filter matches based on whether they are in the new player pool.
+    is_new_player_pool: Option<bool>,
     /// Filter matches based on their ID.
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
@@ -23,7 +38,7 @@ pub(super) struct BadgeDistributionQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-struct BadgeDistribution {
+pub(crate) struct BadgeDistribution {
     /// The badge level. See more: <https://assets.deadlock-api.com/v2/ranks>
     badge_level: u32,
     /// The total number of matches.
@@ -31,23 +46,37 @@ struct BadgeDistribution {
 }
 
 fn build_query(query: &BadgeDistributionQuery) -> String {
-    let mut filters = vec![];
+    let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
+        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
+        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
+        info_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
+        info_filters.push(format!("match_id <= {max_match_id}"));
     }
-    let filters = if filters.is_empty() {
+    if let Some(max_duration_s) = query.max_duration_s {
+        info_filters.push(format!("duration_s <= {max_duration_s}"));
+    }
+    if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
+        info_filters.push(format!(
+            "is_high_skill_range_parties = {is_high_skill_range_parties}"
+        ));
+    }
+    if let Some(is_low_pri_pool) = query.is_low_pri_pool {
+        info_filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
+    }
+    if let Some(is_new_player_pool) = query.is_new_player_pool {
+        info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
+    }
+    let filters = if info_filters.is_empty() {
         String::new()
     } else {
-        format!(" AND {}", filters.join(" AND "))
+        format!(" AND {}", info_filters.join(" AND "))
     };
     format!(
         "
@@ -81,7 +110,7 @@ async fn get_badge_distribution(
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch badge distribution")
     ),
-    tags = ["Matches"],
+    tags = ["Analytics"],
     summary = "Badge Distribution",
     description = "
 This endpoint returns the player badge distribution.
@@ -94,7 +123,7 @@ This endpoint returns the player badge distribution.
 | Global | - |
     "
 )]
-pub(super) async fn badge_distribution(
+pub(crate) async fn badge_distribution(
     Query(query): Query<BadgeDistributionQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
