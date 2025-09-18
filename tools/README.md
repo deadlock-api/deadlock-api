@@ -35,7 +35,7 @@ The system uses a microservice architecture with the following technologies:
 
 To run this project, you'll need:
 
-- Rust 1.89.0 or later
+- Rust 1.90.0 or later
 - Docker and Docker Compose
 - PostgreSQL
 - ClickHouse
