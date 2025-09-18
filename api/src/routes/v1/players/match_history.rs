@@ -288,7 +288,7 @@ pub(super) async fn match_history(
     // If only stored history is requested, we can just return the data from ClickHouse
     if query.only_stored_history {
         let mut headers = HeaderMap::new();
-        headers.insert("called_steam", "false".parse().unwrap());
+        headers.insert("Called-Steam", "false".parse().unwrap());
         return Ok((headers, Json(ch_match_history)));
     }
 
@@ -357,6 +357,6 @@ pub(super) async fn match_history(
         .unique_by(|e| e.match_id)
         .collect_vec();
     let mut headers = HeaderMap::new();
-    headers.insert("called_steam", "true".parse().unwrap());
+    headers.insert("Called-Steam", "true".parse().unwrap());
     Ok((headers, Json(combined_match_history)))
 }
