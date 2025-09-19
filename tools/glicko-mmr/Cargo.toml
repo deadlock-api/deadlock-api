@@ -7,7 +7,7 @@ edition = "2024"
 clickhouse = { version = "0.13.3", features = ["chrono", "inserter"] }
 serde = { version = "1.0.225", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
-anyhow = "1.0.99"
+anyhow = "1.0.100"
 common = { version = "0.1.0", path = "../common" }
 tracing = "0.1.41"
 clap = { version = "4.5.47", features = ["derive", "env"] }

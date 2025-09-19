@@ -145,7 +145,7 @@ async fn ingest_object(
         }
         Err(e) => {
             counter!("ingest_worker.insert_match.failure").increment(1);
-            bail!("Error inserting match data: {}", e);
+            bail!("Error inserting match data: {e}");
         }
     }
 

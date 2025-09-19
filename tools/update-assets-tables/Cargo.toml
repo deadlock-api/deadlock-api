@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.99"
+anyhow = "1.0.100"
 clickhouse = "0.13.3"
 common = { version = "0.1.0", path = "../common" }
 metrics = "0.24.2"

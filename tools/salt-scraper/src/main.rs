@@ -136,7 +136,7 @@ async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
         && result == KEResultRateLimited as i32
     {
         counter!("salt_scraper.parse_salt.failure").increment(1);
-        bail!("Got a rate limited response: {:?}", salts);
+        bail!("Got a rate limited response: {salts:?}");
     }
     counter!("salt_scraper.parse_salt.success").increment(1);
     debug!("Parsed salts");

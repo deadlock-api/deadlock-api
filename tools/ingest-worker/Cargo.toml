@@ -17,4 +17,4 @@ metrics = "0.24.2"
 tracing = "0.1.41"
 tryhard = "0.5.2"
 common = { version = "0.1.0", path = "../common" }
-anyhow = "1.0.99"
+anyhow = "1.0.100"

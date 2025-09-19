@@ -9,4 +9,4 @@ common = { version = "0.1.0", path = "../common" }
 reqwest = "0.12.23"
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.41"
-anyhow = "1.0.99"
+anyhow = "1.0.100"
