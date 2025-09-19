@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderMap;
@@ -68,12 +70,16 @@ pub(super) async fn ingest_salts(
     } else {
         let mut valid_salts = Vec::with_capacity(match_salts.len());
         for salt in match_salts {
-            if state
-                .steam_client
-                .metadata_file_exists(salt.match_id, &salt)
-                .await
-                .is_ok()
-            {
+            let is_valid = tryhard::retry_fn(|| {
+                state
+                    .steam_client
+                    .metadata_file_exists(salt.match_id, &salt)
+            })
+            .retries(3)
+            .linear_backoff(Duration::from_millis(100))
+            .await
+            .is_ok();
+            if is_valid {
                 valid_salts.push(salt);
             }
         }
