@@ -1,8 +1,6 @@
-use core::time::Duration;
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use serde_json::json;
 use tracing::debug;
@@ -53,38 +51,10 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
     "
 )]
 pub(super) async fn ingest_salts(
-    headers: HeaderMap,
     State(state): State<AppState>,
     Json(match_salts): Json<Vec<ClickhouseSalts>>,
 ) -> APIResult<impl IntoResponse> {
-    let bypass_check = headers
-        .get("X-API-Key")
-        .and_then(|key| key.to_str().ok().map(ToString::to_string))
-        .is_some_and(|key| key == state.config.internal_api_key);
-
     debug!("Received salts: {match_salts:?}");
-
-    // Check if the salts are valid if not sent by the internal tools
-    let match_salts: Vec<ClickhouseSalts> = if bypass_check {
-        match_salts
-    } else {
-        let mut valid_salts = Vec::with_capacity(match_salts.len());
-        for salt in match_salts {
-            let is_valid = tryhard::retry_fn(|| {
-                state
-                    .steam_client
-                    .metadata_file_exists(salt.match_id, &salt)
-            })
-            .retries(3)
-            .linear_backoff(Duration::from_millis(100))
-            .await
-            .is_ok();
-            if is_valid {
-                valid_salts.push(salt);
-            }
-        }
-        valid_salts
-    };
 
     if match_salts.is_empty() {
         return Err(APIError::status_msg(
