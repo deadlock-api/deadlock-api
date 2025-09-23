@@ -84,7 +84,7 @@ pub(super) async fn fetch_match_salts(
 
     // Try fetch from Clickhouse DB
     let salts = ch_client
-        .query("SELECT ?fields FROM match_salts WHERE match_id = ?")
+        .query("SELECT ?fields FROM match_salts FINAL WHERE match_id = ?")
         .bind(match_id)
         .fetch_one::<ClickhouseSalts>()
         .await;
