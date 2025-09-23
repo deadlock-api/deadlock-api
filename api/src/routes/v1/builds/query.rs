@@ -109,7 +109,7 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
     let mut query_builder: QueryBuilder<sqlx::Postgres> = QueryBuilder::default();
     query_builder.push(
         " WITH hero_builds AS (SELECT data as builds, weekly_favorites, favorites, ignores, \
-         reports, updated_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
+         reports, updated_at, published_at, version, ROW_NUMBER() OVER(PARTITION BY hero, build_id ORDER BY \
          version DESC) as rn FROM hero_builds WHERE TRUE",
     );
     if let Some(tag) = params.tag {
