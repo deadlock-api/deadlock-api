@@ -154,7 +154,7 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
 
 #[derive(Debug, Clone, IntoParams, ToSchema, Row, Serialize, Deserialize)]
 pub(crate) struct ClickhouseSalts {
-    pub(super) match_id: u64,
+    pub(crate) match_id: u64,
     pub(crate) metadata_salt: Option<u32>,
     pub(crate) replay_salt: Option<u32>,
     pub(crate) cluster_id: Option<u32>,

@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use serde_json::json;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -69,17 +69,34 @@ pub(super) async fn ingest_salts(
         match_salts
     } else {
         let mut valid_salts = Vec::with_capacity(match_salts.len());
-        for salt in match_salts {
-            let is_valid = tryhard::retry_fn(|| {
-                state
-                    .steam_client
-                    .metadata_file_exists(salt.match_id, &salt)
-            })
-            .retries(3)
-            .linear_backoff(Duration::from_millis(100))
-            .await
-            .is_ok();
-            if is_valid {
+        for mut salt in match_salts {
+            if salt.metadata_salt.is_some() {
+                debug!("Checking metadata salt for match_id {}", salt.match_id);
+
+                let is_valid = tryhard::retry_fn(|| state.steam_client.metadata_file_exists(&salt))
+                    .retries(5)
+                    .exponential_backoff(Duration::from_millis(100))
+                    .await
+                    .is_ok();
+                if !is_valid {
+                    warn!("Invalid metadata salt for match_id {}", salt.match_id);
+                    salt.metadata_salt = None;
+                }
+            }
+            if salt.replay_salt.is_some() {
+                debug!("Checking replay salt for match_id {}", salt.match_id);
+
+                let is_valid = tryhard::retry_fn(|| state.steam_client.replay_file_exists(&salt))
+                    .retries(5)
+                    .exponential_backoff(Duration::from_millis(100))
+                    .await
+                    .is_ok();
+                if !is_valid {
+                    warn!("Invalid replay salt for match_id {}", salt.match_id);
+                    salt.replay_salt = None;
+                }
+            }
+            if salt.metadata_salt.is_some() || salt.replay_salt.is_some() {
                 valid_salts.push(salt);
             }
         }
