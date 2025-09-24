@@ -28,7 +28,7 @@ use crate::types::PlayerMatchHistoryEntry;
 static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("HISTORY_COOLDOWN_MILLIS")
         .map(|x| x.parse().expect("HISTORY_COOLDOWN_MILLIS must be a number"))
-        .unwrap_or(24 * 60 * 60 * 1000 / 25)
+        .unwrap_or(24 * 60 * 60 * 1000 / 10)
 });
 
 #[tokio::main]
@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
 
-    let mut interval = tokio::time::interval(Duration::from_secs(15));
+    let mut interval = tokio::time::interval(Duration::from_secs(20));
 
     loop {
         let accounts = match fetch_accounts(&ch_client).await {
