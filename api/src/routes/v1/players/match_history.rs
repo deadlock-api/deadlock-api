@@ -144,7 +144,7 @@ async fn fetch_match_history_raw(
             msg,
             in_all_groups: Some(vec!["GetMatchHistory".to_owned()]),
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50), // 50req/day
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 10), // 10req/day
             request_timeout: Duration::from_secs(3),
             username: None,
             soft_cooldown_millis: None,
