@@ -8,11 +8,11 @@ cached = { version = "0.56.0", features = ["async", "tokio"] }
 clickhouse = { version = "0.13.3", features = ["time", "test-util"] }
 futures = "0.3.31"
 reqwest = { version = "0.12.23", features = ["stream"] }
-serde = { version = "1.0.225", features = ["derive"] }
+serde = { version = "1.0.226", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = { version = "0.7.16", features = ["io"] }
 metrics = "0.24.2"
 tracing = "0.1.41"
 anyhow = "1.0.100"
-object_store = { version = "0.12.3", features = ["aws"] }
+object_store = { version = "0.12.4", features = ["aws"] }
 common = { version = "0.1.0", path = "../common" }

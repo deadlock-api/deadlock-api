@@ -9,7 +9,7 @@ clickhouse = "0.13.3"
 common = { version = "0.1.0", path = "../common" }
 metrics = "0.24.2"
 reqwest = { version = "0.12.23", features = ["json"] }
-serde = { version = "1.0.225", features = ["derive"] }
+serde = { version = "1.0.226", features = ["derive"] }
 serde_repr = "0.1.20"
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.41"
