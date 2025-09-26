@@ -1,5 +1,6 @@
 .env
 venv/
+.venv/
 volumes/
 
 # Created by https://www.toptal.com/developers/gitignore/api/jetbrains+all,visualstudiocode,vim,visualstudio,rust
@@ -546,6 +547,4 @@ FodyWeavers.xsd
 # End of https://www.toptal.com/developers/gitignore/api/jetbrains+all,visualstudiocode,vim,visualstudio,rust
 
 # Added by cargo
-
 /target
-/mmr-calc/.venv/

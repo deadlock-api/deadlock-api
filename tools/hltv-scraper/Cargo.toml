@@ -19,11 +19,11 @@ metrics = "0.24.2"
 object_store = { version = "0.12.4", features = ["aws"] }
 prost = "0.14.1"
 reqwest = { version = "0.12.23", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
-serde = { version = "1.0.226", features = ["derive"] }
+serde = { version = "1.0.227", features = ["derive"] }
 serde_json = "1.0.145"
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8c86b62860e623d57b24ba3675a0ffeaf6756af3", features = ["user-msgs"] }
 thiserror = "2.0.16"
-async-compression = { version = "0.4.31", features = ["tokio", "bzip2", "zstd"] }
+async-compression = { version = "0.4.32", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }
