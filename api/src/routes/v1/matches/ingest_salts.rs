@@ -71,8 +71,6 @@ pub(super) async fn ingest_salts(
         let mut valid_salts = Vec::with_capacity(match_salts.len());
         for mut salt in match_salts {
             if salt.metadata_salt.is_some() {
-                debug!("Checking metadata salt for match_id {}", salt.match_id);
-
                 let is_valid = tryhard::retry_fn(|| state.steam_client.metadata_file_exists(&salt))
                     .retries(30)
                     .linear_backoff(Duration::from_millis(500))
@@ -84,8 +82,6 @@ pub(super) async fn ingest_salts(
                 }
             }
             if salt.replay_salt.is_some() {
-                debug!("Checking replay salt for match_id {}", salt.match_id);
-
                 let is_valid = tryhard::retry_fn(|| state.steam_client.replay_file_exists(&salt))
                     .retries(30)
                     .linear_backoff(Duration::from_millis(500))
