@@ -74,7 +74,7 @@ pub(super) async fn ingest_salts(
                 debug!("Checking metadata salt for match_id {}", salt.match_id);
 
                 let is_valid = tryhard::retry_fn(|| state.steam_client.metadata_file_exists(&salt))
-                    .retries(5)
+                    .retries(10)
                     .exponential_backoff(Duration::from_millis(100))
                     .await
                     .is_ok();
