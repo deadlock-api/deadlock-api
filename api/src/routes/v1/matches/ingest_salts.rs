@@ -74,8 +74,8 @@ pub(super) async fn ingest_salts(
                 debug!("Checking metadata salt for match_id {}", salt.match_id);
 
                 let is_valid = tryhard::retry_fn(|| state.steam_client.metadata_file_exists(&salt))
-                    .retries(10)
-                    .linear_backoff(Duration::from_millis(300))
+                    .retries(30)
+                    .linear_backoff(Duration::from_millis(500))
                     .await
                     .is_ok();
                 if !is_valid {
@@ -87,8 +87,8 @@ pub(super) async fn ingest_salts(
                 debug!("Checking replay salt for match_id {}", salt.match_id);
 
                 let is_valid = tryhard::retry_fn(|| state.steam_client.replay_file_exists(&salt))
-                    .retries(10)
-                    .linear_backoff(Duration::from_millis(300))
+                    .retries(30)
+                    .linear_backoff(Duration::from_millis(500))
                     .await
                     .is_ok();
                 if !is_valid {
