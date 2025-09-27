@@ -303,15 +303,11 @@ fn build_query(query: &ItemStatsQuery) -> String {
         "
 WITH
     t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'),
-
-    /* 1. Relevant matches */
     t_matches AS (
         SELECT match_id, start_time, duration_s
         FROM match_info
         WHERE match_mode IN ('Ranked', 'Unranked'){info_filters}
     ),
-
-    /* 2. Explode items only after filtering */
     exploded_players AS (
         SELECT
             match_id,
@@ -329,15 +325,13 @@ WITH
             AND it.game_time_s > 0
             {player_filters}
     )
-
-/* 3. Aggregation */
 SELECT
     item_id,
-    {bucket_expr}              AS bucket,
-    sum(won)                   AS wins,
-    sum(not won)               AS losses,
-    wins + losses              AS matches,
-    uniqExact(account_id)      AS players
+    {bucket_expr}    AS bucket,
+    sum(won)         AS wins,
+    sum(not won)     AS losses,
+    wins + losses    AS matches,
+    uniq(account_id) AS players
 FROM exploded_players
 INNER JOIN t_matches USING (match_id)
 GROUP BY item_id, bucket
