@@ -70,6 +70,10 @@ pub(super) async fn ingest_salts(
     } else {
         let mut valid_salts = Vec::with_capacity(match_salts.len());
         for mut salt in match_salts {
+            if salt.match_id > 100000000 {
+                warn!("Match id too high, skipping");
+                continue;
+            }
             if salt.metadata_salt.is_some() {
                 let is_valid = tryhard::retry_fn(|| state.steam_client.metadata_file_exists(&salt))
                     .retries(30)
