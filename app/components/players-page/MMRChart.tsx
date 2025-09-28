@@ -39,8 +39,9 @@ export default function MMRChart({
   const rankNames = useMemo(() => {
     return ranksData?.reduce(
       (acc, rank) => {
-        acc[rank.tier * 10 + 1] = `${rank.name} 1`;
-        acc[rank.tier * 10 + 6] = `${rank.name} 6`;
+        for (let i = 1; i <= 6; i++) {
+          acc[rank.tier * 10 + i] = `${rank.name} ${i}`;
+        }
         return acc;
       },
       {} as Record<number, string>,
@@ -94,11 +95,10 @@ export default function MMRChart({
 
   return (
     <ResponsiveContainer width="100%" height={800} className="p-6 bg-gray-800">
-      <LineChart data={formattedData} margin={{ top: 20, bottom: 20 }}>
+      <LineChart data={formattedData} margin={{ top: 20, bottom: 20, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
         <XAxis
           dataKey="date"
-          scale="time"
           tickFormatter={(timestamp) => day(timestamp).format("MM/DD/YY")}
           label={{ value: "Date", position: "insideBottom", offset: -15 }}
           stroke="#9ca3af"
@@ -121,7 +121,7 @@ export default function MMRChart({
           type="monotone"
           dataKey="mmr"
           stroke="#fa4454"
-          dot={{ r: 4, className: "fill-primary" }}
+          dot={{ r: 3, className: "fill-primary" }}
           activeDot={{ r: 6 }}
           strokeWidth={1}
         />
