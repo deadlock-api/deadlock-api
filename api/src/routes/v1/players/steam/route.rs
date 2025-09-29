@@ -31,9 +31,9 @@ pub(super) struct SteamSearchQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub(super) struct SteamProfile {
+pub(crate) struct SteamProfile {
     pub(super) account_id: u32,
-    pub(super) personaname: String,
+    pub(crate) personaname: String,
     pub(super) profileurl: String,
     pub(super) avatar: String,
     pub(super) avatarmedium: String,
@@ -64,7 +64,10 @@ fn build_query(account_id: u32) -> String {
     sync_writes = "by_key",
     key = "u32"
 )]
-async fn get_steam(ch_client: &clickhouse::Client, account_id: u32) -> APIResult<SteamProfile> {
+pub(crate) async fn get_steam(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+) -> APIResult<SteamProfile> {
     let query = build_query(account_id);
     debug!(?query);
     match ch_client.query(&query).fetch_one().await {

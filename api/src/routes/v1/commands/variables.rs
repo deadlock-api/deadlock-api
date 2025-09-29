@@ -4,7 +4,6 @@ use chrono::Duration;
 use futures::future::join;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Postgres};
 use strum::{EnumString, IntoStaticStr, VariantArray};
 use thiserror::Error;
 use tracing::warn;
@@ -20,8 +19,8 @@ use crate::routes::v1::players::match_history::{
     PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
     fetch_steam_match_history, insert_match_history_to_ch,
 };
-use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
+use crate::routes::v1::players::{mmr, steam};
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -383,9 +382,7 @@ impl Variable {
                         .map_or("N/A".to_owned(), |rank| format!("#{rank}")),
                 )
             }
-            Self::SteamAccountName => {
-                get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id).await
-            }
+            Self::SteamAccountName => get_steam_account_name(rate_limit_key, state, steam_id).await,
             Self::HighestDeathCount => {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 matches
@@ -884,7 +881,7 @@ impl Variable {
                 let leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
                 leaderboard
             },
-            get_steam_account_name(rate_limit_key, state, &state.pg_client, steam_id),
+            get_steam_account_name(rate_limit_key, state, steam_id),
         )
         .await;
         let leaderboard = leaderboard?;
@@ -911,7 +908,6 @@ async fn get_last_mmr_history(
 async fn get_steam_account_name(
     rate_limit_key: &RateLimitKey,
     state: &AppState,
-    pg_client: &Pool<Postgres>,
     steam_id: u32,
 ) -> Result<String, VariableResolveError> {
     match state
@@ -921,18 +917,10 @@ async fn get_steam_account_name(
     {
         Ok(name) => Ok(name),
         Err(e) => {
-            warn!(
-                "Failed to fetch steam account name from API, falling back to database, error: {e}"
-            );
-            sqlx::query!(
-                "SELECT personaname FROM steam_profiles WHERE account_id = $1",
-                i32::try_from(steam_id)
-                    .map_err(|_| VariableResolveError::NoData("steam account id"))?
-            )
-            .fetch_one(pg_client)
-            .await?
-            .personaname
-            .ok_or(VariableResolveError::NoData("steam account name"))
+            warn!("Failed to fetch steam account name from API, falling back to db: {e}");
+            Ok(steam::route::get_steam(&state.ch_client_ro, steam_id)
+                .await?
+                .personaname)
         }
     }
 }
