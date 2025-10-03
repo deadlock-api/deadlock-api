@@ -19,7 +19,9 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::OnceCell;
 use tracing::debug;
 use utoipa::IntoParams;
-use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
+use valveprotos::deadlock::{
+    CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
+};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -131,7 +133,13 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     let match_data = CMsgMatchMetaData::decode(buf.as_slice())?
         .match_details
         .ok_or_else(|| APIError::internal("Failed to parse match metadata: No data"))?;
-    Ok(CMsgMatchMetaDataContents::decode(match_data.as_slice())?)
+    Ok(
+        CMsgMatchMetaDataContents::decode(match_data.as_slice()).or_else(|_| {
+            CMsgMatchMetaDataContentsPatched::decode(match_data.as_slice())
+                .map(|p| p.encode_to_vec())
+                .and_then(|p| CMsgMatchMetaDataContents::decode(p.as_slice()))
+        })?,
+    )
 }
 
 #[utoipa::path(
