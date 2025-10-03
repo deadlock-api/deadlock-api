@@ -324,7 +324,7 @@ impl SpectatorBot {
                             .await?;
                         true
                     }
-                    EResponse::KENotInGame => {
+                    EResponse::KENotInGame | EResponse::KEInvalidClientVersion => {
                         warn!("[{label} {match_id}] Match not in game: {:?}", &result);
                         self.mark_spectated(REDIS_FAILED_KEY, &smi).await?;
                         false
