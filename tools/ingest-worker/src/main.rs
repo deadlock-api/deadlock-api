@@ -25,7 +25,9 @@ use tokio::io::AsyncReadExt;
 use tokio::time::timeout;
 use tracing::{debug, error, info, instrument};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
-use valveprotos::deadlock::{CMsgMatchMetaData, CMsgMatchMetaDataContents};
+use valveprotos::deadlock::{
+    CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
+};
 
 use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
 use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
@@ -208,7 +210,11 @@ fn parse_match_data(data: Vec<u8>) -> anyhow::Result<MatchInfo> {
         Err(_) => data,
     };
     let data = data.as_slice();
-    let data = if let Ok(m) = CMsgMatchMetaDataContents::decode(data) {
+    let data = if let Ok(m) = CMsgMatchMetaDataContents::decode(data).or_else(|_| {
+        CMsgMatchMetaDataContentsPatched::decode(data)
+            .map(|p| p.encode_to_vec())
+            .and_then(|p| CMsgMatchMetaDataContents::decode(p.as_slice()))
+    }) {
         m.match_info
     } else {
         MatchInfo::decode(data).ok()
