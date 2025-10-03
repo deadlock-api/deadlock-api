@@ -75,13 +75,6 @@ pub(super) async fn fetch_match_salts(
     match_id: u64,
     is_custom: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
-    if match_id < FIRST_MATCH_DECEMBER_2024 {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!("Match salts for match {match_id} cannot be fetched"),
-        ));
-    }
-
     // Try fetch from Clickhouse DB
     let salts = ch_client
         .query("SELECT ?fields FROM match_salts FINAL WHERE match_id = ?")
@@ -107,6 +100,13 @@ pub(super) async fn fetch_match_salts(
             format!(
                 "Match salts for match {match_id} won't be fetched, as it has metadata already"
             ),
+        ));
+    }
+
+    if match_id < FIRST_MATCH_DECEMBER_2024 {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Match salts for match {match_id} cannot be fetched"),
         ));
     }
 
