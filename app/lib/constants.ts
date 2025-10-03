@@ -8,6 +8,12 @@ export const PATCHES = [
     endDate: day.utc().endOf("day").local(),
   },
   {
+    id: "2025-08-30",
+    name: "Six New Heroes (2025-08-30)",
+    startDate: day("2025-08-30T00:36:28Z"),
+    endDate: day().utc().endOf("day").local(),
+  },
+  {
     id: "2025-05-08",
     name: "Major Item Rework (2025-05-08)",
     startDate: day("2025-05-08T19:43:20Z"),
