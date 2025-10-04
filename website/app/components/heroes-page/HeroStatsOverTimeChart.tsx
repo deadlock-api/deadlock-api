@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Select,
   SelectContent,
@@ -146,11 +146,11 @@ export default function HeroStatsOverTimeChart({
   const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)], [sortedStats]);
 
   const minDataDate = useMemo(
-    () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d))),
+    () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d, 10))),
     [heroStatMap],
   );
   const maxDataDate = useMemo(
-    () => Math.max(...Object.keys(heroStatMap).map((d) => Number.parseInt(d))),
+    () => Math.max(...Object.keys(heroStatMap).map((d) => Number.parseInt(d, 10))),
     [heroStatMap],
   );
 

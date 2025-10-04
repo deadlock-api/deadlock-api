@@ -68,8 +68,12 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
-          <TabsTrigger value="matches">Match History</TabsTrigger>
-          <TabsTrigger value="mmr">MMR</TabsTrigger>
+          <TabsTrigger className="flex-1" value="matches">
+            Match History
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="mmr">
+            MMR
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="mmr">
           {steamId && steamId > 0 && (

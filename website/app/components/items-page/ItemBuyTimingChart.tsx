@@ -6,7 +6,7 @@ import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
 import { ASSETS_ORIGIN } from "~/lib/constants";
 import { randomColorHex } from "~/lib/utils";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -276,164 +276,167 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
       .some((d) => d.winrate !== null && d.matches > 0);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Purchase Analysis</CardTitle>
-        <CardDescription>
-          Win rate by {bucketType === "game_time_min" ? "purchase time" : "net worth at purchase"}
-        </CardDescription>
-        <div className="flex flex-col space-y-3 mt-3">
-          <div className="flex flex-col space-y-2">
-            <Label className="text-sm font-medium">View by:</Label>
-            <ToggleGroup
-              type="single"
-              value={bucketType}
-              onValueChange={(v) => v && setBucketType(v as keyof typeof BUCKET_CONFIG)}
-              variant="outline"
-              size="sm"
-            >
-              <ToggleGroupItem value="net_worth_by_1000" className="px-6">
-                Net Worth
-              </ToggleGroupItem>
-              <ToggleGroupItem value="game_time_min" className="px-6">
-                Time
-              </ToggleGroupItem>
-              <ToggleGroupItem value="game_time_normalized_percentage" className="px-6">
-                Time (Relative)
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Switch id="wilson-interval" checked={useWilsonInterval} onCheckedChange={setUseWilsonInterval} />
-            <Label htmlFor="wilson-interval" className="text-sm flex items-center gap-1">
-              Use conservative win-rate estimate based on volume
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="icon-[material-symbols--info] h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs bg-background text-foreground p-4 text-center text-pretty space-y-2">
-                  <p>
-                    Less matches played for a datapoint means we're less confident in the win rate, so we reduce it a
-                    bit to compensate.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </Label>
-          </div>
-          {rowTotalMatches && (
+    <TooltipProvider>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Purchase Analysis</CardTitle>
+          <CardDescription>
+            Win rate by {bucketType === "game_time_min" ? "purchase time" : "net worth at purchase"}
+          </CardDescription>
+          <div className="flex flex-col space-y-3 mt-3">
+            <div className="flex flex-col space-y-2">
+              <Label className="text-sm font-medium">View by:</Label>
+              <ToggleGroup
+                type="single"
+                value={bucketType}
+                onValueChange={(v) => v && setBucketType(v as keyof typeof BUCKET_CONFIG)}
+                variant="outline"
+                size="sm"
+                className="justify-start"
+              >
+                <ToggleGroupItem value="net_worth_by_1000" className="px-6">
+                  Net Worth
+                </ToggleGroupItem>
+                <ToggleGroupItem value="game_time_min" className="px-6">
+                  Time
+                </ToggleGroupItem>
+                <ToggleGroupItem value="game_time_normalized_percentage" className="px-6">
+                  Time (Relative)
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
             <div className="flex items-center space-x-2">
-              <Switch
-                id="fine-grained"
-                checked={showFineGrainedIntervals}
-                onCheckedChange={setShowFineGrainedIntervals}
-              />
-              <Label htmlFor="fine-grained" className="text-sm">
-                Show fine grained intervals
+              <Switch id="wilson-interval" checked={useWilsonInterval} onCheckedChange={setUseWilsonInterval} />
+              <Label htmlFor="wilson-interval" className="text-sm flex items-center gap-1">
+                Use conservative win-rate estimate based on volume
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="icon-[material-symbols--info] h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs bg-background text-foreground p-4 text-center text-pretty space-y-2">
+                    <p>
+                      Less matches played for a datapoint means we're less confident in the win rate, so we reduce it a
+                      bit to compensate.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               </Label>
             </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center h-120">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+            {rowTotalMatches && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="fine-grained"
+                  checked={showFineGrainedIntervals}
+                  onCheckedChange={setShowFineGrainedIntervals}
+                />
+                <Label htmlFor="fine-grained" className="text-sm">
+                  Show fine grained intervals
+                </Label>
+              </div>
+            )}
           </div>
-        ) : !hasValidData ? (
-          <div className="flex items-center justify-center h-120">
-            <p className="text-muted-foreground">No data available</p>
-          </div>
-        ) : (
-          <ChartContainer config={chartConfig} className="h-120 w-full">
-            <LineChart width={undefined} height={undefined} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              {itemIds.length > 1 && <Legend layout="vertical" align="right" verticalAlign="top" />}
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="displayBucket"
-                domain={dataRange}
-                type="number"
-                tickCount={config.tickCount}
-                tickFormatter={config.formatter}
-                label={{ value: config.label, position: "insideBottom", offset: -5 }}
-              />
-              <YAxis
-                domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
-                label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
-                tickFormatter={(v) => `${v?.toFixed(0)}%`}
-                tickCount={10}
-              />
-              <ChartTooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    return payload.map((data) => {
-                      const d = data.payload;
-                      return (
-                        <div
-                          key={`${data.name} ${d.bucketStart}-${d.bucketEnd}`}
-                          className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl"
-                        >
-                          <div className="text-sm">{data.name}</div>
-                          <div className="font-medium">
-                            {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
-                          </div>
-                          <div className="grid gap-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className="h-2 w-2 rounded-full bg-gray-500" />
-                              <span className="text-muted-foreground">
-                                {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
-                              </span>
-                              <span className="font-mono font-medium">
-                                {d.winrate === null ? "-" : d.winrate?.toFixed(1)}%
-                              </span>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-120">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+            </div>
+          ) : !hasValidData ? (
+            <div className="flex items-center justify-center h-120">
+              <p className="text-muted-foreground">No data available</p>
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="h-120 w-full">
+              <LineChart width={undefined} height={undefined} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                {itemIds.length > 1 && <Legend layout="vertical" align="right" verticalAlign="top" />}
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="displayBucket"
+                  domain={dataRange}
+                  type="number"
+                  tickCount={config.tickCount}
+                  tickFormatter={config.formatter}
+                  label={{ value: config.label, position: "insideBottom", offset: -5 }}
+                />
+                <YAxis
+                  domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
+                  label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
+                  tickFormatter={(v) => `${v?.toFixed(0)}%`}
+                  tickCount={10}
+                />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return payload.map((data) => {
+                        const d = data.payload;
+                        return (
+                          <div
+                            key={`${data.name} ${d.bucketStart}-${d.bucketEnd}`}
+                            className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl"
+                          >
+                            <div className="text-sm">{data.name}</div>
+                            <div className="font-medium">
+                              {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
                             </div>
-                            {useWilsonInterval && (
+                            <div className="grid gap-1.5">
                               <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gray-300" />
-                                <span className="text-muted-foreground">True Win Rate:</span>
+                                <div className="h-2 w-2 rounded-full bg-gray-500" />
+                                <span className="text-muted-foreground">
+                                  {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
+                                </span>
                                 <span className="font-mono font-medium">
-                                  {d.trueWinrate === null ? "-" : d.trueWinrate?.toFixed(1)}%
+                                  {d.winrate === null ? "-" : d.winrate?.toFixed(1)}%
                                 </span>
                               </div>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <div className="h-2 w-2 rounded-full bg-gray-400" />
-                              <span className="text-muted-foreground">Matches:</span>
-                              <span className="font-mono font-medium">{d.matches}</span>
+                              {useWilsonInterval && (
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-gray-300" />
+                                  <span className="text-muted-foreground">True Win Rate:</span>
+                                  <span className="font-mono font-medium">
+                                    {d.trueWinrate === null ? "-" : d.trueWinrate?.toFixed(1)}%
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-gray-400" />
+                                <span className="text-muted-foreground">Matches:</span>
+                                <span className="font-mono font-medium">{d.matches}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    });
-                  }
-                  return null;
-                }}
-              />
-              {(itemIds || []).map((itemId) => (
-                <Line
-                  key={itemId}
-                  dataKey="winrate"
-                  data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
-                  type="monotone"
-                  stroke={randomColorHex(itemId)}
-                  dot={{ r: 4, className: "fill-primary" }}
-                  activeDot={{ r: 6 }}
-                  strokeWidth={2}
-                  name={itemNameMap?.[itemId]}
+                        );
+                      });
+                    }
+                    return null;
+                  }}
                 />
-              ))}
-              {/*<Line*/}
-              {/*  type="monotone"*/}
-              {/*  dataKey="winrate"*/}
-              {/*  stroke="var(--chart-1)"*/}
-              {/*  strokeWidth={1}*/}
-              {/*  dot={{ r: 3, fill: "var(--chart-1)" }}*/}
-              {/*  connectNulls={false}*/}
-              {/*  isAnimationActive={false}*/}
-              {/*/>*/}
-            </LineChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+                {(itemIds || []).map((itemId) => (
+                  <Line
+                    key={itemId}
+                    dataKey="winrate"
+                    data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
+                    type="monotone"
+                    stroke={randomColorHex(itemId)}
+                    dot={{ r: 4, className: "fill-primary" }}
+                    activeDot={{ r: 6 }}
+                    strokeWidth={2}
+                    name={itemNameMap?.[itemId]}
+                  />
+                ))}
+                {/*<Line*/}
+                {/*  type="monotone"*/}
+                {/*  dataKey="winrate"*/}
+                {/*  stroke="var(--chart-1)"*/}
+                {/*  strokeWidth={1}*/}
+                {/*  dot={{ r: 3, fill: "var(--chart-1)" }}*/}
+                {/*  connectNulls={false}*/}
+                {/*  isAnimationActive={false}*/}
+                {/*/>*/}
+              </LineChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }

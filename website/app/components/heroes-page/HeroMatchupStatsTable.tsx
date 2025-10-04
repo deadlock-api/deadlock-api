@@ -148,7 +148,7 @@ export default function HeroMatchupStatsTable({
     }
     const bestSynergies: Record<number, APIHeroSynergyStats & { rel_winrate: number }> = {};
     for (const heroId of Object.keys(synergyMap)) {
-      const heroIdParsed = Number.parseInt(heroId);
+      const heroIdParsed = Number.parseInt(heroId, 10);
       const best = bestCombination(synergyMap, heroIdParsed);
       if (best) {
         bestSynergies[heroIdParsed] = best;
@@ -204,7 +204,7 @@ export default function HeroMatchupStatsTable({
     }
     const bestSynergies: Record<number, APIHeroSynergyStats & { rel_winrate: number }> = {};
     for (const heroId of Object.keys(synergyMap)) {
-      const heroIdParsed = Number.parseInt(heroId);
+      const heroIdParsed = Number.parseInt(heroId, 10);
       const worst = worstCombination(synergyMap, heroIdParsed);
       if (worst) {
         bestSynergies[heroIdParsed] = worst;
@@ -246,7 +246,7 @@ export default function HeroMatchupStatsTable({
     }
     const bestCounters: Record<number, APIHeroCounterStats & { rel_winrate: number }> = {};
     for (const heroId of Object.keys(counterMap)) {
-      const heroIdParsed = Number.parseInt(heroId);
+      const heroIdParsed = Number.parseInt(heroId, 10);
       const best = bestAgainst(counterMap, heroIdParsed);
       if (best) {
         bestCounters[heroIdParsed] = best;
@@ -288,7 +288,7 @@ export default function HeroMatchupStatsTable({
     }
     const worstCounters: Record<number, APIHeroCounterStats & { rel_winrate: number }> = {};
     for (const heroId of Object.keys(counterMap)) {
-      const heroIdParsed = Number.parseInt(heroId);
+      const heroIdParsed = Number.parseInt(heroId, 10);
       const worst = worstAgainst(counterMap, heroIdParsed);
       if (worst) {
         worstCounters[heroIdParsed] = worst;
@@ -310,10 +310,10 @@ export default function HeroMatchupStatsTable({
   const heroIds = useMemo(() => {
     const allHeroIds = new Set<number>();
     for (const heroId of Object.keys(heroBestSynergies)) {
-      allHeroIds.add(Number.parseInt(heroId));
+      allHeroIds.add(Number.parseInt(heroId, 10));
     }
     for (const heroId of Object.keys(heroBestAgainst)) {
-      allHeroIds.add(Number.parseInt(heroId));
+      allHeroIds.add(Number.parseInt(heroId, 10));
     }
     return Array.from(allHeroIds);
   }, [heroBestSynergies, heroBestAgainst]);
