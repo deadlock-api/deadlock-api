@@ -14,11 +14,9 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { serializers, useQSArray, useQSBoolean, useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
-import { cn } from "~/lib/utils";
 import type { HERO_STATS } from "~/types/api_hero_stats";
 
 export const meta: MetaFunction = () => {
@@ -52,10 +50,12 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start text-center">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-              <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
-                <Label htmlFor="minMatches" className="h-8">
-                  {["stats", "stats-over-time"].includes(tab) ? "Min Hero Matches" : "Min Matches"}
-                </Label>
+              <div className="flex flex-col min-w-28 max-w-sm gap-1.5 ">
+                <div className="flex justify-center md:justify-start items-center h-8">
+                  <span className="text-sm font-semibold text-foreground">
+                    {["stats", "stats-over-time"].includes(tab) ? "Min Hero Matches" : "Min Matches"}
+                  </span>
+                </div>
                 <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
                   <button
                     type="button"
@@ -102,12 +102,22 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
       </Card>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
-        <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
-          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
-          <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
-          <TabsTrigger value="matchups">Matchups</TabsTrigger>
-          <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
-          <TabsTrigger value="hero-matchup-details">Matchup Details</TabsTrigger>
+        <TabsList className="flex items-center flex-wrap h-auto w-full">
+          <TabsTrigger className="flex-1" value="stats">
+            Overall Stats
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="stats-over-time">
+            Stats Over Time
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="matchups">
+            Matchups
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="hero-combs">
+            Hero Combs
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="hero-matchup-details">
+            Matchup Details
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="stats">

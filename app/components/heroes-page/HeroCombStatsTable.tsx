@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
@@ -30,6 +30,9 @@ export default function HeroCombStatsTable({
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
+  const combSizeId = useId();
+  const combsToShowId = useId();
+
   const [combSizeFilter, setCombSizeFilter] = useQSNumber("comb_size", 2);
   const [combSizeFilterT, setCombSizeFilterT] = useState<number>(2);
   const [combsToShow, setCombsToShow] = useQSNumber("combs_to_show", limit ?? 50);
@@ -84,12 +87,12 @@ export default function HeroCombStatsTable({
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 mx-auto gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="comb-size" className="text-nowrap text-sm text-muted-foreground">
+          <label htmlFor={combSizeId} className="text-nowrap text-sm text-muted-foreground">
             Combination Size
           </label>
           <div className="flex items-center gap-2">
             <Slider
-              id="comb-size"
+              id={combSizeId}
               min={2}
               max={6}
               value={[combSizeFilterT]}
@@ -103,12 +106,12 @@ export default function HeroCombStatsTable({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="combs-to-show" className="text-nowrap text-sm text-muted-foreground">
+          <label htmlFor={combsToShowId} className="text-nowrap text-sm text-muted-foreground">
             Combinations to Show
           </label>
           <div className="flex items-center gap-2">
             <Slider
-              id="combs-to-show"
+              id={combsToShowId}
               min={0}
               step={100}
               max={Math.min(500, numCombs)}

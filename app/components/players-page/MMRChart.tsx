@@ -95,7 +95,7 @@ export default function MMRChart({
 
   return (
     <ResponsiveContainer width="100%" height={800} className="p-6 bg-gray-800">
-      <LineChart data={formattedData} margin={{ top: 20, bottom: 20, left: 10 }}>
+      <LineChart data={formattedData} margin={{ top: 20, bottom: 20, left: 25 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
         <XAxis
           dataKey="date"

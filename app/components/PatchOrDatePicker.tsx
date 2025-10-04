@@ -1,5 +1,5 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
@@ -27,6 +27,8 @@ const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
 
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
   const [tab, setTab] = useQSString<"patch" | "custom">("pd-picker-tab", defaultTab);
+
+  const patchSelectId = useId();
 
   const matchingPatch = patchDates.find((patch) => {
     if (!value.startDate || !value.endDate) return false;
@@ -98,7 +100,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       <div>
         {tab === "patch" ? (
           <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-            <SelectTrigger id="patch-select" className="h-10 focus-visible:ring-0 min-w-full">
+            <SelectTrigger id={patchSelectId} className="h-10 focus-visible:ring-0 min-w-full">
               <SelectValue placeholder="Select a patch..." />
             </SelectTrigger>
             <SelectContent>

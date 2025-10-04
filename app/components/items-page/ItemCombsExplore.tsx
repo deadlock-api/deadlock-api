@@ -142,9 +142,15 @@ export default function ItemCombsExplore({
         <h2 className="text-center text-xl p-2">Select Items</h2>
         <Tabs value={slot} onValueChange={(i) => setSlot(i as "weapon" | "vitality" | "spirit")} className="w-full">
           <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
-            <TabsTrigger value="weapon">Weapon</TabsTrigger>
-            <TabsTrigger value="vitality">Vitality</TabsTrigger>
-            <TabsTrigger value="spirit">Spirit</TabsTrigger>
+            <TabsTrigger className="flex-1" value="weapon">
+              Weapon
+            </TabsTrigger>
+            <TabsTrigger className="flex-1" value="vitality">
+              Vitality
+            </TabsTrigger>
+            <TabsTrigger className="flex-1" value="spirit">
+              Spirit
+            </TabsTrigger>
           </TabsList>
           <TabsContent value={slot}>
             {[1, 2, 3, 4].map((tier) => (

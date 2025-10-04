@@ -85,7 +85,8 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayText}
-            <span
+            <button
+              type="button"
               onClick={() => handleDateRangeSelect()}
               aria-label="Reset date range"
               className="hover:text-red-500 font-bold text-lg align-middle icon-[mdi--close]"

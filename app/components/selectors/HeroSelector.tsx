@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
@@ -108,6 +108,8 @@ export function HeroSelectorMultiple({
     [data],
   );
 
+  const selectAllId = useId();
+
   if (isLoading) {
     return "";
   }
@@ -154,9 +156,9 @@ export function HeroSelectorMultiple({
                   onHeroesSelected([]);
                 }
               }}
-              id="select-all-heroes"
+              id={selectAllId}
             />
-            <label htmlFor="select-all-heroes" className="text-sm cursor-pointer select-none">
+            <label htmlFor={selectAllId} className="text-sm cursor-pointer select-none">
               Select all
             </label>
           </div>

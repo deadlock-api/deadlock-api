@@ -42,9 +42,9 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
                 allowSelectNull={true}
               />
               <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
-                <Label htmlFor="minMatches" className="h-8">
-                  Min Matches
-                </Label>
+                <div className="flex justify-center md:justify-start items-center h-8">
+                  <span className="text-sm font-semibold text-foreground">Min Matches</span>
+                </div>
                 <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
                   <button
                     type="button"
@@ -83,9 +83,15 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
-          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
-          <TabsTrigger value="item-purchase-analysis">Purchase Analysis</TabsTrigger>
-          <TabsTrigger value="item-combs">Combination Stats</TabsTrigger>
+          <TabsTrigger className="flex-1" value="stats">
+            Overall Stats
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="item-purchase-analysis">
+            Purchase Analysis
+          </TabsTrigger>
+          <TabsTrigger className="flex-1" value="item-combs">
+            Combination Stats
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="stats">
           <ItemStatsTable

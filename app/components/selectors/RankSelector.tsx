@@ -120,7 +120,7 @@ export default function RankSelector({
           <SelectTrigger className="focus-visible:ring-0">
             <SelectValue placeholder={"Select Rank..."}>
               {currentSelectedDetails ? (
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-nowrap">
                   <ImgWithSkeleton
                     src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
                     alt={currentSelectedDetails.label}
@@ -133,7 +133,11 @@ export default function RankSelector({
           </SelectTrigger>
           <SelectContent>
             {selectOptions.map((optionData) => (
-              <SelectItem key={optionData.value} value={String(optionData.value)}>
+              <SelectItem
+                key={optionData.value}
+                value={String(optionData.value)}
+                className="flex items-center gap-2 flex-nowrap"
+              >
                 <ImgWithSkeleton
                   src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
                   alt={optionData.label}
