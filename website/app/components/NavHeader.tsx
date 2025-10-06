@@ -6,7 +6,7 @@ export default function NavHeader() {
       <div className="mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-6">
         <Link to="/" prefetch="intent" className="text-lg font-medium text-white">
           <span className="flex gap-2 items-center">
-            <img src="favicon.webp" alt="Icon" width={36} height={36} className="aspect-square object-contain" />
+            <img src="https://deadlock-api.com/favicon.webp" alt="Icon" width={36} height={36} className="aspect-square object-contain" />
             <h1 className="lg:text-3xl font-bold tracking-tight text-lg">Deadlock API</h1>
           </span>
         </Link>
