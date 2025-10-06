@@ -1,5 +1,7 @@
 mod create;
 mod get;
+mod ready;
+mod utils;
 
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -13,6 +15,7 @@ struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(ready::ready_up))
         .routes(routes!(create::create_custom))
         .routes(routes!(get::get_custom))
 }

@@ -10,7 +10,6 @@ use base64::prelude::BASE64_URL_SAFE;
 use itertools::Itertools;
 use rand::RngCore;
 use rand::prelude::ThreadRng;
-use redis::{AsyncTypedCommands, RedisResult};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use strum::Display;
@@ -21,16 +20,15 @@ use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
     CMsgClientToGcPartyAction, CMsgClientToGcPartyActionResponse, CMsgClientToGcPartyCreate,
     CMsgClientToGcPartyCreateResponse, CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse,
-    CMsgClientToGcPartySetReadyState, CMsgClientToGcPartySetReadyStateResponse, CMsgPartyMmInfo,
-    CMsgRegionPingTimesClient, ECitadelBotDifficulty, ECitadelMmPreference,
+    CMsgPartyMmInfo, CMsgRegionPingTimesClient, ECitadelBotDifficulty, ECitadelMmPreference,
     EgcCitadelClientMessages, c_msg_client_to_gc_party_action_response,
-    c_msg_client_to_gc_party_leave_response, c_msg_client_to_gc_party_set_ready_state_response,
-    cso_citadel_party,
+    c_msg_client_to_gc_party_leave_response, cso_citadel_party,
 };
 use valveprotos::gcsdk::EgcPlatform;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::custom::utils;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -42,6 +40,11 @@ pub(super) struct CreateCustomRequest {
     #[serde(default)]
     #[param(default)]
     callback_url: Option<String>,
+    /// If auto-ready is disabled, the bot will not automatically ready up.
+    /// You need to call the `ready` endpoint to ready up.
+    #[serde(default)]
+    #[param(default)]
+    disable_auto_ready: Option<bool>,
     #[serde(default)]
     #[param(default)]
     region_mode: Option<RegionMode>,
@@ -174,42 +177,6 @@ async fn create_party(
     Ok(result)
 }
 
-async fn get_party_code(
-    redis_client: &mut redis::aio::MultiplexedConnection,
-    party_id: u64,
-) -> RedisResult<Option<String>> {
-    redis_client.get(party_id.to_string()).await
-}
-
-async fn wait_for_party_code(
-    redis_client: &mut redis::aio::MultiplexedConnection,
-    party_id: u64,
-) -> RedisResult<Option<String>> {
-    let mut retries_left = 100;
-    let mut interval = tokio::time::interval(Duration::from_millis(100));
-    loop {
-        match get_party_code(redis_client, party_id).await {
-            Ok(Some(party_code)) => {
-                return Ok(Some(party_code));
-            }
-            Ok(None) => {
-                retries_left -= 1;
-                if retries_left <= 0 {
-                    return Ok(None);
-                }
-                interval.tick().await;
-            }
-            Err(e) => {
-                retries_left -= 1;
-                if retries_left <= 0 {
-                    return Err(e);
-                }
-                interval.tick().await;
-            }
-        }
-    }
-}
-
 async fn switch_to_spectator_slot(
     steam_client: &SteamClient,
     username: String,
@@ -242,39 +209,6 @@ async fn switch_to_spectator_slot(
     {
         return Err(APIError::internal(format!(
             "Failed to switch to spectator slot: {response:?}"
-        )));
-    }
-    Ok(())
-}
-
-async fn make_ready(steam_client: &SteamClient, username: String, party_id: u64) -> APIResult<()> {
-    let msg = CMsgClientToGcPartySetReadyState {
-        party_id: party_id.into(),
-        ready_state: true.into(),
-        hero_roster: None,
-    };
-    let response: CMsgClientToGcPartySetReadyStateResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartySetReadyState,
-            msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(0),
-            request_timeout: Duration::from_secs(2),
-            username: username.clone().into(),
-            soft_cooldown_millis: None,
-        })
-        .await?
-        .msg;
-
-    info!("Made ready: {username} {party_id} {response:?}");
-    let result = response.result;
-    if result.is_none_or(|r| {
-        r != c_msg_client_to_gc_party_set_ready_state_response::EResponse::KESuccess as i32
-    }) {
-        error!("Failed to make ready: {username} {party_id} {result:?}");
-        return Err(APIError::internal(format!(
-            "Failed to make ready: {result:?}"
         )));
     }
     Ok(())
@@ -428,7 +362,7 @@ pub(super) async fn create_custom(
         }
     });
 
-    let party_code = wait_for_party_code(&mut state.redis_client, party_id).await?;
+    let party_code = utils::get_party_info_with_retries(&mut state.redis_client, party_id).await?;
     let Some(party_code) = party_code else {
         error!("Failed to retrieve party code");
         return Err(APIError::internal("Failed to retrieve party code"));
@@ -445,7 +379,15 @@ pub(super) async fn create_custom(
         .map_err(|_| APIError::internal("Failed to parse account id".to_owned()))?;
 
     switch_to_spectator_slot(&state.steam_client, username.clone(), party_id, account_id).await?;
-    make_ready(&state.steam_client, username.clone(), party_id).await?;
+
+    if !payload
+        .as_ref()
+        .ok()
+        .and_then(|p| p.0.disable_auto_ready)
+        .unwrap_or_default()
+    {
+        utils::make_ready(&state.steam_client, username.clone(), party_id).await?;
+    }
 
     let response = CreateCustomResponse {
         party_id: party_id.to_string(),
