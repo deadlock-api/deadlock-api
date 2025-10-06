@@ -78,10 +78,14 @@ pub(crate) struct HeroStatsQuery {
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero.
+    /// Filter players based on the number of matches they have played with a specific hero within the filtered time range.
     min_hero_matches: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero.
+    /// Filter players based on the number of matches they have played with a specific hero within the filtered time range.
     max_hero_matches: Option<u64>,
+    /// Filter players based on the number of matches they have played with a specific hero in their entire history.
+    min_hero_matches_total: Option<u64>,
+    /// Filter players based on the number of matches they have played with a specific hero in their entire history.
+    max_hero_matches_total: Option<u64>,
     /// Comma separated list of item ids to include (only heroes who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
@@ -212,15 +216,33 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         player_hero_filters.join(" AND ")
     };
+    let mut player_hero_total_filters = vec![];
+    if let Some(min_hero_matches) = query.min_hero_matches_total {
+        player_hero_total_filters.push(format!("uniq(match_id) >= {min_hero_matches}"));
+    }
+    if let Some(max_hero_matches) = query.max_hero_matches_total {
+        player_hero_total_filters.push(format!("uniq(match_id) <= {max_hero_matches}"));
+    }
+    let player_hero_total_filters = if player_hero_total_filters.is_empty() {
+        "TRUE".to_owned()
+    } else {
+        player_hero_total_filters.join(" AND ")
+    };
     let bucket = query.bucket.get_select_clause();
+    let start_time_select = if query.bucket == BucketQuery::NoBucket {
+        ""
+    } else {
+        ", start_time"
+    };
     format!(
         "
     WITH t_matches AS (
-            SELECT match_id {}
+            SELECT match_id {start_time_select}
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 {info_filters}
         )
+        {}
         {}
     SELECT
         hero_id,
@@ -248,14 +270,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
     {}
     WHERE TRUE {player_filters}
         {}
+        {}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     ",
-        if query.bucket == BucketQuery::NoBucket {
-            ""
-        } else {
-            ", start_time"
-        },
         if query
             .min_hero_matches
             .or(query.max_hero_matches)
@@ -270,6 +288,23 @@ fn build_query(query: &HeroStatsQuery) -> String {
                 {player_filters}
             GROUP BY account_id, hero_id
             HAVING {player_hero_filters}
+        )"
+            )
+        } else {
+            String::new()
+        },
+        if query
+            .min_hero_matches_total
+            .or(query.max_hero_matches_total)
+            .is_some_and(|v| v > 1)
+        {
+            format!(
+                ",
+        t_players2 AS (
+            SELECT account_id, hero_id
+            FROM match_player
+            GROUP BY account_id, hero_id
+            HAVING {player_hero_total_filters}
         )"
             )
         } else {
@@ -291,6 +326,15 @@ fn build_query(query: &HeroStatsQuery) -> String {
             .is_some_and(|v| v > 1)
         {
             "AND (account_id, hero_id) IN t_players"
+        } else {
+            ""
+        },
+        if query
+            .min_hero_matches_total
+            .or(query.max_hero_matches_total)
+            .is_some_and(|v| v > 1)
+        {
+            "AND (account_id, hero_id) IN t_players2"
         } else {
             ""
         }
