@@ -11,7 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::utils::parse::comma_separated_deserialize;
+use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -20,6 +20,10 @@ pub(crate) struct HeroStatsQuery {
     #[param(inline, min_items = 1, max_items = 1000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u32>,
+    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    hero_ids: Option<Vec<u32>>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
@@ -86,6 +90,10 @@ pub struct HeroStats {
 fn build_query(query: &HeroStatsQuery) -> String {
     let mut filters = vec![];
     filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    filters.push(format!(
+        "account_id IN ({})",
+        query.account_ids.iter().map(ToString::to_string).join(",")
+    ));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
@@ -97,6 +105,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
     }
     if let Some(max_match_id) = query.max_match_id {
         filters.push(format!("match_id <= {max_match_id}"));
+    }
+    if let Some(hero_ids) = query.hero_ids.as_ref() {
+        filters.push(format!(
+            "hero_id IN ({})",
+            hero_ids.iter().map(ToString::to_string).join(",")
+        ));
     }
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
@@ -129,13 +143,25 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         format!(" AND {}", filters.join(" AND "))
     };
-    let account_ids_filter = format!(
+    let mut history_filters = vec![];
+    history_filters.push(format!(
         "account_id IN ({})",
         query.account_ids.iter().map(ToString::to_string).join(",")
-    );
+    ));
+    if let Some(hero_ids) = query.hero_ids.as_ref() {
+        history_filters.push(format!(
+            "hero_id IN ({})",
+            hero_ids.iter().map(ToString::to_string).join(",")
+        ));
+    }
+    let history_filters = if history_filters.is_empty() {
+        String::new()
+    } else {
+        format!(" AND {}", history_filters.join(" AND "))
+    };
     format!(
         "
-    WITH t_histories AS (SELECT match_id FROM player_match_history WHERE {account_ids_filter})
+    WITH t_histories AS (SELECT match_id FROM player_match_history WHERE TRUE {history_filters})
     SELECT
         account_id,
         hero_id,
@@ -168,7 +194,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         groupUniqArray(mi.match_id) as matches
     FROM match_player mp FINAL
         INNER JOIN match_info mi USING (match_id)
-    WHERE match_id IN t_histories AND {account_ids_filter} {filters}
+    WHERE match_id IN t_histories {filters}
     GROUP BY account_id, hero_id
     ORDER BY account_id, hero_id
     "
@@ -252,6 +278,7 @@ pub(crate) struct HeroStatsQueryOld {
     /// Filter matches based on their ID.
     max_match_id: Option<u64>,
 }
+
 pub(crate) async fn hero_stats_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<HeroStatsQueryOld>,
@@ -269,6 +296,7 @@ pub(crate) async fn hero_stats_single(
         max_average_badge: query.max_average_badge,
         min_match_id: query.min_match_id,
         max_match_id: query.max_match_id,
+        ..Default::default()
     };
     get_hero_stats(&state.ch_client_ro, query).await.map(Json)
 }
