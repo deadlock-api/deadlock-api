@@ -218,10 +218,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
     };
     let mut player_hero_total_filters = vec![];
     if let Some(min_hero_matches) = query.min_hero_matches_total {
-        player_hero_total_filters.push(format!("uniq(match_id) >= {min_hero_matches}"));
+        player_hero_total_filters.push(format!("count() >= {min_hero_matches}"));
     }
     if let Some(max_hero_matches) = query.max_hero_matches_total {
-        player_hero_total_filters.push(format!("uniq(match_id) <= {max_hero_matches}"));
+        player_hero_total_filters.push(format!("count() <= {max_hero_matches}"));
     }
     let player_hero_total_filters = if player_hero_total_filters.is_empty() {
         "TRUE".to_owned()
@@ -301,9 +301,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
             format!(
                 ",
         t_players2 AS (
-            SELECT account_id, hero_id
-            FROM match_player
-            GROUP BY account_id, hero_id
+            SELECT hero_id, account_id
+            FROM player_match_history
+            GROUP BY hero_id, account_id
             HAVING {player_hero_total_filters}
         )"
             )
@@ -334,7 +334,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             .or(query.max_hero_matches_total)
             .is_some_and(|v| v > 1)
         {
-            "AND (account_id, hero_id) IN t_players2"
+            "AND (hero_id, account_id) IN t_players2"
         } else {
             ""
         }
