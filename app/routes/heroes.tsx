@@ -29,7 +29,7 @@ export const meta: MetaFunction = () => {
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
   const [minHeroMatches, setMinHeroMatches] = useQSNumber("min_hero_matches", 0);
-  const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQSNumber("min_hero_matches_total", 500);
+  const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQSNumber("min_hero_matches_total", 0);
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
