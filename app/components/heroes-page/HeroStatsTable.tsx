@@ -141,7 +141,7 @@ export default function HeroStatsTable({
                     max={maxMatches}
                     value={row.matches}
                     color={"#00ffff"}
-                    label={`${(Math.round(12 * (row.matches / sumMatches) * 100)).toFixed(0)}% `}
+                    label={`${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `}
                   />
                 </td>
               )}
