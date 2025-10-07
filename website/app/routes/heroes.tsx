@@ -9,6 +9,7 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
@@ -28,6 +29,7 @@ export const meta: MetaFunction = () => {
 export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
   const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
   const [minHeroMatches, setMinHeroMatches] = useQSNumber("min_hero_matches", 0);
+  const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQSNumber("min_hero_matches_total", 500);
   const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
   const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
   const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
@@ -50,42 +52,24 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start text-center">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-              <div className="flex flex-col min-w-28 max-w-sm gap-1.5 ">
-                <div className="flex justify-center md:justify-start items-center h-8">
-                  <span className="text-sm font-semibold text-foreground">
-                    {["stats", "stats-over-time"].includes(tab) ? "Min Hero Matches" : "Min Matches"}
-                  </span>
-                </div>
-                <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
-                  <button
-                    type="button"
-                    aria-label="Decrease min matches"
-                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => {
-                      if (["stats", "stats-over-time"].includes(tab)) {
-                        setMinHeroMatches(Math.max(0, minHeroMatches - 10));
-                      } else setMinMatches(Math.max(0, minMatches - 10));
-                    }}
-                  >
-                    -
-                  </button>
-                  <span className={"flex-1 text-center select-none text-muted-foreground"} style={{ minWidth: 32 }}>
-                    {["stats", "stats-over-time"].includes(tab) ? minHeroMatches : minMatches}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Increase min matches"
-                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => {
-                      if (["stats", "stats-over-time"].includes(tab)) {
-                        setMinHeroMatches(Math.max(0, minHeroMatches + 10));
-                      } else setMinMatches(Math.max(0, minMatches + 10));
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+              {["stats", "stats-over-time"].includes(tab) ? (
+                <>
+                  <NumberSelector
+                    value={minHeroMatches}
+                    onChange={setMinHeroMatches}
+                    label={"Min Hero Matches (Timerange)"}
+                    step={10}
+                  />
+                  <NumberSelector
+                    value={minHeroMatchesTotal}
+                    onChange={setMinHeroMatchesTotal}
+                    label={"Min Hero Matches (Total)"}
+                    step={100}
+                  />
+                </>
+              ) : (
+                <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
+              )}
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
             </div>
@@ -128,6 +112,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               minRankId={minRankId}
               maxRankId={maxRankId}
               minHeroMatches={minHeroMatches}
+              minHeroMatchesTotal={minHeroMatchesTotal}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
               fullWidth
@@ -169,6 +154,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
               minRankId={minRankId}
               maxRankId={maxRankId}
               minHeroMatches={minHeroMatches}
+              minHeroMatchesTotal={minHeroMatchesTotal}
               minDate={startDate}
               maxDate={endDate}
             />
