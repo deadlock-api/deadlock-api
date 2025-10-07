@@ -98,7 +98,19 @@ export default function HeroStatsTable({
               {!hideIndex && <th className="p-2">#</th>}
               <th className="p-2 text-left">Hero</th>
               {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
-              {columns.includes("pickRate") && <th className="p-2">Pick Rate</th>}
+              {columns.includes("pickRate") && (
+                <th className="p-2">
+                  {minHeroMatchesTotal || minHeroMatches ? (
+                    <>
+                      Pick Rate
+                      <br />
+                      (Normalized)
+                    </>
+                  ) : (
+                    "Pick Rate"
+                  )}
+                </th>
+              )}
               {columns.includes("KDA") && <th className="p-2">Kills/Deaths/Assists</th>}
               {columns.includes("totalMatches") && <th className="p-2">Total Matches</th>}
             </tr>
@@ -141,7 +153,11 @@ export default function HeroStatsTable({
                     max={maxMatches}
                     value={row.matches}
                     color={"#00ffff"}
-                    label={`${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `}
+                    label={
+                      minHeroMatchesTotal || minHeroMatches
+                        ? `${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `
+                        : `${(Math.round(12 * (row.matches / sumMatches) * 100)).toFixed(0)}% `
+                    }
                   />
                 </td>
               )}
