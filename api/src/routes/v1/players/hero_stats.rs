@@ -87,6 +87,7 @@ pub struct HeroStats {
     matches: Vec<u64>,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
     let mut filters = vec![];
     filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
