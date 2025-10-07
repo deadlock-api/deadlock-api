@@ -17,7 +17,7 @@ use crate::utils::types::AccountIdQuery;
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct HeroStatsQuery {
     /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
-    #[param(inline, min_items = 1, max_items = 100)]
+    #[param(inline, min_items = 1, max_items = 1000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u32>,
     /// Filter matches based on their start time (Unix timestamp).
@@ -185,7 +185,7 @@ async fn get_hero_stats(
             "No account IDs provided.",
         ));
     }
-    if query.account_ids.len() > 100 {
+    if query.account_ids.len() > 1000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "Too many account IDs provided.",
