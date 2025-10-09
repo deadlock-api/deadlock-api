@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 async-compression = { version = "0.4.32", features = ["tokio", "bzip2"] }
-clickhouse = { version = "0.14.0", features = ["test-util", "time"] }
+clickhouse = { version = "0.13.3", features = ["test-util", "time"] }
 futures = "0.3.31"
 prost = "0.14.1"
 object_store = { version = "0.12.4", features = ["aws"] }

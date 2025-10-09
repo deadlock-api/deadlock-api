@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-clickhouse = { version = "0.14.0", features = ["time"] }
+clickhouse = { version = "0.13.3", features = ["time"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_repr = "0.1.20"
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }

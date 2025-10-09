@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
                 .collect::<HashMap<_, _>>();
 
         let mut squared_error = 0.0;
-        let mut inserter = ch_client.insert::<Glicko2HistoryEntry>("glicko").await?;
+        let mut inserter = ch_client.insert("glicko")?;
         for match_ in matches_to_process {
             let updates: Vec<(Glicko2HistoryEntry, f64)> =
                 glicko::update_match(&config, &match_, &player_ratings_before);

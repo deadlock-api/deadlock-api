@@ -9,7 +9,7 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
 metrics = "0.24.2"
 tracing = "0.1.41"
-clickhouse = "0.14.0"
+clickhouse = "0.13.3"
 tryhard = "0.5.2"
 anyhow = "1.0.100"
 common = { version = "0.1.0", path = "../common" }

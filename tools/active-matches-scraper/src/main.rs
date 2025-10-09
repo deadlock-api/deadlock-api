@@ -106,9 +106,7 @@ async fn insert_active_matches(
     ch_client: &clickhouse::Client,
     ch_active_matches: &[ClickHouseActiveMatch],
 ) -> clickhouse::error::Result<()> {
-    let mut insert = ch_client
-        .insert::<ClickHouseActiveMatch>("active_matches")
-        .await?;
+    let mut insert = ch_client.insert("active_matches")?;
     for ch_active_match in ch_active_matches {
         insert.write(ch_active_match).await?;
     }

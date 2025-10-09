@@ -188,7 +188,7 @@ async fn ingest_salts(
         replay_salt: salts.replay_salt,
         username,
     };
-    let mut inserter = ch_client.insert::<MatchSalt>("match_salts").await?;
+    let mut inserter = ch_client.insert("match_salts")?;
     inserter.write(&salts).await?;
     inserter.end().await
 }
