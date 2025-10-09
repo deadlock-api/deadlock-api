@@ -60,7 +60,7 @@ async fn update_heroes(
     // Truncate table
     ch_client.query("TRUNCATE TABLE heroes").execute().await?;
 
-    let mut insert = ch_client.insert("heroes")?;
+    let mut insert = ch_client.insert::<ChHero>("heroes").await?;
     for hero in heroes {
         if hero.disabled.is_some_and(|d| d) {
             debug!("Hero {} is disabled, skipping", hero.name);
@@ -100,7 +100,7 @@ async fn update_items(
     // Truncate table
     ch_client.query("TRUNCATE TABLE items").execute().await?;
 
-    let mut insert = ch_client.insert::<ChItem>("items")?;
+    let mut insert = ch_client.insert::<ChItem>("items").await?;
     for item in items {
         debug!("Inserting item {}", item.name);
         insert.write(&item.into()).await?;

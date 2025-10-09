@@ -248,8 +248,10 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
                 .into()
         });
 
-    let mut match_info_insert = client.insert("match_info")?;
-    let mut match_player_insert = client.insert("match_player")?;
+    let mut match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
+    let mut match_player_insert = client
+        .insert::<ClickhouseMatchPlayer>("match_player")
+        .await?;
     match_info_insert.write(&ch_match_metadata).await?;
     for player in ch_players {
         match_player_insert.write(&player).await?;
@@ -257,7 +259,9 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
     match_info_insert.end().await?;
     match_player_insert.end().await?;
 
-    let mut player_match_history_insert = client.insert("player_match_history")?;
+    let mut player_match_history_insert = client
+        .insert::<PlayerMatchHistoryEntry>("player_match_history")
+        .await?;
     for p in &match_info.players {
         if let Some(entry) = PlayerMatchHistoryEntry::from_info_and_player(match_info, p) {
             player_match_history_insert.write(&entry).await?;

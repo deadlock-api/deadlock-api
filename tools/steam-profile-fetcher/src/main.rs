@@ -156,7 +156,9 @@ async fn save_profiles(
     ch_client: &clickhouse::Client,
     profiles: &[SteamPlayerSummary],
 ) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client.insert("steam_profiles")?;
+    let mut inserter = ch_client
+        .insert::<SteamPlayerSummary>("steam_profiles")
+        .await?;
     for profile in profiles {
         inserter.write(profile).await?;
     }
