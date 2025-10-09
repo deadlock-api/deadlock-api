@@ -4,7 +4,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players};
 
 #[derive(Serialize_repr, Deserialize_repr, Copy, Clone, PartialEq, Debug, Default)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum Source {
     #[default]
     HistoryFetcher = 1,
@@ -34,6 +34,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub objectives_mask_team0: u32,
     pub objectives_mask_team1: u32,
     pub source: Source,
+    pub username: Option<String>,
 }
 
 impl PlayerMatchHistoryEntry {
@@ -60,6 +61,7 @@ impl PlayerMatchHistoryEntry {
             objectives_mask_team0: match_info.objectives_mask_team0? as u32,
             objectives_mask_team1: match_info.objectives_mask_team1? as u32,
             source: Source::MatchPlayer,
+            username: Some("ingest-worker".to_string()),
         })
     }
 }

@@ -35,7 +35,7 @@ pub(crate) enum SlotType {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
 #[serde(rename_all = "snake_case")]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum CHItemType {
     Upgrade = 0,
     Ability = 1,
@@ -45,7 +45,7 @@ pub(crate) enum CHItemType {
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
 #[serde(rename_all = "snake_case")]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum CHSlotType {
     Weapon = 0,
     Vitality = 1,

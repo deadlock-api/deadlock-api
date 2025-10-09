@@ -28,7 +28,7 @@ pub(crate) struct SteamPlayerSummary {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum PersonaState {
     Offline = 0,
     Online = 1,

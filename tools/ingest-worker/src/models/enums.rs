@@ -5,7 +5,7 @@ use valveprotos::deadlock::{
 };
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum GameMode {
     Invalid = 0,
     Normal = 1,
@@ -36,7 +36,7 @@ impl From<u8> for GameMode {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum MatchMode {
     Invalid = 0,
     Unranked = 1,
@@ -81,7 +81,7 @@ impl From<u8> for MatchMode {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum MatchOutcome {
     TeamWin = 0,
     Error = 1,
@@ -97,7 +97,7 @@ impl From<EMatchOutcome> for MatchOutcome {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum Team {
     Team0 = 0,
     Team1 = 1,
@@ -125,7 +125,7 @@ impl From<u8> for Team {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum Objective {
     Core = 0,
     Tier1Lane1 = 1,

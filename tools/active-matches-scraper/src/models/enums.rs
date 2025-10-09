@@ -1,7 +1,7 @@
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum MatchMode {
     Invalid = 0,
     Unranked = 1,
@@ -14,7 +14,7 @@ pub(crate) enum MatchMode {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum GameMode {
     Invalid = 0,
     Normal = 1,
@@ -23,7 +23,7 @@ pub(crate) enum GameMode {
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
-#[repr(u8)]
+#[repr(i8)]
 pub(crate) enum RegionMode {
     Row = 0,
     Europe = 1,

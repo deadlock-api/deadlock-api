@@ -12,7 +12,7 @@ pub(crate) struct ActiveMatch {
     pub lobby_id: u64,
     pub net_worth_team_0: u32,
     pub net_worth_team_1: u32,
-    pub game_mode_version: Option<u32>,
+    pub game_mode_version: Option<i32>,
     pub duration_s: Option<u32>,
     pub spectators: u16,
     pub open_spectator_slots: u16,
@@ -50,7 +50,7 @@ pub(crate) struct ClickHouseActiveMatch {
     pub lobby_id: String, // This is a big integer, but encoding as String to avoid overflow
     pub net_worth_team_0: u32,
     pub net_worth_team_1: u32,
-    pub game_mode_version: Option<u32>,
+    pub game_mode_version: Option<i32>,
     pub duration_s: u32, // Currently always 0
     pub spectators: u16,
     pub open_spectator_slots: u16,
