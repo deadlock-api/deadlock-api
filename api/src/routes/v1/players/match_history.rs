@@ -107,9 +107,7 @@ pub(crate) async fn insert_match_history_to_ch(
     ch_client: &clickhouse::Client,
     match_history: &[PlayerMatchHistoryEntry],
 ) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client
-        .insert::<PlayerMatchHistoryEntry>("player_match_history")
-        .await?;
+    let mut inserter = ch_client.insert::<PlayerMatchHistoryEntry>("player_match_history")?;
     for entry in match_history {
         inserter.write(entry).await?;
     }

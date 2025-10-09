@@ -203,10 +203,7 @@ pub(crate) async fn get_player_card(
     let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
     let player_card: PlayerCard = proto_player_card.msg.into();
     let ch_player_card: PlayerCardClickhouse = player_card.clone().into();
-    let Ok(mut inserter) = ch_client
-        .insert::<PlayerCardClickhouse>("player_card")
-        .await
-    else {
+    let Ok(mut inserter) = ch_client.insert::<PlayerCardClickhouse>("player_card") else {
         warn!("Failed to create inserter for player card");
         return Ok(player_card);
     };
