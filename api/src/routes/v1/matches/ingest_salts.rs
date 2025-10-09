@@ -15,7 +15,7 @@ pub(super) async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,
     salts: Vec<impl Into<ClickhouseSalts>>,
 ) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client.insert::<ClickhouseSalts>("match_salts")?;
+    let mut inserter = ch_client.insert::<ClickhouseSalts>("match_salts").await?;
     for salt in salts {
         inserter.write(&salt.into()).await?;
     }
