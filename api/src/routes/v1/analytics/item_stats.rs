@@ -69,24 +69,22 @@ pub enum BucketQuery {
 impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
-            Self::NoBucket => "NULL",
-            Self::Hero => "toNullable(hero_id)",
-            Self::Team => "toNullable(toUInt32(if(team = 'Team0', 0, 1)))",
-            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))",
-            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))",
-            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))",
-            Self::StartTimeMonth => "toNullable(toDateTime(toStartOfMonth(start_time)))",
-            Self::GameTimeMin => "toNullable(toUInt32(floor(buy_time / 60)))",
+            Self::NoBucket => "toUInt32(0)",
+            Self::Hero => "hero_id",
+            Self::Team => "toUInt32(if(team = 'Team0', 0, 1))",
+            Self::StartTimeHour => "toStartOfHour(start_time)",
+            Self::StartTimeDay => "toStartOfDay(start_time)",
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
+            Self::GameTimeMin => "toUInt32(floor(buy_time / 60))",
             Self::GameTimeNormalizedPercentage => {
-                "toNullable(toUInt32(floor((buy_time - 1) / duration_s * 100)))"
+                "toUInt32(floor((buy_time - 1) / duration_s * 100))"
             }
-            Self::NetWorthBy1000 => "toNullable(toUInt32(floor(net_worth_at_buy / 1000) * 1000))",
-            Self::NetWorthBy2000 => "toNullable(toUInt32(floor(net_worth_at_buy / 2000) * 2000))",
-            Self::NetWorthBy3000 => "toNullable(toUInt32(floor(net_worth_at_buy / 3000) * 3000))",
-            Self::NetWorthBy5000 => "toNullable(toUInt32(floor(net_worth_at_buy / 5000) * 5000))",
-            Self::NetWorthBy10000 => {
-                "toNullable(toUInt32(floor(net_worth_at_buy / 10000) * 10000))"
-            }
+            Self::NetWorthBy1000 => "toUInt32(floor(net_worth_at_buy / 1000) * 1000)",
+            Self::NetWorthBy2000 => "toUInt32(floor(net_worth_at_buy / 2000) * 2000)",
+            Self::NetWorthBy3000 => "toUInt32(floor(net_worth_at_buy / 3000) * 3000)",
+            Self::NetWorthBy5000 => "toUInt32(floor(net_worth_at_buy / 5000) * 5000)",
+            Self::NetWorthBy10000 => "toUInt32(floor(net_worth_at_buy / 10000) * 10000)",
         }
     }
 }
@@ -157,7 +155,7 @@ pub(crate) struct ItemStatsQuery {
 pub struct ItemStats {
     /// See more: <https://assets.deadlock-api.com/v2/items>
     pub item_id: u32,
-    pub bucket: Option<u32>,
+    pub bucket: u32,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,

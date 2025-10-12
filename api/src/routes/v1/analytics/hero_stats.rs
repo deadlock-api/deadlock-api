@@ -37,11 +37,11 @@ pub enum BucketQuery {
 impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
-            Self::NoBucket => "NULL",
-            Self::StartTimeHour => "toNullable(toStartOfHour(start_time))",
-            Self::StartTimeDay => "toNullable(toStartOfDay(start_time))",
-            Self::StartTimeWeek => "toNullable(toDateTime(toStartOfWeek(start_time)))",
-            Self::StartTimeMonth => "toNullable(toDateTime(toStartOfMonth(start_time)))",
+            Self::NoBucket => "toUInt32(0)",
+            Self::StartTimeHour => "toStartOfHour(start_time)",
+            Self::StartTimeDay => "toStartOfDay(start_time)",
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
         }
     }
 }
@@ -105,7 +105,7 @@ pub(crate) struct HeroStatsQuery {
 pub struct AnalyticsHeroStats {
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
     pub hero_id: u32,
-    bucket: Option<u32>,
+    bucket: u32,
     pub wins: u64,
     pub losses: u64,
     pub matches: u64,
