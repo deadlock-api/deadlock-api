@@ -853,7 +853,7 @@ impl Variable {
             return Ok(vec![]);
         }
 
-        Ok(vec![*first_match]
+        Ok(vec![first_match.clone()]
             .into_iter()
             .chain(
                 matches

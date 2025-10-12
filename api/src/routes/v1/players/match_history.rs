@@ -28,7 +28,7 @@ const MAX_REFETCH_ITERATIONS: i32 = 100;
 
 pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Row, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Row, Eq, PartialEq, Hash)]
 pub(crate) struct PlayerMatchHistoryEntry {
     account_id: u32,
     pub(crate) match_id: u64,
@@ -51,6 +51,7 @@ pub(crate) struct PlayerMatchHistoryEntry {
     match_result: u32,
     objectives_mask_team0: u32,
     objectives_mask_team1: u32,
+    username: Option<String>,
 }
 
 impl PlayerMatchHistoryEntry {
@@ -79,6 +80,7 @@ impl PlayerMatchHistoryEntry {
             match_result: entry.match_result?,
             objectives_mask_team0: u32::try_from(entry.objectives_mask_team0?).ok()?,
             objectives_mask_team1: u32::try_from(entry.objectives_mask_team1?).ok()?,
+            username: Some("api".to_owned()),
         })
     }
 
@@ -344,7 +346,7 @@ pub(super) async fn match_history(
     let ch_missing_entries = steam_match_history
         .iter()
         .filter(|e| !ch_match_ids.contains(&e.match_id))
-        .copied()
+        .cloned()
         .collect_vec();
     if !ch_missing_entries.is_empty()
         && let Err(e) = insert_match_history_to_ch(&state.ch_client, &ch_missing_entries).await
