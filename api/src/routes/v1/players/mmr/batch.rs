@@ -11,9 +11,7 @@ use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::mmr::mmr_history::{
-    MMRHistory, SMOOTHING_FACTOR, WIN_BOOST, WINDOW_SIZE,
-};
+use crate::routes::v1::players::mmr::mmr_history::{MMRHistory, SMOOTHING_FACTOR, WINDOW_SIZE};
 use crate::utils::parse::comma_separated_deserialize;
 
 #[derive(Deserialize, IntoParams, Clone)]
@@ -47,7 +45,6 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
     WITH
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
-        {WIN_BOOST} AS win_boost,
         arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         t_matches AS (
             SELECT
@@ -55,7 +52,7 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
                 match_id,
                 start_time,
                 assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
-                ((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) * (1 + (player_team == winning_team) * win_boost) AS mmr
+                (intDiv(current_match_badge, 10) - 1) * 6 + current_match_badge % 10 AS mmr
             FROM player_match_history
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
@@ -104,7 +101,6 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
     WITH
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
-        {WIN_BOOST} AS win_boost,
         arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         t_matches AS (
             SELECT
@@ -112,7 +108,7 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
                 match_id,
                 start_time,
                 assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
-                ((intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10)) * (1 + (player_team == winning_team) * win_boost) AS mmr
+                (intDiv(current_match_badge, 10) - 1) * 6 + current_match_badge % 10 AS mmr
             FROM player_match_history
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
