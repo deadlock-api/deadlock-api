@@ -14,14 +14,14 @@ fred = { version = "10.1.0", features = ["i-hexpire"] }
 haste = { git = "https://github.com/deadlock-api/haste.git", rev = "de0829c7470c9b33be1d75cae10afdfbf511d05f" }
 itertools = "0.14.0"
 jiff = { version = "0.2.15", features = ["serde"] }
-lru = "0.16.1"
+lru = "0.16.2"
 metrics = "0.24.2"
 object_store = { version = "0.12.4", features = ["aws"] }
 prost = "0.14.1"
 reqwest = { version = "0.12.24", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
-tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "0e1681f6e710cd865ef232d5d272850feca672da", features = ["user-msgs"] }
 thiserror = "2.0.17"

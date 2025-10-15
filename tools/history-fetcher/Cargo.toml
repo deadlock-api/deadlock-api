@@ -7,7 +7,7 @@ edition = "2024"
 anyhow = "1.0.100"
 clickhouse = "0.14.0"
 common = { version = "0.1.0", path = "../common" }
-tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 reqwest = "0.12.24"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "0e1681f6e710cd865ef232d5d272850feca672da", features = ["gc-client", "serde"] }
 metrics = "0.24.2"

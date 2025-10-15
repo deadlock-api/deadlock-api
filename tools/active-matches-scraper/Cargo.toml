@@ -7,7 +7,7 @@ edition = "2024"
 clickhouse = { version = "0.14.0", features = ["time"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_repr = "0.1.20"
-tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 reqwest = { version = "0.12.24", features = ["json"] }
 delay_map = "0.4.1"
 metrics = "0.24.2"
