@@ -9,6 +9,7 @@ use axum::ServiceExt;
 use axum::extract::Request;
 use deadlock_api_rust::{StartupError, router};
 use mimalloc::MiMalloc;
+use tokio::signal::unix::{SignalKind, signal};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -31,6 +32,27 @@ fn init_tracing() {
         .init();
 }
 
+async fn shutdown_signal() {
+    let interrupt = async {
+        signal(SignalKind::interrupt())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    let terminate = async {
+        signal(SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        () = interrupt => {},
+        () = terminate => {},
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
     init_tracing();
@@ -40,6 +62,9 @@ async fn main() -> Result<(), StartupError> {
     let listener = tokio::net::TcpListener::bind(&address).await?;
 
     info!("Listening on http://{address}");
-    axum::serve(listener, ServiceExt::<Request>::into_make_service(router)).await?;
+    let make_service = ServiceExt::<Request>::into_make_service(router);
+    axum::serve(listener, make_service)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
     Ok(())
 }
