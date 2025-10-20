@@ -9,7 +9,6 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::utils::parse::default_true;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -24,12 +23,6 @@ pub(super) struct MateStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
-    #[param(minimum = 0, maximum = 116)]
-    min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
-    #[param(minimum = 0, maximum = 116)]
-    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
@@ -40,10 +33,6 @@ pub(super) struct MateStatsQuery {
     /// Filter based on the number of matches played.
     #[serde(default)]
     max_matches_played: Option<u64>,
-    /// Filter based on whether the mates were on the same party.
-    #[serde(default = "default_true")]
-    #[param(default = true)]
-    same_party: bool,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -56,44 +45,31 @@ pub struct MateStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
-    let mut info_filters = vec![];
-    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    let mut history_filters = vec![];
+    history_filters.push(format!("account_id = {account_id}"));
+    history_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+        history_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
+        history_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
+        history_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
+        history_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
+        history_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
+        history_filters.push(format!("duration_s <= {max_duration_s}"));
     }
-    let info_filters = if info_filters.is_empty() {
+    let history_filters = if history_filters.is_empty() {
         String::new()
     } else {
-        format!(" AND {}", info_filters.join(" AND "))
+        history_filters.join(" AND ")
     };
 
     let mut having_filters = vec![];
@@ -108,65 +84,21 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
-    if query.same_party {
-        format!(
+    format!(
             "
-            WITH
-                t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
-                t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
-                players AS (
-                    SELECT DISTINCT match_id, team, party
-                    FROM match_player
-                    WHERE party != 0 AND match_id IN t_matches AND account_id = {account_id}
-                ),
-                mates AS (
-                    SELECT DISTINCT match_id, won, account_id
-                    FROM match_player
-                    WHERE TRUE
-                        AND (match_id, team, party) IN (SELECT match_id, team, party FROM players)
-                        AND account_id != {account_id}
-                )
+            WITH t_histories AS (SELECT match_id, player_team FROM player_match_history WHERE {history_filters})
             SELECT
                 account_id as mate_id,
-                sum(won) as wins,
-                count() as matches_played,
+                sum(match_result = player_team) as wins,
+                uniq(match_id) as matches_played,
                 groupUniqArray(match_id) as matches
-            FROM mates
-            GROUP BY mate_id
+            FROM player_match_history
+            WHERE (match_id, player_team) IN t_histories AND account_id != {account_id}
+            GROUP BY account_id
             {having_clause}
             ORDER BY matches_played DESC
             "
         )
-    } else {
-        format!(
-            "
-            WITH
-                t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
-                t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
-                players AS (
-                    SELECT DISTINCT match_id, team
-                    FROM match_player
-                    WHERE match_id IN t_matches AND account_id = {account_id}
-                ),
-                mates AS (
-                    SELECT DISTINCT match_id, won, account_id
-                    FROM match_player
-                    WHERE TRUE
-                        AND (match_id, team) IN (SELECT match_id, team FROM players)
-                        AND account_id != {account_id}
-                )
-            SELECT
-                account_id as mate_id,
-                sum(won) as wins,
-                count() as matches_played,
-                groupUniqArray(match_id) as matches
-            FROM mates
-            GROUP BY mate_id
-            {having_clause}
-            ORDER BY matches_played DESC
-            "
-        )
-    }
 }
 
 async fn get_mate_stats(
@@ -218,38 +150,29 @@ mod test {
     #[test]
     fn test_build_query_default_same_party() {
         let account_id = 12345;
-        let query = MateStatsQuery {
-            same_party: true,
-            ..Default::default()
-        };
+        let query = MateStatsQuery::default();
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("party != 0"));
         assert!(sql.contains("account_id != 12345"));
         assert!(sql.contains("account_id as mate_id"));
-        assert!(sql.contains("GROUP BY mate_id"));
+        assert!(sql.contains("GROUP BY account_id"));
         assert!(sql.contains("ORDER BY matches_played DESC"));
         // Should not contain any filters
         assert!(!sql.contains("start_time >="));
         assert!(!sql.contains("start_time <="));
         assert!(!sql.contains("match_id >="));
         assert!(!sql.contains("match_id <="));
-        assert!(!sql.contains("average_badge_team"));
     }
 
     #[test]
     fn test_build_query_default_not_same_party() {
         let account_id = 12345;
-        let query = MateStatsQuery {
-            same_party: false,
-            ..Default::default()
-        };
+        let query = MateStatsQuery::default();
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(!sql.contains("party != 0")); // Should not filter by party
         assert!(sql.contains("account_id != 12345"));
         assert!(sql.contains("account_id as mate_id"));
-        assert!(sql.contains("GROUP BY mate_id"));
+        assert!(sql.contains("GROUP BY account_id"));
         assert!(sql.contains("ORDER BY matches_played DESC"));
     }
 
@@ -258,7 +181,6 @@ mod test {
         let account_id = 12345;
         let query = MateStatsQuery {
             min_unix_timestamp: Some(1672531200),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -270,7 +192,6 @@ mod test {
         let account_id = 12345;
         let query = MateStatsQuery {
             max_unix_timestamp: Some(1675209599),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -282,7 +203,6 @@ mod test {
         let account_id = 12345;
         let query = MateStatsQuery {
             min_match_id: Some(10000),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -294,7 +214,6 @@ mod test {
         let account_id = 12345;
         let query = MateStatsQuery {
             max_match_id: Some(1000000),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -302,35 +221,10 @@ mod test {
     }
 
     #[test]
-    fn test_build_query_min_average_badge() {
-        let account_id = 12345;
-        let query = MateStatsQuery {
-            min_average_badge: Some(61),
-            same_party: true,
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_query_max_average_badge() {
-        let account_id = 12345;
-        let query = MateStatsQuery {
-            max_average_badge: Some(112),
-            same_party: true,
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
     fn test_build_query_min_matches_played() {
         let account_id = 12345;
         let query = MateStatsQuery {
             min_matches_played: Some(5),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -342,7 +236,6 @@ mod test {
         let account_id = 12345;
         let query = MateStatsQuery {
             max_matches_played: Some(100),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -355,13 +248,10 @@ mod test {
         let query = MateStatsQuery {
             min_unix_timestamp: Some(1672531200),
             max_unix_timestamp: Some(1675209599),
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             min_matches_played: Some(3),
             max_matches_played: Some(100),
-            same_party: true,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -370,11 +260,8 @@ mod test {
         assert!(sql.contains("start_time <= 1675209599"));
         assert!(sql.contains("match_id >= 5000"));
         assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
         assert!(sql.contains("matches_played >= 3"));
         assert!(sql.contains("matches_played <= 100"));
-        assert!(sql.contains("party != 0"));
     }
 
     #[test]
@@ -383,13 +270,10 @@ mod test {
         let query = MateStatsQuery {
             min_unix_timestamp: Some(1672531200),
             max_unix_timestamp: Some(1675209599),
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             min_matches_played: Some(3),
             max_matches_played: Some(100),
-            same_party: false,
             ..Default::default()
         };
         let sql = build_query(account_id, &query);
@@ -398,10 +282,7 @@ mod test {
         assert!(sql.contains("start_time <= 1675209599"));
         assert!(sql.contains("match_id >= 5000"));
         assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
         assert!(sql.contains("matches_played >= 3"));
         assert!(sql.contains("matches_played <= 100"));
-        assert!(!sql.contains("party != 0")); // Should not filter by party
     }
 }

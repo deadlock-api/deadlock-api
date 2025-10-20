@@ -23,12 +23,6 @@ pub(super) struct PartyStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
-    #[param(minimum = 0, maximum = 116)]
-    min_average_badge: Option<u8>,
-    /// Filter matches based on the average badge level (0-116) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
-    #[param(minimum = 0, maximum = 116)]
-    max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
     min_match_id: Option<u64>,
     /// Filter matches based on their ID.
@@ -44,63 +38,48 @@ pub struct PartyStats {
 }
 
 fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
-    let mut info_filters = vec![];
-    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    let mut history_filters = vec![];
+    history_filters.push(format!("account_id = {account_id}"));
+    history_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+        history_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
+        history_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
+        history_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
+        history_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
+        history_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
+        history_filters.push(format!("duration_s <= {max_duration_s}"));
     }
-    let info_filters = if info_filters.is_empty() {
+    let history_filters = if history_filters.is_empty() {
         String::new()
     } else {
-        format!(" AND {}", info_filters.join(" AND "))
+        history_filters.join(" AND ")
     };
     format!(
         "
     WITH
-        t_histories AS (SELECT match_id FROM player_match_history WHERE account_id = {account_id}),
-        t_matches AS (SELECT match_id FROM match_info WHERE match_id IN t_histories {info_filters}),
-        players AS (SELECT DISTINCT match_id, team, party FROM match_player WHERE match_id IN t_matches AND party != 0 AND account_id = {account_id}),
+        t_histories AS (SELECT match_id FROM player_match_history WHERE {history_filters}),
+        t_parties AS (SELECT match_id, team, party FROM match_player WHERE match_id IN t_histories AND account_id = {account_id} AND party != 0),
         parties AS (
-            SELECT match_id, any(won) as won, groupUniqArray(account_id) as account_ids
+            SELECT match_id, groupUniqArray(account_id) AS account_ids, any(won) AS won
             FROM match_player
-            WHERE match_id IN t_matches
-                AND (account_id = {account_id} OR (match_id, team, party) IN (SELECT match_id, team, party FROM players))
+            WHERE account_id = 74963221 OR (match_id, team, party) IN t_parties
             GROUP BY match_id
         )
     SELECT
         length(account_ids) as party_size,
         sum(won) as wins,
         uniq(match_id) as matches_played,
-        groupUniqArray(match_id) as matches
+        groupArray(match_id) as matches
     FROM parties
     GROUP BY party_size
     ORDER BY party_size
@@ -160,7 +139,6 @@ mod test {
         let query = PartyStatsQuery::default();
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("players AS"));
         assert!(sql.contains("length(account_ids) as party_size"));
         assert!(sql.contains("GROUP BY party_size"));
         assert!(sql.contains("ORDER BY party_size"));
@@ -169,7 +147,6 @@ mod test {
         assert!(!sql.contains("start_time <="));
         assert!(!sql.contains("match_id >="));
         assert!(!sql.contains("match_id <="));
-        assert!(!sql.contains("average_badge_team"));
     }
 
     #[test]
@@ -217,28 +194,6 @@ mod test {
     }
 
     #[test]
-    fn test_build_query_min_average_badge() {
-        let account_id = 12345;
-        let query = PartyStatsQuery {
-            min_average_badge: Some(61),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_query_max_average_badge() {
-        let account_id = 12345;
-        let query = PartyStatsQuery {
-            max_average_badge: Some(112),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
     fn test_build_query_min_duration_s() {
         let account_id = 12345;
         let query = PartyStatsQuery {
@@ -266,8 +221,6 @@ mod test {
         let query = PartyStatsQuery {
             min_unix_timestamp: Some(1672531200),
             max_unix_timestamp: Some(1675209599),
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
             min_match_id: Some(5000),
             max_match_id: Some(500000),
             ..Default::default()
@@ -278,7 +231,5 @@ mod test {
         assert!(sql.contains("start_time <= 1675209599"));
         assert!(sql.contains("match_id >= 5000"));
         assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 }
