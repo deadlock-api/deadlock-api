@@ -47,7 +47,7 @@ pub(crate) struct ClickHouseActiveMatch {
     pub players_abandoned: Vec<bool>,
     #[serde(rename = "players.hero_id")]
     pub players_hero_id: Vec<u8>,
-    pub lobby_id: String, // This is a big integer, but encoding as String to avoid overflow
+    pub lobby_id: u64,
     pub net_worth_team_0: u32,
     pub net_worth_team_1: u32,
     pub game_mode_version: Option<i32>,
@@ -78,7 +78,7 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
                 .map(|p| p.abandoned.unwrap_or_default())
                 .collect(),
             players_hero_id: am.players.iter().map(|p| p.hero_id).collect(),
-            lobby_id: am.lobby_id.to_string(),
+            lobby_id: am.lobby_id,
             net_worth_team_0: am.net_worth_team_0,
             net_worth_team_1: am.net_worth_team_1,
             game_mode_version: am.game_mode_version,
