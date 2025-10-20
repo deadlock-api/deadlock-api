@@ -1,13 +1,9 @@
 CREATE TABLE IF NOT EXISTS match_player
 (
-    match_id UInt64,
+    match_id UInt64 CODEC (Delta, ZSTD),
     account_id UInt32,
     player_slot UInt32,
-    team Enum8 (
-        'Team0' = 0,
-        'Team1' = 1,
-        'Spectator' = 16,
-    ),
+    team Enum8 ('Team0' = 0, 'Team1' = 1, 'Spectator' = 16),
     kills UInt32,
     deaths UInt32,
     assists UInt32,

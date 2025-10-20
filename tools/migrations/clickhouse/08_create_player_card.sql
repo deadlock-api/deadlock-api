@@ -9,5 +9,5 @@ CREATE TABLE IF NOT EXISTS player_card
  slots_hero_wins    Array(Nullable(UInt32)),
  slots_stat_id      Array(Nullable(Int32)),
  slots_stat_score   Array(Nullable(UInt32)),
- created_at         DateTime DEFAULT now()
+ created_at         DateTime DEFAULT now() CODEC (Delta, ZSTD)
 ) ENGINE = ReplacingMergeTree ORDER BY (account_id, created_at);

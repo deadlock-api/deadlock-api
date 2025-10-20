@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS steam_profiles
   ),
  realname     Nullable(String),
  countrycode  Nullable(String),
- last_updated DateTime DEFAULT now()
+ last_updated DateTime DEFAULT now() CODEC (Delta, ZSTD)
 )
  ENGINE = ReplacingMergeTree()
   ORDER BY account_id;
+

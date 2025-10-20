@@ -16,4 +16,4 @@ trim_trailing_whitespace = false
 indent_size = 2
 
 [*.{lock,sql}]
-indent_size = 1 # Ignore lock files
+indent_size = 4 # Ignore lock files
