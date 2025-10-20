@@ -24,7 +24,8 @@ create table if not exists player_match_history
     created_at            Nullable(DateTime)                               default now() CODEC (Delta, ZSTD),
     username              Nullable(String),
 
-    INDEX idx_match_id match_id TYPE minmax
+    INDEX idx_match_id match_id TYPE minmax,
+    PROJECTION match_id_order (SELECT * ORDER BY match_id)
 )
     engine = ReplacingMergeTree
         PARTITION BY (toStartOfMonth(start_time), match_mode)
