@@ -48,10 +48,8 @@ async fn main() -> Result<()> {
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     loop {
         interval.tick().await;
-        if let Ok(()) = fetch_and_update_profiles(&http_client, &ch_client).await {
-            info!("Updated Steam profiles");
-        } else {
-            error!("Error updating Steam profiles");
+        if let Err(e) = fetch_and_update_profiles(&http_client, &ch_client).await {
+            error!("Error updating Steam profiles: {e}");
         }
     }
 }
