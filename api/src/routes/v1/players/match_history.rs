@@ -169,7 +169,7 @@ async fn fetch_match_history_raw(
             .filter_map(|e| {
                 PlayerMatchHistoryEntry::from_protobuf(account_id, e).map_or_else(
                     || {
-                        warn!("Failed to parse player match history entry: {:?}", e);
+                        warn!("Failed to parse player match history entry: {e:?}");
                         None
                     },
                     Some,

@@ -229,7 +229,7 @@ pub(super) async fn table_schema(
     ty = "TimedCache<String, Vec<TableSchemaRow>>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
-    convert = r#"{ format!("{}", table) }"#,
+    convert = r#"{ format!("{table}") }"#,
     sync_writes = "by_key",
     key = "String"
 )]

@@ -312,7 +312,7 @@ pub(super) async fn create_custom(
         .retries(5)
         .linear_backoff(Duration::from_millis(100))
         .await?;
-    debug!("Created party: {:?}", created_party);
+    debug!("Created party: {created_party:?}");
     let Some(party_id) = created_party.party_id.filter(|&p| p > 0) else {
         error!(
             "Failed to create party, created_party is {:?}",

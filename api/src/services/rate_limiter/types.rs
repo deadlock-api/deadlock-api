@@ -87,7 +87,7 @@ impl Status {
 
     pub(super) fn raise_if_exceeded(&self) -> APIResult<()> {
         if self.is_exceeded() {
-            warn!("Rate limit exceeded: {:?}", self);
+            warn!("Rate limit exceeded: {self:?}");
             return Err(APIError::RateLimitExceeded {
                 status: self.clone(),
             });
