@@ -89,19 +89,21 @@ async fn fetch_and_update_profiles(
         .filter(|id| !profiles.iter().any(|p| p.account_id == **id))
         .copied()
         .collect_vec();
-    match delete_profiles(ch_client, &unavailable_profiles).await {
-        Ok(()) => {
-            info!(
-                "Deleted {} unavailable profiles",
-                unavailable_profiles.len()
-            );
-            counter!("steam_profile_fetcher.deleted_profiles.success")
-                .increment(unavailable_profiles.len() as u64);
-        }
-        Err(e) => {
-            error!("Failed to delete unavailable profiles: {}", e);
-            counter!("steam_profile_fetcher.deleted_profiles.failure")
-                .increment(unavailable_profiles.len() as u64);
+    if !unavailable_profiles.is_empty() {
+        match delete_profiles(ch_client, &unavailable_profiles).await {
+            Ok(()) => {
+                info!(
+                    "Deleted {} unavailable profiles",
+                    unavailable_profiles.len()
+                );
+                counter!("steam_profile_fetcher.deleted_profiles.success")
+                    .increment(unavailable_profiles.len() as u64);
+            }
+            Err(e) => {
+                error!("Failed to delete unavailable profiles: {}", e);
+                counter!("steam_profile_fetcher.deleted_profiles.failure")
+                    .increment(unavailable_profiles.len() as u64);
+            }
         }
     }
 
