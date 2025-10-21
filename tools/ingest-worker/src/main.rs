@@ -76,12 +76,12 @@ async fn main() -> anyhow::Result<()> {
                 {
                     Ok(Ok(key)) => {
                         counter!("ingest_worker.ingest_object.success").increment(1);
-                        info!("Ingested object: {}", key);
+                        info!("Ingested object: {key}");
                         gauge!("ingest_worker.objs_to_ingest").decrement(1);
                     }
                     Ok(Err(e)) => {
                         counter!("ingest_worker.ingest_object.failure").increment(1);
-                        error!("Error ingesting object: {}", e);
+                        error!("Error ingesting object: {e}");
                     }
                     Err(_) => {
                         counter!("ingest_worker.ingest_object.timeout").increment(1);
@@ -182,7 +182,7 @@ async fn get_object(store: &impl ObjectStore, key: &Path) -> object_store::Resul
         }
         Err(e) => {
             counter!("ingest_worker.fetch_object.failure").increment(1);
-            error!("Error getting object: {}", e);
+            error!("Error getting object: {e}");
             Err(e)
         }
     }
@@ -198,7 +198,7 @@ async fn bzip_decompress(data: &[u8]) -> std::io::Result<Vec<u8>> {
         }
         Err(e) => {
             counter!("ingest_worker.decompress_object.failure").increment(1);
-            error!("Error decompressing object: {}", e);
+            error!("Error decompressing object: {e}");
             Err(e)
         }
     }
@@ -288,7 +288,7 @@ async fn move_object(
         }
         Err(e) => {
             counter!("ingest_worker.move_object.failure").increment(1);
-            error!("Error moving object: {}", e);
+            error!("Error moving object: {e}");
             Err(e)
         }
     }

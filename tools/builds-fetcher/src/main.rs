@@ -58,7 +58,7 @@ async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgre
         }
         Err(e) => {
             counter!("builds_fetcher.heroes_fetched.failure").increment(1);
-            warn!("Failed to fetch hero ids: {}", e);
+            warn!("Failed to fetch hero ids: {e}");
             sleep(Duration::from_secs(10)).await;
             return;
         }
@@ -100,7 +100,7 @@ async fn update_builds(
         Err(e) => {
             counter!("builds_fetcher.fetch_builds.failure", "hero_id" => hero_id.to_string())
                 .increment(1);
-            warn!("Failed to fetch builds: {}", e);
+            warn!("Failed to fetch builds: {e}");
             sleep(Duration::from_secs(10)).await;
             return;
         }
@@ -117,7 +117,7 @@ async fn update_builds(
         Err(e) => {
             counter!("builds_fetcher.insert_builds.failure", "hero_id" => hero_id.to_string())
                 .increment(1);
-            warn!("Failed to insert builds: {}", e);
+            warn!("Failed to insert builds: {e}");
             sleep(Duration::from_secs(10)).await;
         }
     }

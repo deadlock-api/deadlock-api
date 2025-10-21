@@ -100,8 +100,8 @@ async fn main() -> anyhow::Result<()> {
                 let ch_client = ch_client.clone();
                 async move {
                     match fetch_match(&ch_client, match_id).await {
-                        Ok(()) => info!("Fetched match {}", match_id),
-                        Err(e) => warn!("Failed to fetch match {}: {:?}", match_id, e),
+                        Ok(()) => info!("Fetched match {match_id}"),
+                        Err(e) => warn!("Failed to fetch match {match_id}: {e:?}"),
                     }
                 }
             })

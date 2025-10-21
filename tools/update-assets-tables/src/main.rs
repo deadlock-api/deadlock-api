@@ -34,10 +34,10 @@ async fn main() -> anyhow::Result<()> {
 
         info!("Updating assets");
         if let Err(e) = update_heroes(&ch_client, &http_client).await {
-            error!("Failed to update heroes: {}", e);
+            error!("Failed to update heroes: {e}");
         }
         if let Err(e) = update_items(&ch_client, &http_client).await {
-            error!("Failed to update items: {}", e);
+            error!("Failed to update items: {e}");
         }
         info!("Updated assets");
     }

@@ -80,7 +80,7 @@ WHERE match_id NOT IN t_matches
                         Ok(())
                     }
                     Err(e) => {
-                        error!("Failed to download match: {}", e);
+                        error!("Failed to download match: {e}");
                         Err(e)
                     }
                 }
@@ -151,7 +151,7 @@ async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
         }
         Err(e) => {
             counter!("matchdata_downloader.fetch_metadata.failure").increment(1);
-            error!("Failed to fetch metadata from {}: {}", metadata_url, e);
+            error!("Failed to fetch metadata from {metadata_url}: {e}");
             Err(e)
         }
     }
@@ -172,7 +172,7 @@ async fn upload_object(
         }
         Err(e) => {
             counter!("matchdata_downloader.upload_object.failure").increment(1);
-            error!("Failed to upload object: {}", e);
+            error!("Failed to upload object: {e}");
             Err(e)
         }
     }
@@ -191,7 +191,7 @@ async fn delete_object(store: &impl ObjectStore, key: &Path) -> object_store::Re
         }
         Err(e) => {
             counter!("matchdata_downloader.delete_object.failure").increment(1);
-            error!("Failed to delete object: {}", e);
+            error!("Failed to delete object: {e}");
             Err(e)
         }
     }
@@ -200,7 +200,7 @@ async fn delete_object(store: &impl ObjectStore, key: &Path) -> object_store::Re
 #[cached(
     ty = "UnboundCache<String, bool>",
     create = "{ UnboundCache::new() }",
-    convert = r#"{ format!("{}", file_path) }"#
+    convert = r#"{ format!("{file_path}") }"#
 )]
 #[instrument(skip(store))]
 async fn key_exists(store: &impl ObjectStore, file_path: &Path) -> bool {

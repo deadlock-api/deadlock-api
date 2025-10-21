@@ -77,7 +77,7 @@ async fn fetch_and_update_profiles(
             profiles
         }
         Err(e) => {
-            error!("Failed to fetch Steam profiles: {}", e);
+            error!("Failed to fetch Steam profiles: {e}");
             counter!("steam_profile_fetcher.fetched_profiles.failure")
                 .increment(batch.len() as u64);
             return Err(e);
@@ -100,7 +100,7 @@ async fn fetch_and_update_profiles(
                     .increment(unavailable_profiles.len() as u64);
             }
             Err(e) => {
-                error!("Failed to delete unavailable profiles: {}", e);
+                error!("Failed to delete unavailable profiles: {e}");
                 counter!("steam_profile_fetcher.deleted_profiles.failure")
                     .increment(unavailable_profiles.len() as u64);
             }
@@ -119,7 +119,7 @@ async fn fetch_and_update_profiles(
                 .increment(profiles.len() as u64);
         }
         Err(e) => {
-            error!("Failed to save Steam profiles: {}", e);
+            error!("Failed to save Steam profiles: {e}");
             counter!("steam_profile_fetcher.saved_profiles.failure")
                 .increment(profiles.len() as u64);
             return Err(e.into());
