@@ -918,9 +918,11 @@ async fn get_steam_account_name(
         Ok(name) => Ok(name),
         Err(e) => {
             warn!("Failed to fetch steam account name from API, falling back to db: {e}");
-            Ok(steam::route::get_steam(&state.ch_client_ro, steam_id)
-                .await?
-                .personaname)
+            Ok(
+                steam::route::get_steam_single(&state.ch_client_ro, steam_id)
+                    .await?
+                    .personaname,
+            )
         }
     }
 }

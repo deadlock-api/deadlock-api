@@ -7,6 +7,7 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::Utc;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
@@ -44,7 +45,7 @@ pub(crate) struct SteamProfile {
     pub(super) last_updated: chrono::DateTime<Utc>,
 }
 
-fn build_query(account_id: u32) -> String {
+fn build_query_single(account_id: u32) -> String {
     format!(
         "
         SELECT ?fields
@@ -64,11 +65,11 @@ fn build_query(account_id: u32) -> String {
     sync_writes = "by_key",
     key = "u32"
 )]
-pub(crate) async fn get_steam(
+pub(crate) async fn get_steam_single(
     ch_client: &clickhouse::Client,
     account_id: u32,
 ) -> APIResult<SteamProfile> {
-    let query = build_query(account_id);
+    let query = build_query_single(account_id);
     debug!(?query);
     match ch_client.query(&query).fetch_one().await {
         Ok(profile) => Ok(profile),
@@ -89,7 +90,36 @@ pub(crate) async fn steam_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(AppState { ch_client_ro, .. }): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_steam(&ch_client_ro, account_id).await.map(Json)
+    get_steam_single(&ch_client_ro, account_id).await.map(Json)
+}
+
+fn build_query_many(account_ids: &[u32]) -> String {
+    format!(
+        "
+        SELECT ?fields
+        FROM steam_profiles
+        WHERE account_id IN ({})
+        ORDER BY last_updated DESC
+         ",
+        account_ids.iter().map(ToString::to_string).join(",")
+    )
+}
+
+pub(crate) async fn get_steam_many(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+) -> APIResult<Vec<SteamProfile>> {
+    let query = build_query_many(account_ids);
+    debug!(?query);
+    match ch_client.query(&query).fetch_all().await {
+        Ok(profiles) => Ok(profiles),
+        Err(e) => {
+            warn!("Failed to fetch steam profiles for account_ids {account_ids:?}: {e}");
+            Err(APIError::InternalError {
+                message: "Failed to fetch steam profiles".to_string(),
+            })
+        }
+    }
 }
 
 #[utoipa::path(
@@ -137,11 +167,7 @@ pub(super) async fn steam(
             "Too many account ids provided.",
         ));
     }
-    futures::future::join_all(account_ids.into_iter().map(|a| get_steam(&ch_client_ro, a)))
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .map(Json)
+    get_steam_many(&ch_client_ro, &account_ids).await.map(Json)
 }
 
 async fn search_steam(
