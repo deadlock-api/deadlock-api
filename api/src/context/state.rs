@@ -101,6 +101,7 @@ impl AppState {
             .with_client_options(
                 ClientOptions::default()
                     .with_allow_http2()
+                    .with_allow_http(true)
                     .with_timeout(Duration::from_secs(5)),
             )
             .with_retry(RetryConfig {
