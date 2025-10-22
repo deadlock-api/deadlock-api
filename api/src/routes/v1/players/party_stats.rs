@@ -72,7 +72,7 @@ fn build_query(account_id: u32, query: &PartyStatsQuery) -> String {
         parties AS (
             SELECT match_id, groupUniqArray(account_id) AS account_ids, any(won) AS won
             FROM match_player
-            WHERE account_id = 74963221 OR (match_id, team, party) IN t_parties
+            WHERE account_id = {account_id} OR (match_id, team, party) IN t_parties
             GROUP BY match_id
         )
     SELECT
