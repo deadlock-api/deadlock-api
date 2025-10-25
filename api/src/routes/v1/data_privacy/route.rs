@@ -57,6 +57,46 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     Ok(())
 }
 
+async fn update_row_policy(
+    pg_client: &sqlx::Pool<sqlx::Postgres>,
+    ch_client: &clickhouse::Client,
+) -> APIResult<()> {
+    let protected_accounts: Vec<i32> = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
+        .fetch_all(pg_client)
+        .await?
+        .into_iter()
+        .map(|record| record.steam_id)
+        .collect();
+
+    if protected_accounts.is_empty() {
+        let query = "DROP ROW POLICY IF EXISTS gdpr_protection ON default.*";
+        ch_client.query(query).execute().await?;
+        return Ok(());
+    }
+
+    let protected_accounts_list = protected_accounts
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<String>>()
+        .join(", ");
+    let policy_queries = [
+        format!(
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_pmh ON player_match_history AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
+        ),
+        format!(
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
+        ),
+        format!(
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
+        ),
+    ];
+    for policy_query in &policy_queries {
+        ch_client.query(policy_query).execute().await?;
+    }
+
+    Ok(())
+}
+
 #[utoipa::path(
     post,
     path = "/request-deletion",
@@ -89,7 +129,9 @@ pub(super) async fn request_deletion(
             format!("Failed to verify OpenID parameters: {e}"),
         ));
     }
-    protect_account(&state.pg_client, steam_id).await
+    protect_account(&state.pg_client, steam_id).await?;
+    update_row_policy(&state.pg_client, &state.ch_client).await?;
+    Ok(())
 }
 
 #[utoipa::path(
@@ -126,5 +168,7 @@ pub(super) async fn request_tracking(
             format!("Failed to verify OpenID parameters: {e}"),
         ));
     }
-    unprotect_account(&state.pg_client, steam_id).await
+    unprotect_account(&state.pg_client, steam_id).await?;
+    update_row_policy(&state.pg_client, &state.ch_client).await?;
+    Ok(())
 }
