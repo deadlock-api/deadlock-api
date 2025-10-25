@@ -257,6 +257,13 @@ pub(super) async fn card(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
     state
         .rate_limit_client
         .apply_limits(

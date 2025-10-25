@@ -12,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -390,9 +390,30 @@ Results are cached for **1 hour** based on the unique combination of query param
     "
 )]
 pub(crate) async fn item_stats(
-    Query(query): Query<ItemStatsQuery>,
+    Query(mut query): Query<ItemStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        query.account_ids = Some(
+            account_ids
+                .into_iter()
+                .filter(|id| !protected_users.contains(id))
+                .collect::<Vec<_>>(),
+        );
+    }
+    #[allow(deprecated)]
+    if let Some(account_id) = query.account_id
+        && state
+            .steam_client
+            .is_user_protected(&state.pg_client, account_id)
+            .await?
+    {
+        return Err(APIError::protected_user());
+    }
     get_item_stats(&state.ch_client_ro, query).await.map(Json)
 }
 

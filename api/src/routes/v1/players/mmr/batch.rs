@@ -185,6 +185,14 @@ pub(super) async fn mmr(
     }): Query<MMRBatchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    let account_ids = account_ids
+        .into_iter()
+        .filter(|id| !protected_users.contains(id))
+        .collect::<Vec<_>>();
     if account_ids.len() > 1_000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -221,6 +229,14 @@ pub(super) async fn hero_mmr(
     }): Query<MMRBatchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    let account_ids = account_ids
+        .into_iter()
+        .filter(|id| !protected_users.contains(id))
+        .collect::<Vec<_>>();
     if account_ids.len() > 1_000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,

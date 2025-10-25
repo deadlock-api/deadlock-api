@@ -11,7 +11,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
@@ -292,9 +292,30 @@ Results are cached for **1 hour** based on the combination of query parameters p
     "
 )]
 pub(super) async fn hero_synergies_stats(
-    Query(query): Query<HeroSynergyStatsQuery>,
+    Query(mut query): Query<HeroSynergyStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        query.account_ids = Some(
+            account_ids
+                .into_iter()
+                .filter(|id| !protected_users.contains(id))
+                .collect::<Vec<_>>(),
+        );
+    }
+    #[allow(deprecated)]
+    if let Some(account_id) = query.account_id
+        && state
+            .steam_client
+            .is_user_protected(&state.pg_client, account_id)
+            .await?
+    {
+        return Err(APIError::protected_user());
+    }
     get_hero_synergy_stats(&state.ch_client_ro, query)
         .await
         .map(Json)

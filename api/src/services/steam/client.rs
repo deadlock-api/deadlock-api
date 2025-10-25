@@ -4,6 +4,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use itertools::Itertools;
 use metrics::counter;
 use prost::Message;
 use rand::prelude::IndexedRandom;
@@ -120,6 +121,25 @@ impl SteamClient {
         get_current_client_version(&self.http_client).await
     }
 
+    /// Is the given Steam ID in the protected users list
+    pub(crate) async fn is_user_protected(
+        &self,
+        pg_client: &sqlx::Pool<sqlx::Postgres>,
+        steam_id: u32,
+    ) -> sqlx::Result<bool> {
+        get_protected_users_cached(pg_client)
+            .await
+            .map(|p| p.contains(&steam_id))
+    }
+
+    /// Get protected users list
+    pub(crate) async fn get_protected_users(
+        &self,
+        pg_client: &sqlx::Pool<sqlx::Postgres>,
+    ) -> sqlx::Result<Vec<u32>> {
+        get_protected_users_cached(pg_client).await
+    }
+
     /// Fetch a Steam account name by Steam ID
     pub(crate) async fn fetch_steam_account_name(
         &self,
@@ -127,6 +147,16 @@ impl SteamClient {
         state: &AppState,
         steam_id: u32,
     ) -> Result<String, SteamAccountNameError> {
+        if self
+            .is_user_protected(&state.pg_client, steam_id)
+            .await
+            .unwrap_or(false)
+        {
+            return Err(SteamAccountNameError::FetchError(
+                "User is protected".to_owned(),
+            ));
+        }
+
         fetch_steam_account_name_cached(
             rate_limit_key,
             state,
@@ -222,6 +252,26 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch
                 format!("Failed to parse patch notes: {e}"),
             )
         })
+}
+
+#[cached(
+    ty = "TimedCache<u8, Vec<u32>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+async fn get_protected_users_cached(
+    ph_client: &sqlx::Pool<sqlx::Postgres>,
+) -> sqlx::Result<Vec<u32>> {
+    let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
+        .fetch_all(ph_client)
+        .await?
+        .into_iter()
+        .map(|r| r.steam_id)
+        .map(i32::cast_unsigned)
+        .collect_vec();
+    Ok(protected_users)
 }
 
 #[cached(

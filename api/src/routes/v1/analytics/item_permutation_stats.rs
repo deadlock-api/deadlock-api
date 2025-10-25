@@ -260,9 +260,30 @@ Results are cached for **1 hour** based on the unique combination of query param
     "
 )]
 pub(super) async fn item_permutation_stats(
-    Query(query): Query<ItemPermutationStatsQuery>,
+    Query(mut query): Query<ItemPermutationStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        query.account_ids = Some(
+            account_ids
+                .into_iter()
+                .filter(|id| !protected_users.contains(id))
+                .collect::<Vec<_>>(),
+        );
+    }
+    #[allow(deprecated)]
+    if let Some(account_id) = query.account_id
+        && state
+            .steam_client
+            .is_user_protected(&state.pg_client, account_id)
+            .await?
+    {
+        return Err(APIError::protected_user());
+    }
     if query.comb_size.is_some() && query.item_ids.is_some() {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,

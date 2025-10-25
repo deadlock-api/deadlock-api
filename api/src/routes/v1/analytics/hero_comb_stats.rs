@@ -311,9 +311,30 @@ Results are cached for **1 hour**. The cache key is determined by the specific c
     "
 )]
 pub(crate) async fn hero_comb_stats(
-    Query(query): Query<HeroCombStatsQuery>,
+    Query(mut query): Query<HeroCombStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        query.account_ids = Some(
+            account_ids
+                .into_iter()
+                .filter(|id| !protected_users.contains(id))
+                .collect::<Vec<_>>(),
+        );
+    }
+    #[allow(deprecated)]
+    if let Some(account_id) = query.account_id
+        && state
+            .steam_client
+            .is_user_protected(&state.pg_client, account_id)
+            .await?
+    {
+        return Err(APIError::protected_user());
+    }
     get_comb_stats(&state.ch_client_ro, query).await.map(Json)
 }
 

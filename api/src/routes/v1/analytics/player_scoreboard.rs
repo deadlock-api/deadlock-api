@@ -234,9 +234,21 @@ This endpoint returns the player scoreboard.
     "
 )]
 pub(crate) async fn player_scoreboard(
-    Query(query): Query<PlayerScoreboardQuery>,
+    Query(mut query): Query<PlayerScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        query.account_ids = Some(
+            account_ids
+                .into_iter()
+                .filter(|id| !protected_users.contains(id))
+                .collect::<Vec<_>>(),
+        );
+    }
     get_player_scoreboard(&state.ch_client_ro, query)
         .await
         .map(Json)

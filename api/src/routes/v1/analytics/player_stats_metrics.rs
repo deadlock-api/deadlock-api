@@ -737,9 +737,21 @@ Results are cached for **1 hour** based on the unique combination of query param
     "
 )]
 pub(crate) async fn player_stats_metrics(
-    Query(query): Query<PlayerStatsMetricsQuery>,
+    Query(mut query): Query<PlayerStatsMetricsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        query.account_ids = Some(
+            account_ids
+                .into_iter()
+                .filter(|id| !protected_users.contains(id))
+                .collect::<Vec<_>>(),
+        );
+    }
     get_player_stats_metrics(&state.ch_client_ro, query)
         .await
         .map(|rows| {

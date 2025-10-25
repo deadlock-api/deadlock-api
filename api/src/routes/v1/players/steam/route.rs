@@ -88,9 +88,18 @@ pub(crate) async fn get_steam_single(
 
 pub(crate) async fn steam_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    State(AppState { ch_client_ro, .. }): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    get_steam_single(&ch_client_ro, account_id).await.map(Json)
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
+    get_steam_single(&state.ch_client_ro, account_id)
+        .await
+        .map(Json)
 }
 
 fn build_query_many(account_ids: &[u32]) -> String {
@@ -149,7 +158,7 @@ See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(
 )]
 pub(super) async fn steam(
     Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
-    State(AppState { ch_client_ro, .. }): State<AppState>,
+    State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let account_ids = account_ids
         .into_iter()
@@ -167,7 +176,17 @@ pub(super) async fn steam(
             "Too many account ids provided.",
         ));
     }
-    get_steam_many(&ch_client_ro, &account_ids).await.map(Json)
+    let protected_users = state
+        .steam_client
+        .get_protected_users(&state.pg_client)
+        .await?;
+    let account_ids = account_ids
+        .into_iter()
+        .filter(|id| !protected_users.contains(id))
+        .collect::<Vec<_>>();
+    get_steam_many(&state.ch_client_ro, &account_ids)
+        .await
+        .map(Json)
 }
 
 async fn search_steam(

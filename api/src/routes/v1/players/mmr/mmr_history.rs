@@ -7,7 +7,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
@@ -167,6 +167,13 @@ pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
     get_mmr_history(&state.ch_client_ro, account_id)
         .await
         .map(Json)
@@ -192,6 +199,13 @@ pub(super) async fn hero_mmr_history(
     }): Path<HeroMMRHistoryQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
     get_hero_mmr_history(&state.ch_client_ro, account_id, hero_id)
         .await
         .map(Json)

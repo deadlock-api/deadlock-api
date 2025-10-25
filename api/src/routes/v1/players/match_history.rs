@@ -279,6 +279,14 @@ pub(super) async fn match_history(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<(HeaderMap, Json<PlayerMatchHistory>)> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
+
     if query.force_refetch && query.only_stored_history {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,

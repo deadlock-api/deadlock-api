@@ -75,6 +75,13 @@ impl APIError {
             message: message.into(),
         }
     }
+
+    pub(super) fn protected_user() -> Self {
+        Self::StatusMsg {
+            status: StatusCode::FORBIDDEN,
+            message: "The requested user is protected.".to_owned(),
+        }
+    }
 }
 
 impl IntoResponse for APIError {

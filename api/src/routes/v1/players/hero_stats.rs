@@ -285,6 +285,13 @@ pub(crate) async fn hero_stats_single(
     Query(query): Query<HeroStatsQueryOld>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
     let query = HeroStatsQuery {
         account_ids: vec![account_id],
         min_unix_timestamp: query.min_unix_timestamp,

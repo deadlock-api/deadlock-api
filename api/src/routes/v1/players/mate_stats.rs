@@ -8,7 +8,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::utils::parse::default_true;
 use crate::utils::types::AccountIdQuery;
 
@@ -174,6 +174,13 @@ pub(super) async fn mate_stats(
     Query(query): Query<MateStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
     get_mate_stats(&state.ch_client_ro, account_id, query)
         .await
         .map(Json)
