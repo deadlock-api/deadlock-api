@@ -29,6 +29,7 @@ async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) 
         r#"
         INSERT INTO protected_user_accounts (steam_id)
         VALUES ($1)
+        ON CONFLICT (steam_id) DO NOTHING
         "#,
         steam_id_i32
     )
