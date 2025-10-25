@@ -30,8 +30,8 @@ export default function DataPrivacy() {
 
     try {
       const response = await sendDataPrivacyRequest(callbackData.action, {
-        steamId: callbackData.steamId,
-        openIdParams: callbackData.openIdParams,
+        steam_id: callbackData.steamId,
+        open_id_params: callbackData.openIdParams,
       });
 
       if (response.success) {

@@ -6,8 +6,8 @@
 import { API_ORIGIN } from "./constants";
 
 export interface DataPrivacyRequest {
-  steamId: string;
-  openIdParams: Record<string, string>;
+  steam_id: string;
+  open_id_params: Record<string, string>;
 }
 
 export interface DataPrivacyResponse {
@@ -130,7 +130,7 @@ export async function requestTrackingReEnable(requestData: DataPrivacyRequest): 
  */
 export async function sendDataPrivacyRequest(
   action: "deletion" | "tracking",
-  requestData: DataPrivacyRequest
+  requestData: DataPrivacyRequest,
 ): Promise<DataPrivacyResponse> {
   if (action === "deletion") {
     return requestDataDeletion(requestData);
