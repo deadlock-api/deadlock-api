@@ -5,6 +5,7 @@ use crate::context::AppState;
 pub mod analytics;
 pub mod builds;
 mod commands;
+mod data_privacy;
 mod esports;
 pub mod info;
 mod leaderboard;
@@ -15,6 +16,7 @@ pub mod sql;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
+        .nest("/data-privacy", data_privacy::router())
         .nest("/matches", matches::router())
         .nest("/players", players::router())
         .nest("/leaderboard", leaderboard::router())

@@ -19,8 +19,8 @@ use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
-    GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError, SteamProxyError,
-    SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+    GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError, SteamAccountVerifyError,
+    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
 };
 
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
@@ -130,6 +130,38 @@ impl SteamClient {
         get_protected_users_cached(pg_client)
             .await
             .map(|p| p.contains(&steam_id))
+    }
+
+    pub(crate) async fn verify_user_owns_steam_id(
+        &self,
+        open_id_params: &std::collections::HashMap<String, String>,
+        steam_id: u64,
+    ) -> Result<(), SteamAccountVerifyError> {
+        // make a request to the OpenID provider to verify the parameters
+        let mut params = open_id_params.clone();
+        params.insert("openid.mode".to_owned(), "check_authentication".to_owned());
+        let response = self
+            .http_client
+            .post("https://steamcommunity.com/openid/login")
+            .form(&params)
+            .send()
+            .await?
+            .text()
+            .await?;
+        // check the response for "is_valid:true"
+        if !response.contains("is_valid:true") {
+            return Err(SteamAccountVerifyError::VerificationFailed);
+        }
+        // check that the claimed Steam ID matches the provided Steam ID
+        let claimed_steam_id = open_id_params
+            .get("openid.claimed_id")
+            .and_then(|url| url.rsplit('/').next())
+            .and_then(|id_str| id_str.parse::<u64>().ok())
+            .ok_or_else(|| SteamAccountVerifyError::VerificationFailed)?;
+        if claimed_steam_id != steam_id {
+            return Err(SteamAccountVerifyError::VerificationFailed);
+        }
+        Ok(())
     }
 
     /// Get protected users list

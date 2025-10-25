@@ -88,6 +88,15 @@ pub(crate) enum SteamAccountNameError {
     RateLimitExceeded(String),
 }
 
+/// Error type for Steam account name fetching
+#[derive(Debug, Error)]
+pub(crate) enum SteamAccountVerifyError {
+    #[error(transparent)]
+    FetchError(#[from] reqwest::Error),
+    #[error("Failed to verify ownership")]
+    VerificationFailed,
+}
+
 #[derive(Debug, Deserialize)]
 pub(super) struct Rss {
     pub(crate) channel: Channel,

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM protected_user_accounts\n        WHERE steam_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "02cbaa28c3af4ce34c651d680d8ab41ca6c2173d37ee459eb6309df9ddd25017"
+}
