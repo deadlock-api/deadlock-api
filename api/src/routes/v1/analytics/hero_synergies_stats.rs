@@ -300,12 +300,14 @@ pub(super) async fn hero_synergies_stats(
             .steam_client
             .get_protected_users(&state.pg_client)
             .await?;
-        query.account_ids = Some(
-            account_ids
-                .into_iter()
-                .filter(|id| !protected_users.contains(id))
-                .collect::<Vec<_>>(),
-        );
+        let filtered_account_ids = account_ids
+            .into_iter()
+            .filter(|id| !protected_users.contains(id))
+            .collect::<Vec<_>>();
+        if filtered_account_ids.is_empty() {
+            return Err(APIError::protected_user());
+        }
+        query.account_ids = Some(filtered_account_ids);
     }
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id

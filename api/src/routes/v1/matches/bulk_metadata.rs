@@ -341,10 +341,24 @@ This endpoints lets you fetch multiple match metadata at once. The response is a
     "
 )]
 pub(super) async fn bulk_metadata(
-    Query(query): Query<BulkMatchMetadataQuery>,
+    Query(mut query): Query<BulkMatchMetadataQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if let Some(account_ids) = query.account_ids {
+        let protected_users = state
+            .steam_client
+            .get_protected_users(&state.pg_client)
+            .await?;
+        let filtered_account_ids = account_ids
+            .into_iter()
+            .filter(|id| !protected_users.contains(id))
+            .collect::<Vec<_>>();
+        if filtered_account_ids.is_empty() {
+            return Err(APIError::protected_user());
+        }
+        query.account_ids = Some(filtered_account_ids);
+    }
     state
         .rate_limit_client
         .apply_limits(

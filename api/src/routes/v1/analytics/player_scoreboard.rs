@@ -11,7 +11,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
@@ -242,12 +242,14 @@ pub(crate) async fn player_scoreboard(
             .steam_client
             .get_protected_users(&state.pg_client)
             .await?;
-        query.account_ids = Some(
-            account_ids
-                .into_iter()
-                .filter(|id| !protected_users.contains(id))
-                .collect::<Vec<_>>(),
-        );
+        let filtered_account_ids = account_ids
+            .into_iter()
+            .filter(|id| !protected_users.contains(id))
+            .collect::<Vec<_>>();
+        if filtered_account_ids.is_empty() {
+            return Err(APIError::protected_user());
+        }
+        query.account_ids = Some(filtered_account_ids);
     }
     get_player_scoreboard(&state.ch_client_ro, query)
         .await
