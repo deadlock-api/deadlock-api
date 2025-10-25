@@ -16,6 +16,8 @@ use core::time::Duration;
 use std::env;
 
 use anyhow::Result;
+use cached::proc_macro::cached;
+use cached::TimedCache;
 use itertools::Itertools;
 use metrics::{counter, gauge};
 use models::SteamPlayerSummary;
@@ -44,11 +46,12 @@ async fn main() -> Result<()> {
 
     let http_client = reqwest::Client::new();
     let ch_client = common::get_ch_client()?;
+    let pg_client = common::get_pg_client().await?;
 
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     loop {
         interval.tick().await;
-        if let Err(e) = fetch_and_update_profiles(&http_client, &ch_client).await {
+        if let Err(e) = fetch_and_update_profiles(&http_client, &ch_client, &pg_client).await {
             error!("Error updating Steam profiles: {e}");
         }
     }
@@ -58,8 +61,14 @@ async fn main() -> Result<()> {
 async fn fetch_and_update_profiles(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
+    pg_client: &sqlx::Pool<sqlx::Postgres>,
 ) -> Result<()> {
-    let account_ids = get_account_ids_to_update(ch_client).await?;
+    let protected_users = get_protected_users_cached(pg_client).await?;
+    let account_ids = get_account_ids_to_update(ch_client)
+        .await?
+        .into_iter()
+        .filter(|id| !protected_users.contains(id))
+        .collect_vec();
     gauge!("steam_profile_fetcher.account_ids_to_update").set(account_ids.len() as f64);
 
     if account_ids.len() < 100 {
@@ -175,4 +184,24 @@ async fn delete_profiles(
         .bind(profiles)
         .execute()
         .await
+}
+
+#[cached(
+    ty = "TimedCache<u8, Vec<u32>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+async fn get_protected_users_cached(
+    ph_client: &sqlx::Pool<sqlx::Postgres>,
+) -> sqlx::Result<Vec<u32>> {
+    let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
+        .fetch_all(ph_client)
+        .await?
+        .into_iter()
+        .map(|r| r.steam_id)
+        .map(i32::cast_unsigned)
+        .collect_vec();
+    Ok(protected_users)
 }

@@ -3599,6 +3599,7 @@ name = "steam-profile-fetcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cached",
  "clickhouse",
  "common",
  "itertools 0.14.0",
@@ -3607,6 +3608,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_repr",
+ "sqlx",
  "tokio",
  "tracing",
 ]
