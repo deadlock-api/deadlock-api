@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -67,6 +67,7 @@ export default function DataPrivacy() {
     try {
       redirectToSteamAuth("deletion");
     } catch (error) {
+      console.error(error);
       setMessage({
         type: "error",
         text: "Failed to initiate Steam authentication. Please try again.",
@@ -78,6 +79,7 @@ export default function DataPrivacy() {
     try {
       redirectToSteamAuth("tracking");
     } catch (error) {
+      console.error(error);
       setMessage({
         type: "error",
         text: "Failed to initiate Steam authentication. Please try again.",
@@ -148,7 +150,8 @@ export default function DataPrivacy() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This will permanently delete all data associated with your Steam account, including:
+              This will permanently delete all data associated with your Steam account and block future API requests,
+              including:
             </p>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
               <li>Match history and statistics</li>
