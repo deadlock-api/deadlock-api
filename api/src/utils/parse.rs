@@ -28,6 +28,10 @@ pub(crate) fn steamid64_to_steamid3(steam_id: u64) -> Result<u32, TryFromIntErro
     u32::try_from(steam_id - STEAM_ID_64_IDENT)
 }
 
+pub(crate) fn steamid3_to_steamid64(steam_id: u32) -> u64 {
+    u64::from(steam_id) + STEAM_ID_64_IDENT
+}
+
 pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
@@ -204,10 +208,17 @@ mod tests {
     #[rstest]
     #[case(76561198123456789u64, 163191061u32)] // Steam ID 64 to Steam ID 32
     #[case(123456u64, 123456u32)] // Steam ID 32 stays the same
-    fn test_parse_steam_id_valid(#[case] input: u64, #[case] expected: u32) {
+    fn test_parse_steam_id3_valid(#[case] input: u64, #[case] expected: u32) {
         let json = format!("{{\"steam_id\": {input}}}");
         let result: SteamIdTestStruct = serde_json::from_str(&json).unwrap();
         assert_eq!(result.steam_id, expected);
+    }
+
+    #[rstest]
+    #[case(123456u32, 76561197960389184u64)] // Steam ID 32 to Steam ID 64
+    fn test_parse_steam_id64_valid(#[case] input: u32, #[case] expected: u64) {
+        let result = steamid3_to_steamid64(input);
+        assert_eq!(result, expected);
     }
 
     #[rstest]
