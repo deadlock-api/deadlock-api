@@ -35,16 +35,13 @@ pub(crate) async fn protected_user_accounts(
         .map(|s| s.to_string())
         .map(String::into_bytes)
         .collect_vec();
+    let mut search_bytes = search_bytes_steamid3
+        .iter()
+        .chain(search_bytes_steamid64.iter());
 
     let path = request.uri().path().as_bytes().to_vec();
 
-    // Check Path for Protected User Accounts
-    let is_protected = search_bytes_steamid3
-        .iter()
-        .any(|s| memchr::memmem::find(&path, s).is_some())
-        || search_bytes_steamid64
-            .iter()
-            .any(|s| memchr::memmem::find(&path, s).is_some());
+    let is_protected = search_bytes.any(|s| memchr::memmem::find(&path, s).is_some());
     if is_protected
         && let Ok(resp) = Response::builder()
             .status(StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS)
