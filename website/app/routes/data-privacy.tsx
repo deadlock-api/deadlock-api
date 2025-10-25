@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
@@ -159,35 +170,75 @@ export default function DataPrivacy() {
               <li>Ranking data</li>
               <li>Any stored preferences</li>
             </ul>
-            <Button onClick={handleDataDeletion} variant="destructive" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                "Request Data Deletion"
-              )}
-            </Button>
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 mb-4">
+              <p className="text-sm text-yellow-400 font-medium">
+                ⚠️ Warning: This action is permanent and cannot be undone. Even if you re-enable tracking later, your
+                historical data may not be recovered.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    "Request Data Deletion"
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-red-400">⚠️ Permanent Data Deletion Warning</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      <strong>This action is permanent and cannot be undone.</strong>
+                    </p>
+                    <p>
+                      Once you confirm data deletion, all your information will be permanently removed from our systems,
+                      including:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 ml-4">
+                      <li>Match history and statistics</li>
+                      <li>Profile information</li>
+                      <li>Ranking data</li>
+                      <li>Any stored preferences</li>
+                    </ul>
+                    <p className="font-semibold text-yellow-400">
+                      Important: Even if you re-enable tracking later, we will not be able to recover your historical
+                      data. You will start with a completely fresh profile.
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDataDeletion} className="bg-red-600 hover:bg-red-700">
+                    Yes, Delete My Data Permanently
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
 
@@ -206,6 +257,12 @@ export default function DataPrivacy() {
               <li>Enable personalized features</li>
               <li>Contribute to community analytics</li>
             </ul>
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3 mt-4">
+              <p className="text-sm text-blue-400">
+                <strong>Note:</strong> Re-enabling tracking will start fresh data collection. Any historical data from
+                before deletion may not be recovered.
+              </p>
+            </div>
             <Button onClick={handleReEnableTracking} variant="default" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
