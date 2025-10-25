@@ -46,69 +46,13 @@ export default function NavHeader() {
             >
               Player
             </Link>
-            <a
-              href="https://assets.deadlock-api.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1 hover:text-primary transition-colors duration-100"
-              title="Assets API (external)"
+            <Link
+              to="/data-privacy"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
             >
-              Assets API
-              <svg
-                className="w-4 h-4 inline"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
-            <a
-              href="https://api.deadlock-api.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1 hover:text-primary transition-colors duration-100"
-              title="Game API (external)"
-            >
-              Game API
-              <svg
-                className="w-4 h-4 inline"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
-            <a
-              href="https://streamkit.deadlock-api.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1 hover:text-primary transition-colors duration-100"
-              title="Stream Kit (external)"
-            >
-              Stream Kit
-              <svg
-                className="w-4 h-4 inline"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
+              Data Privacy
+            </Link>
             <a
               href="https://www.patreon.com/user?u=68961896"
               target="_blank"
