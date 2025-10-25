@@ -755,7 +755,7 @@ impl Variable {
         .bot_id;
         let player_card = get_player_card(
             &state.steam_client,
-            &state.ch_client_ro,
+            &state.ch_client,
             steam_id,
             bot_username,
         )
