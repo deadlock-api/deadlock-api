@@ -3,11 +3,13 @@ use std::collections::HashMap;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
+use cached::Cached;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::steam::client::GET_PROTECTED_USERS_CACHED;
 use crate::utils;
 use crate::utils::parse::parse_steam_id;
 
@@ -35,6 +37,9 @@ async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) 
     )
     .execute(pg_client)
     .await?;
+
+    GET_PROTECTED_USERS_CACHED.lock().await.cache_clear();
+
     Ok(())
 }
 
@@ -54,6 +59,9 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     )
     .execute(pg_client)
     .await?;
+
+    GET_PROTECTED_USERS_CACHED.lock().await.cache_clear();
+
     Ok(())
 }
 

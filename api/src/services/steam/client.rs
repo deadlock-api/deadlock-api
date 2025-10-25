@@ -293,7 +293,7 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch
     convert = "{ 0 }",
     sync_writes = "default"
 )]
-async fn get_protected_users_cached(
+pub(crate) async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
 ) -> sqlx::Result<Vec<u32>> {
     let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
