@@ -36,9 +36,23 @@ pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let steam_id3 = u64::deserialize(deserializer)
-        .map_err(serde::de::Error::custom)
-        .and_then(|s| steamid64_to_steamid3(s).map_err(serde::de::Error::custom))?;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum SteamIdRaw {
+        U64(u64),
+        String(String),
+    }
+
+    let steam_id_u64 =
+        match SteamIdRaw::deserialize(deserializer).map_err(serde::de::Error::custom)? {
+            SteamIdRaw::U64(v) => v,
+            SteamIdRaw::String(s) => s
+                .trim()
+                .parse::<u64>()
+                .map_err(|_| serde::de::Error::custom("Invalid steam id string"))?,
+        };
+
+    let steam_id3 = steamid64_to_steamid3(steam_id_u64).map_err(serde::de::Error::custom)?;
     if steam_id3 == 0 {
         return Err(serde::de::Error::custom("Invalid steam id"));
     }
@@ -209,6 +223,15 @@ mod tests {
     #[case(76561198123456789u64, 163191061u32)] // Steam ID 64 to Steam ID 32
     #[case(123456u64, 123456u32)] // Steam ID 32 stays the same
     fn test_parse_steam_id3_valid(#[case] input: u64, #[case] expected: u32) {
+        let json = format!("{{\"steam_id\": {input}}}");
+        let result: SteamIdTestStruct = serde_json::from_str(&json).unwrap();
+        assert_eq!(result.steam_id, expected);
+    }
+
+    #[rstest]
+    #[case("76561198123456789", 163191061u32)] // Steam ID 64 to Steam ID 32
+    #[case("123456", 123456u32)] // Steam ID 32 stays the same
+    fn test_parse_steam_id3_valid_from_string(#[case] input: String, #[case] expected: u32) {
         let json = format!("{{\"steam_id\": {input}}}");
         let result: SteamIdTestStruct = serde_json::from_str(&json).unwrap();
         assert_eq!(result.steam_id, expected);
