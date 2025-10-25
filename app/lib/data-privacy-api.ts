@@ -47,10 +47,9 @@ export async function requestDataDeletion(requestData: DataPrivacyRequest): Prom
       };
     }
 
-    const data = await response.json();
     return {
       success: true,
-      message: data.message || "Data deletion request submitted successfully",
+      message: "Data deletion request submitted successfully",
     };
   } catch (error) {
     console.error("Error requesting data deletion:", error);
@@ -100,10 +99,9 @@ export async function requestTrackingReEnable(requestData: DataPrivacyRequest): 
       };
     }
 
-    const data = await response.json();
     return {
       success: true,
-      message: data.message || "Tracking re-enablement request submitted successfully",
+      message: "Tracking re-enablement request submitted successfully",
     };
   } catch (error) {
     console.error("Error requesting tracking re-enablement:", error);
