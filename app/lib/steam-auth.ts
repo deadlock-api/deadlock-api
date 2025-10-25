@@ -25,7 +25,7 @@ export function getCurrentDomain(): string {
 export function generateSteamAuthUrl(action: "deletion" | "tracking"): string {
   const currentDomain = getCurrentDomain();
   const returnUrl = `${currentDomain}/data-privacy?action=${action}`;
-  
+
   const params = new URLSearchParams({
     "openid.ns": "http://specs.openid.net/auth/2.0",
     "openid.mode": "checkid_setup",
@@ -64,7 +64,7 @@ export function validateSteamResponse(params: URLSearchParams): boolean {
     "openid.response_nonce",
     "openid.assoc_handle",
     "openid.signed",
-    "openid.sig"
+    "openid.sig",
   ];
 
   // Check if all required parameters are present
@@ -85,11 +85,7 @@ export function validateSteamResponse(params: URLSearchParams): boolean {
   }
 
   // Validate endpoint
-  if (params.get("openid.op_endpoint") !== "https://steamcommunity.com/openid/login") {
-    return false;
-  }
-
-  return true;
+  return params.get("openid.op_endpoint") === "https://steamcommunity.com/openid/login";
 }
 
 /**
@@ -147,9 +143,9 @@ export function redirectToSteamAuth(action: "deletion" | "tracking"): void {
   }
 
   try {
-    const authUrl = generateSteamAuthUrl(action);
-    window.location.href = authUrl;
+    window.location.href = generateSteamAuthUrl(action);
   } catch (error) {
+    console.error(error);
     throw new Error("Failed to generate Steam authentication URL");
   }
 }
@@ -159,7 +155,7 @@ export function redirectToSteamAuth(action: "deletion" | "tracking"): void {
  */
 export function cleanupCallbackUrl(): void {
   if (typeof window === "undefined") return;
-  
+
   // Remove all query parameters and replace the current history entry
   window.history.replaceState({}, document.title, window.location.pathname);
 }
