@@ -583,7 +583,6 @@ dependencies = [
  "clickhouse",
  "futures",
  "itertools",
- "memchr",
  "metrics",
  "mimalloc",
  "object_store",

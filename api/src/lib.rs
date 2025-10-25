@@ -47,7 +47,6 @@ use crate::context::AppState;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
-use crate::middleware::protect_user_accounts::protected_user_accounts;
 use crate::middleware::track_requests::track_requests;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
@@ -102,7 +101,6 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add robots.txt
         .route("/robots.txt", get(async || ROBOTS_TXT))
         // Add Middlewares
-        .layer(from_fn_with_state(state.clone(), protected_user_accounts))
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(write_api_key_to_header))
         .layer(from_fn_with_state(state.clone(), track_requests))
