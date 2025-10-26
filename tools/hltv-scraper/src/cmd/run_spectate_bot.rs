@@ -145,12 +145,11 @@ impl SpectatorBot {
     }
 
     async fn mark_spectated(&self, key: &str, smi: &SpectatedMatchInfo) -> Result<()> {
-        let payload = serde_json::to_string(&smi).unwrap();
+        let payload = serde_json::to_string(&smi)?;
         let _: () = self
             .redis
             .hset(key, [(smi.match_id.to_string(), payload)])
             .await?;
-
         let _: () = self
             .redis
             .hexpire(key, REDIS_EXPIRY, None, &smi.match_id.to_string())
