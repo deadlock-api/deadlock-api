@@ -5,6 +5,7 @@ use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use redis::{AsyncTypedCommands, ExpireOption};
 use serde::Serialize;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -97,7 +98,7 @@ Example Parsers:
 pub(super) async fn url(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
     rate_limit_key: RateLimitKey,
-    State(state): State<AppState>,
+    State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
@@ -145,6 +146,29 @@ pub(super) async fn url(
             lobby_id,
             ..
         } if r == c_msg_client_to_gc_spectate_user_response::EResponse::KESuccess as i32 => {
+            let payload = &serde_json::json!({
+                "match_type": "GapMatch",
+                "match_id": match_id,
+                "updated_at": chrono::Utc::now().timestamp(),
+            });
+            state
+                .redis_client
+                .hset(
+                    "spectated_matches",
+                    match_id.to_string(),
+                    serde_json::to_string(payload)?,
+                )
+                .await?;
+            state
+                .redis_client
+                .hexpire(
+                    "spectated_matches",
+                    900,
+                    ExpireOption::NONE,
+                    match_id.to_string(),
+                )
+                .await?;
+
             Ok(Json(MatchSpectateResponse {
                 broadcast_url,
                 lobby_id,
