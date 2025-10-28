@@ -326,9 +326,9 @@ pub(super) async fn match_history(
                 "match_history",
                 &[
                     Quota::ip_limit(3, Duration::from_secs(60)),
-                    Quota::key_limit(40, Duration::from_secs(60)),
-                    Quota::key_limit(600, Duration::from_secs(60 * 60)),
-                    Quota::global_limit(1500, Duration::from_secs(60 * 60)),
+                    Quota::key_limit(20, Duration::from_secs(60)),
+                    Quota::key_limit(400, Duration::from_secs(60 * 60)),
+                    Quota::global_limit(1000, Duration::from_secs(60 * 60)),
                 ],
             )
             .await
