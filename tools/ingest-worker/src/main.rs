@@ -117,7 +117,7 @@ async fn ingest_object(
     };
 
     // Ingest to Clickhouse
-    let match_info = parse_match_data(data);
+    let match_info = parse_match_data(&data);
     let match_info = match match_info {
         Ok(m)
             if m.match_outcome
@@ -159,7 +159,7 @@ async fn ingest_object(
 
 async fn list_ingest_objects(store: &impl ObjectStore) -> object_store::Result<Vec<Path>> {
     let exts = [".meta", ".meta.bz2", ".meta_hltv.bz2"];
-    let p = object_store::path::Path::from("ingest/metadata/");
+    let p = Path::from("ingest/metadata/");
 
     let mut metas = vec![];
     let mut list_stream = store.list(Some(&p));
@@ -204,14 +204,15 @@ async fn bzip_decompress(data: &[u8]) -> std::io::Result<Vec<u8>> {
     }
 }
 
-fn parse_match_data(data: Vec<u8>) -> anyhow::Result<MatchInfo> {
-    let data = match CMsgMatchMetaData::decode(data.as_slice()) {
-        Ok(m) => m.match_details.map_or(data, |m| m.clone()),
-        Err(_) => data,
+fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
+    let data = match CMsgMatchMetaData::decode(buf) {
+        Ok(m) => m.match_details.map_or(buf.to_owned(), |m| m.clone()),
+        Err(_) => buf.to_owned(),
     };
     let data = data.as_slice();
     let data = if let Ok(m) = CMsgMatchMetaDataContents::decode(data).or_else(|_| {
         CMsgMatchMetaDataContentsPatched::decode(data)
+            .or_else(|_| CMsgMatchMetaDataContentsPatched::decode(buf))
             .map(|p| p.encode_to_vec())
             .and_then(|p| CMsgMatchMetaDataContents::decode(p.as_slice()))
     }) {
