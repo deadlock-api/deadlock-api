@@ -17,7 +17,7 @@ use prost::Message;
 use serde::Deserialize;
 use tokio::io::AsyncReadExt;
 use tokio::sync::OnceCell;
-use tracing::debug;
+use tracing::{debug, error};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
@@ -133,13 +133,28 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
     let match_data = CMsgMatchMetaData::decode(buf.as_slice())?
         .match_details
         .ok_or_else(|| APIError::internal("Failed to parse match metadata: No data"))?;
-    Ok(
-        CMsgMatchMetaDataContents::decode(match_data.as_slice()).or_else(|_| {
-            CMsgMatchMetaDataContentsPatched::decode(match_data.as_slice())
-                .map(|p| p.encode_to_vec())
-                .and_then(|p| CMsgMatchMetaDataContents::decode(p.as_slice()))
-        })?,
-    )
+    if let Ok(data) = CMsgMatchMetaDataContents::decode(match_data.as_slice()) {
+        return Ok(data);
+    }
+
+    match CMsgMatchMetaDataContentsPatched::decode(match_data.as_slice())
+        .or_else(|_| CMsgMatchMetaDataContentsPatched::decode(buf.as_slice()))
+    {
+        Ok(patched) => {
+            let encoded = patched.encode_to_vec();
+            match CMsgMatchMetaDataContents::decode(encoded.as_slice()) {
+                Ok(data) => Ok(data),
+                Err(e) => {
+                    error!("Failed to decode metadata after patch: {e}");
+                    Err(e.into())
+                }
+            }
+        }
+        Err(e) => {
+            debug!("Failed to decode patched metadata: {e}");
+            Err(e.into())
+        }
+    }
 }
 
 #[utoipa::path(
