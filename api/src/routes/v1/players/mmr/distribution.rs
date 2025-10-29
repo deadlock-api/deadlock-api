@@ -10,7 +10,9 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
-use crate::routes::v1::players::mmr::mmr_history::{SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::routes::v1::players::mmr::mmr_history::{
+    LOSS_PENALTY, SMOOTHING_FACTOR, WIN_BOOST, WINDOW_SIZE,
+};
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -88,11 +90,13 @@ fn build_mmr_query(query: &MMRDistributionQuery) -> String {
     WITH
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
+        {WIN_BOOST} as win_boost,
+        {LOSS_PENALTY} as loss_penalty,
         arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         t_matches AS (SELECT account_id,
                              match_id,
                              assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
-                             (intDiv(current_match_badge, 10) - 1) * 6 + current_match_badge % 10               AS mmr
+                             (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) + if(match_result = player_team, win_boost, loss_penalty) AS mmr
                       FROM player_match_history
                                INNER JOIN match_info USING (match_id)
                       WHERE current_match_badge > 0
@@ -109,6 +113,7 @@ fn build_mmr_query(query: &MMRDistributionQuery) -> String {
         distribution AS (SELECT toUInt32(clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66)) AS player_score,
                                 uniq(account_id)                                                            as players
                          FROM mmr_data
+                         WHERE length(mmr_window) >= window_size
                          GROUP BY player_score)
     SELECT toUInt8(if(player_score <= 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
            players
@@ -126,6 +131,8 @@ fn build_hero_mmr_distribution_query(hero_id: u8, query: &MMRDistributionQuery) 
     WITH
         {WINDOW_SIZE} as window_size,
         {SMOOTHING_FACTOR} as k,
+        {WIN_BOOST} as win_boost,
+        {LOSS_PENALTY} as loss_penalty,
         arrayMap(x -> pow(x, -k), range(1, window_size + 1)) AS exp_weights,
         t_matches AS (
             SELECT
@@ -133,7 +140,7 @@ fn build_hero_mmr_distribution_query(hero_id: u8, query: &MMRDistributionQuery) 
                 match_id,
                 start_time,
                 assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
-                (intDiv(current_match_badge, 10) - 1) * 6 + current_match_badge % 10 AS mmr
+                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) + if(match_result = player_team, win_boost, loss_penalty) AS mmr
             FROM player_match_history
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
@@ -152,6 +159,7 @@ fn build_hero_mmr_distribution_query(hero_id: u8, query: &MMRDistributionQuery) 
         distribution AS (SELECT toUInt32(clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66)) AS player_score,
                                 uniq(account_id)                                                            as players
                          FROM mmr_data
+                         WHERE length(mmr_window) >= window_size
                          GROUP BY player_score)
     SELECT toUInt8(if(player_score <= 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
            players
