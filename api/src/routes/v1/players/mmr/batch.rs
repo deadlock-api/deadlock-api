@@ -27,7 +27,7 @@ pub(crate) struct MMRBatchQuery {
 #[derive(Deserialize, IntoParams, Default, Clone, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRPath {
     /// The hero ID to fetch the MMR history for. See more: <https://assets.deadlock-api.com/v2/heroes>
-    hero_id: u8,
+    pub(super) hero_id: u8,
 }
 
 fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
@@ -171,7 +171,7 @@ pub(crate) async fn get_mmr(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch mmr")
     ),
     tags = ["MMR"],
-    summary = "MMR",
+    summary = "Batch MMR",
     description = "
 Batch Player MMR
 
@@ -214,7 +214,7 @@ pub(super) async fn mmr(
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero mmr")
     ),
     tags = ["MMR"],
-    summary = "Hero MMR",
+    summary = "Batch Hero MMR",
     description = "
 Batch Player Hero MMR
 
