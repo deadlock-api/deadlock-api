@@ -152,7 +152,8 @@ impl IntoResponse for APIError {
                 .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
             Self::SteamProxy(e) => match e {
                 SteamProxyError::Request(_) => {
-                    Self::internal("Request to Steam failed.").into_response()
+                    Self::status_msg(StatusCode::SERVICE_UNAVAILABLE, "Request to Steam failed.")
+                        .into_response()
                 }
                 SteamProxyError::Base64(_) => {
                     Self::internal("Failed to decode base64 data from Steam.").into_response()
