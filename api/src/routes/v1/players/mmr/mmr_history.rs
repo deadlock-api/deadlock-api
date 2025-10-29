@@ -15,7 +15,7 @@ pub const WINDOW_SIZE: usize = 50;
 pub const SMOOTHING_FACTOR: f32 = 0.877;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub(super) struct HeroMMRHistoryQuery {
+pub(super) struct HeroMMRHistoryPath {
     /// The players `SteamID3`
     #[serde(default)]
     #[serde(deserialize_with = "parse_steam_id")]
@@ -182,7 +182,7 @@ pub(super) async fn mmr_history(
 #[utoipa::path(
     get,
     path = "/{account_id}/mmr-history/{hero_id}",
-    params(HeroMMRHistoryQuery),
+    params(HeroMMRHistoryPath),
     responses(
         (status = OK, description = "Hero MMR History", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -193,10 +193,10 @@ pub(super) async fn mmr_history(
     description = "Player Hero MMR History",
 )]
 pub(super) async fn hero_mmr_history(
-    Path(HeroMMRHistoryQuery {
+    Path(HeroMMRHistoryPath {
         account_id,
         hero_id,
-    }): Path<HeroMMRHistoryQuery>,
+    }): Path<HeroMMRHistoryPath>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if state

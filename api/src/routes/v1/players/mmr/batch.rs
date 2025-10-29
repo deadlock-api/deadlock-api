@@ -25,7 +25,7 @@ pub(crate) struct MMRBatchQuery {
 }
 
 #[derive(Deserialize, IntoParams, Default, Clone, Eq, PartialEq, Hash)]
-pub(super) struct HeroMMRQuery {
+pub(super) struct HeroMMRPath {
     /// The hero ID to fetch the MMR history for. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: u8,
 }
@@ -207,7 +207,7 @@ pub(super) async fn mmr(
 #[utoipa::path(
     get,
     path = "/mmr/{hero_id}",
-    params(MMRBatchQuery, HeroMMRQuery),
+    params(MMRBatchQuery, HeroMMRPath),
     responses(
         (status = OK, description = "Hero MMR", body = [MMRHistory]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -222,7 +222,7 @@ Filters for the last 90 days if no `max_match_id` is provided.
 ",
 )]
 pub(super) async fn hero_mmr(
-    Path(HeroMMRQuery { hero_id }): Path<HeroMMRQuery>,
+    Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(MMRBatchQuery {
         account_ids,
         max_match_id,
