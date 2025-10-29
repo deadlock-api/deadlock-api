@@ -151,34 +151,39 @@ impl IntoResponse for APIError {
                 )
                 .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
             Self::SteamProxy(e) => match e {
-                SteamProxyError::Request(_) => {
-                    Self::status_msg(StatusCode::SERVICE_UNAVAILABLE, "Request to Steam failed.")
+                SteamProxyError::Request(_) => Self::status_msg(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Failed to fetch data from Steam. Retry your request later.",
+                )
+                .into_response(),
+                SteamProxyError::Base64(_) => {
+                    Self::internal("Failed to decode base64 data from Steam. Retrying won't help.")
                         .into_response()
                 }
-                SteamProxyError::Base64(_) => {
-                    Self::internal("Failed to decode base64 data from Steam.").into_response()
-                }
-                SteamProxyError::Protobuf(_) => {
-                    Self::internal("Failed to parse protobuf message from Steam.").into_response()
-                }
+                SteamProxyError::Protobuf(_) => Self::internal(
+                    "Failed to parse protobuf message from Steam. Retrying won't help.",
+                )
+                .into_response(),
                 SteamProxyError::NoBaseUrl => {
                     Self::internal("No Steam proxy URL configured.").into_response()
                 }
             },
             Self::Protobuf(_) => {
-                Self::internal("Failed to parse protobuf message.").into_response()
+                Self::internal("Failed to parse protobuf message from Steam. Retrying won't help.")
+                    .into_response()
             }
             Self::Base64Decode(_) => {
-                Self::internal("Failed to decode base64 data.").into_response()
+                Self::internal("Failed to decode base64 data. Retrying won't help.").into_response()
             }
-            Self::Request(_) => Self::internal("Request failed.").into_response(),
-            Self::Clickhouse(_) => Self::internal("Clickhouse error.").into_response(),
-            Self::PostgreSQL(_) => Self::internal("PostgreSQL error.").into_response(),
-            Self::Redis(_) => Self::internal("Redis error.").into_response(),
-            Self::Json(_) => Self::internal("Json error.").into_response(),
-            Self::Io(_) => Self::internal("IO error.").into_response(),
-            Self::Snappy(_) => Self::internal("Snappy error.").into_response(),
-            Self::Fmt(_) => Self::internal("Fmt error.").into_response(),
+            Self::Request(_) => {
+                Self::internal("A needed request failed. Retry your request later.").into_response()
+            }
+            Self::Clickhouse(_) | Self::PostgreSQL(_) | Self::Redis(_) => {
+                Self::internal("Database error.").into_response()
+            }
+            Self::Json(_) | Self::Io(_) | Self::Snappy(_) | Self::Fmt(_) => {
+                Self::internal("Serialization error.").into_response()
+            }
         }
     }
 }
