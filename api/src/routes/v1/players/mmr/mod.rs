@@ -1,4 +1,5 @@
 pub(crate) mod batch;
+mod distribution;
 pub mod mmr_history;
 
 use utoipa::OpenApi;
@@ -32,6 +33,8 @@ struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(distribution::mmr))
+        .routes(routes!(distribution::hero_mmr))
         .routes(routes!(batch::mmr))
         .routes(routes!(batch::hero_mmr))
         .routes(routes!(mmr_history::mmr_history))
