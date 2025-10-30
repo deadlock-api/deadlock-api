@@ -70,33 +70,33 @@ pub(super) async fn ingest_salts(
 
     debug!("Received salts: {match_salts:?}");
 
+    let match_salts = futures::stream::iter(match_salts)
+        .map(|salt| {
+            let ch_client = state.ch_client.clone();
+            async move {
+                has_salts_in_clickhouse(
+                    &ch_client,
+                    salt.match_id,
+                    salt.metadata_salt.is_some(),
+                    salt.replay_salt.is_some(),
+                )
+                .await
+                .map(|v| (!v).then_some(salt))
+            }
+        })
+        .buffer_unordered(10)
+        .filter_map(|salt| async move { salt.ok().flatten() })
+        .collect::<Vec<_>>()
+        .await;
+
+    if match_salts.is_empty() {
+        return Ok(Json(json!({ "status": "success" })));
+    }
+
     // Check if the salts are valid if not sent by the internal tools
     let match_salts: Vec<ClickhouseSalts> = if bypass_check {
         match_salts
     } else {
-        let match_salts = futures::stream::iter(match_salts)
-            .map(|salt| {
-                let ch_client = state.ch_client.clone();
-                async move {
-                    has_salts_in_clickhouse(
-                        &ch_client,
-                        salt.match_id,
-                        salt.metadata_salt.is_some(),
-                        salt.replay_salt.is_some(),
-                    )
-                    .await
-                    .map(|v| (!v).then_some(salt))
-                }
-            })
-            .buffer_unordered(10)
-            .filter_map(|salt| async move { salt.ok().flatten() })
-            .collect::<Vec<_>>()
-            .await;
-
-        if match_salts.is_empty() {
-            return Ok(Json(json!({ "status": "success" })));
-        }
-
         futures::stream::iter(match_salts)
             .map(|salt| {
                 let steam_client = state.steam_client.clone();
