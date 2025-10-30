@@ -2,7 +2,7 @@ use core::time::Duration;
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -74,20 +74,45 @@ pub(super) async fn ingest_salts(
     let match_salts: Vec<ClickhouseSalts> = if bypass_check {
         match_salts
     } else {
+        let match_salts = futures::stream::iter(match_salts)
+            .map(|salt| {
+                let ch_client = state.ch_client.clone();
+                async move {
+                    has_salts_in_clickhouse(
+                        &ch_client,
+                        salt.match_id,
+                        salt.metadata_salt.is_some(),
+                        salt.replay_salt.is_some(),
+                    )
+                    .await
+                    .map(|v| (!v).then_some(salt))
+                }
+            })
+            .buffer_unordered(10)
+            .filter_map(|salt| async move { salt.ok().flatten() })
+            .collect::<Vec<_>>()
+            .await;
+
+        if match_salts.is_empty() {
+            return Ok(Json(json!({ "status": "success" })));
+        }
+
         futures::stream::iter(match_salts)
             .map(|salt| {
                 let steam_client = state.steam_client.clone();
-                let ch_client = state.ch_client.clone();
-                async move { validate_salt(&steam_client, &ch_client, &salt).await }
+                async move { validate_salt(&steam_client, &salt).await }
             })
             .buffer_unordered(10)
-            .filter_map(core::future::ready)
+            .filter_map(|salt| async move { salt })
             .collect::<Vec<_>>()
             .await
     };
 
     if match_salts.is_empty() {
-        return Ok(Json(json!({ "status": "success" })));
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "No valid salts provided",
+        ));
     }
 
     insert_salts_to_clickhouse(&state.ch_client, match_salts).await?;
@@ -128,23 +153,10 @@ pub(super) async fn has_salts_in_clickhouse(
 
 async fn validate_salt(
     steam_client: &SteamClient,
-    ch_client: &clickhouse::Client,
     salt: &ClickhouseSalts,
 ) -> Option<ClickhouseSalts> {
     if salt.match_id > 100000000 {
         warn!("Match id too high, skipping");
-        return None;
-    }
-
-    let has_salts_already = has_salts_in_clickhouse(
-        ch_client,
-        salt.match_id,
-        salt.metadata_salt.is_some(),
-        salt.replay_salt.is_some(),
-    )
-    .await
-    .unwrap_or_default();
-    if has_salts_already {
         return None;
     }
 
