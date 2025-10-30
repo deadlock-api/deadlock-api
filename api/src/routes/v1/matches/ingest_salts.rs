@@ -114,8 +114,8 @@ pub(super) async fn has_salts_in_clickhouse(
 ) -> clickhouse::error::Result<bool> {
     #[derive(Deserialize, Row)]
     struct HasSalts {
-        has_metadata: bool,
-        has_replay: bool,
+        has_metadata: Option<u8>,
+        has_replay: Option<u8>,
     }
     ch_client
         .query(
@@ -124,7 +124,10 @@ pub(super) async fn has_salts_in_clickhouse(
         .bind(match_id)
         .fetch_one::<HasSalts>()
         .await
-        .map(|s| s.has_metadata && metadata || s.has_replay && replay)
+        .map(|s| {
+            (s.has_metadata.unwrap_or_default() == 1 && metadata) ||
+                (s.has_replay.unwrap_or_default() == 1 && replay)
+        })
 }
 
 async fn validate_salt(
