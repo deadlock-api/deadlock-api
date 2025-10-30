@@ -4,12 +4,14 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
+use futures::StreamExt;
 use serde_json::json;
 use tracing::{debug, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ClickhouseSalts;
+use crate::services::steam::client::SteamClient;
 
 pub(super) async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,
@@ -68,39 +70,15 @@ pub(super) async fn ingest_salts(
     let match_salts: Vec<ClickhouseSalts> = if bypass_check {
         match_salts
     } else {
-        let mut valid_salts = Vec::with_capacity(match_salts.len());
-        for mut salt in match_salts {
-            if salt.match_id > 100000000 {
-                warn!("Match id too high, skipping");
-                continue;
-            }
-            if salt.metadata_salt.is_some() {
-                let is_valid = tryhard::retry_fn(|| state.steam_client.metadata_file_exists(&salt))
-                    .retries(30)
-                    .linear_backoff(Duration::from_millis(500))
-                    .await
-                    .is_ok();
-                if !is_valid {
-                    warn!("Invalid metadata salt for match_id {}", salt.match_id);
-                    salt.metadata_salt = None;
-                }
-            }
-            if salt.replay_salt.is_some() {
-                let is_valid = tryhard::retry_fn(|| state.steam_client.replay_file_exists(&salt))
-                    .retries(30)
-                    .linear_backoff(Duration::from_millis(500))
-                    .await
-                    .is_ok();
-                if !is_valid {
-                    warn!("Invalid replay salt for match_id {}", salt.match_id);
-                    salt.replay_salt = None;
-                }
-            }
-            if salt.metadata_salt.is_some() || salt.replay_salt.is_some() {
-                valid_salts.push(salt);
-            }
-        }
-        valid_salts
+        futures::stream::iter(match_salts)
+            .map(|salt| {
+                let steam_client = state.steam_client.clone();
+                async move { validate_salt(&steam_client, &salt).await }
+            })
+            .buffer_unordered(10)
+            .filter_map(core::future::ready)
+            .collect::<Vec<_>>()
+            .await
     };
 
     if match_salts.is_empty() {
@@ -113,4 +91,42 @@ pub(super) async fn ingest_salts(
     insert_salts_to_clickhouse(&state.ch_client, match_salts).await?;
 
     Ok(Json(json!({ "status": "success" })))
+}
+
+async fn validate_salt(
+    steam_client: &SteamClient,
+    salt: &ClickhouseSalts,
+) -> Option<ClickhouseSalts> {
+    if salt.match_id > 100000000 {
+        warn!("Match id too high, skipping");
+        return None;
+    }
+    let mut salt = salt.clone();
+    if salt.metadata_salt.is_some() {
+        let is_valid = tryhard::retry_fn(|| steam_client.metadata_file_exists(&salt))
+            .retries(30)
+            .linear_backoff(Duration::from_millis(500))
+            .await
+            .is_ok();
+        if !is_valid {
+            warn!("Invalid metadata salt for match_id {}", salt.match_id);
+            salt.metadata_salt = None;
+        }
+    }
+    if salt.replay_salt.is_some() {
+        let is_valid = tryhard::retry_fn(|| steam_client.replay_file_exists(&salt))
+            .retries(30)
+            .linear_backoff(Duration::from_millis(500))
+            .await
+            .is_ok();
+        if !is_valid {
+            warn!("Invalid replay salt for match_id {}", salt.match_id);
+            salt.replay_salt = None;
+        }
+    }
+    if salt.metadata_salt.is_some() || salt.replay_salt.is_some() {
+        Some(salt)
+    } else {
+        None
+    }
 }
