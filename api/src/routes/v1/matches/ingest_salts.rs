@@ -1,3 +1,4 @@
+use core::ops::Not;
 use core::time::Duration;
 
 use axum::Json;
@@ -70,19 +71,25 @@ pub(super) async fn ingest_salts(
 
     debug!("Received salts: {match_salts:?}");
 
-    let mut new_match_salts = Vec::with_capacity(match_salts.len());
-    for salt in match_salts {
-        let has_salt = has_salts_in_clickhouse(
-            &state.ch_client,
-            salt.match_id,
-            salt.metadata_salt.is_some(),
-            salt.replay_salt.is_some(),
-        )
+    let new_match_salts = futures::stream::iter(match_salts)
+        .map(|salt| {
+            let ch_client = &state.ch_client;
+            async move {
+                has_salts_in_clickhouse(
+                    ch_client,
+                    salt.match_id,
+                    salt.metadata_salt.is_some(),
+                    salt.replay_salt.is_some(),
+                )
+                .await
+                .not()
+                .then_some(salt)
+            }
+        })
+        .buffer_unordered(10)
+        .filter_map(|s| async move { s })
+        .collect::<Vec<_>>()
         .await;
-        if !has_salt {
-            new_match_salts.push(salt);
-        }
-    }
 
     if new_match_salts.is_empty() {
         debug!("No new salts to ingest");
@@ -158,7 +165,7 @@ async fn validate_salt(
     let mut salt = salt.clone();
     if salt.metadata_salt.is_some() {
         let is_valid = tryhard::retry_fn(|| steam_client.metadata_file_exists(&salt))
-            .retries(30)
+            .retries(3)
             .linear_backoff(Duration::from_millis(500))
             .await
             .is_ok();
@@ -169,7 +176,7 @@ async fn validate_salt(
     }
     if salt.replay_salt.is_some() {
         let is_valid = tryhard::retry_fn(|| steam_client.replay_file_exists(&salt))
-            .retries(30)
+            .retries(3)
             .linear_backoff(Duration::from_millis(500))
             .await
             .is_ok();
