@@ -1,5 +1,6 @@
 use core::ops::Not;
 use core::time::Duration;
+use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
@@ -11,6 +12,7 @@ use clickhouse::Row;
 use futures::StreamExt;
 use serde::Deserialize;
 use serde_json::json;
+use tokio::sync::Mutex;
 use tracing::{debug, warn};
 
 use crate::context::AppState;
@@ -24,9 +26,51 @@ pub(super) async fn insert_salts_to_clickhouse(
 ) -> clickhouse::error::Result<()> {
     let mut inserter = ch_client.insert::<ClickhouseSalts>("match_salts").await?;
     for salt in salts {
-        inserter.write(&salt.into()).await?;
+        let salt = salt.into();
+        inserter.write(&salt).await?;
+        HAS_SALTS_IN_CLICKHOUSE.lock().await.insert(
+            (
+                salt.match_id,
+                salt.metadata_salt.is_some(),
+                salt.replay_salt.is_some(),
+            ),
+            Arc::new(Mutex::new(TimedCache::with_lifespan(Duration::from_secs(
+                60 * 60,
+            )))),
+        );
     }
     inserter.end().await
+}
+
+#[cached(
+    ty = "TimedCache<(u64, bool, bool), bool>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    convert = "{ (match_id, metadata, replay) }",
+    sync_writes = "by_key",
+    key = "(u64, bool, bool)"
+)]
+pub(super) async fn has_salts_in_clickhouse(
+    ch_client: &clickhouse::Client,
+    match_id: u64,
+    metadata: bool,
+    replay: bool,
+) -> bool {
+    #[derive(Deserialize, Row)]
+    struct HasSalts {
+        has_metadata: Option<u8>,
+        has_replay: Option<u8>,
+    }
+    ch_client
+        .query(
+            "SELECT metadata_salt > 0 AS has_metadata, replay_salt > 0 AS has_replay FROM match_salts FINAL WHERE match_id = ?",
+        )
+        .bind(match_id)
+        .fetch_one::<HasSalts>()
+        .await
+        .is_ok_and(|s| {
+            (s.has_metadata.unwrap_or_default() == 1 && metadata) ||
+                (s.has_replay.unwrap_or_default() == 1 && replay)
+        })
 }
 
 #[utoipa::path(
@@ -120,37 +164,6 @@ pub(super) async fn ingest_salts(
 
     insert_salts_to_clickhouse(&state.ch_client, match_salts).await?;
     Ok(Json(json!({ "status": "success" })))
-}
-
-#[cached(
-    ty = "TimedCache<(u64, bool, bool), bool>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
-    convert = "{ (match_id, metadata, replay) }",
-    sync_writes = "by_key",
-    key = "(u64, bool, bool)"
-)]
-pub(super) async fn has_salts_in_clickhouse(
-    ch_client: &clickhouse::Client,
-    match_id: u64,
-    metadata: bool,
-    replay: bool,
-) -> bool {
-    #[derive(Deserialize, Row)]
-    struct HasSalts {
-        has_metadata: Option<u8>,
-        has_replay: Option<u8>,
-    }
-    ch_client
-        .query(
-            "SELECT metadata_salt > 0 AS has_metadata, replay_salt > 0 AS has_replay FROM match_salts FINAL WHERE match_id = ?",
-        )
-        .bind(match_id)
-        .fetch_one::<HasSalts>()
-        .await
-        .is_ok_and(|s| {
-            (s.has_metadata.unwrap_or_default() == 1 && metadata) ||
-                (s.has_replay.unwrap_or_default() == 1 && replay)
-        })
 }
 
 async fn validate_salt(
