@@ -1,5 +1,4 @@
 use core::time::Duration;
-use std::ops::Not;
 
 use axum::Json;
 use axum::extract::State;
@@ -79,8 +78,7 @@ pub(super) async fn ingest_salts(
             salt.metadata_salt.is_some(),
             salt.replay_salt.is_some(),
         )
-        .await
-        .unwrap_or_default();
+        .await;
         if !has_salt {
             new_match_salts.push(salt);
         }
@@ -120,7 +118,6 @@ pub(super) async fn ingest_salts(
 #[cached(
     ty = "TimedCache<(u64, bool, bool), bool>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
-    result = true,
     convert = "{ (match_id, metadata, replay) }",
     sync_writes = "by_key",
     key = "(u64, bool, bool)"
@@ -130,7 +127,7 @@ pub(super) async fn has_salts_in_clickhouse(
     match_id: u64,
     metadata: bool,
     replay: bool,
-) -> clickhouse::error::Result<bool> {
+) -> bool {
     #[derive(Deserialize, Row)]
     struct HasSalts {
         has_metadata: Option<u8>,
@@ -143,7 +140,7 @@ pub(super) async fn has_salts_in_clickhouse(
         .bind(match_id)
         .fetch_one::<HasSalts>()
         .await
-        .map(|s| {
+        .is_ok_and(|s| {
             (s.has_metadata.unwrap_or_default() == 1 && metadata) ||
                 (s.has_replay.unwrap_or_default() == 1 && replay)
         })
