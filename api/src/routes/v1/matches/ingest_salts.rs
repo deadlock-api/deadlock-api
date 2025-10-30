@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::ops::Not;
 
 use axum::Json;
 use axum::extract::State;
@@ -70,34 +71,31 @@ pub(super) async fn ingest_salts(
 
     debug!("Received salts: {match_salts:?}");
 
-    let match_salts = futures::stream::iter(match_salts)
-        .map(|salt| {
-            let ch_client = state.ch_client.clone();
-            async move {
-                has_salts_in_clickhouse(
-                    &ch_client,
-                    salt.match_id,
-                    salt.metadata_salt.is_some(),
-                    salt.replay_salt.is_some(),
-                )
-                .await
-                .map(|v| (!v).then_some(salt))
-            }
-        })
-        .buffer_unordered(10)
-        .filter_map(|salt| async move { salt.ok().flatten() })
-        .collect::<Vec<_>>()
-        .await;
+    let mut new_match_salts = Vec::with_capacity(match_salts.len());
+    for salt in match_salts {
+        let has_salt = has_salts_in_clickhouse(
+            &state.ch_client,
+            salt.match_id,
+            salt.metadata_salt.is_some(),
+            salt.replay_salt.is_some(),
+        )
+        .await
+        .unwrap_or_default();
+        if !has_salt {
+            new_match_salts.push(salt);
+        }
+    }
 
-    if match_salts.is_empty() {
+    if new_match_salts.is_empty() {
+        debug!("No new salts to ingest");
         return Ok(Json(json!({ "status": "success" })));
     }
 
     // Check if the salts are valid if not sent by the internal tools
     let match_salts: Vec<ClickhouseSalts> = if bypass_check {
-        match_salts
+        new_match_salts
     } else {
-        futures::stream::iter(match_salts)
+        futures::stream::iter(new_match_salts)
             .map(|salt| {
                 let steam_client = state.steam_client.clone();
                 async move { validate_salt(&steam_client, &salt).await }
