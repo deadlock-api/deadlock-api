@@ -26,7 +26,10 @@ export default function Player({ initialTab }: { initialTab?: "mmr" | "matches" 
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(["mmr", "matches"] as const).withDefault(initialTab || "mmr"));
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(["mmr", "matches"] as const).withDefault(initialTab || "mmr"),
+  );
 
   return (
     <>

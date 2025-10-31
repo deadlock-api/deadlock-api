@@ -18,7 +18,9 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Items({ initialTab }: { initialTab?: "stats" | "item-purchase-analysis" | "item-combs" } = { initialTab: "stats" }) {
+export default function Items(
+  { initialTab }: { initialTab?: "stats" | "item-purchase-analysis" | "item-combs" } = { initialTab: "stats" },
+) {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [hero, setHero] = useQueryState("hero", parseAsInteger);
@@ -27,7 +29,10 @@ export default function Items({ initialTab }: { initialTab?: "stats" | "item-pur
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault(initialTab || "stats"));
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault(initialTab || "stats"),
+  );
 
   return (
     <>
