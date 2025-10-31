@@ -1,3 +1,4 @@
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
@@ -7,8 +8,8 @@ import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
+import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 export const meta: MetaFunction = () => {
   return [
@@ -17,16 +18,16 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Items({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
-  const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
-  const [hero, setHero] = useQSNumber("hero");
-  const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
-  const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
-    PATCHES[0].startDate,
-    PATCHES[0].endDate,
-  ]);
-  const [tab, setTab] = useQSString("tab", initialTab || "stats");
+export default function Items({ initialTab }: { initialTab?: "stats" | "item-purchase-analysis" | "item-combs" } = { initialTab: "stats" }) {
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [hero, setHero] = useQueryState("hero", parseAsInteger);
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
+  const [[startDate, endDate], setDateRange] = useQueryState(
+    "date_range",
+    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+  );
+  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault(initialTab || "stats"));
 
   return (
     <>
@@ -36,8 +37,8 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
           <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start">
             <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-center md:justify-start">
               <HeroSelector
-                onHeroSelected={(x) => setHero(x || undefined)}
-                selectedHero={hero}
+                onHeroSelected={(x) => setHero(x ?? null)}
+                selectedHero={hero ?? undefined}
                 allowSelectNull={true}
               />
               <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
@@ -80,7 +81,7 @@ export default function Items({ initialTab }: { initialTab?: string } = { initia
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger className="flex-1" value="stats">
             Overall Stats

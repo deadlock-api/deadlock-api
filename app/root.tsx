@@ -5,6 +5,7 @@ import "./tailwind.css";
 import "./dayjs.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import NavHeader from "~/components/NavHeader";
 
 export const links: LinksFunction = () => [
@@ -72,15 +73,17 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <NavHeader />
+      <NuqsAdapter>
+        <NavHeader />
 
-      <main className="flex justify-center items-start">
-        <div className="m-4 w-full max-w-[80rem] bg-gray-900 rounded-lg shadow-lg p-8">
-          <Outlet />
-        </div>
-      </main>
+        <main className="flex justify-center items-start">
+          <div className="m-4 w-full max-w-[80rem] bg-gray-900 rounded-lg shadow-lg p-8">
+            <Outlet />
+          </div>
+        </main>
 
-      <ReactQueryDevtools initialIsOpen={false} />
+        <ReactQueryDevtools initialIsOpen={false} />
+      </NuqsAdapter>
     </QueryClientProvider>
   );
 }

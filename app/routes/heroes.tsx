@@ -1,3 +1,5 @@
+import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useId } from "react";
 import type { MetaFunction } from "react-router";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
@@ -15,10 +17,11 @@ import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroS
 import RankSelector from "~/components/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { serializers, useQSArray, useQSBoolean, useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
-import type { HERO_STATS } from "~/types/api_hero_stats";
+import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { HERO_STATS } from "~/types/api_hero_stats";
 
 export const meta: MetaFunction = () => {
   return [
@@ -26,23 +29,33 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Detailed analytics about Heroes in Deadlock" },
   ];
 };
-export default function Heroes({ initialTab }: { initialTab?: string } = { initialTab: "stats" }) {
-  const [minMatches, setMinMatches] = useQSNumber("min_matches", 10);
-  const [minHeroMatches, setMinHeroMatches] = useQSNumber("min_hero_matches", 0);
-  const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQSNumber("min_hero_matches_total", 0);
-  const [minRankId, setMinRankId] = useQSNumber("min_rank", 91);
-  const [maxRankId, setMaxRankId] = useQSNumber("max_rank", 116);
-  const [sameLaneFilter, setSameLaneFilter] = useQSBoolean("same_lane", true);
-  const [samePartyFilter, setSamePartyFilter] = useQSBoolean("same_party", false);
-  const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
-    PATCHES[0].startDate,
-    PATCHES[0].endDate,
-  ]);
-  const [tab, setTab] = useQSString("tab", initialTab || "stats");
-  const [heroId, setHeroId] = useQSNumber("hero_id", 7);
-  const [heroIds, setHeroIds] = useQSArray("hero_ids", serializers.number, [15]);
-  const [heroStat, setHeroStat] = useQSString<(typeof HERO_STATS)[number]>("hero_stat", "winrate");
-  const [heroTimeInterval, setHeroTimeInterval] = useQSString<string>("time_interval", "start_time_day");
+export default function Heroes({ initialTab }: { initialTab?: "stats" | "stats-over-time" | "matchups" | "hero-combs" | "hero-matchup-details" } = { initialTab: "stats" }) {
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
+  const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
+  const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQueryState(
+    "min_hero_matches_total",
+    parseAsInteger.withDefault(0),
+  );
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
+  const [samePartyFilter, setSamePartyFilter] = useQueryState("same_party", parseAsBoolean.withDefault(false));
+  const sameLaneFilterId1 = useId();
+  const samePartyFilterId1 = useId();
+  const sameLaneFilterId2 = useId();
+  const samePartyFilterId2 = useId();
+  const [[startDate, endDate], setDateRange] = useQueryState(
+    "date_range",
+    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+  );
+  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(["stats", "stats-over-time", "matchups", "hero-combs", "hero-matchup-details"] as const).withDefault(initialTab || "stats"));
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(7));
+  const [heroIds, setHeroIds] = useQueryState("hero_ids", parseAsArrayOf(parseAsInteger).withDefault([15]));
+  const [heroStat, setHeroStat] = useQueryState("hero_stat", parseAsStringLiteral(HERO_STATS).withDefault("winrate"));
+  const [heroTimeInterval, setHeroTimeInterval] = useQueryState(
+    "time_interval",
+    parseAsStringLiteral(["start_time_hour", "start_time_day", "start_time_week"] as const).withDefault("start_time_day"),
+  );
 
   return (
     <>
@@ -85,7 +98,7 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList className="flex items-center flex-wrap h-auto w-full">
           <TabsTrigger className="flex-1" value="stats">
             Overall Stats
@@ -130,21 +143,16 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                   onHeroesSelected={(selectedHeroIds) => {
                     if (!selectedHeroIds) return;
                     setHeroIds(selectedHeroIds);
-                    if (typeof window !== "undefined") {
-                      const url = new URL(window.location.href);
-                      url.searchParams.set("heroIds", selectedHeroIds.join(","));
-                      window.history.pushState({}, "", url);
-                    }
                   }}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
-                <HeroStatSelector value={heroStat as (typeof HERO_STATS)[number]} onChange={setHeroStat} />
+                <HeroStatSelector value={heroStat as (typeof HERO_STATS)[number]} onChange={(val) => setHeroStat(val as typeof heroStat)} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Time Interval</span>
-                <HeroTimeIntervalSelector value={heroTimeInterval} onChange={setHeroTimeInterval} />
+                <HeroTimeIntervalSelector value={heroTimeInterval ?? undefined} onChange={(val) => setHeroTimeInterval(val as typeof heroTimeInterval)} />
               </div>
             </div>
             <HeroStatsOverTimeChart
@@ -165,21 +173,21 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
           <div className="flex flex-col gap-4 mt-4">
             <div className="flex flex-wrap justify-center items-center sm:flex-nowrap gap-8">
               <div className="flex items-center gap-2">
-                <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                <Label htmlFor={sameLaneFilterId1} className="text-sm font-semibold text-foreground text-nowrap">
                   Same Lane Filter
-                </label>
+                </Label>
                 <Checkbox
-                  id="same-lane-filter"
+                  id={sameLaneFilterId1}
                   checked={sameLaneFilter}
                   onCheckedChange={(i) => setSameLaneFilter(i === true)}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label htmlFor="same-party-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                <Label htmlFor={samePartyFilterId1} className="text-sm font-semibold text-foreground text-nowrap">
                   Same Party Filter
-                </label>
+                </Label>
                 <Checkbox
-                  id="same-party-filter"
+                  id={samePartyFilterId1}
                   checked={samePartyFilter}
                   onCheckedChange={(i) => setSamePartyFilter(i === true)}
                 />
@@ -220,30 +228,25 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 onHeroSelected={(selectedHeroId) => {
                   if (!selectedHeroId) return;
                   setHeroId(selectedHeroId);
-                  if (typeof window !== "undefined") {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("heroId", selectedHeroId.toString());
-                    window.history.pushState({}, "", url);
-                  }
                 }}
               />
               <div className="flex flex-col flex-wrap items-center sm:flex-nowrap gap-2">
                 <div className="flex items-center gap-2">
-                  <label htmlFor="same-lane-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                  <Label htmlFor={sameLaneFilterId2} className="text-sm font-semibold text-foreground text-nowrap">
                     Same Lane Filter
-                  </label>
+                  </Label>
                   <Checkbox
-                    id="same-lane-filter"
+                    id={sameLaneFilterId2}
                     checked={sameLaneFilter}
                     onCheckedChange={(i) => setSameLaneFilter(i === true)}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label htmlFor="same-party-filter" className="text-sm font-semibold text-foreground text-nowrap">
+                  <Label htmlFor={samePartyFilterId2} className="text-sm font-semibold text-foreground text-nowrap">
                     Same Party Filter
-                  </label>
+                  </Label>
                   <Checkbox
-                    id="same-party-filter"
+                    id={samePartyFilterId2}
                     checked={samePartyFilter}
                     onCheckedChange={(i) => setSamePartyFilter(i === true)}
                   />
@@ -261,11 +264,6 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 onHeroSelected={(selectedHeroId) => {
                   if (!selectedHeroId) return;
                   setHeroId(selectedHeroId);
-                  if (typeof window !== "undefined") {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("heroId", selectedHeroId.toString());
-                    window.history.pushState({}, "", url);
-                  }
                 }}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
@@ -281,11 +279,6 @@ export default function Heroes({ initialTab }: { initialTab?: string } = { initi
                 onHeroSelected={(selectedHeroId) => {
                   if (!selectedHeroId) return;
                   setHeroId(selectedHeroId);
-                  if (typeof window !== "undefined") {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("heroId", selectedHeroId.toString());
-                    window.history.pushState({}, "", url);
-                  }
                 }}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}

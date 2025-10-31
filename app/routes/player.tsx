@@ -1,3 +1,4 @@
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import PlayerName from "~/components/PlayerName";
@@ -8,8 +9,8 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { useQSDayjsRange, useQSNumber, useQSString } from "~/hooks/useQSState";
 import { PATCHES } from "~/lib/constants";
+import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 export const meta: MetaFunction = () => {
   return [
@@ -18,14 +19,14 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Player({ initialTab }: { initialTab?: string } = { initialTab: "mmr" }) {
-  const [steamId, setSteamId] = useQSNumber("steam_id");
-  const [hero, setHero] = useQSNumber("hero");
-  const [[startDate, endDate], setDateRange] = useQSDayjsRange("date_range", [
-    PATCHES[0].startDate,
-    PATCHES[0].endDate,
-  ]);
-  const [tab, setTab] = useQSString("tab", initialTab || "mmr");
+export default function Player({ initialTab }: { initialTab?: "mmr" | "matches" } = { initialTab: "mmr" }) {
+  const [steamId, setSteamId] = useQueryState("steam_id", parseAsInteger);
+  const [hero, setHero] = useQueryState("hero", parseAsInteger);
+  const [[startDate, endDate], setDateRange] = useQueryState(
+    "date_range",
+    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+  );
+  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(["mmr", "matches"] as const).withDefault(initialTab || "mmr"));
 
   return (
     <>
@@ -53,7 +54,11 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
                 </div>
               )}
             </div>
-            <HeroSelector onHeroSelected={(x) => setHero(x || undefined)} selectedHero={hero} allowSelectNull={true} />
+            <HeroSelector
+              onHeroSelected={(x) => setHero(x ?? null)}
+              selectedHero={hero ?? undefined}
+              allowSelectNull={true}
+            />
             <div className="flex justify-center md:justify-start">
               <PatchOrDatePicker
                 patchDates={PATCHES}
@@ -66,7 +71,7 @@ export default function Player({ initialTab }: { initialTab?: string } = { initi
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger className="flex-1" value="matches">
             Match History
