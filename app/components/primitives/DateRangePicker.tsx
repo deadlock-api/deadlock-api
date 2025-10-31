@@ -93,7 +93,7 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
             />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2" align="start">
+        <PopoverContent className="w-auto min-w-[30rem] p-2" align="start">
           <Calendar
             autoFocus={true}
             mode="range"
@@ -101,6 +101,7 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
             selected={dateRange}
             onSelect={handleDateRangeSelect}
             numberOfMonths={2}
+            className="w-full"
           />
           <div className="flex justify-center gap-2">
             <Button variant="outline" onClick={() => selectLastDays(7)}>

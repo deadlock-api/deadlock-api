@@ -120,7 +120,7 @@ export default function RankSelector({
           <SelectTrigger className="focus-visible:ring-0">
             <SelectValue placeholder={"Select Rank..."}>
               {currentSelectedDetails ? (
-                <div className="flex items-center gap-2 min-w-0 flex-nowrap">
+                <div className="flex items-center gap-2 w-fit flex-nowrap">
                   <ImgWithSkeleton
                     src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
                     alt={currentSelectedDetails.label}
@@ -131,19 +131,17 @@ export default function RankSelector({
               ) : null}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
             {selectOptions.map((optionData) => (
-              <SelectItem
-                key={optionData.value}
-                value={String(optionData.value)}
-                className="flex items-center gap-2 flex-nowrap"
-              >
-                <ImgWithSkeleton
-                  src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
-                  alt={optionData.label}
-                  className="size-6 object-contain shrink-0 mr-2 mb-1"
-                />
-                <span className="truncate">{optionData.label}</span>
+              <SelectItem key={optionData.value} value={String(optionData.value)}>
+                <div className="flex items-center gap-2 flex-nowrap">
+                  <ImgWithSkeleton
+                    src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
+                    alt={optionData.label}
+                    className="size-6 object-contain shrink-0 mr-2 mb-1"
+                  />
+                  <span className="truncate">{optionData.label}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
