@@ -29,7 +29,11 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Detailed analytics about Heroes in Deadlock" },
   ];
 };
-export default function Heroes({ initialTab }: { initialTab?: "stats" | "stats-over-time" | "matchups" | "hero-combs" | "hero-matchup-details" } = { initialTab: "stats" }) {
+export default function Heroes(
+  { initialTab }: { initialTab?: "stats" | "stats-over-time" | "matchups" | "hero-combs" | "hero-matchup-details" } = {
+    initialTab: "stats",
+  },
+) {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
   const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQueryState(
@@ -48,13 +52,24 @@ export default function Heroes({ initialTab }: { initialTab?: "stats" | "stats-o
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(["stats", "stats-over-time", "matchups", "hero-combs", "hero-matchup-details"] as const).withDefault(initialTab || "stats"));
+  const [tab, setTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral([
+      "stats",
+      "stats-over-time",
+      "matchups",
+      "hero-combs",
+      "hero-matchup-details",
+    ] as const).withDefault(initialTab || "stats"),
+  );
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(7));
   const [heroIds, setHeroIds] = useQueryState("hero_ids", parseAsArrayOf(parseAsInteger).withDefault([15]));
   const [heroStat, setHeroStat] = useQueryState("hero_stat", parseAsStringLiteral(HERO_STATS).withDefault("winrate"));
   const [heroTimeInterval, setHeroTimeInterval] = useQueryState(
     "time_interval",
-    parseAsStringLiteral(["start_time_hour", "start_time_day", "start_time_week"] as const).withDefault("start_time_day"),
+    parseAsStringLiteral(["start_time_hour", "start_time_day", "start_time_week"] as const).withDefault(
+      "start_time_day",
+    ),
   );
 
   return (
@@ -148,11 +163,17 @@ export default function Heroes({ initialTab }: { initialTab?: "stats" | "stats-o
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
-                <HeroStatSelector value={heroStat as (typeof HERO_STATS)[number]} onChange={(val) => setHeroStat(val as typeof heroStat)} />
+                <HeroStatSelector
+                  value={heroStat as (typeof HERO_STATS)[number]}
+                  onChange={(val) => setHeroStat(val as typeof heroStat)}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Time Interval</span>
-                <HeroTimeIntervalSelector value={heroTimeInterval ?? undefined} onChange={(val) => setHeroTimeInterval(val as typeof heroTimeInterval)} />
+                <HeroTimeIntervalSelector
+                  value={heroTimeInterval ?? undefined}
+                  onChange={(val) => setHeroTimeInterval(val as typeof heroTimeInterval)}
+                />
               </div>
             </div>
             <HeroStatsOverTimeChart

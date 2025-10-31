@@ -26,7 +26,10 @@ const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
 };
 
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
-  const [tab, setTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(["patch", "custom"] as const).withDefault(defaultTab));
+  const [tab, setTab] = useQueryState(
+    "pd-picker-tab",
+    parseAsStringLiteral(["patch", "custom"] as const).withDefault(defaultTab),
+  );
 
   const patchSelectId = useId();
 
