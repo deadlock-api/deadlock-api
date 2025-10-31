@@ -38,7 +38,7 @@ base64 = "0.22.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.32", features = ["bzip2", "tokio"] }
 strum = { version = "0.27.2", features = ["derive"] }
-axum-extra = { version = "0.10.3", features = ["query"] }
+axum-extra = { version = "0.12.0", features = ["query"] }
 metrics = "0.24.2"
 bytes = { version = "1.10.1", features = ["serde"] }
 thiserror = "2.0.17"
