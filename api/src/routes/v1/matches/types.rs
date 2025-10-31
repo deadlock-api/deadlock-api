@@ -152,14 +152,13 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
     }
 }
 
-#[derive(
-    Debug, Clone, Copy, IntoParams, ToSchema, Row, Serialize, Deserialize, Eq, Hash, PartialEq,
-)]
+#[derive(Debug, Clone, IntoParams, ToSchema, Row, Serialize, Deserialize)]
 pub(crate) struct ClickhouseSalts {
     pub(crate) match_id: u64,
     pub(crate) metadata_salt: Option<u32>,
     pub(crate) replay_salt: Option<u32>,
     pub(crate) cluster_id: Option<u32>,
+    username: Option<String>,
 }
 
 impl From<ClickhouseSalts> for CMsgClientToGcGetMatchMetaDataResponse {
@@ -182,6 +181,21 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for ClickhouseSalts {
             metadata_salt: salts.metadata_salt,
             replay_salt: salts.replay_salt,
             cluster_id: salts.replay_group_id,
+            username: None,
+        }
+    }
+}
+
+impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse, String)> for ClickhouseSalts {
+    fn from(
+        (match_id, salts, username): (u64, CMsgClientToGcGetMatchMetaDataResponse, String),
+    ) -> Self {
+        Self {
+            match_id,
+            metadata_salt: salts.metadata_salt,
+            replay_salt: salts.replay_salt,
+            cluster_id: salts.replay_group_id,
+            username: Some(username),
         }
     }
 }
