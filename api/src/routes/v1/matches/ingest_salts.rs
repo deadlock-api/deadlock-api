@@ -73,6 +73,37 @@ pub(super) async fn has_salts_in_clickhouse(
         })
 }
 
+#[cached(
+    ty = "TimedCache<ClickhouseSalts, Option<ClickhouseSalts>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    convert = "{ salt }",
+    sync_writes = "by_key",
+    key = "ClickhouseSalts"
+)]
+async fn validate_salt(
+    steam_client: &SteamClient,
+    mut salt: ClickhouseSalts,
+) -> Option<ClickhouseSalts> {
+    if salt.match_id > 100000000 {
+        warn!("Match id too high, skipping");
+        return None;
+    }
+
+    if salt.metadata_salt.is_some() && steam_client.metadata_file_exists(&salt).await.is_err() {
+        warn!("Invalid metadata salt for match_id {}", salt.match_id);
+        salt.metadata_salt = None;
+    }
+    if salt.replay_salt.is_some() && steam_client.replay_file_exists(&salt).await.is_err() {
+        warn!("Invalid replay salt for match_id {}", salt.match_id);
+        salt.replay_salt = None;
+    }
+    if salt.metadata_salt.is_some() || salt.replay_salt.is_some() {
+        Some(salt)
+    } else {
+        None
+    }
+}
+
 #[utoipa::path(
     post,
     path = "/salts",
@@ -147,7 +178,7 @@ pub(super) async fn ingest_salts(
         futures::stream::iter(new_match_salts)
             .map(|salt| {
                 let steam_client = state.steam_client.clone();
-                async move { validate_salt(&steam_client, &salt).await }
+                async move { validate_salt(&steam_client, salt).await }
             })
             .buffer_unordered(10)
             .filter_map(|salt| async move { salt })
@@ -164,43 +195,4 @@ pub(super) async fn ingest_salts(
 
     insert_salts_to_clickhouse(&state.ch_client, match_salts).await?;
     Ok(Json(json!({ "status": "success" })))
-}
-
-async fn validate_salt(
-    steam_client: &SteamClient,
-    salt: &ClickhouseSalts,
-) -> Option<ClickhouseSalts> {
-    if salt.match_id > 100000000 {
-        warn!("Match id too high, skipping");
-        return None;
-    }
-
-    let mut salt = salt.clone();
-    if salt.metadata_salt.is_some() {
-        let is_valid = tryhard::retry_fn(|| steam_client.metadata_file_exists(&salt))
-            .retries(3)
-            .linear_backoff(Duration::from_millis(500))
-            .await
-            .is_ok();
-        if !is_valid {
-            warn!("Invalid metadata salt for match_id {}", salt.match_id);
-            salt.metadata_salt = None;
-        }
-    }
-    if salt.replay_salt.is_some() {
-        let is_valid = tryhard::retry_fn(|| steam_client.replay_file_exists(&salt))
-            .retries(3)
-            .linear_backoff(Duration::from_millis(500))
-            .await
-            .is_ok();
-        if !is_valid {
-            warn!("Invalid replay salt for match_id {}", salt.match_id);
-            salt.replay_salt = None;
-        }
-    }
-    if salt.metadata_salt.is_some() || salt.replay_salt.is_some() {
-        Some(salt)
-    } else {
-        None
-    }
 }

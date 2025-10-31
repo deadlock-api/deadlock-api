@@ -140,7 +140,6 @@ pub(super) async fn fetch_match_salts(
             soft_cooldown_millis: is_custom.then_some(Duration::from_secs(24 * 60 * 60 / 20)),
         })
         .await?;
-    let username = result.username.clone();
     let salts: SteamProxyResponse<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
     let salts = salts.msg;
     if salts.result.is_none_or(|r| {
@@ -154,8 +153,7 @@ pub(super) async fn fetch_match_salts(
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
         // Insert into Clickhouse
         if let Err(e) =
-            ingest_salts::insert_salts_to_clickhouse(ch_client, vec![(match_id, salts, username)])
-                .await
+            ingest_salts::insert_salts_to_clickhouse(ch_client, vec![(match_id, salts)]).await
         {
             warn!("Failed to insert match salts into Clickhouse: {e}");
         }
