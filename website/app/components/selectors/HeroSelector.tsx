@@ -60,7 +60,7 @@ export default function HeroSelector({
             <SelectValue placeholder={"Select Hero..."}>
               {currentHero ? (
                 <div className="flex items-center gap-2">
-                  <HeroImage heroId={currentHero.id} className="size-4 object-contain flex-shrink-0" />
+                  <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" />
                   <HeroName heroId={currentHero.id} />
                 </div>
               ) : null}
@@ -74,7 +74,7 @@ export default function HeroSelector({
             )}
             {sortedHeroes.map((hero: AssetsHero) => (
               <SelectItem key={hero.id} value={String(hero.id)}>
-                <HeroImage heroId={hero.id} className="size-5 object-contain flex-shrink-0" />
+                <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
                 <HeroName heroId={hero.id} />
               </SelectItem>
             ))}
@@ -132,7 +132,7 @@ export function HeroSelectorMultiple({
               selectedHeroes
                 .map((heroId) => (
                   <span key={heroId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
-                    <HeroImage heroId={heroId} className="size-4 object-contain flex-shrink-0" />
+                    <HeroImage heroId={heroId} className="size-4 object-contain shrink-0" />
                     <HeroName heroId={heroId} className="truncate text-xs" />
                   </span>
                 ))
@@ -181,7 +181,7 @@ export function HeroSelectorMultiple({
                 htmlFor={`hero-checkbox-${hero.id}`}
                 className="flex flex-nowrap items-center gap-2 w-full truncate text-sm cursor-pointer"
               >
-                <HeroImage heroId={hero.id} className="size-5 object-contain flex-shrink-0" />
+                <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
                 <HeroName heroId={hero.id} className="truncate text-sm" />
               </label>
             </div>

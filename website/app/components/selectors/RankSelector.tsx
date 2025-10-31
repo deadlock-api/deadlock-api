@@ -109,7 +109,7 @@ export default function RankSelector({
   const currentSelectedDetails = selectOptions.find((opt) => opt.value === selectedRank);
 
   return (
-    <div className="flex flex-col gap-1.5 flex-shrink-0">
+    <div className="flex flex-col gap-1.5 shrink-0">
       <div className="flex justify-center md:justify-start items-center h-8">
         <span className="text-sm font-semibold text-foreground">{label || "Rank"}</span>
       </div>
@@ -124,7 +124,7 @@ export default function RankSelector({
                   <ImgWithSkeleton
                     src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
                     alt={currentSelectedDetails.label}
-                    className="size-6 object-contain flex-shrink-0 mb-1"
+                    className="size-6 object-contain shrink-0 mb-1"
                   />
                   <span className="truncate">{currentSelectedDetails.label}</span>
                 </div>
@@ -141,7 +141,7 @@ export default function RankSelector({
                 <ImgWithSkeleton
                   src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
                   alt={optionData.label}
-                  className="size-6 object-contain flex-shrink-0 mr-2 mb-1"
+                  className="size-6 object-contain shrink-0 mr-2 mb-1"
                 />
                 <span className="truncate">{optionData.label}</span>
               </SelectItem>

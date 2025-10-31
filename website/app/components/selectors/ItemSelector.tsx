@@ -62,7 +62,7 @@ export default function ItemSelector({
             <SelectValue placeholder={"Select Item..."}>
               {currentItem ? (
                 <div className="flex items-center gap-2">
-                  <ItemImage itemId={currentItem.id} className="size-4 object-contain flex-shrink-0" />
+                  <ItemImage itemId={currentItem.id} className="size-4 object-contain shrink-0" />
                   <ItemName itemId={currentItem.id} />
                 </div>
               ) : null}
@@ -76,7 +76,7 @@ export default function ItemSelector({
             )}
             {sortedItems.map((item: AssetsItem) => (
               <SelectItem key={item.id} value={String(item.id)}>
-                <ItemImage itemId={item.id} className="size-5 object-contain flex-shrink-0" />
+                <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
                 <ItemName itemId={item.id} />
               </SelectItem>
             ))}
@@ -134,7 +134,7 @@ export function ItemSelectorMultiple({
               selectedItems
                 .map((itemId) => (
                   <span key={itemId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
-                    <ItemImage itemId={itemId} className="size-4 object-contain flex-shrink-0" />
+                    <ItemImage itemId={itemId} className="size-4 object-contain shrink-0" />
                     <ItemName itemId={itemId} className="truncate text-xs" />
                   </span>
                 ))
@@ -183,7 +183,7 @@ export function ItemSelectorMultiple({
                 htmlFor={`item-checkbox-${item.id}`}
                 className="flex flex-nowrap items-center gap-2 w-full truncate text-sm cursor-pointer"
               >
-                <ItemImage itemId={item.id} className="size-5 object-contain flex-shrink-0" />
+                <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
                 <ItemName itemId={item.id} className="truncate text-sm" />
               </label>
             </div>
