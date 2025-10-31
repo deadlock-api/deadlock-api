@@ -15,7 +15,6 @@ use valveprotos::deadlock::CMsgClientToGcGetMatchMetaDataResponse;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
@@ -220,39 +219,6 @@ impl SteamClient {
             .bytes()
             .await
             .map(|r| r.to_vec())
-    }
-
-    pub(crate) async fn metadata_file_exists(
-        &self,
-        salts: &ClickhouseSalts,
-    ) -> reqwest::Result<()> {
-        self.http_client
-            .head(format!(
-                "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-                salts.cluster_id.unwrap_or_default(),
-                salts.match_id,
-                salts.metadata_salt.unwrap_or_default()
-            ))
-            .timeout(Duration::from_secs(5))
-            .send()
-            .await
-            .and_then(Response::error_for_status)
-            .map(drop)
-    }
-
-    pub(crate) async fn replay_file_exists(&self, salts: &ClickhouseSalts) -> reqwest::Result<()> {
-        self.http_client
-            .head(format!(
-                "http://replay{}.valve.net/1422450/{}_{}.dem.bz2",
-                salts.cluster_id.unwrap_or_default(),
-                salts.match_id,
-                salts.replay_salt.unwrap_or_default()
-            ))
-            .timeout(Duration::from_secs(5))
-            .send()
-            .await
-            .and_then(Response::error_for_status)
-            .map(drop)
     }
 }
 
