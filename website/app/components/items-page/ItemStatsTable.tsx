@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useMemo, useState } from "react";
+import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
@@ -11,14 +12,18 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
-import { type Serializer, serializers, useQSArray, useQSBoolean, useQSState } from "~/hooks/useQSState";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
 
-type SortDirection = "asc" | "desc";
+// Parsers for sort field and direction using nuqs string literal parser
+const parseAsSortField = parseAsStringLiteral(["winRate", "usage"] as const);
+const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
+
+// Infer types from parsers
 type SortField = "winRate" | "usage";
+type SortDirection = "asc" | "desc";
 
 interface SortState {
   field: SortField;
@@ -352,17 +357,14 @@ export function ItemStatsTableDisplay({
   excludedItemIds,
   onItemInclude,
   onItemExclude,
-  initialSort = { field: "winRate", direction: "desc" },
+  initialSort = { field: "winRate" as SortField, direction: "desc" as SortDirection },
   customDropdownContent,
 }: ItemStatsTableDisplayProps) {
-  const [sortField, setSortField] = useQSState<SortField>("item_sort_field", {
-    defaultValue: initialSort.field,
-    serializer: serializers.string as Serializer<SortField>,
-  });
-  const [sortDirection, setSortDirection] = useQSState<SortDirection>("item_sort_direction", {
-    defaultValue: initialSort.direction,
-    serializer: serializers.string as Serializer<SortDirection>,
-  });
+  const [sortField, setSortField] = useQueryState("item_sort_field", parseAsSortField.withDefault(initialSort.field));
+  const [sortDirection, setSortDirection] = useQueryState(
+    "item_sort_direction",
+    parseAsSortDirection.withDefault(initialSort.direction),
+  );
 
   const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
   const setSort = (sort: SortState) => {
@@ -370,8 +372,15 @@ export function ItemStatsTableDisplay({
     setSortDirection(sort.direction);
   };
 
-  const [itemTiers, setItemTiers] = useQSArray("item_tiers", serializers.number, [1, 2, 3, 4]);
-  const [dimLowConfidence, setDimLowConfidence] = useQSBoolean("dim_low_confidence", false);
+  const [itemTiers, setItemTiers] = useQueryState(
+    "item_tiers",
+    parseAsArrayOf(parseAsInteger).withDefault([1, 2, 3, 4]),
+  );
+  const [dimLowConfidence, setDimLowConfidence] = useQueryState(
+    "dim_low_confidence",
+    parseAsBoolean.withDefault(false),
+  );
+  const dimLowConfidenceId = useId();
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -430,8 +439,8 @@ export function ItemStatsTableDisplay({
         {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
         {columns.includes("confidence") && (
           <div className="flex items-center gap-2">
-            <Switch id="dim-low-confidence" checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
-            <Label htmlFor="dim-low-confidence" className="text-sm font-medium cursor-pointer">
+            <Switch id={dimLowConfidenceId} checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
+            <Label htmlFor={dimLowConfidenceId} className="text-sm font-medium cursor-pointer">
               Highlight overperforming items
             </Label>
           </div>

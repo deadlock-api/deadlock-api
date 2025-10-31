@@ -1,9 +1,9 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useId } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
-import { useQSString } from "~/hooks/useQSState";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
@@ -26,7 +26,7 @@ const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
 };
 
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
-  const [tab, setTab] = useQSString<"patch" | "custom">("pd-picker-tab", defaultTab);
+  const [tab, setTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(["patch", "custom"] as const).withDefault(defaultTab));
 
   const patchSelectId = useId();
 

@@ -1,8 +1,9 @@
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
 import type { Dayjs } from "~/dayjs";
-import { serializers, useQSSet } from "~/hooks/useQSState";
+import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
 
 export default function ItemPurchaseAnalysis({
@@ -20,7 +21,7 @@ export default function ItemPurchaseAnalysis({
   hero?: number | null;
   minMatches?: number | null;
 }) {
-  const [itemIds, setItemIds] = useQSSet("item_ids", serializers.number, new Set());
+  const [itemIds, setItemIds] = useQueryState("item_ids", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 

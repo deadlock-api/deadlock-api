@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
@@ -6,8 +7,8 @@ import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
-import { serializers, useQSSet, useQSString } from "~/hooks/useQSState";
 import { ASSETS_ORIGIN } from "~/lib/constants";
+import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import type { APIItemStats } from "~/types/api_item_stats";
 import type { AssetsItem } from "~/types/assets_item";
@@ -32,9 +33,18 @@ export default function ItemCombsExplore({
   minMatches?: number | null;
   limit?: number;
 }) {
-  const [includeItems, setIncludeItems] = useQSSet("include_items", serializers.number, new Set());
-  const [excludeItems, setExcludeItems] = useQSSet("exclude_items", serializers.number, new Set());
-  const [slot, setSlot] = useQSString<"weapon" | "vitality" | "spirit">("item_slot", "weapon");
+  const [includeItems, setIncludeItems] = useQueryState(
+    "include_items",
+    parseAsSetOf(parseAsInteger).withDefault(new Set()),
+  );
+  const [excludeItems, setExcludeItems] = useQueryState(
+    "exclude_items",
+    parseAsSetOf(parseAsInteger).withDefault(new Set()),
+  );
+  const [slot, setSlot] = useQueryState(
+    "item_slot",
+    parseAsStringLiteral(["weapon", "vitality", "spirit"] as const).withDefault("weapon"),
+  );
 
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);

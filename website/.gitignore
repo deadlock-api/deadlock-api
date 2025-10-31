@@ -7,3 +7,4 @@ node_modules
 .idea
 .react-router/
 pnpm-workspace.yaml
+*.tsbuildinfo
