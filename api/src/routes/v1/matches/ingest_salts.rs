@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
@@ -135,18 +135,12 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
     "
 )]
 pub(super) async fn ingest_salts(
-    headers: HeaderMap,
     State(state): State<AppState>,
     Json(match_salts): Json<Vec<ClickhouseSalts>>,
 ) -> APIResult<impl IntoResponse> {
-    let bypass_check = headers
-        .get("X-API-Key")
-        .and_then(|key| key.to_str().ok().map(ToString::to_string))
-        .is_some_and(|key| key == state.config.internal_api_key);
-
     debug!("Received salts: {match_salts:?}");
 
-    let new_match_salts = futures::stream::iter(match_salts)
+    let match_salts = futures::stream::iter(match_salts)
         .map(|salt| {
             let ch_client = &state.ch_client;
             async move {
@@ -166,25 +160,10 @@ pub(super) async fn ingest_salts(
         .collect::<Vec<_>>()
         .await;
 
-    if new_match_salts.is_empty() {
+    if match_salts.is_empty() {
         debug!("No new salts to ingest");
         return Ok(Json(json!({ "status": "success" })));
     }
-
-    // Check if the salts are valid if not sent by the internal tools
-    let match_salts: Vec<ClickhouseSalts> = if bypass_check {
-        new_match_salts
-    } else {
-        futures::stream::iter(new_match_salts)
-            .map(|salt| {
-                let steam_client = state.steam_client.clone();
-                async move { validate_salt(&steam_client, salt).await }
-            })
-            .buffer_unordered(10)
-            .filter_map(|salt| async move { salt })
-            .collect::<Vec<_>>()
-            .await
-    };
 
     if match_salts.is_empty() {
         return Err(APIError::status_msg(
