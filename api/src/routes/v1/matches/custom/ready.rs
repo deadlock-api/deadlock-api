@@ -69,6 +69,60 @@ pub(super) async fn ready_up(
         error!("Failed to parse party info");
         return Err(APIError::internal("Failed to parse party info"));
     };
-    utils::make_ready(&state.steam_client, username.to_string(), lobby_id).await?;
+    utils::make_ready(&state.steam_client, username.to_string(), lobby_id, true).await?;
+    Ok(())
+}
+
+#[utoipa::path(
+    post,
+    path = "/{lobby_id}/unready",
+    responses(
+        (status = 200, description = "Successfully unready."),
+        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = INTERNAL_SERVER_ERROR, description = "Unready failed")
+    ),
+    tags = ["Custom Matches"],
+    summary = "Unready",
+    description = "
+This endpoint allows you to unready for a custom match.
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | API-Key ONLY |
+| Key | 100req/30min |
+| Global | 1000req/h |
+"
+)]
+pub(super) async fn unready(
+    Path(LobbyIdQuery { lobby_id }): Path<LobbyIdQuery>,
+    rate_limit_key: RateLimitKey,
+    State(mut state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "unready",
+            &[
+                Quota::key_limit(100, Duration::from_secs(30 * 60)),
+                Quota::global_limit(1000, Duration::from_secs(60 * 60)),
+            ],
+        )
+        .await?;
+    let lobby_id = lobby_id.parse().map_err(|_| {
+        APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid lobby id".to_owned())
+    })?;
+    let party_code = utils::get_party_info_with_retries(&mut state.redis_client, lobby_id).await?;
+    let Some(party_code) = party_code else {
+        error!("Failed to retrieve party info");
+        return Err(APIError::internal("Failed to retrieve party info"));
+    };
+    let Some((username, _, _)) = party_code.split(':').collect_tuple() else {
+        error!("Failed to parse party info");
+        return Err(APIError::internal("Failed to parse party info"));
+    };
+    utils::make_ready(&state.steam_client, username.to_string(), lobby_id, false).await?;
     Ok(())
 }

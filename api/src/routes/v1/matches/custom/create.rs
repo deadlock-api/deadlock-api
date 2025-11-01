@@ -386,7 +386,7 @@ pub(super) async fn create_custom(
         .and_then(|p| p.0.disable_auto_ready)
         .unwrap_or_default()
     {
-        utils::make_ready(&state.steam_client, username.clone(), party_id).await?;
+        utils::make_ready(&state.steam_client, username.clone(), party_id, true).await?;
     }
 
     let response = CreateCustomResponse {

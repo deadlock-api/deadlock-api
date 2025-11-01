@@ -51,10 +51,11 @@ pub(super) async fn make_ready(
     steam_client: &SteamClient,
     username: String,
     lobby_id: u64,
+    read_state: bool,
 ) -> APIResult<()> {
     let msg = CMsgClientToGcPartySetReadyState {
         party_id: lobby_id.into(),
-        ready_state: true.into(),
+        ready_state: read_state.into(),
         hero_roster: None,
     };
     let response: CMsgClientToGcPartySetReadyStateResponse = steam_client
