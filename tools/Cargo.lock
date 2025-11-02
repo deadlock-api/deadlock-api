@@ -579,7 +579,7 @@ dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
  "object_store",
- "prost 0.14.1",
+ "prost",
  "reqwest",
  "serde",
  "serde_json",
@@ -1363,7 +1363,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=de0829c7470c9b33be1d75cae10afdfbf511d05f#de0829c7470c9b33be1d75cae10afdfbf511d05f"
+source = "git+https://github.com/deadlock-api/haste.git?rev=d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8#d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1372,14 +1372,14 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=de0829c7470c9b33be1d75cae10afdfbf511d05f#de0829c7470c9b33be1d75cae10afdfbf511d05f"
+source = "git+https://github.com/deadlock-api/haste.git?rev=d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8#d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8"
 dependencies = [
  "anyhow",
  "bytes",
  "haste_core",
  "http",
  "log",
- "prost 0.14.1",
+ "prost",
  "reqwest",
  "serde",
  "serde_json",
@@ -1391,7 +1391,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=de0829c7470c9b33be1d75cae10afdfbf511d05f#de0829c7470c9b33be1d75cae10afdfbf511d05f"
+source = "git+https://github.com/deadlock-api/haste.git?rev=d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8#d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8"
 dependencies = [
  "anyhow",
  "dungers",
@@ -1399,7 +1399,7 @@ dependencies = [
  "hashbrown 0.16.0",
  "haste_vartype",
  "nohash",
- "prost 0.14.1",
+ "prost",
  "snap",
  "sync-unsafe-cell",
  "thiserror",
@@ -1409,7 +1409,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=de0829c7470c9b33be1d75cae10afdfbf511d05f#de0829c7470c9b33be1d75cae10afdfbf511d05f"
+source = "git+https://github.com/deadlock-api/haste.git?rev=d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8#d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8"
 dependencies = [
  "dungers",
  "thiserror",
@@ -1470,7 +1470,7 @@ dependencies = [
  "lru",
  "metrics",
  "object_store",
- "prost 0.14.1",
+ "prost",
  "reqwest",
  "serde",
  "serde_json",
@@ -1786,7 +1786,7 @@ dependencies = [
  "futures",
  "metrics",
  "object_store",
- "prost 0.14.1",
+ "prost",
  "serde",
  "serde_repr",
  "tokio",
@@ -2497,42 +2497,12 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
-dependencies = [
- "bytes",
- "prost-derive 0.13.5",
-]
-
-[[package]]
-name = "prost"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7231bd9b3d3d33c86b58adbac74b5ec0ad9f496b19d22801d773636feaa95f3d"
 dependencies = [
  "bytes",
- "prost-derive 0.14.1",
-]
-
-[[package]]
-name = "prost-build"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
-dependencies = [
- "heck",
- "itertools 0.14.0",
- "log",
- "multimap",
- "once_cell",
- "petgraph",
- "prettyplease",
- "prost 0.13.5",
- "prost-types 0.13.5",
- "regex",
- "syn",
- "tempfile",
+ "prost-derive",
 ]
 
 [[package]]
@@ -2548,24 +2518,11 @@ dependencies = [
  "once_cell",
  "petgraph",
  "prettyplease",
- "prost 0.14.1",
- "prost-types 0.14.1",
+ "prost",
+ "prost-types",
  "regex",
  "syn",
  "tempfile",
-]
-
-[[package]]
-name = "prost-derive"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
-dependencies = [
- "anyhow",
- "itertools 0.14.0",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -2583,31 +2540,22 @@ dependencies = [
 
 [[package]]
 name = "prost-types"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52c2c1bf36ddb1a1c396b3601a3cec27c2462e45f07c386894ec3ccf5332bd16"
-dependencies = [
- "prost 0.13.5",
-]
-
-[[package]]
-name = "prost-types"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9b4db3d6da204ed77bb26ba83b6122a73aeb2e87e25fbf7ad2e84c4ccbf8f72"
 dependencies = [
- "prost 0.14.1",
+ "prost",
 ]
 
 [[package]]
 name = "prost-wkt"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "497e1e938f0c09ef9cabe1d49437b4016e03e8f82fbbe5d1c62a9b61b9decae1"
+checksum = "655944d0ce015e71b3ec21279437e6a09e58433e50c7b0677901f3d5235e74f5"
 dependencies = [
  "chrono",
  "inventory",
- "prost 0.13.5",
+ "prost",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2616,27 +2564,27 @@ dependencies = [
 
 [[package]]
 name = "prost-wkt-build"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07b8bf115b70a7aa5af1fd5d6e9418492e9ccb6e4785e858c938e28d132a884b"
+checksum = "f869f1443fee474b785e935d92e1007f57443e485f51668ed41943fc01a321a2"
 dependencies = [
  "heck",
- "prost 0.13.5",
- "prost-build 0.13.5",
- "prost-types 0.13.5",
+ "prost",
+ "prost-build",
+ "prost-types",
  "quote",
 ]
 
 [[package]]
 name = "prost-wkt-types"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8cdde6df0a98311c839392ca2f2f0bcecd545f86a62b4e3c6a49c336e970fe5"
+checksum = "eeeffd6b9becd4600dd461399f3f71aeda2ff0848802a9ed526cf12e8f42902a"
 dependencies = [
  "chrono",
- "prost 0.13.5",
- "prost-build 0.13.5",
- "prost-types 0.13.5",
+ "prost",
+ "prost-build",
+ "prost-types",
  "prost-wkt",
  "prost-wkt-build",
  "regex",
@@ -4105,12 +4053,12 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=0e1681f6e710cd865ef232d5d272850feca672da#0e1681f6e710cd865ef232d5d272850feca672da"
+source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=08baa963331b196ca3271da3799aa1211dc1641c#08baa963331b196ca3271da3799aa1211dc1641c"
 dependencies = [
  "heck",
- "prost 0.14.1",
- "prost-build 0.14.1",
- "prost-types 0.14.1",
+ "prost",
+ "prost-build",
+ "prost-types",
  "prost-wkt",
  "prost-wkt-build",
  "prost-wkt-types",

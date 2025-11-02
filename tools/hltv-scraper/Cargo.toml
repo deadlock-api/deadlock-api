@@ -11,7 +11,7 @@ cached = { version = "0.56", features = ["async", "async_tokio_rt_multi_thread"]
 clap = { version = "4.5.51", features = ["derive", "env"] }
 dashmap = "6.1.0"
 fred = { version = "10.1.0", features = ["i-hexpire"] }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "de0829c7470c9b33be1d75cae10afdfbf511d05f" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "d05a7b5a4f3bb61bc25f2de2564d2eb51ebcdeb8" }
 itertools = "0.14.0"
 jiff = { version = "0.2.15", features = ["serde"] }
 lru = "0.16.2"
@@ -23,7 +23,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.41"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "0e1681f6e710cd865ef232d5d272850feca672da", features = ["user-msgs"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "08baa963331b196ca3271da3799aa1211dc1641c", features = ["user-msgs"] }
 thiserror = "2.0.17"
 async-compression = { version = "0.4.32", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }
