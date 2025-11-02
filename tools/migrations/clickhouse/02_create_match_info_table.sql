@@ -33,4 +33,4 @@ create table default.match_info
 )
     engine = ReplacingMergeTree PARTITION BY toStartOfMonth(start_time)
         ORDER BY (toStartOfMonth(start_time), match_mode, match_id)
-        SETTINGS index_granularity = 8192;
+        SETTINGS index_granularity = 8192, auto_statistics_types = 'tdigest, minmax, uniq, countmin';

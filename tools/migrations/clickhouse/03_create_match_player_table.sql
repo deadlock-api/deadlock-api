@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS match_player
     max_hero_bullets_hit UInt32 MATERIALIZED arrayMax(stats.hero_bullets_hit),
     max_hero_bullets_hit_crit UInt32 MATERIALIZED arrayMax(stats.hero_bullets_hit_crit),
     max_shots_hit UInt32 MATERIALIZED arrayMax(stats.shots_hit),
-    max_shots_missed UInt32 MATERIALIZED arrayMax(stats.shots_missed)
-) ENGINE = ReplacingMergeTree ORDER BY (match_id, account_id);
+    max_shots_missed UInt32 MATERIALIZED arrayMax(stats.shots_missed),
 
-ALTER TABLE match_player
- ADD INDEX bf_hero_id hero_id TYPE bloom_filter GRANULARITY 1;
+    INDEX bf_hero_id hero_id TYPE bloom_filter GRANULARITY 1
+) ENGINE = ReplacingMergeTree ORDER BY (match_id, account_id) SETTINGS auto_statistics_types = 'tdigest, minmax, uniq, countmin';
+

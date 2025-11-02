@@ -9,4 +9,4 @@ create table match_salts
 )
     engine = CoalescingMergeTree PARTITION BY toStartOfMonth(created_at)
         ORDER BY (toStartOfMonth(created_at), match_id)
-        SETTINGS index_granularity = 8192;
+        SETTINGS index_granularity = 8192, auto_statistics_types = 'tdigest, minmax, uniq, countmin';

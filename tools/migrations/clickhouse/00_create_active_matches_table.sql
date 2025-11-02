@@ -58,4 +58,4 @@ create table active_matches
 )
     engine = MergeTree PRIMARY KEY match_id
         ORDER BY match_id
-        SETTINGS index_granularity = 8192;
+        SETTINGS index_granularity = 8192, auto_statistics_types = 'tdigest, minmax, uniq, countmin';

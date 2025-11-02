@@ -1,12 +1,12 @@
-create table if not exists player_match_history
+create table default.player_match_history
 (
     account_id            UInt32 comment 'Account ID of the Player',
     match_id              UInt64,
     hero_id               UInt32,
     hero_level            UInt32,
     start_time            DateTime,
-    game_mode             Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3),
-    match_mode            Enum8('Unranked' = 1, 'CoopBot' = 3, 'Tutorial' = 6, 'HeroLabs' = 7, 'PrivateLobby' = 2, 'ServerTest' = 5, 'Ranked' = 4, 'Invalid' = 0, 'Calibration' = 8),
+    game_mode             Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3),
+    match_mode            Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'Calibration' = 8),
     player_team           Enum8('Team0' = 0, 'Team1' = 1, 'Spectator' = 16) comment 'player team id',
     player_kills          UInt32,
     player_deaths         UInt32,
@@ -21,12 +21,12 @@ create table if not exists player_match_history
     objectives_mask_team0 UInt32,
     objectives_mask_team1 UInt32,
     source                Enum8('history_fetcher' = 1, 'match_player' = 2) default 'history_fetcher',
-    created_at            Nullable(DateTime)                               default now() CODEC (Delta, ZSTD),
+    created_at            DateTime                                         default now(),
     username              Nullable(String),
 
-    INDEX idx_match_id match_id TYPE minmax,
-    PROJECTION match_id_order (SELECT * ORDER BY match_id)
+    PROJECTION match_id_projection (SELECT *
+                                    ORDER BY match_id, account_id)
 )
-    engine = ReplacingMergeTree
-        PARTITION BY (toStartOfMonth(start_time), match_mode)
-        ORDER BY (account_id, match_id);
+    engine = ReplacingMergeTree PARTITION BY (toStartOfMonth(start_time), match_mode)
+        ORDER BY (account_id, match_id)
+        SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild', auto_statistics_types = 'tdigest, minmax, uniq, countmin';
