@@ -70,8 +70,7 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
                 groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
                 arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
             FROM t_matches
-            ORDER BY match_id DESC
-            LIMIT 1 BY account_id
+            QUALIFY row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC) = 1
         )
     SELECT
         account_id,
@@ -127,8 +126,7 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
                 groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
                 arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
             FROM t_matches
-            ORDER BY match_id DESC
-            LIMIT 1 BY account_id
+            QUALIFY row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC) = 1
         )
     SELECT
         account_id,

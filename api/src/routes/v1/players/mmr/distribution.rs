@@ -105,8 +105,7 @@ fn build_mmr_query(query: &MMRDistributionQuery) -> String {
                             groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
                             arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
                      FROM t_matches
-                     ORDER BY match_id DESC
-                     LIMIT 1 BY account_id),
+                     QUALIFY row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC) = 1),
         distribution AS (SELECT toUInt32(clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66)) AS player_score,
                                 uniq(account_id)                                                            as players
                          FROM mmr_data
@@ -149,8 +148,7 @@ fn build_hero_mmr_distribution_query(hero_id: u8, query: &MMRDistributionQuery) 
                             groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
                             arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
                      FROM t_matches
-                     ORDER BY match_id DESC
-                     LIMIT 1 BY account_id),
+                     QUALIFY row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC) = 1),
         distribution AS (SELECT toUInt32(clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66)) AS player_score,
                                 uniq(account_id)                                                            as players
                          FROM mmr_data
