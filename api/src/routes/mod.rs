@@ -1,5 +1,5 @@
 use axum::extract::Request;
-use axum::routing::get;
+use axum::routing::{get, post};
 use tower_http::trace;
 use tower_http::trace::TraceLayer;
 use tracing::{Level, span};
@@ -10,7 +10,7 @@ use crate::context::AppState;
 use crate::routes::v1::analytics::{
     badge_distribution, hero_comb_stats, hero_stats, item_stats, player_scoreboard,
 };
-use crate::routes::v1::players;
+use crate::routes::v1::{data_privacy, players};
 use crate::utils::parse;
 
 pub mod v1;
@@ -20,6 +20,14 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .route(
             "/v1/players/{account_id}/hero-stats",
             get(players::hero_stats::hero_stats_single),
+        )
+        .route(
+            "/v1/data-privacy/request-deletion",
+            post(data_privacy::request_deletion),
+        )
+        .route(
+            "/v1/data-privacy/request-tracking",
+            post(data_privacy::request_tracking),
         )
         .route(
             "/v1/players/{account_id}/steam",
