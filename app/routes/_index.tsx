@@ -26,7 +26,7 @@ export default function Index() {
             Open Source
           </a>
           <a
-            href="https://minio.deadlock-api.com/browser/db-snapshot/public%2F"
+            href="https://files.deadlock-api.com/buckets/db-snapshot/public/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
@@ -95,7 +95,7 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <a
-                href="https://minio.deadlock-api.com/browser/db-snapshot/public%2F"
+                href="https://files.deadlock-api.com/buckets/db-snapshot/public/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full"
