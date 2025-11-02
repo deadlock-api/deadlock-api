@@ -38,8 +38,7 @@ def get_accounts(client: Client, empty_cards: set) -> list[int]:
         query = """
         WITH last_cards AS (SELECT *
                             FROM player_card
-                            ORDER BY account_id, created_at DESC
-                            LIMIT 1 BY account_id)
+                            QUALIFY ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY created_at DESC) = 1)
         SELECT account_id
         FROM last_cards
         ORDER BY created_at

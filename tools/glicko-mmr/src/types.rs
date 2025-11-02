@@ -23,8 +23,7 @@ impl Glicko2HistoryEntry {
                 r"
                     SELECT ?fields FROM glicko
                     WHERE match_id < ?
-                    ORDER BY match_id DESC
-                    LIMIT 1 BY account_id
+                    QUALIFY ROW_NUMBER() OVER (PARTITION BY account_id ORDER BY match_id DESC) = 1
                 ",
             )
             .bind(match_id)

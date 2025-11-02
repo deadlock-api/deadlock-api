@@ -182,8 +182,7 @@ def get_all_player_mmrs(client, at_match_id: int) -> dict[tuple[int, int], float
     SELECT account_id, hero_id, player_score
     FROM hero_mmr_history2 FINAL
     WHERE match_id <= {at_match_id}
-    ORDER BY account_id, match_id DESC
-    LIMIT 1 BY account_id;
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY account_id, hero_id ORDER BY match_id DESC) = 1;
     """
     result = client.execute(query)
     return {(row[0], row[1]): row[2] for row in result}
