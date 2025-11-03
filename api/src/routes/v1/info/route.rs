@@ -42,20 +42,10 @@ SELECT COUNT() as fetched_matches_per_day
 FROM fetched_matches
 ";
 
-const MISSED_MATCHES_QUERY: &str = "
-SELECT uniq(match_id)
-FROM player_match_history
-WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
-    AND match_mode IN ('Ranked', 'Unranked')
-    AND match_id NOT IN (
-        SELECT match_id
-        FROM match_salts
-        WHERE created_at > now() - INTERVAL 1 WEEK
-        UNION ALL
-        SELECT match_id
-        FROM match_info
-        WHERE start_time BETWEEN '2025-05-01' AND now() - INTERVAL '2 hours'
-    )
+const USER_INGESTED_MATCHES_LAST24H: &str = "
+SELECT uniq(match_id) AS matches
+FROM match_salts
+WHERE created_at > toStartOfDay(now() - INTERVAL 1 DAY) AND username is null
 ";
 
 #[derive(Deserialize, Row)]
@@ -99,31 +89,33 @@ impl From<TableSizeRow> for TableSize {
 pub struct APIInfo {
     /// The number of matches fetched in the last 24 hours.
     fetched_matches_per_day: Option<u64>,
-    /// The number of matches that have not been fetched.
-    missed_matches: Option<u64>,
     /// The sizes of all tables in the database.
     pub table_sizes: Option<HashMap<String, TableSize>>,
+    /// The number of matches ingested by users in the last 24 hours.
+    user_ingested_matches_last24h: Option<u64>,
 }
 
 async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
-    let (table_sizes, fetched_matches_per_day, missed_matches) = join3(
+    let (table_sizes, fetched_matches_per_day, user_ingested_matches_last24h) = join3(
         ch_client
             .query(TABLE_SIZES_QUERY)
             .fetch_all::<TableSizeRow>(),
         ch_client
             .query(FETCHED_MATCHES_LAST_24H_QUERY)
             .fetch_one::<u64>(),
-        ch_client.query(MISSED_MATCHES_QUERY).fetch_one::<u64>(),
+        ch_client
+            .query(USER_INGESTED_MATCHES_LAST24H)
+            .fetch_one::<u64>(),
     )
     .await;
     APIInfo {
         fetched_matches_per_day: fetched_matches_per_day.ok(),
-        missed_matches: missed_matches.ok(),
         table_sizes: table_sizes.ok().map(|v| {
             v.into_iter()
                 .map(|row| (row.table.clone(), row.into()))
                 .collect()
         }),
+        user_ingested_matches_last24h: user_ingested_matches_last24h.ok(),
     }
 }
 
