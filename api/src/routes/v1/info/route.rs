@@ -33,19 +33,18 @@ WITH fetched_matches AS (
     FROM match_info
     WHERE created_at > now() - INTERVAL 1 DAY
     UNION
-    DISTINCT
+    ALL
     SELECT match_id
     FROM match_salts
     WHERE created_at > now() - INTERVAL 1 DAY
 )
-SELECT COUNT() as fetched_matches_per_day
-FROM fetched_matches
+SELECT uniq(match_id) FROM fetched_matches
 ";
 
 const USER_INGESTED_MATCHES_LAST24H: &str = "
 SELECT uniq(match_id) AS matches
 FROM match_salts
-WHERE created_at > toStartOfDay(now() - INTERVAL 1 DAY) AND username is null
+WHERE created_at > now() - INTERVAL 1 DAY AND username is null
 ";
 
 #[derive(Deserialize, Row)]
