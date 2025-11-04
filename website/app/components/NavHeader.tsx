@@ -47,6 +47,13 @@ export default function NavHeader() {
               Player
             </Link>
             <Link
+              to="/ingest-cache"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+            >
+              Data Ingest
+            </Link>
+            <Link
               to="/data-privacy"
               prefetch="intent"
               className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
