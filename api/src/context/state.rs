@@ -135,7 +135,7 @@ impl AppState {
             .with_option("output_format_json_named_tuples_as_objects", "1")
             .with_option("enable_json_type", "1")
             .with_option("use_query_cache", "1")
-            .with_option("allow_statistics_optimize", "1")
+            // .with_option("allow_statistics_optimize", "1") // This is extremely slow right now
             .with_option("allow_experimental_statistics", "1")
             .with_option("query_plan_optimize_join_order_limit", "10")
             .with_option("query_cache_ttl", "300")
@@ -166,7 +166,7 @@ impl AppState {
             .with_option("output_format_json_named_tuples_as_objects", "1")
             .with_option("enable_json_type", "1")
             .with_option("use_query_cache", "1")
-            .with_option("allow_statistics_optimize", "1")
+            // .with_option("allow_statistics_optimize", "1") // This is extremely slow right now
             .with_option("allow_experimental_statistics", "1")
             .with_option("query_plan_optimize_join_order_limit", "10")
             .with_option("query_cache_ttl", "300")
