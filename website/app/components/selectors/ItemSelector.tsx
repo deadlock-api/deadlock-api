@@ -68,7 +68,7 @@ export default function ItemSelector({
               ) : null}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
             {allowSelectNull && (
               <SelectItem value="none">
                 <span className="truncate">None</span>
@@ -76,8 +76,10 @@ export default function ItemSelector({
             )}
             {sortedItems.map((item: AssetsItem) => (
               <SelectItem key={item.id} value={String(item.id)}>
-                <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
-                <ItemName itemId={item.id} />
+                <div className="flex items-center gap-2 flex-nowrap">
+                  <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
+                  <ItemName itemId={item.id} />
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
