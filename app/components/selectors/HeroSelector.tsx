@@ -66,7 +66,7 @@ export default function HeroSelector({
               ) : null}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
             {allowSelectNull && (
               <SelectItem value="none">
                 <span className="truncate">None</span>
@@ -74,8 +74,10 @@ export default function HeroSelector({
             )}
             {sortedHeroes.map((hero: AssetsHero) => (
               <SelectItem key={hero.id} value={String(hero.id)}>
-                <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
-                <HeroName heroId={hero.id} />
+                <div className="flex items-center gap-2 flex-nowrap">
+                  <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
+                  <HeroName heroId={hero.id} />
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
