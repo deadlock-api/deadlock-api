@@ -144,7 +144,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
                       FROM match_player
                                ARRAY JOIN death_details as dd
                       WHERE match_id IN t_matches {death_filters})
-    SELECT position_x, position_y, count(type = 'death') as deaths, count(type = 'kill') as kills
+    SELECT position_x, position_y, countIf(type = 'death') as deaths, countIf(type = 'kill') as kills
     FROM t_events
     GROUP BY position_x, position_y
     HAVING deaths > {} and kills > {}
