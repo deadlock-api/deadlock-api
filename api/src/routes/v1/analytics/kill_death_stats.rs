@@ -1,8 +1,10 @@
+use crate::utils::parse::comma_separated_deserialize_option;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -11,11 +13,15 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::utils::parse::default_last_month_timestamp;
 
-fn default_min_kills_deaths() -> Option<u32> {
-    5.into()
+fn default_min_kills() -> Option<u32> {
+    Some(1)
 }
 
-#[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+fn default_min_deaths() -> Option<u32> {
+    Some(1)
+}
+
+#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct KillDeathStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -29,6 +35,18 @@ pub(crate) struct KillDeathStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
+    /// Filter matches by account IDs of players that participated in the match.
+    #[serde(default)]
+    #[serde(deserialize_with = "comma_separated_deserialize_option")]
+    account_ids: Option<Vec<u32>>,
+    /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    hero_ids: Option<Vec<u32>>,
+    /// Filter players based on their net worth.
+    min_networth: Option<u64>,
+    /// Filter players based on their net worth.
+    max_networth: Option<u64>,
     /// Filter matches based on whether they are in the high skill range.
     is_high_skill_range_parties: Option<bool>,
     /// Filter matches based on whether they are in the low priority pool.
@@ -46,13 +64,17 @@ pub(crate) struct KillDeathStatsQuery {
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter Raster cells based on minimum kills.
-    #[serde(default = "default_min_kills_deaths")]
-    #[param(default = default_min_kills_deaths, minimum = 1)]
+    #[serde(default = "default_min_kills")]
+    #[param(default = default_min_kills)]
     min_kills_per_raster: Option<u32>,
+    /// Filter Raster cells based on maximum kills.
+    max_kills_per_raster: Option<u32>,
     /// Filter Raster cells based on minimum deaths.
-    #[serde(default = "default_min_kills_deaths")]
-    #[param(default = default_min_kills_deaths, minimum = 1)]
+    #[serde(default = "default_min_deaths")]
+    #[param(default = default_min_deaths)]
     min_deaths_per_raster: Option<u32>,
+    /// Filter Raster cells based on maximum deaths.
+    max_deaths_per_raster: Option<u32>,
     /// Filter kills based on their game time.
     #[param(maximum = 7000)]
     min_game_time_s: Option<u32>,
@@ -69,6 +91,7 @@ pub(crate) struct KillDeathStats {
     kills: u64,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: &KillDeathStatsQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
@@ -116,6 +139,30 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
+    let mut player_filters = vec![];
+    if let Some(account_ids) = &query.account_ids {
+        player_filters.push(format!(
+            "account_id IN ({})",
+            account_ids.iter().map(ToString::to_string).join(",")
+        ));
+    }
+    if let Some(hero_ids) = query.hero_ids.as_ref() {
+        player_filters.push(format!(
+            "hero_id IN ({})",
+            hero_ids.iter().map(ToString::to_string).join(",")
+        ));
+    }
+    if let Some(min_networth) = query.min_networth {
+        player_filters.push(format!("net_worth >= {min_networth}"));
+    }
+    if let Some(max_networth) = query.max_networth {
+        player_filters.push(format!("net_worth <= {max_networth}"));
+    }
+    let player_filters = if player_filters.is_empty() {
+        String::new()
+    } else {
+        format!(" AND {}", player_filters.join(" AND "))
+    };
     let mut death_filters = vec![];
     if let Some(min_game_time_s) = query.min_game_time_s {
         death_filters.push(format!("dd.game_time_s >= {min_game_time_s}"));
@@ -128,29 +175,52 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     } else {
         format!(" AND {}", death_filters.join(" AND "))
     };
+    let min_kills_per_raster = query
+        .min_kills_per_raster
+        .map_or("".to_owned(), |v| format!(" AND kills >= {v}"));
+    let min_deaths_per_raster = query
+        .min_deaths_per_raster
+        .map_or("".to_owned(), |v| format!(" AND deaths >= {v}"));
+    let max_kills_per_raster = query
+        .max_kills_per_raster
+        .map_or("".to_owned(), |v| format!(" AND kills <= {v}"));
+    let max_deaths_per_raster = query
+        .max_deaths_per_raster
+        .map_or("".to_owned(), |v| format!(" AND deaths <= {v}"));
     format!(
         "
     WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH {info_filters}),
+         {}
          t_events AS (SELECT toInt32(round(tupleElement(dd.death_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.death_pos, 2), -2)) as position_y,
                              'death'                                  as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
-                      WHERE match_id IN t_matches {death_filters}
+                      WHERE match_id IN t_matches {death_filters} {player_filters}
                       UNION ALL
                       SELECT toInt32(round(tupleElement(dd.killer_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.killer_pos, 2), -2)) as position_y,
                              'kill'                                    as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
-                      WHERE match_id IN t_matches {death_filters})
+                      WHERE match_id IN t_matches {death_filters} {})
     SELECT position_x, position_y, countIf(type = 'death') as deaths, countIf(type = 'kill') as kills
     FROM t_events
     GROUP BY position_x, position_y
-    HAVING deaths > {} and kills > {}
+    HAVING TRUE {min_deaths_per_raster} {min_kills_per_raster} {max_deaths_per_raster} {max_kills_per_raster}
     ",
-        query.min_deaths_per_raster.unwrap_or(1),
-        query.min_kills_per_raster.unwrap_or(1)
+        if player_filters.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "t_killer_slot AS (SELECT match_id, player_slot FROM match_player WHERE match_id IN t_matches {player_filters}),"
+            )
+        },
+        if player_filters.is_empty() {
+            String::new()
+        } else {
+            "AND (match_id, dd.killer_player_slot) in t_killer_slot".to_string()
+        },
     )
 }
 
