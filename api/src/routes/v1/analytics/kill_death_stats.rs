@@ -53,6 +53,12 @@ pub(crate) struct KillDeathStatsQuery {
     #[serde(default = "default_min_kills_deaths")]
     #[param(default = default_min_kills_deaths, minimum = 1)]
     min_deaths_per_raster: Option<u32>,
+    /// Filter kills based on their game time.
+    #[param(maximum = 7000)]
+    min_game_time_s: Option<u32>,
+    /// Filter kills based on their game time.
+    #[param(maximum = 7000)]
+    max_game_time_s: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -110,6 +116,18 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
+    let mut death_filters = vec![];
+    if let Some(min_game_time_s) = query.min_game_time_s {
+        death_filters.push(format!("dd.game_time_s >= {min_game_time_s}"));
+    }
+    if let Some(max_game_time_s) = query.max_game_time_s {
+        death_filters.push(format!("dd.game_time_s <= {max_game_time_s}"));
+    }
+    let death_filters = if death_filters.is_empty() {
+        String::new()
+    } else {
+        format!(" AND {}", death_filters.join(" AND "))
+    };
     format!(
         "
     WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH {info_filters}),
@@ -118,14 +136,14 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
                              'death'                                  as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
-                      WHERE match_id IN t_matches
+                      WHERE match_id IN t_matches {death_filters}
                       UNION ALL
                       SELECT toInt32(round(tupleElement(dd.killer_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.killer_pos, 2), -2)) as position_y,
                              'kill'                                    as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
-                      WHERE match_id IN t_matches)
+                      WHERE match_id IN t_matches {death_filters})
     SELECT position_x, position_y, count(type = 'death') as deaths, count(type = 'kill') as kills
     FROM t_events
     GROUP BY position_x, position_y
