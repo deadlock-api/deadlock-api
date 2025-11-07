@@ -135,6 +135,8 @@ async function scanDirHandle(
   return salts;
 }
 
+import { cn } from "~/lib/utils";
+
 export default function () {
   const [isLoading, setIsLoading] = useState(false);
   const [saltsFound, setSaltsFound] = useState(0);
@@ -143,12 +145,12 @@ export default function () {
   const [dialogDescription, setDialogDescription] = useState("");
   const [dialogType, setDialogType] = useState<"success" | "error">("success");
   const [openSection, setOpenSection] = useState<string | null>("windows");
+  const [isDragging, setIsDragging] = useState(false);
 
-  const openDirectoryPicker = async () => {
+  const handleDirectory = async (dirHandle: FileSystemDirectoryHandle) => {
+    setIsLoading(true);
+    setSaltsFound(0);
     try {
-      const dirHandle = await (window as any).showDirectoryPicker();
-      setIsLoading(true);
-      setSaltsFound(0);
       const salts = Array.from(await scanDirHandle(dirHandle, setSaltsFound));
       setIsLoading(false);
 
@@ -177,6 +179,71 @@ export default function () {
     setDialogOpen(true);
   };
 
+  const openDirectoryPicker = async () => {
+    try {
+      const dirHandle = await (window as any).showDirectoryPicker();
+      await handleDirectory(dirHandle);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return; // User cancelled the picker
+      }
+      setIsLoading(false);
+      setDialogType("error");
+      setDialogTitle("Error");
+      setDialogDescription("An error occurred while opening the directory picker.");
+      console.error(error);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (isLoading) return;
+
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      try {
+        const handle = await (e.dataTransfer.items[0] as any).getAsFileSystemHandle();
+        if (handle && handle.kind === "directory") {
+          await handleDirectory(handle as FileSystemDirectoryHandle);
+        } else {
+          setDialogType("error");
+          setDialogTitle("Invalid Drop");
+          setDialogDescription("Please drop a directory, not a file.");
+          setDialogOpen(true);
+        }
+      } catch (error) {
+        setIsLoading(false);
+        setDialogType("error");
+        setDialogTitle("Error");
+        setDialogDescription("Could not process the dropped item. Is it a directory?");
+        console.error(error);
+        setDialogOpen(true);
+      }
+    }
+  };
+
   const toggleSection = (section: string) => {
     setOpenSection(openSection === section ? null : section);
   };
@@ -198,11 +265,20 @@ export default function () {
             Select your Steam httpcache directory to contribute match information and enhance our database
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent
+          className="pt-6"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <Button
             onClick={openDirectoryPicker}
             disabled={isLoading}
-            className="w-full h-32 text-lg relative overflow-hidden group border-primary border-2 border-dashed"
+            className={cn(
+              "w-full h-32 text-lg relative overflow-hidden group border-primary border-2 border-dashed transition-colors",
+              isDragging && "bg-primary/10 border-primary",
+            )}
             variant="secondary"
           >
             {isLoading ? (
@@ -213,10 +289,15 @@ export default function () {
                   <p className="text-sm font-normal mt-1">{saltsFound} salts found</p>
                 </div>
               </div>
+            ) : isDragging ? (
+              <div className="flex flex-col items-center gap-3 pointer-events-none">
+                <Upload className="size-8" />
+                <span>Drop directory here</span>
+              </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
                 <FolderOpen className="size-8 group-hover:scale-110 transition-transform" />
-                <span>Select Directory to Scan</span>
+                <span>Select Directory or Drop Here</span>
               </div>
             )}
           </Button>
