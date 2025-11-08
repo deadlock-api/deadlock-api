@@ -1,3 +1,5 @@
+import type { HeroV2 } from "assets-deadlock-api-client";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
 import PlayerName from "~/components/PlayerName";
@@ -5,10 +7,8 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { Dayjs } from "~/dayjs";
+import { cn } from "~/lib/utils";
 import type { APIMatchPlayer } from "~/types/api_match_metadata";
-import type { AssetsHero } from "~/types/assets_hero";
-import type { AssetsItem } from "~/types/assets_item";
-import { cn } from "../../lib/utils";
 import RankImage from "../RankImage";
 
 export interface MatchDisplayData {
@@ -16,7 +16,7 @@ export interface MatchDisplayData {
     match_id: number;
     start_time: Dayjs;
     duration_s?: number;
-    winning_team?: string;
+    winning_team?: number;
     game_mode?: string;
     match_mode?: string;
     average_rank_team0?: number;
@@ -28,7 +28,7 @@ export interface MatchDisplayData {
     kills: number;
     deaths: number;
     assists: number;
-    team: string;
+    team: number;
     items: Array<{
       item_id: number;
       game_time_s: number;
@@ -46,15 +46,15 @@ export interface MatchDisplayData {
     game_time_s: number;
     sold_time_s: number;
   }[];
-  hero?: AssetsHero;
+  hero?: HeroV2;
   hasFullData: boolean;
   players?: APIMatchPlayer[];
 }
 
 interface MatchCardProps {
   matchData: MatchDisplayData;
-  itemsMap?: Record<number, AssetsItem>;
-  heroesMap?: Record<number, AssetsHero>;
+  itemsMap?: Record<number, UpgradeV2>;
+  heroesMap?: Record<number, HeroV2>;
   setSteamId?: (steamId: number) => void;
 }
 

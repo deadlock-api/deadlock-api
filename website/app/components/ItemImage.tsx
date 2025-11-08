@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
 import { useMemo } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
-import { ASSETS_ORIGIN } from "~/lib/constants";
-import type { AssetsItem } from "~/types/assets_item";
-import { cn } from "../lib/utils";
+import { assetsApi } from "~/lib/assets-api";
+import { cn } from "~/lib/utils";
 
 export default function ItemImage({ itemId, className }: { itemId: number; className?: string }) {
-  const { data, isLoading } = useQuery<AssetsItem[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -28,11 +31,11 @@ export default function ItemImage({ itemId, className }: { itemId: number; class
 
   return (
     <picture>
-      <source srcSet={item?.shop_image_small_webp} type="image/webp" />
-      <source srcSet={item?.shop_image_small} type="image/png" />
+      {item?.shop_image_small_webp && <source srcSet={item?.shop_image_small_webp} type="image/webp" />}
+      {item?.shop_image_small && <source srcSet={item?.shop_image_small} type="image/png" />}
       <img
         loading="lazy"
-        src={item?.shop_image_small} // Fallback for browsers that don't support <picture> or neither format
+        src={item?.shop_image_small ?? ""} // Fallback for browsers that don't support <picture> or neither format
         alt={item?.name}
         title={item?.name}
         className={cn("size-8 aspect-square", className)}

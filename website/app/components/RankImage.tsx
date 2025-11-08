@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import type { RankV2 } from "assets-deadlock-api-client";
 import { useMemo } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
-import { ASSETS_ORIGIN } from "~/lib/constants";
-import type { AssetsRank } from "~/types/assets_rank";
-import { cn } from "../lib/utils";
+import { assetsApi } from "~/lib/assets-api";
+import { cn } from "~/lib/utils";
 
 // Utility function to get tier and subrank from rankId
 function getTierAndSubrank(rankId: number): { tier: number; subrank: number } {
@@ -19,33 +19,33 @@ function getTierAndSubrank(rankId: number): { tier: number; subrank: number } {
 
 // Helper to get the correct image URL
 function getRankImageUrl(
-  rank: AssetsRank | undefined,
+  rank: RankV2 | undefined,
   subrank: number,
   size: "small" | "large" = "small",
   format: "png" | "webp" = "webp",
-): string | undefined {
+): string | undefined | null {
   if (!rank) return undefined;
   if (rank.tier === 0) {
     // Obscurus only has base images
     const key = `${size}_${format}`;
-    return rank.images[key as keyof AssetsRank["images"]] ?? rank.images[size as keyof AssetsRank["images"]];
+    return rank.images[key as keyof RankV2["images"]] ?? rank.images[size as keyof RankV2["images"]];
   }
   // Try specific subrank image first (webp, then png)
   let key = `${size}_subrank${subrank}_${format}`;
-  if (rank.images[key as keyof AssetsRank["images"]]) {
-    return rank.images[key as keyof AssetsRank["images"]];
+  if (rank.images[key as keyof RankV2["images"]]) {
+    return rank.images[key as keyof RankV2["images"]];
   }
   key = `${size}_subrank${subrank}`;
-  if (rank.images[key as keyof AssetsRank["images"]]) {
-    return rank.images[key as keyof AssetsRank["images"]];
+  if (rank.images[key as keyof RankV2["images"]]) {
+    return rank.images[key as keyof RankV2["images"]];
   }
   // Fallback to base tier image (webp, then png)
   key = `${size}_${format}`;
-  if (rank.images[key as keyof AssetsRank["images"]]) {
-    return rank.images[key as keyof AssetsRank["images"]];
+  if (rank.images[key as keyof RankV2["images"]]) {
+    return rank.images[key as keyof RankV2["images"]];
   }
   key = `${size}`;
-  return rank.images[key as keyof AssetsRank["images"]];
+  return rank.images[key as keyof RankV2["images"]];
 }
 
 export default function RankImage({
@@ -57,9 +57,12 @@ export default function RankImage({
   className?: string;
   size?: "small" | "large";
 }) {
-  const { data, isLoading } = useQuery<AssetsRank[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["assets-ranks"],
-    queryFn: () => fetch(new URL("/v2/ranks", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.default_api.getRanksV2RanksGet();
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -90,7 +93,7 @@ export default function RankImage({
       {pngImageUrl && <source srcSet={pngImageUrl} type="image/png" />}
       <img
         loading="lazy"
-        src={pngImageUrl || webpImageUrl} // Fallback for browsers that don't support <picture>
+        src={pngImageUrl || webpImageUrl || ""} // Fallback for browsers that don't support <picture>
         alt={rankLabel}
         title={rankLabel}
         className={cn("h-8", className)}

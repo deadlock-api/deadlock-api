@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import type { RankV2 } from "assets-deadlock-api-client";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { ASSETS_ORIGIN } from "~/lib/constants";
-import type { AssetsRank } from "~/types/assets_rank";
+import { assetsApi } from "~/lib/assets-api";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";
 
@@ -23,33 +23,33 @@ function getRankId(tier: number, subrank: number): number {
 
 // Helper to get the correct image URL
 function getRankImageUrl(
-  rank: AssetsRank | undefined,
+  rank: RankV2 | undefined,
   subrank: number,
   size: "small" | "large" = "small",
   format: "png" | "webp" = "webp",
-): string | undefined {
-  if (!rank) return undefined;
+): string | undefined | null {
+  if (!rank) return null;
   if (rank.tier === 0) {
     // Obscurus only has base images
     const key = `${size}_${format}`;
-    return rank.images[key as keyof AssetsRank["images"]] ?? rank.images[size as keyof AssetsRank["images"]];
+    return rank.images[key as keyof RankV2["images"]] ?? rank.images[size as keyof RankV2["images"]];
   }
   // Try specific subrank image first (webp, then png)
   let key = `${size}_subrank${subrank}_${format}`;
-  if (rank.images[key as keyof AssetsRank["images"]]) {
-    return rank.images[key as keyof AssetsRank["images"]];
+  if (rank.images[key as keyof RankV2["images"]]) {
+    return rank.images[key as keyof RankV2["images"]];
   }
   key = `${size}_subrank${subrank}`;
-  if (rank.images[key as keyof AssetsRank["images"]]) {
-    return rank.images[key as keyof AssetsRank["images"]];
+  if (rank.images[key as keyof RankV2["images"]]) {
+    return rank.images[key as keyof RankV2["images"]];
   }
   // Fallback to base tier image (webp, then png)
   key = `${size}_${format}`;
-  if (rank.images[key as keyof AssetsRank["images"]]) {
-    return rank.images[key as keyof AssetsRank["images"]];
+  if (rank.images[key as keyof RankV2["images"]]) {
+    return rank.images[key as keyof RankV2["images"]];
   }
   key = `${size}`;
-  return rank.images[key as keyof AssetsRank["images"]];
+  return rank.images[key as keyof RankV2["images"]];
 }
 
 export default function RankSelector({
@@ -61,21 +61,21 @@ export default function RankSelector({
   selectedRank?: number | null;
   label?: string;
 }) {
-  const { data: ranksData, isLoading } = useQuery<AssetsRank[]>({
+  const { data: ranksData, isLoading } = useQuery({
     queryKey: ["assets-ranks"],
-    queryFn: () => fetch(new URL("/v2/ranks", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.default_api.getRanksV2RanksGet();
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Add type annotation to fix linter error
-  const sortedRanks = useMemo(
-    () => ranksData?.sort((a: AssetsRank, b: AssetsRank) => a.tier - b.tier) ?? [],
-    [ranksData],
-  );
+  const sortedRanks = useMemo(() => ranksData?.sort((a: RankV2, b: RankV2) => a.tier - b.tier) ?? [], [ranksData]);
 
   // Prepare options for shadcn Select
   const selectOptions = useMemo(() => {
-    type RankOption = { value: number; label: string; rank: AssetsRank; subrank: number };
+    type RankOption = { value: number; label: string; rank: RankV2; subrank: number };
     const options: RankOption[] = [];
     for (const rank of sortedRanks) {
       const subRanksToShow = rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6];
@@ -122,7 +122,10 @@ export default function RankSelector({
               {currentSelectedDetails ? (
                 <div className="flex items-center gap-2 w-fit flex-nowrap">
                   <ImgWithSkeleton
-                    src={getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp")}
+                    src={
+                      getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp") ??
+                      ""
+                    }
                     alt={currentSelectedDetails.label}
                     className="size-6 object-contain shrink-0 mb-1"
                   />
@@ -136,7 +139,7 @@ export default function RankSelector({
               <SelectItem key={optionData.value} value={String(optionData.value)}>
                 <div className="flex items-center gap-2 flex-nowrap">
                   <ImgWithSkeleton
-                    src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp")}
+                    src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp") ?? ""}
                     alt={optionData.label}
                     className="size-6 object-contain shrink-0 mr-2 mb-1"
                   />

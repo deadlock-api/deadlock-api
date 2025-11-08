@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { HeroStatsBucketEnum } from "deadlock-api-client/api";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
@@ -11,8 +12,9 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { type Dayjs, day } from "~/dayjs";
-import { type APIHeroStats, HERO_STATS, hero_stats_transform, TIME_INTERVALS } from "~/types/api_hero_stats";
-import type { AssetsHero } from "~/types/assets_hero";
+import { api } from "~/lib/api";
+import { assetsApi } from "~/lib/assets-api";
+import { HERO_STATS, hero_stats_transform, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 export function HeroStatSelector({
   value,
@@ -73,7 +75,7 @@ export default function HeroStatsOverTimeChart({
 }: {
   heroIds?: number[];
   heroStat: (typeof HERO_STATS)[number];
-  heroTimeInterval: string;
+  heroTimeInterval: HeroStatsBucketEnum;
   minRankId?: number;
   maxRankId?: number;
   minHeroMatches?: number;
@@ -84,7 +86,7 @@ export default function HeroStatsOverTimeChart({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: heroData, isLoading: isLoadingHeroStats } = useQuery<APIHeroStats[]>({
+  const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
     queryKey: [
       "api-hero-stats-over-time",
       minRankId,
@@ -96,17 +98,16 @@ export default function HeroStatsOverTimeChart({
       minHeroMatchesTotal,
     ],
     queryFn: async () => {
-      const url = new URL("https://api.deadlock-api.com/v1/analytics/hero-stats");
-      if (heroTimeInterval) url.searchParams.set("bucket", heroTimeInterval);
-      if ((minHeroMatches ?? 0) > 0) url.searchParams.set("min_hero_matches", (minHeroMatches ?? 0).toString());
-      if ((minHeroMatchesTotal ?? 0) > 0)
-        url.searchParams.set("min_hero_matches_total", (minHeroMatchesTotal ?? 0).toString());
-      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
-      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
-      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
-      const res = await fetch(url);
-      return await res.json();
+      const response = await api.analytics_api.heroStats({
+        minHeroMatches: minHeroMatches,
+        minHeroMatchesTotal: minHeroMatchesTotal,
+        minAverageBadge: minRankId ?? 0,
+        maxAverageBadge: maxRankId ?? 116,
+        minUnixTimestamp: minDateTimestamp,
+        maxUnixTimestamp: maxDateTimestamp,
+        bucket: heroTimeInterval,
+      });
+      return response.data;
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
@@ -122,9 +123,12 @@ export default function HeroStatsOverTimeChart({
     return map;
   }, [heroStat, heroData]);
 
-  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery<AssetsHero[]>({
+  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes?only_active=true").then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 

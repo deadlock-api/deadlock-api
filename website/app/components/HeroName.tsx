@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { ASSETS_ORIGIN } from "~/lib/constants";
+import { assetsApi } from "~/lib/assets-api";
 import { cn } from "~/lib/utils";
-import type { AssetsHero } from "~/types/assets_hero";
 
 export default function HeroName({ heroId, className }: { heroId: number; className?: string }) {
-  const { data } = useQuery<AssetsHero[]>({
+  const { data } = useQuery({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 

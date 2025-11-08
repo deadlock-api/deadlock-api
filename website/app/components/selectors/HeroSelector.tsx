@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { HeroV2 } from "assets-deadlock-api-client";
 import { useId, useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
@@ -7,8 +8,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
-import { ASSETS_ORIGIN } from "~/lib/constants";
-import type { AssetsHero } from "~/types/assets_hero";
+import { assetsApi } from "~/lib/assets-api";
 
 export default function HeroSelector({
   onHeroSelected,
@@ -21,17 +21,18 @@ export default function HeroSelector({
   allowSelectNull?: boolean;
   label?: string;
 }) {
-  const { data, isLoading } = useQuery<AssetsHero[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const sortedHeroes = useMemo(
     () =>
-      data
-        ?.filter((h) => h.in_development !== true)
-        .sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
+      data?.filter((h) => h.in_development !== true).sort((a: HeroV2, b: HeroV2) => a.name.localeCompare(b.name)) ?? [],
     [data],
   );
 
@@ -45,7 +46,7 @@ export default function HeroSelector({
 
   const selectValue = selectedHero === null || selectedHero === undefined ? "" : String(selectedHero);
 
-  const currentHero = selectedHero ? sortedHeroes.find((opt: AssetsHero) => opt.id === selectedHero) : undefined;
+  const currentHero = selectedHero ? sortedHeroes.find((opt: HeroV2) => opt.id === selectedHero) : undefined;
 
   return (
     <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
@@ -72,7 +73,7 @@ export default function HeroSelector({
                 <span className="truncate">None</span>
               </SelectItem>
             )}
-            {sortedHeroes.map((hero: AssetsHero) => (
+            {sortedHeroes.map((hero: HeroV2) => (
               <SelectItem key={hero.id} value={String(hero.id)}>
                 <div className="flex items-center gap-2 flex-nowrap">
                   <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
@@ -96,17 +97,18 @@ export function HeroSelectorMultiple({
   selectedHeroes: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery<AssetsHero[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   const sortedHeroes = useMemo(
     () =>
-      data
-        ?.filter((h) => h.in_development !== true)
-        .sort((a: AssetsHero, b: AssetsHero) => a.name.localeCompare(b.name)) ?? [],
+      data?.filter((h) => h.in_development !== true).sort((a: HeroV2, b: HeroV2) => a.name.localeCompare(b.name)) ?? [],
     [data],
   );
 
@@ -153,7 +155,7 @@ export function HeroSelectorMultiple({
               checked={allSelected ? true : indeterminate ? "indeterminate" : false}
               onCheckedChange={(checked) => {
                 if (checked) {
-                  onHeroesSelected(sortedHeroes.map((hero: AssetsHero) => hero.id));
+                  onHeroesSelected(sortedHeroes.map((hero: HeroV2) => hero.id));
                 } else {
                   onHeroesSelected([]);
                 }
@@ -164,7 +166,7 @@ export function HeroSelectorMultiple({
               Select all
             </label>
           </div>
-          {sortedHeroes.map((hero: AssetsHero) => (
+          {sortedHeroes.map((hero: HeroV2) => (
             <div key={hero.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent cursor-pointer">
               <Checkbox
                 checked={selectedHeroes.includes(hero.id)}

@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Loader2, Upload } from "lucide-react";
+import type React from "react";
 import { useState } from "react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -115,9 +116,10 @@ async function processFile(fileHandle: FileSystemFileHandle): Promise<Salts | nu
 
 async function scanDirHandle(
   dirHandle: FileSystemDirectoryHandle,
-  setSaltsFound: (count: number) => void,
+  setSaltsFound: React.Dispatch<React.SetStateAction<number>>,
 ): Promise<Set<Salts>> {
   const salts: Set<Salts> = new Set();
+  // @ts-expect-error
   for await (const entry of dirHandle.values()) {
     if (entry.kind === "file") {
       const salt = await processFile(entry);

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -7,10 +8,9 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
-import { ASSETS_ORIGIN } from "~/lib/constants";
+import { assetsApi } from "~/lib/assets-api";
 import { randomColorHex } from "~/lib/utils";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
-import type { AssetsItem } from "~/types/assets_item";
 
 const chartConfig = {
   winrate: { label: "Win Rate", color: "hsl(var(--chart-1))" },
@@ -116,9 +116,12 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
   const minAvgThreshold = showFineGrainedIntervals ? baseMinAvgThreshold / 2 : baseMinAvgThreshold;
   const minMatches = rowTotalMatches && rowTotalMatches > 500 ? 20 : rowTotalMatches && rowTotalMatches > 250 ? 10 : 2;
 
-  const { data: itemsData } = useQuery<AssetsItem[]>({
+  const { data: itemsData } = useQuery({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
   const itemNameMap = useMemo(() => {

@@ -1,18 +1,4 @@
-export interface APIHeroStats {
-  hero_id: number;
-  bucket: number;
-  wins: number;
-  losses: number;
-  matches: number;
-  matches_per_bucket: number;
-  players: number;
-  total_kills: number;
-  total_deaths: number;
-  total_assists: number;
-  total_net_worth: number;
-  total_last_hits: number;
-  total_denies: number;
-}
+import type { AnalyticsHeroStats } from "deadlock-api-client";
 
 export const HERO_STATS = [
   "winrate",
@@ -28,7 +14,7 @@ export const HERO_STATS = [
   "denies_per_match",
 ] as const;
 
-export function hero_stats_transform(heroStats: APIHeroStats, heroStat: (typeof HERO_STATS)[number]) {
+export function hero_stats_transform(heroStats: AnalyticsHeroStats, heroStat: (typeof HERO_STATS)[number]) {
   switch (heroStat) {
     case "winrate":
       return (100 * heroStats.wins) / heroStats.matches;

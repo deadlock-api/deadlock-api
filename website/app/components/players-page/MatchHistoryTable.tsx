@@ -1,14 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import type { HeroV2 } from "assets-deadlock-api-client";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
 import { useMemo } from "react";
-import z from "zod/v4";
 import { Card, CardContent } from "~/components/ui/card";
-import type { Dayjs } from "~/dayjs";
-import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
-import { type $MatchHistory, MatchHistory } from "~/types/api_match_history";
+import { type Dayjs, day } from "~/dayjs";
+import { api } from "~/lib/api";
+import { assetsApi } from "~/lib/assets-api";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
-import { APIMatchMetadataSchema } from "~/types/api_match_metadata";
-import type { AssetsHero } from "~/types/assets_hero";
-import type { AssetsItem } from "~/types/assets_item";
 import MatchCard from "./MatchCard";
 import { mergeMatchData } from "./matchDataUtils";
 
@@ -25,26 +23,32 @@ export default function MatchHistoryTable({
   maxDate?: Dayjs;
   setSteamId?: (steamId: number) => void;
 }) {
-  const { data: heroesData, isLoading: isLoadingHeroes } = useQuery<AssetsHero[]>({
+  const { data: heroesData, isLoading: isLoadingHeroes } = useQuery({
     queryKey: ["assets-heroes"],
-    queryFn: () => fetch(new URL("/v2/heroes?only_active=true", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data: itemsData, isLoading: isLoadingItems } = useQuery<AssetsItem[]>({
+  const { data: itemsData, isLoading: isLoadingItems } = useQuery({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()), // Use new URL()
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   // Fetch match history (simpler data, more comprehensive)
-  const { data: matchHistoryData, isLoading: isLoadingMatchHistory } = useQuery<$MatchHistory[]>({
+  const { data: matchHistoryData, isLoading: isLoadingMatchHistory } = useQuery({
     queryKey: ["api-match-history", steamId],
     queryFn: async () => {
-      const url = new URL(`/v1/players/${steamId}/match-history`, API_ORIGIN); // Use new URL()
-      const res = await fetch(url);
-      const data = await res.json();
-      return z.array(MatchHistory.schema).parse(data);
+      const response = await api.players_api.matchHistory({
+        accountId: steamId,
+      });
+      return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -64,7 +68,7 @@ export default function MatchHistoryTable({
     if (minDate || maxDate) {
       filtered = filtered.filter((match) => {
         // match.start_time is already a Dayjs object from the schema transform
-        const matchTime = match.start_time;
+        const matchTime = day.utc(match.start_time).local();
         const afterMin = !minDate || matchTime.isAfter(minDate);
         const beforeMax = !maxDate || matchTime.isBefore(maxDate);
         return afterMin && beforeMax;
@@ -76,21 +80,17 @@ export default function MatchHistoryTable({
   }, [matchHistoryData, hero, minDate, maxDate]);
 
   // Fetch match metadata for the filtered matches
-  const { data: matchesData } = useQuery<APIMatchMetadata[]>({
+  const { data: matchesData } = useQuery({
     queryKey: ["api-matches-metadata", filteredMatchIds],
     queryFn: async () => {
       if (filteredMatchIds.length === 0) return [];
-
-      const url = new URL("/v1/matches/metadata", API_ORIGIN); // Use new URL()
-      url.searchParams.set("include_info", "true");
-      url.searchParams.set("include_player_info", "true");
-      url.searchParams.set("include_player_items", "true");
-      url.searchParams.set("match_ids", filteredMatchIds.join(","));
-
-      const res = await fetch(url);
-      const data = await res.json();
-
-      return z.array(APIMatchMetadataSchema).parse(data);
+      const response = await api.matches_api.bulkMetadata({
+        includeInfo: true,
+        includePlayerInfo: true,
+        includePlayerItems: true,
+        matchIds: filteredMatchIds,
+      });
+      return response.data as unknown as APIMatchMetadata[];
     },
     throwOnError: true,
     staleTime: 20 * 60 * 1000, // 5 minutes
@@ -103,7 +103,7 @@ export default function MatchHistoryTable({
         acc[hero.id] = hero;
         return acc;
       },
-      {} as Record<number, AssetsHero>,
+      {} as Record<number, HeroV2>,
     );
   }, [heroesData]);
 
@@ -113,7 +113,7 @@ export default function MatchHistoryTable({
         acc[item.id] = item;
         return acc;
       },
-      {} as Record<number, AssetsItem>,
+      {} as Record<number, UpgradeV2>,
     );
   }, [itemsData]);
 
@@ -122,17 +122,18 @@ export default function MatchHistoryTable({
   }, [itemsData]);
 
   // Combine match history with metadata using the new helper function
-  const playerMatches = useMemo(() => {
-    const matches = mergeMatchData({
-      matchHistoryData,
-      matchesData,
-      steamId,
-      heroesMap,
-      upgradeItems,
-      filteredMatchIds,
-    });
-    return matches;
-  }, [matchHistoryData, matchesData, steamId, heroesMap, upgradeItems, filteredMatchIds]);
+  const playerMatches = useMemo(
+    () =>
+      mergeMatchData({
+        matchHistoryData,
+        matchesData,
+        steamId,
+        heroesMap,
+        upgradeItems,
+        filteredMatchIds,
+      }),
+    [matchHistoryData, matchesData, steamId, heroesMap, upgradeItems, filteredMatchIds],
+  );
 
   if (isLoadingMatchHistory || isLoadingHeroes || isLoadingItems) {
     return (

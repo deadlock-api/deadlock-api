@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
 import { useMemo } from "react";
-import { ASSETS_ORIGIN } from "~/lib/constants";
-import type { AssetsItem } from "~/types/assets_item";
+import { assetsApi } from "~/lib/assets-api";
 
 export default function ItemName({ itemId, className }: { itemId: number; className?: string }) {
-  const { data } = useQuery<AssetsItem[]>({
+  const { data } = useQuery({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 

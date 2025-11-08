@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
+import type { ItemStats } from "deadlock-api-client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
@@ -7,11 +9,9 @@ import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
-import { ASSETS_ORIGIN } from "~/lib/constants";
+import { assetsApi } from "~/lib/assets-api";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
-import type { APIItemStats } from "~/types/api_item_stats";
-import type { AssetsItem } from "~/types/assets_item";
 import { Button } from "../ui/button";
 
 export default function ItemCombsExplore({
@@ -29,7 +29,7 @@ export default function ItemCombsExplore({
   minDate?: Dayjs;
   maxDate?: Dayjs;
   hero?: number | null;
-  sortBy?: keyof APIItemStats | "winrate";
+  sortBy?: keyof ItemStats | "winrate";
   minMatches?: number | null;
   limit?: number;
 }) {
@@ -49,9 +49,12 @@ export default function ItemCombsExplore({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
+  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
