@@ -288,7 +288,7 @@ export default function Heroes(
                 }}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
-                minMatches={minMatches}
+                minHeroMatches={minMatches}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
@@ -303,7 +303,7 @@ export default function Heroes(
                 }}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
-                minMatches={minMatches}
+                minHeroMatches={minMatches}
               />
             </div>
           </div>

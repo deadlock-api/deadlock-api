@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
@@ -7,8 +8,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
-import { ASSETS_ORIGIN } from "~/lib/constants";
-import type { AssetsItem } from "~/types/assets_item";
+import { assetsApi } from "~/lib/assets-api";
 
 export default function ItemSelector({
   onItemSelected,
@@ -21,13 +21,16 @@ export default function ItemSelector({
   allowSelectNull?: boolean;
   label?: string;
 }) {
-  const { data, isLoading } = useQuery<AssetsItem[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["assets-items"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  function sortItems(a: AssetsItem, b: AssetsItem) {
+  function sortItems(a: UpgradeV2, b: UpgradeV2) {
     if (a.item_tier !== b.item_tier) {
       return a.item_tier - b.item_tier;
     }
@@ -47,7 +50,7 @@ export default function ItemSelector({
 
   const selectValue = selectedItem === null || selectedItem === undefined ? "" : String(selectedItem);
 
-  const currentItem = selectedItem ? sortedItems.find((opt: AssetsItem) => opt.id === selectedItem) : undefined;
+  const currentItem = selectedItem ? sortedItems.find((opt: UpgradeV2) => opt.id === selectedItem) : undefined;
 
   return (
     <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
@@ -74,7 +77,7 @@ export default function ItemSelector({
                 <span className="truncate">None</span>
               </SelectItem>
             )}
-            {sortedItems.map((item: AssetsItem) => (
+            {sortedItems.map((item: UpgradeV2) => (
               <SelectItem key={item.id} value={String(item.id)}>
                 <div className="flex items-center gap-2 flex-nowrap">
                   <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
@@ -98,13 +101,16 @@ export function ItemSelectorMultiple({
   selectedItems: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery<AssetsItem[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["assets-items"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  function sortItems(a: AssetsItem, b: AssetsItem) {
+  function sortItems(a: UpgradeV2, b: UpgradeV2) {
     if (a.item_tier !== b.item_tier) {
       return a.item_tier - b.item_tier;
     }
@@ -155,7 +161,7 @@ export function ItemSelectorMultiple({
               checked={allSelected ? true : indeterminate ? "indeterminate" : false}
               onCheckedChange={(checked) => {
                 if (checked) {
-                  onItemsSelected(sortedItems.map((item: AssetsItem) => item.id));
+                  onItemsSelected(sortedItems.map((item: UpgradeV2) => item.id));
                 } else {
                   onItemsSelected([]);
                 }
@@ -166,7 +172,7 @@ export function ItemSelectorMultiple({
               Select all
             </label>
           </div>
-          {sortedItems.map((item: AssetsItem) => (
+          {sortedItems.map((item: UpgradeV2) => (
             <div key={item.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent cursor-pointer">
               <Checkbox
                 checked={selectedItems.includes(item.id)}

@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import type { AnalyticsHeroStats } from "deadlock-api-client";
 import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { Dayjs } from "~/dayjs";
-import { API_ORIGIN } from "~/lib/constants";
-import type { APIHeroStats } from "~/types/api_hero_stats";
-import { cn } from "../../lib/utils";
+import { api } from "~/lib/api";
+import { cn } from "~/lib/utils";
 
 export default function HeroStatsTable({
   columns,
@@ -26,7 +26,7 @@ export default function HeroStatsTable({
   limit?: number;
   hideHeader?: boolean;
   hideIndex?: boolean;
-  sortBy?: keyof APIHeroStats | "winrate";
+  sortBy?: keyof AnalyticsHeroStats | "winrate";
   minRankId?: number;
   maxRankId?: number;
   minHeroMatches?: number;
@@ -38,7 +38,7 @@ export default function HeroStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: heroData, isLoading } = useQuery<APIHeroStats[]>({
+  const { data: heroData, isLoading } = useQuery({
     queryKey: [
       "api-hero-stats",
       minRankId,
@@ -49,16 +49,15 @@ export default function HeroStatsTable({
       minHeroMatchesTotal,
     ],
     queryFn: async () => {
-      const url = new URL("/v1/analytics/hero-stats", API_ORIGIN);
-      if ((minHeroMatches ?? 0) > 0) url.searchParams.set("min_hero_matches", (minHeroMatches ?? 0).toString());
-      if ((minHeroMatchesTotal ?? 0) > 0)
-        url.searchParams.set("min_hero_matches_total", (minHeroMatchesTotal ?? 0).toString());
-      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
-      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
-      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
-      const res = await fetch(url);
-      return await res.json();
+      const response = await api.analytics_api.heroStats({
+        minHeroMatches: minHeroMatches,
+        minHeroMatchesTotal: minHeroMatchesTotal,
+        minAverageBadge: minRankId,
+        maxAverageBadge: maxRankId,
+        minUnixTimestamp: minDateTimestamp,
+        maxUnixTimestamp: maxDateTimestamp,
+      });
+      return response.data;
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });

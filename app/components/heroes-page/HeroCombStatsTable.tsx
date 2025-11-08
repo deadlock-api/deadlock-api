@@ -6,8 +6,7 @@ import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Slider } from "~/components/ui/slider";
 import type { Dayjs } from "~/dayjs";
-import { API_ORIGIN } from "~/lib/constants";
-import type { APIHeroCombStats } from "~/types/api_hero_comb_stats";
+import { api } from "~/lib/api";
 
 export default function HeroCombStatsTable({
   columns,
@@ -41,7 +40,7 @@ export default function HeroCombStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: heroData, isLoading } = useQuery<APIHeroCombStats[]>({
+  const { data: heroData, isLoading } = useQuery({
     queryKey: [
       "api-hero-comb-stats",
       minRankId,
@@ -52,15 +51,15 @@ export default function HeroCombStatsTable({
       minHeroMatches,
     ],
     queryFn: async () => {
-      const url = new URL("/v1/analytics/hero-comb-stats", API_ORIGIN);
-      url.searchParams.set("comb_size", combSizeFilter.toString());
-      url.searchParams.set("min_matches", (minHeroMatches ?? 0).toString());
-      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
-      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
-      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
-      const res = await fetch(url);
-      return await res.json();
+      const response = await api.analytics_api.heroCombStats({
+        combSize: combSizeFilter,
+        minMatches: minHeroMatches ?? 0,
+        minAverageBadge: minRankId ?? 0,
+        maxAverageBadge: maxRankId ?? 116,
+        minUnixTimestamp: minDateTimestamp,
+        maxUnixTimestamp: maxDateTimestamp,
+      });
+      return response.data;
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });

@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { day } from "../dayjs";
+import { day } from "~/dayjs";
 
 export const APIMatchPlayerItemSchema = z.object({
   flags: z.int(),
@@ -9,8 +9,6 @@ export const APIMatchPlayerItemSchema = z.object({
   sold_time_s: z.int(),
   upgrade_id: z.int(),
 });
-
-export type APIMatchPlayerItem = z.infer<typeof APIMatchPlayerItemSchema>;
 
 export const APIMatchPlayerSchema = z.object({
   abandon_match_time_s: z.int(),

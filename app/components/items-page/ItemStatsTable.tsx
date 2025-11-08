@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
+import type { ItemStats } from "deadlock-api-client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
@@ -12,10 +14,9 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
-import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { api } from "~/lib/api";
+import { assetsApi } from "~/lib/assets-api";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
-import type { APIItemStats } from "~/types/api_item_stats";
-import type { AssetsItem } from "~/types/assets_item";
 
 // Parsers for sort field and direction using nuqs string literal parser
 const parseAsSortField = parseAsStringLiteral(["winRate", "usage"] as const);
@@ -120,7 +121,7 @@ function wilsonScoreInterval(wins: number, matches: number, z = 1.96): [number, 
   return [(center - margin) / denominator, (center + margin) / denominator];
 }
 
-export function getDisplayItemStats(data: APIItemStats[] | undefined, assetsItems: AssetsItem[]): DisplayItemStats[] {
+export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: UpgradeV2[]): DisplayItemStats[] {
   if (!data || data.length === 0) return [];
   const baselineRow = data.reduce((max, d) => (d.matches > max.matches ? d : max), data[0]);
   const [baselineLower, baselineUpper] = wilsonScoreInterval(baselineRow.wins, baselineRow.matches);
@@ -541,26 +542,27 @@ export default function ItemStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery<AssetsItem[]>({
+  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
     queryKey: ["assets-items-upgrades"],
-    queryFn: () => fetch(new URL("/v2/items/by-type/upgrade", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+      return response.data as UpgradeV2[];
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data = [], isLoading: isLoadingItemStats } = useQuery<APIItemStats[]>({
+  const { data = [], isLoading: isLoadingItemStats } = useQuery({
     queryKey: ["api-item-stats", minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, [], []],
     queryFn: async () => {
-      const url = new URL("/v1/analytics/item-stats", API_ORIGIN);
-      if (hero) url.searchParams.set("hero_id", hero.toString());
-      url.searchParams.set("min_average_badge", (minRankId ?? 0).toString());
-      url.searchParams.set("max_average_badge", (maxRankId ?? 116).toString());
-      if (minDateTimestamp) url.searchParams.set("min_unix_timestamp", minDateTimestamp.toString());
-      if (maxDateTimestamp) url.searchParams.set("max_unix_timestamp", maxDateTimestamp.toString());
-      if (minMatches) url.searchParams.set("min_matches", minMatches.toString());
-      const res = await fetch(url);
-      const data = await res.json();
-      if (Array.isArray(data)) return data;
-      throw new Error("Error", { cause: data });
+      const response = await api.analytics_api.itemStats({
+        heroId: hero,
+        minAverageBadge: minRankId ?? 0,
+        maxAverageBadge: maxRankId ?? 116,
+        minUnixTimestamp: minDateTimestamp,
+        maxUnixTimestamp: maxDateTimestamp,
+        minMatches: minMatches,
+      });
+      return response.data;
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });

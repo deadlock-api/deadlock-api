@@ -1,24 +1,25 @@
-import type { $MatchHistory } from "~/types/api_match_history";
+import type { HeroV2 } from "assets-deadlock-api-client";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
+import type { PlayerMatchHistoryEntry } from "deadlock-api-client";
+import { day } from "~/dayjs";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
-import type { AssetsHero } from "~/types/assets_hero";
-import type { AssetsItem } from "../../types/assets_item";
 import type { MatchDisplayData } from "./MatchCard";
 
 interface MergeMatchDataParams {
-  matchHistoryData: $MatchHistory[] | undefined;
+  matchHistoryData: PlayerMatchHistoryEntry[] | undefined;
   matchesData: APIMatchMetadata[] | undefined;
   steamId: number;
-  heroesMap: Record<number, AssetsHero> | undefined;
-  upgradeItems: Record<number, AssetsItem> | undefined;
+  heroesMap: Record<number, HeroV2> | undefined;
+  upgradeItems: Record<number, UpgradeV2> | undefined;
   filteredMatchIds: number[];
 }
 
 interface CreateMatchDisplayDataParams {
-  historyMatch?: $MatchHistory;
+  historyMatch?: PlayerMatchHistoryEntry;
   metadataMatch?: APIMatchMetadata;
   steamId: number;
-  heroesMap: Record<number, AssetsHero> | undefined;
-  upgradeItems: Record<number, AssetsItem> | undefined;
+  heroesMap: Record<number, HeroV2> | undefined;
+  upgradeItems: Record<number, UpgradeV2> | undefined;
 }
 
 // Function to create a single MatchDisplayData object from history and/or metadata
@@ -71,7 +72,7 @@ function createMatchDisplayData({
         match_id: metadataMatch.match_id,
         start_time: metadataMatch.start_time, // Already Dayjs from schema
         duration_s: metadataMatch.duration_s,
-        winning_team: metadataMatch.winning_team, // Already string from schema
+        winning_team: metadataMatch.winning_team === "Team0" ? 0 : 1, // Already string from schema
         game_mode: metadataMatch.game_mode,
         match_mode: metadataMatch.match_mode,
         average_rank_team0: metadataMatch.average_badge_team0 ?? undefined,
@@ -83,7 +84,7 @@ function createMatchDisplayData({
         kills: playerMetadata.kills,
         deaths: playerMetadata.deaths,
         assists: playerMetadata.assists,
-        team: playerMetadata.team, // Already string from schema
+        team: playerMetadata.team === "Team0" ? 0 : 1, // Already string from schema
         items: playerMetadata.items,
         denies: playerMetadata.denies,
         last_hits: playerMetadata.last_hits,
@@ -101,7 +102,7 @@ function createMatchDisplayData({
 
   if (historyMatch) {
     // Only history data is available
-    const isWin = historyMatch.match_result === "Win";
+    const isWin = historyMatch.match_result === historyMatch.player_team;
     const kda =
       historyMatch.player_deaths > 0
         ? (historyMatch.player_kills + historyMatch.player_assists) / historyMatch.player_deaths
@@ -111,9 +112,9 @@ function createMatchDisplayData({
     return {
       match: {
         match_id: historyMatch.match_id,
-        start_time: historyMatch.start_time, // Already Dayjs from schema
+        start_time: day.unix(historyMatch.start_time).local(),
         duration_s: historyMatch.match_duration_s,
-        winning_team: historyMatch.player_team, // Already string from schema
+        winning_team: historyMatch.match_result, // Already string from schema
         // game_mode and match_mode are not available from history
       },
       player: {

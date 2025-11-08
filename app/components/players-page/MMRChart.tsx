@@ -3,9 +3,8 @@ import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent } from "~/components/ui/card";
 import { type Dayjs, day } from "~/dayjs";
-import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
-import type { APIPlayerMMRHistory } from "~/types/api_player_mmr_history";
-import type { AssetsRank } from "~/types/assets_rank";
+import { api } from "~/lib/api";
+import { assetsApi } from "~/lib/assets-api";
 
 export default function MMRChart({
   steamId,
@@ -18,20 +17,27 @@ export default function MMRChart({
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
-  const { data: ranksData, isLoading: isLoadingAssetsRanks } = useQuery<AssetsRank[]>({
+  const { data: ranksData, isLoading: isLoadingAssetsRanks } = useQuery({
     queryKey: ["assets-ranks"],
-    queryFn: () => fetch(new URL("/v2/ranks", ASSETS_ORIGIN)).then((res) => res.json()),
+    queryFn: async () => {
+      const response = await assetsApi.default_api.getRanksV2RanksGet();
+      return response.data;
+    },
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data: mmrData, isLoading: isLoadingMMR } = useQuery<APIPlayerMMRHistory[]>({
+  const { data: mmrData, isLoading: isLoadingMMR } = useQuery({
     queryKey: ["api-mmr", steamId, hero],
     queryFn: async () => {
-      const url = hero
-        ? new URL(`/v1/players/${steamId}/mmr-history/${hero}`, API_ORIGIN)
-        : new URL(`/v1/players/${steamId}/mmr-history`, API_ORIGIN);
-      const res = await fetch(url);
-      return await res.json();
+      const response = hero
+        ? await api.mmr_api.heroMmrHistory({
+            accountId: steamId,
+            heroId: hero,
+          })
+        : await api.mmr_api.mmrHistory({
+            accountId: steamId,
+          });
+      return response.data;
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
