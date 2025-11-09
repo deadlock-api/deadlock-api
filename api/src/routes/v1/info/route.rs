@@ -44,7 +44,7 @@ SELECT uniq(match_id) FROM fetched_matches
 const USER_INGESTED_MATCHES_LAST24H: &str = "
 SELECT uniq(match_id) AS matches
 FROM match_salts
-WHERE created_at > now() - INTERVAL 1 DAY AND username is null
+WHERE created_at > now() - INTERVAL 1 DAY
 ";
 
 #[derive(Deserialize, Row)]
