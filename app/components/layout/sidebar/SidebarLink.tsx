@@ -13,29 +13,21 @@ export function SidebarLink({ icon: Icon, label, external, ...props }: SidebarLi
   const location = useLocation();
   const isActive =
     !external && props.to === "/" ? location.pathname === "/" : location.pathname.startsWith(props.to.toString());
-  console.log(props.to, isActive)
+  const transition = "transition-colors duration-200";
   return (
-    <Button asChild variant={isActive?"accent":"ghost"} className="flex gap-2 group items-center p-2 rounded-md transition-colors duration-200">
+    <Button asChild variant={isActive?"accent":"ghost"} className={cn("flex gap-2 group items-center p-2 rounded-md", transition)}>
     <Link
       {...props}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
     >
       <div
-        className={cn("rounded-md shadow w-fit bg-gray-900 p-1 transition-colors duration-200", isActive ? "bg-accent" : "group-hover:bg-accent")}
+        className={cn("rounded-md shadow w-fit bg-gray-900 p-1", transition, isActive ? "bg-accent" : "group-hover:bg-accent")}
       >
-        <Icon
-          className={`w-5 h-5 transition-colors duration-200  ${
-            isActive ? "text-accent-foreground" : "text-gray-200 group-hover:text-accent-foreground"
-          }`}
-        />
+        <Icon className={cn("w-5 h-5", transition, isActive ? "text-accent-foreground" : "text-gray-200 group-hover:text-accent-foreground")}/>
       </div>
       <div className="hidden lg:flex flex-row justify-between w-full gap-2">
-        <span
-          className={`transition-colors duration-200 ${
-            isActive ? "text-accent-foreground" : "text-white/70 group-hover:text-accent-foreground"
-          }`}
-        >
+        <span className={cn(transition, isActive ? "text-accent-foreground" : "text-white/70 group-hover:text-accent-foreground")}>
           {label}
         </span>
         {external && <ArrowUpRightIcon />}
