@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { cn } from '~/lib/utils';
+import * as React from "react";
+import { cn } from "~/lib/utils";
 
 export function StatusIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -9,7 +9,7 @@ export function StatusIcon(props: React.SVGProps<SVGSVGElement>) {
       xmlns="http://www.w3.org/2000/svg"
       {...props}
       className={cn(
-        'fill-white hover:fill-accent transition-colors duration-200',
+        "fill-white hover:fill-accent transition-colors duration-200",
         props.className,
       )}
     >

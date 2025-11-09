@@ -1,4 +1,12 @@
-import { BarChart, Book, FileText, Grid, Home, ListOrdered, Swords } from "lucide-react";
+import {
+  BarChart,
+  Book,
+  FileText,
+  Grid,
+  Home,
+  ListOrdered,
+  Swords,
+} from "lucide-react";
 import React from "react";
 import { Link } from "react-router";
 import { ASSETS_API_DOCS_URL, GAME_API_DOCS_URL } from "~/lib/consts";
@@ -17,7 +25,9 @@ export function Sidebar() {
             height={36}
             className="aspect-square object-contain"
           />
-          <h1 className="hidden lg:flex lg:text-2xl font-bold tracking-tight text-lg text-white">Deadlock API</h1>
+          <h1 className="hidden lg:flex lg:text-2xl font-bold tracking-tight text-lg text-white">
+            Deadlock API
+          </h1>
         </Link>
       </div>
       <aside className={`text-white p-4 h-full`}>
@@ -25,16 +35,36 @@ export function Sidebar() {
           <div className="flex flex-col gap-2">
             <SidebarLink to="/" icon={Home} label="Home" />
             <SidebarSeparator label="Analytics" />
-            <SidebarLink to="/rank-distribution" icon={BarChart} label="Rank Distribution" />
+            <SidebarLink
+              to="/rank-distribution"
+              icon={BarChart}
+              label="Rank Distribution"
+            />
             <SidebarSeparator label="Game" />
             <SidebarLink to="/heroes" icon={Swords} label="Heroes" />
             <SidebarLink to="/items" icon={Grid} label="Items" />
-            <SidebarLink to="/leaderboard" icon={ListOrdered} label="Leaderboard" />
+            <SidebarLink
+              to="/leaderboard"
+              icon={ListOrdered}
+              label="Leaderboard"
+            />
           </div>
           <div className="flex flex-col gap-2">
             <SidebarSeparator label="API Docs" />
-            <SidebarLink external to={GAME_API_DOCS_URL} icon={Book} target="_blank" label="Game API Docs" />
-            <SidebarLink external to={ASSETS_API_DOCS_URL} icon={FileText} target="_blank" label="Assets API Docs" />
+            <SidebarLink
+              external
+              to={GAME_API_DOCS_URL}
+              icon={Book}
+              target="_blank"
+              label="Game API Docs"
+            />
+            <SidebarLink
+              external
+              to={ASSETS_API_DOCS_URL}
+              icon={FileText}
+              target="_blank"
+              label="Assets API Docs"
+            />
           </div>
         </nav>
       </aside>

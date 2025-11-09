@@ -4,13 +4,19 @@ import type React from "react";
 import { useState } from "react";
 import { cn } from "~/lib/utils";
 
-function extractImageUrl(item: UpgradeV2, image: "image" | "shop_image" | "shop_image_small", format: "webp" | "png") {
+function extractImageUrl(
+  item: UpgradeV2,
+  image: "image" | "shop_image" | "shop_image_small",
+  format: "webp" | "png",
+) {
   if (image === "image") {
     return format === "webp" ? item?.image_webp : item?.image;
   } else if (image === "shop_image") {
     return format === "webp" ? item?.shop_image_webp : item?.shop_image;
   } else {
-    return format === "webp" ? item?.shop_image_small_webp : item?.shop_image_small;
+    return format === "webp"
+      ? item?.shop_image_small_webp
+      : item?.shop_image_small;
   }
 }
 
@@ -31,7 +37,12 @@ export default function UpgradeImage({
 
   if (isError || !item) {
     return (
-      <div className={cn("flex items-center justify-center bg-muted rounded-md", props?.className)}>
+      <div
+        className={cn(
+          "flex items-center justify-center bg-muted rounded-md",
+          props?.className,
+        )}
+      >
         <CircleQuestionMark className="size-1/2 text-muted-foreground" />
       </div>
     );
