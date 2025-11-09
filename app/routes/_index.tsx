@@ -1,3 +1,4 @@
+import { ArrowUpRightIcon } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Card, CardTitle } from "~/components/ui/card";
@@ -67,11 +68,12 @@ function ServiceBox({
         <h2 className="text-2xl text-center line-clamp-1">{name}</h2>
       </CardTitle>
       <p className="text-balance text-left mx-auto leading-5.5 h-16.5 line-clamp-3">{description}</p>
-      <Button type="button" className="mx-auto w-full" variant="accent">
-        <Link to={link} target="_blank" rel="noopener noreferrer" className="text-ellipsis overflow-hidden">
-          {linkLabel}
-        </Link>
-      </Button>
+        <Button type="button" className="mx-auto w-full text-ellipsis overflow-hidden" variant="accent" asChild>
+          <Link to={link} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+            {linkLabel}
+          <ArrowUpRightIcon />
+          </Link>
+        </Button>
     </Card>
   );
 }

@@ -21,8 +21,8 @@ export function Sidebar() {
         </Link>
       </div>
       <aside className={`text-white p-4 h-full`}>
-        <nav className="flex flex-col justify-between h-full">
-          <div>
+        <nav className="flex flex-col justify-between h-full gap-2">
+          <div className="flex flex-col gap-2">
             <SidebarLink to="/" icon={Home} label="Home" />
             <SidebarSeparator label="Analytics" />
             <SidebarLink to="/rank-distribution" icon={BarChart} label="Rank Distribution" />
@@ -31,8 +31,8 @@ export function Sidebar() {
             <SidebarLink to="/items" icon={Grid} label="Items" />
             <SidebarLink to="/leaderboard" icon={ListOrdered} label="Leaderboard" />
           </div>
-          <div>
-            <SidebarSeparator label="API Documentation" />
+          <div className="flex flex-col gap-2">
+            <SidebarSeparator label="API Docs" />
             <SidebarLink external to={GAME_API_DOCS_URL} icon={Book} target="_blank" label="Game API Docs" />
             <SidebarLink external to={ASSETS_API_DOCS_URL} icon={FileText} target="_blank" label="Assets API Docs" />
           </div>
