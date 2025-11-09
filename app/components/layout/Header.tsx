@@ -1,9 +1,9 @@
 import type React from "react";
 import { Link } from "react-router";
-import { DiscordIcon } from "~/components/layout/icons/discord";
-import { GithubIcon } from "~/components/layout/icons/github";
-import { PatreonIcon } from "~/components/layout/icons/patreon";
-import { StatusIcon } from "~/components/layout/icons/status";
+import { DiscordIcon } from "~/components/layout/icons/DiscordIcon";
+import { GithubIcon } from "~/components/layout/icons/GithubIcon";
+import { PatreonIcon } from "~/components/layout/icons/PatreonIcon";
+import { StatusIcon } from "~/components/layout/icons/StatusIcon";
 import { DISCORD_LINK, GITHUB_LINK, PATREON_LINK, STATUS_PAGE_LINK } from "~/lib/consts";
 
 export function Header() {
