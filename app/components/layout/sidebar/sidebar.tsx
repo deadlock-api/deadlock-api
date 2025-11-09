@@ -23,14 +23,13 @@ export function Sidebar() {
       <aside className={`w-64 text-white p-4 h-full`}>
         <nav className="flex flex-col justify-between h-full">
           <div>
-            <SidebarLink to="#" icon={Home} label="Home" />
+            <SidebarLink to="/" icon={Home} label="Home" />
             <SidebarSeparator label="Analytics" />
-            <SidebarLink to="#" icon={BarChart} label="Rank Distribution" />
-            <SidebarLink to="#" icon={Grid} label="Kill/Death Heatmap" />
+            <SidebarLink to="/rank-distribution" icon={BarChart} label="Rank Distribution" />
             <SidebarSeparator label="Game" />
             <SidebarLink to="/heroes" icon={Swords} label="Heroes" />
-            <SidebarLink to="#" icon={Grid} label="Items" />
-            <SidebarLink to="#" icon={ListOrdered} label="Leaderboard" />
+            <SidebarLink to="/items" icon={Grid} label="Items" />
+            <SidebarLink to="/leaderboard" icon={ListOrdered} label="Leaderboard" />
           </div>
           <div>
             <SidebarSeparator label="Documentation" />
