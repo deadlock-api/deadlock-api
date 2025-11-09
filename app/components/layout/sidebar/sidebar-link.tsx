@@ -14,14 +14,14 @@ export function SidebarLink({ icon: Icon, label, external, ...props }: SidebarLi
   return (
     <Link
       {...props}
-      className={`group flex items-center p-2 rounded-md transition-colors duration-200 ${
+      className={`flex gap-2 group items-center p-2 rounded-md transition-colors duration-200 ${
         isActive ? "bg-accent/60" : "hover:bg-accent/40"
       }`}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
     >
       <div
-        className={`rounded-md bg-gray-900 p-1 mr-3 transition-colors duration-200 ${
+        className={`rounded-md w-fit bg-gray-900 p-1 transition-colors duration-200 ${
           isActive ? "bg-accent/70" : "group-hover:bg-accent/50"
         }`}
       >
@@ -31,15 +31,15 @@ export function SidebarLink({ icon: Icon, label, external, ...props }: SidebarLi
           }`}
         />
       </div>
-      <div className="flex flex-row justify-between w-full ">
+      <div className="hidden lg:flex flex-row justify-between w-full ">
         <span
-          className={`hidden md:inline transition-colors duration-200 ${
+          className={`transition-colors duration-200 ${
             isActive ? "text-accent-foreground" : "text-white/70 group-hover:text-accent-foreground"
           }`}
         >
           {label}
         </span>
-        {external && <ExternalLink />}
+        {external && <ExternalLink className="hidden lg:inline" />}
       </div>
     </Link>
   );

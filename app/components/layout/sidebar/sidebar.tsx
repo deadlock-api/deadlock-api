@@ -7,8 +7,8 @@ import { SidebarSeparator } from "./sidebar-separator";
 
 export function Sidebar() {
   return (
-    <div className="bg-sidebar flex flex-col justify-center">
-      <div className="px-4 py-6 flex items-center justify-center">
+    <div className="bg-sidebar flex flex-col justify-center sticky h-screen top-0">
+      <div className="py-6 flex items-center justify-center">
         <Link to="/" className="flex gap-2 items-center">
           <img
             src="/favicon.webp"
@@ -17,10 +17,10 @@ export function Sidebar() {
             height={36}
             className="aspect-square object-contain"
           />
-          <h1 className="lg:text-2xl font-bold tracking-tight text-lg text-white">Deadlock API</h1>
+          <h1 className="hidden lg:flex lg:text-2xl font-bold tracking-tight text-lg text-white">Deadlock API</h1>
         </Link>
       </div>
-      <aside className={`w-64 text-white p-4 h-full`}>
+      <aside className={`text-white p-4 h-full`}>
         <nav className="flex flex-col justify-between h-full">
           <div>
             <SidebarLink to="/" icon={Home} label="Home" />
