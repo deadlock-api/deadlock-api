@@ -32,9 +32,9 @@ export function Sidebar() {
             <SidebarLink to="/leaderboard" icon={ListOrdered} label="Leaderboard" />
           </div>
           <div>
-            <SidebarSeparator label="Documentation" />
-            <SidebarLink to={GAME_API_DOCS_URL} icon={Book} target="_blank" label="Game API Docs" />
-            <SidebarLink to={ASSETS_API_DOCS_URL} icon={FileText} target="_blank" label="Assets API Docs" />
+            <SidebarSeparator label="API Documentation" />
+            <SidebarLink external to={GAME_API_DOCS_URL} icon={Book} target="_blank" label="Game API Docs" />
+            <SidebarLink external to={ASSETS_API_DOCS_URL} icon={FileText} target="_blank" label="Assets API Docs" />
           </div>
         </nav>
       </aside>
