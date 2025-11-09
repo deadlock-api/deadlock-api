@@ -1,11 +1,6 @@
-import axios from "axios";
-import {
-  AnalyticsApi,
-  MatchesApi,
-  MMRApi,
-  PlayersApi,
-} from "deadlock-api-client";
-import { BASE_PATH } from "deadlock-api-client/base";
+import axios from 'axios';
+import { AnalyticsApi, MatchesApi, MMRApi, PlayersApi } from 'deadlock-api-client';
+import { BASE_PATH } from 'deadlock-api-client/base';
 
 export interface ApiConfig {
   timeout: number;
@@ -25,8 +20,8 @@ export class Api {
     const axios_client = axios.create({
       timeout: config.timeout,
       headers: {
-        Accept: "application/json",
-        UserAgent: "DeadlockAPI/1.0.0",
+        Accept: 'application/json',
+        UserAgent: 'DeadlockAPI/1.0.0',
       },
     });
     this.players_api = new PlayersApi(undefined, BASE_PATH, axios_client);

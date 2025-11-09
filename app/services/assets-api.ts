@@ -1,6 +1,6 @@
-import { DefaultApi, HeroesApi, ItemsApi } from "assets-deadlock-api-client";
-import { BASE_PATH } from "assets-deadlock-api-client/base";
-import axios from "axios";
+import { DefaultApi, HeroesApi, ItemsApi } from 'assets-deadlock-api-client';
+import { BASE_PATH } from 'assets-deadlock-api-client/base';
+import axios from 'axios';
 
 export interface ApiConfig {
   timeout: number;
@@ -19,9 +19,9 @@ export class Api {
     const axios_client = axios.create({
       timeout: config.timeout,
       headers: {
-        Accept: "application/json",
-        UserAgent: "DeadlockAPI/1.0.0",
-        "Content-Type": "application/json",
+        Accept: 'application/json',
+        UserAgent: 'DeadlockAPI/1.0.0',
+        'Content-Type': 'application/json',
       },
     });
     this.heroes_api = new HeroesApi(undefined, BASE_PATH, axios_client);

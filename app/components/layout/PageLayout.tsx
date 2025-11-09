@@ -1,12 +1,8 @@
-import { Header } from "~/components/layout/Header";
-import { Sidebar } from "~/components/layout/sidebar/Sidebar";
-import { Card } from "../ui/card";
+import { Header } from '~/components/layout/Header';
+import { Sidebar } from '~/components/layout/sidebar/Sidebar';
+import { Card } from '../ui/card';
 
-export default function PageLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function PageLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-row min-h-screen">
       <Sidebar />

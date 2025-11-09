@@ -1,26 +1,23 @@
-import { ArrowUpRightIcon } from "lucide-react";
-import { Link } from "react-router";
-import { Button } from "~/components/ui/button";
-import { Card, CardTitle } from "~/components/ui/card";
-import { ASSETS_API_DOCS_URL, DATABASE_DUMPS_URL, GAME_API_DOCS_URL, STREAMKIT_URL } from "~/lib/consts";
+import { ArrowUpRightIcon } from 'lucide-react';
+import { Link } from 'react-router';
+import { Button } from '~/components/ui/button';
+import { Card, CardTitle } from '~/components/ui/card';
+import { ASSETS_API_DOCS_URL, DATABASE_DUMPS_URL, GAME_API_DOCS_URL, STREAMKIT_URL } from '~/lib/consts';
 
 export function meta() {
-  return [{ title: "Deadlock API" }, { name: "description", content: "Deadlock API" }];
+  return [{ title: 'Deadlock API' }, { name: 'description', content: 'Deadlock API' }];
 }
 
 export default function Index() {
   return (
-    <Card className="text-center">
-      <CardTitle>
-        <h1 className="text-center text-4xl">Deadlock API</h1>
-      </CardTitle>
-      <p className="text-balance">
+    <div className="space-y-4">
+      <h1 className="text-center text-4xl">Deadlock API</h1>
+      <p className="text-balance text-center max-w-3xl mx-auto">
         The Deadlock API provides a comprehensive set of endpoints to access game data, including match history, player
         statistics, and more. Whether you are a developer looking to integrate game data into your application or a
         player wanting to analyze your performance, the Deadlock API has you covered.
       </p>
-
-      <h2 className="text-2xl mb-4 mt-8">Available Services</h2>
+      <h2 className="text-2xl text-center">Available Services</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4 mx-8">
         <ServiceBox
           name="Assets API"
@@ -47,7 +44,7 @@ export default function Index() {
           linkLabel="Explore Stream Kit"
         />
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -68,12 +65,12 @@ function ServiceBox({
         <h2 className="text-2xl text-center line-clamp-1">{name}</h2>
       </CardTitle>
       <p className="text-balance text-left mx-auto leading-5.5 h-16.5 line-clamp-3">{description}</p>
-        <Button type="button" className="mx-auto w-full text-ellipsis overflow-hidden" variant="accent" asChild>
-          <Link to={link} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
-            {linkLabel}
+      <Button type="button" className="mx-auto w-full text-ellipsis overflow-hidden" variant="accent" asChild>
+        <Link to={link} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+          {linkLabel}
           <ArrowUpRightIcon />
-          </Link>
-        </Button>
+        </Link>
+      </Button>
     </Card>
   );
 }

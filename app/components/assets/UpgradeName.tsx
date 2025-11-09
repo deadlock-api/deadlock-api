@@ -1,6 +1,6 @@
-import type { UpgradeV2 } from "assets-deadlock-api-client";
-import type React from "react";
-import { cn } from "~/lib/utils";
+import type { UpgradeV2 } from 'assets-deadlock-api-client';
+import type React from 'react';
+import { cn } from '~/lib/utils';
 
 export default function UpgradeName({
   itemId,
@@ -14,8 +14,8 @@ export default function UpgradeName({
   const item = itemAssets.find((item) => item.id === itemId);
 
   return (
-    <span {...props} className={cn("truncate", props?.className)}>
-      {item?.name ?? "Unknown Item"}
+    <span {...props} className={cn('truncate', props?.className)}>
+      {item?.name ?? 'Unknown Item'}
     </span>
   );
 }
