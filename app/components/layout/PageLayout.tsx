@@ -10,10 +10,10 @@ export default function PageLayout({
 	return (
 		<div className="flex flex-row min-h-screen">
 			<Sidebar />
-			<div className="flex-1 flex flex-col">
+			<div className="flex flex-col flex-1 min-h-screen w-full overflow-auto">
 				<Header />
-				<main className="flex-1 p-6 overflow-y-auto bg-center bg-no-repeat bg-cover bg-[url('/background.svg')]">
-					<Card className="w-full max-w-7xl mx-auto p-8">{children}</Card>
+				<main className="h-full p-16 bg-center bg-no-repeat bg-cover bg-[url('/background.svg')]">
+					<Card className="mx-auto p-8">{children}</Card>
 				</main>
 			</div>
 		</div>
