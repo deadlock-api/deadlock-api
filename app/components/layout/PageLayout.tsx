@@ -1,5 +1,5 @@
 import { Header } from "~/components/layout/Header";
-import { Sidebar } from "~/components/layout/sidebar/sidebar";
+import { Sidebar } from "~/components/layout/sidebar/Sidebar";
 
 export default function PageLayout({ children }: { children: React.ReactNode }) {
   return (

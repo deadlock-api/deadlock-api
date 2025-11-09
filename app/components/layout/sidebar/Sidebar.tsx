@@ -2,8 +2,8 @@ import { BarChart, Book, FileText, Grid, Home, ListOrdered, Swords } from "lucid
 import React from "react";
 import { Link } from "react-router";
 import { ASSETS_API_DOCS_URL, GAME_API_DOCS_URL } from "~/lib/consts";
-import { SidebarLink } from "./sidebar-link";
-import { SidebarSeparator } from "./sidebar-separator";
+import { SidebarLink } from "./SidebarLink";
+import { SidebarSeparator } from "./SidebarSeparator";
 
 export function Sidebar() {
   return (
