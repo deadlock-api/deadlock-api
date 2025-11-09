@@ -22,7 +22,7 @@ export function SidebarLink({ icon: Icon, label, external, ...props }: SidebarLi
       rel={external ? "noopener noreferrer" : undefined}
     >
       <div
-        className={cn("rounded-md shadow w-fit bg-gray-900 p-1 transition-colors duration-200", isActive ? "bg-accent/70" : "group-hover:bg-accent/50")}
+        className={cn("rounded-md shadow w-fit bg-gray-900 p-1 transition-colors duration-200", isActive ? "bg-accent" : "group-hover:bg-accent")}
       >
         <Icon
           className={`w-5 h-5 transition-colors duration-200  ${
