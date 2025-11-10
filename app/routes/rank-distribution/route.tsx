@@ -35,8 +35,8 @@ export default function RankDistribution() {
 
 	const ranksData = ranksQuery?.data ?? [];
 	const badgeDistributionData = badgeDistributionQuery?.data;
-	const isLoading =
-		badgeDistributionQuery?.isLoading || ranksQuery?.isLoading || false;
+	const isPending =
+		badgeDistributionQuery?.isPending || ranksQuery?.isPending || false;
 	const isError =
 		badgeDistributionQuery?.isError || ranksQuery?.isError || false;
 	return (
@@ -44,7 +44,7 @@ export default function RankDistribution() {
 			<section className="space-y-4 max-h-xl">
 				<h1 className="text-center text-4xl">Match Rank Distribution</h1>
 				<div className="h-200 flex flex-1 justify-center items-center">
-					{isLoading ? (
+					{isPending ? (
 						<div className="flex items-center justify-center py-8">
 							<LoadingWithDescription description="Loading rank distribution..." />
 						</div>
