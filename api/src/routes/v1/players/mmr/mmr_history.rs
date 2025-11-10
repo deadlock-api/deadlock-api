@@ -11,8 +11,8 @@ use crate::error::{APIError, APIResult};
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
-pub const WINDOW_SIZE: usize = 36;
-pub const SMOOTHING_FACTOR: f32 = 0.837;
+pub const WINDOW_SIZE: usize = 40;
+pub const SMOOTHING_FACTOR: f32 = 0.8;
 
 #[derive(Deserialize, IntoParams, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub(super) struct HeroMMRHistoryPath {
