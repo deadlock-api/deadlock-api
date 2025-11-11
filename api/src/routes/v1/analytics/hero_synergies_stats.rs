@@ -17,6 +17,7 @@ use crate::utils::parse::{
     parse_steam_id_option,
 };
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u64> {
     20.into()
 }

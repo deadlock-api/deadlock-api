@@ -6,6 +6,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::utils::parse::parse_steam_id_option;
 use crate::utils::types::SortDirectionDesc;
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_limit() -> Option<u32> {
     100.into()
 }

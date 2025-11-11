@@ -20,10 +20,12 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u32> {
     20.into()
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_comb_size() -> Option<u8> {
     6.into()
 }

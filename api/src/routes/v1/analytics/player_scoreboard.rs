@@ -16,10 +16,12 @@ use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_limit() -> Option<u32> {
     100.into()
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u32> {
     20.into()
 }

@@ -12,10 +12,12 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_min_kills() -> Option<u32> {
     Some(1)
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn default_min_deaths() -> Option<u32> {
     Some(1)
 }
