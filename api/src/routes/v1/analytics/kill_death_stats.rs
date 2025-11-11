@@ -1,4 +1,3 @@
-use crate::utils::parse::comma_separated_deserialize_option;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -11,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::utils::parse::default_last_month_timestamp;
+use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 fn default_min_kills() -> Option<u32> {
     Some(1)
@@ -177,16 +176,16 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     };
     let min_kills_per_raster = query
         .min_kills_per_raster
-        .map_or("".to_owned(), |v| format!(" AND kills >= {v}"));
+        .map_or(String::new(), |v| format!(" AND kills >= {v}"));
     let min_deaths_per_raster = query
         .min_deaths_per_raster
-        .map_or("".to_owned(), |v| format!(" AND deaths >= {v}"));
+        .map_or(String::new(), |v| format!(" AND deaths >= {v}"));
     let max_kills_per_raster = query
         .max_kills_per_raster
-        .map_or("".to_owned(), |v| format!(" AND kills <= {v}"));
+        .map_or(String::new(), |v| format!(" AND kills <= {v}"));
     let max_deaths_per_raster = query
         .max_deaths_per_raster
-        .map_or("".to_owned(), |v| format!(" AND deaths <= {v}"));
+        .map_or(String::new(), |v| format!(" AND deaths <= {v}"));
     format!(
         "
     WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH {info_filters}),
