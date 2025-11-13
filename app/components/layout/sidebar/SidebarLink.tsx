@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon, ExternalLink, type LucideIcon } from "lucide-react";
+import { ArrowUpRightIcon, type LucideIcon } from "lucide-react";
 import { Link, type LinkProps, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";

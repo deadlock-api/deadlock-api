@@ -1,5 +1,4 @@
 import type React from "react";
-import { Link } from "react-router";
 import { DiscordIcon } from "~/components/layout/icons/DiscordIcon";
 import { GithubIcon } from "~/components/layout/icons/GithubIcon";
 import { PatreonIcon } from "~/components/layout/icons/PatreonIcon";

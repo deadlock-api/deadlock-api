@@ -1,5 +1,10 @@
-import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
+import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/api";
+import { useQueryState } from "nuqs";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
+import { Card, CardContent } from "~/components/ui/card";
+import { parseAsAnyJson } from "~/lib/utils";
+import BadgeDistributionFilter from "~/routes/rank-distribution/BadgeDistributionFilter";
 import { api } from "~/services/api";
 import { assetsApi } from "~/services/assets-api";
 import BadgeDistributionChart from "./BadgeDistributionChart";
@@ -12,6 +17,12 @@ export function meta() {
 }
 
 export default function RankDistribution() {
+	const [filters, setFilters] =
+		useQueryState<AnalyticsApiBadgeDistributionRequest>(
+			"badge-distribution-filters",
+			parseAsAnyJson<AnalyticsApiBadgeDistributionRequest>().withDefault({}),
+		);
+
 	const [ranksQuery, badgeDistributionQuery] = useQueries({
 		queries: [
 			{
@@ -23,9 +34,9 @@ export default function RankDistribution() {
 				staleTime: Number.MAX_SAFE_INTEGER,
 			},
 			{
-				queryKey: ["rankDistribution"],
+				queryKey: ["rankDistribution", filters],
 				queryFn: async () => {
-					const response = await api.analytics_api.badgeDistribution();
+					const response = await api.analytics_api.badgeDistribution(filters);
 					return response.data;
 				},
 				staleTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -43,7 +54,15 @@ export default function RankDistribution() {
 		<div className="space-y-8 max-h-xl">
 			<section className="space-y-4 max-h-xl">
 				<h1 className="text-center text-4xl">Match Rank Distribution</h1>
-				<div className="h-200 flex flex-1 justify-center items-center">
+				<Card>
+					<CardContent className="p-4">
+						<BadgeDistributionFilter
+							filters={filters}
+							onFiltersChange={setFilters}
+						/>
+					</CardContent>
+				</Card>
+				<div className="h-200 flex justify-center items-center">
 					{isPending ? (
 						<div className="flex items-center justify-center py-8">
 							<LoadingWithDescription description="Loading rank distribution..." />

@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { createParser } from "nuqs";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -21,3 +22,13 @@ export function range(start: number, stop: number, step: number = 0): number[] {
 	}
 	return result;
 }
+
+export const parseAsAnyJson = <T>() =>
+	createParser<T>({
+		parse(queryValue) {
+			return JSON.parse(queryValue) as T;
+		},
+		serialize(value) {
+			return JSON.stringify(value);
+		},
+	});
