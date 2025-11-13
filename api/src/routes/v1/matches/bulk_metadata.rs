@@ -64,8 +64,8 @@ pub(super) struct BulkMatchMetadataQuery {
     include_player_death_details: bool,
     // Parameters that influence what data is included in the response (WHERE)
     /// Comma separated list of match ids, limited by `limit`
-    #[serde(default)]
-    #[serde(deserialize_with = "comma_separated_deserialize_option")]
+    #[param(inline, min_items = 1, max_items = 1_000)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,

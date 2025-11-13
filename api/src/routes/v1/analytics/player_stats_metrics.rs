@@ -60,6 +60,7 @@ pub(crate) struct PlayerStatsMetricsQuery {
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// Comma separated list of account ids to include
+    #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
 }

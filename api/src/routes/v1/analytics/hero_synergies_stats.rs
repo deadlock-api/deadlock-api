@@ -71,6 +71,7 @@ pub(super) struct HeroSynergyStatsQuery {
     #[deprecated]
     account_id: Option<u32>,
     /// Comma separated list of account ids to include
+    #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
 }
