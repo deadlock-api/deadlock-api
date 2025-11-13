@@ -1,5 +1,5 @@
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { LoadingWithDescription } from "~/components/LoadingWithDescription";
+import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
 import { api } from "~/services/api";
 import { assetsApi } from "~/services/assets-api";
 import BadgeDistributionChart from "./BadgeDistributionChart";
