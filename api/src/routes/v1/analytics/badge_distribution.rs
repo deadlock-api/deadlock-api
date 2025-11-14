@@ -39,7 +39,7 @@ pub(crate) struct BadgeDistributionQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub(crate) struct BadgeDistribution {
-    /// The badge level. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// The badge level (tier = first digits, subtier = last digit). See more: <https://assets.deadlock-api.com/v2/ranks>
     badge_level: u32,
     /// The total number of matches.
     total_matches: u64,
