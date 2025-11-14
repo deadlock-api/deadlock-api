@@ -23,6 +23,7 @@ create table default.player_match_history
     source                Enum8('history_fetcher' = 1, 'match_player' = 2) default 'history_fetcher',
     created_at            DateTime                                         default now(),
     username              Nullable(String),
+    won                   BOOL MATERIALIZED player_team = match_result,
 
     PROJECTION match_id_projection (SELECT *
                                     ORDER BY match_id, account_id)
