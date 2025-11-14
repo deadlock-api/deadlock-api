@@ -4,7 +4,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use clickhouse::Row;
-use futures::future::join3;
+use futures::future::join;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -39,12 +39,6 @@ WITH fetched_matches AS (
     WHERE created_at > now() - INTERVAL 1 DAY
 )
 SELECT uniq(match_id) FROM fetched_matches
-";
-
-const USER_INGESTED_MATCHES_LAST24H: &str = "
-SELECT uniq(match_id) AS matches
-FROM match_salts
-WHERE created_at > now() - INTERVAL 1 DAY
 ";
 
 #[derive(Deserialize, Row)]
@@ -90,31 +84,31 @@ pub struct APIInfo {
     fetched_matches_per_day: Option<u64>,
     /// The sizes of all tables in the database.
     pub table_sizes: Option<HashMap<String, TableSize>>,
-    /// The number of matches ingested by users in the last 24 hours.
+    /// The number of matches ingested in the last 24 hours.
+    #[deprecated(note = "Use `fetched_matches_per_day` instead.")]
     user_ingested_matches_last24h: Option<u64>,
 }
 
 async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
-    let (table_sizes, fetched_matches_per_day, user_ingested_matches_last24h) = join3(
+    let (table_sizes, fetched_matches_per_day) = join(
         ch_client
             .query(TABLE_SIZES_QUERY)
             .fetch_all::<TableSizeRow>(),
         ch_client
             .query(FETCHED_MATCHES_LAST_24H_QUERY)
             .fetch_one::<u64>(),
-        ch_client
-            .query(USER_INGESTED_MATCHES_LAST24H)
-            .fetch_one::<u64>(),
     )
     .await;
+    let fetched_matches_per_day = fetched_matches_per_day.ok();
+    #[allow(deprecated)]
     APIInfo {
-        fetched_matches_per_day: fetched_matches_per_day.ok(),
+        fetched_matches_per_day,
         table_sizes: table_sizes.ok().map(|v| {
             v.into_iter()
                 .map(|row| (row.table.clone(), row.into()))
                 .collect()
         }),
-        user_ingested_matches_last24h: user_ingested_matches_last24h.ok(),
+        user_ingested_matches_last24h: fetched_matches_per_day,
     }
 }
 
