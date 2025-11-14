@@ -94,7 +94,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         )
     SELECT
         account_id as enemy_id,
-        sum(match_result != player_team) as wins,
+        sum(not won) as wins,
         uniq(match_id) as matches_played,
         groupArray(match_id) as matches
     FROM player_match_history
@@ -166,7 +166,7 @@ mod test {
         let sql = build_query(account_id, &query);
         assert!(sql.contains("account_id = 12345"));
         assert!(sql.contains("account_id as enemy_id"));
-        assert!(sql.contains("sum(match_result != player_team) as wins"));
+        assert!(sql.contains("sum(not won) as wins"));
         assert!(sql.contains("uniq(match_id) as matches_played"));
         assert!(sql.contains("groupArray(match_id) as matches"));
         assert!(sql.contains("GROUP BY account_id"));

@@ -124,7 +124,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
             WITH t_histories AS (SELECT match_id, player_team FROM player_match_history WHERE {history_filters})
             SELECT
                 account_id as mate_id,
-                sum(match_result = player_team) as wins,
+                sum(won) as wins,
                 uniq(match_id) as matches_played,
                 groupUniqArray(match_id) as matches
             FROM player_match_history
