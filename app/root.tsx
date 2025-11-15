@@ -1,10 +1,10 @@
 import {
-	isRouteErrorResponse,
 	Links,
 	Meta,
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useNavigate,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -13,6 +13,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React from "react";
 import PageLayout from "~/components/layout/PageLayout";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { isDevelopment } from "~/lib/consts";
 
 export const links: Route.LinksFunction = () => [
@@ -71,31 +80,29 @@ export default function App() {
 	);
 }
 
-export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-	let message = "Oops!";
-	let details = "An unexpected error occurred.";
-	let stack: string | undefined;
+export function ErrorBoundary() {
+	const navigate = useNavigate();
 
-	if (isRouteErrorResponse(error)) {
-		message = error.status === 404 ? "404" : "Error";
-		details =
-			error.status === 404
-				? "The requested page could not be found."
-				: error.statusText || details;
-	} else if (import.meta.env.DEV && error && error instanceof Error) {
-		details = error.message;
-		stack = error.stack;
-	}
+	const backToSafety = () => {
+		navigate("/");
+	};
 
 	return (
-		<main className="pt-16 p-4 container mx-auto">
-			<h1>{message}</h1>
-			<p>{details}</p>
-			{stack && (
-				<pre className="w-full p-4 overflow-x-auto">
-					<code>{stack}</code>
-				</pre>
-			)}
-		</main>
+		<AlertDialog open>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>An unexpected error occurred</AlertDialogTitle>
+					<AlertDialogDescription>
+						We are sorry, but something went wrong. Please return to the
+						homepage.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogAction onClick={backToSafety}>
+						Back to Homepage
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	);
 }
