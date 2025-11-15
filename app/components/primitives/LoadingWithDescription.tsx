@@ -1,11 +1,24 @@
+import { useEffect, useState } from "react";
 import { Item, ItemContent, ItemMedia, ItemTitle } from "~/components/ui/item";
 import { Spinner } from "~/components/ui/spinner";
 
+export interface LoadingWithDescriptionProps {
+	description?: string;
+	delay_ms?: number;
+}
+
 export function LoadingWithDescription({
-	description,
-}: {
-	description: string;
-}) {
+	description = "Loading ...",
+	delay_ms = 300,
+}: LoadingWithDescriptionProps) {
+	const [show, setShow] = useState(false);
+
+	useEffect(() => {
+		const timeout = setTimeout(() => setShow(true), delay_ms);
+		return () => clearTimeout(timeout);
+	}, []);
+
+	if (!show) return null;
 	return (
 		<div className="flex w-full max-w-xs flex-col gap-4 [--radius:1rem]">
 			<Item variant="muted">
