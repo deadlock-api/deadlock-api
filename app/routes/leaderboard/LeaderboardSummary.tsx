@@ -2,11 +2,6 @@ import type { RankV2 } from "assets-deadlock-api-client";
 import type { Leaderboard } from "deadlock-api-client";
 import { useMemo } from "react";
 import BadgeImage from "~/components/assets/BadgeImage";
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "~/components/ui/hover-card";
 import { extractBadgeMap } from "~/lib/leaderboard";
 
 export interface LeaderboardSummaryProps {
@@ -35,36 +30,24 @@ export function LeaderboardSummary({
 	}
 
 	return (
-		<div className="grid grid-cols-[repeat(auto-fit,minmax(104px,1fr))] gap-4">
+		<div className="grid grid-cols-[repeat(auto-fit,minmax(63px,1fr))] gap-4">
 			{Array.from(rankCounts.entries()).map(([badge, count]) => {
 				const badgeInfo = badgeMap.get(badge);
 				if (!badgeInfo) return null;
 
 				return (
-					<HoverCard>
-						<HoverCardTrigger asChild>
-							<div
-								key={badge}
-								className="flex items-center space-x-2 p-2 rounded-md bg-slate-800"
-							>
-								<div className="flex items-center space-x-2 cursor-pointer">
-									<BadgeImage
-										badgeLevel={badge}
-										ranks={ranks}
-										imageType="small"
-										className="h-10 w-10"
-									/>
-									<div className="text-lg font-semibold">{count}</div>
-								</div>
-							</div>
-						</HoverCardTrigger>
-						<HoverCardContent className="w-auto p-2">
-							<p className="text-sm text-muted-foreground">
-								{count} leaderboard players in {badgeInfo.name}{" "}
-								{badgeInfo.subtier}
-							</p>
-						</HoverCardContent>
-					</HoverCard>
+					<div
+						key={badge}
+						className="flex flex-col items-center justify-center p-2 rounded-md bg-slate-800"
+					>
+						<BadgeImage
+							badgeLevel={badge}
+							ranks={ranks}
+							imageType="small"
+							className="size-10"
+						/>
+						<div className="text-lg font-semibold">{count}</div>
+					</div>
 				);
 			})}
 		</div>
