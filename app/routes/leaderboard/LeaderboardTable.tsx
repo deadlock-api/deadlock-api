@@ -88,19 +88,6 @@ export function LeaderboardTable({
 		return filteredEntries.slice(startIndex, startIndex + itemsPerPage);
 	}, [filteredEntries, currentPage, itemsPerPage]);
 
-	let rankWidth = 10;
-	let accountNameWidth = 90;
-	if (shouldShowBadgeColumn && shouldShowTopHeroesColumn) {
-		rankWidth = 10;
-		accountNameWidth = 50;
-	} else if (shouldShowBadgeColumn) {
-		rankWidth = 10;
-		accountNameWidth = 70;
-	} else if (shouldShowTopHeroesColumn) {
-		rankWidth = 10;
-		accountNameWidth = 65;
-	}
-
 	const controls = (
 		<LeaderboardControls
 			searchQuery={searchQuery}
@@ -119,15 +106,13 @@ export function LeaderboardTable({
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead style={{ width: `${rankWidth}%` }}>Rank</TableHead>
-						<TableHead style={{ width: `${accountNameWidth}%` }}>
-							Account Name
-						</TableHead>
+						<TableHead className="w-[5ch] text-right">#</TableHead>
 						{shouldShowBadgeColumn && (
-							<TableHead style={{ width: "20%" }}>Badge</TableHead>
+							<TableHead className="w-16 text-center">Rank</TableHead>
 						)}
+						<TableHead>Account Name</TableHead>
 						{shouldShowTopHeroesColumn && (
-							<TableHead style={{ width: "20%" }}>Top Heroes</TableHead>
+							<TableHead className="w-40 text-right">Top Heroes</TableHead>
 						)}
 					</TableRow>
 				</TableHeader>
@@ -172,12 +157,9 @@ function LeaderboardTableRow({
 			key={`${entry.account_name}-${entry.rank}`}
 			style={backgroundColor ? { backgroundColor } : undefined}
 		>
-			<TableCell>{entry.rank}</TableCell>
-			<TableCell className="max-w-[150px] truncate">
-				{entry.account_name}
-			</TableCell>
+			<TableCell className="text-right">{entry.rank}</TableCell>
 			{shouldShowBadgeColumn && (
-				<TableCell>
+				<TableCell className="flex justify-center">
 					{entry.badge_level && (
 						<BadgeImage
 							badge={entry.badge_level}
@@ -188,9 +170,10 @@ function LeaderboardTableRow({
 					)}
 				</TableCell>
 			)}
+			<TableCell className="truncate">{entry.account_name}</TableCell>
 			{shouldShowTopHeroesColumn && (
 				<TableCell>
-					<div className="flex space-x-3">
+					<div className="flex justify-end space-x-3">
 						{entry.top_hero_ids &&
 							entry.top_hero_ids.map((heroId) => {
 								const hero = heroesMap.get(heroId);
