@@ -1,4 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
+import { endOfDay, getUnixTime, startOfDay, subDays } from "date-fns";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/api";
 import { useState } from "react";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
@@ -16,9 +17,10 @@ export function meta() {
 }
 
 export default function RankDistribution() {
-	const [filter, setFilter] = useState<AnalyticsApiBadgeDistributionRequest>(
-		{},
-	);
+	const [filter, setFilter] = useState<AnalyticsApiBadgeDistributionRequest>({
+		minUnixTimestamp: getUnixTime(startOfDay(subDays(new Date(), 30))),
+		maxUnixTimestamp: getUnixTime(endOfDay(new Date())),
+	});
 
 	const [ranks, badgeDistributionQuery] = useQueries({
 		queries: [
