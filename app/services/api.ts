@@ -1,6 +1,7 @@
 import axios from "axios";
 import {
 	AnalyticsApi,
+	LeaderboardApi,
 	MatchesApi,
 	MMRApi,
 	PlayersApi,
@@ -19,6 +20,7 @@ export class Api {
 	public players_api: PlayersApi;
 	public matches_api: MatchesApi;
 	public analytics_api: AnalyticsApi;
+	public leaderboard_api: LeaderboardApi;
 	public mmr_api: MMRApi;
 
 	constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
@@ -32,6 +34,11 @@ export class Api {
 		this.players_api = new PlayersApi(undefined, BASE_PATH, axios_client);
 		this.matches_api = new MatchesApi(undefined, BASE_PATH, axios_client);
 		this.analytics_api = new AnalyticsApi(undefined, BASE_PATH, axios_client);
+		this.leaderboard_api = new LeaderboardApi(
+			undefined,
+			BASE_PATH,
+			axios_client,
+		);
 		this.mmr_api = new MMRApi(undefined, BASE_PATH, axios_client);
 	}
 }
