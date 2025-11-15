@@ -41,7 +41,7 @@ export function LeaderboardSummary({
 						className="flex flex-col items-center justify-center p-2 rounded-md bg-slate-800"
 					>
 						<BadgeImage
-							badgeLevel={badge}
+							badge={badge}
 							ranks={ranks}
 							imageType="small"
 							className="size-10"

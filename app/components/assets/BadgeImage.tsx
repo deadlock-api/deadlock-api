@@ -6,20 +6,20 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import { cn } from "~/lib/utils";
 
 export interface BadgeImageProps {
-	badgeLevel: number;
+	badge: number;
 	ranks: RankV2[];
 	imageType?: "small" | "large";
 }
 
 export default function BadgeImage({
-	badgeLevel,
+	badge,
 	ranks,
 	imageType = "small",
 	className,
 	...props
 }: BadgeImageProps & React.ComponentProps<"img">) {
 	const badgeMap = extractBadgeMap(ranks);
-	const badgeInfo = badgeMap.get(badgeLevel);
+	const badgeInfo = badgeMap.get(badge);
 	const [isError, setIsError] = useState(!badgeInfo);
 
 	if (isError || !badgeInfo) {

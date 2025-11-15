@@ -180,7 +180,7 @@ function LeaderboardTableRow({
 				<TableCell>
 					{entry.badge_level && (
 						<BadgeImage
-							badgeLevel={entry.badge_level}
+							badge={entry.badge_level}
 							ranks={ranks}
 							imageType="small"
 							className="h-8 w-8"
