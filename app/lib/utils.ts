@@ -34,7 +34,9 @@ export const parseAsAnyJson = <T>() =>
 	});
 
 export function hexToRgba(hex: string, alpha: number): string {
-	let r = 0, g = 0, b = 0;
+	let r = 0;
+	let g = 0;
+	let b = 0;
 
 	// Handle #RRGGBB or #RGB
 	if (hex.startsWith("#")) {

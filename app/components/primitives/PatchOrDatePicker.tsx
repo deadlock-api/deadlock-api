@@ -50,7 +50,6 @@ export function PatchOrDatePicker({
 		);
 	});
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Meant to only run on start
 	useEffect(() => {
 		if (matchingPatch) {
 			if (tab !== "patch") {
