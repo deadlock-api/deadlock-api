@@ -11,7 +11,6 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import React from "react";
 import PageLayout from "~/components/layout/PageLayout";
 import { isDevelopment } from "~/lib/consts";
@@ -62,15 +61,13 @@ export default function App() {
 	);
 
 	return (
-		<NuqsAdapter>
-			<QueryClientProvider client={queryClient}>
-				<PageLayout>
-					<Outlet />
-				</PageLayout>
+		<QueryClientProvider client={queryClient}>
+			<PageLayout>
+				<Outlet />
+			</PageLayout>
 
-				{isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
-			</QueryClientProvider>
-		</NuqsAdapter>
+			{isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}
+		</QueryClientProvider>
 	);
 }
 

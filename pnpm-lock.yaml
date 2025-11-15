@@ -74,9 +74,6 @@ importers:
       lucide-react:
         specifier: ^0.553.0
         version: 0.553.0(react@19.2.0)
-      nuqs:
-        specifier: ^2.7.3
-        version: 2.7.3(react-router@7.9.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       react:
         specifier: ^19.2.0
         version: 19.2.0
@@ -1103,9 +1100,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@standard-schema/spec@1.0.0':
-    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
-
   '@tailwindcss/node@4.1.17':
     resolution: {integrity: sha512-csIkHIgLb3JisEFQ0vxr2Y57GUNYh447C8xzwj89U/8fdW8LhProdxvnVH6U8M2Y73QKiTIH+LWbK3V2BBZsAg==}
 
@@ -1930,27 +1924,6 @@ packages:
   npm-pick-manifest@8.0.2:
     resolution: {integrity: sha512-1dKY+86/AIiq1tkKVD3l0WI+Gd3vkknVGAggsFeBkTvbhMQ1OND/LKkYv4JtXPKUJ8bOTCyLiqEg2P6QNdK+Gg==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
-
-  nuqs@2.7.3:
-    resolution: {integrity: sha512-lQzSYLsXUYftc0cerww64yevjMeYOX8thkcqI25XtyyTEJFTk3LE+i2hcY2h0Jwvp1+owCb+KJ0GMaKQwfmq3g==}
-    peerDependencies:
-      '@remix-run/react': '>=2'
-      '@tanstack/react-router': ^1
-      next: '>=14.2.0'
-      react: '>=18.2.0 || ^19.0.0-0'
-      react-router: ^6 || ^7
-      react-router-dom: ^6 || ^7
-    peerDependenciesMeta:
-      '@remix-run/react':
-        optional: true
-      '@tanstack/react-router':
-        optional: true
-      next:
-        optional: true
-      react-router:
-        optional: true
-      react-router-dom:
-        optional: true
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -3355,8 +3328,6 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.53.2':
     optional: true
 
-  '@standard-schema/spec@1.0.0': {}
-
   '@tailwindcss/node@4.1.17':
     dependencies:
       '@jridgewell/remapping': 2.3.5
@@ -4121,13 +4092,6 @@ snapshots:
       npm-normalize-package-bin: 3.0.1
       npm-package-arg: 10.1.0
       semver: 7.7.3
-
-  nuqs@2.7.3(react-router@7.9.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0):
-    dependencies:
-      '@standard-schema/spec': 1.0.0
-      react: 19.2.0
-    optionalDependencies:
-      react-router: 7.9.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
 
   object-assign@4.1.1: {}
 

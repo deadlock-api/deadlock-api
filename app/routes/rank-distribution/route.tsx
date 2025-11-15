@@ -1,9 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/api";
-import { useQueryState } from "nuqs";
+import { useState } from "react";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
 import { Card, CardContent } from "~/components/ui/card";
-import { parseAsAnyJson } from "~/lib/utils";
 import BadgeDistributionFilter from "~/routes/rank-distribution/BadgeDistributionFilter";
 import { api } from "~/services/api";
 import { assetsApi } from "~/services/assets-api";
@@ -17,11 +16,9 @@ export function meta() {
 }
 
 export default function RankDistribution() {
-	const [filter, setFilter] =
-		useQueryState<AnalyticsApiBadgeDistributionRequest>(
-			"badge-distribution-filter",
-			parseAsAnyJson<AnalyticsApiBadgeDistributionRequest>().withDefault({}),
-		);
+	const [filter, setFilter] = useState<AnalyticsApiBadgeDistributionRequest>(
+		{},
+	);
 
 	const [ranks, badgeDistributionQuery] = useQueries({
 		queries: [

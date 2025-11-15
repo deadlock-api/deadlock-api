@@ -1,7 +1,6 @@
 import { endOfDay, isSameDay, startOfDay } from "date-fns";
 import { CalendarIcon, ClockIcon } from "lucide-react";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import {
 	DateRangePicker,
 	type DateRangePickerProps,
@@ -15,6 +14,8 @@ import {
 } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
+type Tab = "patch" | "custom";
+
 export interface PatchInfo {
 	id: string; // Unique identifier for the patch
 	name: string; // Display name, e.g., "Current Patch (05-08)"
@@ -26,7 +27,7 @@ export interface PatchOrDatePickerProps {
 	patchDates: PatchInfo[];
 	value: { startDate?: Date; endDate?: Date };
 	onValueChange: (value: { startDate?: Date; endDate?: Date }) => void;
-	defaultTab?: "patch" | "custom";
+	defaultTab?: Tab;
 }
 
 export function PatchOrDatePicker({
@@ -35,10 +36,7 @@ export function PatchOrDatePicker({
 	onValueChange,
 	defaultTab = "patch",
 }: PatchOrDatePickerProps) {
-	const [tab, setTab] = useQueryState(
-		"pd-picker-tab",
-		parseAsStringLiteral(["patch", "custom"] as const).withDefault(defaultTab),
-	);
+	const [tab, setTab] = useState<Tab>(defaultTab);
 
 	const patchSelectId = useId();
 

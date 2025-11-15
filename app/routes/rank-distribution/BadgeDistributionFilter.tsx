@@ -1,14 +1,11 @@
 import { fromUnixTime, getUnixTime } from "date-fns";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/api";
-import { useState } from "react";
-import { DualRangeSlider } from "~/components/primitives/DualRangeSlider";
 import {
 	DurationRangeFilter,
 	MAX_DURATION,
 	MIN_DURATION,
 } from "~/components/primitives/DurationRangeFilter";
 import { PatchOrDatePicker } from "~/components/primitives/PatchOrDatePicker";
-import { Label } from "~/components/ui/label";
 import { PATCHES } from "~/lib/consts";
 
 export interface BadgeDistributionFilterProps {

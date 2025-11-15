@@ -1,5 +1,4 @@
 import type { HeroV2 } from "assets-deadlock-api-client";
-import type { HeroImagesV2 } from "assets-deadlock-api-client/api";
 import type React from "react";
 import { cn } from "~/lib/utils";
 

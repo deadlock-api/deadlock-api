@@ -1,14 +1,3 @@
-import type { HeroV2 } from "assets-deadlock-api-client";
-import { useId, useMemo } from "react";
-import HeroImage from "~/components/assets/HeroImage";
-import HeroName from "~/components/assets/HeroName";
-import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "~/components/ui/popover";
 import {
 	Select,
 	SelectContent,

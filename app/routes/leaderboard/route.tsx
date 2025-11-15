@@ -1,6 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock-api-client";
-import { useQueryState } from "nuqs";
 import { useState } from "react";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
 import { Card, CardContent } from "~/components/ui/card";
