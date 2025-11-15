@@ -28,7 +28,7 @@ export function LeaderboardControls({
 	totalPages,
 }: LeaderboardControlsProps) {
 	return (
-		<div className="flex items-center justify-between space-x-4 py-4">
+		<div className="flex flex-wrap items-center justify-between py-4 gap-4">
 			<div className="flex items-center space-x-2">
 				<Input
 					placeholder="Search player..."
@@ -37,47 +37,47 @@ export function LeaderboardControls({
 					className="h-8 w-40"
 				/>
 			</div>
-			<div className="flex items-center justify-end space-x-4">
-				<div className="flex items-center space-x-2">
-					<span className="text-sm text-muted-foreground">Rows per page</span>
-					<Select
-						value={String(itemsPerPage)}
-						onValueChange={(value) => {
-							setItemsPerPage(Number(value));
-							setCurrentPage(0);
+			<div className="flex items-center space-x-2">
+				<span className="text-sm text-muted-foreground">Rows per page</span>
+				<Select
+					value={String(itemsPerPage)}
+					onValueChange={(value) => {
+						setItemsPerPage(Number(value));
+						setCurrentPage(0);
+					}}
+				>
+					<SelectTrigger className="h-8 w-20">
+						<SelectValue placeholder={itemsPerPage} />
+					</SelectTrigger>
+					<SelectContent>
+						{[10, 25, 50, 100].map((size) => (
+							<SelectItem key={size} value={String(size)}>
+								{size}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+			<span className="text-sm text-muted-foreground flex items-center space-x-1">
+				Page
+				<span className="mx-2">
+					<Input
+						type="number"
+						max={totalPages}
+						min={1}
+						value={currentPage + 1}
+						onChange={(e) => {
+							const page = parseInt(e.target.value, 10);
+							if (!isNaN(page) && page > 0 && page <= totalPages) {
+								setCurrentPage(page - 1);
+							}
 						}}
-					>
-						<SelectTrigger className="h-8 w-20">
-							<SelectValue placeholder={itemsPerPage} />
-						</SelectTrigger>
-						<SelectContent>
-							{[10, 25, 50, 100].map((size) => (
-								<SelectItem key={size} value={String(size)}>
-									{size}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<span className="text-sm text-muted-foreground flex items-center space-x-1">
-					Page
-					<span className="mx-2">
-						<Input
-							type="number"
-							max={totalPages}
-							min={1}
-							value={currentPage + 1}
-							onChange={(e) => {
-								const page = parseInt(e.target.value, 10);
-								if (!isNaN(page) && page > 0 && page <= totalPages) {
-									setCurrentPage(page - 1);
-								}
-							}}
-							className="h-8 w-16 text-center"
-						/>
-					</span>
-					of {totalPages}
+						className="h-8 w-16 text-center"
+					/>
 				</span>
+				of {totalPages}
+			</span>
+			<div className="flex items-center space-x-2">
 				<Button
 					variant="outline"
 					size="sm"

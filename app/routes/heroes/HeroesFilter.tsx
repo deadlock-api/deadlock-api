@@ -19,7 +19,7 @@ export function HeroesFilter({
 	onChange,
 }: HeroesFilterProps) {
 	return (
-		<div className="flex justify-center items-center w-full gap-8">
+		<div className="flex flex-wrap justify-center items-center w-full gap-8">
 			<RankSelector
 				ranks={ranks}
 				onSelect={(badge) => {

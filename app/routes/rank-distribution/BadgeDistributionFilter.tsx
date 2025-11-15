@@ -18,7 +18,7 @@ export default function BadgeDistributionFilter({
 	onChange,
 }: BadgeDistributionFilterProps) {
 	return (
-		<div className="flex justify-center items-center w-full gap-8">
+		<div className="flex flex-wrap justify-center items-center w-full gap-8">
 			<DurationRangeFilter
 				durationRange={[
 					value.minDurationS ?? MIN_DURATION,

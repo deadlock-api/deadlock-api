@@ -24,7 +24,7 @@ export function LeaderboardFilter({
 }: LeaderboardFilterProps) {
 	const regions = Object.values(LeaderboardRegionEnum);
 	return (
-		<div className="flex justify-center items-center w-full gap-8">
+		<div className="flex flex-wrap justify-center items-center w-full gap-8">
 			<HeroSelector
 				heroes={heroes}
 				onSelect={(heroId) => {
