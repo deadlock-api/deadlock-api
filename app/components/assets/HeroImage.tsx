@@ -15,28 +15,27 @@ function extractImageUrl(
 	return item.images[image_key as keyof HeroImagesV2];
 }
 
+export interface HeroImageProps {
+	heroId: number;
+	heroes: HeroV2[];
+	image?: keyof HeroImagesV2;
+}
+
 export default function HeroImage({
 	heroId,
-	heroAssets,
+	heroes,
 	image,
-	props,
-}: {
-	heroId: number;
-	heroAssets: HeroV2[];
-	image?: keyof HeroImagesV2;
-	props?: React.ImgHTMLAttributes<HTMLImageElement>;
-}) {
+	className,
+	...props
+}: HeroImageProps & React.ComponentProps<"img">) {
 	image = image ?? "minimap_image";
-	const hero = heroAssets.find((hero) => hero.id === heroId);
+	const hero = heroes.find((hero) => hero.id === heroId);
 	const [isError, setIsError] = useState(!hero);
 
 	if (isError || !hero) {
 		return (
 			<div
-				className={cn(
-					"flex items-center justify-center bg-muted rounded-md",
-					props?.className,
-				)}
+				className={cn("flex items-center justify-center bg-muted rounded-md")}
 			>
 				<CircleQuestionMark className="size-1/2 text-muted-foreground" />
 			</div>
@@ -54,9 +53,9 @@ export default function HeroImage({
 				src={webp ?? ""}
 				alt={hero?.name}
 				title={hero?.name}
-				{...props}
-				className={cn("size-8 aspect-square", props?.className)}
+				className={cn("size-8 aspect-square", className)}
 				onError={() => setIsError(true)}
+				{...props}
 			/>
 		</picture>
 	);

@@ -2,32 +2,34 @@ import { fromUnixTime, getUnixTime } from "date-fns";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/api";
 import { useState } from "react";
 import { DualRangeSlider } from "~/components/primitives/DualRangeSlider";
+import {
+	DurationRangeFilter,
+	MAX_DURATION,
+	MIN_DURATION,
+} from "~/components/primitives/DurationRangeFilter";
 import { PatchOrDatePicker } from "~/components/primitives/PatchOrDatePicker";
 import { Label } from "~/components/ui/label";
 import { PATCHES } from "~/lib/consts";
 
-const MIN_DURATION = 0;
-const MAX_DURATION = 7000;
-
 export interface BadgeDistributionFilterProps {
-	filters: AnalyticsApiBadgeDistributionRequest;
-	onFiltersChange: (filters: AnalyticsApiBadgeDistributionRequest) => void;
+	value: AnalyticsApiBadgeDistributionRequest;
+	onChange: (filter: AnalyticsApiBadgeDistributionRequest) => void;
 }
 
 export default function BadgeDistributionFilter({
-	filters,
-	onFiltersChange,
+	value,
+	onChange,
 }: BadgeDistributionFilterProps) {
 	return (
 		<div className="flex justify-center items-center w-full gap-8">
-			<DurationRangeFilters
+			<DurationRangeFilter
 				durationRange={[
-					filters.minDurationS ?? MIN_DURATION,
-					filters.maxDurationS ?? MAX_DURATION,
+					value.minDurationS ?? MIN_DURATION,
+					value.maxDurationS ?? MAX_DURATION,
 				]}
 				onDurationRangeChange={(range) =>
-					onFiltersChange({
-						...filters,
+					onChange({
+						...value,
 						minDurationS: range[0],
 						maxDurationS: range[1],
 					})
@@ -36,54 +38,20 @@ export default function BadgeDistributionFilter({
 			<PatchOrDatePicker
 				patchDates={PATCHES}
 				value={{
-					startDate: filters.minUnixTimestamp
-						? fromUnixTime(filters.minUnixTimestamp)
+					startDate: value.minUnixTimestamp
+						? fromUnixTime(value.minUnixTimestamp)
 						: undefined,
-					endDate: filters.maxUnixTimestamp
-						? fromUnixTime(filters.maxUnixTimestamp)
+					endDate: value.maxUnixTimestamp
+						? fromUnixTime(value.maxUnixTimestamp)
 						: undefined,
 				}}
 				onValueChange={({ startDate, endDate }) =>
-					onFiltersChange({
-						...filters,
+					onChange({
+						...value,
 						minUnixTimestamp: startDate ? getUnixTime(startDate) : undefined,
 						maxUnixTimestamp: endDate ? getUnixTime(endDate) : undefined,
 					})
 				}
-			/>
-		</div>
-	);
-}
-
-function DurationRangeFilters({
-	durationRange,
-	onDurationRangeChange,
-}: {
-	durationRange: [number, number];
-	onDurationRangeChange: (range: [number, number]) => void;
-}) {
-	const [internalRange, setInternalRange] =
-		useState<[number, number]>(durationRange);
-	return (
-		<div className="flex flex-col gap-4 w-42">
-			<Label htmlFor="duration-range-slider" className="mb-2 block font-medium">
-				Match Duration
-			</Label>
-			<DualRangeSlider
-				id="duration-range-slider"
-				min={MIN_DURATION}
-				max={MAX_DURATION}
-				step={60}
-				value={internalRange}
-				aria-label="Match Duration Range Slider"
-				onValueChange={(value) => setInternalRange([value[0], value[1]])}
-				onValueCommit={(value) => onDurationRangeChange([value[0], value[1]])}
-				label={(value) => (
-					<span className="text-sm text-nowrap">
-						{value !== undefined ? `${Math.floor(value / 60)}m` : ""}
-					</span>
-				)}
-				labelPosition="bottom"
 			/>
 		</div>
 	);

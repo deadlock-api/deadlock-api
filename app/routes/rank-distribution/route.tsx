@@ -17,13 +17,13 @@ export function meta() {
 }
 
 export default function RankDistribution() {
-	const [filters, setFilters] =
+	const [filter, setFilter] =
 		useQueryState<AnalyticsApiBadgeDistributionRequest>(
-			"badge-distribution-filters",
+			"badge-distribution-filter",
 			parseAsAnyJson<AnalyticsApiBadgeDistributionRequest>().withDefault({}),
 		);
 
-	const [ranksQuery, badgeDistributionQuery] = useQueries({
+	const [ranks, badgeDistributionQuery] = useQueries({
 		queries: [
 			{
 				queryKey: ["ranks"],
@@ -34,9 +34,9 @@ export default function RankDistribution() {
 				staleTime: Number.MAX_SAFE_INTEGER,
 			},
 			{
-				queryKey: ["rankDistribution", filters],
+				queryKey: ["rankDistribution", filter],
 				queryFn: async () => {
-					const response = await api.analytics_api.badgeDistribution(filters);
+					const response = await api.analytics_api.badgeDistribution(filter);
 					return response.data;
 				},
 				staleTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -44,22 +44,16 @@ export default function RankDistribution() {
 		],
 	});
 
-	const ranksData = ranksQuery?.data ?? [];
-	const badgeDistributionData = badgeDistributionQuery?.data;
-	const isPending =
-		badgeDistributionQuery?.isPending || ranksQuery?.isPending || false;
-	const isError =
-		badgeDistributionQuery?.isError || ranksQuery?.isError || false;
+	const isPending = badgeDistributionQuery?.isPending || ranks?.isPending;
+	const isError = badgeDistributionQuery?.isError || ranks?.isError;
+	const error = badgeDistributionQuery?.error || ranks?.error;
 	return (
-		<div className="space-y-8 max-h-xl">
+		<div className="space-y-8">
 			<section className="space-y-4 max-h-xl">
 				<h1 className="text-center text-4xl">Match Rank Distribution</h1>
 				<Card>
 					<CardContent className="p-4">
-						<BadgeDistributionFilter
-							filters={filters}
-							onFiltersChange={setFilters}
-						/>
+						<BadgeDistributionFilter value={filter} onChange={setFilter} />
 					</CardContent>
 				</Card>
 				<div className="h-200 flex justify-center items-center">
@@ -69,12 +63,12 @@ export default function RankDistribution() {
 						</div>
 					) : isError ? (
 						<div className="text-center text-sm text-red-600 py-8">
-							Failed to load rank distribution.
+							Failed to load rank distribution: {error?.message}
 						</div>
-					) : badgeDistributionData ? (
+					) : badgeDistributionQuery.data ? (
 						<BadgeDistributionChart
-							badgeDistributionData={badgeDistributionData}
-							ranksData={ranksData}
+							badgeDistributionData={badgeDistributionQuery.data}
+							ranksData={ranks.data ?? []}
 						/>
 					) : null}
 				</div>
