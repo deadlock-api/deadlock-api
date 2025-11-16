@@ -33,7 +33,10 @@ export function LeaderboardControls({
 				<Input
 					placeholder="Search player..."
 					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
+					onChange={(e) => {
+						setSearchQuery(e.target.value);
+						if (e.target.value.length > 0) setCurrentPage(0);
+					}}
 					className="h-8 w-40"
 				/>
 			</div>
