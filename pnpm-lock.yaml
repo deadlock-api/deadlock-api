@@ -52,7 +52,7 @@ importers:
         version: 5.90.9(react@19.2.0)
       assets-deadlock-api-client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript/assets-api
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17#path:/typescript/assets-api
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182#path:/typescript/assets-api
       axios:
         specifier: ^1.13.2
         version: 1.13.2
@@ -67,7 +67,7 @@ importers:
         version: 4.1.0
       deadlock-api-client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript/api
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17#path:/typescript/api
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182#path:/typescript/api
       fuse.js:
         specifier: ^7.1.0
         version: 7.1.0
@@ -1307,8 +1307,8 @@ packages:
   array-flatten@1.1.1:
     resolution: {integrity: sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==}
 
-  assets-deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17#path:/typescript/assets-api:
-    resolution: {path: /typescript/assets-api, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17}
+  assets-deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182#path:/typescript/assets-api:
+    resolution: {path: /typescript/assets-api, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182}
     version: 0.1.0
 
   asynckit@0.4.0:
@@ -1365,8 +1365,8 @@ packages:
     resolution: {integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==}
     engines: {node: '>= 0.4'}
 
-  caniuse-lite@1.0.30001754:
-    resolution: {integrity: sha512-x6OeBXueoAceOmotzx3PO4Zpt4rzpeIFsSr6AAePTZxSkXiYDUmpypEl7e2+8NCd9bD7bXjqyef8CJYPC1jfxg==}
+  caniuse-lite@1.0.30001755:
+    resolution: {integrity: sha512-44V+Jm6ctPj7R52Na4TLi3Zri4dWUljJd+RDm+j8LtNCc/ihLCT+X1TzoOAkRETEWqjuLnh9581Tl80FvK7jVA==}
 
   chokidar@4.0.3:
     resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
@@ -1477,8 +1477,8 @@ packages:
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
-  deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17#path:/typescript/api:
-    resolution: {path: /typescript/api, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17}
+  deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182#path:/typescript/api:
+    resolution: {path: /typescript/api, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182}
     version: 0.1.0
 
   debug@2.6.9:
@@ -1541,8 +1541,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  electron-to-chromium@1.5.253:
-    resolution: {integrity: sha512-O0tpQ/35rrgdiGQ0/OFWhy1itmd9A6TY9uQzlqj3hKSu/aYpe7UIn5d7CU2N9myH6biZiWF3VMZVuup8pw5U9w==}
+  electron-to-chromium@1.5.254:
+    resolution: {integrity: sha512-DcUsWpVhv9svsKRxnSCZ86SjD+sp32SGidNB37KpqXJncp1mfUgKbHvBomE89WJDbfVKw1mdv5+ikrvd43r+Bg==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -3537,7 +3537,7 @@ snapshots:
 
   array-flatten@1.1.1: {}
 
-  assets-deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17#path:/typescript/assets-api:
+  assets-deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182#path:/typescript/assets-api:
     dependencies:
       axios: 1.13.2
     transitivePeerDependencies:
@@ -3598,8 +3598,8 @@ snapshots:
   browserslist@4.28.0:
     dependencies:
       baseline-browser-mapping: 2.8.28
-      caniuse-lite: 1.0.30001754
-      electron-to-chromium: 1.5.253
+      caniuse-lite: 1.0.30001755
+      electron-to-chromium: 1.5.254
       node-releases: 2.0.27
       update-browserslist-db: 1.1.4(browserslist@4.28.0)
 
@@ -3619,7 +3619,7 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       get-intrinsic: 1.3.0
 
-  caniuse-lite@1.0.30001754: {}
+  caniuse-lite@1.0.30001755: {}
 
   chokidar@4.0.3:
     dependencies:
@@ -3721,7 +3721,7 @@ snapshots:
 
   date-fns@4.1.0: {}
 
-  deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/e56556b1a21715c924d4f91e5f64c031deb26d17#path:/typescript/api:
+  deadlock-api-client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/d77d20d1878f238e80a141237ff621ab057ed182#path:/typescript/api:
     dependencies:
       axios: 1.13.2
     transitivePeerDependencies:
@@ -3764,7 +3764,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.253: {}
+  electron-to-chromium@1.5.254: {}
 
   emoji-regex@8.0.0: {}
 
