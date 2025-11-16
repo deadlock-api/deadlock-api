@@ -7,12 +7,13 @@ import {
 	useNavigate,
 } from "react-router";
 
-import type { Route } from "./+types/root";
 import "./app.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import React from "react";
-import PageLayout from "~/components/layout/PageLayout";
+import "@fontsource-variable/inter";
+import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -23,19 +24,7 @@ import {
 	AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import { isDevelopment } from "~/lib/consts";
-
-export const links: Route.LinksFunction = () => [
-	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
-	{
-		rel: "preconnect",
-		href: "https://fonts.gstatic.com",
-		crossOrigin: "anonymous",
-	},
-	{
-		rel: "stylesheet",
-		href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-	},
-];
+import PageLayout from "./components/layout/PageLayout";
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
@@ -44,6 +33,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<title>Deadlock API</title>
+				<link
+					rel="preload"
+					href={interWoff2}
+					as="font"
+					type="font/woff2"
+					crossOrigin="anonymous"
+				/>
 				<Meta />
 				<Links />
 			</head>
