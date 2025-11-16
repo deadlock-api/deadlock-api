@@ -5,6 +5,7 @@ import {
 	Grid,
 	HardDriveDownload,
 	Home,
+	ListEnd,
 	ListOrdered,
 	Swords,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import { Link } from "react-router";
 import {
 	ASSETS_API_DOCS_URL,
 	GAME_API_DOCS_URL,
+	LIVE_EVENTS_API,
 	OPENAPI_CLIENTS_URL,
 } from "~/lib/consts";
 import { SidebarLink } from "./SidebarLink";
@@ -62,6 +64,13 @@ export function Sidebar() {
 							icon={HardDriveDownload}
 							target="_blank"
 							label="Open API Clients"
+						/>
+						<SidebarLink
+							external
+							to={LIVE_EVENTS_API}
+							icon={ListEnd}
+							target="_blank"
+							label="Live Events API"
 						/>
 						<SidebarLink
 							external

@@ -37,6 +37,8 @@ export const GITHUB_LINK = "https://github.com/deadlock-api";
 
 export const OPENAPI_CLIENTS_URL =
 	"https://github.com/deadlock-api/openapi-clients";
+export const LIVE_EVENTS_API =
+	"https://github.com/deadlock-api/deadlock-live-events";
 export const ASSETS_API_DOCS_URL = "https://assets.deadlock-api.com/scalar";
 export const GAME_API_DOCS_URL = "https://api.deadlock-api.com/docs";
 export const DATABASE_DUMPS_URL =
