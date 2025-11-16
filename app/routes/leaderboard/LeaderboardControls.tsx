@@ -1,3 +1,4 @@
+import React, { useCallback } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import {
@@ -27,16 +28,49 @@ export function LeaderboardControls({
 	setCurrentPage,
 	totalPages,
 }: LeaderboardControlsProps) {
+	const handleSearchChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			setSearchQuery(e.target.value);
+			if (e.target.value.length > 0) setCurrentPage(0);
+		},
+		[setSearchQuery, setCurrentPage],
+	);
+
+	const handleItemsPerPageChange = useCallback(
+		(value: string) => {
+			setItemsPerPage(Number(value));
+			setCurrentPage(0);
+		},
+		[setItemsPerPage, setCurrentPage],
+	);
+
+	const handlePageInputChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => {
+			const page = parseInt(e.target.value, 10);
+			if (!isNaN(page) && page > 0 && page <= totalPages) {
+				setCurrentPage(page - 1);
+			}
+		},
+		[setCurrentPage, totalPages],
+	);
+
+	const handlePreviousPage = useCallback(
+		() => setCurrentPage((prev) => Math.max(0, prev - 1)),
+		[setCurrentPage],
+	);
+
+	const handleNextPage = useCallback(
+		() => setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1)),
+		[setCurrentPage, totalPages],
+	);
+
 	return (
 		<div className="flex flex-wrap items-center justify-between py-4 gap-4">
 			<div className="flex items-center space-x-2">
 				<Input
 					placeholder="Search player..."
 					value={searchQuery}
-					onChange={(e) => {
-						setSearchQuery(e.target.value);
-						if (e.target.value.length > 0) setCurrentPage(0);
-					}}
+					onChange={handleSearchChange}
 					className="h-8 w-40"
 				/>
 			</div>
@@ -44,10 +78,7 @@ export function LeaderboardControls({
 				<span className="text-sm text-muted-foreground">Rows per page</span>
 				<Select
 					value={String(itemsPerPage)}
-					onValueChange={(value) => {
-						setItemsPerPage(Number(value));
-						setCurrentPage(0);
-					}}
+					onValueChange={handleItemsPerPageChange}
 				>
 					<SelectTrigger className="h-8 w-20">
 						<SelectValue placeholder={itemsPerPage} />
@@ -69,12 +100,7 @@ export function LeaderboardControls({
 						max={totalPages}
 						min={1}
 						value={currentPage + 1}
-						onChange={(e) => {
-							const page = parseInt(e.target.value, 10);
-							if (!isNaN(page) && page > 0 && page <= totalPages) {
-								setCurrentPage(page - 1);
-							}
-						}}
+						onChange={handlePageInputChange}
 						className="h-8 w-16 text-center"
 					/>
 				</span>
@@ -84,9 +110,7 @@ export function LeaderboardControls({
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={() => {
-						setCurrentPage((prev) => Math.max(0, prev - 1));
-					}}
+					onClick={handlePreviousPage}
 					disabled={currentPage === 0}
 				>
 					Previous
@@ -94,9 +118,7 @@ export function LeaderboardControls({
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={() => {
-						setCurrentPage((prev) => Math.min(totalPages - 1, currentPage + 1));
-					}}
+					onClick={handleNextPage}
 					disabled={currentPage >= totalPages - 1}
 				>
 					Next

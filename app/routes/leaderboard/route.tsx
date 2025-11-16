@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock-api-client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
 import { Card, CardContent } from "~/components/ui/card";
 import {
@@ -64,12 +64,12 @@ export default function Leaderboard() {
 		heroes?.isError || ranks?.isError || leaderboardQuery?.isError;
 	const error = heroes.error || ranks?.error || leaderboardQuery?.error;
 
-	const handleHeroClick = (heroId: number) => {
+	const handleHeroClick = useCallback((heroId: number) => {
 		setFilter((prevFilter) => ({
 			...prevFilter,
 			heroId: heroId,
 		}));
-	};
+	}, []);
 
 	return (
 		<div className="space-y-8">

@@ -1,5 +1,6 @@
 import type { RankV2 } from "assets-deadlock-api-client";
 import type { BadgeDistribution } from "deadlock-api-client";
+import { useCallback, useMemo } from "react";
 import {
 	Bar,
 	BarChart,
@@ -19,24 +20,43 @@ export default function BadgeDistributionChart({
 	badgeDistributionData: BadgeDistribution[];
 	ranksData: RankV2[];
 }) {
-	const tierData = new Map<number, RankV2>();
-	ranksData.forEach((r) => {
-		tierData.set(r.tier, r);
-	});
+	const tierData = useMemo(() => {
+		const map = new Map<number, RankV2>();
+		ranksData.forEach((r) => {
+			map.set(r.tier, r);
+		});
+		return map;
+	}, [ranksData]);
 
-	const matchePerBadge = new Map<number, number>();
-	badgeDistributionData.forEach((item) => {
-		matchePerBadge.set(item.badge_level, item.total_matches ?? 0);
-	});
+	const matchePerBadge = useMemo(() => {
+		const map = new Map<number, number>();
+		badgeDistributionData.forEach((item) => {
+			map.set(item.badge_level, item.total_matches ?? 0);
+		});
+		return map;
+	}, [badgeDistributionData]);
 
-	const badges = badgeDistributionData.map((item) => item.badge_level);
-	const [minBadge, maxBadge] = [Math.min(...badges), Math.max(...badges)];
-	const chartData = range(minBadge, maxBadge).map((badge) => ({
-		badge,
-		tier: Math.floor(badge / 10),
-		matches: matchePerBadge.get(badge) ?? 0,
-	}));
-	const ticks = range(minBadge, maxBadge, 10);
+	const chartData = useMemo(() => {
+		const badges = badgeDistributionData.map((item) => item.badge_level);
+		if (badges.length === 0) return [];
+		const [minBadge, maxBadge] = [Math.min(...badges), Math.max(...badges)];
+		return range(minBadge, maxBadge).map((badge) => ({
+			badge,
+			tier: Math.floor(badge / 10),
+			matches: matchePerBadge.get(badge) ?? 0,
+		}));
+	}, [badgeDistributionData, matchePerBadge]);
+	const ticks = useMemo(() => {
+		const badges = badgeDistributionData.map((item) => item.badge_level);
+		if (badges.length === 0) return [];
+		const [minBadge, maxBadge] = [Math.min(...badges), Math.max(...badges)];
+		return range(minBadge, maxBadge, 10);
+	}, [badgeDistributionData]);
+	const xAxisTickFormatter = useCallback(
+		(badge: number) => tierData.get(Math.floor(badge / 10))?.name ?? "",
+		[tierData],
+	);
+
 	return (
 		<ChartContainer
 			config={{ matches: { label: "Matches" } }}
@@ -58,9 +78,7 @@ export default function BadgeDistributionChart({
 					minTickGap={0}
 					ticks={ticks}
 					textAnchor="start"
-					tickFormatter={(badge) =>
-						tierData.get(Math.floor(badge / 10))?.name ?? ""
-					}
+					tickFormatter={xAxisTickFormatter}
 				/>
 				<YAxis dataKey="matches" tickCount={4} textAnchor="end">
 					<Label value="Matches" position="middle" textAnchor={"middle"} />

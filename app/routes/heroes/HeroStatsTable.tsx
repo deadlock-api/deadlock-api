@@ -155,51 +155,55 @@ export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 		return formatting;
 	}, [augmentedHeroStats, statColumns]);
 
-	const sortedHeroStats = useMemo(() => {
-		return [...augmentedHeroStats].sort((a, b) => {
-			if (sortColumn === "hero_name") {
-				const heroA = heroesMap.get(a.hero_id)?.name ?? "";
-				const heroB = heroesMap.get(b.hero_id)?.name ?? "";
+	const sortedHeroStats = useMemo(
+		() =>
+			[...augmentedHeroStats].sort((a, b) => {
+				if (sortColumn === "hero_name") {
+					const heroA = heroesMap.get(a.hero_id)?.name ?? "";
+					const heroB = heroesMap.get(b.hero_id)?.name ?? "";
+					return sortDirection === "asc"
+						? heroA.localeCompare(heroB)
+						: heroB.localeCompare(heroA);
+				}
+
+				const valA = a[sortColumn];
+				const valB = b[sortColumn];
+
+				if (typeof valA === "number" && typeof valB === "number") {
+					return sortDirection === "asc" ? valA - valB : valB - valA;
+				}
+
+				const strA = String(valA ?? "");
+				const strB = String(valB ?? "");
+
 				return sortDirection === "asc"
-					? heroA.localeCompare(heroB)
-					: heroB.localeCompare(heroA);
-			}
-
-			const valA = a[sortColumn];
-			const valB = b[sortColumn];
-
-			if (typeof valA === "number" && typeof valB === "number") {
-				return sortDirection === "asc" ? valA - valB : valB - valA;
-			}
-
-			const strA = String(valA ?? "");
-			const strB = String(valB ?? "");
-
-			return sortDirection === "asc"
-				? strA.localeCompare(strB)
-				: strB.localeCompare(strA);
-		});
-	}, [augmentedHeroStats, sortColumn, sortDirection, heroesMap]);
+					? strA.localeCompare(strB)
+					: strB.localeCompare(strA);
+			}),
+		[augmentedHeroStats, sortColumn, sortDirection, heroesMap],
+	);
 
 	if (heroStats.length === 0) {
 		return <p>No hero stats available for the selected filters.</p>;
 	}
 
-	const handleSort = (column: SortKey) => {
-		if (sortColumn === column) {
-			setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-		} else {
-			setSortColumn(column);
-			setSortDirection("desc");
-		}
-	};
+	const handleSort = useCallback(
+		(column: SortKey) => {
+			if (sortColumn === column) {
+				setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+			} else {
+				setSortColumn(column);
+				setSortDirection("desc");
+			}
+		},
+		[sortColumn],
+	);
 
-	const getSortIndicator = (column: SortKey) => {
-		if (sortColumn === column) {
-			return sortDirection === "asc" ? " ▲" : " ▼";
-		}
-		return "";
-	};
+	const getSortIndicator = useCallback(
+		(column: SortKey) =>
+			sortColumn === column ? (sortDirection === "asc" ? " ▲" : " ▼") : "",
+		[sortColumn, sortDirection],
+	);
 
 	return (
 		<div className="rounded-md border">
@@ -291,7 +295,7 @@ export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 											}
 
 											const formattingRule = columnFormatting.get(col);
-											let options: Intl.NumberFormatOptions = {};
+											let options: Intl.NumberFormatOptions;
 											if (formattingRule === "fixed-2") {
 												options = {
 													minimumFractionDigits: 2,

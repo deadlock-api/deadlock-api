@@ -1,7 +1,7 @@
 import type { HeroV2, RankV2 } from "assets-deadlock-api-client";
 import type { Leaderboard } from "deadlock-api-client";
 import Fuse from "fuse.js";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import BadgeImage from "~/components/assets/BadgeImage";
 import HeroImage from "~/components/assets/HeroImage";
 import {
@@ -40,11 +40,14 @@ export function LeaderboardTable({
 	leaderboard,
 	onHeroClick,
 }: LeaderboardTableProps) {
-	const badgeMap = extractBadgeMap(ranks);
-	const heroesMap = new Map<number, HeroV2>();
-	heroes.forEach((hero) => {
-		heroesMap.set(hero.id, hero);
-	});
+	const badgeMap = useMemo(() => extractBadgeMap(ranks), [ranks]);
+	const heroesMap = useMemo(() => {
+		const map = new Map<number, HeroV2>();
+		heroes.forEach((hero) => {
+			map.set(hero.id, hero);
+		});
+		return map;
+	}, [heroes]);
 
 	const [currentPage, setCurrentPage] = useState(0);
 	const [itemsPerPage, setItemsPerPage] = useState(25);
@@ -81,7 +84,10 @@ export function LeaderboardTable({
 		[filteredEntries],
 	);
 
-	const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+	const totalPages = useMemo(
+		() => Math.ceil(filteredEntries.length / itemsPerPage),
+		[filteredEntries.length, itemsPerPage],
+	);
 
 	const paginatedEntries = useMemo(() => {
 		const startIndex = currentPage * itemsPerPage;
@@ -147,10 +153,12 @@ function LeaderboardTableRow({
 	shouldShowTopHeroesColumn,
 	onHeroClick,
 }: LeaderboardTableRowProps) {
-	const rowColor = entry.badge_level
-		? badgeMap.get(entry.badge_level)?.color
-		: undefined;
-	const backgroundColor = rowColor ? hexToRgba(rowColor, 0.1) : undefined;
+	const backgroundColor = useMemo(() => {
+		const rowColor = entry.badge_level
+			? badgeMap.get(entry.badge_level)?.color
+			: undefined;
+		return rowColor ? hexToRgba(rowColor, 0.1) : undefined;
+	}, [entry.badge_level, badgeMap]);
 
 	return (
 		<TableRow
@@ -183,7 +191,10 @@ function LeaderboardTableRow({
 										heroId={heroId}
 										heroes={heroes}
 										className="h-8 w-8 rounded-full object-cover border border-gray-700 cursor-pointer"
-										onClick={() => onHeroClick(heroId)}
+										onClick={useCallback(
+											() => onHeroClick(heroId),
+											[onHeroClick, heroId],
+										)}
 									/>
 								) : null;
 							})}

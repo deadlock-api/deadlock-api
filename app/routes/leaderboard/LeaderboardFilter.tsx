@@ -4,6 +4,7 @@ import {
 	LeaderboardRegionEnum,
 } from "deadlock-api-client";
 import type { LeaderboardApiLeaderboardHeroRequest } from "deadlock-api-client/api";
+import { useCallback } from "react";
 import { HeroSelector } from "~/components/primitives/selectors/HeroSelector";
 import { StringSelector } from "~/components/primitives/selectors/StringSelector";
 
@@ -23,16 +24,32 @@ export function LeaderboardFilter({
 	onChange,
 }: LeaderboardFilterProps) {
 	const regions = Object.values(LeaderboardRegionEnum);
+
+	const handleHeroSelect = useCallback(
+		(heroId: number | null) =>
+			onChange({
+				...value,
+				heroId: heroId ?? undefined,
+			}),
+		[onChange, value],
+	);
+
+	const handleRegionSelect = useCallback(
+		(region: string | null) => {
+			if (region)
+				onChange({
+					...value,
+					region: region as LeaderboardRegionEnum,
+				});
+		},
+		[onChange, value],
+	);
+
 	return (
 		<div className="flex flex-wrap justify-center items-center w-full gap-8">
 			<HeroSelector
 				heroes={heroes}
-				onSelect={(heroId) => {
-					onChange({
-						...value,
-						heroId: heroId ?? undefined,
-					});
-				}}
+				onSelect={handleHeroSelect}
 				selected={"heroId" in value ? (value.heroId ?? null) : null}
 				allowSelectNull
 			/>
@@ -41,12 +58,7 @@ export function LeaderboardFilter({
 				placeholder={"Select Region..."}
 				values={regions}
 				selected={value.region}
-				onSelect={(region) => {
-					onChange({
-						...value,
-						region: region as LeaderboardRegionEnum,
-					});
-				}}
+				onSelect={handleRegionSelect}
 			/>
 		</div>
 	);
