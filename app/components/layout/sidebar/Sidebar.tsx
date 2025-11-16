@@ -3,13 +3,18 @@ import {
 	Book,
 	FileText,
 	Grid,
+	HardDriveDownload,
 	Home,
 	ListOrdered,
 	Swords,
 } from "lucide-react";
 import React from "react";
 import { Link } from "react-router";
-import { ASSETS_API_DOCS_URL, GAME_API_DOCS_URL } from "~/lib/consts";
+import {
+	ASSETS_API_DOCS_URL,
+	GAME_API_DOCS_URL,
+	OPENAPI_CLIENTS_URL,
+} from "~/lib/consts";
 import { SidebarLink } from "./SidebarLink";
 import { SidebarSeparator } from "./SidebarSeparator";
 
@@ -51,6 +56,13 @@ export function Sidebar() {
 					</div>
 					<div className="flex flex-col gap-2">
 						<SidebarSeparator label="API Docs" />
+						<SidebarLink
+							external
+							to={OPENAPI_CLIENTS_URL}
+							icon={HardDriveDownload}
+							target="_blank"
+							label="Open API Clients"
+						/>
 						<SidebarLink
 							external
 							to={GAME_API_DOCS_URL}
