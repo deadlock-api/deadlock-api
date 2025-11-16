@@ -1,6 +1,6 @@
 import type { HeroV2 } from "assets-deadlock-api-client";
 import type { AnalyticsHeroStats } from "deadlock-api-client";
-import { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import HeroImage from "~/components/assets/HeroImage";
 import HeroName from "~/components/assets/HeroName";
 import {
@@ -11,6 +11,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "~/components/ui/table";
+import { cn } from "~/lib/utils";
 
 export interface HeroStatsTableProps {
 	heroes: HeroV2[];
@@ -36,6 +37,18 @@ const formatHeader = (header: string) => {
 export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 	const [sortColumn, setSortColumn] = useState<SortKey>("win_rate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+	const [hoveredColumn, setHoveredColumn] = useState<number | null>(null);
+
+	const handleMouseOver = useCallback(
+		(e: React.MouseEvent<HTMLTableElement>) => {
+			const target = e.target as HTMLElement;
+			const cell = target.closest("td, th") as HTMLTableCellElement | null;
+			if (cell) setHoveredColumn(cell.cellIndex);
+		},
+		[],
+	);
+
+	const handleMouseOut = useCallback(() => setHoveredColumn(null), []);
 
 	const heroesMap = useMemo(() => {
 		const map = new Map<number, HeroV2>();
@@ -190,21 +203,31 @@ export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 
 	return (
 		<div className="rounded-md border">
-			<Table>
+			<Table onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
 				<TableHeader>
 					<TableRow>
-						<TableHead className="text-right">#</TableHead>
 						<TableHead
-							className="cursor-pointer"
+							className={cn("text-right", {
+								"bg-muted/50": hoveredColumn === 0,
+							})}
+						>
+							#
+						</TableHead>
+						<TableHead
+							className={cn("cursor-pointer", {
+								"bg-muted/50": hoveredColumn === 1,
+							})}
 							onClick={() => handleSort("hero_name")}
 						>
 							Hero
 							{getSortIndicator("hero_name")}
 						</TableHead>
-						{statColumns.map((col) => (
+						{statColumns.map((col, i) => (
 							<TableHead
 								key={col}
-								className="cursor-pointer text-right"
+								className={cn("cursor-pointer text-right", {
+									"bg-muted/50": hoveredColumn === i + 2,
+								})}
 								onClick={() => handleSort(col)}
 							>
 								{formatHeader(col)}
@@ -218,8 +241,18 @@ export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 						const hero = heroesMap.get(stats.hero_id);
 						return (
 							<TableRow key={stats.hero_id}>
-								<TableCell className="text-right">{index + 1}</TableCell>
-								<TableCell>
+								<TableCell
+									className={cn("text-right", {
+										"bg-muted/50": hoveredColumn === 0,
+									})}
+								>
+									{index + 1}
+								</TableCell>
+								<TableCell
+									className={cn({
+										"bg-muted/50": hoveredColumn === 1,
+									})}
+								>
 									{hero ? (
 										<div className="flex items-center gap-2 min-w-34">
 											<HeroImage
@@ -233,8 +266,13 @@ export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 										"Unknown Hero"
 									)}
 								</TableCell>
-								{statColumns.map((col) => (
-									<TableCell key={col} className="text-right">
+								{statColumns.map((col, i) => (
+									<TableCell
+										key={col}
+										className={cn("text-right", {
+											"bg-muted/50": hoveredColumn === i + 2,
+										})}
+									>
 										{(() => {
 											const value = stats[col];
 											if (typeof value !== "number") {
