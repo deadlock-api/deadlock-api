@@ -31,6 +31,7 @@ export function SidebarLink({
 				{...props}
 				target={external ? "_blank" : undefined}
 				rel={external ? "noopener noreferrer" : undefined}
+				prefetch="intent"
 			>
 				<div
 					className={cn(
