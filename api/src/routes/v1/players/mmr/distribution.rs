@@ -177,7 +177,7 @@ fn build_hero_mmr_distribution_query(hero_id: u8, query: &MMRDistributionQuery) 
 Player MMR Distribution
 ",
 )]
-pub(super) async fn mmr(
+pub(super) async fn mmr_distribution(
     State(state): State<AppState>,
     Query(query): Query<MMRDistributionQuery>,
 ) -> APIResult<impl IntoResponse> {
@@ -206,7 +206,7 @@ pub(super) async fn mmr(
 Player Hero MMR Distribution
 ",
 )]
-pub(super) async fn hero_mmr(
+pub(super) async fn hero_mmr_distribution(
     Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(query): Query<MMRDistributionQuery>,
     State(state): State<AppState>,

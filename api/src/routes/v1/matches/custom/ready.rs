@@ -22,6 +22,7 @@ pub(crate) struct LobbyIdQuery {
 #[utoipa::path(
     post,
     path = "/{lobby_id}/ready",
+    params(LobbyIdQuery),
     responses(
         (status = 200, description = "Successfully ready up."),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
@@ -76,6 +77,7 @@ pub(super) async fn ready_up(
 #[utoipa::path(
     post,
     path = "/{lobby_id}/unready",
+    params(LobbyIdQuery),
     responses(
         (status = 200, description = "Successfully unready."),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
