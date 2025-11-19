@@ -1,37 +1,29 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.2/schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "includes": ["**", "!**/node_modules", "!**/build", "!**/.react-router"]
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "lineWidth": 120
-  },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true,
-      "a11y": {
-        "useKeyWithClickEvents": "off"
-      }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double"
-    }
-  },
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+	"files": { "ignoreUnknown": false },
+	"formatter": { "enabled": true, "indentStyle": "tab" },
+	"linter": { "enabled": true, "rules": { "recommended": false } },
+	"javascript": { "formatter": { "quoteStyle": "double" } },
+	"overrides": [
+		{
+			"includes": ["**/*.{ts,tsx}"],
+			"javascript": { "globals": [] },
+			"linter": { "rules": { "correctness": { "noUnusedVariables": "warn" } } }
+		},
+		{
+			"includes": ["**/*.{js,jsx}"],
+			"javascript": { "globals": [] },
+			"linter": { "rules": {} }
+		}
+	],
+	"assist": {
+		"enabled": true,
+		"actions": { "source": { "organizeImports": "on" } }
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
 }
