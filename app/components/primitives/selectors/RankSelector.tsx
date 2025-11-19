@@ -62,7 +62,7 @@ export function RankSelector({
 		: undefined;
 
 	return (
-		<div className="flex flex-col gap-1.5 w-full max-w-[200px]">
+		<div className="flex flex-col gap-1.5 w-full max-w-40">
 			<div className="flex justify-center md:justify-start items-center h-8">
 				<span className="text-sm font-semibold text-foreground">{label}</span>
 			</div>
