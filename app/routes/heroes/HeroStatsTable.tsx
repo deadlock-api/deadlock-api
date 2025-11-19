@@ -1,5 +1,6 @@
 import type { HeroV2 } from "assets-deadlock-api-client";
 import type { AnalyticsHeroStats } from "deadlock-api-client";
+import type { SortDirection } from "~/types";
 import React, { useCallback, useMemo, useState } from "react";
 import HeroImage from "~/components/assets/HeroImage";
 import HeroName from "~/components/assets/HeroName";
@@ -19,7 +20,6 @@ export interface HeroStatsTableProps {
 }
 
 type SortKey = string;
-type SortDirection = "asc" | "desc";
 
 const formatHeader = (header: string) => {
 	if (header.endsWith("_per_match")) {

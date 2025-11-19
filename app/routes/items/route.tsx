@@ -1,5 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets-deadlock-api-client/dist/api";
+import { ItemTierV2 } from "assets-deadlock-api-client/dist/api";
 import { endOfDay, getUnixTime, startOfDay, subDays } from "date-fns";
 import { type AnalyticsApiItemStatsRequest } from "deadlock-api-client";
 import { useState } from "react";
@@ -19,7 +20,7 @@ export function meta() {
 
 export default function Items() {
 	const [filter, setFilter] = useState<
-		AnalyticsApiItemStatsRequest & { tierIds?: number[] }
+		AnalyticsApiItemStatsRequest & { tierIds?: ItemTierV2[] }
 	>({
 		minAverageBadge: 91,
 		maxAverageBadge: 116,

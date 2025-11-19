@@ -12,16 +12,24 @@ import {
 	TableHeader,
 	TableRow,
 } from "~/components/ui/table";
+import type { SortDirection } from "~/types";
 
 export interface ItemStatsTableProps {
-	heroes: HeroV2[];
+	heroes?: HeroV2[];
 	upgradeAssets: UpgradeV2[];
 	itemStats: ItemStats[];
 	tierIds?: number[];
 }
 
-type SortKey = string;
-type SortDirection = "asc" | "desc";
+// Define known properties from ItemStats and extend with computed properties
+interface BaseItemStats extends ItemStats {
+	win_rate: number;
+	usage_rate: number;
+	tier: ItemTierV2;
+}
+
+// Define the specific column types that are expected to exist after augmentation
+type AugmentedItemStats = BaseItemStats & Record<string, number>;
 
 const formatHeader = (header: string) => {
 	if (header.endsWith("_per_match")) {
@@ -41,10 +49,11 @@ export function ItemStatsTable({
 	upgradeAssets,
 	tierIds,
 }: ItemStatsTableProps) {
-	const [sortColumn, setSortColumn] = useState<SortKey>("win_rate");
+	const [sortColumn, setSortColumn] =
+		useState<keyof AugmentedItemStats>("win_rate");
 	const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-	const augmentedItemStats = useMemo(() => {
+	const augmentedItemStats = useMemo((): AugmentedItemStats[] => {
 		if (itemStats.length === 0) return [];
 		const totalMatchesAllItems = itemStats.reduce(
 			(sum, stat) => sum + stat.matches,
@@ -63,7 +72,8 @@ export function ItemStatsTable({
 				: itemStats;
 
 		return filteredItemStats.map((s) => {
-			const augmented = {
+			// Create the base augmented object with known properties
+			const augmented: BaseItemStats = {
 				...s,
 				tier:
 					upgradeAssets.find((asset) => asset.id === s.item_id)?.item_tier ??
@@ -73,33 +83,37 @@ export function ItemStatsTable({
 					totalMatchesAllItems > 0 ? s.matches / totalMatchesAllItems : 0,
 			};
 
+			// Add dynamic properties for keys starting with "total_"
 			Object.keys(s)
 				.filter((key) => key.startsWith("total_"))
-				.forEach(
-					(key) =>
-						(augmented[`${key.replace("total_", "")}_per_match`] =
-							s.matches > 0
-								? (s[key as keyof typeof s] as number) / s.matches
-								: 0),
-				);
-			return augmented;
+				.forEach((key) => {
+					// Ensure the value is a number before division
+					const value = s[key as keyof ItemStats] as number | undefined;
+					if (typeof value === "number") {
+						(augmented as any)[`${key.replace("total_", "")}_per_match`] =
+							s.matches > 0 ? value / s.matches : 0;
+					}
+				});
+			return augmented as AugmentedItemStats;
 		});
 	}, [itemStats, upgradeAssets, tierIds]);
 
-	const statColumns = useMemo(() => {
+	const statColumns = useMemo((): (keyof AugmentedItemStats)[] => {
 		if (augmentedItemStats.length === 0) return [];
 
-		const keys = Object.keys(augmentedItemStats[0]);
+		const keys = Object.keys(
+			augmentedItemStats[0],
+		) as (keyof AugmentedItemStats)[];
 
 		const filteredKeys = keys.filter(
 			(key) =>
 				key !== "item_id" &&
 				!key.startsWith("total_") &&
-				!key.includes("bucket") &&
-				!key.includes("shots"),
+				!key.toString().includes("bucket") &&
+				!key.toString().includes("shots"),
 		);
 
-		const preferredOrder = [
+		const preferredOrder: (keyof AugmentedItemStats)[] = [
 			"tier",
 			"matches",
 			"players",
@@ -115,12 +129,15 @@ export function ItemStatsTable({
 			if (indexA !== -1 && indexB !== -1) return indexA - indexB;
 			if (indexA !== -1) return -1;
 			if (indexB !== -1) return 1;
-			return a.localeCompare(b);
+			return a.toString().localeCompare(b.toString());
 		});
 	}, [augmentedItemStats]);
 
 	const columnFormatting = useMemo(() => {
-		const formatting = new Map<string, "fixed-0" | "fixed-2">();
+		const formatting = new Map<
+			keyof AugmentedItemStats,
+			"fixed-0" | "fixed-2"
+		>();
 		if (augmentedItemStats.length === 0) {
 			return formatting;
 		}
@@ -151,19 +168,9 @@ export function ItemStatsTable({
 	const sortedItemStats = useMemo(
 		() =>
 			[...augmentedItemStats].sort((a, b) => {
-				const valA = a[sortColumn] as any;
-				const valB = b[sortColumn] as any;
-
-				if (typeof valA === "number" && typeof valB === "number") {
-					return sortDirection === "asc" ? valA - valB : valB - valA;
-				}
-
-				const strA = String(valA ?? "");
-				const strB = String(valB ?? "");
-
-				return sortDirection === "asc"
-					? strA.localeCompare(strB)
-					: strB.localeCompare(strA);
+				const valA = a[sortColumn];
+				const valB = b[sortColumn];
+				return sortDirection === "asc" ? valA - valB : valB - valA;
 			}),
 		[augmentedItemStats, sortColumn, sortDirection],
 	);
@@ -173,7 +180,7 @@ export function ItemStatsTable({
 	}
 
 	const handleSort = useCallback(
-		(column: SortKey) => {
+		(column: keyof AugmentedItemStats) => {
 			if (sortColumn === column) {
 				setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
 			} else {
@@ -185,7 +192,7 @@ export function ItemStatsTable({
 	);
 
 	const getSortIndicator = useCallback(
-		(column: SortKey) =>
+		(column: keyof AugmentedItemStats) =>
 			sortColumn === column ? (sortDirection === "asc" ? " ▲" : " ▼") : "",
 		[sortColumn, sortDirection],
 	);
@@ -197,13 +204,13 @@ export function ItemStatsTable({
 					<TableRow>
 						<TableHead className="text-right w-[4ch]">#</TableHead>
 						<TableHead>Item</TableHead>
-						{statColumns.map((col, i) => (
+						{statColumns.map((col) => (
 							<TableHead
-								key={col}
+								key={col as string}
 								className="cursor-pointer text-right"
 								onClick={() => handleSort(col)}
 							>
-								{formatHeader(col)}
+								{formatHeader(col as string)}
 								{getSortIndicator(col)}
 							</TableHead>
 						))}
@@ -226,13 +233,11 @@ export function ItemStatsTable({
 									/>
 								</div>
 							</TableCell>
-							{statColumns.map((col, i) => (
-								<TableCell key={col} className="text-right">
+							{statColumns.map((col) => (
+								<TableCell key={col as string} className="text-right">
 									{(() => {
-										const value = stats[col] as number | string;
-										if (typeof value !== "number") {
-											return value;
-										}
+										const value: string | number = stats[col];
+
 										if (col === "win_rate" || col === "usage_rate") {
 											return value.toLocaleString(undefined, {
 												style: "percent",
