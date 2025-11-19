@@ -90,11 +90,9 @@ export function PatchOrDatePicker({
 
 	return (
 		<div className="flex flex-col gap-1.5">
-			<div className="flex items-center gap-2">
+			<div className="flex items-center justify-between gap-2">
 				<div className="flex items-center h-8">
-					<span className="text-sm text-foreground font-semibold">
-						Date Range
-					</span>
+					<span className="text-sm text-foreground font-semibold">Time</span>
 				</div>
 				<Tabs
 					defaultValue={defaultTab}
@@ -128,7 +126,7 @@ export function PatchOrDatePicker({
 					>
 						<SelectTrigger
 							id={patchSelectId}
-							className="h-10 focus-visible:ring-0 min-w-full"
+							className="h-10 focus-visible:ring-0 w-[220px]"
 						>
 							<SelectValue placeholder="Select a patch..." />
 						</SelectTrigger>

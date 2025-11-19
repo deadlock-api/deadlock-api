@@ -61,8 +61,7 @@ export function DateRangePicker({
 		if (startDate && endDate) {
 			return (
 				<>
-					{format(startDate, "MMM dd, yyyy")} -{" "}
-					{format(endDate, "MMM dd, yyyy")}
+					{format(startDate, "MMM dd, yy")} - {format(endDate, "MMM dd, yy")}
 				</>
 			);
 		}
@@ -87,7 +86,7 @@ export function DateRangePicker({
 					<Button
 						variant="outline"
 						className={cn(
-							"w-[300px] justify-between text-left font-normal",
+							"w-[220px] justify-between text-left font-normal",
 							!startDate && "text-foreground",
 						)}
 					>
