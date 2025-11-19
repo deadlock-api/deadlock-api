@@ -84,7 +84,7 @@ export default function Leaderboard() {
 						/>
 					</CardContent>
 				</Card>
-				<div className="min-h-200 w-fit mx-auto">
+				<div className="min-h-200 max-w-200 mx-auto">
 					{isPending ? (
 						<div className="flex items-center justify-center py-8">
 							<LoadingWithDescription description="Loading leaderboard..." />

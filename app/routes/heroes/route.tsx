@@ -1,21 +1,11 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { endOfDay, getUnixTime, startOfDay, subDays } from "date-fns";
-import {
-	type AnalyticsApiHeroStatsRequest,
-	LeaderboardRegionEnum,
-} from "deadlock-api-client";
+import { type AnalyticsApiHeroStatsRequest } from "deadlock-api-client";
 import { useState } from "react";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
-import {
-	RankSelector,
-	RankSelectorMultiple,
-} from "~/components/primitives/selectors/RankSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { HeroesFilter } from "~/routes/heroes/HeroesFilter";
 import { HeroStatsTable } from "~/routes/heroes/HeroStatsTable";
-import type { LeaderboardFilterType } from "~/routes/leaderboard/LeaderboardFilter";
-import BadgeDistributionChart from "~/routes/rank-distribution/BadgeDistributionChart";
-import BadgeDistributionFilter from "~/routes/rank-distribution/BadgeDistributionFilter";
 import { api } from "~/services/api";
 import { assetsApi } from "~/services/assets-api";
 

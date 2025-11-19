@@ -211,7 +211,7 @@ export function HeroStatsTable({ heroes, heroStats }: HeroStatsTableProps) {
 				<TableHeader>
 					<TableRow>
 						<TableHead
-							className={cn("text-right", {
+							className={cn("text-right w-[3ch]", {
 								"bg-muted/50": hoveredColumn === 0,
 							})}
 						>

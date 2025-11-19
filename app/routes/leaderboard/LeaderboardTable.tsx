@@ -114,11 +114,11 @@ export function LeaderboardTable({
 					<TableRow>
 						<TableHead className="w-[5ch] text-right">#</TableHead>
 						{shouldShowBadgeColumn && (
-							<TableHead className="w-16 text-center">Rank</TableHead>
+							<TableHead className="text-center">Rank</TableHead>
 						)}
 						<TableHead>Account Name</TableHead>
 						{shouldShowTopHeroesColumn && (
-							<TableHead className="w-40 text-right">Top Heroes</TableHead>
+							<TableHead className="min-w-40 text-right">Top Heroes</TableHead>
 						)}
 					</TableRow>
 				</TableHeader>
@@ -178,7 +178,9 @@ function LeaderboardTableRow({
 					)}
 				</TableCell>
 			)}
-			<TableCell className="truncate">{entry.account_name}</TableCell>
+			<TableCell className="truncate max-w-[200px]">
+				{entry.account_name}
+			</TableCell>
 			{shouldShowTopHeroesColumn && (
 				<TableCell>
 					<div className="flex justify-end space-x-3">

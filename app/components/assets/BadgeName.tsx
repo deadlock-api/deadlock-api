@@ -1,4 +1,4 @@
-import type { HeroV2, RankV2 } from "assets-deadlock-api-client";
+import type { RankV2 } from "assets-deadlock-api-client";
 import type React from "react";
 import { cn } from "~/lib/utils";
 
