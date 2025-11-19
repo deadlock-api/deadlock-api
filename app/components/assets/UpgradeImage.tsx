@@ -20,19 +20,20 @@ function extractImageUrl(
 	}
 }
 
-export default function UpgradeImage({
-	itemId,
-	itemAssets,
-	image,
-	props,
-}: {
-	itemId: number;
-	itemAssets: UpgradeV2[];
+export interface UpgradeImageProps {
+	upgradeId: number;
+	upgradeAssets: UpgradeV2[];
 	image?: "image" | "shop_image" | "shop_image_small";
-	props?: React.ImgHTMLAttributes<HTMLImageElement>;
-}) {
-	image = image ?? "shop_image_small";
-	const item = itemAssets.find((item) => item.id === itemId);
+}
+
+export default function UpgradeImage({
+	upgradeId,
+	upgradeAssets,
+	image = "shop_image_small",
+	className,
+	...props
+}: UpgradeImageProps & React.ComponentProps<"img">) {
+	const item = upgradeAssets.find((item) => item.id === upgradeId);
 	const [isError, setIsError] = useState(!item);
 
 	if (isError || !item) {
@@ -40,7 +41,7 @@ export default function UpgradeImage({
 			<div
 				className={cn(
 					"flex items-center justify-center bg-muted rounded-md",
-					props?.className,
+					className,
 				)}
 			>
 				<CircleQuestionMark className="size-1/2 text-muted-foreground" />
@@ -60,7 +61,7 @@ export default function UpgradeImage({
 				alt={item?.name}
 				title={item?.name}
 				{...props}
-				className={cn("size-8 aspect-square", props?.className)}
+				className={cn("size-8 aspect-square", className)}
 				onError={() => setIsError(true)}
 			/>
 		</picture>
