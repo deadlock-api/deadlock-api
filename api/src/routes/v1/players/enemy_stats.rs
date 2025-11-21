@@ -97,7 +97,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
         sum(not won) as wins,
         uniq(match_id) as matches_played,
         groupArray(match_id) as matches
-    FROM player_match_history
+    FROM player_match_history FINAL
     WHERE (match_id, player_team) IN t_matches
     GROUP BY account_id
     {having_clause}
