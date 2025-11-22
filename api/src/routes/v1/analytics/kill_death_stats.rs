@@ -14,16 +14,6 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
-#[allow(clippy::unnecessary_wraps)]
-fn default_min_kills() -> Option<u32> {
-    Some(1)
-}
-
-#[allow(clippy::unnecessary_wraps)]
-fn default_min_deaths() -> Option<u32> {
-    Some(1)
-}
-
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct KillDeathStatsQuery {
     /// Filter by team number.
@@ -70,14 +60,10 @@ pub(crate) struct KillDeathStatsQuery {
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter Raster cells based on minimum kills.
-    #[serde(default = "default_min_kills")]
-    #[param(default = default_min_kills)]
     min_kills_per_raster: Option<u32>,
     /// Filter Raster cells based on maximum kills.
     max_kills_per_raster: Option<u32>,
     /// Filter Raster cells based on minimum deaths.
-    #[serde(default = "default_min_deaths")]
-    #[param(default = default_min_deaths)]
     min_deaths_per_raster: Option<u32>,
     /// Filter Raster cells based on maximum deaths.
     max_deaths_per_raster: Option<u32>,
