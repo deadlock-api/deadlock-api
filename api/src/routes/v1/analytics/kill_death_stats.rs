@@ -24,6 +24,9 @@ fn default_min_deaths() -> Option<u32> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct KillDeathStatsQuery {
+    /// Filter by team number.
+    #[param(minimum = 0, maximum = 1)]
+    team: Option<u8>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -158,6 +161,13 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     }
     if let Some(max_networth) = query.max_networth {
         player_filters.push(format!("net_worth <= {max_networth}"));
+    }
+    if let Some(team) = query.team {
+        if team == 0 {
+            player_filters.push("team = 'Team0'".to_owned());
+        } else if team == 1 {
+            player_filters.push("team = 'Team1'".to_owned());
+        }
     }
     let player_filters = if player_filters.is_empty() {
         String::new()
