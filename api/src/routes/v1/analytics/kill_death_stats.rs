@@ -1,3 +1,5 @@
+#![allow(clippy::large_stack_arrays)]
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
