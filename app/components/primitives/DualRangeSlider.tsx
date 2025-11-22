@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { cn } from "~/lib/utils";
 
-interface DualRangeSliderProps
+export interface DualRangeSliderProps
 	extends React.ComponentProps<typeof SliderPrimitive.Root> {
 	labelPosition?: "top" | "bottom";
 	label?: (value: number | undefined) => React.ReactNode;

@@ -13,13 +13,15 @@ import {
 import { ChartContainer } from "~/components/ui/chart";
 import { range } from "~/lib/utils";
 
+export interface BadgeDistributionChartProps {
+	badgeDistributionData: BadgeDistribution[];
+	ranksData: RankV2[];
+}
+
 export default function BadgeDistributionChart({
 	badgeDistributionData,
 	ranksData,
-}: {
-	badgeDistributionData: BadgeDistribution[];
-	ranksData: RankV2[];
-}) {
+}: BadgeDistributionChartProps) {
 	const tierData = useMemo(() => {
 		const map = new Map<number, RankV2>();
 		ranksData.forEach((r) => {

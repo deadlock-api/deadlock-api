@@ -1,12 +1,8 @@
 import { fromUnixTime, getUnixTime } from "date-fns";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/api";
 import { useCallback } from "react";
-import {
-	DurationRangeFilter,
-	MAX_DURATION,
-	MIN_DURATION,
-} from "~/components/primitives/DurationRangeFilter";
 import { PatchOrDatePicker } from "~/components/primitives/PatchOrDatePicker";
+import { TimeRangeFilter } from "~/components/primitives/TimeRangeFilter";
 import { PATCHES } from "~/lib/consts";
 
 export interface BadgeDistributionFilterProps {
@@ -40,12 +36,12 @@ export default function BadgeDistributionFilter({
 
 	return (
 		<div className="flex flex-wrap justify-center items-center w-full gap-8">
-			<DurationRangeFilter
-				durationRange={[
-					value.minDurationS ?? MIN_DURATION,
-					value.maxDurationS ?? MAX_DURATION,
-				]}
-				onDurationRangeChange={handleDurationRangeChange}
+			<TimeRangeFilter
+				value={[value.minDurationS ?? 0, value.maxDurationS ?? 7000]}
+				min={0}
+				max={7000}
+				onRangeChange={handleDurationRangeChange}
+				labelText="Match Duration"
 			/>
 			<PatchOrDatePicker
 				patchDates={PATCHES}

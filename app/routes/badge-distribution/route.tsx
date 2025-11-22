@@ -4,7 +4,7 @@ import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/a
 import { useState } from "react";
 import { LoadingWithDescription } from "~/components/primitives/LoadingWithDescription";
 import { Card, CardContent } from "~/components/ui/card";
-import BadgeDistributionFilter from "~/routes/rank-distribution/BadgeDistributionFilter";
+import BadgeDistributionFilter from "~/routes/badge-distribution/BadgeDistributionFilter";
 import { api } from "~/services/api";
 import { assetsApi } from "~/services/assets-api";
 import BadgeDistributionChart from "./BadgeDistributionChart";
@@ -16,7 +16,7 @@ export function meta() {
 	];
 }
 
-export default function RankDistribution() {
+export default function BadgeDistribution() {
 	const [filter, setFilter] = useState<AnalyticsApiBadgeDistributionRequest>({
 		minUnixTimestamp: getUnixTime(startOfDay(subDays(new Date(), 30))),
 		maxUnixTimestamp: getUnixTime(endOfDay(new Date())),
@@ -33,7 +33,7 @@ export default function RankDistribution() {
 				staleTime: Number.MAX_SAFE_INTEGER,
 			},
 			{
-				queryKey: ["rankDistribution", filter],
+				queryKey: ["badgeDistribution", filter],
 				queryFn: async () => {
 					const response = await api.analytics_api.badgeDistribution(filter);
 					return response.data;

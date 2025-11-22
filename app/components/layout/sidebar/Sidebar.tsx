@@ -7,6 +7,7 @@ import {
 	Home,
 	ListEnd,
 	ListOrdered,
+	Map,
 	Swords,
 } from "lucide-react";
 import React from "react";
@@ -43,10 +44,11 @@ export function Sidebar() {
 						<SidebarLink to="/" icon={Home} label="Home" />
 						<SidebarSeparator label="Analytics" />
 						<SidebarLink
-							to="/rank-distribution"
+							to="/badge-distribution"
 							icon={BarChart}
 							label="Rank Distribution"
 						/>
+						<SidebarLink to="/heatmap" icon={Map} label="Heatmap" />
 						<SidebarSeparator label="Game" />
 						<SidebarLink to="/heroes" icon={Swords} label="Heroes" />
 						<SidebarLink to="/items" icon={Grid} label="Items" />
