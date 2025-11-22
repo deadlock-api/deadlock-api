@@ -12,7 +12,6 @@ use rand::RngCore;
 use rand::prelude::ThreadRng;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use strum::Display;
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 use utoipa::{IntoParams, ToSchema};
@@ -29,6 +28,7 @@ use valveprotos::gcsdk::EgcPlatform;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::custom::utils;
+use crate::routes::v1::matches::types::RegionMode;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -66,31 +66,6 @@ pub(super) struct CreateCustomRequest {
     #[serde(default)]
     #[param(default)]
     experimental_heroes_enabled: Option<bool>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Display, PartialEq, Eq, Hash)]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-#[repr(i32)]
-enum RegionMode {
-    Row = 0,
-    Europe = 1,
-    SeAsia = 2,
-    SAmerica = 3,
-    Russia = 4,
-    Oceania = 5,
-}
-
-impl From<RegionMode> for i32 {
-    fn from(val: RegionMode) -> Self {
-        val as i32
-    }
-}
-
-impl From<RegionMode> for u32 {
-    fn from(val: RegionMode) -> Self {
-        val as u32
-    }
 }
 
 #[derive(Serialize, ToSchema)]

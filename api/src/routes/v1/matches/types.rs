@@ -1,7 +1,7 @@
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use strum::FromRepr;
+use strum::{Display, FromRepr};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
@@ -56,9 +56,24 @@ impl From<i32> for ActiveMatchGameMode {
     }
 }
 
-#[derive(FromRepr, Debug, Clone, Copy, Serialize, ToSchema, Default)]
+#[derive(
+    FromRepr,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    Display,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 #[repr(i32)]
-enum ActiveMatchRegionMode {
+pub(crate) enum RegionMode {
     #[default]
     Row = 0,
     Europe = 1,
@@ -68,9 +83,21 @@ enum ActiveMatchRegionMode {
     Oceania = 5,
 }
 
-impl From<i32> for ActiveMatchRegionMode {
-    fn from(value: i32) -> Self {
-        Self::from_repr(value).unwrap_or_default()
+impl From<RegionMode> for i32 {
+    fn from(val: RegionMode) -> Self {
+        val as i32
+    }
+}
+
+impl From<RegionMode> for u32 {
+    fn from(val: RegionMode) -> Self {
+        val as u32
+    }
+}
+
+impl From<i32> for RegionMode {
+    fn from(val: i32) -> Self {
+        Self::from_repr(val).unwrap_or_default()
     }
 }
 
@@ -119,7 +146,7 @@ pub(super) struct ActiveMatch {
     game_mode_parsed: Option<ActiveMatchGameMode>,
     match_score: Option<u32>,
     region_mode: Option<i32>,
-    region_mode_parsed: Option<ActiveMatchRegionMode>,
+    region_mode_parsed: Option<RegionMode>,
     compat_version: Option<u32>,
 }
 
