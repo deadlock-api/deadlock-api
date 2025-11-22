@@ -190,7 +190,6 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     format!(
         "
     WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH {info_filters}),
-         {}
          t_events AS (SELECT toInt32(round(tupleElement(dd.death_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.death_pos, 2), -2)) as position_y,
                              if(team = 'Team0', 1, 0) as killer_team,
@@ -214,14 +213,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
         if player_filters.is_empty() {
             String::new()
         } else {
-            format!(
-                "t_killer_slot AS (SELECT match_id, player_slot FROM match_player WHERE match_id IN t_matches {player_filters}),"
-            )
-        },
-        if player_filters.is_empty() {
-            String::new()
-        } else {
-            "AND (match_id, dd.killer_player_slot) in t_killer_slot".to_string()
+            format!("AND (match_id, dd.killer_player_slot) in (SELECT match_id, player_slot FROM match_player WHERE match_id IN t_matches {player_filters})")
         },
     )
 }
