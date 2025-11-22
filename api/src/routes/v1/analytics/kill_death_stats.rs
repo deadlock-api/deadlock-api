@@ -200,7 +200,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
                       UNION ALL
                       SELECT toInt32(round(tupleElement(dd.killer_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.killer_pos, 2), -2)) as position_y,
-                             if(team = 'Team0', 0, 1) as killer_team,
+                             if(team = 'Team0', 1, 0) as killer_team,
                              'kill' as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
