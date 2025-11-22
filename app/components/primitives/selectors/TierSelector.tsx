@@ -1,4 +1,4 @@
-import { ItemTierV2 } from "assets-deadlock-api-client/dist/api";
+import { ItemTierV2 } from "assets-deadlock-api-client/api";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 

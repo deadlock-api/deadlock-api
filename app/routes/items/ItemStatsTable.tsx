@@ -1,5 +1,5 @@
 import type { HeroV2, UpgradeV2 } from "assets-deadlock-api-client";
-import { ItemTierV2 } from "assets-deadlock-api-client/dist/api";
+import { ItemTierV2 } from "assets-deadlock-api-client/api";
 import type { ItemStats } from "deadlock-api-client";
 import React, { useCallback, useMemo, useState } from "react";
 import UpgradeImage from "~/components/assets/UpgradeImage";

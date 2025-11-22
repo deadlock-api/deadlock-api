@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets-deadlock-api-client/dist/api";
-import { ItemTierV2 } from "assets-deadlock-api-client/dist/api";
+import type { UpgradeV2 } from "assets-deadlock-api-client/api";
+import { ItemTierV2 } from "assets-deadlock-api-client/api";
 import { endOfDay, getUnixTime, startOfDay, subDays } from "date-fns";
 import { type AnalyticsApiItemStatsRequest } from "deadlock-api-client";
 import { useState } from "react";

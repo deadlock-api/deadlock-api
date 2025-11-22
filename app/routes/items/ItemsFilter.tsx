@@ -1,5 +1,5 @@
 import type { HeroV2, RankV2 } from "assets-deadlock-api-client";
-import type { ItemTierV2 } from "assets-deadlock-api-client/dist/api";
+import type { ItemTierV2 } from "assets-deadlock-api-client/api";
 import { fromUnixTime, getUnixTime } from "date-fns";
 import { type AnalyticsApiItemStatsRequest } from "deadlock-api-client";
 import { useCallback } from "react";
