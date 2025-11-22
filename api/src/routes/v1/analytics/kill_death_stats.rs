@@ -26,9 +26,6 @@ fn default_min_deaths() -> Option<u32> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct KillDeathStatsQuery {
-    /// Filter by team number.
-    #[param(minimum = 0, maximum = 1)]
-    team: Option<u8>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -93,6 +90,7 @@ pub(crate) struct KillDeathStatsQuery {
 pub(crate) struct KillDeathStats {
     position_x: i32,
     position_y: i32,
+    killer_team: u8,
     deaths: u64,
     kills: u64,
 }
@@ -164,13 +162,6 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     if let Some(max_networth) = query.max_networth {
         player_filters.push(format!("net_worth <= {max_networth}"));
     }
-    if let Some(team) = query.team {
-        if team == 0 {
-            player_filters.push("team = 'Team0'".to_owned());
-        } else if team == 1 {
-            player_filters.push("team = 'Team1'".to_owned());
-        }
-    }
     let player_filters = if player_filters.is_empty() {
         String::new()
     } else {
@@ -206,20 +197,22 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
          {}
          t_events AS (SELECT toInt32(round(tupleElement(dd.death_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.death_pos, 2), -2)) as position_y,
-                             'death'                                  as type
+                             if(team = 'Team0', 1, 0) as killer_team,
+                             'death' as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
                       WHERE match_id IN t_matches {death_filters} {player_filters}
                       UNION ALL
                       SELECT toInt32(round(tupleElement(dd.killer_pos, 1), -2)) as position_x,
                              toInt32(round(tupleElement(dd.killer_pos, 2), -2)) as position_y,
-                             'kill'                                    as type
+                             if(team = 'Team0', 0, 1) as killer_team,
+                             'kill' as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
                       WHERE match_id IN t_matches {death_filters} {})
-    SELECT position_x, position_y, countIf(type = 'death') as deaths, countIf(type = 'kill') as kills
+    SELECT position_x, position_y, killer_team, countIf(type = 'death') as deaths, countIf(type = 'kill') as kills
     FROM t_events
-    GROUP BY position_x, position_y
+    GROUP BY position_x, position_y, killer_team
     HAVING TRUE {min_deaths_per_raster} {min_kills_per_raster} {max_deaths_per_raster} {max_kills_per_raster}
     ",
         if player_filters.is_empty() {
