@@ -1,7 +1,7 @@
 import type { MapV1 } from "assets-deadlock-api-client/api";
 import type { KillDeathStats } from "deadlock-api-client";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock-api-client/api";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import MapImage from "~/components/assets/MapImage";
 
 const COLORS = {
@@ -13,15 +13,15 @@ export interface KillDeathHeatmapProps {
 	killDeathStats: KillDeathStats[];
 	map: MapV1;
 	team: AnalyticsApiKillDeathStatsRequest["team"];
-	values: { kills?: boolean; deaths?: boolean };
 }
 
 export default function KillDeathHeatmap({
 	killDeathStats,
 	map,
 	team,
-	values = { kills: true, deaths: true },
 }: KillDeathHeatmapProps) {
+	const [showKills, setShowKills] = useState(true);
+	const [showDeaths, setShowDeaths] = useState(false);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const mapRadius = map.radius ?? 10752;
 
@@ -58,13 +58,14 @@ export default function KillDeathHeatmap({
 		const pointRadius = (250 / mapRadius) * canvas.width;
 
 		for (const stat of killDeathStats) {
-			if (values["kills"] && team !== stat.killer_team) continue;
-			if (values["deaths"] && team === stat.killer_team) continue;
+			const isKill = team === stat.killer_team;
+
+			if (isKill && !showKills) continue;
+			if (!isKill && !showDeaths) continue;
 
 			const x = ((stat.position_x / mapRadius + 1) / 2) * canvas.width;
 			const y = ((stat.position_y / mapRadius + 1) / 2) * canvas.height;
 
-			const isKill = team === stat.killer_team;
 			const intensity = Math.pow(
 				isKill ? stat.kills / maxKills : stat.deaths / maxDeaths,
 				1.2,
@@ -87,7 +88,15 @@ export default function KillDeathHeatmap({
 			ctx.arc(x, y, pointRadius, 0, Math.PI * 2);
 			ctx.fill();
 		}
-	}, [killDeathStats, maxKills, maxDeaths, team, mapRadius, values]);
+	}, [
+		killDeathStats,
+		maxKills,
+		maxDeaths,
+		team,
+		mapRadius,
+		showKills,
+		showDeaths,
+	]);
 
 	return (
 		<div className="kill-death-heatmap w-full h-auto max-w-200 relative isolate pointer-events-none select-none">
@@ -100,17 +109,25 @@ export default function KillDeathHeatmap({
 				className="absolute inset-0 w-full h-full select-none pointer-events-none opacity-90 mix-blend-hard-light blur-sm"
 			/>
 
-			<div>
+			<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-auto">
 				{/* Legend */}
-				<div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white text-sm rounded-md px-4 py-2 flex items-center space-x-4">
-					<div className="flex items-center space-x-2">
+				<div className="bg-black bg-opacity-50 text-white text-sm rounded-md px-4 py-2 flex items-center space-x-4">
+					<div
+						className="flex items-center space-x-2 cursor-pointer"
+						onClick={() => setShowKills((prev) => !prev)}
+						style={{ opacity: showKills ? 1 : 0.5 }}
+					>
 						<div
 							className="w-6 h-6 rounded-full"
 							style={{ backgroundColor: "rgba(255, 60, 60, 0.7)" }}
 						></div>
 						<span>Kills</span>
 					</div>
-					<div className="flex items-center space-x-2">
+					<div
+						className="flex items-center space-x-2 cursor-pointer"
+						onClick={() => setShowDeaths((prev) => !prev)}
+						style={{ opacity: showDeaths ? 1 : 0.5 }}
+					>
 						<div
 							className="w-6 h-6 rounded-full"
 							style={{ backgroundColor: "rgba(60, 160, 255, 0.7)" }}

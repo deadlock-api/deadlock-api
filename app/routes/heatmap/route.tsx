@@ -1,4 +1,4 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { endOfDay, getUnixTime, startOfDay, subDays } from "date-fns";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock-api-client/api";
 import { useState } from "react";
@@ -7,6 +7,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import KillDeathHeatmap from "~/routes/heatmap/KillDeathHeatmap";
 import { api } from "~/services/api";
 import { assetsApi } from "~/services/assets-api";
+import HeatmapFilter from "./HeatmapFilter";
 
 export function meta() {
 	return [
@@ -19,14 +20,23 @@ export default function Heatmap() {
 	const [filter, setFilter] = useState<AnalyticsApiKillDeathStatsRequest>({
 		minUnixTimestamp: getUnixTime(startOfDay(subDays(new Date(), 30))),
 		maxUnixTimestamp: getUnixTime(endOfDay(new Date())),
-		// minGameTimeS: 1800,
-		maxGameTimeS: 601,
-		accountIds: [74963221],
+		minGameTimeS: 0,
+		maxGameTimeS: 300,
 		team: 1,
 	});
 
-	const [map, killDeathStatsQuery] = useQueries({
+	const [heroes, map, killDeathStatsQuery] = useQueries({
 		queries: [
+			{
+				queryKey: ["heroes"],
+				queryFn: async () => {
+					const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({
+						onlyActive: true,
+					});
+					return response.data;
+				},
+				staleTime: Number.MAX_SAFE_INTEGER,
+			},
 			{
 				queryKey: ["map"],
 				queryFn: async () => {
@@ -46,21 +56,27 @@ export default function Heatmap() {
 		],
 	});
 
-	const isPending = killDeathStatsQuery?.isPending || map?.isPending;
-	const isError = killDeathStatsQuery?.isError || map?.isError;
-	const error = killDeathStatsQuery?.error || map?.error;
+	const isPending =
+		killDeathStatsQuery?.isPending || map?.isPending || heroes?.isPending;
+	const isError =
+		killDeathStatsQuery?.isError || map?.isError || heroes?.isError;
+	const error = killDeathStatsQuery?.error || map?.error || heroes?.error;
 	return (
 		<div className="space-y-8">
 			<section className="space-y-4">
 				<h1 className="text-center text-4xl">Heatmap</h1>
 				<Card>
 					<CardContent className="p-4">
-						<div>TODO: Add filters</div>
+						<HeatmapFilter
+							heroes={heroes.data ?? []}
+							value={filter}
+							onChange={setFilter}
+						/>
 					</CardContent>
 				</Card>
 				<div className="flex justify-center items-center">
 					{isPending ? (
-						<div className="flex items-center justify-center py-8">
+						<div className="flex items-center justify-center py-8 min-h-150">
 							<LoadingWithDescription description="Loading heatmap..." />
 						</div>
 					) : isError ? (
@@ -72,7 +88,6 @@ export default function Heatmap() {
 							killDeathStats={killDeathStatsQuery.data}
 							map={map.data}
 							team={filter.team}
-							values={{ deaths: true }}
 						/>
 					) : null}
 				</div>

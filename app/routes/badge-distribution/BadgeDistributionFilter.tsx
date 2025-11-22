@@ -3,7 +3,11 @@ import type { AnalyticsApiBadgeDistributionRequest } from "deadlock-api-client/a
 import { useCallback } from "react";
 import { PatchOrDatePicker } from "~/components/primitives/PatchOrDatePicker";
 import { TimeRangeFilter } from "~/components/primitives/TimeRangeFilter";
-import { PATCHES } from "~/lib/consts";
+import {
+	MAX_GAME_DURATION_S,
+	MIN_GAME_DURATION_S,
+	PATCHES,
+} from "~/lib/consts";
 
 export interface BadgeDistributionFilterProps {
 	value: AnalyticsApiBadgeDistributionRequest;
@@ -37,9 +41,12 @@ export default function BadgeDistributionFilter({
 	return (
 		<div className="flex flex-wrap justify-center items-center w-full gap-8">
 			<TimeRangeFilter
-				value={[value.minDurationS ?? 0, value.maxDurationS ?? 7000]}
-				min={0}
-				max={7000}
+				value={[
+					value.minDurationS ?? MIN_GAME_DURATION_S,
+					value.maxDurationS ?? MAX_GAME_DURATION_S,
+				]}
+				min={MIN_GAME_DURATION_S}
+				max={MAX_GAME_DURATION_S}
 				onRangeChange={handleDurationRangeChange}
 				labelText="Match Duration"
 			/>

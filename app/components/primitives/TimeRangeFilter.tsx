@@ -4,6 +4,7 @@ import {
 	type DualRangeSliderProps,
 } from "~/components/primitives/DualRangeSlider";
 import { Label } from "~/components/ui/label";
+import { cn } from "~/lib/utils";
 
 export interface DurationRangeFilterProps extends DualRangeSliderProps {
 	value: [number, number];
@@ -39,7 +40,12 @@ export function TimeRangeFilter({
 				onValueChange={(value) => setInternalRange([value[0], value[1]])}
 				onValueCommit={(value) => onRangeChange([value[0], value[1]])}
 				label={(value) => (
-					<span className="text-sm text-nowrap">
+					<span
+						className={cn(
+							"text-sm text-nowrap",
+							value === internalRange[0] ? "mr-4" : "ml-4",
+						)}
+					>
 						{value !== undefined ? `${Math.floor(value / 60)}m` : ""}
 					</span>
 				)}

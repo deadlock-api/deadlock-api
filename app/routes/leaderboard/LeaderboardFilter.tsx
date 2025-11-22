@@ -18,13 +18,16 @@ export interface LeaderboardFilterProps {
 	onChange: (filter: LeaderboardFilterType) => void;
 }
 
+const regions = Object.entries(LeaderboardRegionEnum).map(([key, val]) => ({
+	label: key,
+	value: val,
+}));
+
 export function LeaderboardFilter({
 	heroes,
 	value,
 	onChange,
 }: LeaderboardFilterProps) {
-	const regions = Object.values(LeaderboardRegionEnum);
-
 	const handleHeroSelect = useCallback(
 		(heroId: number | null) =>
 			onChange({
@@ -56,7 +59,7 @@ export function LeaderboardFilter({
 			<StringSelector
 				label={"Region"}
 				placeholder={"Select Region..."}
-				values={regions}
+				options={regions}
 				selected={value.region}
 				onSelect={handleRegionSelect}
 			/>

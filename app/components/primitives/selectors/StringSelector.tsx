@@ -7,8 +7,8 @@ import {
 } from "~/components/ui/select";
 
 export interface StringSelectorProps {
-	values: string[];
-	onSelect: (selected: string | null) => void;
+	options: { value: string; label: string }[];
+	onSelect: (selected: string) => void;
 	selected?: string | null;
 	allowSelectNull?: boolean;
 	placeholder?: string;
@@ -16,13 +16,16 @@ export interface StringSelectorProps {
 }
 
 export function StringSelector({
-	values,
+	options,
 	onSelect,
 	selected,
 	allowSelectNull = false,
 	placeholder,
 	label,
 }: StringSelectorProps) {
+	const valueLabelMap = new Map<string, string>(
+		options.map((o) => [o.value, o.label]),
+	);
 	return (
 		<div className="flex flex-col gap-1.5 w-full max-w-40">
 			<div className="flex justify-center md:justify-start items-center h-8">
@@ -30,7 +33,9 @@ export function StringSelector({
 			</div>
 			<Select value={selected ?? undefined} onValueChange={onSelect}>
 				<SelectTrigger className="w-full focus-visible:ring-0">
-					<SelectValue placeholder={placeholder}>{selected}</SelectValue>
+					<SelectValue placeholder={placeholder}>
+						{selected ? valueLabelMap.get(selected) : ""}
+					</SelectValue>
 				</SelectTrigger>
 				<SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
 					{allowSelectNull && (
@@ -38,9 +43,9 @@ export function StringSelector({
 							<span className="truncate">None</span>
 						</SelectItem>
 					)}
-					{values.map((item) => (
-						<SelectItem key={item} value={item}>
-							{item}
+					{options.map((item) => (
+						<SelectItem key={item.value} value={item.value}>
+							{item.label}
 						</SelectItem>
 					))}
 				</SelectContent>

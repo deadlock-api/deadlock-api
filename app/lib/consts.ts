@@ -1,5 +1,8 @@
 import { endOfDay } from "date-fns";
 
+export const MIN_GAME_DURATION_S = 0;
+export const MAX_GAME_DURATION_S = 60 * 60;
+
 export const PATCHES = [
 	{
 		id: "2025-10-24",
