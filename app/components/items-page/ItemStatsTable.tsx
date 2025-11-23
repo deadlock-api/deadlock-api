@@ -524,6 +524,8 @@ export default function ItemStatsTable({
   maxDate,
   hero,
   minMatches,
+  minBoughtAtS,
+  maxBoughtAtS,
 }: {
   columns: string[];
   limit?: number;
@@ -538,6 +540,8 @@ export default function ItemStatsTable({
   maxDate?: Dayjs;
   hero?: number | null;
   minMatches?: number | null;
+  minBoughtAtS?: number;
+  maxBoughtAtS?: number;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -552,7 +556,17 @@ export default function ItemStatsTable({
   });
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery({
-    queryKey: ["api-item-stats", minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, [], []],
+    queryKey: [
+      "api-item-stats",
+      minMatches,
+      hero,
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      minBoughtAtS,
+      maxBoughtAtS,
+    ],
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,
@@ -561,6 +575,8 @@ export default function ItemStatsTable({
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
         minMatches: minMatches,
+        minBoughtAtS: minBoughtAtS,
+        maxBoughtAtS: maxBoughtAtS,
       });
       return response.data;
     },
