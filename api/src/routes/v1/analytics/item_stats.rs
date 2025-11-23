@@ -151,6 +151,10 @@ pub(crate) struct ItemStatsQuery {
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
+    /// Filter items bought after this game time (seconds).
+    min_bought_at_s: Option<u32>,
+    /// Filter items bought before this game time (seconds).
+    max_bought_at_s: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -246,6 +250,12 @@ fn build_query(query: &ItemStatsQuery) -> String {
             "NOT hasAny(items.item_id, [{}])",
             exclude_item_ids.iter().map(u32::to_string).join(", ")
         ));
+    }
+    if let Some(min_bought_at_s) = query.min_bought_at_s {
+        player_filters.push(format!("it.game_time_s >= {min_bought_at_s}"));
+    }
+    if let Some(max_bought_at_s) = query.max_bought_at_s {
+        player_filters.push(format!("it.game_time_s <= {max_bought_at_s}"));
     }
     let player_filters = if player_filters.is_empty() {
         // WHERE 1 = 1 makes string concatenation simpler later on.
@@ -576,5 +586,27 @@ mod test {
             "hero_id IN ({})",
             hero_ids.iter().map(ToString::to_string).join(", ")
         )));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_min_bought_at_s() {
+        let min_bought_at_s = 300;
+        let query = ItemStatsQuery {
+            min_bought_at_s: min_bought_at_s.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("it.game_time_s >= {min_bought_at_s}")));
+    }
+
+    #[test]
+    fn test_build_item_stats_query_max_bought_at() {
+        let max_bought_at_s = 600;
+        let query = ItemStatsQuery {
+            max_bought_at_s: max_bought_at_s.into(),
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains(&format!("it.game_time_s <= {max_bought_at_s}")));
     }
 }
