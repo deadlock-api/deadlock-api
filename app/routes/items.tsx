@@ -131,6 +131,8 @@ export default function Items(
             maxDate={endDate || undefined}
             hero={hero}
             minMatches={minMatches}
+            minBoughtAtS={minBoughtAtS ?? undefined}
+            maxBoughtAtS={maxBoughtAtS ?? undefined}
           />
         </TabsContent>
         <TabsContent value="item-combs">
@@ -142,6 +144,8 @@ export default function Items(
             maxDate={endDate || undefined}
             hero={hero}
             minMatches={minMatches}
+            minBoughtAtS={minBoughtAtS ?? undefined}
+            maxBoughtAtS={maxBoughtAtS ?? undefined}
           />
         </TabsContent>
       </Tabs>

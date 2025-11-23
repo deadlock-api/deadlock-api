@@ -13,6 +13,8 @@ export default function ItemPurchaseAnalysis({
   maxDate,
   hero,
   minMatches,
+  minBoughtAtS,
+  maxBoughtAtS,
 }: {
   minRankId?: number;
   maxRankId?: number;
@@ -20,6 +22,8 @@ export default function ItemPurchaseAnalysis({
   maxDate?: Dayjs;
   hero?: number | null;
   minMatches?: number | null;
+  minBoughtAtS?: number;
+  maxBoughtAtS?: number;
 }) {
   const [itemIds, setItemIds] = useQueryState("item_ids", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
@@ -34,8 +38,10 @@ export default function ItemPurchaseAnalysis({
       minDateTimestamp,
       maxDateTimestamp,
       bucket: undefined,
+      minBoughtAtS,
+      maxBoughtAtS,
     } satisfies ItemStatsQueryParams;
-  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp]);
+  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minBoughtAtS, maxBoughtAtS]);
 
   return (
     <div>

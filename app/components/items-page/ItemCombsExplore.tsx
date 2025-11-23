@@ -23,6 +23,8 @@ export default function ItemCombsExplore({
   hero,
   minMatches,
   limit,
+  minBoughtAtS,
+  maxBoughtAtS,
 }: {
   minRankId?: number;
   maxRankId?: number;
@@ -32,6 +34,8 @@ export default function ItemCombsExplore({
   sortBy?: keyof ItemStats | "winrate";
   minMatches?: number | null;
   limit?: number;
+  minBoughtAtS?: number;
+  maxBoughtAtS?: number;
 }) {
   const [includeItems, setIncludeItems] = useQueryState(
     "include_items",
@@ -69,8 +73,21 @@ export default function ItemCombsExplore({
       includeItems,
       excludeItems,
       bucket: undefined,
+      minBoughtAtS,
+      maxBoughtAtS,
     } satisfies ItemStatsQueryParams;
-  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, includeItems, excludeItems]);
+  }, [
+    minMatches,
+    hero,
+    minRankId,
+    maxRankId,
+    minDateTimestamp,
+    maxDateTimestamp,
+    includeItems,
+    excludeItems,
+    minBoughtAtS,
+    maxBoughtAtS,
+  ]);
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery(itemStatsQueryOptions(queryStatOptions));
 
