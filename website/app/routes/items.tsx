@@ -6,6 +6,7 @@ import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
+import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
@@ -23,6 +24,8 @@ export default function Items(
 ) {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
+  const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
   const [hero, setHero] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [[startDate, endDate], setDateRange] = useQueryState(
@@ -74,6 +77,14 @@ export default function Items(
               </div>
               <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
               <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+              <TimeWindowSelector
+                minTime={minBoughtAtS ?? undefined}
+                maxTime={maxBoughtAtS ?? undefined}
+                onTimeChange={(min, max) => {
+                  setMinBoughtAtS(min ?? null);
+                  setMaxBoughtAtS(max ?? null);
+                }}
+              />
             </div>
             <div className="flex justify-center md:justify-start">
               <PatchOrDatePicker
@@ -108,6 +119,8 @@ export default function Items(
             maxDate={endDate || undefined}
             hero={hero}
             minMatches={minMatches}
+            minBoughtAtS={minBoughtAtS ?? undefined}
+            maxBoughtAtS={maxBoughtAtS ?? undefined}
           />
         </TabsContent>
         <TabsContent value="item-purchase-analysis">
