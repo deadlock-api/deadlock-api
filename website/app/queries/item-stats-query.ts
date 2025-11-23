@@ -12,6 +12,8 @@ export interface ItemStatsQueryParams {
   includeItems?: Set<number>;
   excludeItems?: Set<number>;
   bucket?: ItemStatsBucketEnum;
+  minBoughtAtS?: number;
+  maxBoughtAtS?: number;
 }
 
 export function itemStatsQueryOptions({
@@ -24,6 +26,8 @@ export function itemStatsQueryOptions({
   includeItems,
   excludeItems,
   bucket,
+  minBoughtAtS,
+  maxBoughtAtS,
 }: ItemStatsQueryParams) {
   return queryOptions({
     queryKey: [
@@ -37,6 +41,8 @@ export function itemStatsQueryOptions({
       bucket,
       includeItems ? Array.from(includeItems) : "",
       excludeItems ? Array.from(excludeItems) : "",
+      minBoughtAtS,
+      maxBoughtAtS,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
@@ -49,6 +55,8 @@ export function itemStatsQueryOptions({
         excludeItemIds: excludeItems ? Array.from(excludeItems) : undefined,
         minMatches: minMatches,
         bucket: bucket,
+        minBoughtAtS,
+        maxBoughtAtS,
       });
       return response.data;
     },
