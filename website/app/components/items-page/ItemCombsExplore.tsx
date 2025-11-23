@@ -115,7 +115,7 @@ export default function ItemCombsExplore({
   return (
     <div>
       <div className="grid grid-cols-2 text-center mt-2 rounded bg-gray-800 p-4 min-h-24">
-        <div className="border-r-1">
+        <div className="border-r">
           <h2 className="text-center text-xl p-2">Included Items</h2>
           <div className="flex flex-wrap items-center justify-center p-2 gap-2">
             {Array.from(includeItems)?.map((item) => (
@@ -132,7 +132,7 @@ export default function ItemCombsExplore({
             ))}
           </div>
         </div>
-        <div className="border-l-1">
+        <div className="border-l">
           <h2 className="text-center text-xl p-2">Excluded Items</h2>
           <div className="flex flex-wrap items-center justify-center p-2 gap-2">
             {Array.from(excludeItems)?.map((item) => (
