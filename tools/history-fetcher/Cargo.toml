@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
-clickhouse = "0.14.0"
+clickhouse = "0.14.1"
 common = { version = "0.1.0", path = "../common" }
 tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 reqwest = "0.12.24"

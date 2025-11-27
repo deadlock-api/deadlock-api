@@ -12,7 +12,7 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 prost = "0.14.1"
 metrics = "0.24.2"
 tracing = "0.1.41"
-clickhouse = "0.14.0"
+clickhouse = "0.14.1"
 object_store = { version = "0.12.4", features = ["aws"] }
 anyhow = "1.0.100"
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "time"] }
