@@ -12,7 +12,7 @@ itertools = "0.14.0"
 serde_json = "1.0.145"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "08baa963331b196ca3271da3799aa1211dc1641c", features = ["gc-client", "serde"] }
 time = "0.3.44"
-metrics = "0.24.2"
-tracing = "0.1.41"
+metrics = "0.24.3"
+tracing = "0.1.43"
 common = { version = "0.1.0", path = "../common" }
 rand = "0.9.2"
