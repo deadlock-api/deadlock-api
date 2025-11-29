@@ -77,7 +77,7 @@ pub(super) async fn fetch_match_salts(
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     // Try fetch from Clickhouse DB
     let salts = ch_client
-        .query("SELECT ?fields FROM match_salts FINAL WHERE match_id = ?")
+        .query("SELECT ?fields FROM match_salts FINAL WHERE match_id = ? AND metadata_salt > 0 AND cluster_id > 0")
         .bind(match_id)
         .fetch_one::<ClickhouseSalts>()
         .await;
