@@ -9,11 +9,11 @@ license = "MIT"
 [dependencies]
 reqwest = { version = "0.12.24", features = ["json", "http2", "zstd", "gzip"] }
 tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread", "signal"] }
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 redis = { version = "0.32.7", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.14.1", features = ["chrono"] }
 sqlx = { version = "0.8.6", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
-uuid = { version = "1.18.1", features = ["serde", "v4"] }
+uuid = { version = "1.19.0", features = ["serde", "v4"] }
 cached = { version = "0.56.0", features = ["async", "serde"] }
 axum = "0.8.7"
 utoipa-axum = "0.2.0"
