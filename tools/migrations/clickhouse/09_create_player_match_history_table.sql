@@ -25,8 +25,7 @@ create table default.player_match_history
     username              Nullable(String),
     won                   BOOL MATERIALIZED player_team = match_result,
 
-    PROJECTION match_id_projection (SELECT *
-                                    ORDER BY match_id, account_id)
+    PROJECTION by_match_id (SELECT _part_offset ORDER BY match_id, account_id)
 )
     engine = ReplacingMergeTree PARTITION BY (toStartOfMonth(start_time), match_mode)
         ORDER BY (account_id, match_id)
