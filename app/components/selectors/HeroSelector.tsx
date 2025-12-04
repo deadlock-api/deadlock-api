@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroV2 } from "assets-deadlock-api-client";
+import type { HeroV2 } from "assets-deadlock_api_client";
 import { useId, useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";

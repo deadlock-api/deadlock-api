@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets-deadlock-api-client";
+import type { RankV2 } from "assets-deadlock_api_client";
 import { useMemo } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { assetsApi } from "~/lib/assets-api";

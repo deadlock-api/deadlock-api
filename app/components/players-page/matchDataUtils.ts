@@ -1,6 +1,6 @@
-import type { HeroV2 } from "assets-deadlock-api-client";
-import type { UpgradeV2 } from "assets-deadlock-api-client/api";
-import type { PlayerMatchHistoryEntry } from "deadlock-api-client";
+import type { HeroV2 } from "assets-deadlock_api_client";
+import type { UpgradeV2 } from "assets-deadlock_api_client/api";
+import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 import { day } from "~/dayjs";
 import type { APIMatchMetadata } from "~/types/api_match_metadata";
 import type { MatchDisplayData } from "./MatchCard";

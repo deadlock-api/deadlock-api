@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsHeroStats } from "deadlock-api-client";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
