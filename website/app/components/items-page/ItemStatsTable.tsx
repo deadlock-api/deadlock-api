@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets-deadlock-api-client/api";
-import type { ItemStats } from "deadlock-api-client";
+import type { UpgradeV2 } from "assets-deadlock_api_client/api";
+import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";

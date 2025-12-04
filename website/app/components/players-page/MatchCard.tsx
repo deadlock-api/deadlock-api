@@ -1,5 +1,5 @@
-import type { HeroV2 } from "assets-deadlock-api-client";
-import type { UpgradeV2 } from "assets-deadlock-api-client/api";
+import type { HeroV2 } from "assets-deadlock_api_client";
+import type { UpgradeV2 } from "assets-deadlock_api_client/api";
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
 import PlayerName from "~/components/PlayerName";

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets-deadlock-api-client/api";
+import type { UpgradeV2 } from "assets-deadlock_api_client/api";
 import { useMemo } from "react";
 import { assetsApi } from "~/lib/assets-api";
 

@@ -1,5 +1,5 @@
-import { DefaultApi, HeroesApi, ItemsApi } from "assets-deadlock-api-client";
-import { BASE_PATH } from "assets-deadlock-api-client/base";
+import { DefaultApi, HeroesApi, ItemsApi } from "assets_deadlock_api_client";
+import { BASE_PATH } from "assets_deadlock_api_client/base";
 import axios from "axios";
 
 export interface ApiConfig {

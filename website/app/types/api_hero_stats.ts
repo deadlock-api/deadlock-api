@@ -1,4 +1,4 @@
-import type { AnalyticsHeroStats } from "deadlock-api-client";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 
 export const HERO_STATS = [
   "winrate",

@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { ItemStatsBucketEnum } from "deadlock-api-client/api";
+import type { ItemStatsBucketEnum } from "deadlock_api_client/api";
 import { api } from "~/lib/api";
 
 export interface ItemStatsQueryParams {

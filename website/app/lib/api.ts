@@ -1,6 +1,6 @@
 import axios from "axios";
-import { AnalyticsApi, MatchesApi, MMRApi, PlayersApi } from "deadlock-api-client";
-import { BASE_PATH } from "deadlock-api-client/base";
+import { AnalyticsApi, MatchesApi, MMRApi, PlayersApi } from "deadlock_api_client";
+import { BASE_PATH } from "deadlock_api_client/base";
 
 export interface ApiConfig {
   timeout: number;

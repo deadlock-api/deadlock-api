@@ -72,7 +72,7 @@ export default function DataPrivacy() {
   // Check for Steam callback on component mount
   useEffect(() => {
     handleSteamCallback();
-  }, []);
+  }, [handleSteamCallback]);
 
   const handleDataDeletion = () => {
     try {
