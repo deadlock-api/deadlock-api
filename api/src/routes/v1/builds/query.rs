@@ -32,6 +32,29 @@ pub enum BuildsSearchQuerySortBy {
     Version,
 }
 
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq)]
+pub enum BuildLanguage {
+    #[default]
+    English = 0,
+    German = 1,
+    French = 2,
+    Italian = 3,
+    Korean = 4,
+    SpanishSpain = 5,
+    ChineseSimplified = 6,
+    Russian = 8,
+    Thai = 9,
+    Japanese = 10,
+    PortuguesePortugal = 11,
+    Polish = 12,
+    Czech = 19,
+    Turkish = 21,
+    PortugueseBrazil = 22,
+    Ukrainian = 25,
+    SpanishLatinAmerica = 26,
+    Vietnamese = 27,
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 #[into_params(style = Form, parameter_in = Query)]
 #[serde(rename_all = "snake_case")]
@@ -65,7 +88,12 @@ pub(super) struct BuildsSearchQuery {
     /// Only return the latest version of each build.
     only_latest: Option<bool>,
     /// Filter builds by language.
+    #[deprecated]
     language: Option<u32>,
+    /// Filter builds by language.
+    #[serde(default)]
+    #[param(inline)]
+    build_language: Option<BuildLanguage>,
     /// Filter builds by ID.
     build_id: Option<u32>,
     /// Filter builds by version.
@@ -91,7 +119,9 @@ impl Default for BuildsSearchQuery {
             search_name: None,
             search_description: None,
             only_latest: None,
+            #[allow(deprecated)]
             language: None,
+            build_language: None,
             build_id: None,
             version: None,
             hero_id: None,
@@ -131,9 +161,14 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push(search_description.to_lowercase());
         query_builder.push("%'");
     }
+    #[allow(deprecated)]
     if let Some(language) = params.language {
         query_builder.push(" AND language = ");
         query_builder.push(language.to_string());
+    }
+    if let Some(build_language) = params.build_language {
+        query_builder.push(" AND language = ");
+        query_builder.push(build_language as u32);
     }
     if let Some(build_id) = params.build_id {
         query_builder.push(" AND build_id = ");
@@ -212,7 +247,7 @@ mod tests {
         assert_eq!(query.search_name, None);
         assert_eq!(query.search_description, None);
         assert_eq!(query.only_latest, None);
-        assert_eq!(query.language, None);
+        assert_eq!(query.build_language, None);
         assert_eq!(query.build_id, None);
         assert_eq!(query.version, None);
         assert_eq!(query.hero_id, None);
@@ -303,7 +338,7 @@ mod tests {
     #[test]
     fn test_language_filter() {
         let query = BuildsSearchQuery {
-            language: Some(1),
+            build_language: Some(BuildLanguage::German),
             ..Default::default()
         };
 
