@@ -317,7 +317,7 @@ impl Variable {
                     Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
                         .await?;
                 let heroes_played = todays_matches.iter().fold(HashMap::new(), |mut acc, m| {
-                    *acc.entry(m.hero_id).or_insert(0) += 1;
+                    *acc.entry(m.hero_id).or_default() += 1;
                     acc
                 });
                 let heroes = state.assets_client.fetch_heroes().await?;
@@ -467,7 +467,7 @@ impl Variable {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let most_played_hero = matches
                     .fold(HashMap::new(), |mut acc, m| {
-                        *acc.entry(m.hero_id).or_insert(0) += 1;
+                        *acc.entry(m.hero_id).or_default() += 1;
                         acc
                     })
                     .into_iter()
@@ -486,7 +486,7 @@ impl Variable {
                 let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
                 let most_played_hero_count = matches
                     .fold(HashMap::new(), |mut acc, m| {
-                        *acc.entry(m.hero_id).or_insert(0) += 1;
+                        *acc.entry(m.hero_id).or_default() += 1;
                         acc
                     })
                     .into_values()

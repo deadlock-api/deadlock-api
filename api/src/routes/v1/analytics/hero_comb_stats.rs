@@ -264,7 +264,7 @@ async fn get_comb_stats(
         for comb_hero_ids in comb_stat.hero_ids.iter().combinations(comb_size as usize) {
             *comb_stats_agg
                 .entry(comb_hero_ids.clone())
-                .or_insert(HeroCombStats {
+                .or_insert_with(|| HeroCombStats {
                     hero_ids: comb_hero_ids.into_iter().copied().collect_vec(),
                     wins: 0,
                     losses: 0,
