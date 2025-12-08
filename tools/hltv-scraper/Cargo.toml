@@ -25,5 +25,5 @@ tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.43"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "08baa963331b196ca3271da3799aa1211dc1641c", features = ["user-msgs"] }
 thiserror = "2.0.17"
-async-compression = { version = "0.4.34", features = ["tokio", "bzip2", "zstd"] }
+async-compression = { version = "0.4.35", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }
