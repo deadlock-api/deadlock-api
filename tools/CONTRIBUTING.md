@@ -11,7 +11,7 @@ By participating in this project, you agree to abide by our Code of Conduct. Ple
 ### Prerequisites
 
 Before you begin, ensure you have the following installed:
-- Rust 1.91 or later
+- Rust 1.92 or later
 - Protobuf compiler
 - Docker and Docker Compose (for running the full stack)
 - Git
