@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets-deadlock_api_client";
+import type { RankV2 } from "assets_deadlock_api_client";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { assetsApi } from "~/lib/assets-api";

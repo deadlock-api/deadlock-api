@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets-deadlock_api_client/api";
+import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
