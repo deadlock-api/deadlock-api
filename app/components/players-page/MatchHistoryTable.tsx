@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroV2 } from "assets-deadlock_api_client";
-import type { UpgradeV2 } from "assets-deadlock_api_client/api";
+import type { HeroV2 } from "assets_deadlock_api_client";
+import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useMemo } from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { type Dayjs, day } from "~/dayjs";

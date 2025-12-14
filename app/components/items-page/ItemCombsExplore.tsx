@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets-deadlock_api_client/api";
+import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
