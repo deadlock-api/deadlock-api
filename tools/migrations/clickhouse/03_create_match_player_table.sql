@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS match_player
         self_damage UInt32
     ),
     rewards_eligible Bool DEFAULT FALSE,
+    earned_holiday_award_2025 Bool DEFAULT FALSE,
     max_level UInt32 MATERIALIZED arrayMax(stats.level),
     max_player_damage UInt32 MATERIALIZED arrayMax(stats.player_damage),
     max_player_damage_taken UInt32 MATERIALIZED arrayMax(stats.player_damage_taken),

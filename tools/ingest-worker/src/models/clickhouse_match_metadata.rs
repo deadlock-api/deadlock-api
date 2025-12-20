@@ -264,6 +264,7 @@ pub(crate) struct ClickhouseMatchPlayer {
     #[serde(rename = "stats.self_damage")]
     pub stats_self_damage: Vec<u32>,
     pub rewards_eligible: bool,
+    pub earned_holiday_award_2025: bool,
     pub hero_xp: u32,
     pub hero_equips: Vec<u64>,
 }
@@ -412,6 +413,7 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             book_reward_book_id: value.book_rewards.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::BookReward::book_id).collect(),
             abandon_match_time_s: value.abandon_match_time_s(),
             rewards_eligible: value.rewards_eligible(),
+            earned_holiday_award_2025: value.earned_holiday_award_2025(),
             hero_xp: value.hero_data.as_ref().and_then(|h| h.hero_xp).unwrap_or_default(),
             hero_equips: value.hero_data.as_ref().and_then(|h| h.hero_equips.as_ref().map(|e| e.items.iter().filter_map(|i| i.id).collect())).unwrap_or_default(),
         }
