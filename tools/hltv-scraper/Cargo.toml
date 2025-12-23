@@ -16,11 +16,11 @@ itertools = "0.14.0"
 jiff = { version = "0.2.16", features = ["serde"] }
 lru = "0.16.2"
 metrics = "0.24.3"
-object_store = { version = "0.12.4", features = ["aws"] }
+object_store = { version = "0.13.0", features = ["aws"] }
 prost = "0.14.1"
-reqwest = { version = "0.12.26", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
+reqwest = { version = "0.12.28", default-features = false, features = ["http2", "rustls-tls", "blocking", "gzip", "cookies", "json", "charset", "zstd"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
+serde_json = "1.0.146"
 tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.44"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4712d051b023a1199b84adb60921211f29ebc058", features = ["user-msgs"] }

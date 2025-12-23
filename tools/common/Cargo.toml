@@ -5,15 +5,15 @@ edition = "2024"
 
 [dependencies]
 base64 = "0.22.1"
-reqwest = { version = "0.12.26", features = ["json"] }
+reqwest = { version = "0.12.28", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
+serde_json = "1.0.146"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4712d051b023a1199b84adb60921211f29ebc058", features = ["gc-client", "serde"] }
 prost = "0.14.1"
 metrics = "0.24.3"
 tracing = "0.1.44"
 clickhouse = "0.14.1"
-object_store = { version = "0.12.4", features = ["aws"] }
+object_store = { version = "0.13.0", features = ["aws"] }
 anyhow = "1.0.100"
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "time"] }
 fred = { version = "10.1.0", features = ["i-hexpire"] }
