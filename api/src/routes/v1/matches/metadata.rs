@@ -12,7 +12,7 @@ use futures::stream::BoxStream;
 use metrics::counter;
 use object_store::aws::AmazonS3;
 use object_store::path::Path as S3Path;
-use object_store::{GetResult, ObjectStore};
+use object_store::{GetResult, ObjectStoreExt};
 use prost::Message;
 use serde::Deserialize;
 use tokio::io::AsyncReadExt;
