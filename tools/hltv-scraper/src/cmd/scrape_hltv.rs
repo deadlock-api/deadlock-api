@@ -11,7 +11,7 @@ use dashmap::DashMap;
 use jiff::{Timestamp, ToSpan};
 use lru::LruCache;
 use metrics::gauge;
-use object_store::ObjectStore;
+use object_store::{ObjectStore, ObjectStoreExt};
 use prost::Message;
 use reqwest::Url;
 use serde_json::json;

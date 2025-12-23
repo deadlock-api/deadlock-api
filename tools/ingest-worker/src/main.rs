@@ -19,7 +19,7 @@ use async_compression::tokio::bufread::BzDecoder;
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use object_store::path::Path;
-use object_store::{GetResult, ObjectStore};
+use object_store::{GetResult, ObjectStore, ObjectStoreExt};
 use prost::Message;
 use tokio::io::AsyncReadExt;
 use tokio::time::timeout;

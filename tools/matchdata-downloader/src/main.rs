@@ -19,7 +19,7 @@ use futures::StreamExt;
 use metrics::{counter, gauge};
 use models::MatchSalts;
 use object_store::path::Path;
-use object_store::{ObjectStore, PutPayload};
+use object_store::{ObjectStore, ObjectStoreExt, PutPayload};
 use tokio::time::sleep;
 use tokio_util::bytes::Bytes;
 use tracing::{debug, error, info, instrument};
