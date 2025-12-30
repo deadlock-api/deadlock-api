@@ -84,7 +84,7 @@ jobs:
         run: cargo clippy --all-targets --locked --all-features -- -D warnings
 
   build-base:
-    runs-on: blacksmith-4vcpu-ubuntu-2404-arm
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v6
       - name: Setup Docker Builder
@@ -99,12 +99,12 @@ jobs:
         id: build-base
         uses: useblacksmith/build-push-action@v2
         with:
-          platforms: linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository }}/rust-base:latest
 
   push-components:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     needs: build-base
     strategy:
       matrix:
