@@ -19,11 +19,9 @@ on:
       - "matchdata-downloader/**"
       - "active-matches-scraper/**"
       - "builds-fetcher/**"
-      - "friends-rank-fetcher/**"
       - "history-fetcher/**"
       - "steam-profile-fetcher/**"
       - "update-assets-tables/**"
-      - "glicko-mmr/**"
 
 permissions:
   contents: read
@@ -115,11 +113,9 @@ jobs:
           - matchdata-downloader
           - active-matches-scraper
           - builds-fetcher
-          - friends-rank-fetcher
           - history-fetcher
           - steam-profile-fetcher
           - update-assets-tables
-          - glicko-mmr
     steps:
       - uses: actions/checkout@v6
       - name: Filter changed paths
