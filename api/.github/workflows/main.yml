@@ -90,7 +90,7 @@ jobs:
 
   test_deploy:
     name: Test and Deploy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Determine Docker Tag
         run: |
