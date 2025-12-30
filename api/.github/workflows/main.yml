@@ -90,7 +90,7 @@ jobs:
 
   test_deploy:
     name: Test and Deploy
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     steps:
       - name: Determine Docker Tag
         run: |
@@ -141,7 +141,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/arm64
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
           load: true
           push: false
