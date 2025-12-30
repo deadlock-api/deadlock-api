@@ -61,7 +61,7 @@ jobs:
         run: |
           rustup override set stable
           rustup update stable
-      - uses: taiki-e/cache-cargo-install-action@v2
+      - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: typos-cli
       - name: Typos Check
@@ -124,7 +124,7 @@ jobs:
         run: |
           rustup override set stable
           rustup update stable
-      - uses: taiki-e/cache-cargo-install-action@v2
+      - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: cargo-nextest
 
