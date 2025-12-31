@@ -778,6 +778,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("start_time >= 1672531200"));
     }
 
@@ -788,6 +793,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("start_time <= 1675209599"));
     }
 
@@ -798,6 +808,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("duration_s >= 600"));
     }
 
@@ -808,6 +823,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("duration_s <= 1800"));
     }
 
@@ -818,6 +838,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("net_worth >= 1000"));
     }
 
@@ -828,6 +853,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("net_worth <= 10000"));
     }
 
@@ -838,6 +868,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
     }
 
@@ -848,6 +883,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
     }
 
@@ -858,6 +898,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("match_id >= 10000"));
     }
 
@@ -868,6 +913,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("match_id <= 1000000"));
     }
 
@@ -878,6 +928,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("account_id IN (18373975)"));
     }
 
@@ -888,6 +943,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
     }
 
@@ -898,6 +958,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
     }
 
@@ -909,6 +974,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
         assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
     }
@@ -917,6 +987,11 @@ mod test {
     fn test_build_query_selects() {
         let query = PlayerStatsMetricsQuery::default();
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         for metric in Metric::VARIANTS {
             assert!(sql.contains(&format!(
                 "avg({}) AS avg_{}",

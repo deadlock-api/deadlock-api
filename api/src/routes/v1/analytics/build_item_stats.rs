@@ -109,12 +109,18 @@ pub(super) async fn build_item_stats(
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     #[test]
     fn test_build_query_default() {
         let query = BuildItemStatsQuery::default();
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains(
             "SELECT (mod_element ->> 'ability_id')::bigint AS item_id, COUNT(*) as num_builds"
         ));
@@ -133,6 +139,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("AND hero = 42"));
     }
 
@@ -143,6 +154,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains(
             "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint > 1672531200"
         ));
@@ -155,6 +171,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains(
             "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint < 1675209599"
         ));
@@ -168,6 +189,11 @@ mod test {
             max_last_updated_unix_timestamp: Some(1675209599),
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("AND hero = 25"));
         assert!(sql.contains(
             "AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint > 1672531200"
@@ -185,6 +211,11 @@ mod test {
             ..Default::default()
         };
         let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
         assert!(sql.contains("AND hero = 10"));
         // Should contain the default timestamp filter
         assert!(sql.contains("AND (data -> 'hero_build' ->> 'last_updated_timestamp')::bigint >"));
