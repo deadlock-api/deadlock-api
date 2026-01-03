@@ -250,7 +250,7 @@ impl SpectatorBot {
     }
 
     #[tracing::instrument(skip(self), fields(account = field::Empty, ready_bots = field::Empty))]
-    async fn spectate_match(&self, match_type: SpectatedMatchType, match_id: u64) -> Result<bool> {
+    async fn spectate_match(&self, match_type: SpectatedMatchType, match_id: u64, lobby_id: Option<u64>) -> Result<bool> {
         let label = match_type.label();
         if self.is_recently_spectated(REDIS_SPEC_KEY, match_id).await? {
             debug!("[{label} {match_id}] Recently spectated, skipping");
@@ -267,7 +267,7 @@ impl SpectatorBot {
             match_id: Some(match_id),
             client_version: Some(current_patch as u32),
             client_platform: Some(EgcPlatform::KEGcPlatformPc as i32),
-            ..Default::default()
+            lobby_id
         };
 
         let mut data = Vec::new();
@@ -280,8 +280,8 @@ impl SpectatorBot {
             .json(&serde_json::json!({
                 "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby as u32,
                 "bot_in_all_groups": ["SpectateLobby"],
-                "rate_limit_cooldown_millis": 2 * 24 * 60 * 60 * 1000 / 50,
-                "job_cooldown_millis": 24 * 60 * 60 * 1000 / 50,
+                "rate_limit_cooldown_millis": 2 * 24 * 60 * 60 * 1000 / 100,
+                "job_cooldown_millis": 24 * 60 * 60 * 1000 / 100,
                 "soft_cooldown_millis": 5 * 60 * 1000,
                 "data": BASE64_STANDARD.encode(data),
             }))
@@ -296,10 +296,14 @@ impl SpectatorBot {
                     CMsgClientToGcSpectateLobbyResponse::decode(buf.as_slice())?;
 
                 let Some(ref res) = spectate_response.result else {
+                    warn!("[{label} {match_id}] No result in response");
+                    self.failed_spectates.lock().unwrap().put(match_id, true);
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
                 let Some(broadcast_url) = res.client_broadcast_url.as_ref() else {
+                    warn!("[{label} {match_id}] No broadcast URL");
+                    self.failed_spectates.lock().unwrap().put(match_id, true);
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
@@ -397,7 +401,14 @@ impl SpectatorBot {
                 continue;
             }
 
-            let failed_spectates = self.get_all_recently_spectated(REDIS_FAILED_KEY).await?;
+            let redis_failed_spectates = self.get_all_recently_spectated(REDIS_FAILED_KEY).await?;
+            let local_failed_spectates: Vec<u64> = self
+                .failed_spectates
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(k, _)| *k)
+                .collect();
 
             let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
             let next_match = live_matches
@@ -405,7 +416,8 @@ impl SpectatorBot {
                 .filter(|x| {
                     x.spectators.unwrap_or_default() == 0
                         && !recently_spectated.contains_key(&x.match_id)
-                        && !failed_spectates.contains_key(&x.match_id)
+                        && !redis_failed_spectates.contains_key(&x.match_id)
+                        && !local_failed_spectates.contains(&x.match_id)
                 })
                 .filter(|x| x.is_titan_exposed())
                 .sorted_by_key(|x| {
@@ -429,7 +441,7 @@ impl SpectatorBot {
                     m.lobby_id, m.match_score
                 );
                 if let Err(e) = self
-                    .spectate_match(SpectatedMatchType::ActiveMatch, m.match_id)
+                    .spectate_match(SpectatedMatchType::ActiveMatch, m.match_id, m.lobby_id)
                     .await
                 {
                     error!("Failed to spectate match {}: {e:?}", m.match_id);
@@ -453,7 +465,10 @@ impl SpectatorBot {
                     .sorted()
                     .collect();
 
-                let gaps = Self::find_gaps(&match_ids, &recently_spectated, &failed_spectates);
+                let gaps = Self::find_gaps(&match_ids, &recently_spectated, &redis_failed_spectates)
+                    .into_iter()
+                    .filter(|x| !local_failed_spectates.contains(x))
+                    .collect::<Vec<_>>();
 
                 if gaps.is_empty() {
                     info!("No eligible matches or gaps found (spectated: {n_spectated})");
@@ -465,7 +480,7 @@ impl SpectatorBot {
                     );
                     for gap_id in gaps.into_iter().take(10) {
                         if let Err(e) = self
-                            .spectate_match(SpectatedMatchType::GapMatch, gap_id)
+                            .spectate_match(SpectatedMatchType::GapMatch, gap_id, None)
                             .await
                         {
                             error!("Error spectating gap match {gap_id}: {:?}", e);
