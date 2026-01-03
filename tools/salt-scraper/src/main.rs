@@ -29,7 +29,7 @@ mod models;
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("SALTS_COOLDOWN_MILLIS")
         .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
-        .unwrap_or(24 * 60 * 60 * 1000 / 45)
+        .unwrap_or(24 * 60 * 60 * 1000 / 100)
 });
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
@@ -186,7 +186,7 @@ async fn ingest_salts(
         cluster_id: salts.replay_group_id,
         metadata_salt: salts.metadata_salt,
         replay_salt: salts.replay_salt,
-        username,
+        username: Some(format!("salt-scraper:{}", username.unwrap_or_default())),
     };
     let mut inserter = ch_client.insert::<MatchSalt>("match_salts").await?;
     inserter.write(&salts).await?;
