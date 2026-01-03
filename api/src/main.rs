@@ -22,7 +22,7 @@ const PORT: u16 = 3000;
 
 fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new(
-        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn",
+        "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
     ));
     let fmt_layer = tracing_subscriber::fmt::layer();
 
