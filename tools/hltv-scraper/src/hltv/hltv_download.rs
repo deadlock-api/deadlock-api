@@ -96,29 +96,24 @@ struct SyncResponse {
 /// ...
 pub(crate) async fn download_match_mpsc(
     client: Client,
-    prefix_url: String,
     match_id: u64,
+    broadcast_url: String,
 ) -> Result<Receiver<HltvFragment>, DownloadError> {
     let (sender, receiver) = channel::<HltvFragment>(100);
 
-    let sync_url = format!("{prefix_url}/{match_id}/sync");
-
-    let sync_response: SyncResponse = get_initial_sync(&client, &sync_url).await?;
+    let sync_response: SyncResponse = get_initial_sync(&client, &broadcast_url).await?;
 
     let fragment_start = sync_response.fragment;
 
-    let prefix_url_clone = prefix_url.clone();
-    let sync_url_clone = sync_url.clone();
     let sender_clone = sender.clone();
 
     tokio::spawn(async move {
         if let Err(e) = fragment_fetching_loop(
             &client,
-            prefix_url_clone,
             match_id,
             fragment_start,
             sender_clone,
-            sync_url_clone,
+            broadcast_url,
         )
         .await
         {
@@ -130,11 +125,16 @@ pub(crate) async fn download_match_mpsc(
 }
 
 /// Helper function to get the initial `/sync` with a 30s leniency period.
-async fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncResponse, DownloadError> {
+async fn get_initial_sync(
+    client: &Client,
+    broadcast_url: &str,
+) -> Result<SyncResponse, DownloadError> {
     let start_time = Instant::now();
 
+    let sync_url = format!("{broadcast_url}/sync");
+
     loop {
-        if let Ok(resp) = client.get(sync_url).send().await {
+        if let Ok(resp) = client.get(&sync_url).send().await {
             if resp.status().is_success() {
                 counter!("hltv.initial_sync.http.2xx").increment(1);
                 let sync_response = resp.json::<SyncResponse>().await?;
@@ -164,15 +164,16 @@ async fn get_initial_sync(client: &Client, sync_url: &str) -> Result<SyncRespons
 /// Main loop to fetch fragments and send them via the channel.
 async fn fragment_fetching_loop(
     client: &Client,
-    prefix_url: String,
     match_id: u64,
     first_fragment_n: u64,
     sender: Sender<HltvFragment>,
-    sync_url: String,
+    broadcast_url: String,
 ) -> Result<(), DownloadError> {
     let mut sync_available = true;
 
     let mut fragment_n = first_fragment_n;
+
+    let sync_url = format!("{broadcast_url}/sync");
 
     let mut hard_retry = false;
     while sync_available {
@@ -200,14 +201,7 @@ async fn fragment_fetching_loop(
         for fragment_type in fragment_types {
             let mut retry_count = 0;
             loop {
-                match download_match_fragment(
-                    prefix_url.clone(),
-                    match_id,
-                    fragment_n,
-                    fragment_type,
-                )
-                .await
-                {
+                match download_match_fragment(&broadcast_url, fragment_n, fragment_type).await {
                     Ok(fragment_contents) => {
                         let contents: Arc<[u8]> = fragment_contents.into();
                         counter!("hltv.fragment.success").increment(1);
@@ -322,13 +316,12 @@ async fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
 ///
 /// Returns an error in case of a 404.
 pub(crate) async fn download_match_fragment(
-    prefix_url: String,
-    match_id: u64,
+    broadcast_url: &str,
     fragment_n: u64,
     fragment_type: FragmentType,
 ) -> Result<Vec<u8>, DownloadError> {
     let client = Client::new();
-    let fragment_url = format!("{prefix_url}/{match_id}/{fragment_n}/{fragment_type}");
+    let fragment_url = format!("{broadcast_url}/{fragment_n}/{fragment_type}");
 
     trace!("Downloading match fragment: {fragment_url}");
     let resp = client.get(&fragment_url).send().await?;

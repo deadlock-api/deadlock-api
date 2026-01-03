@@ -14,18 +14,15 @@ use crate::hltv::hltv_extract_meta::extract_meta_from_fragment;
 pub(crate) async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
     match_id: u64,
+    broadcast_url: String,
 ) -> anyhow::Result<Option<CMsgMatchMetaData>> {
     let start = Instant::now();
     let label = match_type.label();
 
     let client = Client::new();
-    let mut recv = hltv_download::download_match_mpsc(
-        client,
-        "https://dist1-ord1.steamcontent.com/tv".to_string(),
-        match_id,
-    )
-    .await
-    .context("Error downloading match initialization")?;
+    let mut recv = hltv_download::download_match_mpsc(client, match_id, broadcast_url)
+        .await
+        .context("Error downloading match initialization")?;
 
     let mut fragment_count = 0;
     let mut did_receive_last_fragment = false;

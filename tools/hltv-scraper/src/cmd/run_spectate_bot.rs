@@ -37,13 +37,6 @@ const REDIS_FAILED_KEY: &str = "failed_spectated_matches";
 const REDIS_EXTRA_KEY: &str = "extra_spectated_matches";
 const REDIS_EXPIRY: i64 = 900; // 15 minutes in seconds
 
-static NO_ACTIVE_SPECTATE: LazyLock<bool> = LazyLock::new(|| {
-    env::var("NO_ACTIVE_SPECTATE")
-        .unwrap_or_default()
-        .parse()
-        .unwrap_or_default()
-});
-
 // Percentile (0.0 - 1.0) used to choose where to start
 // filling gaps between the min and max match id range. Defaults to 0.5 (50%).
 static GAP_PERCENTILE: LazyLock<f64> = LazyLock::new(|| {
@@ -86,6 +79,7 @@ impl SpectatedMatchType {
 pub(crate) struct SpectatedMatchInfo {
     pub match_type: SpectatedMatchType,
     pub match_id: u64,
+    pub broadcast_url: String,
     #[serde(with = "jiff::fmt::serde::timestamp::second::required")]
     pub updated_at: Timestamp,
     #[serde(with = "jiff::fmt::serde::timestamp::second::optional")]
@@ -96,12 +90,14 @@ impl SpectatedMatchInfo {
     pub(crate) fn new(
         match_type: SpectatedMatchType,
         match_id: u64,
+        broadcast_url: String,
         updated_at: Timestamp,
         started_at: Option<Timestamp>,
     ) -> Self {
-        SpectatedMatchInfo {
+        Self {
             match_type,
             match_id,
+            broadcast_url,
             updated_at,
             started_at,
         }
@@ -303,10 +299,19 @@ impl SpectatorBot {
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
+                let Some(broadcast_url) = res.client_broadcast_url.as_ref() else {
+                    sleep(SPECTATE_COOLDOWN).await;
+                    return Ok(false);
+                };
 
                 let result = res.result();
-                let smi =
-                    SpectatedMatchInfo::new(match_type, match_id, jiff::Timestamp::now(), None);
+                let smi = SpectatedMatchInfo::new(
+                    match_type,
+                    match_id,
+                    broadcast_url.clone(),
+                    jiff::Timestamp::now(),
+                    None,
+                );
                 Span::current().record("account", &body.username);
                 Span::current().record("ready_bots", body.pool_limit_info.ready_bots);
 
@@ -377,34 +382,9 @@ impl SpectatorBot {
             Duration::from_secs(60 * 5),
         ).await;
 
-        let mut prev_live_matches = Vec::new();
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             let s = steam_inf.read().await.clone();
             self.update_patch_version(&s)?;
-            let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
-            if live_matches != prev_live_matches {
-                let ms = live_matches
-                    .iter()
-                    .filter(|x| x.spectators.unwrap_or_default() > 0)
-                    .map(|x| {
-                        SpectatedMatchInfo::new(
-                            SpectatedMatchType::ActiveMatch,
-                            x.match_id,
-                            Timestamp::now(),
-                            x.start_time
-                                .and_then(|x| Timestamp::from_second(x as i64).ok()),
-                        )
-                    })
-                    .collect_vec();
-                self.mark_spectated_many(REDIS_SPEC_KEY, &ms, REDIS_EXPIRY)
-                    .await?;
-            }
-            prev_live_matches.clone_from(&live_matches);
-
-            if *NO_ACTIVE_SPECTATE {
-                sleep(Duration::from_secs(30)).await;
-                continue;
-            }
 
             let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
             let n_spectated = recently_spectated.len();
@@ -419,6 +399,7 @@ impl SpectatorBot {
 
             let failed_spectates = self.get_all_recently_spectated(REDIS_FAILED_KEY).await?;
 
+            let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
             let next_match = live_matches
                 .iter()
                 .filter(|x| {
@@ -451,16 +432,14 @@ impl SpectatorBot {
                     .spectate_match(SpectatedMatchType::ActiveMatch, m.match_id)
                     .await
                 {
-                    error!("Failed to spectate match {}: {:?}", m.match_id, e);
+                    error!("Failed to spectate match {}: {e:?}", m.match_id);
                 }
             } else {
                 let fifteen_min_ago = jiff::Timestamp::now()
-                    .checked_sub(15.minutes())
-                    .unwrap()
+                    .checked_sub(15.minutes())?
                     .as_second();
                 let fifty_min_ago = jiff::Timestamp::now()
-                    .checked_sub(50.minutes())
-                    .unwrap()
+                    .checked_sub(50.minutes())?
                     .as_second();
 
                 let match_ids: Vec<u64> = live_matches
@@ -513,8 +492,8 @@ async fn run_server(bot: Arc<SpectatorBot>) -> Result<()> {
         .with_state(shared_state);
 
     // run our app with hyper, listening globally on port 3000
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3929").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3929").await?;
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

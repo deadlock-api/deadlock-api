@@ -115,12 +115,13 @@ fn download_task(
     tokio::task::spawn(async move {
         let label = smi.match_type.label();
         let match_id = smi.match_id;
-        let match_metadata = download_single_hltv_meta(smi.match_type.clone(), match_id)
-            .await
-            .unwrap_or_else(|e| {
-                error!("[{label} {match_id}] Got error: {:?}", e);
-                None
-            });
+        let match_metadata =
+            download_single_hltv_meta(smi.match_type.clone(), match_id, smi.broadcast_url)
+                .await
+                .unwrap_or_else(|e| {
+                    error!("[{label} {match_id}] Got error: {:?}", e);
+                    None
+                });
         let did_finish_match = match_metadata.is_some();
 
         let c = reqwest::Client::new();
