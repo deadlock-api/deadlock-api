@@ -250,7 +250,12 @@ impl SpectatorBot {
     }
 
     #[tracing::instrument(skip(self), fields(account = field::Empty, ready_bots = field::Empty))]
-    async fn spectate_match(&self, match_type: SpectatedMatchType, match_id: u64, lobby_id: Option<u64>) -> Result<bool> {
+    async fn spectate_match(
+        &self,
+        match_type: SpectatedMatchType,
+        match_id: u64,
+        lobby_id: Option<u64>,
+    ) -> Result<bool> {
         let label = match_type.label();
         if self.is_recently_spectated(REDIS_SPEC_KEY, match_id).await? {
             debug!("[{label} {match_id}] Recently spectated, skipping");
@@ -267,7 +272,7 @@ impl SpectatorBot {
             match_id: Some(match_id),
             client_version: Some(current_patch as u32),
             client_platform: Some(EgcPlatform::KEGcPlatformPc as i32),
-            lobby_id
+            lobby_id,
         };
 
         let mut data = Vec::new();
@@ -465,10 +470,11 @@ impl SpectatorBot {
                     .sorted()
                     .collect();
 
-                let gaps = Self::find_gaps(&match_ids, &recently_spectated, &redis_failed_spectates)
-                    .into_iter()
-                    .filter(|x| !local_failed_spectates.contains(x))
-                    .collect::<Vec<_>>();
+                let gaps =
+                    Self::find_gaps(&match_ids, &recently_spectated, &redis_failed_spectates)
+                        .into_iter()
+                        .filter(|x| !local_failed_spectates.contains(x))
+                        .collect::<Vec<_>>();
 
                 if gaps.is_empty() {
                     info!("No eligible matches or gaps found (spectated: {n_spectated})");
