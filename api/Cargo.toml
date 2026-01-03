@@ -8,7 +8,7 @@ license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.13.1", features = ["json", "http2", "zstd", "gzip", "form"] }
-tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 redis = { version = "1.0.2", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.14.1", features = ["chrono"] }
@@ -28,7 +28,7 @@ tower-service = "0.3.3"
 tower-http = { version = "0.6.8", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-axum-prometheus = "0.9.0"
+axum-prometheus = "0.10.0"
 itertools = "0.14.0"
 futures = "0.3.31"
 snap = "1.1.1"
