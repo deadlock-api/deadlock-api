@@ -173,18 +173,16 @@ async fn fragment_fetching_loop(
 
     let mut fragment_n = first_fragment_n;
 
-    let sync_url = format!("{broadcast_url}/sync");
-
     let mut hard_retry = false;
     while sync_available {
         if hard_retry {
-            let sync_response: SyncResponse = get_initial_sync(client, &sync_url).await?;
+            let sync_response: SyncResponse = get_initial_sync(client, &broadcast_url).await?;
             if sync_response.fragment > fragment_n {
                 fragment_n = sync_response.fragment;
             }
         } else {
             // Check if /sync is still available
-            sync_available = check_sync_availability(client, &sync_url).await;
+            sync_available = check_sync_availability(client, &broadcast_url).await;
             if !sync_available {
                 break;
             }
@@ -245,7 +243,8 @@ async fn fragment_fetching_loop(
                             if retry_count > 1 {
                                 trace!("Retry #{retry_count} - checking sync availability...");
                                 // Check if /sync is still available
-                                sync_available = check_sync_availability(client, &sync_url).await;
+                                sync_available =
+                                    check_sync_availability(client, &broadcast_url).await;
                                 if !sync_available {
                                     break;
                                 } else if retry_count > 5 {
@@ -281,11 +280,13 @@ async fn fragment_fetching_loop(
 }
 
 /// Checks if `/sync` is still available with a 5s retry period.
-async fn check_sync_availability(client: &Client, sync_url: &str) -> bool {
+async fn check_sync_availability(client: &Client, broadcast_url: &str) -> bool {
     let start_time = Instant::now();
 
+    let sync_url = format!("{broadcast_url}/sync");
+
     loop {
-        if let Ok(resp) = client.get(sync_url).send().await {
+        if let Ok(resp) = client.get(&sync_url).send().await {
             if resp.status().is_success() {
                 return true;
             } else if resp.status() == reqwest::StatusCode::NOT_FOUND {
