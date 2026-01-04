@@ -59,10 +59,10 @@ pub(super) async fn spectate_match(
                 "SpectateLobby".to_owned(),
                 "SpectateLobbyOnDemand".to_owned(),
             ]),
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 100),
             request_timeout: Duration::from_secs(2),
             username: None,
-            soft_cooldown_millis: None,
+            soft_cooldown_millis: Some(Duration::from_secs(24 * 60 * 60 / 200)),
         })
         .await
         .map(|s| s.msg)?)
