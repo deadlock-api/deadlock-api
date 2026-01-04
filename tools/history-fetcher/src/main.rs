@@ -28,7 +28,7 @@ use crate::types::PlayerMatchHistoryEntry;
 static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("HISTORY_COOLDOWN_MILLIS")
         .map(|x| x.parse().expect("HISTORY_COOLDOWN_MILLIS must be a number"))
-        .unwrap_or(24 * 60 * 60 * 1000 / 10)
+        .unwrap_or(24 * 60 * 60 * 1000 / 100)
 });
 
 #[tokio::main]
