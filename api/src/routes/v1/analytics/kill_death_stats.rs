@@ -39,9 +39,9 @@ pub(crate) struct KillDeathStatsQuery {
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     hero_ids: Option<Vec<u32>>,
-    /// Filter players based on their net worth.
+    /// Filter players based on their final net worth.
     min_networth: Option<u64>,
-    /// Filter players based on their net worth.
+    /// Filter players based on their final net worth.
     max_networth: Option<u64>,
     /// Filter matches based on whether they are in the high skill range.
     is_high_skill_range_parties: Option<bool>,

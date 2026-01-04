@@ -36,9 +36,9 @@ pub(super) struct HeroCounterStatsQuery {
     /// Filter matches based on their duration in seconds (up to 7000s).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
-    /// Filter players based on their net worth.
+    /// Filter players based on their final net worth.
     min_networth: Option<u64>,
-    /// Filter players based on their net worth.
+    /// Filter players based on their final net worth.
     max_networth: Option<u64>,
     /// Filter enemy players based on their net worth.
     min_enemy_networth: Option<u64>,

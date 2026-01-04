@@ -44,9 +44,9 @@ pub(super) struct AbilityOrderStatsQuery {
     /// Filter players based on their maximum number of ability upgrades over the whole match.
     #[param(minimum = 1, maximum = 16)]
     max_ability_upgrades: Option<u64>,
-    /// Filter players based on their net worth.
+    /// Filter players based on their final net worth.
     min_networth: Option<u64>,
-    /// Filter players based on their net worth.
+    /// Filter players based on their final net worth.
     max_networth: Option<u64>,
     /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
     #[param(minimum = 0, maximum = 116)]
