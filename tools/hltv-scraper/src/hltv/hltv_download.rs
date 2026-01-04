@@ -195,7 +195,9 @@ async fn fragment_fetching_loop(
         for fragment_type in fragment_types {
             let mut retry_count = 0;
             loop {
-                match download_match_fragment(&broadcast_url, fragment_n, fragment_type).await {
+                match download_match_fragment(client, &broadcast_url, fragment_n, fragment_type)
+                    .await
+                {
                     Ok(fragment_contents) => {
                         let contents: Arc<[u8]> = fragment_contents.into();
                         counter!("hltv.fragment.success").increment(1);
@@ -316,11 +318,11 @@ async fn check_sync_availability(client: &Client, broadcast_url: &str) -> bool {
 ///
 /// Returns an error in case of a 404.
 pub(crate) async fn download_match_fragment(
+    client: &Client,
     broadcast_url: &str,
     fragment_n: u64,
     fragment_type: FragmentType,
 ) -> Result<Vec<u8>, DownloadError> {
-    let client = Client::new();
     let fragment_url = format!("{broadcast_url}/{fragment_n}/{fragment_type}");
 
     trace!("Downloading match fragment: {fragment_url}");
