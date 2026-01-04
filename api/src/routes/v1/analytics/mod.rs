@@ -9,6 +9,7 @@ pub mod hero_synergies_stats;
 mod item_permutation_stats;
 pub mod item_stats;
 mod kill_death_stats;
+pub mod net_worth_curve;
 pub mod player_scoreboard;
 mod player_stats_metrics;
 pub mod scoreboard_types;
@@ -44,6 +45,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             .routes(routes!(hero_comb_stats::hero_comb_stats))
             .routes(routes!(build_item_stats::build_item_stats))
             .routes(routes!(badge_distribution::badge_distribution))
+            .routes(routes!(net_worth_curve::net_worth_curve))
             .nest(
                 "/scoreboards",
                 OpenApiRouter::with_openapi(ApiDoc::openapi())
