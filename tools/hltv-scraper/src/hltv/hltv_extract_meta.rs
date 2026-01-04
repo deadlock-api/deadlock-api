@@ -31,6 +31,7 @@ fn analyze_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnal
     let cursor = Cursor::new(fragment_buf);
     let mut demo_file = BroadcastFile::start_reading(cursor);
     let mut has_end_command = false;
+    let mut shared_msg_vec: Vec<u8> = vec![0u8; 2097152];
 
     // let mut demo_file = haste::demofile::DemoFile::from_reader(cursor);
     loop {
@@ -49,7 +50,6 @@ fn analyze_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnal
 
                 let mut br = haste::bitreader::BitReader::new(d);
 
-                let mut shared_msg_vec: Vec<u8> = vec![0u8; 2097152];
                 while br.num_bits_left() > 8 {
                     let msg_type = br.read_ubitvar()?;
 
