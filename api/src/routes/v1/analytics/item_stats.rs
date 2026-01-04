@@ -166,6 +166,14 @@ pub struct ItemStats {
     pub losses: u64,
     pub matches: u64,
     players: u64,
+    /// Average buy time in seconds (absolute)
+    pub avg_buy_time_s: f64,
+    /// Average sell time in seconds (absolute, for items that were sold)
+    pub avg_sell_time_s: f64,
+    /// Average buy time as percentage of match duration
+    pub avg_buy_time_relative: f64,
+    /// Average sell time as percentage of match duration (for items that were sold)
+    pub avg_sell_time_relative: f64,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -325,7 +333,9 @@ WITH
             account_id,
             hero_id,
             it.item_id AS item_id,
-            won
+            won,
+            it.game_time_s AS buy_time,
+            it.sold_time_s AS sold_time
             {buy_time_expr}
             {net_worth_expr}
         FROM match_player
@@ -341,7 +351,11 @@ SELECT
     sum(won)         AS wins,
     sum(not won)     AS losses,
     wins + losses    AS matches,
-    uniq(account_id) AS players
+    uniq(account_id) AS players,
+    avg(buy_time) AS avg_buy_time_s,
+    avgIf(sold_time, sold_time > 0) AS avg_sell_time_s,
+    avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
+    avgIf((sold_time / duration_s) * 100, sold_time > 0) AS avg_sell_time_relative
 FROM exploded_players
 INNER JOIN t_matches USING (match_id)
 GROUP BY item_id, bucket
