@@ -151,7 +151,7 @@ async fn fetch_match_history_raw(
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 100),
             request_timeout: Duration::from_secs(3),
             username: None,
-            soft_cooldown_millis: Some(Duration::from_secs(24 * 60 * 60 / 200)),
+            soft_cooldown_millis: None,
         })
         .await?
         .msg;

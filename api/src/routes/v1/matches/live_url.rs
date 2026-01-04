@@ -62,7 +62,7 @@ pub(super) async fn spectate_match(
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 100),
             request_timeout: Duration::from_secs(2),
             username: None,
-            soft_cooldown_millis: Some(Duration::from_secs(24 * 60 * 60 / 200)),
+            soft_cooldown_millis: None,
         })
         .await
         .map(|s| s.msg)?)
