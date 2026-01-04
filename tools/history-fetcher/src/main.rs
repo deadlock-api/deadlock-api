@@ -52,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
             Err(e) => {
                 gauge!("history_fetcher.fetched_accounts").set(0);
                 counter!("history_fetcher.fetch_accounts.failure").increment(1);
-                error!("Failed to fetch accounts: {:?}", e);
+                error!("Failed to fetch accounts: {e:?}");
                 tokio::time::sleep(Duration::from_secs(10)).await;
                 continue;
             }
@@ -75,7 +75,7 @@ async fn update_account(
         Ok(r) => r,
         Err(e) => {
             counter!("history_fetcher.fetch_match_history.failure").increment(1);
-            error!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
+            warn!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
             return;
         }
     };
@@ -85,7 +85,7 @@ async fn update_account(
         .is_none_or(|r| r != EResult::KEResultSuccess as i32)
     {
         counter!("history_fetcher.fetch_match_history.failure").increment(1);
-        error!(
+        warn!(
             "Failed to fetch match history, result: {:?}, skipping",
             match_history.result
         );
@@ -106,7 +106,7 @@ async fn update_account(
         }
         Err(e) => {
             counter!("history_fetcher.insert_match_history.failure").increment(1);
-            error!("Failed to insert match history: {:?}", e);
+            error!("Failed to insert match history: {e:?}");
         }
     }
 }
