@@ -5,9 +5,9 @@ edition = "2024"
 
 [dependencies]
 base64 = "0.22.1"
-reqwest = { version = "0.12.28", features = ["json"] }
+reqwest = { version = "0.13.1", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.146"
+serde_json = "1.0.148"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4712d051b023a1199b84adb60921211f29ebc058", features = ["gc-client", "serde"] }
 prost = "0.14.1"
 metrics = "0.24.3"
