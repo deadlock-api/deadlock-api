@@ -18,21 +18,26 @@ fn process_post_match(details_buf: &[u8]) -> anyhow::Result<Vec<u8>> {
     Ok(meta_content)
 }
 
-pub(crate) async fn extract_meta_from_fragment(
-    fragment_buf: Arc<[u8]>,
-) -> anyhow::Result<Option<Vec<u8>>> {
-    tokio::task::spawn_blocking(move || extract_meta_from_fragment_sync(fragment_buf)).await?
+pub(crate) struct FragmentAnalysis {
+    pub meta: Option<Vec<u8>>,
+    pub has_end_command: bool,
 }
 
-fn extract_meta_from_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<Option<Vec<u8>>> {
+pub(crate) async fn analyze_fragment(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnalysis> {
+    tokio::task::spawn_blocking(move || analyze_fragment_sync(fragment_buf)).await?
+}
+
+fn analyze_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnalysis> {
     let cursor = Cursor::new(fragment_buf);
     let mut demo_file = BroadcastFile::start_reading(cursor);
+    let mut has_end_command = false;
 
     // let mut demo_file = haste::demofile::DemoFile::from_reader(cursor);
     loop {
         match demo_file.read_cmd_header() {
             Ok(cmd_header) => {
                 if cmd_header.cmd == EDemoCommands::DemStop {
+                    has_end_command = true;
                     break;
                 }
                 if cmd_header.cmd != EDemoCommands::DemPacket {
@@ -58,7 +63,10 @@ fn extract_meta_from_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<Op
                     br.read_bytes(msg_buf)?;
                     if msg_type == CitadelUserMessageIds::KEUserMsgPostMatchDetails as u32 {
                         let meta_content = process_post_match(msg_buf)?;
-                        return Ok(Some(meta_content));
+                        return Ok(FragmentAnalysis {
+                            meta: Some(meta_content),
+                            has_end_command,
+                        });
                     }
                 }
             }
@@ -72,5 +80,8 @@ fn extract_meta_from_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<Op
         }
     }
 
-    Ok(None)
+    Ok(FragmentAnalysis {
+        meta: None,
+        has_end_command,
+    })
 }

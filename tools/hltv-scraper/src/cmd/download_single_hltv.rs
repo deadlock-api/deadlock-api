@@ -9,7 +9,6 @@ use valveprotos::deadlock::CMsgMatchMetaData;
 
 use crate::cmd::run_spectate_bot::SpectatedMatchType;
 use crate::hltv::hltv_download;
-use crate::hltv::hltv_extract_meta::extract_meta_from_fragment;
 
 pub(crate) async fn download_single_hltv_meta(
     match_type: SpectatedMatchType,
@@ -48,28 +47,20 @@ pub(crate) async fn download_single_hltv_meta(
         }
 
         counter!("hltv.fragment.persisted").increment(1);
-        if (fragment.has_match_meta || fragment.is_last)
-            && !did_receive_last_fragment
-        {
+        if (fragment.match_meta.is_some() || fragment.is_last) && !did_receive_last_fragment {
             counter!("hltv.fragment.persisted_end").increment(1);
             histogram!("hltv.fragment.end_fragment_n").record(fragment.fragment_n as f64);
             did_receive_last_fragment = true;
         }
-        if fragment.has_match_meta {
+        if let Some(match_meta_buf) = fragment.match_meta {
             counter!("hltv.fragment.persisted_meta").increment(1);
             histogram!("hltv.fragment.meta_fragment_n").record(fragment.fragment_n as f64);
 
-            let match_meta_buf = extract_meta_from_fragment(fragment.fragment_contents)
-                .await
-                .ok()
-                .flatten();
-            if let Some(match_meta_buf) = match_meta_buf {
-                match_meta = Some(CMsgMatchMetaData {
-                    version: Some(1),
-                    match_details: Some(match_meta_buf),
-                    match_id: Some(match_id),
-                });
-            }
+            match_meta = Some(CMsgMatchMetaData {
+                version: Some(1),
+                match_details: Some(match_meta_buf),
+                match_id: Some(match_id),
+            });
         }
         fragment_count += 1;
         total_byte_size += byte_size;

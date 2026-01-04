@@ -1,21 +1,17 @@
 use core::time::Duration;
-use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Instant;
 
-use haste::broadcast::BroadcastFile;
-use haste::demostream::DemoStream;
 use metrics::counter;
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use serde::Deserialize;
 use thiserror::Error;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::time::sleep;
 use tracing::{error, trace};
-use valveprotos::common::EDemoCommands;
 
 use crate::hltv::FragmentType;
-use crate::hltv::hltv_extract_meta::extract_meta_from_fragment;
+use crate::hltv::hltv_extract_meta::analyze_fragment;
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -25,7 +21,7 @@ pub(crate) struct HltvFragment {
     pub fragment_contents: Arc<[u8]>,
     pub fragment_type: FragmentType,
     pub is_last: bool,
-    pub has_match_meta: bool,
+    pub match_meta: Option<Vec<u8>>,
 }
 
 #[derive(Error, Debug)]
@@ -141,7 +137,7 @@ async fn get_initial_sync(
                 trace!("Got successful /sync response {sync_url}");
                 return Ok(sync_response);
             } else if resp.status() == reqwest::StatusCode::NOT_FOUND
-                || resp.status() == StatusCode::METHOD_NOT_ALLOWED
+                || resp.status() == reqwest::StatusCode::METHOD_NOT_ALLOWED
             {
                 counter!(format!("hltv.initial_sync.http.{}", resp.status().as_u16())).increment(1);
                 if start_time.elapsed() >= Duration::from_secs(120) {
@@ -203,13 +199,16 @@ async fn fragment_fetching_loop(
                     Ok(fragment_contents) => {
                         let contents: Arc<[u8]> = fragment_contents.into();
                         counter!("hltv.fragment.success").increment(1);
-                        let is_last =
-                            check_fragment_has_end_command(contents.clone()).await;
 
-                        let has_meta = extract_meta_from_fragment(contents.clone())
-                            .await
-                            .map(|x| x.is_some())
-                            .unwrap_or(false);
+                        let analysis = analyze_fragment(contents.clone()).await.unwrap_or(
+                            crate::hltv::hltv_extract_meta::FragmentAnalysis {
+                                meta: None,
+                                has_end_command: false,
+                            },
+                        );
+
+                        let has_meta = analysis.meta.is_some();
+                        let is_last = analysis.has_end_command;
 
                         let hltv_fragment = HltvFragment {
                             match_id,
@@ -217,7 +216,7 @@ async fn fragment_fetching_loop(
                             fragment_contents: contents,
                             fragment_type,
                             is_last,
-                            has_match_meta: has_meta,
+                            match_meta: analysis.meta,
                         };
 
                         sender
@@ -339,48 +338,5 @@ pub(crate) async fn download_match_fragment(
         Err(DownloadError::TemporaryError)
     } else {
         Err(DownloadError::UnexpectedStatusCode(resp.status()))
-    }
-}
-
-pub(crate) async fn check_fragment_has_end_command(fragment_contents: Arc<[u8]>) -> bool {
-    tokio::task::spawn_blocking(move || check_fragment_has_end_command_sync(&fragment_contents))
-        .await
-        .expect("Should not fail")
-}
-fn check_fragment_has_end_command_sync(fragment_contents: &Arc<[u8]>) -> bool {
-    let cursor = Cursor::new(&fragment_contents[..]);
-
-    let mut demo_file = BroadcastFile::start_reading(cursor);
-
-    let mut count = 0;
-    loop {
-        match demo_file.read_cmd_header() {
-            Ok(cmd_header) => {
-                count += 1;
-                if cmd_header.cmd == EDemoCommands::DemStop {
-                    return true;
-                }
-                // cmd_header.cmd
-                if let Err(e) = demo_file.skip_cmd(&cmd_header) {
-                    error!(
-                        "Got error skipping cmd body #{}, cmd type {:?}: {:?}",
-                        count, cmd_header.cmd, e
-                    );
-                    return false;
-                }
-            }
-            Err(err) => {
-                if demo_file.is_at_eof().unwrap_or_default() {
-                    // Tick rate is 60, so a delta file which has count < 60
-                    // if count < 60 && fragment_type == FragmentType::Delta {
-                    //     return true;
-                    // }
-
-                    return false;
-                }
-                error!("Got error processing fragmemt cmd #{}: {:?}", count, err);
-                return false;
-            }
-        }
     }
 }
