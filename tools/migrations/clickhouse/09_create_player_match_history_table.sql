@@ -1,10 +1,10 @@
 create table default.player_match_history
 (
     account_id            UInt32 comment 'Account ID of the Player',
-    match_id              UInt64,
+    match_id              UInt64 CODEC (Delta, ZSTD),
     hero_id               UInt32,
     hero_level            UInt32,
-    start_time            DateTime,
+    start_time            DateTime CODEC (Delta, ZSTD),
     game_mode             Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3),
     match_mode            Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'Calibration' = 8),
     player_team           Enum8('Team0' = 0, 'Team1' = 1, 'Spectator' = 16) comment 'player team id',
@@ -21,8 +21,8 @@ create table default.player_match_history
     objectives_mask_team0 UInt32,
     objectives_mask_team1 UInt32,
     source                Enum8('history_fetcher' = 1, 'match_player' = 2) default 'history_fetcher',
-    created_at            DateTime                                         default now(),
-    username              Nullable(String),
+    created_at            DateTime                                         default now() CODEC (Delta, ZSTD),
+    username              Nullable(String) CODEC (ZSTD(1)),
     won                   BOOL MATERIALIZED player_team = match_result,
 
     PROJECTION by_match_id (SELECT _part_offset ORDER BY match_id, account_id)
