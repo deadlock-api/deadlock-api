@@ -17,7 +17,7 @@ use core::time::Duration;
 use std::sync::LazyLock;
 
 use metrics::{counter, gauge};
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchHistory, CMsgClientToGcGetMatchHistoryResponse, EgcCitadelClientMessages,
