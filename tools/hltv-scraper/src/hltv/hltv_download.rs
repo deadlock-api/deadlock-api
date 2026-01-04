@@ -24,7 +24,7 @@ pub(crate) struct HltvFragment {
     pub fragment_n: u64,
     pub fragment_contents: Arc<[u8]>,
     pub fragment_type: FragmentType,
-    pub is_confirmed_last_fragment: bool,
+    pub is_last: bool,
     pub has_match_meta: bool,
 }
 
@@ -84,7 +84,7 @@ struct SyncResponse {
 ///    number should be called for *both* `/full` and `/delta`. Retry fragment
 ///    requests when they 404 with 1s in between calls.
 /// 4. Stop once `check_fragment_has_end_command` returns true for a given fragment, or once `/sync` is confirmed to be gone as specified above.
-/// 5. `is_confirmed_last_fragment` is only set if `check_fragment_has_end_command` was actually confirmed.
+/// 5. `is_last` is only set if `check_fragment_has_end_command` was actually confirmed.
 ///
 /// Fragment contents are the entire HTTP Get body of them.
 ///
@@ -203,7 +203,7 @@ async fn fragment_fetching_loop(
                     Ok(fragment_contents) => {
                         let contents: Arc<[u8]> = fragment_contents.into();
                         counter!("hltv.fragment.success").increment(1);
-                        let is_confirmed_last_fragment =
+                        let is_last =
                             check_fragment_has_end_command(contents.clone()).await;
 
                         let has_meta = extract_meta_from_fragment(contents.clone())
@@ -216,7 +216,7 @@ async fn fragment_fetching_loop(
                             fragment_n,
                             fragment_contents: contents,
                             fragment_type,
-                            is_confirmed_last_fragment,
+                            is_last,
                             has_match_meta: has_meta,
                         };
 
@@ -225,7 +225,7 @@ async fn fragment_fetching_loop(
                             .await
                             .map_err(|_| DownloadError::ReceiverDropped)?;
 
-                        if is_confirmed_last_fragment || has_meta {
+                        if is_last || has_meta {
                             return Ok(());
                         }
 

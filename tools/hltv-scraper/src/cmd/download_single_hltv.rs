@@ -48,7 +48,7 @@ pub(crate) async fn download_single_hltv_meta(
         }
 
         counter!("hltv.fragment.persisted").increment(1);
-        if (fragment.has_match_meta || fragment.is_confirmed_last_fragment)
+        if (fragment.has_match_meta || fragment.is_last)
             && !did_receive_last_fragment
         {
             counter!("hltv.fragment.persisted_end").increment(1);
