@@ -7,6 +7,7 @@ use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterSt
 use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
 use deadlock_api_rust::routes::v1::analytics::hero_synergies_stats::HeroSynergyStats;
 use deadlock_api_rust::routes::v1::analytics::item_stats::ItemStats;
+use deadlock_api_rust::routes::v1::analytics::net_worth_curve::NetWorthCurvePoint;
 use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use deadlock_api_rust::routes::v1::analytics::{
     hero_scoreboard, hero_stats, item_stats, player_scoreboard,
@@ -1211,5 +1212,131 @@ async fn test_ability_order_stats(
 
         // Verify matches > 0 (should always be true due to min_matches default)
         assert!(stat.matches > 0);
+    }
+}
+
+#[rstest]
+#[case(
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(vec![1, 2, 3]),
+    Some(vec![4, 5]),
+    Some(vec![6, 7]),
+)]
+#[tokio::test]
+async fn test_net_worth_curve(
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
+    #[case] min_duration_s: Option<u64>,
+    #[case] max_duration_s: Option<u64>,
+    #[case] min_networth: Option<u64>,
+    #[case] max_networth: Option<u64>,
+    #[case] min_average_badge: Option<u8>,
+    #[case] max_average_badge: Option<u8>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] hero_ids: Option<Vec<u32>>,
+    #[case] include_item_ids: Option<Vec<u32>>,
+    #[case] exclude_item_ids: Option<Vec<u32>>,
+    #[values(None, Some(18373975))] account_ids: Option<u32>,
+) {
+    let mut queries = vec![];
+    if let Some(min_unix_timestamp) = min_unix_timestamp {
+        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
+    }
+    if let Some(max_unix_timestamp) = max_unix_timestamp {
+        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
+    }
+    if let Some(min_duration_s) = min_duration_s {
+        queries.push(("min_duration_s", min_duration_s.to_string()));
+    }
+    if let Some(max_duration_s) = max_duration_s {
+        queries.push(("max_duration_s", max_duration_s.to_string()));
+    }
+    if let Some(min_networth) = min_networth {
+        queries.push(("min_networth", min_networth.to_string()));
+    }
+    if let Some(max_networth) = max_networth {
+        queries.push(("max_networth", max_networth.to_string()));
+    }
+    if let Some(min_average_badge) = min_average_badge {
+        queries.push(("min_average_badge", min_average_badge.to_string()));
+    }
+    if let Some(max_average_badge) = max_average_badge {
+        queries.push(("max_average_badge", max_average_badge.to_string()));
+    }
+    if let Some(min_match_id) = min_match_id {
+        queries.push(("min_match_id", min_match_id.to_string()));
+    }
+    if let Some(max_match_id) = max_match_id {
+        queries.push(("max_match_id", max_match_id.to_string()));
+    }
+    if let Some(hero_ids) = hero_ids.as_ref() {
+        queries.push((
+            "hero_ids",
+            hero_ids.iter().map(ToString::to_string).join(","),
+        ));
+    }
+    if let Some(include_item_ids) = include_item_ids.as_ref() {
+        queries.push((
+            "include_item_ids",
+            include_item_ids.iter().map(ToString::to_string).join(","),
+        ));
+    }
+    if let Some(exclude_item_ids) = exclude_item_ids.as_ref() {
+        queries.push((
+            "exclude_item_ids",
+            exclude_item_ids.iter().map(ToString::to_string).join(","),
+        ));
+    }
+    if let Some(account_ids) = account_ids {
+        queries.push(("account_ids", account_ids.to_string()));
+    }
+
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = request_endpoint("/v1/analytics/net-worth-curve", queries).await;
+    let net_worth_curve: Vec<NetWorthCurvePoint> =
+        response.json().await.expect("Failed to parse response");
+
+    // Verify relative_timestamps are unique and sorted
+    let mut timestamps: Vec<u8> = net_worth_curve
+        .iter()
+        .map(|p| p.relative_timestamp)
+        .collect();
+    timestamps.sort();
+    timestamps.dedup();
+    assert_eq!(timestamps.len(), net_worth_curve.len());
+
+    // Verify relative_timestamps are in 5% increments from 0 to 100
+    for (i, &timestamp) in timestamps.iter().enumerate() {
+        assert_eq!(timestamp, (i as u8) * 5);
+    }
+
+    for point in &net_worth_curve {
+        // Verify percentiles are ordered
+        assert!(point.percentile1 <= point.percentile5);
+        assert!(point.percentile5 <= point.percentile10);
+        assert!(point.percentile10 <= point.percentile25);
+        assert!(point.percentile25 <= point.percentile50);
+        assert!(point.percentile50 <= point.percentile75);
+        assert!(point.percentile75 <= point.percentile90);
+        assert!(point.percentile90 <= point.percentile95);
+        assert!(point.percentile95 <= point.percentile99);
+
+        // Verify avg is positive and reasonable
+        assert!(point.avg > 0.0);
+        assert!(point.avg < 1_000_000.0); // reasonable upper bound
+
+        // Verify std is non-negative
+        assert!(point.std >= 0.0);
     }
 }

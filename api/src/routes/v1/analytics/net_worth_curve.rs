@@ -171,16 +171,16 @@ fn build_query(query: &NetWorthCurveQuery) -> String {
                 {info_filters}
         ),
         t_players AS (
-            SELECT match_id, stats.time_stamp_s as timestamp_s, stats.net_worth as net_worth
+            SELECT match_id, stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths
             FROM match_player
             WHERE match_id IN (SELECT match_id FROM t_matches)
                 {player_filters}
         ),
         t_data AS (
-            SELECT tp.timestamp_s as timestamp_s, tp.net_worth as net_worth, tm.duration_s as duration_s
+            SELECT tp.timestamp_s as timestamp_s, tp.net_worths as net_worth, tm.duration_s as duration_s
             FROM t_players tp
             JOIN t_matches tm ON tp.match_id = tm.match_id
-            ARRAY JOIN timestamp_s, net_worth
+            ARRAY JOIN timestamp_s, net_worths
         )
     SELECT
         toUInt8(floor((timestamp_s / duration_s) * 20) * 5) AS relative_timestamp,
