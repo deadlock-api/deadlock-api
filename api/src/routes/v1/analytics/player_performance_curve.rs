@@ -15,7 +15,7 @@ use crate::error::{APIError, APIResult};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
-pub(crate) struct NetWorthCurveQuery {
+pub(crate) struct PlayerPerformanceCurveQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -59,35 +59,29 @@ pub(crate) struct NetWorthCurveQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct NetWorthCurvePoint {
+pub struct PlayerPerformanceCurvePoint {
     /// Percentage interval of match duration (0%, 5%, 10%, ..., 100%)
     pub relative_timestamp: u8,
     /// Average net worth at this timestamp
-    pub avg: f64,
+    pub net_worth_avg: f64,
     /// Standard deviation of net worth at this timestamp
-    pub std: f64,
-    /// 1st percentile net worth
-    pub percentile1: f64,
-    /// 5th percentile net worth
-    pub percentile5: f64,
-    /// 10th percentile net worth
-    pub percentile10: f64,
-    /// 25th percentile net worth
-    pub percentile25: f64,
-    /// 50th percentile net worth
-    pub percentile50: f64,
-    /// 75th percentile net worth
-    pub percentile75: f64,
-    /// 90th percentile net worth
-    pub percentile90: f64,
-    /// 95th percentile net worth
-    pub percentile95: f64,
-    /// 99th percentile net worth
-    pub percentile99: f64,
+    pub net_worth_std: f64,
+    /// Average kills at this timestamp
+    pub kills_avg: f64,
+    /// Standard deviation of kills at this timestamp
+    pub kills_std: f64,
+    /// Average deaths at this timestamp
+    pub deaths_avg: f64,
+    /// Standard deviation of deaths at this timestamp
+    pub deaths_std: f64,
+    /// Average assists at this timestamp
+    pub assists_avg: f64,
+    /// Standard deviation of assists at this timestamp
+    pub assists_std: f64,
 }
 
 #[allow(clippy::too_many_lines)]
-fn build_query(query: &NetWorthCurveQuery) -> String {
+fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -171,22 +165,27 @@ fn build_query(query: &NetWorthCurveQuery) -> String {
                 {info_filters}
         ),
         t_players AS (
-            SELECT match_id, stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths
+            SELECT match_id, stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills, stats.deaths as deaths, stats.assists as assists
             FROM match_player
             WHERE match_id IN (SELECT match_id FROM t_matches)
                 {player_filters}
         ),
         t_data AS (
-            SELECT tp.timestamp_s as timestamp_s, tp.net_worths as net_worth, tm.duration_s as duration_s
+            SELECT tp.timestamp_s as timestamp_s, tp.net_worths as net_worth, tp.kills as kills, tp.deaths as deaths, tp.assists as assists, tm.duration_s as duration_s
             FROM t_players tp
             JOIN t_matches tm ON tp.match_id = tm.match_id
-            ARRAY JOIN timestamp_s, net_worths
+            ARRAY JOIN timestamp_s, net_worths, kills, deaths, assists
         )
     SELECT
-        toUInt8(floor((timestamp_s / duration_s) * 20) * 5) AS relative_timestamp,
-        avg(net_worth) AS avg,
-        std(net_worth) AS std,
-        quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)(net_worth) AS percentiles
+        toUInt8(floor((timestamp_s / duration_s) * 10) * 10) AS relative_timestamp,
+        avg(net_worth) AS net_worth_avg,
+        std(net_worth) AS net_worth_std,
+        avg(kills) AS kills_avg,
+        std(kills) AS kills_std,
+        avg(deaths) AS deaths_avg,
+        std(deaths) AS deaths_std,
+        avg(assists) AS assists_avg,
+        std(assists) AS assists_std
     FROM t_data
     GROUP BY relative_timestamp
     ORDER BY relative_timestamp
@@ -195,15 +194,20 @@ fn build_query(query: &NetWorthCurveQuery) -> String {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize)]
-struct NetWorthCurveRow {
+struct PlayerPerformanceCurveRow {
     relative_timestamp: u8,
-    avg: f64,
-    std: f64,
-    percentiles: Vec<f64>,
+    net_worth_avg: f64,
+    net_worth_std: f64,
+    kills_avg: f64,
+    kills_std: f64,
+    deaths_avg: f64,
+    deaths_std: f64,
+    assists_avg: f64,
+    assists_std: f64,
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<NetWorthCurveRow>>",
+    ty = "TimedCache<String, Vec<PlayerPerformanceCurveRow>>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
     result = true,
     convert = "{ query_str.to_string() }",
@@ -213,14 +217,14 @@ struct NetWorthCurveRow {
 async fn run_query(
     ch_client: &clickhouse::Client,
     query_str: &str,
-) -> clickhouse::error::Result<Vec<NetWorthCurveRow>> {
+) -> clickhouse::error::Result<Vec<PlayerPerformanceCurveRow>> {
     ch_client.query(query_str).fetch_all().await
 }
 
-async fn get_net_worth_curve(
+async fn get_player_performance_curve(
     ch_client: &clickhouse::Client,
-    mut query: NetWorthCurveQuery,
-) -> APIResult<Vec<NetWorthCurvePoint>> {
+    mut query: PlayerPerformanceCurveQuery,
+) -> APIResult<Vec<PlayerPerformanceCurvePoint>> {
     query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
     query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
     let query_str = build_query(&query);
@@ -228,36 +232,33 @@ async fn get_net_worth_curve(
     let rows = run_query(ch_client, &query_str).await?;
     Ok(rows
         .into_iter()
-        .map(|row| NetWorthCurvePoint {
+        .map(|row| PlayerPerformanceCurvePoint {
             relative_timestamp: row.relative_timestamp,
-            avg: row.avg,
-            std: row.std,
-            percentile1: row.percentiles[0],
-            percentile5: row.percentiles[1],
-            percentile10: row.percentiles[2],
-            percentile25: row.percentiles[3],
-            percentile50: row.percentiles[4],
-            percentile75: row.percentiles[5],
-            percentile90: row.percentiles[6],
-            percentile95: row.percentiles[7],
-            percentile99: row.percentiles[8],
+            net_worth_avg: row.net_worth_avg,
+            net_worth_std: row.net_worth_std,
+            kills_avg: row.kills_avg,
+            kills_std: row.kills_std,
+            deaths_avg: row.deaths_avg,
+            deaths_std: row.deaths_std,
+            assists_avg: row.assists_avg,
+            assists_std: row.assists_std,
         })
         .collect())
 }
 
 #[utoipa::path(
     get,
-    path = "/net-worth-curve",
-    params(NetWorthCurveQuery),
+    path = "/player-performance-curve",
+    params(PlayerPerformanceCurveQuery),
     responses(
-        (status = OK, description = "Net Worth Curve", body = [NetWorthCurvePoint]),
+        (status = OK, description = "Player Performance Curve", body = [PlayerPerformanceCurvePoint]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch net worth curve")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player performance curve")
     ),
     tags = ["Analytics"],
-    summary = "Net Worth Curve",
+    summary = "Player Performance Curve",
     description = "
-Retrieves the net worth distribution over time throughout matches.
+Retrieves player performance statistics (net worth, kills, deaths, assists) over time throughout matches.
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
@@ -269,8 +270,8 @@ Results are cached for **1 hour** based on the unique combination of query param
 | Global | - |
     "
 )]
-pub(crate) async fn net_worth_curve(
-    Query(mut query): Query<NetWorthCurveQuery>,
+pub(crate) async fn player_performance_curve(
+    Query(mut query): Query<PlayerPerformanceCurveQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if let Some(account_ids) = query.account_ids {
@@ -287,7 +288,7 @@ pub(crate) async fn net_worth_curve(
         }
         query.account_ids = Some(filtered_account_ids);
     }
-    get_net_worth_curve(&state.ch_client_ro, query)
+    get_player_performance_curve(&state.ch_client_ro, query)
         .await
         .map(Json)
 }
