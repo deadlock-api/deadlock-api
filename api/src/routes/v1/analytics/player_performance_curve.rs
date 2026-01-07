@@ -14,8 +14,19 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
+#[allow(clippy::unnecessary_wraps)]
+fn default_resolution() -> Option<u8> {
+    10.into()
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(crate) struct PlayerPerformanceCurveQuery {
+    /// Resolution for relative game times in percent (0-100).
+    /// **Default:** 10 (buckets of 10%).
+    /// Set to **0** to use absolute game time (seconds).
+    #[param(minimum = 0, maximum = 100, default = 10)]
+    #[serde(default = "default_resolution")]
+    resolution: Option<u8>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -60,23 +71,25 @@ pub(crate) struct PlayerPerformanceCurveQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerPerformanceCurvePoint {
-    /// Percentage interval of match duration (0%, 5%, 10%, ..., 100%)
-    pub relative_timestamp: u8,
-    /// Average net worth at this timestamp
+    /// The time point of the data.
+    /// If `resolution` (default 10) is > 0, this is a percentage (0, 10, ..., 100).
+    /// If `resolution` is 0, this is the match time in seconds.
+    pub game_time: u32,
+    /// Average net worth at this time point
     pub net_worth_avg: f64,
-    /// Standard deviation of net worth at this timestamp
+    /// Standard deviation of net worth at this time point
     pub net_worth_std: f64,
-    /// Average kills at this timestamp
+    /// Average kills at this time point
     pub kills_avg: f64,
-    /// Standard deviation of kills at this timestamp
+    /// Standard deviation of kills at this time point
     pub kills_std: f64,
-    /// Average deaths at this timestamp
+    /// Average deaths at this time point
     pub deaths_avg: f64,
-    /// Standard deviation of deaths at this timestamp
+    /// Standard deviation of deaths at this time point
     pub deaths_std: f64,
-    /// Average assists at this timestamp
+    /// Average assists at this time point
     pub assists_avg: f64,
-    /// Standard deviation of assists at this timestamp
+    /// Standard deviation of assists at this time point
     pub assists_std: f64,
 }
 
@@ -156,6 +169,22 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
+
+    let resolution = query.resolution.unwrap_or(10);
+    let (game_time_selection, additional_filter) = if resolution == 0 {
+        (
+            "toUInt32(timestamp_s)".to_string(),
+            "WHERE (timestamp_s >= 180) AND ((timestamp_s <= 900 AND timestamp_s % 180 = 0) OR (timestamp_s > 900 AND timestamp_s % 300 = 0))",
+        )
+    } else {
+        (
+            format!(
+                "toUInt32(floor((timestamp_s / duration_s) * (100 / {resolution})) * {resolution})"
+            ),
+            "",
+        )
+    };
+
     format!(
         "
     WITH t_matches AS (
@@ -177,7 +206,7 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
             ARRAY JOIN timestamp_s, net_worths, kills, deaths, assists
         )
     SELECT
-        toUInt8(floor((timestamp_s / duration_s) * 10) * 10) AS relative_timestamp,
+        {game_time_selection} AS game_time,
         avg(net_worth) AS net_worth_avg,
         std(net_worth) AS net_worth_std,
         avg(kills) AS kills_avg,
@@ -187,15 +216,16 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         avg(assists) AS assists_avg,
         std(assists) AS assists_std
     FROM t_data
-    GROUP BY relative_timestamp
-    ORDER BY relative_timestamp
+    {additional_filter}
+    GROUP BY game_time
+    ORDER BY game_time
     "
     )
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize)]
 struct PlayerPerformanceCurveRow {
-    relative_timestamp: u8,
+    game_time: u32,
     net_worth_avg: f64,
     net_worth_std: f64,
     kills_avg: f64,
@@ -233,7 +263,7 @@ async fn get_player_performance_curve(
     Ok(rows
         .into_iter()
         .map(|row| PlayerPerformanceCurvePoint {
-            relative_timestamp: row.relative_timestamp,
+            game_time: row.game_time,
             net_worth_avg: row.net_worth_avg,
             net_worth_std: row.net_worth_std,
             kills_avg: row.kills_avg,

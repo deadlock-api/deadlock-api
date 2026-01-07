@@ -1307,16 +1307,16 @@ async fn test_player_performance_curve(
     let player_performance_curve: Vec<PlayerPerformanceCurvePoint> =
         response.json().await.expect("Failed to parse response");
 
-    // Verify relative_timestamps are unique and sorted
+    // Verify game_times are unique and sorted
     let mut timestamps: Vec<u8> = player_performance_curve
         .iter()
-        .map(|p| p.relative_timestamp)
+        .map(|p| p.game_time)
         .collect();
     timestamps.sort();
     timestamps.dedup();
     assert_eq!(timestamps.len(), player_performance_curve.len());
 
-    // Verify relative_timestamps are in 5% increments from 0 to 100
+    // Verify game_times are in 5% increments from 0 to 100
     for (i, &timestamp) in timestamps.iter().enumerate() {
         assert_eq!(timestamp, (i as u8) * 5);
     }
