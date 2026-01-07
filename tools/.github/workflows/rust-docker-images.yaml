@@ -57,7 +57,7 @@ jobs:
           rustup override set stable
           rustup update stable
       - name: Machete
-        uses: bnjbvr/cargo-machete@20e5cc836607b4bc0aef8a7baab61d53f66197c8
+        uses: bnjbvr/cargo-machete@78beac95c8fd7c25bdfb194415128523e41512d5
 
   lint:
     name: Lint
