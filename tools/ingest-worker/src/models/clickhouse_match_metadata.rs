@@ -45,6 +45,9 @@ pub(crate) struct ClickhouseMatchInfo {
     pub mid_boss_team_claimed: Vec<Team>,
     #[serde(rename = "mid_boss.destroyed_time_s")]
     pub mid_boss_destroyed_time_s: Vec<u32>,
+    pub match_tracked_stats: Vec<(u32, i32)>,
+    pub team0_tracked_stats: Vec<(u32, i32)>,
+    pub team1_tracked_stats: Vec<(u32, i32)>,
 }
 
 impl From<MatchInfo> for ClickhouseMatchInfo {
@@ -118,6 +121,9 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
                 .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::destroyed_time_s)
                 .collect(),
             not_scored: value.not_scored,
+            match_tracked_stats: value.match_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect(),
+            team0_tracked_stats: value.teams.get(0).map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
+            team1_tracked_stats: value.teams.get(1).map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
         }
     }
 }
@@ -267,6 +273,14 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub earned_holiday_award_2025: bool,
     pub hero_xp: u32,
     pub hero_equips: Vec<u64>,
+    pub mvp_rank: Option<u32>,
+    pub player_tracked_stats: Vec<(u32, i32)>,
+    #[serde(rename = "accolades.accolade_id")]
+    pub accolades_accolade_id: Vec<u32>,
+    #[serde(rename = "accolades.accolade_stat_value")]
+    pub accolades_accolade_stat_value: Vec<i32>,
+    #[serde(rename = "accolades.accolade_threshold_achieved")]
+    pub accolades_accolade_threshold_achieved: Vec<i32>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -416,6 +430,11 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             earned_holiday_award_2025: value.earned_holiday_award_2025(),
             hero_xp: value.hero_data.as_ref().and_then(|h| h.hero_xp).unwrap_or_default(),
             hero_equips: value.hero_data.as_ref().and_then(|h| h.hero_equips.as_ref().map(|e| e.items.iter().filter_map(|i| i.id).collect())).unwrap_or_default(),
+            mvp_rank: value.mvp_rank,
+            player_tracked_stats: value.player_tracked_stats.iter().map(|v| (v.tracked_stat_id(), v.tracked_stat_value())).collect(),
+            accolades_accolade_id: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_id).collect(),
+            accolades_accolade_stat_value: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_stat_value).collect(),
+            accolades_accolade_threshold_achieved: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_threshold_achieved).collect(),
         }
     }
 }

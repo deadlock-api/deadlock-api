@@ -88,6 +88,13 @@ CREATE TABLE IF NOT EXISTS match_player
     ),
     rewards_eligible Bool DEFAULT FALSE,
     earned_holiday_award_2025 Bool DEFAULT FALSE,
+    mvp_rank Nullable(UInt32) DEFAULT NULL,
+    player_tracked_stats Map (UInt32, Int32),
+    accolades Nested (
+        accolade_id UInt32,
+        accolade_stat_value Int32,
+        accolade_threshold_achieved Int32
+    ) DEFAULT [],
     max_level UInt32 MATERIALIZED arrayMax(stats.level),
     max_player_damage UInt32 MATERIALIZED arrayMax(stats.player_damage),
     max_player_damage_taken UInt32 MATERIALIZED arrayMax(stats.player_damage_taken),
@@ -104,4 +111,3 @@ CREATE TABLE IF NOT EXISTS match_player
 
     INDEX bf_hero_id hero_id TYPE bloom_filter GRANULARITY 1
 ) ENGINE = ReplacingMergeTree ORDER BY (match_id, account_id) SETTINGS auto_statistics_types = 'tdigest, minmax, uniq, countmin';
-

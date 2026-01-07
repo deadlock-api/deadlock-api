@@ -28,9 +28,16 @@ create table default.match_info
     average_badge_team1         Nullable(UInt32),
     rewards_eligible            Bool           default false,
     not_scored                  Nullable(Bool) default NULL,
+    match_tracked_stats         Map (UInt32, Int32),
+    team0_tracked_stats         Map (UInt32, Int32),
+    team1_tracked_stats         Map (UInt32, Int32),
     created_at                  DateTime       default now() CODEC (Delta, ZSTD),
     game_mode_version           Nullable(UInt32)
 )
     engine = ReplacingMergeTree PARTITION BY toStartOfMonth(start_time)
         ORDER BY (toStartOfMonth(start_time), match_mode, match_id)
         SETTINGS index_granularity = 8192, auto_statistics_types = 'tdigest, minmax, uniq, countmin';
+
+ALTER TABLE match_info ADD COLUMN IF NOT EXISTS match_tracked_stats Map (UInt32, Int32) AFTER not_scored;
+ALTER TABLE match_info ADD COLUMN IF NOT EXISTS team0_tracked_stats Map (UInt32, Int32) AFTER match_tracked_stats;
+ALTER TABLE match_info ADD COLUMN IF NOT EXISTS team1_tracked_stats Map (UInt32, Int32) AFTER team0_tracked_stats;
