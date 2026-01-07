@@ -46,10 +46,10 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     hero_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to include (only heroes who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     include_item_ids: Option<Vec<u32>>,
-    /// Comma separated list of item ids to exclude (only heroes who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
+    /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     exclude_item_ids: Option<Vec<u32>>,
     /// Comma separated list of account ids to include
