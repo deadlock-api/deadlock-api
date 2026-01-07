@@ -122,7 +122,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
                 .collect(),
             not_scored: value.not_scored,
             match_tracked_stats: value.match_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect(),
-            team0_tracked_stats: value.teams.get(0).map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
+            team0_tracked_stats: value.teams.first().map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
             team1_tracked_stats: value.teams.get(1).map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
         }
     }
