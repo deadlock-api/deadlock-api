@@ -9,8 +9,8 @@ sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0.100"
 itertools = "0.14.0"
-serde_json = "1.0.148"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "4712d051b023a1199b84adb60921211f29ebc058", features = ["gc-client", "serde"] }
+serde_json = "1.0.149"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "22f44513a4945cb1f623877d9a6e939a542cc8d5", features = ["gc-client", "serde"] }
 time = "0.3.44"
 metrics = "0.24.3"
 tracing = "0.1.44"
