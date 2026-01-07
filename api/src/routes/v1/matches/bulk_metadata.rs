@@ -135,6 +135,9 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(average_badge_team1) as average_badge_team1".to_owned(),
             "any(rewards_eligible) as rewards_eligible".to_owned(),
             "any(not_scored) as not_scored".to_owned(),
+            "any(match_tracked_stats) as match_tracked_stats".to_owned(),
+            "any(team0_tracked_stats) as team0_tracked_stats".to_owned(),
+            "any(team1_tracked_stats) as team1_tracked_stats".to_owned(),
         ]);
     }
     if query.include_mid_boss {
@@ -163,6 +166,9 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
                 "assigned_lane",
                 "player_level",
                 "abandon_match_time_s",
+                "mvp_rank",
+                "player_tracked_stats",
+                "accolades",
             ]);
         }
         if query.include_player_items {
