@@ -14,7 +14,7 @@ fred = { version = "10.1.0", features = ["i-hexpire"] }
 haste = { git = "https://github.com/deadlock-api/haste.git", rev = "7c277686e9f3514e787b8477a0f7fa22cee43011" }
 itertools = "0.14.0"
 jiff = { version = "0.2.18", features = ["serde"] }
-lru = "0.16.2"
+lru = "0.16.3"
 metrics = "0.24.3"
 object_store = { version = "0.13.0", features = ["aws"] }
 prost = "0.14.1"
