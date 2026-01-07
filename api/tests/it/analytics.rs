@@ -1308,7 +1308,7 @@ async fn test_player_performance_curve(
         response.json().await.expect("Failed to parse response");
 
     // Verify game_times are unique and sorted
-    let mut timestamps: Vec<u8> = player_performance_curve
+    let mut timestamps: Vec<u32> = player_performance_curve
         .iter()
         .map(|p| p.game_time)
         .collect();
