@@ -1318,7 +1318,7 @@ async fn test_player_performance_curve(
 
     // Verify game_times are in 5% increments from 0 to 100
     for (i, &timestamp) in timestamps.iter().enumerate() {
-        assert_eq!(timestamp, (i as u8) * 5);
+        assert_eq!(timestamp, (i as u32) * 5);
     }
 
     for point in &player_performance_curve {
