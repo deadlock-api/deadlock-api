@@ -22,7 +22,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 serde_json = "1.0.149"
 object_store = { version = "0.13.0", features = ["aws"], default-features = false }
-tower = { version = "0.5.2", features = ["limit", "tokio"] }
+tower = { version = "0.5.3", features = ["limit", "tokio"] }
 tower-layer = "0.3.3"
 tower-service = "0.3.3"
 tower-http = { version = "0.6.8", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
@@ -33,17 +33,17 @@ itertools = "0.14.0"
 futures = "0.3.31"
 snap = "1.1.1"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "22f44513a4945cb1f623877d9a6e939a542cc8d5", features = ["gc-client", "serde"] }
-prost = "0.14.1"
+prost = "0.14.3"
 base64 = "0.22.1"
 tryhard = "0.5.2"
-async-compression = { version = "0.4.36", features = ["bzip2", "tokio"] }
+async-compression = { version = "0.4.37", features = ["bzip2", "tokio"] }
 strum = { version = "0.27.2", features = ["derive"] }
 axum-extra = { version = "0.12.5", features = ["query"] }
 metrics = "0.24.3"
 bytes = { version = "1.11.0", features = ["serde"] }
 thiserror = "2.0.17"
 rand = "0.9.2"
-quick-xml = { version = "0.38.4", features = ["serde", "serialize"] }
+quick-xml = { version = "0.39.0", features = ["serde", "serialize"] }
 serde-env = "0.2.0"
 regex = "1.12.2"
 mimalloc = "0.1.48"
