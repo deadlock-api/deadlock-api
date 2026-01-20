@@ -8,12 +8,12 @@ base64 = "0.22.1"
 reqwest = { version = "0.13.1", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "22f44513a4945cb1f623877d9a6e939a542cc8d5", features = ["gc-client", "serde"] }
-prost = "0.14.1"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "d4690706e95e1d468e09f0365e99296e321e57ac", features = ["gc-client", "serde"] }
+prost = "0.14.3"
 metrics = "0.24.3"
 tracing = "0.1.44"
-clickhouse = "0.14.1"
-object_store = { version = "0.13.0", features = ["aws"] }
+clickhouse = "0.14.2"
+object_store = { version = "0.13.1", features = ["aws"] }
 anyhow = "1.0.100"
 sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "time"] }
 fred = { version = "10.1.0", features = ["i-hexpire"] }

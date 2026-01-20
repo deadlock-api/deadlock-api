@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 cached = { version = "0.56.0", features = ["async", "tokio"] }
-clickhouse = { version = "0.14.1", features = ["time", "test-util"] }
+clickhouse = { version = "0.14.2", features = ["time", "test-util"] }
 futures = "0.3.31"
 reqwest = { version = "0.13.1", features = ["stream"] }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -14,5 +14,5 @@ tokio-util = { version = "0.7.18", features = ["io"] }
 metrics = "0.24.3"
 tracing = "0.1.44"
 anyhow = "1.0.100"
-object_store = { version = "0.13.0", features = ["aws"] }
+object_store = { version = "0.13.1", features = ["aws"] }
 common = { version = "0.1.0", path = "../common" }

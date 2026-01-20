@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.100"
-clickhouse = "0.14.1"
+clickhouse = "0.14.2"
 common = { path = "../common" }
 itertools = "0.14.0"
 metrics = "0.24.3"

@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
-clickhouse = "0.14.1"
+clickhouse = "0.14.2"
 common = { version = "0.1.0", path = "../common" }
 metrics = "0.24.3"
 reqwest = { version = "0.13.1", features = ["json"] }
