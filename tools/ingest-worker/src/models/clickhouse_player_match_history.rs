@@ -43,6 +43,16 @@ pub(crate) struct PlayerMatchHistoryEntry {
 
 impl PlayerMatchHistoryEntry {
     pub(crate) fn from_info_and_player(match_info: &MatchInfo, player: &Players) -> Option<Self> {
+        let avg_round_len = if match_info.street_brawl_rounds.is_empty() {
+            0
+        } else {
+            match_info
+                .street_brawl_rounds
+                .iter()
+                .filter_map(|&r| r.round_duration_s)
+                .sum::<u32>()
+                / match_info.street_brawl_rounds.len() as u32
+        };
         Some(Self {
             account_id: player.account_id?,
             match_id: match_info.match_id?,
@@ -76,12 +86,7 @@ impl PlayerMatchHistoryEntry {
                 .filter_map(|r| r.winning_team)
                 .filter(|&r| r as u8 == Team::Team1 as u8)
                 .count() as u32,
-            brawl_avg_round_time_s: match_info
-                .street_brawl_rounds
-                .iter()
-                .filter_map(|&r| r.round_duration_s)
-                .sum::<u32>()
-                / match_info.street_brawl_rounds.len() as u32,
+            brawl_avg_round_time_s: avg_round_len,
             source: Source::MatchPlayer,
             username: Some("ingest-worker".to_string()),
         })
