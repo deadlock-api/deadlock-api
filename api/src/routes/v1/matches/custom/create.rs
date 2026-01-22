@@ -28,7 +28,7 @@ use valveprotos::gcsdk::EgcPlatform;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::custom::utils;
-use crate::routes::v1::matches::types::RegionMode;
+use crate::routes::v1::matches::types::{GameMode, RegionMode};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -49,6 +49,9 @@ pub(super) struct CreateCustomRequest {
     #[param(default)]
     region_mode: Option<RegionMode>,
     #[serde(default)]
+    #[param(default)]
+    game_mode: Option<GameMode>,
+    #[serde(default)]
     #[param(default, minimum = 1, maximum = 12)]
     min_roster_size: Option<u32>,
     #[serde(default)]
@@ -63,9 +66,6 @@ pub(super) struct CreateCustomRequest {
     #[serde(default)]
     #[param(default)]
     duplicate_heroes_enabled: Option<bool>,
-    #[serde(default)]
-    #[param(default)]
-    experimental_heroes_enabled: Option<bool>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -112,6 +112,7 @@ async fn create_party(
         region_mode: settings
             .as_ref()
             .and_then(|m| m.region_mode.map(Into::into)),
+        game_mode: settings.as_ref().and_then(|m| m.game_mode.map(Into::into)),
         server_search_key: None,
         mm_preference: (ECitadelMmPreference::KECitadelMmPreferenceCasual as i32).into(),
         private_lobby_settings: cso_citadel_party::PrivateLobbySettings {
@@ -127,9 +128,6 @@ async fn create_party(
             cheats_enabled: settings.as_ref().and_then(|m| m.cheats_enabled),
             available_regions: vec![],
             duplicate_heroes_enabled: settings.as_ref().and_then(|m| m.duplicate_heroes_enabled),
-            experimental_heroes_enabled: settings
-                .as_ref()
-                .and_then(|m| m.experimental_heroes_enabled),
         }
         .into(),
         bot_difficulty: (ECitadelBotDifficulty::KECitadelBotDifficultyNone as i32).into(),

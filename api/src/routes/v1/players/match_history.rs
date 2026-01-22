@@ -51,6 +51,9 @@ pub(crate) struct PlayerMatchHistoryEntry {
     match_result: u32,
     objectives_mask_team0: u32,
     objectives_mask_team1: u32,
+    brawl_score_team0: Option<u32>,
+    brawl_score_team1: Option<u32>,
+    brawl_avg_round_time_s: Option<u32>,
     username: Option<String>,
 }
 
@@ -80,6 +83,9 @@ impl PlayerMatchHistoryEntry {
             match_result: entry.match_result?,
             objectives_mask_team0: u32::try_from(entry.objectives_mask_team0?).ok()?,
             objectives_mask_team1: u32::try_from(entry.objectives_mask_team1?).ok()?,
+            brawl_score_team0: entry.brawl_score_team0,
+            brawl_score_team1: entry.brawl_score_team1,
+            brawl_avg_round_time_s: entry.brawl_avg_round_time_s,
             username: Some("api".to_owned()),
         })
     }
@@ -140,7 +146,8 @@ async fn fetch_match_history_raw(
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: Some(account_id),
         continue_cursor,
-        ranked_interval: None,
+        game_mode: None,
+        match_mode: None,
     };
     let response: CMsgClientToGcGetMatchHistoryResponse = steam_client
         .call_steam_proxy(SteamProxyQuery {

@@ -101,6 +101,47 @@ impl From<i32> for RegionMode {
     }
 }
 
+#[derive(
+    FromRepr,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    Display,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+#[repr(i32)]
+pub(crate) enum GameMode {
+    #[default]
+    Normal = 1,
+    StreetBrawl = 4,
+}
+
+impl From<GameMode> for i32 {
+    fn from(val: GameMode) -> Self {
+        val as i32
+    }
+}
+
+impl From<GameMode> for u32 {
+    fn from(val: GameMode) -> Self {
+        val as u32
+    }
+}
+
+impl From<i32> for GameMode {
+    fn from(val: i32) -> Self {
+        Self::from_repr(val).unwrap_or_default()
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, ToSchema)]
 pub(super) struct ActiveMatchPlayer {
     pub(super) account_id: Option<u32>,
