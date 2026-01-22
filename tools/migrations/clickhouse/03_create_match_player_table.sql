@@ -84,10 +84,19 @@ CREATE TABLE IF NOT EXISTS match_player
         player_barriering UInt32,
         teammate_healing UInt32,
         teammate_barriering UInt32,
-        self_damage UInt32
+        self_damage UInt32,
+        bullet_kills UInt32,
+        melee_kills UInt32,
+        ability_kills UInt32,
+        headshot_kills UInt32
     ),
     rewards_eligible Bool DEFAULT FALSE,
     earned_holiday_award_2025 Bool DEFAULT FALSE,
+    power_up_buffs Nested (
+        type String,
+        value UInt32,
+        is_permanent Bool
+    ),
     mvp_rank Nullable(UInt32) DEFAULT NULL,
     player_tracked_stats Map (UInt32, Int32),
     accolades Nested (

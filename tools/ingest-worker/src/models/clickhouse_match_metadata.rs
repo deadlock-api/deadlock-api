@@ -1,8 +1,8 @@
 use clickhouse::Row;
 use serde::Serialize;
-use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players};
+use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players, PowerUpBuff};
 
-use crate::models::enums::{GameMode, MatchMode, MatchOutcome, Objective, Team};
+use crate::models::enums::{BotDifficulty, GameMode, MatchMode, MatchOutcome, Objective, Team};
 
 #[derive(Row, Debug, Serialize)]
 pub(crate) struct ClickhouseMatchInfo {
@@ -13,6 +13,7 @@ pub(crate) struct ClickhouseMatchInfo {
     pub match_outcome: MatchOutcome,
     pub match_mode: MatchMode,
     pub game_mode: GameMode,
+    pub bot_difficulty: BotDifficulty,
     pub objectives_mask_team0: u16,
     pub objectives_mask_team1: u16,
     pub is_high_skill_range_parties: Option<bool>,
@@ -45,6 +46,11 @@ pub(crate) struct ClickhouseMatchInfo {
     pub mid_boss_team_claimed: Vec<Team>,
     #[serde(rename = "mid_boss.destroyed_time_s")]
     pub mid_boss_destroyed_time_s: Vec<u32>,
+    #[serde(rename = "street_brawl_rounds.round_duration_s")]
+    pub street_brawl_round_duration_s: Vec<u32>,
+    #[serde(rename = "street_brawl_rounds.winning_team")]
+    pub street_brawl_rounds_winning_team: Vec<Team>,
+    pub team_score: Vec<u32>,
     pub match_tracked_stats: Vec<(u32, i32)>,
     pub team0_tracked_stats: Vec<(u32, i32)>,
     pub team1_tracked_stats: Vec<(u32, i32)>,
@@ -60,6 +66,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             start_time: value.start_time(),
             game_mode: GameMode::from(value.game_mode()),
             match_mode: MatchMode::from(value.match_mode()),
+            bot_difficulty: BotDifficulty::from(value.bot_difficulty()),
             is_high_skill_range_parties: value.is_high_skill_range_parties,
             low_pri_pool: value.low_pri_pool,
             new_player_pool: value.new_player_pool,
@@ -67,6 +74,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
             average_badge_team1: value.average_badge_team1,
             game_mode_version: value.game_mode_version,
             rewards_eligible: value.rewards_eligible(),
+            team_score: value.team_score.clone(),
             objectives_destroyed_time_s: value
                 .objectives
                 .iter()
@@ -119,6 +127,17 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
                 .mid_boss
                 .iter()
                 .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::destroyed_time_s)
+                .collect(),
+            street_brawl_round_duration_s: value
+                .street_brawl_rounds
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::StreetBrawlRound::round_duration_s)
+                .collect(),
+            street_brawl_rounds_winning_team: value
+                .street_brawl_rounds
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::StreetBrawlRound::winning_team)
+                .map(Team::from)
                 .collect(),
             not_scored: value.not_scored,
             match_tracked_stats: value.match_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect(),
@@ -269,6 +288,20 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub stats_teammate_barriering: Vec<u32>,
     #[serde(rename = "stats.self_damage")]
     pub stats_self_damage: Vec<u32>,
+    #[serde(rename = "stats.bullet_kills")]
+    pub stats_bullet_kills: Vec<u32>,
+    #[serde(rename = "stats.melee_kills")]
+    pub stats_melee_kills: Vec<u32>,
+    #[serde(rename = "stats.ability_kills")]
+    pub stats_ability_kills: Vec<u32>,
+    #[serde(rename = "stats.headshot_kills")]
+    pub stats_headshot_kills: Vec<u32>,
+    #[serde(rename = "power_up_buffs.type")]
+    pub power_up_buffs_type: Vec<String>,
+    #[serde(rename = "power_up_buffs.value")]
+    pub power_up_buffs_value: Vec<u32>,
+    #[serde(rename = "power_up_buffs.is_permanent")]
+    pub power_up_buffs_is_permanent: Vec<bool>,
     pub rewards_eligible: bool,
     pub earned_holiday_award_2025: bool,
     pub hero_xp: u32,
@@ -404,6 +437,13 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             stats_teammate_healing: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::teammate_healing).collect(),
             stats_teammate_barriering: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::teammate_barriering).collect(),
             stats_self_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::self_damage).collect(),
+            stats_bullet_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::bullet_kills).collect(),
+            stats_melee_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::melee_kills).collect(),
+            stats_ability_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::ability_kills).collect(),
+            stats_headshot_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::headshot_kills).collect(),
+            power_up_buffs_type: value.power_up_buffs.iter().map(PowerUpBuff::r#type).map(std::string::ToString::to_string).collect(),
+            power_up_buffs_value: value.power_up_buffs.iter().map(PowerUpBuff::value).collect(),
+            power_up_buffs_is_permanent: value.power_up_buffs.iter().map(PowerUpBuff::is_permanent).collect(),
             team: Team::from(value.team()),
             kills: value.kills(),
             deaths: value.deaths(),

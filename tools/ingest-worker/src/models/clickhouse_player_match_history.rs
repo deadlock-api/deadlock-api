@@ -1,3 +1,4 @@
+use crate::models::enums::Team;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -33,6 +34,9 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub match_result: u32,
     pub objectives_mask_team0: u32,
     pub objectives_mask_team1: u32,
+    pub brawl_score_team0: u32,
+    pub brawl_score_team1: u32,
+    pub brawl_avg_round_time_s: u32,
     pub source: Source,
     pub username: Option<String>,
 }
@@ -60,6 +64,24 @@ impl PlayerMatchHistoryEntry {
             match_result: match_info.winning_team? as u32,
             objectives_mask_team0: match_info.objectives_mask_team0? as u32,
             objectives_mask_team1: match_info.objectives_mask_team1? as u32,
+            brawl_score_team0: match_info
+                .street_brawl_rounds
+                .iter()
+                .filter_map(|r| r.winning_team)
+                .filter(|&r| r as u8 == Team::Team0 as u8)
+                .count() as u32,
+            brawl_score_team1: match_info
+                .street_brawl_rounds
+                .iter()
+                .filter_map(|r| r.winning_team)
+                .filter(|&r| r as u8 == Team::Team1 as u8)
+                .count() as u32,
+            brawl_avg_round_time_s: match_info
+                .street_brawl_rounds
+                .iter()
+                .filter_map(|&r| r.round_duration_s)
+                .sum::<u32>()
+                / match_info.street_brawl_rounds.len() as u32,
             source: Source::MatchPlayer,
             username: Some("ingest-worker".to_string()),
         })

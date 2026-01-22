@@ -1,7 +1,8 @@
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::EMatchOutcome;
 use valveprotos::deadlock::{
-    ECitadelGameMode, ECitadelLobbyTeam, ECitadelMatchMode, ECitadelTeamObjective,
+    ECitadelBotDifficulty, ECitadelGameMode, ECitadelLobbyTeam, ECitadelMatchMode,
+    ECitadelTeamObjective,
 };
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
@@ -11,6 +12,7 @@ pub(crate) enum GameMode {
     Normal = 1,
     OnevOneTest = 2,
     Sandbox = 3,
+    StreetBrawl = 4,
 }
 
 impl From<ECitadelGameMode> for GameMode {
@@ -20,6 +22,7 @@ impl From<ECitadelGameMode> for GameMode {
             ECitadelGameMode::KECitadelGameModeNormal => Self::Normal,
             ECitadelGameMode::KECitadelGameMode1v1Test => Self::OnevOneTest,
             ECitadelGameMode::KECitadelGameModeSandbox => Self::Sandbox,
+            ECitadelGameMode::KECitadelGameModeStreetBrawl => Self::StreetBrawl,
         }
     }
 }
@@ -31,6 +34,43 @@ impl From<u8> for GameMode {
             2 => GameMode::OnevOneTest,
             3 => GameMode::Sandbox,
             _ => GameMode::Invalid,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum BotDifficulty {
+    None = 0,
+    Easy = 1,
+    Medium = 2,
+    Hard = 3,
+    Nightmare = 4,
+    Guided = 5,
+}
+
+impl From<ECitadelBotDifficulty> for BotDifficulty {
+    fn from(value: ECitadelBotDifficulty) -> Self {
+        match value {
+            ECitadelBotDifficulty::KECitadelBotDifficultyNone => Self::None,
+            ECitadelBotDifficulty::KECitadelBotDifficultyEasy => Self::Easy,
+            ECitadelBotDifficulty::KECitadelBotDifficultyMedium => Self::Medium,
+            ECitadelBotDifficulty::KECitadelBotDifficultyHard => Self::Hard,
+            ECitadelBotDifficulty::KECitadelBotDifficultyNightmare => Self::Nightmare,
+            ECitadelBotDifficulty::KECitadelBotDifficultyGuided => Self::Guided,
+        }
+    }
+}
+
+impl From<u8> for BotDifficulty {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => BotDifficulty::Easy,
+            2 => BotDifficulty::Medium,
+            3 => BotDifficulty::Hard,
+            4 => BotDifficulty::Nightmare,
+            5 => BotDifficulty::Guided,
+            _ => BotDifficulty::None,
         }
     }
 }
@@ -85,6 +125,7 @@ impl From<u8> for MatchMode {
 pub(crate) enum MatchOutcome {
     TeamWin = 0,
     Error = 1,
+    Draw = 2,
 }
 
 impl From<EMatchOutcome> for MatchOutcome {
@@ -92,6 +133,7 @@ impl From<EMatchOutcome> for MatchOutcome {
         match value {
             EMatchOutcome::KEOutcomeTeamWin => MatchOutcome::TeamWin,
             EMatchOutcome::KEOutcomeError => MatchOutcome::Error,
+            EMatchOutcome::KEOutcomeMatchDraw => MatchOutcome::Draw,
         }
     }
 }

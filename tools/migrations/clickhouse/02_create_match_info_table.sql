@@ -3,10 +3,11 @@ create table default.match_info
     match_id                    UInt64 CODEC (Delta, ZSTD),
     start_time                  DateTime CODEC (Delta, ZSTD),
     winning_team                Enum8('Team0' = 0, 'Spectator' = 16, 'Team1' = 1),
+    bot_difficulty                Enum8('None' = 0, 'Easy' = 1, 'Medium' = 2, 'Hard' = 3, 'Nightmare' = 4, 'Guided' = 5),
     duration_s                  UInt32,
-    match_outcome               Enum8('TeamWin' = 0, 'Error' = 1),
+    match_outcome               Enum8('TeamWin' = 0, 'Error' = 1, 'Draw' = 2),
     match_mode                  Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'Calibration' = 8),
-    game_mode                   Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3),
+    game_mode                   Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3, 'StreetBrawl' = 4),
     objectives_mask_team0       UInt16,
     objectives_mask_team1       UInt16,
     objectives                  Nested(destroyed_time_s UInt32,
@@ -28,9 +29,14 @@ create table default.match_info
     average_badge_team1         Nullable(UInt32),
     rewards_eligible            Bool           default false,
     not_scored                  Nullable(Bool) default NULL,
+    team_score                  Array(UInt32),
     match_tracked_stats         Map (UInt32, Int32),
     team0_tracked_stats         Map (UInt32, Int32),
     team1_tracked_stats         Map (UInt32, Int32),
+    street_brawl_rounds         Nested(
+        round_duration_s UInt32,
+        winning_team Enum8('Team0' = 0, 'Spectator' = 16, 'Team1' = 1)
+    ),
     created_at                  DateTime       default now() CODEC (Delta, ZSTD),
     game_mode_version           Nullable(UInt32)
 )
