@@ -15,8 +15,6 @@ export default function HeroImage({ heroId, className }: { heroId: number; class
 
   const hero = useMemo(() => data?.find((hero) => hero.id === heroId), [data, heroId]);
 
-  console.log(data);
-
   return (
     <picture>
       {hero?.images?.minimap_image_webp && <source srcSet={hero?.images?.minimap_image_webp} type="image/webp" />}

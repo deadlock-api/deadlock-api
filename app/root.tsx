@@ -7,17 +7,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import NavHeader from "~/components/NavHeader";
+import "@fontsource-variable/inter";
+import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 
 export const links: LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
+    rel: "preload",
+    href: interWoff2,
+    as: "font",
+    type: "font/woff2",
     crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
 ];
 
