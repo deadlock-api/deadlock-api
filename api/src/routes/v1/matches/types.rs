@@ -48,6 +48,7 @@ enum ActiveMatchGameMode {
     KECitadelGameModeNormal = 1,
     KECitadelGameMode1v1Test = 2,
     KECitadelGameModeSandbox = 3,
+    KECitadelGameModeStreetBrawl = 4,
 }
 
 impl From<i32> for ActiveMatchGameMode {
