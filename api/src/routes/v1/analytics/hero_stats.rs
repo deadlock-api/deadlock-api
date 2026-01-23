@@ -13,6 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -52,6 +53,10 @@ pub(crate) struct HeroStatsQuery {
     #[serde(default)]
     #[param(inline)]
     bucket: BucketQuery,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -235,12 +240,14 @@ fn build_query(query: &HeroStatsQuery) -> String {
     } else {
         ", start_time"
     };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     WITH t_matches AS (
             SELECT match_id {start_time_select}
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
+                AND {game_mode_filter}
                 {info_filters}
         )
         {}

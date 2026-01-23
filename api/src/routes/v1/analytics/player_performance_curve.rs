@@ -12,6 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[allow(clippy::unnecessary_wraps)]
@@ -27,6 +28,10 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     #[param(minimum = 0, maximum = 100, default = 10)]
     #[serde(default = "default_resolution")]
     resolution: Option<u8>,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -185,12 +190,14 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         )
     };
 
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     WITH t_matches AS (
             SELECT match_id, duration_s
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
+                AND {game_mode_filter}
                 {info_filters}
         ),
         t_players AS (

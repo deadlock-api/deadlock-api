@@ -12,6 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
@@ -24,6 +25,10 @@ fn default_min_matches() -> Option<u64> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct HeroCounterStatsQuery {
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -203,11 +208,12 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     WITH t_matches AS (SELECT match_id
                  FROM match_info
-                 WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
+                 WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
     SELECT p1.hero_id  AS hero_id,
            p2.hero_id  AS enemy_hero_id,
            SUM(p1.won) AS wins,

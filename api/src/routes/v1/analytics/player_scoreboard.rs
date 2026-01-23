@@ -13,6 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::types::SortDirectionDesc;
 
@@ -35,6 +36,10 @@ pub(crate) struct PlayerScoreboardQuery {
     #[serde(default)]
     #[param(inline)]
     sort_direction: SortDirectionDesc,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
@@ -93,6 +98,7 @@ pub struct Entry {
 fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    info_filters.push(GameMode::sql_filter(query.game_mode));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }

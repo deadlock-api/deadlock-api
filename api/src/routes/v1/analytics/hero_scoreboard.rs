@@ -13,6 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -27,6 +28,10 @@ pub(super) struct HeroScoreboardQuery {
     #[serde(default)]
     #[param(inline)]
     sort_direction: SortDirectionDesc,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter by min number of matches played.
     min_matches: Option<u32>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
@@ -78,6 +83,7 @@ pub struct Entry {
 fn build_query(query: &HeroScoreboardQuery) -> String {
     let mut info_filters = vec![];
     info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    info_filters.push(GameMode::sql_filter(query.game_mode));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }

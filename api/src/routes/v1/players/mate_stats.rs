@@ -9,11 +9,16 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::default_true;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct MateStatsQuery {
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
@@ -54,6 +59,7 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     let mut history_filters = vec![];
     history_filters.push(format!("account_id = {account_id}"));
     history_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    history_filters.push(GameMode::sql_filter(query.game_mode));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         history_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }

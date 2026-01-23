@@ -16,6 +16,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -32,6 +33,10 @@ fn default_comb_size() -> Option<u8> {
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
 pub(crate) struct HeroCombStatsQuery {
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -198,6 +203,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
 WITH hero_combinations AS (
@@ -207,7 +213,7 @@ WITH hero_combinations AS (
         any(won) AS won
     FROM match_player
     INNER JOIN match_info mi USING (match_id)
-    WHERE mi.match_mode IN ('Ranked', 'Unranked') {player_filters} {info_filters}
+    WHERE mi.match_mode IN ('Ranked', 'Unranked') AND mi.{game_mode_filter} {player_filters} {info_filters}
     GROUP BY match_id, team
     HAVING length(hero_ids) = 6
 )

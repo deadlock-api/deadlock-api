@@ -1,3 +1,5 @@
+#![allow(clippy::large_stack_arrays)]
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -13,6 +15,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -96,6 +99,10 @@ pub(crate) struct ItemStatsQuery {
     #[serde(default)]
     #[param(inline)]
     bucket: BucketQuery,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -317,6 +324,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     /* ---------- final query ---------- */
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
 WITH
@@ -324,7 +332,7 @@ WITH
     t_matches AS (
         SELECT match_id, start_time, duration_s
         FROM match_info
-        WHERE match_mode IN ('Ranked', 'Unranked'){info_filters}
+        WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
     ),
     exploded_players AS (
         SELECT

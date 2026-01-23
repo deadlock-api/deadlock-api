@@ -9,10 +9,15 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 pub(crate) struct BadgeDistributionQuery {
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -78,6 +83,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     } else {
         format!(" AND {}", info_filters.join(" AND "))
     };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     SELECT
@@ -85,7 +91,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
         COUNT() as total_matches
     FROM match_info
         ARRAY JOIN [average_badge_team0, average_badge_team1] AS t_badge_level
-    WHERE match_mode IN ('Ranked', 'Unranked') AND badge_level > 0 {filters}
+    WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} AND badge_level > 0 {filters}
     GROUP BY badge_level
     ORDER BY badge_level
     "

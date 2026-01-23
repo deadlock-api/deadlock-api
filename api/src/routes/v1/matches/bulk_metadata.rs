@@ -19,6 +19,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::{comma_separated_deserialize_option, default_true};
@@ -63,6 +64,10 @@ pub(super) struct BulkMatchMetadataQuery {
     #[serde(default)]
     include_player_death_details: bool,
     // Parameters that influence what data is included in the response (WHERE)
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Comma separated list of match ids, limited by `limit`
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -196,6 +201,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     }
 
     let mut info_filters = vec![];
+    info_filters.push(GameMode::sql_filter(query.game_mode));
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }

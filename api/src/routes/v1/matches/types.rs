@@ -119,10 +119,26 @@ impl From<i32> for RegionMode {
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 #[repr(i32)]
-pub(crate) enum GameMode {
+pub enum GameMode {
     #[default]
     Normal = 1,
     StreetBrawl = 4,
+}
+
+impl GameMode {
+    /// Returns a SQL filter clause for `game_mode`.
+    /// If a specific game mode is provided, returns `game_mode = {value}`.
+    /// If None, returns a filter for all valid game modes: `game_mode IN (1, 4)`.
+    pub fn sql_filter(game_mode: Option<Self>) -> String {
+        match game_mode {
+            Some(mode) => format!("game_mode = {}", mode as i32),
+            None => format!(
+                "game_mode IN ({}, {})",
+                Self::Normal as i32,
+                Self::StreetBrawl as i32
+            ),
+        }
+    }
 }
 
 impl From<GameMode> for i32 {

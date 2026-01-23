@@ -11,6 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
 use crate::utils::types::AccountIdQuery;
 
@@ -20,6 +21,10 @@ pub(crate) struct HeroStatsQuery {
     #[param(inline, min_items = 1, max_items = 1000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u32>,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -91,6 +96,7 @@ pub struct HeroStats {
 fn build_query(query: &HeroStatsQuery) -> String {
     let mut filters = vec![];
     filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
+    filters.push(format!("mi.{}", GameMode::sql_filter(query.game_mode)));
     filters.push(format!(
         "account_id IN ({})",
         query.account_ids.iter().map(ToString::to_string).join(",")

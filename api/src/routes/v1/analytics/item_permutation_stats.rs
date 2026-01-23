@@ -13,6 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
@@ -30,6 +31,10 @@ pub(super) struct ItemPermutationStatsQuery {
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
     comb_size: Option<u8>,
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
+    #[serde(default)]
+    #[param(inline)]
+    game_mode: Option<GameMode>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -155,6 +160,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {
             return String::new();
@@ -164,7 +170,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             "
         WITH t_matches AS (SELECT match_id
                 FROM match_info
-                WHERE match_mode IN ('Ranked', 'Unranked') {info_filters})
+                WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
         SELECT
             arrayIntersect(items.item_id, {items_list}) AS item_ids,
             sum(won)      AS wins,
@@ -192,7 +198,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             "
         WITH t_matches AS (SELECT match_id
                 FROM match_info
-                WHERE match_mode IN ('Ranked', 'Unranked') {info_filters}),
+                WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}),
             t_upgrades AS (SELECT id from items WHERE type = 'upgrade'),
             t_players AS (SELECT arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))
              as p_items, won
