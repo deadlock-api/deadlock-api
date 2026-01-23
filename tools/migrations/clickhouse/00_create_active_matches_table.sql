@@ -16,7 +16,7 @@ create table active_matches
     objectives_mask_team0          UInt16,
     objectives_mask_team1          UInt16,
     match_mode                     Enum8('Unranked' = 1, 'CoopBot' = 3, 'Tutorial' = 6, 'HeroLabs' = 7, 'PrivateLobby' = 2, 'ServerTest' = 5, 'Ranked' = 4, 'Invalid' = 0),
-    game_mode                      Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3),
+    game_mode                      Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3, 'StreetBrawl' = 4),
     match_score                    UInt16,
     region_mode                    Enum8('Row' = 0, 'Europe' = 1, 'SEAsia' = 2, 'SAmerica' = 3, 'Russia' = 4, 'Oceania' = 5),
     scraped_at                     DateTime64(3) default now() CODEC (Delta, ZSTD),
