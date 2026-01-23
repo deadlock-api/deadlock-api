@@ -10,7 +10,7 @@ pub(crate) struct ActiveMatch {
     pub match_id: u64,
     pub players: Vec<ActiveMatchPlayer>,
     #[serde(default)]
-    pub team_stats: Vec<ActiveMatchTeamStats>,
+    pub team_stats: Option<Vec<ActiveMatchTeamStats>>,
     pub lobby_id: u64,
     pub net_worth_team_0: u32,
     pub net_worth_team_1: u32,
@@ -36,7 +36,7 @@ pub(crate) struct ActiveMatchPlayer {
     pub hero_id: u8,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Copy, Clone)]
 pub(crate) struct ActiveMatchTeamStats {
     pub team: u8,
     pub net_worth: u32,
@@ -96,10 +96,10 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
                 .map(|p| p.abandoned.unwrap_or_default())
                 .collect(),
             players_hero_id: am.players.iter().map(|p| p.hero_id).collect(),
-            team_stats_team: am.team_stats.iter().map(|t| t.team).collect(),
-            team_stats_net_worth: am.team_stats.iter().map(|t| t.net_worth).collect(),
-            team_stats_objectives_mask: am.team_stats.iter().map(|t| t.objectives_mask).collect(),
-            team_stats_brawl_score: am.team_stats.iter().map(|t| t.brawl_score).collect(),
+            team_stats_team: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.team).collect(),
+            team_stats_net_worth: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.net_worth).collect(),
+            team_stats_objectives_mask: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.objectives_mask).collect(),
+            team_stats_brawl_score: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.brawl_score).collect(),
             lobby_id: am.lobby_id,
             net_worth_team_0: am.net_worth_team_0,
             net_worth_team_1: am.net_worth_team_1,
