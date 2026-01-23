@@ -58,7 +58,7 @@ async fn fetch_insert_active_matches(
         Err(e) => {
             gauge!("active_matches_scraper.fetched_active_matches").set(0);
             counter!("active_matches_scraper.fetch_active_matches.failure").increment(1);
-            error!("Failed to fetch active matches: {e}");
+            error!("Failed to fetch active matches: {e:?}");
             return;
         }
     };
@@ -96,7 +96,7 @@ async fn fetch_insert_active_matches(
         Err(e) => {
             gauge!("active_matches_scraper.inserted_active_matches").set(0);
             counter!("active_matches_scraper.insert_active_matches.failure").increment(1);
-            error!("Failed to insert active matches: {e}");
+            error!("Failed to insert active matches: {e:?}");
         }
     }
 }
