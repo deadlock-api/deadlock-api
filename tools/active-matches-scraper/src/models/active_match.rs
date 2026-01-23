@@ -9,6 +9,7 @@ pub(crate) struct ActiveMatch {
     pub winning_team: Option<u8>,
     pub match_id: u64,
     pub players: Vec<ActiveMatchPlayer>,
+    #[serde(default)]
     pub team_stats: Vec<ActiveMatchTeamStats>,
     pub lobby_id: u64,
     pub net_worth_team_0: u32,
