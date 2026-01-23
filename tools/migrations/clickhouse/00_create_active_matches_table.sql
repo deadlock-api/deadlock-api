@@ -59,7 +59,6 @@ create table active_matches
     team1_barrack_boss_lane3       Bool alias bitAnd(objectives_mask_team1, bitShiftLeft(toUInt16(1), 14)) != 0,
     team1_barrack_boss_lane4       Bool alias bitAnd(objectives_mask_team1, bitShiftLeft(toUInt16(1), 15)) != 0,
     compat_version                 Nullable(UInt32),
-    ranked_badge_level             Nullable(UInt32),
     game_mode_version              Nullable(Int32)
 )
     engine = MergeTree PRIMARY KEY match_id
