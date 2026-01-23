@@ -20,6 +20,12 @@ create table active_matches
     match_score                    UInt16,
     region_mode                    Enum8('Row' = 0, 'Europe' = 1, 'SEAsia' = 2, 'SAmerica' = 3, 'Russia' = 4, 'Oceania' = 5),
     scraped_at                     DateTime64(3) default now() CODEC (Delta, ZSTD),
+    team_stats                     Nested(
+        team UInt8,
+        net_worth UInt32,
+        objectives_mask UInt64,
+        brawl_score UInt32
+    ),
     team0_core                     Bool alias bitAnd(objectives_mask_team0, bitShiftLeft(1, 0)) != 0,
     team0_tier1_lane1              Bool alias bitAnd(objectives_mask_team0, bitShiftLeft(1, 1)) != 0,
     team0_tier2_lane1              Bool alias bitAnd(objectives_mask_team0, bitShiftLeft(1, 2)) != 0,
