@@ -18,7 +18,8 @@ create table default.match_info
                                     first_damage_time_s UInt32,
                                     team_objective Enum8 (
                                         'Core' = 0, 'Tier1Lane1' = 1, 'Tier1Lane2' = 2, 'Tier1Lane3' = 3, 'Tier1Lane4' = 4, 'Tier2Lane1' = 5, 'Tier2Lane2' = 6, 'Tier2Lane3' = 7, 'Tier2Lane4' = 8, 'Titan' = 9, 'TitanShieldGenerator1' = 10, 'TitanShieldGenerator2' = 11, 'BarrackBossLane1' = 12, 'BarrackBossLane2' = 13, 'BarrackBossLane3' = 14, 'BarrackBossLane4' = 15),
-                                    team Enum8 ('Team0' = 0, 'Team1' = 1, 'Spectator' = 16)),
+                                    team Enum8 ('Team0' = 0, 'Team1' = 1, 'Spectator' = 16),
+                                    player_damage_mitigated UInt32),
     mid_boss                    Nested(team_killed Enum8 ('Team0' = 0, 'Team1' = 1, 'Spectator' = 16),
                                     team_claimed Enum8 ('Team0' = 0, 'Team1' = 1, 'Spectator' = 16),
                                     destroyed_time_s UInt32),
@@ -43,7 +44,3 @@ create table default.match_info
     engine = ReplacingMergeTree PARTITION BY toStartOfMonth(start_time)
         ORDER BY (toStartOfMonth(start_time), match_mode, match_id)
         SETTINGS index_granularity = 8192, auto_statistics_types = 'tdigest, minmax, uniq, countmin';
-
-ALTER TABLE match_info ADD COLUMN IF NOT EXISTS match_tracked_stats Map (UInt32, Int32) AFTER not_scored;
-ALTER TABLE match_info ADD COLUMN IF NOT EXISTS team0_tracked_stats Map (UInt32, Int32) AFTER match_tracked_stats;
-ALTER TABLE match_info ADD COLUMN IF NOT EXISTS team1_tracked_stats Map (UInt32, Int32) AFTER team0_tracked_stats;

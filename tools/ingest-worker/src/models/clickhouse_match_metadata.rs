@@ -40,6 +40,8 @@ pub(crate) struct ClickhouseMatchInfo {
     pub objectives_team_objective: Vec<Objective>,
     #[serde(rename = "objectives.team")]
     pub objectives_team: Vec<Team>,
+    #[serde(rename = "objectives.player_spirit_damage")]
+    pub objectives_player_spirit_damage: Vec<u32>,
     #[serde(rename = "mid_boss.team_killed")]
     pub mid_boss_team_killed: Vec<Team>,
     #[serde(rename = "mid_boss.team_claimed")]
@@ -108,6 +110,11 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
                 .iter()
                 .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::team)
                 .map(Team::from)
+                .collect(),
+            objectives_player_spirit_damage: value
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_spirit_damage)
                 .collect(),
             objectives_mask_team0: value.objectives_mask_team0() as u16,
             objectives_mask_team1: value.objectives_mask_team1() as u16,
