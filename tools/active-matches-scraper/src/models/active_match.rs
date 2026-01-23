@@ -25,7 +25,6 @@ pub(crate) struct ActiveMatch {
     pub match_score: u16,
     pub region_mode: RegionMode,
     pub compat_version: Option<u32>,
-    pub ranked_badge_level: Option<u32>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -79,7 +78,6 @@ pub(crate) struct ClickHouseActiveMatch {
     pub match_score: u16,
     pub region_mode: RegionMode,
     pub compat_version: Option<u32>,
-    pub ranked_badge_level: Option<u32>,
 }
 
 impl From<ActiveMatch> for ClickHouseActiveMatch {
@@ -96,10 +94,34 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
                 .map(|p| p.abandoned.unwrap_or_default())
                 .collect(),
             players_hero_id: am.players.iter().map(|p| p.hero_id).collect(),
-            team_stats_team: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.team).collect(),
-            team_stats_net_worth: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.net_worth).collect(),
-            team_stats_objectives_mask: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.objectives_mask).collect(),
-            team_stats_brawl_score: am.team_stats.clone().unwrap_or_default().iter().map(|t| t.brawl_score).collect(),
+            team_stats_team: am
+                .team_stats
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|t| t.team)
+                .collect(),
+            team_stats_net_worth: am
+                .team_stats
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|t| t.net_worth)
+                .collect(),
+            team_stats_objectives_mask: am
+                .team_stats
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|t| t.objectives_mask)
+                .collect(),
+            team_stats_brawl_score: am
+                .team_stats
+                .clone()
+                .unwrap_or_default()
+                .iter()
+                .map(|t| t.brawl_score)
+                .collect(),
             lobby_id: am.lobby_id,
             net_worth_team_0: am.net_worth_team_0,
             net_worth_team_1: am.net_worth_team_1,
@@ -114,7 +136,6 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
             match_score: am.match_score,
             region_mode: am.region_mode,
             compat_version: am.compat_version,
-            ranked_badge_level: am.ranked_badge_level,
         }
     }
 }
