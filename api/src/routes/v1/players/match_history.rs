@@ -54,7 +54,6 @@ pub(crate) struct PlayerMatchHistoryEntry {
     brawl_score_team0: Option<u32>,
     brawl_score_team1: Option<u32>,
     brawl_avg_round_time_s: Option<u32>,
-    #[serde(skip_serializing)]
     username: Option<String>,
 }
 
