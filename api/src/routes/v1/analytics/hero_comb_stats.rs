@@ -110,6 +110,11 @@ impl AddAssign for HeroCombStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroCombStatsQuery) -> String {
+    let team_size = if query.game_mode == Some(GameMode::StreetBrawl) {
+        4
+    } else {
+        6
+    };
     let mut info_filters = vec![];
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
         info_filters.push(format!("start_time >= {min_unix_timestamp}"));
@@ -208,14 +213,14 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         "
 WITH hero_combinations AS (
     SELECT
-        arraySort(groupUniqArray(6)(hero_id)) AS hero_ids,
+        arraySort(groupUniqArray({team_size})(hero_id)) AS hero_ids,
         groupArray(account_id) AS account_ids,
         any(won) AS won
     FROM match_player
     INNER JOIN match_info mi USING (match_id)
     WHERE mi.match_mode IN ('Ranked', 'Unranked') AND mi.{game_mode_filter} {player_filters} {info_filters}
     GROUP BY match_id, team
-    HAVING length(hero_ids) = 6
+    HAVING length(hero_ids) = {team_size}
 )
 SELECT
     hero_ids,
