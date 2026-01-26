@@ -89,9 +89,6 @@ async fn update_row_policy(
         .join(", ");
     let policy_queries = [
         format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_pmh ON player_match_history AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
-        ),
-        format!(
             "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
         ),
         format!(
