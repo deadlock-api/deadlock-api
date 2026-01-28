@@ -126,6 +126,7 @@ pub enum GameMode {
 }
 
 impl GameMode {
+    #[allow(clippy::unnecessary_wraps)]
     pub fn default_option() -> Option<Self> {
         Some(Self::Normal)
     }
