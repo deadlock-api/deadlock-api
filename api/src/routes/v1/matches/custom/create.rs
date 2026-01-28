@@ -48,8 +48,8 @@ pub(super) struct CreateCustomRequest {
     #[serde(default)]
     #[param(default)]
     region_mode: Option<RegionMode>,
-    #[serde(default)]
-    #[param(default)]
+    #[serde(default = "GameMode::default_option")]
+    #[param(default = "normal")]
     game_mode: Option<GameMode>,
     #[serde(default)]
     #[param(default, minimum = 1, maximum = 12)]

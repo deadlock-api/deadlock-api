@@ -15,9 +15,9 @@ use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 pub(super) struct MateStatsQuery {
-    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
-    #[serde(default)]
-    #[param(inline)]
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
+    #[serde(default = "GameMode::default_option")]
+    #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,

@@ -28,9 +28,9 @@ pub(crate) struct PlayerPerformanceCurveQuery {
     #[param(minimum = 0, maximum = 100, default = 10)]
     #[serde(default = "default_resolution")]
     resolution: Option<u8>,
-    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
-    #[serde(default)]
-    #[param(inline)]
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
+    #[serde(default = "GameMode::default_option")]
+    #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]

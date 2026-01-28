@@ -21,9 +21,9 @@ pub(crate) struct HeroStatsQuery {
     #[param(inline, min_items = 1, max_items = 1000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u32>,
-    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
-    #[serde(default)]
-    #[param(inline)]
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
+    #[serde(default = "GameMode::default_option")]
+    #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]

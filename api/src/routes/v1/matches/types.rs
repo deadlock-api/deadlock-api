@@ -126,6 +126,10 @@ pub enum GameMode {
 }
 
 impl GameMode {
+    pub fn default_option() -> Option<Self> {
+        Some(Self::Normal)
+    }
+
     /// Returns a SQL filter clause for `game_mode`.
     /// If a specific game mode is provided, returns `game_mode = {value}`.
     /// If None, returns a filter for all valid game modes: `game_mode IN (1, 4)`.

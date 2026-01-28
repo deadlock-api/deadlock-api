@@ -64,9 +64,9 @@ pub(super) struct BulkMatchMetadataQuery {
     #[serde(default)]
     include_player_death_details: bool,
     // Parameters that influence what data is included in the response (WHERE)
-    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
-    #[serde(default)]
-    #[param(inline)]
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
+    #[serde(default = "GameMode::default_option")]
+    #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Comma separated list of match ids, limited by `limit`
     #[param(inline, min_items = 1, max_items = 1_000)]

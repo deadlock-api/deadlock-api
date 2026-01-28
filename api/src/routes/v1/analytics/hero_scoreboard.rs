@@ -28,9 +28,9 @@ pub(super) struct HeroScoreboardQuery {
     #[serde(default)]
     #[param(inline)]
     sort_direction: SortDirectionDesc,
-    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. If not specified, both are included.
-    #[serde(default)]
-    #[param(inline)]
+    /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
+    #[serde(default = "GameMode::default_option")]
+    #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Filter by min number of matches played.
     min_matches: Option<u32>,
