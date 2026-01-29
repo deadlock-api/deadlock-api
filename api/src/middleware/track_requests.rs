@@ -102,11 +102,7 @@ pub(crate) async fn track_requests(
     let path_str = matched_path.as_str();
     if !matches!(
         path_str,
-        "/" | "/docs"
-            | "/favicon.ico"
-            | "/robots.txt"
-            | "/metrics"
-            | "/openapi.json"
+        "/" | "/docs" | "/favicon.ico" | "/robots.txt" | "/metrics" | "/openapi.json"
     ) {
         let api_key_uuid = api_key.and_then(|k| {
             let stripped = k.strip_prefix("HEXE-").unwrap_or(&k);
