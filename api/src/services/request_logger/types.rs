@@ -23,6 +23,7 @@ pub(crate) struct RequestLog {
     /// User agent header
     pub user_agent: Option<String>,
     /// API key if provided (without the HEXE- prefix, just the UUID)
+    #[serde(with = "clickhouse::serde::uuid::option")]
     pub api_key: Option<Uuid>,
     /// Client IP address
     pub client_ip: Option<String>,
