@@ -72,6 +72,9 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     let state = AppState::from_env().await?;
     debug!("Application state loaded");
 
+    // Start the background request logger flush task
+    state.request_logger.clone().start_background_flush();
+
     let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
     prometheus_layer.enable_response_body_size();
 

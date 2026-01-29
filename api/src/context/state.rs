@@ -2,6 +2,7 @@ use core::time::Duration;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
+use std::sync::Arc;
 
 use object_store::aws::{AmazonS3, AmazonS3Builder};
 use object_store::{BackoffConfig, ClientOptions, RetryConfig};
@@ -14,6 +15,7 @@ use tracing::{debug, warn};
 use crate::context::config::Config;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::RateLimitClient;
+use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
 
 #[derive(Debug, Error)]
@@ -53,6 +55,7 @@ pub(crate) struct AppState {
     pub(crate) steam_client: SteamClient,
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
+    pub(crate) request_logger: Arc<RequestLogger>,
 }
 
 impl AppState {
@@ -256,6 +259,10 @@ impl AppState {
             config.emergency_mode,
         );
 
+        // Create a Request Logger
+        debug!("Creating Request Logger");
+        let request_logger = Arc::new(RequestLogger::new(ch_client.clone()));
+
         Ok(Self {
             config,
             s3_client,
@@ -269,6 +276,7 @@ impl AppState {
             steam_client,
             assets_client,
             rate_limit_client,
+            request_logger,
         })
     }
 }
