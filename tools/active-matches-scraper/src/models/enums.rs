@@ -55,6 +55,7 @@ impl From<u8> for GameMode {
             1 => GameMode::Normal,
             2 => GameMode::OneVsOneTest,
             3 => GameMode::Sandbox,
+            4 => GameMode::StreetBrawl,
             _ => GameMode::Invalid,
         }
     }
