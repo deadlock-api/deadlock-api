@@ -127,7 +127,7 @@ FROM active_matches
          ARRAY JOIN players.account_id as account_id
 WHERE account_id > 0
   AND match_mode IN ('Unranked', 'Ranked')
-  AND game_mode = 'Normal'
+  AND (game_mode = 'Normal' OR game_mode = 'StreetBrawl')
   AND start_time BETWEEN now() - INTERVAL 2 HOUR AND now() - INTERVAL 1 HOUR
   AND match_id NOT IN t_matches
   AND (account_id, match_id) NOT IN t_player_histories
