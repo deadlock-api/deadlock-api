@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, NavLink } from "react-router";
 
 export default function NavHeader() {
   return (
@@ -60,6 +60,15 @@ export default function NavHeader() {
             >
               Data Privacy
             </Link>
+            <NavLink
+              to="/chat"
+              prefetch="intent"
+              className={({ isActive }) =>
+                `text-lg font-medium hover:underline hover:text-primary transition-colors duration-100 ${isActive ? "text-primary underline" : ""}`
+              }
+            >
+              AI Chat
+            </NavLink>
             <a
               href="https://www.patreon.com/user?u=68961896"
               target="_blank"
