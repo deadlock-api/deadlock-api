@@ -93,12 +93,14 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
   const handleEnd = useCallback((_event: ChatEndEvent) => {
     setConversation((prev) => {
       // Create the completed assistant message from streaming content
+      // Include the tools that were used during this response
       const assistantMessage: Message = {
         id: currentAssistantMessageIdRef.current || generateMessageId(),
         role: "assistant",
         content: prev.currentStreamingMessage,
         timestamp: Date.now(),
         isStreaming: false,
+        tools: prev.activeTools.length > 0 ? prev.activeTools : undefined,
       };
 
       return {
@@ -332,6 +334,7 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
           content: prev.currentStreamingMessage,
           timestamp: Date.now(),
           isStreaming: false,
+          tools: prev.activeTools.length > 0 ? prev.activeTools : undefined,
         };
 
         return {

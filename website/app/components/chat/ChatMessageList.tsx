@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { Message, ToolExecution } from "~/types/chat";
 import { ChatMessage } from "./ChatMessage";
-import { ToolIndicatorList } from "./ToolIndicator";
 
 interface ChatMessageListProps {
   messages: Message[];
@@ -32,6 +31,7 @@ export function ChatMessageList({
   }, [messageCount, lastMessageId, streamingLength, toolCount]);
 
   // Create a temporary streaming message to display while AI is responding
+  // Include activeTools so they display consistently with completed messages
   const streamingMessage: Message | null = isStreaming
     ? {
         id: "streaming-message",
@@ -39,6 +39,7 @@ export function ChatMessageList({
         content: currentStreamingMessage || "",
         timestamp: Date.now(),
         isStreaming: true,
+        tools: activeTools.length > 0 ? activeTools : undefined,
       }
     : null;
 
@@ -48,8 +49,6 @@ export function ChatMessageList({
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
-        {/* Tool indicators shown inline during streaming */}
-        {isStreaming && activeTools.length > 0 && <ToolIndicatorList tools={activeTools} />}
         {streamingMessage && (
           <ChatMessage
             key="streaming"

@@ -11,6 +11,7 @@ export interface Message {
   content: string;
   timestamp: number;
   isStreaming?: boolean;
+  tools?: ToolExecution[];
 }
 
 // Tool Execution Types
