@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { cn } from "~/lib/utils";
 import type { Message } from "~/types/chat";
+import { ToolIndicatorList } from "./ToolIndicator";
 
 interface ChatMessageProps {
   message: Message;
@@ -30,6 +31,12 @@ export function ChatMessage({ message, isStreaming, streamingContent }: ChatMess
 
       {/* Message bubble */}
       <div className={cn("flex flex-col gap-1 max-w-[90%]", isUser ? "items-end" : "items-start")}>
+        {/* Tools used for this message (shown above the bubble for assistant messages) */}
+        {!isUser && message.tools && message.tools.length > 0 && (
+          <div className="mb-1">
+            <ToolIndicatorList tools={message.tools} />
+          </div>
+        )}
         <div
           className={cn(
             "rounded-lg px-4 py-2 text-sm",
