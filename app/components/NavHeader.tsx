@@ -47,6 +47,13 @@ export default function NavHeader() {
               Player
             </Link>
             <Link
+              to="/chat"
+              prefetch="intent"
+              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+            >
+              AI Chat
+            </Link>
+            <Link
               to="/ingest-cache"
               prefetch="intent"
               className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
@@ -60,15 +67,6 @@ export default function NavHeader() {
             >
               Data Privacy
             </Link>
-            <NavLink
-              to="/chat"
-              prefetch="intent"
-              className={({ isActive }) =>
-                `text-lg font-medium hover:underline hover:text-primary transition-colors duration-100 ${isActive ? "text-primary underline" : ""}`
-              }
-            >
-              AI Chat
-            </NavLink>
             <a
               href="https://www.patreon.com/user?u=68961896"
               target="_blank"
