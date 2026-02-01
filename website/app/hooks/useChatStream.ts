@@ -87,7 +87,7 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
       ...prev,
       currentStreamingMessage: event.content,
     }));
-  }, []);;
+  }, []);
 
   // Handle SSE end event
   const handleEnd = useCallback((_event: ChatEndEvent) => {
@@ -315,7 +315,7 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
       // Start the connection
       sse.stream();
     },
-    [isDev, turnstileToken, conversation.conversationId, effectiveApiUrl, handleSSEMessage],
+    [turnstileToken, conversation.conversationId, effectiveApiUrl, handleSSEMessage],
   );
 
   // Stop streaming (cancel SSE connection)

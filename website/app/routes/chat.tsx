@@ -61,7 +61,7 @@ export default function ChatPage() {
     clearError();
     // In development, just reset to bypass token
     setTurnstileToken(isDev ? "DEV_BYPASS" : null);
-  }, [clearError, isDev]);
+  }, [clearError]);
 
   return (
     <div className="flex flex-col h-[85vh] w-full">

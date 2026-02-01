@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router";
+import { Link } from "react-router";
 
 export default function NavHeader() {
   return (
