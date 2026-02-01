@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "highlight.js/styles/github-dark.min.css";
 
 @plugin "@iconify/tailwind4"; /* Not unused, this is used for icons */
 
