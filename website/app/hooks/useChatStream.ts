@@ -85,9 +85,9 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
   const handleDelta = useCallback((event: ChatDeltaEvent) => {
     setConversation((prev) => ({
       ...prev,
-      currentStreamingMessage: prev.currentStreamingMessage + event.content,
+      currentStreamingMessage: event.content,
     }));
-  }, []);
+  }, []);;
 
   // Handle SSE end event
   const handleEnd = useCallback((_event: ChatEndEvent) => {
