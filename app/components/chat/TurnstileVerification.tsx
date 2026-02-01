@@ -62,7 +62,7 @@ export function TurnstileVerification({ onVerified }: TurnstileVerificationProps
   }
 
   return (
-    <Card className="max-w-md mx-auto">
+    <Card className="max-w-md mx-auto min-w-sm">
       <CardHeader className="text-center">
         <div className="flex justify-center mb-2">
           <ShieldCheck className="h-8 w-8 text-primary" />
