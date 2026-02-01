@@ -4,6 +4,7 @@ import { type BoundTurnstileObject, Turnstile } from "react-turnstile";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Spinner } from "~/components/ui/spinner";
 
 interface TurnstileVerificationProps {
   onVerified: (token: string) => void;
@@ -98,7 +99,12 @@ export function TurnstileVerification({ onVerified }: TurnstileVerificationProps
           />
         </div>
 
-        {isLoading && !error && <p className="text-sm text-muted-foreground">Loading verification...</p>}
+        {isLoading && !error && (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Spinner />
+            <p className="text-sm">Verifying...</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
