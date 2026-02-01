@@ -49,7 +49,7 @@ export function TurnstileVerification({ onVerified }: TurnstileVerificationProps
     turnstileRef.current?.reset();
   }, []);
 
-  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAABs5lyUV9iomsdK2";
 
   if (!siteKey) {
     return (
