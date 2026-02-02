@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import NavHeader from "~/components/NavHeader";
+import { PatreonAuthProvider } from "~/contexts/PatreonAuthContext";
 import "@fontsource-variable/inter";
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 
@@ -72,17 +73,19 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <NuqsAdapter>
-        <NavHeader />
+      <PatreonAuthProvider>
+        <NuqsAdapter>
+          <NavHeader />
 
-        <main className="flex justify-center items-start">
-          <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
-            <Outlet />
-          </div>
-        </main>
+          <main className="flex justify-center items-start">
+            <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
+              <Outlet />
+            </div>
+          </main>
 
-        <ReactQueryDevtools initialIsOpen={false} />
-      </NuqsAdapter>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </NuqsAdapter>
+      </PatreonAuthProvider>
     </QueryClientProvider>
   );
 }
