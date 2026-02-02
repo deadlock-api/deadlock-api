@@ -19,6 +19,8 @@ import type {
 interface UseChatStreamOptions {
   turnstileToken: string | null;
   apiUrl?: string;
+  /** Callback to sync rate limit headers from responses */
+  onRateLimitHeaders?: (headers: Headers) => void;
 }
 
 interface UseChatStreamReturn {
@@ -47,7 +49,11 @@ function generateToolExecutionId(): string {
   return `tool-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
-export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions): UseChatStreamReturn {
+export function useChatStream({
+  turnstileToken,
+  apiUrl,
+  onRateLimitHeaders,
+}: UseChatStreamOptions): UseChatStreamReturn {
   const isDev = import.meta.env.DEV;
   const defaultApiUrl = import.meta.env.VITE_AI_ASSISTANT_API_URL || "https://ai-assistant.deadlock-api.com";
   const effectiveApiUrl = apiUrl || defaultApiUrl;
@@ -200,8 +206,13 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
   // Send a message to the chat API
   const sendMessage = useCallback(
     (message: string) => {
-      // In development mode, skip Turnstile verification
-      if (!isDev && !turnstileToken) {
+      // Check for Patreon token first (takes priority over Turnstile)
+      const patreonToken = localStorage.getItem("patreon_token");
+      const hasPatreonAuth = !!patreonToken;
+
+      // In development mode, skip verification requirements
+      // In production, require either Patreon token or Turnstile token
+      if (!isDev && !hasPatreonAuth && !turnstileToken) {
         setConversation((prev) => ({
           ...prev,
           error: {
@@ -245,11 +256,13 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
         conversation_id: conversation.conversationId,
       });
 
-      // In development mode, don't send the Turnstile token header
+      // Build headers: Patreon token takes priority over Turnstile
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      if (!isDev && turnstileToken) {
+      if (hasPatreonAuth) {
+        headers["X-Patreon-Token"] = patreonToken;
+      } else if (!isDev && turnstileToken) {
         headers["cf-turnstile-response"] = turnstileToken;
       }
 
@@ -271,6 +284,19 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
         // Check if we have a response code that indicates an error
         const responseCode = event.responseCode || 0;
 
+        // Try to parse rate limit headers from the response if available
+        // and call the callback even on error responses
+        if (onRateLimitHeaders && event.headers) {
+          // event.headers is Record<string, string[]> - convert to Headers-like interface
+          const headersObj: Headers = {
+            get: (name: string) => {
+              const values = event.headers?.[name.toLowerCase()];
+              return values && values.length > 0 ? values[0] : null;
+            },
+          } as Headers;
+          onRateLimitHeaders(headersObj);
+        }
+
         let errorMessage = "Connection error. Please try again.";
         let errorCode = "INTERNAL_ERROR";
         let isRetryable = true;
@@ -282,6 +308,10 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
         } else if (responseCode === 400) {
           errorMessage = "Invalid request. Please check your message and try again.";
           errorCode = "VALIDATION_ERROR";
+          isRetryable = false;
+        } else if (responseCode === 429) {
+          errorMessage = "You've reached your rate limit. Please try again later.";
+          errorCode = "RATE_LIMIT_EXCEEDED";
           isRetryable = false;
         } else if (responseCode >= 500) {
           errorMessage = "Server error. Please try again later.";
@@ -315,7 +345,7 @@ export function useChatStream({ turnstileToken, apiUrl }: UseChatStreamOptions):
       // Start the connection
       sse.stream();
     },
-    [turnstileToken, conversation.conversationId, effectiveApiUrl, handleSSEMessage],
+    [turnstileToken, conversation.conversationId, effectiveApiUrl, handleSSEMessage, onRateLimitHeaders],
   );
 
   // Stop streaming (cancel SSE connection)
