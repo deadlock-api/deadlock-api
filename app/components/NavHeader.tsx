@@ -13,7 +13,6 @@ export default function NavHeader() {
               height={36}
               className="aspect-square object-contain"
             />
-            <h1 className="lg:text-3xl font-bold tracking-tight text-lg text-nowrap">Deadlock API</h1>
           </span>
         </Link>
         <div className="flex flex-wrap md:flex-nowrap items-center gap-6 gap-y-12">
@@ -40,13 +39,6 @@ export default function NavHeader() {
               Items
             </Link>
             <Link
-              to="/player"
-              prefetch="intent"
-              className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
-            >
-              Player
-            </Link>
-            <Link
               to="/chat"
               prefetch="intent"
               className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
@@ -67,30 +59,32 @@ export default function NavHeader() {
             >
               Data Privacy
             </Link>
-            <a
-              href="https://www.patreon.com/user?u=68961896"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
-              title="Support us (external)"
-            >
-              Support us
-              <svg
-                className="w-4 h-4 inline"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </a>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center">
+          <a
+            href="https://www.patreon.com/user?u=68961896"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 text-gray-500 hover:text-[#f96854] rounded flex items-center"
+            title="Support us on Patreon"
+            aria-label="Support us on Patreon"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 180 180"
+              aria-hidden={true}
+            >
+              <path
+                fill="currentColor"
+                d="M108.8135992 26.06720125c-26.468266 0-48.00213212 21.53066613-48.00213212 47.99733213 0 26.38653268 21.53386613 47.85426547 48.00213213 47.85426547 26.38639937 0 47.8530655-21.4677328 47.8530655-47.85426547 0-26.466666-21.46666613-47.99733213-47.85306547-47.99733213"
+              />
+              <path fill="currentColor" d="M23.333335 153.93333178V26.0666679h23.46666576v127.8666639z" />
+            </svg>
+          </a>
           <a
             href="https://stats.uptimerobot.com/V1HIfGQT77"
             target="_blank"
