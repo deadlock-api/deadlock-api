@@ -59,8 +59,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "sse.js": "^2.7.2",
-    "tailwind-merge": "^3.4.0",
-    "zod": "^4.3.6"
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
