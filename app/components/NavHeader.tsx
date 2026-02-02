@@ -3,7 +3,7 @@ import { Link } from "react-router";
 export default function NavHeader() {
   return (
     <header className="px-8 py-4 bg-gray-900 shadow">
-      <div className="mx-auto flex flex-wrap sm:flex-nowrap items-center justify-between gap-6">
+      <div className="mx-auto flex flex-wrap md:flex-nowrap items-center justify-between gap-6">
         <Link to="/" prefetch="intent" className="text-lg font-medium text-white">
           <span className="flex gap-2 items-center">
             <img
@@ -13,10 +13,10 @@ export default function NavHeader() {
               height={36}
               className="aspect-square object-contain"
             />
-            <h1 className="lg:text-3xl font-bold tracking-tight text-lg">Deadlock API</h1>
+            <h1 className="lg:text-3xl font-bold tracking-tight text-lg text-nowrap">Deadlock API</h1>
           </span>
         </Link>
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-6 gap-y-12">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-6 gap-y-12">
           <nav className="flex items-center gap-6 flex-wrap">
             <Link
               to="/"
