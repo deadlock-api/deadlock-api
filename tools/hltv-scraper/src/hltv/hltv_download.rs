@@ -140,7 +140,7 @@ async fn get_initial_sync(
                 || resp.status() == reqwest::StatusCode::METHOD_NOT_ALLOWED
             {
                 counter!(format!("hltv.initial_sync.http.{}", resp.status().as_u16())).increment(1);
-                if start_time.elapsed() >= Duration::from_secs(120) {
+                if start_time.elapsed() >= Duration::from_mins(2) {
                     return Err(DownloadError::SyncNotAvailable(
                         resp.error_for_status().err(),
                     ));

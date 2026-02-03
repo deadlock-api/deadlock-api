@@ -1,8 +1,9 @@
-use crate::models::enums::Team;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players};
+
+use crate::models::enums::Team;
 
 #[derive(Serialize_repr, Deserialize_repr, Copy, Clone, PartialEq, Debug, Default)]
 #[repr(i8)]

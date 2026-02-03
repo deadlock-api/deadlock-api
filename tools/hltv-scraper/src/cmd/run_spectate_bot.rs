@@ -388,7 +388,7 @@ impl SpectatorBot {
 
         let (abort_handle, steam_inf) = start_polling_text(
             "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_string(),
-            Duration::from_secs(60 * 5),
+            Duration::from_mins(5),
         ).await;
 
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
@@ -580,7 +580,7 @@ pub(crate) async fn run_bot(
     loop {
         if let Err(e) = bot.run(max_spectating_matches).await {
             error!("Bot error, restarting in 2 minutes: {:?}", e);
-            sleep(Duration::from_secs(120)).await;
+            sleep(Duration::from_mins(2)).await;
         }
     }
 }

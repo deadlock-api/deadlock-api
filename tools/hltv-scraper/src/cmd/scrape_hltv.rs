@@ -82,7 +82,7 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
                 "no current match to watch... {current_count} in progress \
                  ({total_available_matches} total possible to spectate)"
             );
-            sleep(Duration::from_millis(10000)).await;
+            sleep(Duration::from_secs(10)).await;
             continue;
         };
 

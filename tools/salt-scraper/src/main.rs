@@ -28,8 +28,7 @@ mod models;
 
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("SALTS_COOLDOWN_MILLIS")
-        .map(|x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
-        .unwrap_or(24 * 60 * 60 * 1000 / 100)
+        .map_or(24 * 60 * 60 * 1000 / 100, |x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
 });
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
@@ -71,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
         let recent_matches: Vec<u64> = ch_client.query(query).fetch_all().await?;
         if recent_matches.is_empty() {
             info!("No new matches to fetch, sleeping 60s...");
-            tokio::time::sleep(Duration::from_secs(60)).await;
+            tokio::time::sleep(Duration::from_mins(1)).await;
             continue;
         }
         info!("Found {} matches to fetch", recent_matches.len());
