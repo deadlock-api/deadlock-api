@@ -22,9 +22,9 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             OpenApiRouter::new()
                 .routes(routes!(matches::matches))
                 .layer(
-                    CacheControlMiddleware::new(Duration::from_secs(10 * 60))
-                        .with_stale_while_revalidate(Duration::from_secs(60 * 60))
-                        .with_stale_if_error(Duration::from_secs(60 * 60)),
+                    CacheControlMiddleware::new(Duration::from_mins(10))
+                        .with_stale_while_revalidate(Duration::from_hours(1))
+                        .with_stale_if_error(Duration::from_hours(1)),
                 ),
         )
 }

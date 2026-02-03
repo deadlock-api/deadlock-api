@@ -22,8 +22,8 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(big_patch_days::big_patch_days))
         .routes(routes!(feed::feed))
         .layer(
-            CacheControlMiddleware::new(Duration::from_secs(60 * 60))
-                .with_stale_while_revalidate(Duration::from_secs(60 * 60))
-                .with_stale_if_error(Duration::from_secs(60 * 60)),
+            CacheControlMiddleware::new(Duration::from_hours(1))
+                .with_stale_while_revalidate(Duration::from_hours(1))
+                .with_stale_if_error(Duration::from_hours(1)),
         )
 }

@@ -34,8 +34,8 @@ pub(super) async fn insert_salts_to_clickhouse(
                 salt.metadata_salt.is_some(),
                 salt.replay_salt.is_some(),
             ),
-            Arc::new(Mutex::new(TimedCache::with_lifespan(Duration::from_secs(
-                60 * 60,
+            Arc::new(Mutex::new(TimedCache::with_lifespan(Duration::from_hours(
+                1,
             )))),
         );
     }

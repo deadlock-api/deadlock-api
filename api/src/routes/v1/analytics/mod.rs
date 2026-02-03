@@ -53,9 +53,9 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                     .routes(routes!(hero_scoreboard::hero_scoreboard)),
             )
             .layer(
-                CacheControlMiddleware::new(Duration::from_secs(60 * 60))
-                    .with_stale_while_revalidate(Duration::from_secs(12 * 60 * 60))
-                    .with_stale_if_error(Duration::from_secs(24 * 60 * 60)),
+                CacheControlMiddleware::new(Duration::from_hours(1))
+                    .with_stale_while_revalidate(Duration::from_hours(12))
+                    .with_stale_if_error(Duration::from_hours(24)),
             ),
     )
 }

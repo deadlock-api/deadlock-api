@@ -154,8 +154,8 @@ pub(super) async fn command_resolve(
             &rate_limit_key,
             "command",
             &[
-                Quota::ip_limit(60, core::time::Duration::from_secs(60)),
-                Quota::global_limit(300, core::time::Duration::from_secs(60)),
+                Quota::ip_limit(60, core::time::Duration::from_mins(1)),
+                Quota::global_limit(300, core::time::Duration::from_mins(1)),
             ],
         )
         .await?;
@@ -256,8 +256,8 @@ pub(super) async fn variables_resolve(
             &rate_limit_key,
             "command",
             &[
-                Quota::ip_limit(60, core::time::Duration::from_secs(60)),
-                Quota::global_limit(300, core::time::Duration::from_secs(60)),
+                Quota::ip_limit(60, core::time::Duration::from_mins(1)),
+                Quota::global_limit(300, core::time::Duration::from_mins(1)),
             ],
         )
         .await?;

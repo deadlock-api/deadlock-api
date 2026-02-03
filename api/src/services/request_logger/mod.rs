@@ -8,7 +8,6 @@ use clickhouse::Client;
 use tokio::sync::Mutex;
 use tokio::time::interval;
 use tracing::{debug, error, info, warn};
-
 pub(crate) use types::RequestLog;
 
 const FLUSH_INTERVAL_SECS: u64 = 10;

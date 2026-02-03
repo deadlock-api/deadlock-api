@@ -106,8 +106,8 @@ pub(super) async fn url(
             &rate_limit_key,
             "spectate",
             &[
-                Quota::ip_limit(10, Duration::from_secs(30 * 60)),
-                Quota::key_limit(60, Duration::from_secs(60)),
+                Quota::ip_limit(10, Duration::from_mins(30)),
+                Quota::key_limit(60, Duration::from_mins(1)),
                 Quota::global_limit(100, Duration::from_secs(10)),
             ],
         )

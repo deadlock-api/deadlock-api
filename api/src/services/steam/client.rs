@@ -357,8 +357,8 @@ async fn fetch_steam_account_name_cached(
             rate_limit_key,
             "steam_account_name",
             &[
-                Quota::ip_limit(50, Duration::from_secs(60 * 60)),
-                Quota::global_limit(500, Duration::from_secs(60 * 60)),
+                Quota::ip_limit(50, Duration::from_hours(1)),
+                Quota::global_limit(500, Duration::from_hours(1)),
             ],
         )
         .await

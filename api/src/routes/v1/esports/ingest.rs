@@ -65,8 +65,8 @@ pub(super) async fn ingest_match(
             &rate_limit_key,
             "esports_match_ingest",
             &[
-                Quota::key_limit(1000, Duration::from_secs(60 * 60)),
-                Quota::global_limit(10000, Duration::from_secs(60 * 60)),
+                Quota::key_limit(1000, Duration::from_hours(1)),
+                Quota::global_limit(10000, Duration::from_hours(1)),
             ],
         )
         .await?;

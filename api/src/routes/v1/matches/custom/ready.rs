@@ -53,8 +53,8 @@ pub(super) async fn ready_up(
             &rate_limit_key,
             "ready_up",
             &[
-                Quota::key_limit(100, Duration::from_secs(30 * 60)),
-                Quota::global_limit(1000, Duration::from_secs(60 * 60)),
+                Quota::key_limit(100, Duration::from_mins(30)),
+                Quota::global_limit(1000, Duration::from_hours(1)),
             ],
         )
         .await?;
@@ -108,8 +108,8 @@ pub(super) async fn unready(
             &rate_limit_key,
             "unready",
             &[
-                Quota::key_limit(100, Duration::from_secs(30 * 60)),
-                Quota::global_limit(1000, Duration::from_secs(60 * 60)),
+                Quota::key_limit(100, Duration::from_mins(30)),
+                Quota::global_limit(1000, Duration::from_hours(1)),
             ],
         )
         .await?;

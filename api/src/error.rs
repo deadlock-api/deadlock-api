@@ -233,7 +233,7 @@ mod tests {
     fn test_api_error_rate_limit_exceeded() {
         use chrono::Utc;
 
-        let quota = rate_limiter::Quota::ip_limit(100, Duration::from_secs(60));
+        let quota = rate_limiter::Quota::ip_limit(100, Duration::from_mins(1));
         let status = rate_limiter::Status {
             quota,
             requests: 100,

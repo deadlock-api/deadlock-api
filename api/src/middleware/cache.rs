@@ -139,7 +139,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_max_age() {
-        let layer = CacheControlMiddleware::new(Duration::from_secs(60));
+        let layer = CacheControlMiddleware::new(Duration::from_mins(1));
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 
         let response = app
@@ -156,8 +156,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_stale_while_revalidate() {
-        let layer = CacheControlMiddleware::new(Duration::from_secs(60))
-            .with_stale_while_revalidate(Duration::from_secs(60));
+        let layer = CacheControlMiddleware::new(Duration::from_mins(1))
+            .with_stale_while_revalidate(Duration::from_mins(1));
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 
         let response = app
@@ -174,8 +174,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_stale_if_error() {
-        let layer = CacheControlMiddleware::new(Duration::from_secs(60))
-            .with_stale_if_error(Duration::from_secs(60));
+        let layer = CacheControlMiddleware::new(Duration::from_mins(1))
+            .with_stale_if_error(Duration::from_mins(1));
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 
         let response = app

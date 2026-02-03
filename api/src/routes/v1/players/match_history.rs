@@ -319,9 +319,9 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history_refetch",
                 &[
-                    Quota::ip_limit(1, Duration::from_secs(60 * 60)),
-                    Quota::key_limit(5, Duration::from_secs(60 * 60)),
-                    Quota::global_limit(10, Duration::from_secs(60 * 60)),
+                    Quota::ip_limit(1, Duration::from_hours(1)),
+                    Quota::key_limit(5, Duration::from_hours(1)),
+                    Quota::global_limit(10, Duration::from_hours(1)),
                 ],
             )
             .await
@@ -332,10 +332,10 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history",
                 &[
-                    Quota::ip_limit(3, Duration::from_secs(60)),
-                    Quota::key_limit(20, Duration::from_secs(60)),
-                    Quota::key_limit(400, Duration::from_secs(60 * 60)),
-                    Quota::global_limit(1000, Duration::from_secs(60 * 60)),
+                    Quota::ip_limit(3, Duration::from_mins(1)),
+                    Quota::key_limit(20, Duration::from_mins(1)),
+                    Quota::key_limit(400, Duration::from_hours(1)),
+                    Quota::global_limit(1000, Duration::from_hours(1)),
                 ],
             )
             .await

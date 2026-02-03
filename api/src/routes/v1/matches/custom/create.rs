@@ -141,7 +141,7 @@ async fn create_party(
             msg,
             in_all_groups: None,
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(2 * 60 * 60),
+            cooldown_time: Duration::from_hours(2),
             request_timeout: Duration::from_secs(2),
             username: None,
             soft_cooldown_millis: None,
@@ -270,8 +270,8 @@ pub(super) async fn create_custom(
             &rate_limit_key,
             "create_custom",
             &[
-                Quota::key_limit(100, Duration::from_secs(30 * 60)),
-                Quota::global_limit(1000, Duration::from_secs(60 * 60)),
+                Quota::key_limit(100, Duration::from_mins(30)),
+                Quota::global_limit(1000, Duration::from_hours(1)),
             ],
         )
         .await?;
@@ -326,7 +326,7 @@ pub(super) async fn create_custom(
     let steam_client = state.steam_client.clone();
     let username_clone = username.clone();
     tokio::spawn(async move {
-        sleep(Duration::from_secs(15 * 60)).await; // Wait for 15 minutes
+        sleep(Duration::from_mins(15)).await; // Wait for 15 minutes
 
         // Leave the party
         let result = leave_party(&steam_client, username_clone, party_id).await;
