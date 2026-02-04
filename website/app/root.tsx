@@ -9,6 +9,7 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import NavHeader from "~/components/NavHeader";
 import { Toaster } from "~/components/ui/sonner";
 import { PatreonAuthProvider } from "~/contexts/PatreonAuthContext";
+import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import "@fontsource-variable/inter";
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 
@@ -75,18 +76,20 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PatreonAuthProvider>
-        <NuqsAdapter>
-          <NavHeader />
+        <PatronAuthProvider>
+          <NuqsAdapter>
+            <NavHeader />
 
-          <main className="flex justify-center items-start">
-            <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
-              <Outlet />
-            </div>
-          </main>
+            <main className="flex justify-center items-start">
+              <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
+                <Outlet />
+              </div>
+            </main>
 
-          <ReactQueryDevtools initialIsOpen={false} />
-          <Toaster />
-        </NuqsAdapter>
+            <ReactQueryDevtools initialIsOpen={false} />
+            <Toaster />
+          </NuqsAdapter>
+        </PatronAuthProvider>
       </PatreonAuthProvider>
     </QueryClientProvider>
   );

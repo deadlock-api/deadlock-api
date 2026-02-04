@@ -35,7 +35,7 @@ import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { usePatreonAuth } from "~/hooks/usePatreonAuth";
+import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { parseSteamIdInput, steamId3ToSteamId64 } from "~/lib/patron-api";
 import {
   useAddSteamAccount,
@@ -873,7 +873,7 @@ function AuthenticatedDashboard() {
 }
 
 export default function PatronPage() {
-  const { isAuthenticated, isLoading, login } = usePatreonAuth();
+  const { isAuthenticated, isLoading, login } = usePatronAuth();
 
   if (isLoading) {
     return <PatronPageSkeleton />;
