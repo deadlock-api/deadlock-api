@@ -173,7 +173,7 @@ pub(crate) fn calculate_slot_limit(
     slot_override: Option<i32>,
     pledge_amount_cents: Option<i32>,
 ) -> i32 {
-    slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 100).min(10))
+    slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 200).min(10))
 }
 
 /// Error type for token encryption/decryption
