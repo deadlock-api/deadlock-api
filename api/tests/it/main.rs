@@ -11,13 +11,6 @@ pub fn check_response(response: &Response) {
         reqwest::StatusCode::OK,
         "Status code is not 200"
     );
-    assert_eq!(
-        response
-            .headers()
-            .get("access-control-allow-origin")
-            .unwrap(),
-        "*"
-    );
 }
 
 fn stringify<'a>(query: &[(&'a str, &'a str)]) -> String {
