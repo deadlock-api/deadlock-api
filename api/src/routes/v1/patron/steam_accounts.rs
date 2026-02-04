@@ -99,10 +99,7 @@ pub(crate) async fn add_steam_account(
             APIError::internal("Patron record not found")
         })?;
 
-    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
-    let slot_limit = patron
-        .slot_override
-        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+    let slot_limit = patron.slot_limit();
 
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
@@ -200,10 +197,7 @@ pub(crate) async fn list_steam_accounts(
             APIError::internal("Patron record not found")
         })?;
 
-    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
-    let total_slots = patron
-        .slot_override
-        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+    let total_slots = patron.slot_limit();
 
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
@@ -419,10 +413,7 @@ pub(crate) async fn reactivate_steam_account(
             APIError::internal("Patron record not found")
         })?;
 
-    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
-    let slot_limit = patron
-        .slot_override
-        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+    let slot_limit = patron.slot_limit();
 
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 

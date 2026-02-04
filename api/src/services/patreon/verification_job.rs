@@ -11,7 +11,7 @@ use tracing::{error, info, warn};
 use super::client::PatreonClient;
 use super::repository::PatronRepository;
 use super::steam_accounts_repository::SteamAccountsRepository;
-use super::types::Patron;
+use super::types::{Patron, calculate_slot_limit};
 
 /// Interval between verification runs (24 hours)
 const VERIFICATION_INTERVAL_SECS: u64 = 24 * 60 * 60;
@@ -359,9 +359,7 @@ impl PatreonVerificationJob {
         }
 
         let accounts_to_delete = if is_active {
-            // Calculate new slot limit: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
-            let new_slot_limit =
-                slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 100).min(10));
+            let new_slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents);
             // Safe cast: practical slot limits will never exceed i32::MAX
             let active_count = active_accounts.len() as i32;
 

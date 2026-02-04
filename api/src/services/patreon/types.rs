@@ -157,6 +157,25 @@ pub(crate) struct Patron {
     pub(crate) updated_at: DateTime<Utc>,
 }
 
+impl Patron {
+    /// Calculates the number of Steam account slots for this patron.
+    ///
+    /// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 100` capped at 10.
+    pub(crate) fn slot_limit(&self) -> i32 {
+        calculate_slot_limit(self.slot_override, self.pledge_amount_cents)
+    }
+}
+
+/// Calculates the number of Steam account slots from raw values.
+///
+/// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 100` capped at 10.
+pub(crate) fn calculate_slot_limit(
+    slot_override: Option<i32>,
+    pledge_amount_cents: Option<i32>,
+) -> i32 {
+    slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 100).min(10))
+}
+
 /// Error type for token encryption/decryption
 #[derive(Debug, Error)]
 pub(crate) enum TokenCryptoError {
