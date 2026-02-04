@@ -17,6 +17,7 @@ pub(crate) struct CacheControlMiddleware {
     max_age: Duration,
     stale_while_revalidate: Option<Duration>,
     stale_if_error: Option<Duration>,
+    is_private: bool,
 }
 
 impl CacheControlMiddleware {
@@ -25,7 +26,13 @@ impl CacheControlMiddleware {
             max_age,
             stale_while_revalidate: None,
             stale_if_error: None,
+            is_private: false,
         }
+    }
+
+    pub(crate) fn private(mut self) -> Self {
+        self.is_private = true;
+        self
     }
 
     pub(crate) fn with_stale_while_revalidate(mut self, stale_while_revalidate: Duration) -> Self {
@@ -43,7 +50,11 @@ impl CacheControlMiddleware {
         if self.max_age.as_secs() == 0 {
             return Ok(HeaderValue::from_static("no-cache"));
         }
-        write!(&mut header_value, "public").ok();
+        if self.is_private {
+            write!(&mut header_value, "private").ok();
+        } else {
+            write!(&mut header_value, "public").ok();
+        }
         write!(&mut header_value, ", max-age={}", self.max_age.as_secs()).ok();
         if let Some(stale_while_revalidate) = self.stale_while_revalidate {
             write!(
@@ -151,6 +162,23 @@ mod tests {
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
             "public, max-age=60"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_private() {
+        let layer = CacheControlMiddleware::new(Duration::from_mins(1)).private();
+        let app = Router::new().route("/", get(test_handler)).layer(layer);
+
+        let response = app
+            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(CACHE_CONTROL).unwrap(),
+            "private, max-age=60"
         );
     }
 

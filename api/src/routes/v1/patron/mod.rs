@@ -1,7 +1,10 @@
+use core::time::Duration;
+
 use axum::routing::{delete, get, post};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::context::AppState;
+use crate::middleware::cache::CacheControlMiddleware;
 
 mod status;
 mod steam_accounts;
@@ -21,4 +24,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             "/steam-accounts/{account_id}/reactivate",
             post(steam_accounts::reactivate_steam_account),
         )
+        .layer(CacheControlMiddleware::new(Duration::from_secs(60)).private())
 }
