@@ -1,6 +1,8 @@
 import { Link } from "react-router";
+import { usePatreonAuth } from "~/hooks/usePatreonAuth";
 
 export default function NavHeader() {
+  const { isAuthenticated } = usePatreonAuth();
   return (
     <header className="px-8 py-4 bg-gray-900 shadow">
       <div className="mx-auto flex flex-wrap md:flex-nowrap items-center justify-between gap-6">
@@ -59,6 +61,15 @@ export default function NavHeader() {
             >
               Data Privacy
             </Link>
+            {isAuthenticated && (
+              <Link
+                to="/patron"
+                prefetch="intent"
+                className="text-lg font-medium hover:underline hover:text-primary transition-colors duration-100"
+              >
+                Patron
+              </Link>
+            )}
           </nav>
         </div>
         <div className="flex items-center">
