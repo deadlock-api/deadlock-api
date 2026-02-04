@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import NavHeader from "~/components/NavHeader";
+import { Toaster } from "~/components/ui/sonner";
 import { PatreonAuthProvider } from "~/contexts/PatreonAuthContext";
 import "@fontsource-variable/inter";
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
@@ -84,6 +85,7 @@ export default function App() {
           </main>
 
           <ReactQueryDevtools initialIsOpen={false} />
+          <Toaster />
         </NuqsAdapter>
       </PatreonAuthProvider>
     </QueryClientProvider>
