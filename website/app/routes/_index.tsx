@@ -5,12 +5,15 @@ import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { usePatreonAuth } from "~/hooks/usePatreonAuth";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Deadlock API" }, { name: "description", content: "Match Data, Player Data, and more" }];
 };
 
 export default function Index() {
+  const { isAuthenticated, isOAuthAvailable, login, isLoading } = usePatreonAuth();
+
   return (
     <div className="container mx-auto space-y-12">
       <section className="text-center">
@@ -126,6 +129,34 @@ export default function Index() {
           </Card>
         </div>
       </section>
+
+      {!isAuthenticated && isOAuthAvailable && !isLoading && (
+        <section className="text-center">
+          <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5">
+            <CardHeader>
+              <CardTitle className="text-2xl text-amber-400">Prioritized Fetching</CardTitle>
+              <CardDescription className="text-base">
+                Get faster API responses with priority queue access
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                As a Patreon supporter, your API requests are processed with higher priority, ensuring faster response
+                times even during peak usage. Support the project and enjoy a smoother experience with prioritized data
+                fetching.
+              </p>
+            </CardContent>
+            <CardFooter className="justify-center">
+              <Button
+                onClick={login}
+                className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8"
+              >
+                Enable Prioritized Fetching
+              </Button>
+            </CardFooter>
+          </Card>
+        </section>
+      )}
 
       <section className="text-center">
         <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Game Statistics Snapshot</h2>

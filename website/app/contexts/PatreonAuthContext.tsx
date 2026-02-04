@@ -105,6 +105,10 @@ export function PatreonAuthProvider({ children }: PatreonAuthProviderProps) {
   }, [clearToken]);
 
   const login = useCallback(() => {
+    // Store current path to redirect back after login
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("patreon_redirect_path", window.location.pathname);
+    }
     window.location.href = `${API_URL}/auth/patreon`;
   }, []);
 
