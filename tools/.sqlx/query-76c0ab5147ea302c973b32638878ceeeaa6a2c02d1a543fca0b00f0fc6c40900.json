@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT psa.steam_id3\n        FROM prioritized_steam_accounts psa\n        LEFT JOIN patrons p ON psa.patron_id = p.id\n        WHERE psa.steam_id3 = ANY($1)\n          AND psa.deleted_at IS NULL\n          AND (psa.patron_id IS NULL OR p.is_active = TRUE)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "76c0ab5147ea302c973b32638878ceeeaa6a2c02d1a543fca0b00f0fc6c40900"
+}

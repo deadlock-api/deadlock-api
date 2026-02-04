@@ -1,22 +1,24 @@
 //! Prioritization module for checking if Steam accounts are prioritized.
 //!
-//! Prioritized accounts are those linked to active patrons in the database.
+//! Prioritized accounts are those in the `prioritized_steam_accounts` table that are either
+//! linked to an active patron or manually assigned (no patron link).
 
 use sqlx::{Pool, Postgres};
 
 /// Checks if a single Steam account is prioritized.
 ///
-/// Returns `true` if the account is linked to an active patron and has not been deleted.
+/// Returns `true` if the account is in the prioritization table, not deleted,
+/// and is either not linked to a patron or linked to an active one.
 pub async fn is_prioritized(pool: &Pool<Postgres>, steam_id3: i64) -> anyhow::Result<bool> {
     let result = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
             SELECT 1
             FROM prioritized_steam_accounts psa
-            INNER JOIN patrons p ON psa.patron_id = p.id
+            LEFT JOIN patrons p ON psa.patron_id = p.id
             WHERE psa.steam_id3 = $1
               AND psa.deleted_at IS NULL
-              AND p.is_active = TRUE
+              AND (psa.patron_id IS NULL OR p.is_active = TRUE)
         ) AS "exists!"
         "#,
         steam_id3
@@ -49,10 +51,10 @@ pub async fn get_prioritized_from_list(
         r#"
         SELECT psa.steam_id3
         FROM prioritized_steam_accounts psa
-        INNER JOIN patrons p ON psa.patron_id = p.id
+        LEFT JOIN patrons p ON psa.patron_id = p.id
         WHERE psa.steam_id3 = ANY($1)
           AND psa.deleted_at IS NULL
-          AND p.is_active = TRUE
+          AND (psa.patron_id IS NULL OR p.is_active = TRUE)
         "#,
         steam_id3_list
     )
@@ -80,16 +82,16 @@ pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> anyhow::Resu
         r#"
         SELECT psa.steam_id3
         FROM prioritized_steam_accounts psa
-        INNER JOIN patrons p ON psa.patron_id = p.id
+        LEFT JOIN patrons p ON psa.patron_id = p.id
         WHERE psa.deleted_at IS NULL
-          AND p.is_active = TRUE
+          AND (psa.patron_id IS NULL OR p.is_active = TRUE)
         "#
     )
     .fetch_all(pool)
     .await;
 
     match result {
-        Ok(ids) => Ok(ids),
+        Ok(ids) => Ok(ids.into_iter().flatten().collect()),
         Err(e) => {
             tracing::error!(error = %e, "Failed to fetch all prioritized accounts");
             Err(e.into())

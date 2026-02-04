@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT EXISTS (\n            SELECT 1\n            FROM prioritized_steam_accounts psa\n            LEFT JOIN patrons p ON psa.patron_id = p.id\n            WHERE psa.steam_id3 = $1\n              AND psa.deleted_at IS NULL\n              AND (psa.patron_id IS NULL OR p.is_active = TRUE)\n        ) AS \"exists!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "425fb9b9e265076b8ad5ea079e3f11b20f0c5ccc567e79c3544f9a015ee02b67"
+}

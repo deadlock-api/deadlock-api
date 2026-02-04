@@ -30,7 +30,7 @@ create table if not exists prioritized_steam_accounts
                                gen_random_uuid
                                (
                                )                     not null primary key,
-    patron_id  uuid                                  not null
+    patron_id  uuid                                  null
         constraint prioritized_steam_accounts_patron_fkey references patrons
             (
              id
