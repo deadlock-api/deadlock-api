@@ -33,7 +33,7 @@ pub use error::*;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::compression::predicate::NotForContentType;
 use tower_http::compression::{CompressionLayer, DefaultPredicate, Predicate};
-use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_layer::Layer;
