@@ -18,8 +18,6 @@ use crate::services::patreon::jwt::validate_session_token;
 pub(crate) struct PatronSession {
     /// Patron's database UUID
     pub(crate) patron_id: Uuid,
-    /// Number of Steam account slots based on pledge amount
-    pub(crate) slot_limit: i32,
 }
 
 impl FromRequestParts<AppState> for PatronSession {
@@ -44,7 +42,6 @@ impl FromRequestParts<AppState> for PatronSession {
 
         Ok(PatronSession {
             patron_id: claims.patron_id,
-            slot_limit: claims.slot_limit,
         })
     }
 }

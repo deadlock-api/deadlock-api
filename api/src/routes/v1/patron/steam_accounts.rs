@@ -78,6 +78,32 @@ pub(crate) async fn add_steam_account(
         ));
     }
 
+    // Fetch patron record to get current slot_override (JWT may have stale slot_limit)
+    let patron_repo = PatronRepository::new(
+        app_state.pg_client.clone(),
+        app_state.config.patron_encryption_key.clone(),
+    );
+
+    let patron = patron_repo
+        .get_patron_by_id(session.patron_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get patron: {e}");
+            APIError::internal("Failed to fetch patron data")
+        })?
+        .ok_or_else(|| {
+            tracing::error!(
+                "Patron not found for session patron_id: {}",
+                session.patron_id
+            );
+            APIError::internal("Patron record not found")
+        })?;
+
+    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
+    let slot_limit = patron
+        .slot_override
+        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
     // Step 2: Count active accounts and accounts in cooldown
@@ -99,12 +125,11 @@ pub(crate) async fn add_steam_account(
 
     // Step 3: Check if adding would exceed slot_limit
     let used_slots = active_count + cooldown_count;
-    if used_slots >= session.slot_limit {
+    if used_slots >= slot_limit {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             format!(
-                "Cannot add account: slot limit exceeded (using {used_slots} of {} slots)",
-                session.slot_limit
+                "Cannot add account: slot limit exceeded (using {used_slots} of {slot_limit} slots)",
             ),
         ));
     }
@@ -373,6 +398,32 @@ pub(crate) async fn reactivate_steam_account(
     session: PatronSession,
     Path(account_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, APIError> {
+    // Fetch patron record to get current slot_override (JWT may have stale slot_limit)
+    let patron_repo = PatronRepository::new(
+        app_state.pg_client.clone(),
+        app_state.config.patron_encryption_key.clone(),
+    );
+
+    let patron = patron_repo
+        .get_patron_by_id(session.patron_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get patron: {e}");
+            APIError::internal("Failed to fetch patron data")
+        })?
+        .ok_or_else(|| {
+            tracing::error!(
+                "Patron not found for session patron_id: {}",
+                session.patron_id
+            );
+            APIError::internal("Patron record not found")
+        })?;
+
+    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
+    let slot_limit = patron
+        .slot_override
+        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
     // Step 1: Get the account and verify it belongs to the patron
@@ -417,12 +468,11 @@ pub(crate) async fn reactivate_steam_account(
 
     // Step 4: Check if reactivation would exceed slot_limit
     let used_slots = active_count + cooldown_count;
-    if used_slots >= session.slot_limit {
+    if used_slots >= slot_limit {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             format!(
-                "Cannot reactivate account: slot limit exceeded (using {used_slots} of {} slots)",
-                session.slot_limit
+                "Cannot reactivate account: slot limit exceeded (using {used_slots} of {slot_limit} slots)",
             ),
         ));
     }

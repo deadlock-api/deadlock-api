@@ -9,8 +9,6 @@ use uuid::Uuid;
 pub(crate) struct PatronClaims {
     /// Patron's database UUID
     pub(crate) patron_id: Uuid,
-    /// Number of Steam account slots based on pledge amount
-    pub(crate) slot_limit: i32,
     /// Expiration time (Unix timestamp)
     pub(crate) exp: i64,
 }
@@ -29,16 +27,11 @@ pub(crate) type JwtResult<T> = Result<T, JwtError>;
 /// Creates a JWT session token for a patron
 ///
 /// Tokens are valid for 7 days from creation.
-pub(crate) fn create_session_token(
-    patron_id: Uuid,
-    slot_limit: i32,
-    secret: &str,
-) -> JwtResult<String> {
+pub(crate) fn create_session_token(patron_id: Uuid, secret: &str) -> JwtResult<String> {
     let expiration = Utc::now() + Duration::days(7);
 
     let claims = PatronClaims {
         patron_id,
-        slot_limit,
         exp: expiration.timestamp(),
     };
 

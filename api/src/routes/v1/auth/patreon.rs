@@ -239,23 +239,17 @@ pub(crate) async fn callback(
         }
     };
 
-    // Calculate slot limit: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
-    let slot_limit = patron
-        .slot_override
-        .unwrap_or_else(|| (pledge_amount_cents / 100).min(10));
-
     // Step 5: Generate JWT session token
-    let session_token =
-        match create_session_token(patron.id, slot_limit, &app_state.config.jwt_secret) {
-            Ok(token) => token,
-            Err(e) => {
-                tracing::error!("Failed to create session token: {e}");
-                return Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(axum::body::Body::from("Failed to create session"))
-                    .expect("Failed to build error response");
-            }
-        };
+    let session_token = match create_session_token(patron.id, &app_state.config.jwt_secret) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("Failed to create session token: {e}");
+            return Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(axum::body::Body::from("Failed to create session"))
+                .expect("Failed to build error response");
+        }
+    };
 
     // Step 6: Set session cookie and redirect to frontend
     // Session cookie valid for 7 days (matches JWT expiration)
