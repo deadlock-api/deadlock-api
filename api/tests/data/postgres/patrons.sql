@@ -7,6 +7,7 @@ create table if not exists patrons
     email                text,
     tier_id              text,
     pledge_amount_cents  integer,
+    slot_override        integer,
     is_active            boolean     default false             not null,
     access_token         text,
     refresh_token        text,

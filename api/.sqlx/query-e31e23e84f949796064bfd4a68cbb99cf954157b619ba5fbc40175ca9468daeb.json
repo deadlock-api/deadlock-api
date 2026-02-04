@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                patreon_user_id,\n                email,\n                tier_id,\n                pledge_amount_cents,\n                is_active,\n                access_token,\n                refresh_token,\n                token_expires_at,\n                last_verified_at,\n                created_at,\n                updated_at\n            FROM patrons\n            WHERE patreon_user_id = $1\n            ",
+  "query": "\n            SELECT\n                id,\n                patreon_user_id,\n                email,\n                tier_id,\n                pledge_amount_cents,\n                slot_override,\n                is_active,\n                access_token,\n                refresh_token,\n                token_expires_at,\n                last_verified_at,\n                created_at,\n                updated_at\n            FROM patrons\n            WHERE access_token IS NOT NULL\n              AND refresh_token IS NOT NULL\n            ",
   "describe": {
     "columns": [
       {
@@ -30,48 +30,52 @@
       },
       {
         "ordinal": 5,
+        "name": "slot_override",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
         "name": "is_active",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "access_token",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "refresh_token",
         "type_info": "Text"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "token_expires_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "last_verified_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Text"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
       false,
+      true,
       true,
       true,
       true,
@@ -84,5 +88,5 @@
       false
     ]
   },
-  "hash": "eb63397862629d2c7e788645ee5a1e6a58c12501350d5a34036bfff4d2a3babf"
+  "hash": "e31e23e84f949796064bfd4a68cbb99cf954157b619ba5fbc40175ca9468daeb"
 }

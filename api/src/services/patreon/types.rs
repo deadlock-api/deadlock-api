@@ -146,6 +146,8 @@ pub(crate) struct Patron {
     pub(crate) email: Option<String>,
     pub(crate) tier_id: Option<String>,
     pub(crate) pledge_amount_cents: Option<i32>,
+    /// Override for slot limit (when set, takes precedence over pledge-based calculation)
+    pub(crate) slot_override: Option<i32>,
     pub(crate) is_active: bool,
     pub(crate) access_token: Option<String>,
     pub(crate) refresh_token: Option<String>,

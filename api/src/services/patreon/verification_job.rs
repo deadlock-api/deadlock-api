@@ -21,6 +21,7 @@ struct RetryPatron {
     id: uuid::Uuid,
     patreon_user_id: String,
     access_token: String,
+    slot_override: Option<i32>,
 }
 
 /// Interval for retry on Patreon API errors (30 minutes)
@@ -182,7 +183,12 @@ impl PatreonVerificationJob {
 
         // Sync membership status from Patreon API
         match self
-            .sync_membership(patron.id, &patron.patreon_user_id, &current_access_token)
+            .sync_membership(
+                patron.id,
+                &patron.patreon_user_id,
+                &current_access_token,
+                patron.slot_override,
+            )
             .await
         {
             MembershipSyncResult::Success => {
@@ -193,8 +199,13 @@ impl PatreonVerificationJob {
                 }
             }
             MembershipSyncResult::ApiError => {
-                self.queue_for_retry(patron.id, &patron.patreon_user_id, &current_access_token)
-                    .await;
+                self.queue_for_retry(
+                    patron.id,
+                    &patron.patreon_user_id,
+                    &current_access_token,
+                    patron.slot_override,
+                )
+                .await;
                 VerificationResult::ApiError
             }
             MembershipSyncResult::DbError => VerificationResult::Failed,
@@ -268,6 +279,7 @@ impl PatreonVerificationJob {
         patron_id: uuid::Uuid,
         patreon_user_id: &str,
         access_token: &str,
+        slot_override: Option<i32>,
     ) -> MembershipSyncResult {
         match self
             .patreon_client
@@ -303,6 +315,7 @@ impl PatreonVerificationJob {
                         patreon_user_id,
                         pledge_amount_cents,
                         is_active,
+                        slot_override,
                     )
                     .await
                 {
@@ -332,6 +345,7 @@ impl PatreonVerificationJob {
         patreon_user_id: &str,
         pledge_amount_cents: Option<i32>,
         is_active: bool,
+        slot_override: Option<i32>,
     ) -> Result<(), String> {
         // Get all active Steam accounts for this patron (ordered by created_at ASC)
         let active_accounts = self
@@ -345,8 +359,9 @@ impl PatreonVerificationJob {
         }
 
         let accounts_to_delete = if is_active {
-            // Calculate new slot limit: pledge_amount_cents / 100
-            let new_slot_limit = (pledge_amount_cents.unwrap_or(0) / 100).min(10);
+            // Calculate new slot limit: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
+            let new_slot_limit =
+                slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 100).min(10));
             // Safe cast: practical slot limits will never exceed i32::MAX
             let active_count = active_accounts.len() as i32;
 
@@ -411,12 +426,14 @@ impl PatreonVerificationJob {
         patron_id: uuid::Uuid,
         patreon_user_id: &str,
         access_token: &str,
+        slot_override: Option<i32>,
     ) {
         let mut queue = self.retry_queue.lock().await;
         queue.push(RetryPatron {
             id: patron_id,
             patreon_user_id: patreon_user_id.to_string(),
             access_token: access_token.to_string(),
+            slot_override,
         });
     }
 
@@ -445,6 +462,7 @@ impl PatreonVerificationJob {
                     retry_patron.id,
                     &retry_patron.patreon_user_id,
                     &retry_patron.access_token,
+                    retry_patron.slot_override,
                 )
                 .await
             {
