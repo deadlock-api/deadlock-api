@@ -31,31 +31,38 @@ use valveprotos::deadlock::{
 use crate::types::PlayerMatchHistoryEntry;
 
 static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("HISTORY_COOLDOWN_MILLIS")
-        .map_or(24 * 60 * 60 * 1000 / 100, |x| x.parse().expect("HISTORY_COOLDOWN_MILLIS must be a number"))
+    std::env::var("HISTORY_COOLDOWN_MILLIS").map_or(24 * 60 * 60 * 1000 / 100, |x| {
+        x.parse().expect("HISTORY_COOLDOWN_MILLIS must be a number")
+    })
 });
 
 /// Interval in seconds to refresh the prioritized accounts list from the database.
 /// Default: 300 seconds (5 minutes).
 static PRIORITIZATION_REFRESH_SECS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_REFRESH_SECS")
-        .map_or(300, |x| x.parse().expect("PRIORITIZATION_REFRESH_SECS must be a number"))
+    std::env::var("PRIORITIZATION_REFRESH_SECS").map_or(300, |x| {
+        x.parse()
+            .expect("PRIORITIZATION_REFRESH_SECS must be a number")
+    })
 });
 
 /// Time window in seconds within which prioritized accounts should be fetched.
 /// Accounts not fetched within this window are considered due for fetching.
 /// Default: 1800 seconds (30 minutes).
 static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_WINDOW_SECS")
-        .map_or(1800, |x| x.parse().expect("PRIORITIZATION_WINDOW_SECS must be a number"))
+    std::env::var("PRIORITIZATION_WINDOW_SECS").map_or(1800, |x| {
+        x.parse()
+            .expect("PRIORITIZATION_WINDOW_SECS must be a number")
+    })
 });
 
 /// Maximum number of retry attempts for prioritized account fetches.
 /// Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, etc.
 /// Default: 5 retries.
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_MAX_RETRIES")
-        .map_or(5, |x| x.parse().expect("PRIORITIZATION_MAX_RETRIES must be a number"))
+    std::env::var("PRIORITIZATION_MAX_RETRIES").map_or(5, |x| {
+        x.parse()
+            .expect("PRIORITIZATION_MAX_RETRIES must be a number")
+    })
 });
 
 /// Tracks prioritized Steam accounts and their last fetch timestamps.
@@ -159,7 +166,10 @@ async fn update_prioritized_account(
     account: u32,
     prioritized_accounts: &PrioritizedAccountsMap,
 ) {
-    info!(account = account, "Fetching prioritized account match history");
+    info!(
+        account = account,
+        "Fetching prioritized account match history"
+    );
 
     let max_retries = *PRIORITIZATION_MAX_RETRIES;
     let attempt = core::sync::atomic::AtomicU32::new(0);
@@ -438,7 +448,11 @@ async fn refresh_prioritized_accounts(pg_pool: &Pool<Postgres>, accounts: &Prior
     let mut map = accounts.write().await;
 
     // Remove accounts that are no longer prioritized
-    let to_remove: Vec<i64> = map.keys().filter(|id| !current_set.contains(id)).copied().collect();
+    let to_remove: Vec<i64> = map
+        .keys()
+        .filter(|id| !current_set.contains(id))
+        .copied()
+        .collect();
     for id in &to_remove {
         map.remove(id);
         debug!(steam_id3 = id, "Removed account from prioritized tracking");

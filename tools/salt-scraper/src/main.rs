@@ -30,8 +30,9 @@ use valveprotos::deadlock::{
 mod models;
 
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("SALTS_COOLDOWN_MILLIS")
-        .map_or(24 * 60 * 60 * 1000 / 100, |x| x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number"))
+    std::env::var("SALTS_COOLDOWN_MILLIS").map_or(24 * 60 * 60 * 1000 / 100, |x| {
+        x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number")
+    })
 });
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
@@ -41,8 +42,10 @@ static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 });
 /// Maximum retry attempts for prioritized match salt fetches (default: 5).
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_MAX_RETRIES")
-        .map_or(5, |x| x.parse().expect("PRIORITIZATION_MAX_RETRIES must be a number"))
+    std::env::var("PRIORITIZATION_MAX_RETRIES").map_or(5, |x| {
+        x.parse()
+            .expect("PRIORITIZATION_MAX_RETRIES must be a number")
+    })
 });
 
 #[tokio::main]
@@ -97,14 +100,16 @@ async fn main() -> anyhow::Result<()> {
         info!("Found {} matches to fetch", pending_matches.len());
 
         // Batch-check participants against prioritized accounts
-        let mut prioritized_matches =
-            mark_prioritized_matches(&pg_pool, pending_matches).await;
+        let mut prioritized_matches = mark_prioritized_matches(&pg_pool, pending_matches).await;
 
         // Sort so prioritized matches are processed first
-        prioritized_matches.sort_by(|a, b| b.is_prioritized.cmp(&a.is_prioritized));
+        prioritized_matches.sort_by_key(|b| core::cmp::Reverse(b.is_prioritized));
 
         // Update gauge for prioritized matches pending processing
-        let prioritized_count = prioritized_matches.iter().filter(|m| m.is_prioritized).count();
+        let prioritized_count = prioritized_matches
+            .iter()
+            .filter(|m| m.is_prioritized)
+            .count();
         gauge!("salt_scraper.prioritized_matches_pending").set(prioritized_count as f64);
         if prioritized_count > 0 {
             info!("Processing {prioritized_count} prioritized matches first");
@@ -320,14 +325,18 @@ async fn mark_prioritized_matches(
         .collect();
 
     // Batch query for prioritized accounts
-    let prioritized_accounts: HashSet<i64> =
-        match common::get_prioritized_from_list(pg_pool, &all_participants.into_iter().collect::<Vec<_>>()).await {
-            Ok(ids) => ids.into_iter().collect(),
-            Err(e) => {
-                warn!("Failed to fetch prioritized accounts, treating all as non-prioritized: {e:?}");
-                HashSet::new()
-            }
-        };
+    let prioritized_accounts: HashSet<i64> = match common::get_prioritized_from_list(
+        pg_pool,
+        &all_participants.into_iter().collect::<Vec<_>>(),
+    )
+    .await
+    {
+        Ok(ids) => ids.into_iter().collect(),
+        Err(e) => {
+            warn!("Failed to fetch prioritized accounts, treating all as non-prioritized: {e:?}");
+            HashSet::new()
+        }
+    };
 
     // Mark matches as prioritized if any participant is in the prioritized set
     pending_matches
