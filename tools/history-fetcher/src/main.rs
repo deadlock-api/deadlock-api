@@ -88,48 +88,52 @@ async fn main() -> anyhow::Result<()> {
     spawn_prioritization_refresh_task(pg_pool.clone(), prioritized_accounts.clone());
 
     let mut interval = tokio::time::interval(Duration::from_secs(20));
+    let mut regular_accounts: Vec<u32> = Vec::new();
 
     loop {
-        // First, process prioritized accounts that are due for fetching
+        interval.tick().await;
+
+        // Always check prioritized accounts first - process one if any are due
         let due_prioritized = get_due_prioritized_accounts(&prioritized_accounts).await;
-        if !due_prioritized.is_empty() {
-            info!(
-                count = due_prioritized.len(),
-                "Processing prioritized accounts due for fetching"
-            );
-            for account in due_prioritized {
-                interval.tick().await;
-                update_prioritized_account(
-                    &ch_client,
-                    &http_client,
-                    account,
-                    &prioritized_accounts,
-                )
-                .await;
+        if let Some(&account) = due_prioritized.first() {
+            if due_prioritized.len() > 1 {
+                debug!(
+                    count = due_prioritized.len(),
+                    "Prioritized accounts due for fetching"
+                );
             }
+            update_prioritized_account(
+                &ch_client,
+                &http_client,
+                account,
+                &prioritized_accounts,
+            )
+            .await;
+            continue; // Re-check prioritized accounts before processing regular
         }
 
-        // Then, process regular accounts from ClickHouse query
-        let accounts = match fetch_accounts(&ch_client).await {
+        // No prioritized accounts due - process one regular account
+        if let Some(account) = regular_accounts.pop() {
+            update_account(&ch_client, &http_client, account).await;
+            gauge!("history_fetcher.fetched_accounts").set(regular_accounts.len() as f64);
+            continue;
+        }
+
+        // Regular accounts exhausted - fetch more
+        regular_accounts = match fetch_accounts(&ch_client).await {
             Ok(accounts) => {
                 gauge!("history_fetcher.fetched_accounts").set(accounts.len() as f64);
                 counter!("history_fetcher.fetch_accounts.success").increment(1);
-                info!("Fetched {} accounts", accounts.len());
+                info!("Fetched {} regular accounts", accounts.len());
                 accounts
             }
             Err(e) => {
                 gauge!("history_fetcher.fetched_accounts").set(0);
                 counter!("history_fetcher.fetch_accounts.failure").increment(1);
                 error!("Failed to fetch accounts: {e:?}");
-                tokio::time::sleep(Duration::from_secs(10)).await;
-                continue;
+                Vec::new()
             }
         };
-        for account in accounts {
-            interval.tick().await;
-            update_account(&ch_client, &http_client, account).await;
-            gauge!("history_fetcher.fetched_accounts").decrement(1);
-        }
     }
 }
 
