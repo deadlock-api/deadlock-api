@@ -1328,6 +1328,7 @@ dependencies = [
  "anyhow",
  "clickhouse",
  "common",
+ "futures",
  "metrics",
  "reqwest 0.13.1",
  "serde",

@@ -14,3 +14,4 @@ metrics = "0.24.3"
 tracing = "0.1.44"
 serde = { version = "1.0.228", features = ["derive"] }
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
+futures = "0.3.31"

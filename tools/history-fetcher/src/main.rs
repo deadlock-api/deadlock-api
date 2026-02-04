@@ -17,6 +17,7 @@ use core::time::Duration;
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
 
+use futures::StreamExt;
 use metrics::{counter, gauge};
 use sqlx::{Pool, Postgres};
 use tokio::sync::RwLock;
@@ -93,22 +94,33 @@ async fn main() -> anyhow::Result<()> {
     loop {
         interval.tick().await;
 
-        // Always check prioritized accounts first - process one if any are due
+        // Always check prioritized accounts first - process all that are due in parallel
         let due_prioritized = get_due_prioritized_accounts(&prioritized_accounts).await;
-        if let Some(&account) = due_prioritized.first() {
-            if due_prioritized.len() > 1 {
-                debug!(
-                    count = due_prioritized.len(),
-                    "Prioritized accounts due for fetching"
-                );
-            }
-            update_prioritized_account(
-                &ch_client,
-                &http_client,
-                account,
-                &prioritized_accounts,
-            )
-            .await;
+        if !due_prioritized.is_empty() {
+            info!(
+                count = due_prioritized.len(),
+                "Processing prioritized accounts due for fetching"
+            );
+
+            futures::stream::iter(due_prioritized)
+                .map(|account| {
+                    let ch_client = ch_client.clone();
+                    let http_client = http_client.clone();
+                    let prioritized_accounts = prioritized_accounts.clone();
+                    async move {
+                        update_prioritized_account(
+                            &ch_client,
+                            &http_client,
+                            account,
+                            &prioritized_accounts,
+                        )
+                        .await;
+                    }
+                })
+                .buffer_unordered(2)
+                .collect::<Vec<_>>()
+                .await;
+
             continue; // Re-check prioritized accounts before processing regular
         }
 
