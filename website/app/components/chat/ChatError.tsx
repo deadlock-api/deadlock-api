@@ -1,9 +1,7 @@
-import { AlertCircle, Clock, ExternalLink, RefreshCw, ShieldAlert, X } from "lucide-react";
+import { AlertCircle, Clock, RefreshCw, ShieldAlert, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import type { ChatError as ChatErrorType } from "~/types/chat";
-
-const PATREON_URL = "https://www.patreon.com/user?u=68961896";
 
 interface ChatErrorProps {
   error: ChatErrorType;
@@ -12,14 +10,6 @@ interface ChatErrorProps {
   onReVerify?: () => void;
   /** Time until rate limit resets (e.g., "45 minutes") - only used for RATE_LIMIT_EXCEEDED errors */
   resetTime?: string | null;
-  /** Whether user is authenticated with Patreon - used for rate limit CTAs */
-  isAuthenticated?: boolean;
-  /** User's Patreon tier (0 = free, 1 = Supporter, 2 = Contributor, 3 = Champion) */
-  tier?: number;
-  /** Callback to trigger Patreon login flow */
-  onPatreonLogin?: () => void;
-  /** Whether Patreon OAuth is available (hides login CTA when false) */
-  isOAuthAvailable?: boolean;
 }
 
 function getErrorDetails(code: string): { title: string; icon: "alert" | "shield" | "clock" } {
@@ -50,26 +40,13 @@ function getIcon(iconType: "alert" | "shield" | "clock") {
   }
 }
 
-export function ChatError({
-  error,
-  onDismiss,
-  onRetry,
-  onReVerify,
-  resetTime,
-  isAuthenticated = false,
-  tier = 0,
-  onPatreonLogin,
-  isOAuthAvailable = true,
-}: ChatErrorProps) {
+export function ChatError({ error, onDismiss, onRetry, onReVerify, resetTime }: ChatErrorProps) {
   const { title, icon } = getErrorDetails(error.code);
   const isAuthError = error.code === "AUTH_FAILED";
   const isRateLimitError = error.code === "RATE_LIMIT_EXCEEDED";
 
   // For rate limit errors, show specific message
-  const displayMessage = isRateLimitError ? "You've reached your free limit of 5 requests per hour." : error.message;
-
-  // Max tier is 3 (Champion) - users at this tier can't upgrade further
-  const isMaxTier = tier >= 3;
+  const displayMessage = isRateLimitError ? "You've reached your rate limit." : error.message;
 
   return (
     <Alert variant="destructive" className="relative">
@@ -89,20 +66,6 @@ export function ChatError({
             <Button variant="outline" size="sm" onClick={onRetry} className="w-fit">
               <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
-            </Button>
-          )}
-          {isRateLimitError && !isAuthenticated && onPatreonLogin && isOAuthAvailable && (
-            <Button variant="outline" size="sm" onClick={onPatreonLogin} className="w-fit">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Login with Patreon for more requests
-            </Button>
-          )}
-          {isRateLimitError && isAuthenticated && !isMaxTier && (
-            <Button variant="outline" size="sm" asChild className="w-fit">
-              <a href={PATREON_URL} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Upgrade on Patreon
-              </a>
             </Button>
           )}
         </div>

@@ -8,7 +8,6 @@ import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { useChatStream } from "~/hooks/useChatStream";
-import { usePatreonAuth } from "~/hooks/usePatreonAuth";
 import { useRateLimit } from "~/hooks/useRateLimit";
 
 export const meta: MetaFunction = () => {
@@ -28,7 +27,6 @@ export default function ChatPage() {
   const [lastMessage, setLastMessage] = useState<string | null>(null);
 
   const rateLimit = useRateLimit();
-  const { isAuthenticated, tier, isOAuthAvailable, login: patreonLogin } = usePatreonAuth();
 
   const { conversation, sendMessage, stopStreaming, clearConversation, clearError } = useChatStream({
     turnstileToken,
@@ -144,10 +142,6 @@ export default function ChatPage() {
                 onRetry={lastMessage ? handleRetry : undefined}
                 onReVerify={handleReVerify}
                 resetTime={rateLimit.timeUntilReset}
-                isAuthenticated={isAuthenticated}
-                tier={tier}
-                onPatreonLogin={patreonLogin}
-                isOAuthAvailable={isOAuthAvailable}
               />
             </div>
           </div>

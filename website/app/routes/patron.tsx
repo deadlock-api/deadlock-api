@@ -129,7 +129,7 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
             <p className="text-sm text-center">
               <span className="text-muted-foreground">Not a patron yet? </span>
               <a
-                href="https://www.patreon.com/deadlockapi"
+                href="https://www.patreon.com/c/manuelhexe"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
