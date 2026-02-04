@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                patreon_user_id,\n                email,\n                tier_id,\n                pledge_amount_cents,\n                is_active,\n                access_token,\n                refresh_token,\n                token_expires_at,\n                last_verified_at,\n                created_at,\n                updated_at\n            FROM patrons\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "patreon_user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tier_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "pledge_amount_cents",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_active",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "access_token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "refresh_token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "token_expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_verified_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "882dea51b1bca06ece88396e3428c2078fa46b2c53b7f45253e60dbdbc538f86"
+}

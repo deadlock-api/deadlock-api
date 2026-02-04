@@ -9,6 +9,15 @@ pub(super) struct SteamConfig {
     pub(super) proxy_api_key: String,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub(crate) struct PatreonConfig {
+    pub(crate) client_id: String,
+    pub(crate) client_secret: String,
+    pub(crate) redirect_uri: String,
+    pub(crate) frontend_redirect_url: String,
+    pub(crate) campaign_id: String,
+}
+
 fn default_redis_url() -> String {
     "redis://localhost:6379".to_owned()
 }
@@ -113,6 +122,10 @@ pub(crate) struct Config {
     pub(super) s3_cache: S3Config,
     pub(crate) clickhouse: ClickhouseConfig,
     pub(super) postgres: PostgresConfig,
+    pub(crate) patreon: PatreonConfig,
+    pub(crate) jwt_secret: String,
+    /// Encryption key for patron tokens (32-byte hex-encoded for AES-256-GCM)
+    pub(crate) patron_encryption_key: String,
 
     #[serde(default = "default_assets_base_url")]
     pub(super) assets_base_url: String,

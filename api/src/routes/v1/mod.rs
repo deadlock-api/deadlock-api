@@ -3,6 +3,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::context::AppState;
 
 pub mod analytics;
+mod auth;
 pub mod builds;
 mod commands;
 pub(crate) mod data_privacy;
@@ -11,6 +12,7 @@ pub mod info;
 mod leaderboard;
 pub mod matches;
 mod patches;
+mod patron;
 pub mod players;
 pub mod sql;
 
@@ -26,4 +28,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/info", info::router())
         .nest("/esports", esports::router())
         .nest("/sql", sql::router())
+        .nest("/auth", auth::router())
+        .nest("/patron", patron::router())
 }

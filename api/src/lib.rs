@@ -48,6 +48,7 @@ use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::track_requests::track_requests;
+use crate::services::patreon::verification_job::PatreonVerificationJob;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
@@ -74,6 +75,17 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
 
     // Start the background request logger flush task
     state.request_logger.clone().start_background_flush();
+
+    // Start the daily Patreon verification job for token refresh and membership sync
+    let patreon_verification_job = std::sync::Arc::new(PatreonVerificationJob::new(
+        state.pg_client.clone(),
+        state.config.patron_encryption_key.clone(),
+        state.config.patreon.client_id.clone(),
+        state.config.patreon.client_secret.clone(),
+        state.config.patreon.redirect_uri.clone(),
+        state.config.patreon.campaign_id.clone(),
+    ));
+    patreon_verification_job.start_background_verification();
 
     let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
     prometheus_layer.enable_response_body_size();

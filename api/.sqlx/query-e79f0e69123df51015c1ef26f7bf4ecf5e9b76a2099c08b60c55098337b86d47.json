@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                patron_id,\n                steam_id3,\n                created_at,\n                deleted_at\n            FROM prioritized_steam_accounts\n            WHERE patron_id = $1\n              AND deleted_at IS NULL\n            ORDER BY created_at ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "patron_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "e79f0e69123df51015c1ef26f7bf4ecf5e9b76a2099c08b60c55098337b86d47"
+}

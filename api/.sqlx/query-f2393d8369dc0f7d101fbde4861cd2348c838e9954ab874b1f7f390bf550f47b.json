@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COUNT(*) as \"count!\"\n            FROM prioritized_steam_accounts\n            WHERE patron_id = $1\n              AND deleted_at IS NOT NULL\n              AND deleted_at > $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f2393d8369dc0f7d101fbde4861cd2348c838e9954ab874b1f7f390bf550f47b"
+}
