@@ -5,7 +5,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install --locked cargo-chef
-ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache
+ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache SQLX_OFFLINE=true
 
 WORKDIR /app
 
