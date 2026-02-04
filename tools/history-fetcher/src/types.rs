@@ -24,6 +24,9 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub match_result: u32,
     pub objectives_mask_team0: u32,
     pub objectives_mask_team1: u32,
+    pub brawl_score_team0: Option<u32>,
+    pub brawl_score_team1: Option<u32>,
+    pub brawl_avg_round_time_s: Option<u32>,
     pub username: Option<String>,
 }
 
@@ -54,6 +57,9 @@ impl PlayerMatchHistoryEntry {
             match_result: entry.match_result?,
             objectives_mask_team0: entry.objectives_mask_team0? as u32,
             objectives_mask_team1: entry.objectives_mask_team1? as u32,
+            brawl_score_team0: None,
+            brawl_score_team1: None,
+            brawl_avg_round_time_s: None,
             username: Some(username),
         })
     }
