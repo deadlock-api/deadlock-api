@@ -107,7 +107,7 @@ export default function NavHeader() {
             </svg>
           </a>
           <a
-            href="https://discord.gg/XMF9Xrgfqu"
+            href="https://discord.gg/pqWQfTPQJu"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 text-gray-500 rounded hover:text-[#7289da]"
