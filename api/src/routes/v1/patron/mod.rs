@@ -24,5 +24,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             "/steam-accounts/{account_id}/reactivate",
             post(steam_accounts::reactivate_steam_account),
         )
-        .layer(CacheControlMiddleware::new(Duration::from_secs(60)).private())
+        .layer(CacheControlMiddleware::new(Duration::from_mins(1)).private())
 }
