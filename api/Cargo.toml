@@ -52,7 +52,7 @@ http-body-util = "0.1.3"
 url = "2.5.8"
 aes-gcm = "0.10"
 hex = "0.4"
-jsonwebtoken = "9"
+jsonwebtoken = "10"
 
 [dev-dependencies]
 rstest = "0.26.1"
