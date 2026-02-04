@@ -4,8 +4,6 @@ import type { MetaFunction } from "react-router";
 import { ChatError } from "~/components/chat/ChatError";
 import { ChatInput } from "~/components/chat/ChatInput";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
-import { PatreonLoginButton } from "~/components/chat/PatreonLoginButton";
-import { PatreonUserBadge } from "~/components/chat/PatreonUserBadge";
 import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -73,17 +71,13 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-[85vh] w-full">
-      {/* Chat header with Patreon login and New Conversation buttons */}
-      {isVerified && (
+      {/* Chat header with New Conversation button */}
+      {isVerified && hasMessages && (
         <div className="border-b px-4 py-2 flex justify-end gap-2">
-          <PatreonLoginButton />
-          <PatreonUserBadge />
-          {hasMessages && (
-            <Button variant="outline" size="sm" onClick={handleNewConversation} disabled={conversation.isStreaming}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              New Conversation
-            </Button>
-          )}
+          <Button variant="outline" size="sm" onClick={handleNewConversation} disabled={conversation.isStreaming}>
+            <RotateCcw className="h-4 w-4 mr-2" />
+            New Conversation
+          </Button>
         </div>
       )}
 

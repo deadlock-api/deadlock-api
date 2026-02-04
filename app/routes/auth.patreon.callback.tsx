@@ -32,9 +32,14 @@ export default function PatreonCallbackPage() {
   const navigate = useNavigate();
   const [state, setState] = useState<CallbackState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [redirectPath, setRedirectPath] = useState<string>("/");
 
   useEffect(() => {
     const handleCallback = async () => {
+      // Get redirect path early so we can use it in error cases too
+      const storedRedirectPath = sessionStorage.getItem("patreon_redirect_path") || "/";
+      setRedirectPath(storedRedirectPath);
+
       // Check for error param from OAuth flow
       const error = searchParams.get("error");
       if (error) {
@@ -84,9 +89,12 @@ export default function PatreonCallbackPage() {
 
         setState("success");
 
-        // Redirect to chat after brief success message
+        // Clear stored redirect path
+        sessionStorage.removeItem("patreon_redirect_path");
+
+        // Redirect to patron page after brief success message
         setTimeout(() => {
-          navigate("/chat", { replace: true });
+          navigate("/patron", { replace: true });
         }, 1500);
       } catch (_err) {
         setState("error");
@@ -115,7 +123,7 @@ export default function PatreonCallbackPage() {
             <Alert>
               <CheckCircle className="size-4" />
               <AlertTitle>Success!</AlertTitle>
-              <AlertDescription>You have been authenticated. Redirecting to chat...</AlertDescription>
+              <AlertDescription>You have been authenticated. Redirecting...</AlertDescription>
             </Alert>
           )}
 
@@ -127,8 +135,8 @@ export default function PatreonCallbackPage() {
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
               <div className="flex justify-center">
-                <Button onClick={() => navigate("/chat")} variant="outline">
-                  Return to Chat
+                <Button onClick={() => navigate(redirectPath)} variant="outline">
+                  Go Back
                 </Button>
               </div>
             </div>
