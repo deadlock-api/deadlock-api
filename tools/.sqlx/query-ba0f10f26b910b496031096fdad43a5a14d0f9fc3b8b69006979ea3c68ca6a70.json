@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT psa.steam_id3\n        FROM prioritized_steam_accounts psa\n        INNER JOIN patrons p ON psa.patron_id = p.id\n        WHERE psa.deleted_at IS NULL\n          AND p.is_active = TRUE\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ba0f10f26b910b496031096fdad43a5a14d0f9fc3b8b69006979ea3c68ca6a70"
+}
