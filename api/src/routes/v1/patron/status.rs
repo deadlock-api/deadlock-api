@@ -76,13 +76,18 @@ pub(crate) async fn get_patron_status(
             APIError::internal("Failed to fetch Steam account data")
         })?;
 
+    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
+    let total_slots = patron
+        .slot_override
+        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+
     let used_slots = active_count + cooldown_count;
-    let available_slots = (session.slot_limit - used_slots).max(0);
+    let available_slots = (total_slots - used_slots).max(0);
 
     Ok(Json(PatronStatusResponse {
         tier_id: patron.tier_id,
         pledge_amount_cents: patron.pledge_amount_cents,
-        total_slots: session.slot_limit,
+        total_slots,
         is_active: patron.is_active,
         last_verified_at: patron.last_verified_at,
         steam_accounts_summary: SteamAccountsSummary {

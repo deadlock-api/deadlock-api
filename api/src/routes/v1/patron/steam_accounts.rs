@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::APIError;
 use crate::services::patreon::extractor::PatronSession;
+use crate::services::patreon::repository::PatronRepository;
 use crate::services::patreon::steam_accounts_repository::{
     SteamAccountsRepository, SteamAccountsRepositoryError,
 };
@@ -153,6 +154,32 @@ pub(crate) async fn list_steam_accounts(
     State(app_state): State<AppState>,
     session: PatronSession,
 ) -> Result<impl IntoResponse, APIError> {
+    // Fetch patron record to get current slot_override
+    let patron_repo = PatronRepository::new(
+        app_state.pg_client.clone(),
+        app_state.config.patron_encryption_key.clone(),
+    );
+
+    let patron = patron_repo
+        .get_patron_by_id(session.patron_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to get patron: {e}");
+            APIError::internal("Failed to fetch patron data")
+        })?
+        .ok_or_else(|| {
+            tracing::error!(
+                "Patron not found for session patron_id: {}",
+                session.patron_id
+            );
+            APIError::internal("Patron record not found")
+        })?;
+
+    // Calculate slot limit from database: use slot_override if set, otherwise pledge_amount_cents / 100 capped at 10
+    let total_slots = patron
+        .slot_override
+        .unwrap_or_else(|| (patron.pledge_amount_cents.unwrap_or(0) / 100).min(10));
+
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
     // Get all accounts for the patron (including soft-deleted)
@@ -196,12 +223,12 @@ pub(crate) async fn list_steam_accounts(
         .collect();
 
     let used_slots = active_count + cooldown_count;
-    let available_slots = (session.slot_limit - used_slots).max(0);
+    let available_slots = (total_slots - used_slots).max(0);
 
     let response = ListSteamAccountsResponse {
         accounts: account_items,
         summary: SlotsSummary {
-            total_slots: session.slot_limit,
+            total_slots,
             used_slots,
             available_slots,
             slots_in_cooldown: cooldown_count,
