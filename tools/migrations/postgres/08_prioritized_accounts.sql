@@ -11,6 +11,7 @@ create table if not exists patrons
         constraint patrons_patreon_user_id_unique unique,
     email               text,
     tier_id             text,
+    slot_override       integer,
     pledge_amount_cents integer,
     is_active           boolean     default false             not null,
     access_token        text,
