@@ -8,16 +8,19 @@
 #![deny(clippy::perf)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::std_instead_of_core)]
+#![allow(clippy::cast_precision_loss)]
 
 use core::time::Duration;
+use std::collections::HashSet;
 use std::sync::LazyLock;
 
 use anyhow::bail;
 use clickhouse::Client;
 use futures::StreamExt;
-use metrics::counter;
-use models::MatchSalt;
-use tracing::{debug, info, instrument, warn};
+use metrics::{counter, gauge};
+use models::{MatchSalt, PendingMatch, PrioritizedMatch};
+use tokio::sync::Mutex;
+use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_meta_data_response::EResult::KEResultRateLimited;
 use valveprotos::deadlock::{
     CMsgClientToGcGetMatchMetaData, CMsgClientToGcGetMatchMetaDataResponse,
@@ -36,6 +39,11 @@ static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .build()
         .unwrap()
 });
+/// Maximum retry attempts for prioritized match salt fetches (default: 5).
+static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
+    std::env::var("PRIORITIZATION_MAX_RETRIES")
+        .map_or(5, |x| x.parse().expect("PRIORITIZATION_MAX_RETRIES must be a number"))
+});
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -44,21 +52,34 @@ async fn main() -> anyhow::Result<()> {
 
     let ch_client = common::get_ch_client()?;
 
+    // Initialize PostgreSQL connection pool for prioritization queries
+    let pg_pool = match common::get_pg_client().await {
+        Ok(pool) => {
+            info!("PostgreSQL connection pool initialized successfully");
+            pool
+        }
+        Err(e) => {
+            error!("Failed to initialize PostgreSQL connection pool: {e:?}");
+            return Err(e);
+        }
+    };
+
     loop {
-        // let query = "SELECT DISTINCT match_id FROM finished_matches WHERE start_time < now() - INTERVAL '3 hours' AND match_id NOT IN (SELECT match_id FROM match_salts UNION DISTINCT SELECT match_id FROM match_info) ORDER BY start_time DESC LIMIT 1000";
+        // Query pending matches with participant account_ids for prioritization checking
         let query = r"
-        SELECT DISTINCT match_id
+        SELECT match_id, groupArray(account_id) AS participants
         FROM player_match_history
         WHERE match_mode IN ('Ranked', 'Unranked')
           AND start_time BETWEEN '2025-08-01' AND now() - INTERVAL 2 HOUR
           AND match_id NOT IN (SELECT match_id FROM match_salts)
           AND match_id NOT IN (SELECT match_id FROM match_info)
+        GROUP BY match_id
         ORDER BY match_id DESC
         LIMIT 100
 
-        UNION DISTINCT
+        UNION ALL
 
-        SELECT DISTINCT match_id
+        SELECT match_id, players.account_id AS participants
         FROM active_matches
         WHERE match_mode IN ('Ranked', 'Unranked')
           AND match_id NOT IN (SELECT match_id FROM match_salts)
@@ -67,52 +88,144 @@ async fn main() -> anyhow::Result<()> {
         ORDER BY match_id DESC
         LIMIT 100
         ";
-        let recent_matches: Vec<u64> = ch_client.query(query).fetch_all().await?;
-        if recent_matches.is_empty() {
+        let pending_matches: Vec<PendingMatch> = ch_client.query(query).fetch_all().await?;
+        if pending_matches.is_empty() {
             info!("No new matches to fetch, sleeping 60s...");
             tokio::time::sleep(Duration::from_mins(1)).await;
             continue;
         }
-        info!("Found {} matches to fetch", recent_matches.len());
-        // if recent_matches.len() < 100 {
-        //     info!(
-        //         "Only got {} matches, fetching salts for hltv matches.",
-        //         recent_matches.len()
-        //     );
-        //     let query = r"
-        //         SELECT DISTINCT match_id
-        //         FROM match_info
-        //         WHERE match_id NOT IN (SELECT match_id FROM match_salts)
-        //             AND start_time < now() - INTERVAL '3 hours' AND start_time > toDateTime('2024-11-01')
-        //         ORDER BY match_id
-        //         LIMIT ?
-        //         ";
-        //     let additional_matches: Vec<MatchIdQueryResult> = ch_client
-        //         .query(query)
-        //         .bind(100 - recent_matches.len())
-        //         .fetch_all()
-        //         .await?;
-        //     recent_matches.extend(additional_matches.into_iter().map(|m| m.match_id));
-        // }
-        futures::stream::iter(recent_matches)
-            .map(|match_id| {
+        info!("Found {} matches to fetch", pending_matches.len());
+
+        // Batch-check participants against prioritized accounts
+        let mut prioritized_matches =
+            mark_prioritized_matches(&pg_pool, pending_matches).await;
+
+        // Sort so prioritized matches are processed first
+        prioritized_matches.sort_by(|a, b| b.is_prioritized.cmp(&a.is_prioritized));
+
+        // Update gauge for prioritized matches pending processing
+        let prioritized_count = prioritized_matches.iter().filter(|m| m.is_prioritized).count();
+        gauge!("salt_scraper.prioritized_matches_pending").set(prioritized_count as f64);
+        if prioritized_count > 0 {
+            info!("Processing {prioritized_count} prioritized matches first");
+        }
+
+        // Track failed prioritized matches for re-queueing
+        let failed_prioritized: std::sync::Arc<Mutex<Vec<u64>>> =
+            std::sync::Arc::new(Mutex::new(Vec::new()));
+
+        futures::stream::iter(prioritized_matches)
+            .map(|prioritized_match| {
                 let ch_client = ch_client.clone();
+                let failed_prioritized = std::sync::Arc::clone(&failed_prioritized);
                 async move {
-                    match fetch_match(&ch_client, match_id).await {
-                        Ok(()) => info!("Fetched match {match_id}"),
-                        Err(e) => warn!("Failed to fetch match {match_id}: {e:?}"),
+                    let match_id = prioritized_match.match_id;
+                    if prioritized_match.is_prioritized {
+                        // Prioritized match: use exponential backoff retry
+                        match fetch_prioritized_match(&ch_client, match_id).await {
+                            Ok(()) => {
+                                counter!("salt_scraper.prioritized_fetch.success").increment(1);
+                                info!("Fetched prioritized match {match_id}");
+                            }
+                            Err(e) => {
+                                counter!("salt_scraper.prioritized_fetch.failure").increment(1);
+                                warn!("Failed to fetch prioritized match {match_id} after all retries: {e:?}");
+                                // Re-queue for next cycle by tracking the failure
+                                failed_prioritized.lock().await.push(match_id);
+                            }
+                        }
+                    } else {
+                        // Regular match: use existing 30 retries with 1s fixed interval
+                        match fetch_match(&ch_client, match_id).await {
+                            Ok(()) => info!("Fetched match {match_id}"),
+                            Err(e) => warn!("Failed to fetch match {match_id}: {e:?}"),
+                        }
                     }
                 }
             })
             .buffer_unordered(2)
             .collect::<Vec<_>>()
             .await;
+
+        // Log any failed prioritized matches that will be re-queued
+        let failed = failed_prioritized.lock().await;
+        if !failed.is_empty() {
+            info!(
+                "Re-queueing {} failed prioritized matches for next cycle: {:?}",
+                failed.len(),
+                *failed
+            );
+        }
+    }
+}
+
+/// Fetches a prioritized match with exponential backoff retry.
+///
+/// Uses configurable max retries (default 5) with exponential backoff delays.
+/// Logs when fetching a prioritized match and tracks retry attempts.
+#[instrument(skip(ch_client))]
+async fn fetch_prioritized_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
+    info!("Fetching prioritized match {match_id}");
+
+    // Use exponential backoff for prioritized matches
+    let max_retries = *PRIORITIZATION_MAX_RETRIES;
+    let attempt = core::sync::atomic::AtomicU32::new(0);
+
+    common::retry_with_backoff_configurable(max_retries, || {
+        let current = attempt.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        if current > 0 {
+            counter!("salt_scraper.prioritized_fetch.retry").increment(1);
+        }
+        async { fetch_match_internal(ch_client, match_id).await }
+    })
+    .await
+}
+
+/// Internal match fetch logic used by both regular and prioritized fetches.
+async fn fetch_match_internal(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
+    // Fetch Salts
+    let salts = fetch_salts(match_id).await;
+    let (username, salts) = match salts {
+        Ok(r) => {
+            counter!("salt_scraper.fetch_salts.success").increment(1);
+            debug!("Fetched salts: {:?}", r.1);
+            r
+        }
+        Err(e) => {
+            counter!("salt_scraper.fetch_salts.failure").increment(1);
+            warn!("Failed to fetch salts: {:?}", e);
+            return Err(e);
+        }
+    };
+
+    // Parse Salts
+    if let Some(result) = salts.result
+        && result == KEResultRateLimited as i32
+    {
+        counter!("salt_scraper.parse_salt.failure").increment(1);
+        bail!("Got a rate limited response: {salts:?}");
+    }
+    counter!("salt_scraper.parse_salt.success").increment(1);
+    debug!("Parsed salts");
+
+    // Ingest Salts
+    match ingest_salts(ch_client, match_id, salts, username.into()).await {
+        Ok(()) => {
+            counter!("salt_scraper.ingest_salt.success").increment(1);
+            debug!("Ingested salts");
+            Ok(())
+        }
+        Err(e) => {
+            counter!("salt_scraper.ingest_salt.failure").increment(1);
+            warn!("Failed to ingest salts: {:?}", e);
+            Err(e.into())
+        }
     }
 }
 
 #[instrument(skip(ch_client))]
 async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
-    // Fetch Salts
+    // Fetch Salts with fixed 30 retries and 1s interval for regular matches
     let salts = tryhard::retry_fn(|| fetch_salts(match_id))
         .retries(30)
         .fixed_backoff(Duration::from_secs(1))
@@ -190,4 +303,44 @@ async fn ingest_salts(
     let mut inserter = ch_client.insert::<MatchSalt>("match_salts").await?;
     inserter.write(&salts).await?;
     inserter.end().await
+}
+
+/// Batch-checks participants against prioritized accounts and marks matches accordingly.
+///
+/// Collects all unique participant `account_id` values, queries the database for prioritized
+/// accounts, and returns a list of `PrioritizedMatch` entries with the priority flag set.
+async fn mark_prioritized_matches(
+    pg_pool: &sqlx::Pool<sqlx::Postgres>,
+    pending_matches: Vec<PendingMatch>,
+) -> Vec<PrioritizedMatch> {
+    // Collect all unique participant account_ids
+    let all_participants: HashSet<i64> = pending_matches
+        .iter()
+        .flat_map(|m| m.participants.iter().map(|&id| i64::from(id)))
+        .collect();
+
+    // Batch query for prioritized accounts
+    let prioritized_accounts: HashSet<i64> =
+        match common::get_prioritized_from_list(pg_pool, &all_participants.into_iter().collect::<Vec<_>>()).await {
+            Ok(ids) => ids.into_iter().collect(),
+            Err(e) => {
+                warn!("Failed to fetch prioritized accounts, treating all as non-prioritized: {e:?}");
+                HashSet::new()
+            }
+        };
+
+    // Mark matches as prioritized if any participant is in the prioritized set
+    pending_matches
+        .into_iter()
+        .map(|m| {
+            let is_prioritized = m
+                .participants
+                .iter()
+                .any(|&id| prioritized_accounts.contains(&i64::from(id)));
+            PrioritizedMatch {
+                match_id: m.match_id,
+                is_prioritized,
+            }
+        })
+        .collect()
 }

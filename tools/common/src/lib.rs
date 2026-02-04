@@ -14,12 +14,16 @@
 
 mod assets;
 mod clients;
+mod prioritization;
+mod retry;
 mod steam;
 mod telemetry;
 mod utils;
 
 pub use assets::*;
 pub use clients::*;
+pub use prioritization::*;
+pub use retry::*;
 pub use steam::*;
 pub use telemetry::*;
 pub use utils::*;
