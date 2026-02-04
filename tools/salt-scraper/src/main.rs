@@ -287,6 +287,7 @@ async fn fetch_salts(
         None,
         None,
         Duration::from_millis(*SALTS_COOLDOWN_MILLIS),
+        None,
         Duration::from_secs(5),
     )
     .await

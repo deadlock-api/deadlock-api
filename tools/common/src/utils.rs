@@ -30,6 +30,7 @@ pub async fn call_steam_proxy<T: Message + Default>(
     in_all_groups: Option<&[&str]>,
     in_any_groups: Option<&[&str]>,
     cooldown_time: Duration,
+    soft_cooldown_time: Option<Duration>,
     request_timeout: Duration,
 ) -> anyhow::Result<(String, T)> {
     let serialized_message = msg.encode_to_vec();
@@ -42,7 +43,7 @@ pub async fn call_steam_proxy<T: Message + Default>(
             "message_kind": msg_type as i32,
             "job_cooldown_millis": cooldown_time.as_millis(),
             "rate_limit_cooldown_millis": 2 * cooldown_time.as_millis(),
-            "soft_cooldown_millis": 5 * 60 * 1000,
+            "soft_cooldown_millis": soft_cooldown_time.map_or(5 * 60 * 1000, |d| d.as_millis()),
             "bot_in_all_groups": in_all_groups,
             "bot_in_any_groups": in_any_groups,
             "data": encoded_message,

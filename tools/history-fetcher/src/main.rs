@@ -180,7 +180,7 @@ async fn update_prioritized_account(
             counter!("history_fetcher.prioritized_fetch.retry").increment(1);
         }
         async {
-            if update_account_internal(ch_client, http_client, account).await {
+            if update_account_internal(ch_client, http_client, account, true).await {
                 Ok(())
             } else {
                 Err(format!("Failed to fetch prioritized account {account}"))
@@ -218,7 +218,7 @@ async fn update_account(
     http_client: &reqwest::Client,
     account: u32,
 ) {
-    let _ = update_account_internal(ch_client, http_client, account).await;
+    let _ = update_account_internal(ch_client, http_client, account, false).await;
 }
 
 /// Internal account update logic. Returns true on successful fetch (even if no new matches).
@@ -227,15 +227,19 @@ async fn update_account_internal(
     ch_client: &clickhouse::Client,
     http_client: &reqwest::Client,
     account: u32,
+    is_prioritized: bool,
 ) -> bool {
-    let (username, match_history) = match fetch_account_match_history(http_client, account).await {
-        Ok(r) => r,
-        Err(e) => {
-            counter!("history_fetcher.fetch_match_history.failure").increment(1);
-            warn!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
-            return false;
-        }
-    };
+    let (username, match_history) =
+        match fetch_account_match_history(http_client, account, is_prioritized).await {
+            Ok(r) => r,
+            Err(e) => {
+                counter!("history_fetcher.fetch_match_history.failure").increment(1);
+                warn!(
+                    "Failed to fetch match history for account {account}, error: {e:?}, skipping",
+                );
+                return false;
+            }
+        };
     counter!("history_fetcher.fetch_match_history.status", "status" => match_history.result.unwrap_or_default().to_string()).increment(1);
     if match_history
         .result
@@ -320,10 +324,17 @@ LIMIT 1000
 async fn fetch_account_match_history(
     http_client: &reqwest::Client,
     account: u32,
+    is_prioritized: bool,
 ) -> anyhow::Result<(String, CMsgClientToGcGetMatchHistoryResponse)> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: account.into(),
         ..Default::default()
+    };
+    let job_cooldown = Duration::from_millis(*HISTORY_COOLDOWN_MILLIS);
+    let soft_cooldown = if is_prioritized {
+        Some(job_cooldown / 2)
+    } else {
+        None
     };
     common::call_steam_proxy(
         http_client,
@@ -331,7 +342,8 @@ async fn fetch_account_match_history(
         &msg,
         Some(&["GetMatchHistory"]),
         None,
-        Duration::from_millis(*HISTORY_COOLDOWN_MILLIS),
+        job_cooldown,
+        soft_cooldown,
         Duration::from_secs(5),
     )
     .await
