@@ -14,11 +14,11 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             get(steam_accounts::list_steam_accounts).post(steam_accounts::add_steam_account),
         )
         .route(
-            "/steam-accounts/:account_id",
+            "/steam-accounts/{account_id}",
             delete(steam_accounts::delete_steam_account).put(steam_accounts::replace_steam_account),
         )
         .route(
-            "/steam-accounts/:account_id/reactivate",
+            "/steam-accounts/{account_id}/reactivate",
             post(steam_accounts::reactivate_steam_account),
         )
 }
