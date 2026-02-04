@@ -346,7 +346,7 @@ impl PatreonVerificationJob {
 
         let accounts_to_delete = if is_active {
             // Calculate new slot limit: pledge_amount_cents / 100
-            let new_slot_limit = pledge_amount_cents.unwrap_or(0) / 100;
+            let new_slot_limit = (pledge_amount_cents.unwrap_or(0) / 100).min(10);
             // Safe cast: practical slot limits will never exceed i32::MAX
             let active_count = active_accounts.len() as i32;
 

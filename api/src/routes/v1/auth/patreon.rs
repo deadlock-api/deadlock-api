@@ -207,8 +207,8 @@ pub(crate) async fn callback(
         None => (None, 0, false),
     };
 
-    // Calculate slot limit: pledge_amount_cents / 100
-    let slot_limit = pledge_amount_cents / 100;
+    // Calculate slot limit: pledge_amount_cents / 100 capped at 5
+    let slot_limit = (pledge_amount_cents / 100).min(10);
 
     // Calculate token expiration time
     let token_expires_at = Utc::now() + Duration::seconds(token_response.expires_in);
