@@ -7,17 +7,6 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
 
-const PATREON_TOKEN_KEY = "patreon_token";
-const API_URL = import.meta.env.VITE_AI_ASSISTANT_API_URL || "https://ai-assistant.deadlock-api.com";
-
-interface CallbackResponse {
-  session_token: string;
-}
-
-interface ErrorResponse {
-  detail?: string;
-}
-
 export const meta: MetaFunction = () => {
   return [
     { title: "Patreon Login | Deadlock API" },
@@ -32,78 +21,40 @@ export default function PatreonCallbackPage() {
   const navigate = useNavigate();
   const [state, setState] = useState<CallbackState>("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [redirectPath, setRedirectPath] = useState<string>("/");
 
   useEffect(() => {
-    const handleCallback = async () => {
-      // Get redirect path early so we can use it in error cases too
-      const storedRedirectPath = sessionStorage.getItem("patreon_redirect_path") || "/";
-      setRedirectPath(storedRedirectPath);
+    // Get redirect path from session storage (stored before OAuth flow)
+    const storedRedirectPath = sessionStorage.getItem("patron_redirect_path") || "/patron";
 
-      // Check for error param from OAuth flow
-      const error = searchParams.get("error");
-      if (error) {
-        const errorDescription = searchParams.get("error_description") || "Authorization was denied or failed";
-        setState("error");
-        setErrorMessage(errorDescription);
-        return;
-      }
+    // Check for error param from OAuth flow or API redirect
+    const error = searchParams.get("error");
+    if (error) {
+      const errorDescription = searchParams.get("error_description") || "Authorization was denied or failed";
+      setState("error");
+      setErrorMessage(errorDescription);
+      return;
+    }
 
-      // Extract code and state from URL
-      const code = searchParams.get("code");
-      const oauthState = searchParams.get("state");
+    // The API has already handled the OAuth callback and set the session cookie.
+    // We just need to show success and redirect to the patron page.
+    setState("success");
 
-      if (!code) {
-        setState("error");
-        setErrorMessage("Missing authorization code");
-        return;
-      }
+    // Clear stored redirect path
+    sessionStorage.removeItem("patron_redirect_path");
 
-      try {
-        // Call backend callback endpoint
-        const params = new URLSearchParams();
-        params.set("code", code);
-        if (oauthState) {
-          params.set("state", oauthState);
-        }
+    // Redirect after brief success message
+    const timeout = setTimeout(() => {
+      navigate(storedRedirectPath, { replace: true });
+    }, 1500);
 
-        const response = await fetch(`${API_URL}/auth/patreon/callback?${params.toString()}`);
-
-        if (response.status === 503) {
-          setState("error");
-          setErrorMessage("Patreon login is currently unavailable. Please try again later.");
-          return;
-        }
-
-        if (!response.ok) {
-          const errorData: ErrorResponse = await response.json().catch(() => ({}));
-          setState("error");
-          setErrorMessage(errorData.detail || `Authentication failed (${response.status})`);
-          return;
-        }
-
-        const data: CallbackResponse = await response.json();
-
-        // Store session token in localStorage
-        localStorage.setItem(PATREON_TOKEN_KEY, data.session_token);
-
-        setState("success");
-
-        // Clear stored redirect path
-        sessionStorage.removeItem("patreon_redirect_path");
-
-        // Redirect to patron page after brief success message
-        setTimeout(() => {
-          navigate("/patron", { replace: true });
-        }, 1500);
-      } catch (_err) {
-        setState("error");
-        setErrorMessage("Failed to complete authentication. Please try again.");
-      }
-    };
-
-    handleCallback();
+    return () => clearTimeout(timeout);
   }, [searchParams, navigate]);
+
+  const handleGoBack = () => {
+    const redirectPath = sessionStorage.getItem("patron_redirect_path") || "/patron";
+    sessionStorage.removeItem("patron_redirect_path");
+    navigate(redirectPath);
+  };
 
   return (
     <div className="flex items-center justify-center min-h-[60vh] p-4">
@@ -135,7 +86,7 @@ export default function PatreonCallbackPage() {
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
               <div className="flex justify-center">
-                <Button onClick={() => navigate(redirectPath)} variant="outline">
+                <Button onClick={handleGoBack} variant="outline">
                   Go Back
                 </Button>
               </div>

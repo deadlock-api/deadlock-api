@@ -1,9 +1,6 @@
 import { Link } from "react-router";
-import { usePatreonAuth } from "~/hooks/usePatreonAuth";
-import { PatreonUserBadge } from "./chat/PatreonUserBadge";
 
 export default function NavHeader() {
-  const { isAuthenticated, isOAuthAvailable, login, isLoading } = usePatreonAuth();
   return (
     <header className="px-8 py-4 bg-gray-900 shadow">
       <div className="mx-auto flex flex-wrap md:flex-nowrap items-center justify-between gap-6">
@@ -27,22 +24,13 @@ export default function NavHeader() {
             >
               Home
             </Link>
-            {!isAuthenticated && isOAuthAvailable && !isLoading ? (
-              <button
-                onClick={login}
-                className="text-lg font-medium px-3 py-1 rounded-md bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300 border border-amber-500/40 transition-all duration-100"
-              >
-                Prioritized Fetching
-              </button>
-            ) : (
-              <Link
-                to="/patron"
-                prefetch="intent"
-                className="text-lg font-medium px-3 py-1 rounded-md bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300 border border-amber-500/40 transition-all duration-100"
-              >
-                Prioritized Fetching
-              </Link>
-            )}
+            <Link
+              to="/patron"
+              prefetch="intent"
+              className="text-lg font-medium px-3 py-1 rounded-md bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300 border border-amber-500/40 transition-all duration-100"
+            >
+              Prioritized Fetching
+            </Link>
             <Link
               to="/heroes"
               prefetch="intent"
@@ -81,12 +69,9 @@ export default function NavHeader() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <PatreonUserBadge />
-          </div>
           <div className="flex items-center">
             <a
-              href="https://www.patreon.com/user?u=68961896"
+              href="https://www.patreon.com/c/manuelhexe"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-gray-500 hover:text-[#f96854] rounded flex items-center"

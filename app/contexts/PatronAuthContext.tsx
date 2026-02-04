@@ -4,11 +4,9 @@ const API_URL = "https://api.deadlock-api.com";
 
 export interface PatronAuthState {
   isAuthenticated: boolean;
-  tier: number;
-  tierName: string | null;
-  rateLimit: number | null;
-  email: string | null;
-  expiresAt: number | null;
+  isActive: boolean;
+  pledgeAmountCents: number | null;
+  totalSlots: number;
   isLoading: boolean;
   isLoggingOut: boolean;
   isOAuthAvailable: boolean;
@@ -21,21 +19,23 @@ export interface PatronAuthContextValue extends PatronAuthState {
 }
 
 interface PatronStatusResponse {
-  authenticated: boolean;
-  tier: number;
-  tier_name: string;
-  rate_limit: number;
-  email: string;
-  expires_at: number;
+  tier_id: string | null;
+  pledge_amount_cents: number | null;
+  total_slots: number;
+  is_active: boolean;
+  last_verified_at: string;
+  steam_accounts_summary: {
+    active_count: number;
+    cooldown_count: number;
+    available_slots: number;
+  };
 }
 
 const initialState: PatronAuthState = {
   isAuthenticated: false,
-  tier: 0,
-  tierName: null,
-  rateLimit: null,
-  email: null,
-  expiresAt: null,
+  isActive: false,
+  pledgeAmountCents: null,
+  totalSlots: 0,
   isLoading: true,
   isLoggingOut: false,
   isOAuthAvailable: true,
@@ -56,7 +56,7 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
 
   const refreshStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/v1/auth/patreon/status`, {
+      const response = await fetch(`${API_URL}/v1/patron/status`, {
         credentials: "include",
       });
 
@@ -78,12 +78,10 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
       const data: PatronStatusResponse = await response.json();
 
       setAuthState((prev) => ({
-        isAuthenticated: data.authenticated,
-        tier: data.tier,
-        tierName: data.tier_name,
-        rateLimit: data.rate_limit,
-        email: data.email,
-        expiresAt: data.expires_at,
+        isAuthenticated: true,
+        isActive: data.is_active,
+        pledgeAmountCents: data.pledge_amount_cents,
+        totalSlots: data.total_slots,
         isLoading: false,
         isLoggingOut: prev.isLoggingOut,
         isOAuthAvailable: true,
