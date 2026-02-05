@@ -6,7 +6,7 @@ import { ChatInput } from "~/components/chat/ChatInput";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
 import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { useChatStream } from "~/hooks/useChatStream";
 import { useRateLimit } from "~/hooks/useRateLimit";
 
