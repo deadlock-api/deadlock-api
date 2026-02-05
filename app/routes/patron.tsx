@@ -664,17 +664,15 @@ function ReactivateAccountDialog({
   steamId3,
   onReactivate,
   isReactivating,
-  disabled,
 }: {
   steamId3: number;
   onReactivate: () => void;
   isReactivating: boolean;
-  disabled: boolean;
 }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" disabled={isReactivating || disabled}>
+        <Button variant="ghost" size="sm" disabled={isReactivating}>
           {isReactivating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
         </Button>
       </AlertDialogTrigger>
@@ -702,12 +700,9 @@ function ReactivateAccountDialog({
 
 function SteamAccountsList() {
   const { data, isLoading, isError, error } = useSteamAccounts();
-  const { data: status } = usePatronStatus();
   const deleteSteamAccountMutation = useDeleteSteamAccount();
   const replaceSteamAccountMutation = useReplaceSteamAccount();
   const reactivateSteamAccountMutation = useReactivateSteamAccount();
-
-  const availableSlots = status?.steam_accounts_summary.available_slots ?? 0;
 
   const handleDeleteAccount = (accountId: string) => {
     deleteSteamAccountMutation.mutate(accountId, {
@@ -859,7 +854,6 @@ function SteamAccountsList() {
                               steamId3={account.steam_id3}
                               onReactivate={() => handleReactivateAccount(account.id)}
                               isReactivating={isReactivating}
-                              disabled={availableSlots === 0}
                             />
                           )}
                         </div>
