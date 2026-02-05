@@ -64,6 +64,7 @@ pub(crate) struct ListSteamAccountsResponse {
 /// - `SteamID3` must be a valid 32-bit unsigned integer (0 to 4,294,967,295)
 /// - Total active accounts + accounts in cooldown must not exceed `slot_limit`
 /// - The specific `steam_id3` must not be in cooldown (deleted within 24 hours)
+#[allow(clippy::too_many_lines)]
 pub(crate) async fn add_steam_account(
     State(app_state): State<AppState>,
     session: PatronSession,
@@ -103,7 +104,73 @@ pub(crate) async fn add_steam_account(
 
     let repo = SteamAccountsRepository::new(app_state.pg_client.clone());
 
-    // Step 2: Count active accounts and accounts in cooldown
+    // Step 2: Check if this steam_id3 already exists as a soft-deleted account.
+    // If so, reactivate it instead of creating a new record.
+    let existing_deleted = repo
+        .find_deleted_account_by_steam_id(session.patron_id, request.steam_id3)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to check for deleted account: {e}");
+            APIError::internal("Failed to check account status")
+        })?;
+
+    if let Some(deleted_account) = existing_deleted {
+        let cooldown_threshold = Utc::now() - Duration::hours(24);
+        let is_in_cooldown = deleted_account
+            .deleted_at
+            .is_some_and(|deleted| deleted > cooldown_threshold);
+
+        // If the account is NOT in cooldown, reactivating it uses a new slot,
+        // so we need to check slot limits.
+        if !is_in_cooldown {
+            let active_count = repo
+                .count_active_accounts(session.patron_id)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to count active accounts: {e}");
+                    APIError::internal("Failed to count accounts")
+                })?;
+
+            let cooldown_count = repo
+                .count_accounts_in_cooldown(session.patron_id)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to count accounts in cooldown: {e}");
+                    APIError::internal("Failed to count accounts")
+                })?;
+
+            let used_slots = active_count + cooldown_count;
+            if used_slots >= slot_limit {
+                return Err(APIError::status_msg(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "Cannot add account: slot limit exceeded (using {used_slots} of {slot_limit} slots)",
+                    ),
+                ));
+            }
+        }
+
+        // Reactivate the soft-deleted account (sets deleted_at to NULL)
+        let reactivated = repo
+            .reactivate_account(deleted_account.id, session.patron_id)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to reactivate account: {e}");
+                APIError::internal("Failed to reactivate Steam account")
+            })?;
+
+        return Ok((
+            StatusCode::CREATED,
+            Json(SteamAccountResponse {
+                id: reactivated.id,
+                steam_id3: reactivated.steam_id3,
+                created_at: reactivated.created_at,
+                deleted_at: reactivated.deleted_at,
+            }),
+        ));
+    }
+
+    // Step 3: No existing deleted account found — check slot limits for a new insert
     let active_count = repo
         .count_active_accounts(session.patron_id)
         .await
@@ -120,7 +187,6 @@ pub(crate) async fn add_steam_account(
             APIError::internal("Failed to count accounts")
         })?;
 
-    // Step 3: Check if adding would exceed slot_limit
     let used_slots = active_count + cooldown_count;
     if used_slots >= slot_limit {
         return Err(APIError::status_msg(
@@ -131,23 +197,7 @@ pub(crate) async fn add_steam_account(
         ));
     }
 
-    // Step 4: Check if this specific steam_id3 is in cooldown
-    let is_in_cooldown = repo
-        .is_steam_id_in_cooldown(session.patron_id, request.steam_id3)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to check cooldown status: {e}");
-            APIError::internal("Failed to check cooldown status")
-        })?;
-
-    if is_in_cooldown {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "Slot still in cooldown: this Steam account was removed within the last 24 hours",
-        ));
-    }
-
-    // Step 5: Insert new record
+    // Step 4: Insert new record
     let account = repo
         .add_steam_account(session.patron_id, request.steam_id3)
         .await

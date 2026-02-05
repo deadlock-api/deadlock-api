@@ -182,6 +182,38 @@ impl SteamAccountsRepository {
         Ok(row.exists)
     }
 
+    /// Finds a soft-deleted Steam account by `steam_id3` for a patron.
+    /// Returns the most recently deleted record if one exists.
+    pub(crate) async fn find_deleted_account_by_steam_id(
+        &self,
+        patron_id: Uuid,
+        steam_id3: i64,
+    ) -> SteamAccountsRepositoryResult<Option<SteamAccount>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT id, patron_id, steam_id3, created_at, deleted_at
+            FROM prioritized_steam_accounts
+            WHERE patron_id = $1
+              AND steam_id3 = $2
+              AND deleted_at IS NOT NULL
+            ORDER BY deleted_at DESC
+            LIMIT 1
+            "#,
+            patron_id,
+            steam_id3,
+        )
+        .fetch_optional(&self.pg_client)
+        .await?;
+
+        Ok(row.map(|row| SteamAccount {
+            id: row.id,
+            patron_id: row.patron_id,
+            steam_id3: row.steam_id3,
+            created_at: row.created_at,
+            deleted_at: row.deleted_at,
+        }))
+    }
+
     /// Adds a new Steam account to a patron's prioritized list.
     pub(crate) async fn add_steam_account(
         &self,
