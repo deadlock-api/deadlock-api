@@ -68,10 +68,10 @@ pub(crate) async fn login(State(state): State<AppState>) -> impl IntoResponse {
 /// Query parameters for the OAuth callback
 #[derive(Deserialize)]
 pub(crate) struct CallbackParams {
-    /// Authorization code from Patreon
-    code: String,
+    /// Authorization code from Patreon (absent if user cancels the flow)
+    code: Option<String>,
     /// State parameter for CSRF protection
-    state: String,
+    state: Option<String>,
 }
 
 /// Extracts the OAuth state from the `patreon_oauth_state` cookie
@@ -125,6 +125,16 @@ pub(crate) async fn callback(
     headers: HeaderMap,
     Query(params): Query<CallbackParams>,
 ) -> impl IntoResponse {
+    // If the user cancelled the OAuth flow, Patreon redirects back without a code.
+    // Redirect them back to the frontend gracefully.
+    let Some(code) = params.code else {
+        return Response::builder()
+            .status(StatusCode::FOUND)
+            .header("Location", &app_state.config.patreon.frontend_redirect_url)
+            .body(axum::body::Body::empty())
+            .expect("Failed to build redirect response");
+    };
+
     // Step 1: Validate state parameter matches cookie (CSRF protection)
     let Some(stored_state) = extract_state_from_cookie(&headers) else {
         return Response::builder()
@@ -133,7 +143,14 @@ pub(crate) async fn callback(
             .expect("Failed to build error response");
     };
 
-    if params.state != stored_state {
+    let Some(ref state_param) = params.state else {
+        return Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .body(axum::body::Body::from("Missing OAuth state parameter"))
+            .expect("Failed to build error response");
+    };
+
+    if *state_param != stored_state {
         return Response::builder()
             .status(StatusCode::BAD_REQUEST)
             .body(axum::body::Body::from("Invalid OAuth state"))
@@ -149,7 +166,7 @@ pub(crate) async fn callback(
     );
 
     // Step 2: Exchange authorization code for tokens
-    let token_response = match patreon_client.exchange_code(&params.code).await {
+    let token_response = match patreon_client.exchange_code(&code).await {
         Ok(response) => response,
         Err(e) => {
             tracing::error!("Failed to exchange code: {e}");
