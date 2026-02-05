@@ -429,8 +429,8 @@ function AddSteamAccountForm() {
         setSteamIdInput("");
         setValidationError(null);
       },
-      onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Failed to add Steam account");
+      onError: () => {
+        toast.error("Failed to add Steam account");
       },
     });
   };
@@ -693,8 +693,8 @@ function SteamAccountsList() {
       onSuccess: () => {
         toast.success("Steam account removed successfully");
       },
-      onError: (err) => {
-        toast.error(err instanceof Error ? err.message : "Failed to remove Steam account");
+      onError: () => {
+        toast.error("Failed to remove Steam account");
       },
     });
   };
@@ -706,8 +706,8 @@ function SteamAccountsList() {
         onSuccess: () => {
           toast.success("Steam account replaced successfully");
         },
-        onError: (err) => {
-          toast.error(err instanceof Error ? err.message : "Failed to replace Steam account");
+        onError: () => {
+          toast.error("Failed to replace Steam account");
         },
       },
     );
@@ -718,8 +718,8 @@ function SteamAccountsList() {
       onSuccess: () => {
         toast.success("Steam account reactivated successfully");
       },
-      onError: (err) => {
-        toast.error(err instanceof Error ? err.message : "Failed to reactivate Steam account");
+      onError: () => {
+        toast.error("Failed to reactivate Steam account");
       },
     });
   };
