@@ -75,7 +75,8 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Patron Dashboard</CardTitle>
           <CardDescription className="text-base mt-2">
-            Become a patron to unlock prioritized data fetching for your Steam accounts.
+            Become a patron to unlock prioritized data fetching for your Steam accounts. Patronage helps us cover
+            infrastructure costs — we don't make a profit from this.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
@@ -112,8 +113,13 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
             <h3 className="text-lg font-semibold">How Prioritization Works</h3>
             <p className="text-sm text-muted-foreground">
               Deadlock API fetches match data for millions of players. Patron accounts are placed in a priority queue,
-              meaning your matches and stats are updated more frequently than free-tier users. This ensures you always
-              have the latest data for analysis and tracking.
+              meaning your matches and stats are updated more frequently. This ensures you always have the latest data
+              for analysis and tracking.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Free users are not affected</strong> — the experience for
+              non-patrons stays exactly the same. Patronage solely funds the additional infrastructure costs of
+              running priority fetches. We don't profit from this; every cent goes toward keeping the service running.
             </p>
           </div>
 
