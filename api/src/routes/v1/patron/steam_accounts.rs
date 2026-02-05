@@ -508,7 +508,13 @@ pub(crate) async fn reactivate_steam_account(
         })?;
 
     // Step 4: Check if reactivation would exceed slot_limit
-    let used_slots = active_count + cooldown_count;
+    // If the account is still in cooldown, it's already counted in cooldown_count,
+    // so reactivating it doesn't consume an additional slot — subtract 1.
+    let cooldown_threshold = Utc::now() - Duration::hours(24);
+    let account_in_cooldown = account
+        .deleted_at
+        .is_some_and(|deleted| deleted > cooldown_threshold);
+    let used_slots = active_count + cooldown_count - i32::from(account_in_cooldown);
     if used_slots >= slot_limit {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
