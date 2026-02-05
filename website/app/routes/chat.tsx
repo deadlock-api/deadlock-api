@@ -97,29 +97,6 @@ export default function ChatPage() {
                   and more.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground text-center">Try asking:</p>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">&bull;</span>
-                      <span>"What are the best items for Haze?"</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">&bull;</span>
-                      <span>"How do I counter Wraith?"</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">&bull;</span>
-                      <span>"What's the current hero tier list?"</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-primary">&bull;</span>
-                      <span>"Explain the soul economy mechanics"</span>
-                    </li>
-                  </ul>
-                </div>
-              </CardContent>
             </Card>
           </div>
         ) : (
