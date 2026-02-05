@@ -117,9 +117,9 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
               for analysis and tracking.
             </p>
             <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">Free users are not affected</strong> — the experience for
-              non-patrons stays exactly the same. Patronage solely funds the additional infrastructure costs of
-              running priority fetches. We don't profit from this; every cent goes toward keeping the service running.
+              <strong className="text-foreground">Free users are not affected!</strong> The experience for non-patrons
+              stays exactly the same. Patronage solely funds the additional infrastructure costs of running priority
+              fetches. We don't profit from this; every cent goes toward keeping the service running.
             </p>
           </div>
 
