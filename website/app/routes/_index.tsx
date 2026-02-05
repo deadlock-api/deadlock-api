@@ -11,7 +11,6 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-
   return (
     <div className="container mx-auto space-y-12">
       <section className="text-center">
@@ -132,9 +131,7 @@ export default function Index() {
         <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5">
           <CardHeader>
             <CardTitle className="text-2xl text-amber-400">Prioritized Fetching</CardTitle>
-            <CardDescription className="text-base">
-              Get faster data updates with priority queue access
-            </CardDescription>
+            <CardDescription className="text-base">Get faster data updates with priority queue access</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground max-w-2xl mx-auto">
