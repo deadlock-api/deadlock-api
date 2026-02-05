@@ -3,6 +3,7 @@ import {
   CheckCircle,
   ChevronDown,
   Clock,
+  ExternalLink,
   HelpCircle,
   Loader2,
   LogIn,
@@ -403,7 +404,9 @@ function AddSteamAccountForm() {
   const addSteamAccountMutation = useAddSteamAccount();
 
   const availableSlots = status?.steam_accounts_summary.available_slots ?? 0;
+  const totalSlots = status?.total_slots ?? 0;
   const hasAvailableSlots = availableSlots > 0;
+  const canUpgrade = totalSlots < 10;
 
   // Validate input on change
   const handleInputChange = (value: string) => {
@@ -455,7 +458,7 @@ function AddSteamAccountForm() {
               {availableSlots} slot{availableSlots !== 1 ? "s" : ""} available
             </span>
           ) : (
-            <span className="text-destructive">No slots available</span>
+            <span className="text-destructive">No slots available — {canUpgrade ? "upgrade your pledge for more" : "maximum of 10 reached"}</span>
           )}
         </CardDescription>
       </CardHeader>
@@ -481,6 +484,19 @@ function AddSteamAccountForm() {
             <span className="ml-2">Add</span>
           </Button>
         </form>
+        {!hasAvailableSlots && canUpgrade && (
+          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-4 flex items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Need more slots? Increase your Patreon pledge to unlock additional accounts (up to 10 slots max).
+            </p>
+            <Button variant="outline" size="sm" className="shrink-0" asChild>
+              <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Upgrade on Patreon
+              </a>
+            </Button>
+          </div>
+        )}
         <div className="mt-4">
           <SteamIdFormatHelper />
         </div>
