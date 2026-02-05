@@ -94,7 +94,7 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
                 <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                 <span>
                   <strong className="text-foreground">Multiple Steam Accounts</strong> — Add multiple Steam accounts
-                  based on your pledge level ($1 = 1 account slot, capped at 10).
+                  based on your pledge level ($3 = 1 account slot, capped at 10).
                 </span>
               </li>
               <li className="flex items-start gap-2">
