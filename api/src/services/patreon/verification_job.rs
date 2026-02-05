@@ -13,8 +13,8 @@ use super::repository::PatronRepository;
 use super::steam_accounts_repository::SteamAccountsRepository;
 use super::types::{Patron, calculate_slot_limit};
 
-/// Interval between verification runs (24 hours)
-const VERIFICATION_INTERVAL_SECS: u64 = 24 * 60 * 60;
+/// Interval between verification runs (1 hour)
+const VERIFICATION_INTERVAL_SECS: u64 = 60 * 60;
 
 /// Patron queued for retry after API error
 struct RetryPatron {
@@ -27,9 +27,9 @@ struct RetryPatron {
 /// Interval for retry on Patreon API errors (30 minutes)
 const RETRY_INTERVAL_SECS: u64 = 30 * 60;
 
-/// Daily verification job for Patreon tokens and membership sync
+/// Hourly verification job for Patreon tokens and membership sync
 ///
-/// This job runs once per day and:
+/// This job runs once per hour and:
 /// 1. Fetches all patrons with stored tokens
 /// 2. For each patron with an expired token, refreshes it using the Patreon API
 /// 3. Updates the stored tokens on successful refresh
@@ -82,7 +82,7 @@ impl PatreonVerificationJob {
         let job = Arc::clone(&self);
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(VERIFICATION_INTERVAL_SECS));
-            info!("Patreon verification job started (runs every 24 hours)");
+            info!("Patreon verification job started (runs every hour)");
 
             loop {
                 interval.tick().await;
@@ -124,7 +124,7 @@ impl PatreonVerificationJob {
 
     /// Run the verification process for all patrons
     async fn run_verification(&self) {
-        info!("Starting daily Patreon verification (tokens + membership)");
+        info!("Starting hourly Patreon verification (tokens + membership)");
 
         // Fetch all patrons with stored tokens
         let patrons = match self.patron_repository.get_all_patrons_with_tokens().await {
@@ -157,7 +157,7 @@ impl PatreonVerificationJob {
         }
 
         info!(
-            "Daily verification complete: {} tokens refreshed, {} memberships synced, {} failed, {} skipped, {} queued for retry",
+            "Hourly verification complete: {} tokens refreshed, {} memberships synced, {} failed, {} skipped, {} queued for retry",
             refreshed_count, membership_synced_count, failed_count, skipped_count, api_error_count
         );
     }
