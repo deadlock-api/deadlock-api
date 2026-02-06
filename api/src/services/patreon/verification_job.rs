@@ -9,7 +9,7 @@ use tokio::time::interval;
 use tracing::{error, info, warn};
 
 use super::client::PatreonClient;
-use super::membership::handle_downgrade_or_cancellation;
+use super::membership::{handle_downgrade_or_cancellation, handle_reactivation};
 use super::repository::PatronRepository;
 use super::steam_accounts_repository::SteamAccountsRepository;
 use super::types::Patron;
@@ -317,6 +317,22 @@ impl PatreonVerificationJob {
                         "Failed to handle downgrade/cancellation for patron {patreon_user_id}: {e}"
                     );
                     // Don't return DbError here as the membership sync itself succeeded
+                }
+
+                // Handle reactivation (re-subscribe)
+                if let Err(e) = handle_reactivation(
+                    &self.steam_accounts_repository,
+                    patron_id,
+                    patreon_user_id,
+                    pledge_amount_cents,
+                    is_active,
+                    slot_override,
+                )
+                .await
+                {
+                    error!(
+                        "Failed to handle reactivation for patron {patreon_user_id}: {e}"
+                    );
                 }
 
                 MembershipSyncResult::Success

@@ -3,6 +3,63 @@ use tracing::info;
 use super::steam_accounts_repository::SteamAccountsRepository;
 use super::types::calculate_slot_limit;
 
+/// Handle patron reactivation by restoring soft-deleted Steam accounts up to the slot limit.
+///
+/// When a patron re-subscribes (pays again), reactivate their previously soft-deleted
+/// accounts so they don't have to re-add them manually.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+pub(crate) async fn handle_reactivation(
+    steam_accounts_repository: &SteamAccountsRepository,
+    patron_id: uuid::Uuid,
+    patreon_user_id: &str,
+    pledge_amount_cents: Option<i32>,
+    is_active: bool,
+    slot_override: Option<i32>,
+) -> Result<(), String> {
+    if !is_active {
+        return Ok(());
+    }
+
+    let slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents);
+
+    let active_count = steam_accounts_repository
+        .count_active_accounts(patron_id)
+        .await
+        .map_err(|e| format!("Failed to count active accounts: {e}"))?;
+
+    if active_count >= slot_limit {
+        return Ok(());
+    }
+
+    let available_slots = (slot_limit - active_count) as usize;
+
+    let deleted_accounts = steam_accounts_repository
+        .get_deleted_accounts_for_patron(patron_id)
+        .await
+        .map_err(|e| format!("Failed to get deleted accounts: {e}"))?;
+
+    if deleted_accounts.is_empty() {
+        return Ok(());
+    }
+
+    let accounts_to_reactivate: Vec<uuid::Uuid> = deleted_accounts
+        .into_iter()
+        .take(available_slots)
+        .map(|a| a.id)
+        .collect();
+
+    let reactivated_count = steam_accounts_repository
+        .reactivate_accounts(&accounts_to_reactivate, patron_id)
+        .await
+        .map_err(|e| format!("Failed to reactivate accounts: {e}"))?;
+
+    info!(
+        "Reactivated {reactivated_count} accounts for patron {patreon_user_id} (slot limit: {slot_limit})"
+    );
+
+    Ok(())
+}
+
 /// Handle patron downgrade or cancellation by soft-deleting excess Steam accounts.
 ///
 /// - If `is_active` is false (patron cancelled), soft-delete ALL accounts

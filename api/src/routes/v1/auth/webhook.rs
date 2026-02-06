@@ -6,7 +6,7 @@ use md5::Md5;
 use tracing::{error, info, warn};
 
 use crate::context::AppState;
-use crate::services::patreon::membership::handle_downgrade_or_cancellation;
+use crate::services::patreon::membership::{handle_downgrade_or_cancellation, handle_reactivation};
 use crate::services::patreon::repository::PatronRepository;
 use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;
 use crate::services::patreon::webhook_types::{PatreonWebhookEvent, WebhookPayload};
@@ -166,6 +166,22 @@ pub(crate) async fn webhook(
         {
             error!(
                 "Patreon webhook: failed to handle downgrade/cancellation for {patreon_user_id}: {e}"
+            );
+        }
+
+        // Handle reactivation (re-subscribe)
+        if let Err(e) = handle_reactivation(
+            &steam_accounts_repo,
+            patron.id,
+            &patreon_user_id,
+            pledge_amount_cents,
+            is_active,
+            patron.slot_override,
+        )
+        .await
+        {
+            error!(
+                "Patreon webhook: failed to handle reactivation for {patreon_user_id}: {e}"
             );
         }
     });

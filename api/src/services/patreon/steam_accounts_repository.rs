@@ -365,6 +365,70 @@ impl SteamAccountsRepository {
             .collect())
     }
 
+    /// Gets soft-deleted Steam accounts for a patron, ordered by `created_at ASC`.
+    /// Used to reactivate accounts when a patron re-subscribes.
+    pub(crate) async fn get_deleted_accounts_for_patron(
+        &self,
+        patron_id: Uuid,
+    ) -> SteamAccountsRepositoryResult<Vec<SteamAccount>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                id,
+                patron_id,
+                steam_id3,
+                created_at,
+                deleted_at
+            FROM prioritized_steam_accounts
+            WHERE patron_id = $1
+              AND deleted_at IS NOT NULL
+            ORDER BY created_at ASC
+            "#,
+            patron_id,
+        )
+        .fetch_all(&self.pg_client)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| SteamAccount {
+                id: row.id,
+                patron_id: row.patron_id,
+                steam_id3: row.steam_id3,
+                created_at: row.created_at,
+                deleted_at: row.deleted_at,
+            })
+            .collect())
+    }
+
+    /// Reactivates multiple soft-deleted Steam accounts by setting `deleted_at` to NULL.
+    /// Returns the number of accounts that were reactivated.
+    pub(crate) async fn reactivate_accounts(
+        &self,
+        account_ids: &[Uuid],
+        patron_id: Uuid,
+    ) -> SteamAccountsRepositoryResult<u64> {
+        if account_ids.is_empty() {
+            return Ok(0);
+        }
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE prioritized_steam_accounts
+            SET deleted_at = NULL
+            WHERE id = ANY($1)
+              AND patron_id = $2
+              AND deleted_at IS NOT NULL
+            "#,
+            account_ids,
+            patron_id,
+        )
+        .execute(&self.pg_client)
+        .await?;
+
+        Ok(result.rows_affected())
+    }
+
     /// Soft-deletes multiple Steam accounts by their IDs.
     /// Used during patron downgrades to disable excess accounts.
     /// Returns the number of accounts that were soft-deleted.
