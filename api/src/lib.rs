@@ -83,7 +83,6 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         state.config.patreon.client_id.clone(),
         state.config.patreon.client_secret.clone(),
         state.config.patreon.redirect_uri.clone(),
-        state.config.patreon.campaign_id.clone(),
     ));
     patreon_verification_job.start_background_verification();
 

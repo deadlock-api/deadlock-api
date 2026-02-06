@@ -196,10 +196,7 @@ pub(crate) async fn callback(
 
     // Step 3b: Fetch membership status
     let membership = match patreon_client
-        .get_membership(
-            &token_response.access_token,
-            &app_state.config.patreon.campaign_id,
-        )
+        .get_membership(&token_response.access_token)
         .await
     {
         Ok(membership) => membership,

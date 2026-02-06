@@ -94,15 +94,17 @@ impl PatreonClient {
         })
     }
 
-    /// Fetch patron membership status for a specific campaign
+    /// Fetch patron membership status from the identity endpoint.
     ///
-    /// Returns None if the user is not a member of the campaign.
+    /// Without the `identity.memberships` scope, the API only returns the
+    /// membership for the creator's own campaign, so we use the first member
+    /// resource found.
+    ///
+    /// Returns None if the user has no membership.
     pub(crate) async fn get_membership(
         &self,
         access_token: &str,
-        campaign_id: &str,
     ) -> PatreonResult<Option<Membership>> {
-        // Query identity endpoint with memberships included
         let url = format!(
             "{IDENTITY_ENDPOINT}?include=memberships&fields[member]=currently_entitled_amount_cents,patron_status"
         );
@@ -117,34 +119,27 @@ impl PatreonClient {
             .json::<IdentityWithMembershipsResponse>()
             .await?;
 
-        // Find the membership for the specified campaign in the included resources
+        // Without identity.memberships scope, only our campaign's membership is returned
         for resource in response.included {
             if let IncludedResource::Member(member) = resource {
-                // Check if this membership is for our campaign
-                if let Some(ref campaign_ref) = member.relationships.campaign.data
-                    && campaign_ref.id == campaign_id
-                {
-                    // Extract the first tier ID if available
-                    let tier_id = member
-                        .relationships
-                        .currently_entitled_tiers
-                        .data
-                        .first()
-                        .map(|tier| tier.id.clone());
+                let tier_id = member
+                    .relationships
+                    .currently_entitled_tiers
+                    .data
+                    .first()
+                    .map(|tier| tier.id.clone());
 
-                    return Ok(Some(Membership {
-                        tier_id,
-                        pledge_amount_cents: member
-                            .attributes
-                            .currently_entitled_amount_cents
-                            .unwrap_or(0),
-                        patron_status: member.attributes.patron_status,
-                    }));
-                }
+                return Ok(Some(Membership {
+                    tier_id,
+                    pledge_amount_cents: member
+                        .attributes
+                        .currently_entitled_amount_cents
+                        .unwrap_or(0),
+                    patron_status: member.attributes.patron_status,
+                }));
             }
         }
 
-        // User is not a member of this campaign
         Ok(None)
     }
 }

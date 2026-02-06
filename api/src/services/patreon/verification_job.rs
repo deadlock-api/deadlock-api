@@ -43,7 +43,6 @@ pub(crate) struct PatreonVerificationJob {
     patron_repository: PatronRepository,
     steam_accounts_repository: SteamAccountsRepository,
     patreon_client: PatreonClient,
-    campaign_id: String,
     shutdown: Arc<AtomicBool>,
     /// Patrons that need retry due to API errors
     retry_queue: Arc<Mutex<Vec<RetryPatron>>>,
@@ -56,7 +55,6 @@ impl PatreonVerificationJob {
         patreon_client_id: String,
         patreon_client_secret: String,
         patreon_redirect_uri: String,
-        campaign_id: String,
     ) -> Self {
         let patron_repository = PatronRepository::new(pg_client.clone(), encryption_key);
         let steam_accounts_repository = SteamAccountsRepository::new(pg_client);
@@ -71,7 +69,6 @@ impl PatreonVerificationJob {
             patron_repository,
             steam_accounts_repository,
             patreon_client,
-            campaign_id,
             shutdown: Arc::new(AtomicBool::new(false)),
             retry_queue: Arc::new(Mutex::new(Vec::new())),
         }
@@ -282,11 +279,7 @@ impl PatreonVerificationJob {
         access_token: &str,
         slot_override: Option<i32>,
     ) -> MembershipSyncResult {
-        match self
-            .patreon_client
-            .get_membership(access_token, &self.campaign_id)
-            .await
-        {
+        match self.patreon_client.get_membership(access_token).await {
             Ok(membership) => {
                 let (tier_id, pledge_amount_cents, is_active) =
                     Self::extract_membership_data(membership);
