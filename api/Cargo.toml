@@ -53,7 +53,7 @@ url = "2.5.8"
 aes-gcm = "0.10"
 hex = "0.4"
 hmac = "0.12"
-md-5 = "0.10"
+md5 = { package = "md-5", version = "0.10" }
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 
 [dev-dependencies]

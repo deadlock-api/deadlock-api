@@ -36,7 +36,6 @@ pub(crate) struct WebhookPayload {
 /// Member resource in the webhook payload (the primary `data` object).
 #[derive(Debug, Deserialize)]
 pub(crate) struct WebhookMemberData {
-    pub(crate) id: String,
     pub(crate) attributes: WebhookMemberAttributes,
     #[serde(default)]
     pub(crate) relationships: WebhookMemberRelationships,
@@ -84,8 +83,6 @@ pub(crate) struct WebhookCampaignRelationship {
 #[derive(Debug, Deserialize)]
 pub(crate) struct WebhookResourceRef {
     pub(crate) id: String,
-    #[serde(rename = "type")]
-    pub(crate) resource_type: String,
 }
 
 #[cfg(test)]
