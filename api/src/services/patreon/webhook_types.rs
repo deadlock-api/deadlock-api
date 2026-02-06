@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use serde::Deserialize;
 
 /// Patreon webhook event types parsed from the `X-Patreon-Event` header.
@@ -33,8 +31,6 @@ impl PatreonWebhookEvent {
 #[derive(Debug, Deserialize)]
 pub(crate) struct WebhookPayload {
     pub(crate) data: WebhookMemberData,
-    #[serde(default)]
-    pub(crate) included: Vec<WebhookIncludedResource>,
 }
 
 /// Member resource in the webhook payload (the primary `data` object).
@@ -90,35 +86,6 @@ pub(crate) struct WebhookResourceRef {
     pub(crate) id: String,
     #[serde(rename = "type")]
     pub(crate) resource_type: String,
-}
-
-/// Included resources in the webhook payload.
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
-pub(crate) enum WebhookIncludedResource {
-    #[serde(rename = "user")]
-    User(WebhookIncludedUser),
-    #[serde(rename = "tier")]
-    Tier(WebhookIncludedTier),
-    #[serde(rename = "campaign")]
-    Campaign(WebhookIncludedCampaign),
-    #[serde(other)]
-    Other,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct WebhookIncludedUser {
-    pub(crate) id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct WebhookIncludedTier {
-    pub(crate) id: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct WebhookIncludedCampaign {
-    pub(crate) id: String,
 }
 
 #[cfg(test)]
