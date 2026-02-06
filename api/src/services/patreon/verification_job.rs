@@ -330,9 +330,7 @@ impl PatreonVerificationJob {
                 )
                 .await
                 {
-                    error!(
-                        "Failed to handle reactivation for patron {patreon_user_id}: {e}"
-                    );
+                    error!("Failed to handle reactivation for patron {patreon_user_id}: {e}");
                 }
 
                 MembershipSyncResult::Success

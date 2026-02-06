@@ -31,6 +31,7 @@ pub(crate) async fn handle_reactivation(
         return Ok(());
     }
 
+    #[allow(clippy::cast_sign_loss)]
     let available_slots = (slot_limit - active_count) as usize;
 
     let deleted_accounts = steam_accounts_repository

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE prioritized_steam_accounts\n            SET deleted_at = NULL\n            WHERE id = ANY($1)\n              AND patron_id = $2\n              AND deleted_at IS NOT NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c75d810765d776c80b327dc961fdd1d61181217e23279ced320420f79b860256"
+}

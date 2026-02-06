@@ -180,9 +180,7 @@ pub(crate) async fn webhook(
         )
         .await
         {
-            error!(
-                "Patreon webhook: failed to handle reactivation for {patreon_user_id}: {e}"
-            );
+            error!("Patreon webhook: failed to handle reactivation for {patreon_user_id}: {e}");
         }
     });
 
