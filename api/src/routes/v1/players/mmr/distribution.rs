@@ -11,6 +11,8 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
 use crate::routes::v1::players::mmr::mmr_history::{SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -178,9 +180,22 @@ Player MMR Distribution
 ",
 )]
 pub(super) async fn mmr_distribution(
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Query(query): Query<MMRDistributionQuery>,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "mmr",
+            &[
+                Quota::ip_limit(10, core::time::Duration::from_secs(10)),
+                Quota::key_limit(10, core::time::Duration::from_secs(10)),
+                Quota::global_limit(20, core::time::Duration::from_secs(10)),
+            ],
+        )
+        .await?;
     let query = build_mmr_query(&query);
     debug!(?query);
     Ok(state
@@ -209,8 +224,21 @@ Player Hero MMR Distribution
 pub(super) async fn hero_mmr_distribution(
     Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(query): Query<MMRDistributionQuery>,
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "mmr",
+            &[
+                Quota::ip_limit(10, core::time::Duration::from_secs(10)),
+                Quota::key_limit(10, core::time::Duration::from_secs(10)),
+                Quota::global_limit(20, core::time::Duration::from_secs(10)),
+            ],
+        )
+        .await?;
     let query = build_hero_mmr_distribution_query(hero_id, &query);
     debug!(?query);
     Ok(state
