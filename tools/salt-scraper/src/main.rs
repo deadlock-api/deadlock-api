@@ -156,7 +156,7 @@ async fn main() -> anyhow::Result<()> {
 
         // Batch-check participants against prioritized accounts (reuse already-fetched set)
         let prioritized_set: HashSet<i64> = prioritized_account_ids.iter().copied().collect();
-        let mut prioritized_matches = mark_prioritized_matches(prioritized_set, pending_matches);
+        let mut prioritized_matches = mark_prioritized_matches(&prioritized_set, pending_matches);
 
         // Sort so prioritized matches are processed first
         prioritized_matches.sort_by_key(|b| core::cmp::Reverse(b.is_prioritized));
@@ -372,7 +372,7 @@ async fn ingest_salts(
 /// Takes a pre-fetched set of prioritized account IDs and returns a list of `PrioritizedMatch`
 /// entries with the priority flag set based on whether any participant is in the prioritized set.
 fn mark_prioritized_matches(
-    prioritized_accounts: HashSet<i64>,
+    prioritized_accounts: &HashSet<i64>,
     pending_matches: Vec<PendingMatch>,
 ) -> Vec<PrioritizedMatch> {
     // Mark matches as prioritized if any participant is in the prioritized set
