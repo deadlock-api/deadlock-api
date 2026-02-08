@@ -154,8 +154,9 @@ async fn main() -> anyhow::Result<()> {
         }
         info!("Found {} total matches to fetch", pending_matches.len());
 
-        // Batch-check participants against prioritized accounts
-        let mut prioritized_matches = mark_prioritized_matches(&pg_pool, pending_matches).await;
+        // Batch-check participants against prioritized accounts (reuse already-fetched set)
+        let prioritized_set: HashSet<i64> = prioritized_account_ids.iter().copied().collect();
+        let mut prioritized_matches = mark_prioritized_matches(prioritized_set, pending_matches);
 
         // Sort so prioritized matches are processed first
         prioritized_matches.sort_by_key(|b| core::cmp::Reverse(b.is_prioritized));
@@ -368,32 +369,12 @@ async fn ingest_salts(
 
 /// Batch-checks participants against prioritized accounts and marks matches accordingly.
 ///
-/// Collects all unique participant `account_id` values, queries the database for prioritized
-/// accounts, and returns a list of `PrioritizedMatch` entries with the priority flag set.
-async fn mark_prioritized_matches(
-    pg_pool: &sqlx::Pool<sqlx::Postgres>,
+/// Takes a pre-fetched set of prioritized account IDs and returns a list of `PrioritizedMatch`
+/// entries with the priority flag set based on whether any participant is in the prioritized set.
+fn mark_prioritized_matches(
+    prioritized_accounts: HashSet<i64>,
     pending_matches: Vec<PendingMatch>,
 ) -> Vec<PrioritizedMatch> {
-    // Collect all unique participant account_ids
-    let all_participants: HashSet<i64> = pending_matches
-        .iter()
-        .flat_map(|m| m.participants.iter().map(|&id| i64::from(id)))
-        .collect();
-
-    // Batch query for prioritized accounts
-    let prioritized_accounts: HashSet<i64> = match common::get_prioritized_from_list(
-        pg_pool,
-        &all_participants.into_iter().collect::<Vec<_>>(),
-    )
-    .await
-    {
-        Ok(ids) => ids.into_iter().collect(),
-        Err(e) => {
-            warn!("Failed to fetch prioritized accounts, treating all as non-prioritized: {e:?}");
-            HashSet::new()
-        }
-    };
-
     // Mark matches as prioritized if any participant is in the prioritized set
     pending_matches
         .into_iter()
