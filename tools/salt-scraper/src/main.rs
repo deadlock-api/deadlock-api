@@ -68,7 +68,56 @@ async fn main() -> anyhow::Result<()> {
     };
 
     loop {
-        // Query pending matches with participant account_ids for prioritization checking
+        // Fetch all prioritized account IDs from PostgreSQL
+        let prioritized_account_ids = match common::get_all_prioritized_accounts(&pg_pool).await {
+            Ok(ids) => ids,
+            Err(e) => {
+                warn!("Failed to fetch prioritized accounts: {e:?}");
+                Vec::new()
+            }
+        };
+
+        // Query full match history for prioritized accounts (no LIMIT)
+        let mut pending_matches: Vec<PendingMatch> = Vec::new();
+
+        if !prioritized_account_ids.is_empty() {
+            info!("Fetching full history for {} prioritized accounts", prioritized_account_ids.len());
+
+            // Convert i64 to u32 for ClickHouse query
+            let account_ids_u32: Vec<u32> = prioritized_account_ids
+                .iter()
+                .filter_map(|&id| u32::try_from(id).ok())
+                .collect();
+
+            let prio_query = r"
+            SELECT match_id, groupArray(account_id) AS participants
+            FROM player_match_history
+            WHERE account_id IN ?
+              AND match_mode IN ('Ranked', 'Unranked')
+              AND start_time BETWEEN '2025-08-01' AND now() - INTERVAL 2 HOUR
+              AND match_id NOT IN (SELECT match_id FROM match_salts)
+              AND match_id NOT IN (SELECT match_id FROM match_info)
+            GROUP BY match_id
+            ORDER BY match_id DESC
+            ";
+
+            match ch_client
+                .query(prio_query)
+                .bind(account_ids_u32)
+                .fetch_all::<PendingMatch>()
+                .await
+            {
+                Ok(matches) => {
+                    info!("Found {} matches for prioritized accounts", matches.len());
+                    pending_matches.extend(matches);
+                }
+                Err(e) => {
+                    warn!("Failed to fetch prioritized account matches: {e:?}");
+                }
+            }
+        }
+
+        // Query regular pending matches with participant account_ids for prioritization checking
         let query = r"
         SELECT match_id, groupArray(account_id) AS participants
         FROM player_match_history
@@ -91,13 +140,19 @@ async fn main() -> anyhow::Result<()> {
         ORDER BY match_id DESC
         LIMIT 100
         ";
-        let pending_matches: Vec<PendingMatch> = ch_client.query(query).fetch_all().await?;
+        let regular_matches: Vec<PendingMatch> = ch_client.query(query).fetch_all().await?;
+        pending_matches.extend(regular_matches);
+
+        // Deduplicate matches by match_id (prioritized matches take precedence)
+        let mut seen_matches = HashSet::new();
+        pending_matches.retain(|m| seen_matches.insert(m.match_id));
+
         if pending_matches.is_empty() {
             info!("No new matches to fetch, sleeping 60s...");
             tokio::time::sleep(Duration::from_mins(1)).await;
             continue;
         }
-        info!("Found {} matches to fetch", pending_matches.len());
+        info!("Found {} total matches to fetch", pending_matches.len());
 
         // Batch-check participants against prioritized accounts
         let mut prioritized_matches = mark_prioritized_matches(&pg_pool, pending_matches).await;
