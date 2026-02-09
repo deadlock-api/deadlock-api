@@ -98,7 +98,6 @@ fn build_mmr_query(query: &MMRDistributionQuery) -> String {
                       FROM player_match_history
                                INNER JOIN match_info USING (match_id)
                       WHERE current_match_badge > 0
-                        AND (not_scored is NULL OR not_scored != true)
                         {info_filters}
                       ORDER BY account_id, match_id),
         mmr_data AS (SELECT account_id,
@@ -139,7 +138,6 @@ fn build_hero_mmr_distribution_query(hero_id: u8, query: &MMRDistributionQuery) 
             FROM player_match_history
                 INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
-            AND (not_scored is NULL OR not_scored != true)
             AND hero_id = {hero_id}
             {info_filters}
             ORDER BY account_id, match_id

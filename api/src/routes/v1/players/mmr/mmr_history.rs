@@ -52,13 +52,11 @@ fn build_mmr_history_query(account_id: u32) -> String {
             SELECT
                 account_id,
                 match_id,
-                start_time,
-                assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
+                dictGet('match_info_dict', 'start_time', match_id) AS start_time,
+                assumeNotNull(if(player_team = 'Team1', dictGet('match_info_dict', 'average_badge_team1', match_id), dictGet('match_info_dict', 'average_badge_team0', match_id))) AS current_match_badge,
                 (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
             FROM player_match_history
-                INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
-            AND (not_scored is NULL OR not_scored != true)
             AND account_id = {account_id}
             AND match_mode IN ('Ranked', 'Unranked')
             ORDER BY account_id, match_id
@@ -97,13 +95,11 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
             SELECT
                 account_id,
                 match_id,
-                start_time,
-                assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
+                dictGet('match_info_dict', 'start_time', match_id) AS start_time,
+                assumeNotNull(if(player_team = 'Team1', dictGet('match_info_dict', 'average_badge_team1', match_id), dictGet('match_info_dict', 'average_badge_team0', match_id))) AS current_match_badge,
                 (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
             FROM player_match_history
-                INNER JOIN match_info USING (match_id)
             WHERE current_match_badge > 0
-            AND (not_scored is NULL OR not_scored != true)
             AND account_id = {account_id}
             AND hero_id = {hero_id}
             AND match_mode IN ('Ranked', 'Unranked')
