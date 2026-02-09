@@ -8,8 +8,6 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::rate_limiter::Quota;
-use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
@@ -163,21 +161,8 @@ async fn get_hero_mmr_history(
 )]
 pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
-    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "mmr",
-            &[
-                Quota::ip_limit(10, core::time::Duration::from_secs(10)),
-                Quota::key_limit(10, core::time::Duration::from_secs(10)),
-                Quota::global_limit(20, core::time::Duration::from_secs(10)),
-            ],
-        )
-        .await?;
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)
@@ -208,21 +193,8 @@ pub(super) async fn hero_mmr_history(
         account_id,
         hero_id,
     }): Path<HeroMMRHistoryPath>,
-    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "mmr",
-            &[
-                Quota::ip_limit(10, core::time::Duration::from_secs(10)),
-                Quota::key_limit(10, core::time::Duration::from_secs(10)),
-                Quota::global_limit(20, core::time::Duration::from_secs(10)),
-            ],
-        )
-        .await?;
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)

@@ -24,9 +24,9 @@ This is how we calculate a player MMR.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 10req/10s |
-| Key | 10req/10s |
-| Global | 20req/10s |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
     "
 )))]
 struct ApiDoc;
