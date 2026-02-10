@@ -11,8 +11,8 @@ metrics = "0.24.3"
 tracing = "0.1.44"
 clickhouse = "0.14.2"
 tryhard = "0.5.2"
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 common = { version = "0.1.0", path = "../common" }
 futures = "0.3.31"
-reqwest = "0.13.1"
+reqwest = "0.13.2"
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }

@@ -91,7 +91,7 @@ pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> anyhow::Resu
     .await;
 
     match result {
-        Ok(ids) => Ok(ids.into_iter().flatten().collect()),
+        Ok(ids) => Ok(ids),
         Err(e) => {
             tracing::error!(error = %e, "Failed to fetch all prioritized accounts");
             Err(e.into())

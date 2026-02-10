@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 clickhouse = "0.14.2"
 common = { version = "0.1.0", path = "../common" }
 metrics = "0.24.3"
-reqwest = { version = "0.13.1", features = ["json"] }
+reqwest = { version = "0.13.2", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_repr = "0.1.20"
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }

@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 clickhouse = "0.14.2"
 common = { version = "0.1.0", path = "../common" }
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros"] }
-reqwest = "0.13.1"
+reqwest = "0.13.2"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "bec6cd7d8b6bd2a10fc80d6df38637a37fd920e1", features = ["gc-client", "serde"] }
 metrics = "0.24.3"
 tracing = "0.1.44"
