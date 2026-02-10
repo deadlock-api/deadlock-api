@@ -131,13 +131,30 @@ export default function Index() {
         <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5">
           <CardHeader>
             <CardTitle className="text-2xl text-amber-400">Prioritized Fetching</CardTitle>
-            <CardDescription className="text-base">Get faster data updates with priority queue access</CardDescription>
+            <CardDescription className="text-base">
+              Your matches tracked faster — starting at just $3/month
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              As a Patreon supporter, your Steam accounts are fetched with higher priority, ensuring your match history
-              and stats are always up-to-date. Support the project and enjoy faster data updates.
+              We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to the
+              front of the queue — your matches and stats are updated more frequently so you always have the latest data
+              for analysis.
             </p>
+            <div className="flex flex-wrap justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Priority queue updates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Up to 10 Steam accounts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">100% funds infrastructure</span>
+              </div>
+            </div>
           </CardContent>
           <CardFooter className="justify-center">
             <Link to="/patron" prefetch="intent">

@@ -5,6 +5,7 @@ import { ChatError } from "~/components/chat/ChatError";
 import { ChatInput } from "~/components/chat/ChatInput";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
 import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
+import { PatronCTA } from "~/components/PatronCTA";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { useChatStream } from "~/hooks/useChatStream";
@@ -89,15 +90,18 @@ export default function ChatPage() {
         ) : !hasMessages ? (
           // Empty state - Welcome message
           <div className="flex-1 flex items-center justify-center p-4">
-            <Card className="max-w-lg w-full">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Welcome to Deadlock AI Assistant</CardTitle>
-                <CardDescription className="text-base mt-2">
-                  Ask me anything about Deadlock - hero builds, item recommendations, game mechanics, match statistics,
-                  and more.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <div className="max-w-lg w-full space-y-4">
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl">Welcome to Deadlock AI Assistant</CardTitle>
+                  <CardDescription className="text-base mt-2">
+                    Ask me anything about Deadlock - hero builds, item recommendations, game mechanics, match
+                    statistics, and more.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <PatronCTA message="Support the project and get your match data updated more frequently with prioritized fetching." />
+            </div>
           </div>
         ) : (
           // Message list area
