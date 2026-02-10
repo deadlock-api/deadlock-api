@@ -49,6 +49,7 @@ static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
 });
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> anyhow::Result<()> {
     common::init_tracing();
     common::init_metrics()?;
@@ -81,7 +82,10 @@ async fn main() -> anyhow::Result<()> {
         let mut pending_matches: Vec<PendingMatch> = Vec::new();
 
         if !prioritized_account_ids.is_empty() {
-            info!("Fetching full history for {} prioritized accounts", prioritized_account_ids.len());
+            info!(
+                "Fetching full history for {} prioritized accounts",
+                prioritized_account_ids.len()
+            );
 
             // Convert i64 to u32 for ClickHouse query
             let account_ids_u32: Vec<u32> = prioritized_account_ids
