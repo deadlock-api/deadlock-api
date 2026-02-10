@@ -137,6 +137,7 @@ async function scanDirHandle(
   return salts;
 }
 
+import { PatronCTA } from "~/components/PatronCTA";
 import { cn } from "~/lib/utils";
 
 export default function () {
@@ -255,6 +256,10 @@ export default function () {
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Steam Cache Ingestion</h1>
         <p className="text-gray-600">Help improve Deadlock API by sharing your match data</p>
+      </div>
+
+      <div className="mb-6">
+        <PatronCTA message="Already contributing match data? Get your own stats updated faster with prioritized fetching." />
       </div>
 
       <Card className="mb-6 shadow-lg pt-0">

@@ -1,3 +1,4 @@
+import { Zap } from "lucide-react";
 import { Link } from "react-router";
 
 export default function NavHeader() {
@@ -27,8 +28,9 @@ export default function NavHeader() {
             <Link
               to="/patron"
               prefetch="intent"
-              className="text-lg font-medium px-3 py-1 rounded-md bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300 border border-amber-500/40 transition-all duration-100"
+              className="text-lg font-medium px-3 py-1 rounded-md bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300 border border-amber-500/40 transition-all duration-100 flex items-center gap-1.5 animate-pulse hover:animate-none"
             >
+              <Zap className="h-4 w-4" />
               Prioritized Fetching
             </Link>
             <Link
