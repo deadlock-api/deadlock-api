@@ -8,7 +8,7 @@ use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_URL_SAFE;
 use itertools::Itertools;
-use rand::RngCore;
+use rand::Rng;
 use rand::prelude::ThreadRng;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};

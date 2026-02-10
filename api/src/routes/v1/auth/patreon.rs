@@ -3,7 +3,7 @@ use axum::http::header::{COOKIE, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use chrono::{Duration, Utc};
-use rand::Rng;
+use rand::RngExt;
 use serde::Deserialize;
 
 use crate::context::AppState;
