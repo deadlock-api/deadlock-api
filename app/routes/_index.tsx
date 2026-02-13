@@ -128,9 +128,9 @@ export default function Index() {
       </section>
 
       <section className="text-center">
-        <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5">
+        <Card className="border-primary/40 bg-linear-to-br from-primary/10 to-primary/5">
           <CardHeader>
-            <CardTitle className="text-2xl text-amber-400">Prioritized Fetching</CardTitle>
+            <CardTitle className="text-2xl text-primary">Prioritized Fetching</CardTitle>
             <CardDescription className="text-base">
               Your matches tracked faster — starting at just $3/month
             </CardDescription>
@@ -143,22 +143,22 @@ export default function Index() {
             </p>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
-                <span className="text-amber-400 font-semibold">&#10003;</span>
+                <span className="text-primary font-semibold">&#10003;</span>
                 <span className="text-muted-foreground">Priority queue updates</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-amber-400 font-semibold">&#10003;</span>
+                <span className="text-primary font-semibold">&#10003;</span>
                 <span className="text-muted-foreground">Up to 10 Steam accounts</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-amber-400 font-semibold">&#10003;</span>
+                <span className="text-primary font-semibold">&#10003;</span>
                 <span className="text-muted-foreground">100% funds infrastructure</span>
               </div>
             </div>
           </CardContent>
           <CardFooter className="justify-center">
             <Link to="/patron" prefetch="intent">
-              <Button className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8">
+              <Button className="bg-primary hover:bg-amber-600 text-white font-semibold px-8">
                 Enable Prioritized Fetching
               </Button>
             </Link>
