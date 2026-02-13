@@ -13,7 +13,7 @@ export function PatronCTA({ message }: { message?: string }) {
     <Card className="border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-transparent">
       <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
         <div className="flex items-center gap-3">
-          <Zap className="h-5 w-5 text-amber-400 shrink-0" />
+          <Zap className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm text-muted-foreground">
             {message || "Get your match history and stats updated more frequently with prioritized fetching."}
           </p>
