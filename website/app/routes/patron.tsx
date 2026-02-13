@@ -1,9 +1,9 @@
 import {
   AlertCircle,
+  ArrowRight,
   CheckCircle,
   ChevronDown,
   Clock,
-  ExternalLink,
   HelpCircle,
   Loader2,
   LogIn,
@@ -49,112 +49,106 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Patron Dashboard | Deadlock API" },
+    { title: "Prioritized Fetching | Deadlock API" },
     {
       name: "description",
-      content: "Manage your prioritized Steam accounts as a Deadlock API patron.",
+      content: "Get priority data fetching for your Steam accounts. Your matches and stats updated faster.",
     },
   ];
 };
 
-function PatronPageSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-96" />
-      </div>
-      <Skeleton className="h-32 w-full" />
-    </div>
-  );
-}
+// ============================================================================
+// Unauthenticated Landing Page
+// ============================================================================
 
 function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="max-w-2xl w-full">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Patron Dashboard</CardTitle>
-          <CardDescription className="text-base mt-2">
-            Become a patron to unlock prioritized data fetching for your Steam accounts. Patronage helps us cover
-            infrastructure costs — we don't make a profit from this.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
-          {/* Benefits section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Patron Benefits</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                <span>
-                  <strong className="text-foreground">Priority Data Fetching</strong> — Your match history and stats are
-                  fetched more frequently, ensuring up-to-date information.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                <span>
-                  <strong className="text-foreground">Multiple Steam Accounts</strong> — Add multiple Steam accounts
-                  based on your pledge level ($3 = 1 account slot, capped at 10).
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                <span>
-                  <strong className="text-foreground">Flexible Management</strong> — Add, remove, or replace Steam
-                  accounts anytime with a simple 24-hour cooldown between changes.
-                </span>
-              </li>
-            </ul>
-          </div>
+    <div className="space-y-4">
+      {/* Hero Section */}
+      <section className="relative text-center space-y-6 py-8">
+        {/* Glow effect behind hero */}
+        <div className="absolute inset-0 -top-12 flex items-center justify-center pointer-events-none" aria-hidden>
+          <div className="w-80 h-80 rounded-full bg-primary/8 blur-3xl" />
+        </div>
 
-          {/* How it works section */}
-          <div className="space-y-3 border-t pt-4">
-            <h3 className="text-lg font-semibold">How Prioritization Works</h3>
-            <p className="text-sm text-muted-foreground">
-              Deadlock API fetches match data for millions of players. Patron accounts are placed in a priority queue,
-              meaning your matches and stats are updated more frequently. This ensures you always have the latest data
-              for analysis and tracking.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">Free users are not affected!</strong> The experience for non-patrons
-              stays exactly the same. Patronage solely funds the additional infrastructure costs of running priority
-              fetches. We don't profit from this; every cent goes toward keeping the service running.
-            </p>
-          </div>
-
-          {/* Actions section */}
-          <div className="space-y-3 border-t pt-4">
-            <Button onClick={onLogin} className="w-full" size="lg">
+        <div className="relative space-y-6">
+          <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">
+            Your matches. Updated <span className="text-primary">faster</span>.
+          </h1>
+          <p className="mx-auto max-w-xl text-muted-foreground">
+            Patron accounts get a dedicated queue with reserved resources, guaranteeing fast and reliable data fetching
+            for your match history and stats.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
+              onClick={onLogin}
+            >
               <LogIn className="h-4 w-4 mr-2" />
-              Login with Patreon
+              Sign in with Patreon
             </Button>
-            <p className="text-sm text-muted-foreground text-center">
-              Already a patron? Sign in above to manage your Steam accounts.
-            </p>
-            <p className="text-sm text-center">
-              <span className="text-muted-foreground">Not a patron yet? </span>
-              <a
-                href="https://www.patreon.com/c/manuelhexe"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Support us on Patreon
+            <Button size="lg" variant="outline" asChild>
+              <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
+                Become a Patron
+                <ArrowRight className="h-4 w-4 ml-2" />
               </a>
-              <span className="text-muted-foreground"> to unlock these benefits.</span>
-            </p>
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+          <p className="text-xs text-muted-foreground">Starting at $3/month — every cent goes to infrastructure</p>
+        </div>
+      </section>
+
+      {/* Comparison Table */}
+      <section className="max-w-2xl mx-auto">
+        <div className="rounded-xl border border-border overflow-hidden">
+          {/* Header row */}
+          <div className="grid grid-cols-[1fr_120px_120px] sm:grid-cols-[1fr_140px_140px] bg-muted/40">
+            <div className="p-4" />
+            <div className="p-4 text-center text-sm font-medium text-muted-foreground border-l border-border">Free</div>
+            <div className="p-4 text-center text-sm font-semibold text-primary border-l border-primary/30 bg-primary/5">
+              Patron
+            </div>
+          </div>
+          {/* Rows */}
+          <ComparisonRow label="Full API access" free checked />
+          <ComparisonRow label="Match history & stats" free checked />
+          <ComparisonRow label="Dedicated queue with reserved resources" checked />
+          <ComparisonRow label="Faster data updates" checked />
+          <ComparisonRow label="Up to 10 prioritized accounts" checked />
+          <ComparisonRow label="Swap accounts anytime" checked />
+        </div>
+      </section>
     </div>
   );
 }
 
-/**
- * Format cents as currency (USD)
- */
+function ComparisonRow({ label, free, checked }: { label: string; free?: boolean; checked?: boolean }) {
+  return (
+    <div className="grid grid-cols-[1fr_120px_120px] sm:grid-cols-[1fr_140px_140px] border-t border-border">
+      <div className="p-3 px-4 text-sm">{label}</div>
+      <div className="p-3 flex items-center justify-center border-l border-border">
+        {free ? (
+          <CheckCircle className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <span className="text-muted-foreground/40">—</span>
+        )}
+      </div>
+      <div className="p-3 flex items-center justify-center border-l border-primary/30 bg-primary/5">
+        {checked ? (
+          <CheckCircle className="h-4 w-4 text-primary" />
+        ) : (
+          <span className="text-muted-foreground/40">—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
 function formatCurrency(cents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -162,9 +156,6 @@ function formatCurrency(cents: number): string {
   }).format(cents / 100);
 }
 
-/**
- * Format a date string in human-readable format
- */
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat("en-US", {
@@ -173,9 +164,6 @@ function formatDate(dateString: string): string {
   }).format(date);
 }
 
-/**
- * Format a date as relative time (e.g., "7 days ago")
- */
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
   const now = new Date();
@@ -207,10 +195,6 @@ function formatRelativeTime(dateString: string): string {
 
 const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-/**
- * Calculate time remaining until cooldown expires
- * @returns Formatted string like "18h 32m" or null if cooldown has expired
- */
 function formatCooldownRemaining(deletedAt: string): string | null {
   const deletedDate = new Date(deletedAt);
   const cooldownEnd = new Date(deletedDate.getTime() + COOLDOWN_DURATION_MS);
@@ -228,6 +212,22 @@ function formatCooldownRemaining(deletedAt: string): string | null {
     return `${remainingHours}h ${remainingMinutes}m`;
   }
   return `${remainingMinutes}m`;
+}
+
+// ============================================================================
+// Authenticated Dashboard
+// ============================================================================
+
+function PatronPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+      <Skeleton className="h-32 w-full" />
+    </div>
+  );
 }
 
 function PatronStatusCardSkeleton() {
@@ -261,7 +261,11 @@ function PatronStatusCardSkeleton() {
 }
 
 function PatronStatusCard() {
-  const { data: status, isLoading, isError, error } = usePatronStatus();
+  const query = usePatronStatus();
+  const status = query.data;
+  const isLoading = query.isLoading;
+  const isError = query.isError;
+  const error = query.error;
 
   if (isLoading) {
     return <PatronStatusCardSkeleton />;
@@ -291,13 +295,14 @@ function PatronStatusCard() {
   const { active_count, cooldown_count, available_slots } = steam_accounts_summary;
   const usedSlots = active_count + cooldown_count;
   const canUpgrade = total_slots < 10;
+  const slotPercentage = total_slots > 0 ? (usedSlots / total_slots) * 100 : 0;
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            Your Patron Status
+            Patron Status
             {is_active ? (
               <Badge className="bg-green-600 hover:bg-green-600">
                 <CheckCircle className="h-3 w-3 mr-1" />
@@ -315,35 +320,47 @@ function PatronStatusCard() {
           {pledge_amount_cents ? `Pledging ${formatCurrency(pledge_amount_cents)} / month` : "No active pledge"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Pledge Amount</p>
-            <p className="text-lg font-semibold">{pledge_amount_cents ? formatCurrency(pledge_amount_cents) : "—"}</p>
+            <p className="text-sm text-muted-foreground">Pledge</p>
+            <p className="text-2xl font-bold">{pledge_amount_cents ? formatCurrency(pledge_amount_cents) : "—"}</p>
+            <p className="text-xs text-muted-foreground">per month</p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Last Verified</p>
             <p className="text-lg font-semibold">{formatDate(last_verified_at)}</p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Slot Usage</p>
-            <p className="text-lg font-semibold">
-              {usedSlots} of {total_slots} slots used
-              {cooldown_count > 0 && (
-                <span className="text-sm font-normal text-muted-foreground"> ({cooldown_count} in cooldown)</span>
-              )}
-            </p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Account Slots</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold">{usedSlots}</p>
+              <p className="text-sm text-muted-foreground">of {total_slots} used</p>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${slotPercentage}%` }}
+              />
+            </div>
+            {cooldown_count > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {cooldown_count} in cooldown
+              </p>
+            )}
           </div>
         </div>
         {available_slots === 0 && canUpgrade && (
-          <div className="mt-6 flex flex-col items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-5 text-center">
-            <p className="text-sm text-muted-foreground">
-              All slots are in use. Increase your Patreon pledge to unlock more accounts (up to 10 slots).
+          <div className="rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 p-6 text-center space-y-3">
+            <p className="text-base font-medium">Want to prioritize more accounts?</p>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Each additional $3/month unlocks another slot. You can add up to {10 - total_slots} more.
             </p>
-            <Button asChild>
+            <Button size="lg" asChild className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
               <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Upgrade on Patreon
+                Increase Pledge
+                <ArrowRight className="h-4 w-4 ml-2" />
               </a>
             </Button>
           </div>
@@ -352,6 +369,10 @@ function PatronStatusCard() {
     </Card>
   );
 }
+
+// ============================================================================
+// Steam Account Management Components
+// ============================================================================
 
 function SteamIdFormatHelper() {
   return (
@@ -414,13 +435,13 @@ function SteamIdFormatHelper() {
 function AddSteamAccountForm() {
   const [steamIdInput, setSteamIdInput] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const { data: status } = usePatronStatus();
+  const query = usePatronStatus();
   const addSteamAccountMutation = useAddSteamAccount();
 
+  const status = query.data;
   const availableSlots = status?.steam_accounts_summary.available_slots ?? 0;
   const hasAvailableSlots = availableSlots > 0;
 
-  // Validate input on change
   const handleInputChange = (value: string) => {
     setSteamIdInput(value);
     if (!value.trim()) {
@@ -551,7 +572,7 @@ function DeleteAccountDialog({
               Are you sure you want to remove the Steam account{" "}
               <span className="font-mono font-semibold">{steamId3}</span>?
             </p>
-            <p className="text-amber-500">
+            <p className="text-primary">
               <strong>Note:</strong> This slot will be in a 24-hour cooldown period. You won't be able to use this slot
               for a new account until the cooldown expires.
             </p>
@@ -609,7 +630,6 @@ function ReplaceAccountDialog({
 
   const isInputValid = steamIdInput.trim() !== "" && validationError === null;
 
-  // Reset form when dialog closes
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
@@ -684,7 +704,7 @@ function ReactivateAccountDialog({
               Are you sure you want to reactivate the Steam account{" "}
               <span className="font-mono font-semibold">{steamId3}</span>?
             </p>
-            <p className="text-amber-500">
+            <p className="text-primary">
               <strong>Note:</strong> This will use one of your available slots.
             </p>
           </AlertDialogDescription>
@@ -699,10 +719,15 @@ function ReactivateAccountDialog({
 }
 
 function SteamAccountsList() {
-  const { data, isLoading, isError, error } = useSteamAccounts();
+  const query = useSteamAccounts();
   const deleteSteamAccountMutation = useDeleteSteamAccount();
   const replaceSteamAccountMutation = useReplaceSteamAccount();
   const reactivateSteamAccountMutation = useReactivateSteamAccount();
+
+  const data = query.data;
+  const isLoading = query.isLoading;
+  const isError = query.isError;
+  const error = query.error;
 
   const handleDeleteAccount = (accountId: string) => {
     deleteSteamAccountMutation.mutate(accountId, {
@@ -759,14 +784,14 @@ function SteamAccountsList() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Steam Accounts</CardTitle>
-        <CardDescription>Your prioritized Steam accounts for data fetching</CardDescription>
+        <CardTitle>Prioritized Accounts</CardTitle>
+        <CardDescription>Your Steam accounts with priority data fetching</CardDescription>
       </CardHeader>
       <CardContent>
         {accounts.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <p>No Steam accounts added yet.</p>
-            <p className="text-sm mt-1">Add a Steam account to get prioritized data fetching.</p>
+            <p className="text-sm mt-1">Add a Steam account above to get prioritized data fetching.</p>
           </div>
         ) : (
           <Table>
@@ -774,7 +799,7 @@ function SteamAccountsList() {
               <TableRow>
                 <TableHead>SteamID3</TableHead>
                 <TableHead>SteamID64</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Added</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[60px]">Actions</TableHead>
               </TableRow>
@@ -790,9 +815,7 @@ function SteamAccountsList() {
                   replaceSteamAccountMutation.variables?.accountId === account.id;
                 const isReactivating =
                   reactivateSteamAccountMutation.isPending && reactivateSteamAccountMutation.variables === account.id;
-                // Can replace only if deleted and cooldown has expired
                 const canReplace = account.deleted_at !== null && !account.is_in_cooldown;
-                // Can reactivate any deleted account (regardless of cooldown) if slots are available
                 const isDeleted = account.deleted_at !== null;
 
                 return (
@@ -870,7 +893,61 @@ function SteamAccountsList() {
   );
 }
 
+function NotSubscribedState() {
+  return (
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">Welcome, Patron!</h1>
+        <p className="text-muted-foreground mt-1">You're signed in but don't have an active subscription yet.</p>
+      </div>
+
+      <Card className="border-primary/30 bg-linear-to-br from-primary/10 to-primary/5">
+        <CardContent className="pt-8 pb-8 text-center space-y-4">
+          <div className="mx-auto w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
+            <ArrowRight className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">Get prioritized fetching</h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Subscribe on Patreon to unlock dedicated queue access with reserved resources. Your match data and stats
+              will be fetched faster and more reliably.
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <Button
+              size="lg"
+              asChild
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8"
+            >
+              <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
+                Subscribe on Patreon
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground">Starting at $3/month — every cent goes to infrastructure</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function AuthenticatedDashboard() {
+  const query = usePatronStatus();
+  const status = query.data;
+  const isLoading = query.isLoading;
+  const hasAvailableSlots = (status?.steam_accounts_summary.available_slots ?? 0) > 0;
+  const totalSlots = status?.total_slots ?? 0;
+
+  if (isLoading) {
+    return <PatronPageSkeleton />;
+  }
+
+  // 0/0 state: user is authed but has no subscription / 0 slots
+  if (totalSlots === 0) {
+    return <NotSubscribedState />;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -880,12 +957,16 @@ function AuthenticatedDashboard() {
 
       <PatronStatusCard />
 
-      <AddSteamAccountForm />
+      {hasAvailableSlots && <AddSteamAccountForm />}
 
       <SteamAccountsList />
     </div>
   );
 }
+
+// ============================================================================
+// Page Entry Point
+// ============================================================================
 
 export default function PatronPage() {
   const { isAuthenticated, isLoading, login } = usePatronAuth();
