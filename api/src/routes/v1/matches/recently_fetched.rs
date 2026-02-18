@@ -23,6 +23,7 @@ struct ClickhouseMatchInfo {
     start_time: u32,
     duration_s: u32,
     match_mode: i8,
+    game_mode: i8,
     /// See more: <https://assets.deadlock-api.com/v2/ranks>
     #[serde(default)]
     average_badge_team0: Option<u32>,
@@ -54,6 +55,7 @@ async fn get_recently_fetched_match_ids(
         start_time,
         duration_s,
         match_mode,
+        game_mode,
         average_badge_team0,
         average_badge_team1
     FROM match_info FINAL
