@@ -1119,3 +1119,17 @@ VALUES (34000002, '2025-03-17 06:19:56', 'Team0', 1241, 'TeamWin', 'Unranked', '
         ['Tier1Lane3', 'Tier1Lane4', 'Tier1Lane1', 'Tier1Lane1', 'Tier1Lane4', 'Tier1Lane3', 'Tier2Lane4', 'Tier2Lane1', 'Tier2Lane3', 'Tier2Lane4', 'Titan', 'TitanShieldGenerator2', 'BarrackBossLane4', 'BarrackBossLane3', 'TitanShieldGenerator1', 'Tier2Lane3', 'BarrackBossLane1', 'Core'],
         ['Team0', 'Team0', 'Team1', 'Team0', 'Team1', 'Team1', 'Team0', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team0', 'Team1', 'Team1'],
         ['Team0'], ['Team0'], [1622], false, false, false, 76, 76, '2025-03-18 07:27:41', 2);
+
+DROP DICTIONARY IF EXISTS match_info_dict;
+
+CREATE DICTIONARY match_info_dict
+(
+    `match_id` UInt64,
+    `start_time` DateTime,
+    `average_badge_team0` Nullable(UInt32),
+    `average_badge_team1` Nullable(UInt32)
+)
+PRIMARY KEY match_id
+SOURCE(CLICKHOUSE(TABLE 'match_info'))
+LIFETIME(MIN 0 MAX 0)
+LAYOUT(HASHED());
