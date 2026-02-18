@@ -74,12 +74,12 @@ async fn fetch_match_metadata_raw(
         .await;
         if let Ok(data) = results.0 {
             debug!("Match metadata found in cache");
-            counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
+            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
             return Ok(data);
         }
         if let Ok(data) = results.1 {
             debug!("Match metadata found in cache, hltv");
-            counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
+            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
             return Ok(data);
         }
     }
@@ -210,12 +210,12 @@ pub(super) async fn metadata_raw(
         .await;
         if let Ok(data) = results.0 {
             debug!("Match metadata found in cache");
-            counter!("metadata.fetch", "s3" => "minio", "source" => "salt").increment(1);
+            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
             return Ok(Body::from_stream(data));
         }
         if let Ok(data) = results.1 {
             debug!("Match metadata found in cache, hltv");
-            counter!("metadata.fetch", "s3" => "minio", "source" => "hltv").increment(1);
+            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
             return Ok(Body::from_stream(data));
         }
     }
