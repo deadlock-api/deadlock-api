@@ -13,7 +13,7 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 redis = { version = "1.0.3", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.14.2", features = ["chrono", "uuid"] }
 sqlx = { version = "0.8.6", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
-uuid = { version = "1.20.0", features = ["serde", "v4"] }
+uuid = { version = "1.21.0", features = ["serde", "v4"] }
 cached = { version = "0.56.0", features = ["async", "serde"] }
 axum = "0.8.8"
 utoipa-axum = "0.2.0"
@@ -30,20 +30,20 @@ tracing = "0.1.44"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
 axum-prometheus = "0.10.0"
 itertools = "0.14.0"
-futures = "0.3.31"
+futures = "0.3.32"
 snap = "1.1.1"
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "bec6cd7d8b6bd2a10fc80d6df38637a37fd920e1", features = ["gc-client", "serde"] }
 prost = "0.14.3"
 base64 = "0.22.1"
 tryhard = "0.5.2"
-async-compression = { version = "0.4.39", features = ["bzip2", "tokio"] }
+async-compression = { version = "0.4.40", features = ["bzip2", "tokio"] }
 strum = { version = "0.27.2", features = ["derive"] }
 axum-extra = { version = "0.12.5", features = ["query"] }
 metrics = "0.24.3"
 bytes = { version = "1.11.1", features = ["serde"] }
 thiserror = "2.0.18"
 rand = "0.10.0"
-quick-xml = { version = "0.39.0", features = ["serde", "serialize"] }
+quick-xml = { version = "0.39.1", features = ["serde", "serialize"] }
 serde-env = "0.2.0"
 regex = "1.12.3"
 mimalloc = "0.1.48"
@@ -58,4 +58,4 @@ jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 
 [dev-dependencies]
 rstest = "0.26.1"
-sqlparser = "0.60.0"
+sqlparser = "0.61.0"
