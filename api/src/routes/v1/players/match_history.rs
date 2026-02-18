@@ -276,8 +276,8 @@ Relevant Protobuf Messages:
 | Type | Limit |
 | ---- | ----- |
 | IP | 5req/min<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 5req/h |
-| Key | 50req/min & 1000req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
-| Global | 2000req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
+| Key | 80req/h & 1000req/day<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
+| Global | 200req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
     "
 )]
 pub(super) async fn match_history(
@@ -333,9 +333,9 @@ pub(super) async fn match_history(
                 "match_history",
                 &[
                     Quota::ip_limit(3, Duration::from_mins(1)),
-                    Quota::key_limit(20, Duration::from_mins(1)),
-                    Quota::key_limit(400, Duration::from_hours(1)),
-                    Quota::global_limit(1000, Duration::from_hours(1)),
+                    Quota::key_limit(80, Duration::from_hours(1)),
+                    Quota::key_limit(1000, Duration::from_hours(24)),
+                    Quota::global_limit(200, Duration::from_hours(1)),
                 ],
             )
             .await
