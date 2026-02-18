@@ -115,9 +115,9 @@ pub(super) async fn fetch_match_salts(
             rate_limit_key,
             "salts",
             &[
-                Quota::ip_limit(10, Duration::from_mins(30)),
-                Quota::key_limit(10, Duration::from_mins(1)),
-                Quota::global_limit(10, Duration::from_secs(10)),
+                Quota::ip_limit(5, Duration::from_hours(1)),
+                Quota::key_limit(400, Duration::from_hours(1)),
+                Quota::global_limit(2000, Duration::from_hours(1)),
             ],
         )
         .await?;
