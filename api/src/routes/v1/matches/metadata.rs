@@ -259,9 +259,9 @@ Relevant Protobuf Messages:
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 10req/30mins |
-| Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 10req/min |
-| Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 10req/10s |
+| IP | From Cache: 100req/s<br>From S3: 100req/10s<br>From Steam: 5req/h |
+| Key | From Cache: 100req/s<br>From S3: 100req/s<br>From Steam: 400req/h |
+| Global | From Cache: 100req/s<br>From S3: 700req/s<br>From Steam: 2000req/h |
     "
 )]
 pub(super) async fn metadata(
