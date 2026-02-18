@@ -3,8 +3,9 @@ use core::time::Duration;
 use redis::{AsyncTypedCommands, RedisResult};
 use tracing::{error, info};
 use valveprotos::deadlock::{
-    CMsgClientToGcPartySetReadyState, CMsgClientToGcPartySetReadyStateResponse,
-    EgcCitadelClientMessages, c_msg_client_to_gc_party_set_ready_state_response,
+    CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse, CMsgClientToGcPartySetReadyState,
+    CMsgClientToGcPartySetReadyStateResponse, EgcCitadelClientMessages,
+    c_msg_client_to_gc_party_leave_response, c_msg_client_to_gc_party_set_ready_state_response,
 };
 
 use crate::error::{APIError, APIResult};
@@ -80,6 +81,41 @@ pub(super) async fn make_ready(
         error!("Failed to make ready: {username} {lobby_id} {result:?}");
         return Err(APIError::internal(format!(
             "Failed to make ready: {result:?}"
+        )));
+    }
+    Ok(())
+}
+
+pub(super) async fn leave_party(
+    steam_client: &SteamClient,
+    username: String,
+    party_id: u64,
+) -> APIResult<()> {
+    let msg = CMsgClientToGcPartyLeave {
+        party_id: party_id.into(),
+    };
+    let response: CMsgClientToGcPartyLeaveResponse = steam_client
+        .call_steam_proxy(SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
+            msg,
+            in_all_groups: None,
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(0),
+            request_timeout: Duration::from_secs(2),
+            username: username.clone().into(),
+            soft_cooldown_millis: None,
+        })
+        .await?
+        .msg;
+
+    info!("Left Party: {username} {party_id} {response:?}");
+    let result = response.result;
+    if result
+        .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
+    {
+        error!("Failed to leave party: {username} {party_id} {result:?}");
+        return Err(APIError::internal(format!(
+            "Failed to leave party: {result:?}"
         )));
     }
     Ok(())

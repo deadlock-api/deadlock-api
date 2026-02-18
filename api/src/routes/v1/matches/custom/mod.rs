@@ -1,5 +1,6 @@
 mod create;
 mod get;
+mod leave;
 mod ready;
 mod utils;
 
@@ -17,6 +18,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(ready::ready_up))
         .routes(routes!(ready::unready))
+        .routes(routes!(leave::leave))
         .routes(routes!(create::create_custom))
         .routes(routes!(get::get_custom))
 }

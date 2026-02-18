@@ -13,15 +13,14 @@ use rand::prelude::ThreadRng;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
     CMsgClientToGcPartyAction, CMsgClientToGcPartyActionResponse, CMsgClientToGcPartyCreate,
-    CMsgClientToGcPartyCreateResponse, CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse,
-    CMsgPartyMmInfo, CMsgRegionPingTimesClient, ECitadelBotDifficulty, ECitadelMmPreference,
-    EgcCitadelClientMessages, c_msg_client_to_gc_party_action_response,
-    c_msg_client_to_gc_party_leave_response, cso_citadel_party,
+    CMsgClientToGcPartyCreateResponse, CMsgPartyMmInfo, CMsgRegionPingTimesClient,
+    ECitadelBotDifficulty, ECitadelMmPreference, EgcCitadelClientMessages,
+    c_msg_client_to_gc_party_action_response, cso_citadel_party,
 };
 use valveprotos::gcsdk::EgcPlatform;
 
@@ -187,37 +186,6 @@ async fn switch_to_spectator_slot(
     Ok(())
 }
 
-async fn leave_party(steam_client: &SteamClient, username: String, party_id: u64) -> APIResult<()> {
-    let msg = CMsgClientToGcPartyLeave {
-        party_id: party_id.into(),
-    };
-    let response: CMsgClientToGcPartyLeaveResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
-            msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(0),
-            request_timeout: Duration::from_secs(2),
-            username: username.clone().into(),
-            soft_cooldown_millis: None,
-        })
-        .await?
-        .msg;
-
-    info!("Left Party: {username} {party_id} {response:?}");
-    let result = response.result;
-    if result
-        .is_none_or(|r| r != c_msg_client_to_gc_party_leave_response::EResponse::KESuccess as i32)
-    {
-        error!("Failed to leave party: {username} {party_id} {result:?}");
-        return Err(APIError::internal(format!(
-            "Failed to leave party: {result:?}"
-        )));
-    }
-    Ok(())
-}
-
 #[utoipa::path(
     post,
     path = "/create",
@@ -329,7 +297,7 @@ pub(super) async fn create_custom(
         sleep(Duration::from_mins(15)).await; // Wait for 15 minutes
 
         // Leave the party
-        let result = leave_party(&steam_client, username_clone, party_id).await;
+        let result = utils::leave_party(&steam_client, username_clone, party_id).await;
         if let Err(e) = result {
             error!("Failed to leave party: {e}");
         }
