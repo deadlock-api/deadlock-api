@@ -45,6 +45,9 @@ pub(super) struct BulkMatchMetadataQuery {
     #[serde(default = "default_true")]
     #[param(inline, default = "true")]
     include_info: bool,
+    /// Include more match info in the response.
+    #[serde(default)]
+    include_more_info: bool,
     /// Include objectives in the response.
     #[serde(default)]
     include_objectives: bool,
@@ -133,13 +136,17 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "any(match_outcome) as match_outcome".to_owned(),
             "any(match_mode) as match_mode".to_owned(),
             "any(game_mode) as game_mode".to_owned(),
+            "any(average_badge_team0) as average_badge_team0".to_owned(),
+            "any(average_badge_team1) as average_badge_team1".to_owned(),
+            "any(not_scored) as not_scored".to_owned(),
+        ]);
+    }
+    if query.include_more_info {
+        select_fields.extend(vec![
+            "any(rewards_eligible) as rewards_eligible".to_owned(),
             "any(is_high_skill_range_parties) as is_high_skill_range_parties".to_owned(),
             "any(low_pri_pool) as low_pri_pool".to_owned(),
             "any(new_player_pool) as new_player_pool".to_owned(),
-            "any(average_badge_team0) as average_badge_team0".to_owned(),
-            "any(average_badge_team1) as average_badge_team1".to_owned(),
-            "any(rewards_eligible) as rewards_eligible".to_owned(),
-            "any(not_scored) as not_scored".to_owned(),
             "any(team_score) as team_score".to_owned(),
             "any(match_tracked_stats) as match_tracked_stats".to_owned(),
             "any(team0_tracked_stats) as team0_tracked_stats".to_owned(),
@@ -461,6 +468,45 @@ mod tests {
 
         // Should not contain player filter when account_ids is None
         assert!(!normalized.contains("match_id IN (SELECT match_id FROM match_player"));
+    }
+
+    #[test]
+    fn test_build_ch_query_with_more_info() {
+        let query = BulkMatchMetadataQuery {
+            include_info: true,
+            include_more_info: true,
+            limit: 10,
+            ..Default::default()
+        };
+
+        let result = build_query(query).unwrap();
+        let normalized = normalize_whitespace(&result);
+
+        assert!(normalized.contains("rewards_eligible"));
+        assert!(normalized.contains("is_high_skill_range_parties"));
+        assert!(normalized.contains("low_pri_pool"));
+        assert!(normalized.contains("new_player_pool"));
+        assert!(normalized.contains("team_score"));
+        assert!(normalized.contains("match_tracked_stats"));
+        assert!(normalized.contains("team0_tracked_stats"));
+        assert!(normalized.contains("team1_tracked_stats"));
+    }
+
+    #[test]
+    fn test_build_ch_query_without_more_info() {
+        let query = BulkMatchMetadataQuery {
+            include_info: true,
+            include_more_info: false,
+            limit: 10,
+            ..Default::default()
+        };
+
+        let result = build_query(query).unwrap();
+        let normalized = normalize_whitespace(&result);
+
+        assert!(!normalized.contains("rewards_eligible"));
+        assert!(!normalized.contains("team_score"));
+        assert!(!normalized.contains("match_tracked_stats"));
     }
 
     #[test]
