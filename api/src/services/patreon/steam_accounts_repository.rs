@@ -1,9 +1,12 @@
 #![allow(dead_code)]
 
+use cached::Cached;
 use chrono::{DateTime, Duration, Utc};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;
 use uuid::Uuid;
+
+use crate::services::patreon::IS_ACCOUNT_PRIORITIZED;
 
 /// Error type for steam accounts repository operations
 #[derive(Debug, Error)]
@@ -232,6 +235,8 @@ impl SteamAccountsRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
+        IS_ACCOUNT_PRIORITIZED.lock().await.cache_remove(&steam_id3);
+
         Ok(SteamAccount {
             id: row.id,
             patron_id: row.patron_id,
@@ -255,18 +260,24 @@ impl SteamAccountsRepository {
             WHERE id = $1
               AND patron_id = $2
               AND deleted_at IS NULL
+            RETURNING steam_id3
             "#,
             account_id,
             patron_id,
         )
-        .execute(&self.pg_client)
+        .fetch_optional(&self.pg_client)
         .await?;
 
-        if result.rows_affected() == 0 {
-            return Err(SteamAccountsRepositoryError::AccountNotFound);
+        match result {
+            None => Err(SteamAccountsRepositoryError::AccountNotFound),
+            Some(row) => {
+                IS_ACCOUNT_PRIORITIZED
+                    .lock()
+                    .await
+                    .cache_remove(&row.steam_id3);
+                Ok(())
+            }
         }
-
-        Ok(())
     }
 
     /// Hard-deletes a Steam account (permanently removes from database).
@@ -281,18 +292,24 @@ impl SteamAccountsRepository {
             DELETE FROM prioritized_steam_accounts
             WHERE id = $1
               AND patron_id = $2
+            RETURNING steam_id3
             "#,
             account_id,
             patron_id,
         )
-        .execute(&self.pg_client)
+        .fetch_optional(&self.pg_client)
         .await?;
 
-        if result.rows_affected() == 0 {
-            return Err(SteamAccountsRepositoryError::AccountNotFound);
+        match result {
+            None => Err(SteamAccountsRepositoryError::AccountNotFound),
+            Some(row) => {
+                IS_ACCOUNT_PRIORITIZED
+                    .lock()
+                    .await
+                    .cache_remove(&row.steam_id3);
+                Ok(())
+            }
         }
-
-        Ok(())
     }
 
     /// Reactivates a soft-deleted Steam account by setting `deleted_at` to NULL.
@@ -318,13 +335,19 @@ impl SteamAccountsRepository {
         .await?;
 
         match row {
-            Some(row) => Ok(SteamAccount {
-                id: row.id,
-                patron_id: row.patron_id,
-                steam_id3: row.steam_id3,
-                created_at: row.created_at,
-                deleted_at: row.deleted_at,
-            }),
+            Some(row) => {
+                IS_ACCOUNT_PRIORITIZED
+                    .lock()
+                    .await
+                    .cache_remove(&row.steam_id3);
+                Ok(SteamAccount {
+                    id: row.id,
+                    patron_id: row.patron_id,
+                    steam_id3: row.steam_id3,
+                    created_at: row.created_at,
+                    deleted_at: row.deleted_at,
+                })
+            }
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
         }
     }
@@ -419,14 +442,22 @@ impl SteamAccountsRepository {
             WHERE id = ANY($1)
               AND patron_id = $2
               AND deleted_at IS NOT NULL
+            RETURNING steam_id3
             "#,
             account_ids,
             patron_id,
         )
-        .execute(&self.pg_client)
+        .fetch_all(&self.pg_client)
         .await?;
 
-        Ok(result.rows_affected())
+        for row in &result {
+            IS_ACCOUNT_PRIORITIZED
+                .lock()
+                .await
+                .cache_remove(&row.steam_id3);
+        }
+
+        Ok(result.len() as u64)
     }
 
     /// Soft-deletes multiple Steam accounts by their IDs.
@@ -448,13 +479,21 @@ impl SteamAccountsRepository {
             WHERE id = ANY($1)
               AND patron_id = $2
               AND deleted_at IS NULL
+            RETURNING steam_id3
             "#,
             account_ids,
             patron_id,
         )
-        .execute(&self.pg_client)
+        .fetch_all(&self.pg_client)
         .await?;
 
-        Ok(result.rows_affected())
+        for row in &result {
+            IS_ACCOUNT_PRIORITIZED
+                .lock()
+                .await
+                .cache_remove(&row.steam_id3);
+        }
+
+        Ok(result.len() as u64)
     }
 }

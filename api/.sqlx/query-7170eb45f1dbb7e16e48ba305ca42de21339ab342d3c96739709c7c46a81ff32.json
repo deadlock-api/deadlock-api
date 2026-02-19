@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM prioritized_steam_accounts\n            WHERE id = $1\n              AND patron_id = $2\n            RETURNING steam_id3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7170eb45f1dbb7e16e48ba305ca42de21339ab342d3c96739709c7c46a81ff32"
+}
