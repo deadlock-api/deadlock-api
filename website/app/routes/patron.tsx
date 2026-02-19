@@ -1,9 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
+import type { RankV2 } from "assets_deadlock_api_client";
 import {
   AlertCircle,
   ArrowRight,
   CheckCircle,
   ChevronDown,
   Clock,
+  ExternalLink,
   HelpCircle,
   Loader2,
   LogIn,
@@ -11,9 +14,10 @@ import {
   RefreshCw,
   RotateCcw,
   Trash2,
+  UserPlus,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
@@ -32,16 +36,20 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
-import { parseSteamIdInput, steamId3ToSteamId64 } from "~/lib/patron-api";
+import { assetsApi } from "~/lib/assets-api";
+import { BotNotFriendError, type PlayerCard, parseSteamIdInput, steamId3ToSteamId64 } from "~/lib/patron-api";
+import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import {
   useAddSteamAccount,
   useDeleteSteamAccount,
   usePatronStatus,
+  usePlayerCard,
   useReactivateSteamAccount,
   useReplaceSteamAccount,
   useSteamAccounts,
@@ -117,6 +125,7 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           <ComparisonRow label="Faster data updates" checked />
           <ComparisonRow label="Up to 10 prioritized accounts" checked />
           <ComparisonRow label="Swap accounts anytime" checked />
+          <ComparisonRow label="Accurate rank data from Steam" checked />
         </div>
       </section>
     </div>
@@ -718,6 +727,142 @@ function ReactivateAccountDialog({
   );
 }
 
+function AddBotDialog({
+  open,
+  onOpenChange,
+  invites,
+  isChecking,
+  onCheck,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  invites: string[];
+  isChecking: boolean;
+  onCheck: () => void;
+}) {
+  const [inviteClicked, setInviteClicked] = useState(false);
+
+  // Reset invite-clicked state when dialog is closed
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) setInviteClicked(false);
+    onOpenChange(nextOpen);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add bot as Steam friend</DialogTitle>
+          <DialogDescription>
+            To retrieve your rank, our bot needs to be on your Steam friends list. Click one of the invite links below,
+            accept the friend request in Steam, then check the connection.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="space-y-2">
+            {invites.map((invite, i) => (
+              <a
+                key={invite}
+                href={invite}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setInviteClicked(true)}
+                className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                Invite link {i + 1}
+              </a>
+            ))}
+          </div>
+          {inviteClicked && (
+            <button
+              type="button"
+              onClick={onCheck}
+              disabled={isChecking}
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+            >
+              {isChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              {isChecking ? "Checking…" : "Check connection"}
+            </button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const cardQuery = usePlayerCard(steamId3, isActive);
+
+  const ranksQuery = useQuery({
+    queryKey: ["assets-ranks"],
+    queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  // Close dialog automatically once card loads successfully after a refetch
+  useEffect(() => {
+    if (cardQuery.isSuccess && dialogOpen) {
+      setDialogOpen(false);
+    }
+  }, [cardQuery.isSuccess, dialogOpen]);
+
+  if (!isActive) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  if (cardQuery.isLoading) {
+    return <Skeleton className="h-5 w-20" />;
+  }
+
+  if (cardQuery.isError) {
+    const err = cardQuery.error;
+    if (err instanceof BotNotFriendError) {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setDialogOpen(true)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Add bot
+          </button>
+          <AddBotDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            invites={err.invites}
+            isChecking={cardQuery.isFetching}
+            onCheck={() => cardQuery.refetch()}
+          />
+        </>
+      );
+    }
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const card = cardQuery.data as PlayerCard;
+
+  if (card.ranked_rank === null || card.ranked_badge_level === null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
+  // Obscurus (tier 0) has subrank 0 in the card — use 1 for image lookup fallback
+  const subrank = (card.ranked_subrank ?? 0) === 0 ? 1 : (card.ranked_subrank as number);
+  const imageUrl = getRankImageUrl(rank, subrank, "small", "webp");
+  const label = rank ? getRankLabel(rank, subrank) : `${card.ranked_rank}·${card.ranked_subrank}`;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {imageUrl && <img src={imageUrl} alt={label} className="size-6 object-contain" />}
+      <span className="text-sm">{label}</span>
+    </div>
+  );
+}
+
 function SteamAccountsList() {
   const query = useSteamAccounts();
   const deleteSteamAccountMutation = useDeleteSteamAccount();
@@ -801,6 +946,7 @@ function SteamAccountsList() {
                 <TableHead>SteamID64</TableHead>
                 <TableHead>Added</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Rank</TableHead>
                 <TableHead className="w-[60px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -855,6 +1001,9 @@ function SteamAccountsList() {
                           Removed
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <PlayerCardRankCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
                     </TableCell>
                     <TableCell>
                       {isActive ? (
