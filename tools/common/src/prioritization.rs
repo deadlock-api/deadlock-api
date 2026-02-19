@@ -15,10 +15,8 @@ pub async fn is_prioritized(pool: &Pool<Postgres>, steam_id3: i64) -> anyhow::Re
         SELECT EXISTS (
             SELECT 1
             FROM prioritized_steam_accounts psa
-            LEFT JOIN patrons p ON psa.patron_id = p.id
             WHERE psa.steam_id3 = $1
               AND psa.deleted_at IS NULL
-              AND (psa.patron_id IS NULL OR p.is_active = TRUE)
         ) AS "exists!"
         "#,
         steam_id3
@@ -51,10 +49,8 @@ pub async fn get_prioritized_from_list(
         r#"
         SELECT psa.steam_id3
         FROM prioritized_steam_accounts psa
-        LEFT JOIN patrons p ON psa.patron_id = p.id
         WHERE psa.steam_id3 = ANY($1)
           AND psa.deleted_at IS NULL
-          AND (psa.patron_id IS NULL OR p.is_active = TRUE)
         "#,
         steam_id3_list
     )
@@ -82,9 +78,7 @@ pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> anyhow::Resu
         r#"
         SELECT psa.steam_id3
         FROM prioritized_steam_accounts psa
-        LEFT JOIN patrons p ON psa.patron_id = p.id
         WHERE psa.deleted_at IS NULL
-          AND (psa.patron_id IS NULL OR p.is_active = TRUE)
         "#
     )
     .fetch_all(pool)

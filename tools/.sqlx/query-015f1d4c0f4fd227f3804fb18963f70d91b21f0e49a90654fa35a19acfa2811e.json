@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT psa.steam_id3\n        FROM prioritized_steam_accounts psa\n        WHERE psa.deleted_at IS NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "015f1d4c0f4fd227f3804fb18963f70d91b21f0e49a90654fa35a19acfa2811e"
+}
