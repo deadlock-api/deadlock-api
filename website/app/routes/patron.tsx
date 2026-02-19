@@ -819,7 +819,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
 
   if (cardQuery.isError) {
     const err = cardQuery.error;
-    if (err instanceof BotNotFriendError) {
+    if (Object.hasOwn(err, "invites") && Array.isArray(err.invites)) {
       return (
         <>
           <button
