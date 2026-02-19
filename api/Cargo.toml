@@ -10,7 +10,7 @@ license = "MIT"
 reqwest = { version = "0.13.2", features = ["json", "http2", "zstd", "gzip", "form"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-redis = { version = "1.0.3", default-features = false, features = ["tokio-comp"] }
+redis = { version = "1.0.4", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.14.2", features = ["chrono", "uuid"] }
 sqlx = { version = "0.8.6", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.21.0", features = ["serde", "v4"] }
