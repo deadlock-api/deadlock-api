@@ -20,6 +20,7 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::patreon;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -226,13 +227,16 @@ pub(crate) async fn get_player_card(
     responses(
         (status = OK, body = [PlayerCard]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = FORBIDDEN, description = "Account is not a Patreon subscriber or not prioritized."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
-        (status = INTERNAL_SERVER_ERROR, description = "Fetching match history failed")
+        (status = INTERNAL_SERVER_ERROR, description = "Fetching card failed")
     ),
     tags = ["Players"],
     summary = "Card",
     description = "
 This endpoint returns the player card for the given `account_id`.
+
+!THIS IS A PATREON ONLY ENDPOINT!
 
 You have to be friend with one of the bots to use this endpoint.
 On first use this endpoint will return an error with a list of invite links to add the bot as friend.
@@ -270,13 +274,22 @@ pub(super) async fn card(
             &rate_limit_key,
             "card",
             &[
-                Quota::ip_limit(5, Duration::from_secs(60)),
-                Quota::key_limit(20, Duration::from_secs(60)),
-                Quota::key_limit(800, Duration::from_secs(60 * 60)),
-                Quota::global_limit(200, Duration::from_secs(60)),
+                Quota::ip_limit(5, Duration::from_mins(1)),
+                Quota::key_limit(20, Duration::from_mins(1)),
+                Quota::key_limit(800, Duration::from_hours(1)),
+                Quota::global_limit(200, Duration::from_mins(1)),
             ],
         )
         .await?;
+
+    let is_prioritized =
+        patreon::is_account_prioritized(&state.pg_client, i64::from(account_id)).await?;
+    if !is_prioritized {
+        return Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "This endpoint is only available to Patreon subscribers.",
+        ));
+    }
 
     let friend_id = i32::try_from(account_id).map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid account ID".to_owned())
