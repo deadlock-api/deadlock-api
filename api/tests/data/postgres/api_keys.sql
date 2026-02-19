@@ -5,12 +5,11 @@ create table api_keys
     comment        text
         constraint api_keys_pk unique,
     data_access    boolean   default false             not null,
-    disabled       boolean   default false             not null,
-    esports_ingest boolean   default false             not null
+    disabled       boolean   default false             not null
 );
 
-insert into api_keys (key, comment, data_access, disabled, esports_ingest)
-values ('fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64', 'Test Key', true, false, false);
+insert into api_keys (key, comment, data_access, disabled)
+values ('fffd6bfd-2be9-4b7e-ab76-a9d1dca19b64', 'Test Key', true, false);
 
 create table api_key_limits
 (

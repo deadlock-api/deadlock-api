@@ -7,7 +7,6 @@ mod auth;
 pub mod builds;
 mod commands;
 pub(crate) mod data_privacy;
-mod esports;
 pub mod info;
 mod leaderboard;
 pub mod matches;
@@ -26,7 +25,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())
         .nest("/info", info::router())
-        .nest("/esports", esports::router())
         .nest("/sql", sql::router())
         .nest("/auth", auth::router())
         .nest("/patron", patron::router())
