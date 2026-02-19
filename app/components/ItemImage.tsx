@@ -25,14 +25,14 @@ export default function ItemImage({ itemId, className }: { itemId: number; class
     return <div>ENOITEM</div>;
   }
 
-  if (!item?.shop_image_small_webp) {
+  if (!item?.shop_image_webp) {
     return <div>ENOIMG</div>;
   }
 
   return (
     <picture>
-      {item?.shop_image_small_webp && <source srcSet={item?.shop_image_small_webp} type="image/webp" />}
-      {item?.shop_image_small && <source srcSet={item?.shop_image_small} type="image/png" />}
+      {item?.shop_image_webp && <source srcSet={item?.shop_image_webp} type="image/webp" />}
+      {item?.shop_image && <source srcSet={item?.shop_image} type="image/png" />}
       <img
         loading="lazy"
         src={item?.shop_image_small ?? ""} // Fallback for browsers that don't support <picture> or neither format
