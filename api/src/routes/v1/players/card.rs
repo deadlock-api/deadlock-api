@@ -268,6 +268,16 @@ pub(super) async fn card(
     {
         return Err(APIError::protected_user());
     }
+
+    let is_prioritized =
+        patreon::is_account_prioritized(&state.pg_client, i64::from(account_id)).await?;
+    if !is_prioritized {
+        return Err(APIError::status_msg(
+            StatusCode::FORBIDDEN,
+            "This endpoint is only available to Patreon subscribers.",
+        ));
+    }
+
     state
         .rate_limit_client
         .apply_limits(
@@ -281,15 +291,6 @@ pub(super) async fn card(
             ],
         )
         .await?;
-
-    let is_prioritized =
-        patreon::is_account_prioritized(&state.pg_client, i64::from(account_id)).await?;
-    if !is_prioritized {
-        return Err(APIError::status_msg(
-            StatusCode::FORBIDDEN,
-            "This endpoint is only available to Patreon subscribers.",
-        ));
-    }
 
     let friend_id = i32::try_from(account_id).map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid account ID".to_owned())
