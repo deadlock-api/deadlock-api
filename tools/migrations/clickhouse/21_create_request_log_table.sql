@@ -26,3 +26,7 @@ ALTER TABLE request_logs
     ADD INDEX idx_path path TYPE bloom_filter GRANULARITY 4;
 ALTER TABLE request_logs
     ADD INDEX idx_api_key api_key TYPE bloom_filter GRANULARITY 4;
+
+ALTER TABLE request_logs
+    ADD COLUMN rate_limit_remaining Nullable(UInt64) DEFAULT NULL,
+    ADD COLUMN rate_limit_reset     Nullable(UInt64) DEFAULT NULL;
