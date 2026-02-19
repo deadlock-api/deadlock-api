@@ -7,6 +7,7 @@ import {
   addSteamAccount,
   deleteSteamAccount,
   getPatronStatus,
+  getPlayerCard,
   listSteamAccounts,
   reactivateSteamAccount,
   replaceSteamAccount,
@@ -20,6 +21,7 @@ export const patronQueryKeys = {
   all: ["patron"] as const,
   status: () => [...patronQueryKeys.all, "status"] as const,
   steamAccounts: () => [...patronQueryKeys.all, "steam-accounts"] as const,
+  playerCard: (steamId3: number) => [...patronQueryKeys.all, "player-card", steamId3] as const,
 };
 
 // ============================================================================
@@ -46,6 +48,22 @@ export function useSteamAccounts() {
     queryKey: patronQueryKeys.steamAccounts(),
     queryFn: listSteamAccounts,
     refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * Hook to fetch the Steam profile card for a prioritized account.
+ * Returns ranked badge level and display slots.
+ * Throws BotNotFriendError if the account hasn't friended a bot yet.
+ * Only runs when enabled=true (pass false for inactive/deleted accounts).
+ */
+export function usePlayerCard(steamId3: number, enabled = true) {
+  return useQuery({
+    queryKey: patronQueryKeys.playerCard(steamId3),
+    queryFn: () => getPlayerCard(steamId3),
+    enabled,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 min — matches server-side cache
   });
 }
 

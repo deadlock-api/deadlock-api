@@ -61,6 +61,30 @@ export interface PatronApiError {
   message: string;
 }
 
+export interface PlayerCardSlot {
+  slot_id: number | null;
+  hero: { id: number | null; kills: number | null; wins: number | null } | null;
+  stat: { stat_id: number | null; stat_score: number | null } | null;
+}
+
+export interface PlayerCard {
+  account_id: number;
+  ranked_badge_level: number | null;
+  ranked_rank: number | null;
+  ranked_subrank: number | null;
+  slots: PlayerCardSlot[];
+}
+
+export class BotNotFriendError extends Error {
+  invites: string[];
+  constructor(invites: string[], message: string) {
+    super(message);
+    Object.setPrototypeOf(this, BotNotFriendError.prototype);
+    this.name = "BotNotFriendError";
+    this.invites = invites;
+  }
+}
+
 // ============================================================================
 // API Functions
 // ============================================================================
@@ -262,4 +286,29 @@ export function parseSteamIdInput(input: string): { steamId3: number; format: "i
   }
 
   return { steamId3: id3, format: "id3" };
+}
+
+/**
+ * Fetches the Steam profile card for a given account.
+ * Public endpoint — no auth required.
+ * Throws BotNotFriendError if the account hasn't friended a bot yet.
+ */
+export async function getPlayerCard(steamId3: number): Promise<PlayerCard> {
+  // No credentials — this is a public endpoint, no auth required
+  const response = await fetch(`${API_ORIGIN}/v1/players/${steamId3}/card`);
+
+  if (response.status === 400) {
+    const data = await response.json().catch(() => ({}));
+    if (Array.isArray(data.invites)) {
+      throw new BotNotFriendError(data.invites, data.message ?? "Not a bot friend");
+    }
+    throw new Error(data.error ?? `HTTP 400`);
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error ?? `HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
 }

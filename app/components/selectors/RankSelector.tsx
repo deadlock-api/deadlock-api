@@ -3,6 +3,7 @@ import type { RankV2 } from "assets_deadlock_api_client";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { assetsApi } from "~/lib/assets-api";
+import { getRankImageUrl } from "~/lib/rank-utils";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";
 
@@ -19,37 +20,6 @@ function getRankId(tier: number, subrank: number): number {
   // Ascendant (tier 10) should map 101-106
   // ... Initiate (tier 1) should map 11-16
   return baseId + subrank;
-}
-
-// Helper to get the correct image URL
-function getRankImageUrl(
-  rank: RankV2 | undefined,
-  subrank: number,
-  size: "small" | "large" = "small",
-  format: "png" | "webp" = "webp",
-): string | undefined | null {
-  if (!rank) return null;
-  if (rank.tier === 0) {
-    // Obscurus only has base images
-    const key = `${size}_${format}`;
-    return rank.images[key as keyof RankV2["images"]] ?? rank.images[size as keyof RankV2["images"]];
-  }
-  // Try specific subrank image first (webp, then png)
-  let key = `${size}_subrank${subrank}_${format}`;
-  if (rank.images[key as keyof RankV2["images"]]) {
-    return rank.images[key as keyof RankV2["images"]];
-  }
-  key = `${size}_subrank${subrank}`;
-  if (rank.images[key as keyof RankV2["images"]]) {
-    return rank.images[key as keyof RankV2["images"]];
-  }
-  // Fallback to base tier image (webp, then png)
-  key = `${size}_${format}`;
-  if (rank.images[key as keyof RankV2["images"]]) {
-    return rank.images[key as keyof RankV2["images"]];
-  }
-  key = `${size}`;
-  return rank.images[key as keyof RankV2["images"]];
 }
 
 export default function RankSelector({

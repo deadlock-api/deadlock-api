@@ -154,6 +154,10 @@ export default function Index() {
                 <span className="text-primary font-semibold">&#10003;</span>
                 <span className="text-muted-foreground">100% funds infrastructure</span>
               </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Accurate rank data from Steam</span>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="justify-center">
