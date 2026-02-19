@@ -37,4 +37,8 @@ pub(crate) struct RequestLog {
     pub accept: Option<String>,
     /// Accept-Encoding header
     pub accept_encoding: Option<String>,
+    /// Remaining requests in the current rate limit window (None if no rate limiting applied)
+    pub rate_limit_remaining: Option<u64>,
+    /// Seconds until the rate limit window resets (None if no rate limiting applied)
+    pub rate_limit_reset: Option<u64>,
 }

@@ -15,8 +15,10 @@ CREATE TABLE IF NOT EXISTS request_logs
     response_size   UInt64,
     content_type    Nullable(String),
     referer         Nullable(String),
-    accept          Nullable(String),
-    accept_encoding Nullable(String)
+    accept               Nullable(String),
+    accept_encoding      Nullable(String),
+    rate_limit_remaining Nullable(UInt64),
+    rate_limit_reset     Nullable(UInt64)
     )
     ENGINE = MergeTree
     PARTITION BY toYYYYMMDD(timestamp)

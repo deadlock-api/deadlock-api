@@ -74,6 +74,16 @@ pub(crate) async fn track_requests(
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
         .map(ToOwned::to_owned);
+    let rate_limit_remaining = response
+        .headers()
+        .get("ratelimit-remaining")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<u64>().ok());
+    let rate_limit_reset = response
+        .headers()
+        .get("ratelimit-reset")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<u64>().ok());
 
     // Collect response body to get size, then reconstruct the response
     let (parts, body) = response.into_parts();
@@ -124,6 +134,8 @@ pub(crate) async fn track_requests(
             referer,
             accept,
             accept_encoding,
+            rate_limit_remaining,
+            rate_limit_reset,
         };
         request_logger.log(log).await;
     }
