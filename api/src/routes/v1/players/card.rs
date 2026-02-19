@@ -312,6 +312,10 @@ pub(super) async fn card(
             }
             // Shuffle so the invites get used more equally (hopefully)
             invites.shuffle(&mut rand::rng());
+
+            // return at most 5 invites
+            invites.truncate(5);
+
             return Err(APIError::StatusMsgJson {
                 status: StatusCode::BAD_REQUEST,
                 message: json!({
