@@ -740,16 +740,8 @@ function AddBotDialog({
   isChecking: boolean;
   onCheck: () => void;
 }) {
-  const [inviteClicked, setInviteClicked] = useState(false);
-
-  // Reset invite-clicked state when dialog is closed
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setInviteClicked(false);
-    onOpenChange(nextOpen);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add bot as Steam friend</DialogTitle>
@@ -766,7 +758,6 @@ function AddBotDialog({
                 href={invite}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => setInviteClicked(true)}
                 className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
               >
                 <ExternalLink className="h-4 w-4 shrink-0" />
@@ -774,7 +765,7 @@ function AddBotDialog({
               </a>
             ))}
           </div>
-          {inviteClicked && (
+          <div className="space-y-2">
             <button
               type="button"
               onClick={onCheck}
@@ -784,7 +775,10 @@ function AddBotDialog({
               {isChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               {isChecking ? "Checking…" : "Check connection"}
             </button>
-          )}
+            <p className="text-xs text-center text-muted-foreground">
+              After accepting the request, it may take a few minutes before the bot can see your profile.
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
