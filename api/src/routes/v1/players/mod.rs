@@ -1,3 +1,4 @@
+pub mod account_stats;
 pub mod card;
 pub mod enemy_stats;
 pub mod hero_stats;
@@ -24,6 +25,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(match_history::match_history))
         .routes(routes!(card::card))
+        .routes(routes!(account_stats::account_stats))
         .routes(routes!(mate_stats::mate_stats))
         .routes(routes!(enemy_stats::enemy_stats))
         .routes(routes!(party_stats::party_stats))
