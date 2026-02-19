@@ -299,10 +299,11 @@ export async function getPlayerCard(steamId3: number): Promise<PlayerCard> {
 
   if (response.status === 400) {
     const data = await response.json().catch(() => ({}));
-    if (Array.isArray(data.invites)) {
-      throw new BotNotFriendError(data.invites, data.message ?? "Not a bot friend");
+    const errorPayload = data.error ?? data;
+    if (Array.isArray(errorPayload.invites)) {
+      throw new BotNotFriendError(errorPayload.invites, errorPayload.message ?? "Not a bot friend");
     }
-    throw new Error(data.error ?? `HTTP 400`);
+    throw new Error(errorPayload.message ?? data.error ?? `HTTP 400`);
   }
 
   if (!response.ok) {
