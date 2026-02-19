@@ -29,10 +29,7 @@ pub(crate) async fn is_account_prioritized(
         SELECT EXISTS (
             SELECT 1
             FROM prioritized_steam_accounts psa
-            LEFT JOIN patrons p ON psa.patron_id = p.id
-            WHERE psa.steam_id3 = $1
-              AND psa.deleted_at IS NULL
-              AND (p.id IS NULL OR p.is_active = TRUE)
+            WHERE psa.steam_id3 = $1 AND psa.deleted_at IS NULL
         ) AS "exists!"
         "#,
         steam_id3
