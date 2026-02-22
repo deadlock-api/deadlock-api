@@ -98,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
             FROM player_match_history
             WHERE account_id IN ?
               AND match_mode IN ('Ranked', 'Unranked')
-              AND start_time BETWEEN '2025-08-01' AND now() - INTERVAL 2 HOUR
+              AND start_time < now() - INTERVAL 2 HOUR
               AND match_id NOT IN (SELECT match_id FROM match_salts)
               AND match_id NOT IN (SELECT match_id FROM match_info)
             GROUP BY match_id
