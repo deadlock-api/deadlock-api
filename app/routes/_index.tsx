@@ -152,6 +152,10 @@ export default function Index() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Full match history from first to last game</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
                 <span className="text-muted-foreground">100% funds infrastructure</span>
               </div>
               <div className="flex items-center gap-2">
