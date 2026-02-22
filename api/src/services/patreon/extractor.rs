@@ -54,8 +54,7 @@ impl FromRequestParts<AppState> for PatronSession {
             .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
 
         if let Some(api_key) = api_key
-            && let Some(patron_id) =
-                get_patron_id_for_api_key(&state.pg_client, api_key).await
+            && let Some(patron_id) = get_patron_id_for_api_key(&state.pg_client, api_key).await
         {
             return Ok(PatronSession { patron_id });
         }
@@ -98,7 +97,10 @@ fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<Str
     sync_writes = "by_key",
     key = "Uuid"
 )]
-async fn get_patron_id_for_api_key(pg_client: &Pool<Postgres>, api_key: Uuid) -> Option<Uuid> {
+pub(crate) async fn get_patron_id_for_api_key(
+    pg_client: &Pool<Postgres>,
+    api_key: Uuid,
+) -> Option<Uuid> {
     sqlx::query_scalar!(
         "SELECT patron_id FROM api_keys WHERE key = $1 AND disabled IS false AND patron_id IS NOT NULL",
         api_key

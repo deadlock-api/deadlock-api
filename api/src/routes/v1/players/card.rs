@@ -272,10 +272,20 @@ pub(super) async fn card(
     let is_prioritized =
         patreon::is_account_prioritized(&state.pg_client, i64::from(account_id)).await?;
     if !is_prioritized {
-        return Err(APIError::status_msg(
-            StatusCode::FORBIDDEN,
-            "This endpoint is only available to Patreon subscribers.",
-        ));
+        let has_patron_key = match rate_limit_key.api_key {
+            Some(api_key) => {
+                patreon::extractor::get_patron_id_for_api_key(&state.pg_client, api_key)
+                    .await
+                    .is_some()
+            }
+            None => false,
+        };
+        if !has_patron_key {
+            return Err(APIError::status_msg(
+                StatusCode::FORBIDDEN,
+                "This endpoint is only available to Patreon subscribers.",
+            ));
+        }
     }
 
     state
