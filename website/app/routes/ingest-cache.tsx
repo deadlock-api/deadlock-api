@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Loader2, Upload } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -108,6 +108,10 @@ function urlToSalts(url: string): Salts | null {
 
 async function processFile(fileHandle: FileSystemFileHandle): Promise<Salts | null> {
   const file = await fileHandle.getFile();
+  return processFileObject(file);
+}
+
+async function processFileObject(file: File): Promise<Salts | null> {
   const arrayBuffer = await file.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
   const replayUrl = extractReplayUrl(data);
@@ -137,6 +141,67 @@ async function scanDirHandle(
   return salts;
 }
 
+async function scanFileList(
+  files: FileList,
+  setSaltsFound: React.Dispatch<React.SetStateAction<number>>,
+): Promise<Set<Salts>> {
+  const salts: Set<Salts> = new Set();
+  for (let i = 0; i < files.length; i++) {
+    const salt = await processFileObject(files[i]);
+    if (salt) {
+      salts.add(salt);
+      setSaltsFound((prev) => prev + 1);
+    }
+  }
+  return salts;
+}
+
+function readAllEntries(reader: FileSystemDirectoryReader): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const entries: FileSystemEntry[] = [];
+    const readBatch = () => {
+      reader.readEntries((batch) => {
+        if (batch.length === 0) {
+          resolve(entries);
+        } else {
+          entries.push(...batch);
+          readBatch();
+        }
+      }, reject);
+    };
+    readBatch();
+  });
+}
+
+function getFileFromEntry(entry: FileSystemFileEntry): Promise<File> {
+  return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+
+async function scanEntry(
+  entry: FileSystemEntry,
+  setSaltsFound: React.Dispatch<React.SetStateAction<number>>,
+): Promise<Set<Salts>> {
+  const salts: Set<Salts> = new Set();
+  if (entry.isFile) {
+    const file = await getFileFromEntry(entry as FileSystemFileEntry);
+    const salt = await processFileObject(file);
+    if (salt) {
+      salts.add(salt);
+      setSaltsFound((prev) => prev + 1);
+    }
+  } else if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    const entries = await readAllEntries(reader);
+    for (const childEntry of entries) {
+      const subSalts = await scanEntry(childEntry, setSaltsFound);
+      for (const s of subSalts) {
+        salts.add(s);
+      }
+    }
+  }
+  return salts;
+}
+
 import { PatronCTA } from "~/components/PatronCTA";
 import { cn } from "~/lib/utils";
 
@@ -150,11 +215,13 @@ export default function () {
   const [openSection, setOpenSection] = useState<string | null>("windows");
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleDirectory = async (dirHandle: FileSystemDirectoryHandle) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const runScanAndUpload = async (scanFn: () => Promise<Set<Salts>>) => {
     setIsLoading(true);
     setSaltsFound(0);
     try {
-      const salts = Array.from(await scanDirHandle(dirHandle, setSaltsFound));
+      const salts = Array.from(await scanFn());
       setIsLoading(false);
 
       const response = await fetch("https://api.deadlock-api.com/v1/matches/salts", {
@@ -183,19 +250,23 @@ export default function () {
   };
 
   const openDirectoryPicker = async () => {
-    try {
-      const dirHandle = await (window as any).showDirectoryPicker();
-      await handleDirectory(dirHandle);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return; // User cancelled the picker
+    if ("showDirectoryPicker" in window) {
+      try {
+        const dirHandle = await (window as any).showDirectoryPicker();
+        await runScanAndUpload(() => scanDirHandle(dirHandle, setSaltsFound));
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        setIsLoading(false);
+        setDialogType("error");
+        setDialogTitle("Error");
+        setDialogDescription("An error occurred while opening the directory picker.");
+        console.error(error);
+        setDialogOpen(true);
       }
-      setIsLoading(false);
-      setDialogType("error");
-      setDialogTitle("Error");
-      setDialogDescription("An error occurred while opening the directory picker.");
-      console.error(error);
-      setDialogOpen(true);
+    } else {
+      fileInputRef.current?.click();
     }
   };
 
@@ -227,14 +298,27 @@ export default function () {
 
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       try {
-        const handle = await (e.dataTransfer.items[0] as any).getAsFileSystemHandle();
-        if (handle && handle.kind === "directory") {
-          await handleDirectory(handle as FileSystemDirectoryHandle);
+        const item = e.dataTransfer.items[0];
+        if ("getAsFileSystemHandle" in item) {
+          const handle = await (item as any).getAsFileSystemHandle();
+          if (handle && handle.kind === "directory") {
+            await runScanAndUpload(() => scanDirHandle(handle as FileSystemDirectoryHandle, setSaltsFound));
+          } else {
+            setDialogType("error");
+            setDialogTitle("Invalid Drop");
+            setDialogDescription("Please drop a directory, not a file.");
+            setDialogOpen(true);
+          }
         } else {
-          setDialogType("error");
-          setDialogTitle("Invalid Drop");
-          setDialogDescription("Please drop a directory, not a file.");
-          setDialogOpen(true);
+          const entry = item.webkitGetAsEntry();
+          if (entry && entry.isDirectory) {
+            await runScanAndUpload(() => scanEntry(entry, setSaltsFound));
+          } else {
+            setDialogType("error");
+            setDialogTitle("Invalid Drop");
+            setDialogDescription("Please drop a directory, not a file.");
+            setDialogOpen(true);
+          }
         }
       } catch (error) {
         setIsLoading(false);
@@ -279,6 +363,19 @@ export default function () {
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
+          <input
+            ref={fileInputRef}
+            type="file"
+            // @ts-expect-error webkitdirectory is not in standard types
+            webkitdirectory=""
+            className="hidden"
+            onChange={async (e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                await runScanAndUpload(() => scanFileList(e.target.files!, setSaltsFound));
+                e.target.value = "";
+              }
+            }}
+          />
           <Button
             onClick={openDirectoryPicker}
             disabled={isLoading}
