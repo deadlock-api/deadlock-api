@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
+import axios from "axios";
 import {
   AlertCircle,
   ArrowRight,
@@ -51,6 +52,7 @@ import {
   usePatronStatus,
   usePlayerCard,
   useReactivateSteamAccount,
+  useRefetchMatchHistory,
   useReplaceSteamAccount,
   useSteamAccounts,
 } from "~/queries/patron-queries";
@@ -787,6 +789,7 @@ function AddBotDialog({
 
 function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const refetchMutation = useRefetchMatchHistory();
 
   const cardQuery = usePlayerCard(steamId3, isActive);
 
@@ -839,8 +842,54 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
 
   const card = cardQuery.data as PlayerCard;
 
+  const handleRefetch = () => {
+    refetchMutation.mutate(steamId3, {
+      onSuccess: (response) => {
+        const count = response.data.length;
+        toast.success(`Fetched ${count} match${count !== 1 ? "es" : ""}`);
+      },
+      onError: (error) => {
+        if (axios.isAxiosError(error) && error.response?.status === 429) {
+          const retryAfter = Number(error.response.headers["retry-after"]);
+          if (retryAfter && retryAfter > 0) {
+            const minutes = Math.ceil(retryAfter / 60);
+            toast.error(`Rate limited — try again in ${minutes} minute${minutes !== 1 ? "s" : ""}`);
+          } else {
+            toast.error("Rate limited — please wait before trying again");
+          }
+        } else if (axios.isAxiosError(error)) {
+          const detail = error.response?.data?.detail ?? error.response?.data?.message;
+          toast.error(detail ?? `Request failed (${error.response?.status ?? "network error"})`);
+        } else {
+          toast.error(error instanceof Error ? error.message : "Failed to refetch match history");
+        }
+      },
+    });
+  };
+
+  const refetchButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={handleRefetch}
+          disabled={refetchMutation.isPending}
+          className="ml-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${refetchMutation.isPending ? "animate-spin" : ""}`} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>Refetch full match history</TooltipContent>
+    </Tooltip>
+  );
+
   if (card.ranked_rank === null || card.ranked_badge_level === null) {
-    return <span className="text-muted-foreground">—</span>;
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-muted-foreground">—</span>
+        {refetchButton}
+      </div>
+    );
   }
 
   const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
@@ -853,6 +902,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
     <div className="flex items-center gap-1.5">
       {imageUrl && <img src={imageUrl} alt={label} className="size-6 object-contain" />}
       <span className="text-sm">{label}</span>
+      {refetchButton}
     </div>
   );
 }

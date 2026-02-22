@@ -12,6 +12,7 @@ import {
   reactivateSteamAccount,
   replaceSteamAccount,
 } from "~/lib/patron-api";
+import { api } from "~/lib/api";
 
 // ============================================================================
 // Query Keys
@@ -133,5 +134,16 @@ export function useReactivateSteamAccount() {
       queryClient.invalidateQueries({ queryKey: patronQueryKeys.steamAccounts() });
       queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
     },
+  });
+}
+
+/**
+ * Hook to force-refetch the full match history for a player from Steam.
+ * Calls the PlayersApi match-history endpoint with force_refetch=true.
+ */
+export function useRefetchMatchHistory() {
+  return useMutation({
+    mutationFn: (accountId: number) =>
+      api.players_api.matchHistory({ accountId, forceRefetch: true }),
   });
 }
