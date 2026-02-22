@@ -176,6 +176,39 @@ pub(crate) fn calculate_slot_limit(
     slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 250).min(10))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_slot_limit_with_override_ignores_pledge() {
+        assert_eq!(calculate_slot_limit(Some(5), Some(0)), 5);
+        assert_eq!(calculate_slot_limit(Some(5), None), 5);
+        assert_eq!(calculate_slot_limit(Some(3), Some(10000)), 3);
+    }
+
+    #[test]
+    fn test_slot_limit_without_override_uses_pledge() {
+        assert_eq!(calculate_slot_limit(None, Some(500)), 2);
+        assert_eq!(calculate_slot_limit(None, Some(250)), 1);
+        assert_eq!(calculate_slot_limit(None, Some(2500)), 10);
+        // Capped at 10
+        assert_eq!(calculate_slot_limit(None, Some(5000)), 10);
+    }
+
+    #[test]
+    fn test_slot_limit_no_override_no_pledge() {
+        assert_eq!(calculate_slot_limit(None, None), 0);
+        assert_eq!(calculate_slot_limit(None, Some(0)), 0);
+    }
+
+    #[test]
+    fn test_slot_limit_override_zero() {
+        // slot_override of 0 means explicitly set to 0 slots
+        assert_eq!(calculate_slot_limit(Some(0), Some(500)), 0);
+    }
+}
+
 /// Error type for token encryption/decryption
 #[derive(Debug, Error)]
 pub(crate) enum TokenCryptoError {

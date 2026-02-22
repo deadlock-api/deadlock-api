@@ -5,8 +5,8 @@ use super::types::calculate_slot_limit;
 
 /// Handle patron reactivation by restoring soft-deleted Steam accounts up to the slot limit.
 ///
-/// When a patron re-subscribes (pays again), reactivate their previously soft-deleted
-/// accounts so they don't have to re-add them manually.
+/// When a patron re-subscribes (pays again) or has a slot override, reactivate their
+/// previously soft-deleted accounts so they don't have to re-add them manually.
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn handle_reactivation(
     steam_accounts_repository: &SteamAccountsRepository,
@@ -16,7 +16,7 @@ pub(crate) async fn handle_reactivation(
     is_active: bool,
     slot_override: Option<i32>,
 ) -> Result<(), String> {
-    if !is_active {
+    if !is_active && slot_override.is_none_or(|s| s <= 0) {
         return Ok(());
     }
 
@@ -63,7 +63,8 @@ pub(crate) async fn handle_reactivation(
 
 /// Handle patron downgrade or cancellation by soft-deleting excess Steam accounts.
 ///
-/// - If `is_active` is false (patron cancelled), soft-delete ALL accounts
+/// - If `is_active` is false and patron has no slot override, soft-delete ALL accounts
+/// - If patron has a slot override, respect that limit even when subscription is inactive
 /// - If new slot limit < active accounts count, soft-delete oldest accounts first
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub(crate) async fn handle_downgrade_or_cancellation(
@@ -84,7 +85,7 @@ pub(crate) async fn handle_downgrade_or_cancellation(
         return Ok(());
     }
 
-    let accounts_to_delete = if is_active {
+    let accounts_to_delete = if is_active || slot_override.is_some_and(|s| s > 0) {
         let new_slot_limit = calculate_slot_limit(slot_override, pledge_amount_cents);
         // Safe cast: practical slot limits will never exceed i32::MAX
         let active_count = active_accounts.len() as i32;
@@ -103,7 +104,7 @@ pub(crate) async fn handle_downgrade_or_cancellation(
         );
         active_accounts.into_iter().take(excess_count).collect()
     } else {
-        // Patron cancelled: soft-delete ALL accounts
+        // Patron cancelled with no slot override: soft-delete ALL accounts
         info!(
             "Patron {patreon_user_id} cancelled, soft-deleting all {} accounts",
             active_accounts.len()
