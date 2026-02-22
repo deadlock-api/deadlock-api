@@ -789,7 +789,6 @@ function AddBotDialog({
 
 function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const refetchMutation = useRefetchMatchHistory();
 
   const cardQuery = usePlayerCard(steamId3, isActive);
 
@@ -842,6 +841,31 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
 
   const card = cardQuery.data as PlayerCard;
 
+  if (card.ranked_rank === null || card.ranked_badge_level === null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
+  // Obscurus (tier 0) has subrank 0 in the card — use 1 for image lookup fallback
+  const subrank = (card.ranked_subrank ?? 0) === 0 ? 1 : (card.ranked_subrank as number);
+  const imageUrl = getRankImageUrl(rank, subrank, "small", "webp");
+  const label = rank ? getRankLabel(rank, subrank) : `${card.ranked_rank}·${card.ranked_subrank}`;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {imageUrl && <img src={imageUrl} alt={label} className="size-6 object-contain" />}
+      <span className="text-sm">{label}</span>
+    </div>
+  );
+}
+
+function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
+  const refetchMutation = useRefetchMatchHistory();
+
+  if (!isActive) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
   const handleRefetch = () => {
     refetchMutation.mutate(steamId3, {
       onSuccess: (response) => {
@@ -867,43 +891,16 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
     });
   };
 
-  const refetchButton = (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={handleRefetch}
-          disabled={refetchMutation.isPending}
-          className="ml-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refetchMutation.isPending ? "animate-spin" : ""}`} />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>Refetch full match history</TooltipContent>
-    </Tooltip>
-  );
-
-  if (card.ranked_rank === null || card.ranked_badge_level === null) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <span className="text-muted-foreground">—</span>
-        {refetchButton}
-      </div>
-    );
-  }
-
-  const rank = ranksQuery.data?.find((r) => r.tier === card.ranked_rank);
-  // Obscurus (tier 0) has subrank 0 in the card — use 1 for image lookup fallback
-  const subrank = (card.ranked_subrank ?? 0) === 0 ? 1 : (card.ranked_subrank as number);
-  const imageUrl = getRankImageUrl(rank, subrank, "small", "webp");
-  const label = rank ? getRankLabel(rank, subrank) : `${card.ranked_rank}·${card.ranked_subrank}`;
-
   return (
-    <div className="flex items-center gap-1.5">
-      {imageUrl && <img src={imageUrl} alt={label} className="size-6 object-contain" />}
-      <span className="text-sm">{label}</span>
-      {refetchButton}
-    </div>
+    <button
+      type="button"
+      onClick={handleRefetch}
+      disabled={refetchMutation.isPending}
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${refetchMutation.isPending ? "animate-spin" : ""}`} />
+      Refetch Match History
+    </button>
   );
 }
 
@@ -991,6 +988,7 @@ function SteamAccountsList() {
                 <TableHead>Added</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Rank</TableHead>
+                <TableHead>Refetch</TableHead>
                 <TableHead className="w-[60px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -1048,6 +1046,9 @@ function SteamAccountsList() {
                     </TableCell>
                     <TableCell>
                       <PlayerCardRankCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
+                    </TableCell>
+                    <TableCell>
+                      <RefetchMatchHistoryCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
                     </TableCell>
                     <TableCell>
                       {isActive ? (
