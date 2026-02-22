@@ -125,6 +125,7 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           <ComparisonRow label="Match history & stats" free checked />
           <ComparisonRow label="Dedicated queue with reserved resources" checked />
           <ComparisonRow label="Faster data updates" checked />
+          <ComparisonRow label="Full match history from first to last game" checked />
           <ComparisonRow label="Up to 10 prioritized accounts" checked />
           <ComparisonRow label="Swap accounts anytime" checked />
           <ComparisonRow label="Accurate rank data from Steam" checked />
