@@ -37,13 +37,13 @@ prost = "0.14.3"
 base64 = "0.22.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.40", features = ["bzip2", "tokio"] }
-strum = { version = "0.27.2", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.5", features = ["query"] }
 metrics = "0.24.3"
 bytes = { version = "1.11.1", features = ["serde"] }
 thiserror = "2.0.18"
 rand = "0.10.0"
-quick-xml = { version = "0.39.1", features = ["serde", "serialize"] }
+quick-xml = { version = "0.39.2", features = ["serde", "serialize"] }
 serde-env = "0.2.0"
 regex = "1.12.3"
 mimalloc = "0.1.48"
