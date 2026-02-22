@@ -55,7 +55,7 @@ tasks:
       - '[[ $(docker compose -f $TESTING_DOCKER_COMPOSE ps --format json postgres | jq ".Health") != "healthy" ]]'
     vars:
       FILE:
-        sh: find tests/data/postgres/ -type f -name '*.sql'
+        sh: find tests/data/postgres/ -type f -name '*.sql' | sort
     cmds:
       - for: { var: FILE }
         cmd: docker compose -f $TESTING_DOCKER_COMPOSE exec -T postgres psql -U $POSTGRES_USERNAME -d $POSTGRES_DBNAME < {{.ITEM}}
@@ -67,7 +67,7 @@ tasks:
       - '[[ $(docker compose -f $TESTING_DOCKER_COMPOSE ps --format json clickhouse | jq ".Health") != "healthy" ]]'
     vars:
       FILE:
-        sh: find tests/data/clickhouse/ -type f -name '*.sql'
+        sh: find tests/data/clickhouse/ -type f -name '*.sql' | sort
     cmds:
       - for: { var: FILE }
         cmd: docker compose -f $TESTING_DOCKER_COMPOSE exec -T clickhouse clickhouse-client -u $CLICKHOUSE_USERNAME --password $CLICKHOUSE_PASSWORD < {{.ITEM}}
