@@ -1,6 +1,9 @@
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
+use cached::TimedCache;
+use cached::proc_macro::cached;
 use reqwest::StatusCode;
+use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 
 use crate::context::AppState;
@@ -31,18 +34,36 @@ impl FromRequestParts<AppState> for PatronSession {
         let token = extract_token_from_cookie(&parts.headers)
             .or_else(|| extract_token_from_auth_header(&parts.headers));
 
-        let token = token.ok_or_else(|| {
-            APIError::status_msg(StatusCode::UNAUTHORIZED, "Missing authentication token")
-        })?;
+        if let Some(token) = token {
+            // Validate the JWT token
+            let claims =
+                validate_session_token(&token, &state.config.jwt_secret).map_err(|_| {
+                    APIError::status_msg(StatusCode::UNAUTHORIZED, "Invalid or expired token")
+                })?;
 
-        // Validate the JWT token
-        let claims = validate_session_token(&token, &state.config.jwt_secret).map_err(|_| {
-            APIError::status_msg(StatusCode::UNAUTHORIZED, "Invalid or expired token")
-        })?;
+            return Ok(PatronSession {
+                patron_id: claims.patron_id,
+            });
+        }
 
-        Ok(PatronSession {
-            patron_id: claims.patron_id,
-        })
+        // Fallback: check if an API key is present and linked to a patron
+        let api_key = parts
+            .headers
+            .get("X-API-Key")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
+
+        if let Some(api_key) = api_key
+            && let Some(patron_id) =
+                get_patron_id_for_api_key(&state.pg_client, api_key).await
+        {
+            return Ok(PatronSession { patron_id });
+        }
+
+        Err(APIError::status_msg(
+            StatusCode::UNAUTHORIZED,
+            "Missing authentication token",
+        ))
     }
 }
 
@@ -65,6 +86,28 @@ fn extract_token_from_auth_header(headers: &axum::http::HeaderMap) -> Option<Str
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .and_then(|auth| auth.strip_prefix("Bearer ").map(String::from))
+}
+
+/// Looks up the `patron_id` linked to an API key.
+/// Returns `None` if the API key is not found, is disabled, or has no patron linked.
+/// Results are cached for 10 minutes.
+#[cached(
+    ty = "TimedCache<Uuid, Option<Uuid>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
+    convert = "{ api_key }",
+    sync_writes = "by_key",
+    key = "Uuid"
+)]
+async fn get_patron_id_for_api_key(pg_client: &Pool<Postgres>, api_key: Uuid) -> Option<Uuid> {
+    sqlx::query_scalar!(
+        "SELECT patron_id FROM api_keys WHERE key = $1 AND disabled IS false AND patron_id IS NOT NULL",
+        api_key
+    )
+    .fetch_optional(pg_client)
+    .await
+    .ok()
+    .flatten()
+    .flatten()
 }
 
 #[cfg(test)]

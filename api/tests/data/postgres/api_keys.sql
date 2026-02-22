@@ -5,7 +5,8 @@ create table api_keys
     comment        text
         constraint api_keys_pk unique,
     data_access    boolean   default false             not null,
-    disabled       boolean   default false             not null
+    disabled       boolean   default false             not null,
+    patron_id      uuid      references patrons(id)
 );
 
 insert into api_keys (key, comment, data_access, disabled)
