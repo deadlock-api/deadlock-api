@@ -22,6 +22,7 @@ pub(crate) struct PendingMatch {
 #[derive(Debug)]
 pub(crate) struct PrioritizedMatch {
     pub(crate) match_id: u64,
+    pub(crate) target_account_id: Option<u32>,
     /// Whether this match involves at least one prioritized account.
     pub(crate) is_prioritized: bool,
 }
