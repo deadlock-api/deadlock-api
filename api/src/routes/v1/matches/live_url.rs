@@ -127,6 +127,22 @@ pub(super) async fn url(
         ));
     }
 
+    // Check Redis for a cached broadcast URL
+    let cached: Option<String> = state
+        .redis_client
+        .hget("spectated_matches", match_id.to_string())
+        .await?;
+
+    if let Some(cached) = cached
+        && let Ok(cached) = serde_json::from_str::<serde_json::Value>(&cached)
+        && let Some(broadcast_url) = cached.get("broadcast_url").and_then(|v| v.as_str())
+    {
+        return Ok(Json(MatchSpectateResponse {
+            broadcast_url: broadcast_url.to_string(),
+            lobby_id: cached.get("lobby_id").and_then(serde_json::Value::as_u64),
+        }));
+    }
+
     let spectate_response = tryhard::retry_fn(|| spectate_match(&state.steam_client, match_id))
         .retries(3)
         .fixed_backoff(Duration::from_millis(10))
@@ -146,6 +162,8 @@ pub(super) async fn url(
             let payload = &serde_json::json!({
                 "match_type": "GapMatch",
                 "match_id": match_id,
+                "broadcast_url": broadcast_url,
+                "lobby_id": lobby_id,
                 "updated_at": chrono::Utc::now().timestamp(),
             });
             state
