@@ -18,13 +18,11 @@ use lru::LruCache;
 use prost::Message;
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Postgres};
 use tokio::time::sleep;
 use tracing::{Span, debug, error, field, info, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_spectate_user_response::EResponse;
 use valveprotos::deadlock::{
-    CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse, CMsgClientToGcSpectateUser,
-    CMsgClientToGcSpectateUserResponse, EgcCitadelClientMessages,
+    CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse, EgcCitadelClientMessages,
 };
 use valveprotos::gcsdk::EgcPlatform;
 
@@ -38,8 +36,6 @@ const REDIS_SPEC_KEY: &str = "spectated_matches";
 const REDIS_FAILED_KEY: &str = "failed_spectated_matches";
 const REDIS_EXTRA_KEY: &str = "extra_spectated_matches";
 const REDIS_EXPIRY: i64 = 900; // 15 minutes in seconds
-const BOT_FRIENDS_SPECTATE_KEY: &str = "bot_friend_spectated";
-const BOT_FRIENDS_SPECTATE_EXPIRY: i64 = 45 * 60; // 45 minutes in seconds
 
 // Percentile (0.0 - 1.0) used to choose where to start
 // filling gaps between the min and max match id range. Defaults to 0.5 (50%).
@@ -68,7 +64,6 @@ struct InvokeResponse {
 pub(crate) enum SpectatedMatchType {
     ActiveMatch,
     GapMatch,
-    BotFriend,
 }
 
 impl SpectatedMatchType {
@@ -76,7 +71,6 @@ impl SpectatedMatchType {
         match self {
             SpectatedMatchType::ActiveMatch => "ACT".to_string(),
             SpectatedMatchType::GapMatch => "GAP".to_string(),
-            SpectatedMatchType::BotFriend => "BOT".to_string(),
         }
     }
 }
@@ -117,13 +111,11 @@ struct SpectatorBot {
     proxy_url: String,
     failed_spectates: Mutex<LruCache<u64, bool>>,
     current_patch: Arc<Mutex<Option<u64>>>,
-    pg_pool: Pool<Postgres>,
 }
 
 impl SpectatorBot {
     async fn new(proxy_api_url: String, api_token: String) -> Result<Self> {
         let redis = common::get_redis_client().await?;
-        let pg_pool = common::get_pg_client().await?;
 
         Ok(Self {
             client: Client::new(),
@@ -132,7 +124,6 @@ impl SpectatorBot {
             proxy_url: proxy_api_url,
             failed_spectates: Mutex::new(LruCache::new(NonZeroUsize::new(1000).unwrap())),
             current_patch: Arc::new(Mutex::new(None)),
-            pg_pool,
         })
     }
 
@@ -392,148 +383,6 @@ impl SpectatorBot {
         }
     }
 
-    async fn spectate_user(
-        &self,
-        account_id: u32,
-        bot_id: &str,
-    ) -> Result<Option<SpectatedMatchInfo>> {
-        let current_patch = self
-            .current_patch
-            .lock()
-            .expect("Patch version should be set")
-            .context("No current patch version available")?;
-
-        let spectate_message = CMsgClientToGcSpectateUser {
-            spectate_account_id: Some(account_id),
-            client_version: Some(current_patch as u32),
-            client_platform: Some(EgcPlatform::KEGcPlatformPc as i32),
-        };
-
-        let mut data = Vec::new();
-        spectate_message.encode(&mut data)?;
-
-        let response = self
-            .client
-            .post(&self.proxy_url)
-            .header("Authorization", format!("Bearer {}", self.api_token))
-            .json(&serde_json::json!({
-                "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateUser as u32,
-                "bot_in_all_groups": [bot_id],
-                "data": BASE64_STANDARD.encode(data),
-            }))
-            .send()
-            .await?;
-
-        match response.status() {
-            StatusCode::OK => {
-                let body: InvokeResponse = response.json().await?;
-                let buf = BASE64_STANDARD.decode(body.data)?;
-                let spectate_response = CMsgClientToGcSpectateUserResponse::decode(buf.as_slice())?;
-
-                let result = spectate_response.result();
-                match result {
-                    EResponse::KESuccess => {
-                        let Some(broadcast_url) = spectate_response.client_broadcast_url else {
-                            warn!("[BOT {account_id}] No broadcast URL in SpectateUser response");
-                            return Ok(None);
-                        };
-                        let Some(lobby_id) = spectate_response.lobby_id else {
-                            warn!("[BOT {account_id}] No lobby_id in SpectateUser response");
-                            return Ok(None);
-                        };
-
-                        info!(
-                            "[BOT {account_id}] Successfully spectated user via bot {bot_id}, lobby: {lobby_id}"
-                        );
-
-                        Ok(Some(SpectatedMatchInfo::new(
-                            SpectatedMatchType::BotFriend,
-                            lobby_id,
-                            broadcast_url,
-                            jiff::Timestamp::now(),
-                            None,
-                        )))
-                    }
-                    EResponse::KENotInGame => {
-                        debug!("[BOT {account_id}] User not in game");
-                        Ok(None)
-                    }
-                    EResponse::KENotFriends => {
-                        warn!("[BOT {account_id}] Bot {bot_id} is not friends with user");
-                        Ok(None)
-                    }
-                    EResponse::KERateLimited => {
-                        warn!("[BOT {account_id}] Rate limited, waiting 10s");
-                        sleep(Duration::from_secs(10)).await;
-                        Ok(None)
-                    }
-                    _ => {
-                        warn!("[BOT {account_id}] SpectateUser failed: {:?}", result);
-                        Ok(None)
-                    }
-                }
-            }
-            StatusCode::TOO_MANY_REQUESTS => {
-                warn!("[BOT {account_id}] Proxy rate limited, waiting 10s");
-                sleep(Duration::from_secs(10)).await;
-                Ok(None)
-            }
-            _ => {
-                warn!(
-                    "[BOT {account_id}] HTTP {} failed to call SpectateUser",
-                    response.status()
-                );
-                Ok(None)
-            }
-        }
-    }
-
-    async fn spectate_bot_friends(&self) -> Result<()> {
-        let friends: Vec<(i32, String)> =
-            sqlx::query_as("SELECT friend_id, bot_id FROM bot_friends")
-                .fetch_all(&self.pg_pool)
-                .await?;
-
-        for (friend_id, bot_id) in friends {
-            let key = friend_id.to_string();
-            let recently_called: Option<String> =
-                self.redis.hget(BOT_FRIENDS_SPECTATE_KEY, &key).await?;
-
-            if recently_called.is_some() {
-                continue;
-            }
-
-            // Mark as called to enforce 45-minute rate limit regardless of outcome
-            let _: () = self
-                .redis
-                .hset(BOT_FRIENDS_SPECTATE_KEY, [(&key, "1")])
-                .await?;
-            let _: () = self
-                .redis
-                .hexpire(
-                    BOT_FRIENDS_SPECTATE_KEY,
-                    BOT_FRIENDS_SPECTATE_EXPIRY,
-                    None,
-                    &key,
-                )
-                .await?;
-
-            match self.spectate_user(friend_id as u32, &bot_id).await {
-                Ok(Some(smi)) => {
-                    self.mark_spectated(REDIS_SPEC_KEY, &smi).await?;
-                    self.mark_spectated_many(REDIS_EXTRA_KEY, &[smi], 60 * 60)
-                        .await?;
-                }
-                Ok(None) => {}
-                Err(e) => {
-                    warn!("Error spectating bot friend {friend_id}: {e:?}");
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     async fn run(&self, max_spectating_matches: Option<usize>) -> Result<()> {
         let start_time = Instant::now();
 
@@ -545,10 +394,6 @@ impl SpectatorBot {
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             let s = steam_inf.read().await.clone();
             self.update_patch_version(&s)?;
-
-            if let Err(e) = self.spectate_bot_friends().await {
-                error!("Failed to spectate bot friends: {e:?}");
-            }
 
             let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
             let n_spectated = recently_spectated.len();

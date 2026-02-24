@@ -27,4 +27,3 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 thiserror = "2.0.18"
 async-compression = { version = "0.4.39", features = ["tokio", "bzip2", "zstd"] }
 common = { version = "0.1.0", path = "../common" }
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
