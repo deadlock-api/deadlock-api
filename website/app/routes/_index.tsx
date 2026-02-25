@@ -53,7 +53,7 @@ export default function Index() {
 
       <section>
         <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Our Services</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Assets API</CardTitle>
