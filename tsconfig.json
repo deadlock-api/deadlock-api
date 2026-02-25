@@ -20,5 +20,6 @@
     },
     "noEmit": true,
     "rootDirs": [".", "./.react-router/types"]
-  }
+  },
+  "exclude": ["opensrc"]
 }

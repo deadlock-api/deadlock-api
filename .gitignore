@@ -8,3 +8,6 @@ node_modules
 .react-router/
 pnpm-workspace.yaml
 *.tsbuildinfo
+
+# opensrc - source code for packages
+opensrc/
