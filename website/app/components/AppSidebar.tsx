@@ -13,6 +13,9 @@ const navLinks = [
   { to: "/items", label: "Items" },
   { to: "/chat", label: "AI Chat" },
   { to: "/streamkit", label: "Stream Kit" },
+] as const;
+
+const bottomNavLinks = [
   { to: "/ingest-cache", label: "Data Ingest" },
   { to: "/data-privacy", label: "Data Privacy" },
 ] as const;
@@ -125,6 +128,26 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           ),
         )}
       </nav>
+
+      {/* Bottom nav links */}
+      <div className="p-3 border-t border-sidebar-border space-y-1">
+        {bottomNavLinks.map((link) => (
+          <Link
+            key={link.to}
+            to={link.to}
+            prefetch="intent"
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100",
+              isActive(pathname, link.to)
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+            )}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
 
       {/* Service links */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
