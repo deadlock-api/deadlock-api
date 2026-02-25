@@ -114,14 +114,9 @@ export default function Index() {
               </p>
             </CardContent>
             <CardFooter>
-              <a
-                href="https://streamkit.deadlock-api.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full"
-              >
+              <Link to="/streamkit" prefetch="intent" className="w-full">
                 <Button className="w-full">Explore Stream Kit</Button>
-              </a>
+              </Link>
             </CardFooter>
           </Card>
         </div>
