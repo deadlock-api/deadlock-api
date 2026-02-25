@@ -2,6 +2,7 @@ mod create;
 mod get;
 mod leave;
 mod ready;
+mod start;
 mod utils;
 
 use utoipa::OpenApi;
@@ -21,4 +22,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(leave::leave))
         .routes(routes!(create::create_custom))
         .routes(routes!(get::get_custom))
+        .routes(routes!(start::start))
 }

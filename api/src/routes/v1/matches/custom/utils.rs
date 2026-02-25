@@ -4,8 +4,10 @@ use redis::{AsyncTypedCommands, RedisResult};
 use tracing::{error, info};
 use valveprotos::deadlock::{
     CMsgClientToGcPartyLeave, CMsgClientToGcPartyLeaveResponse, CMsgClientToGcPartySetReadyState,
-    CMsgClientToGcPartySetReadyStateResponse, EgcCitadelClientMessages,
+    CMsgClientToGcPartySetReadyStateResponse, CMsgClientToGcPartyStartMatch,
+    CMsgClientToGcPartyStartMatchResponse, EgcCitadelClientMessages,
     c_msg_client_to_gc_party_leave_response, c_msg_client_to_gc_party_set_ready_state_response,
+    c_msg_client_to_gc_party_start_match_response,
 };
 
 use crate::error::{APIError, APIResult};
@@ -116,6 +118,41 @@ pub(super) async fn leave_party(
         error!("Failed to leave party: {username} {party_id} {result:?}");
         return Err(APIError::internal(format!(
             "Failed to leave party: {result:?}"
+        )));
+    }
+    Ok(())
+}
+
+pub(super) async fn start_match(
+    steam_client: &SteamClient,
+    username: String,
+    party_id: u64,
+) -> APIResult<()> {
+    let msg = CMsgClientToGcPartyStartMatch {
+        party_id: party_id.into(),
+    };
+    let response: CMsgClientToGcPartyStartMatchResponse = steam_client
+        .call_steam_proxy(SteamProxyQuery {
+            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyStartMatch,
+            msg,
+            in_all_groups: None,
+            in_any_groups: None,
+            cooldown_time: Duration::from_secs(0),
+            request_timeout: Duration::from_secs(2),
+            username: username.clone().into(),
+            soft_cooldown_millis: None,
+        })
+        .await?
+        .msg;
+
+    info!("Start match: {username} {party_id} {response:?}");
+    let result = response.result;
+    if result.is_none_or(|r| {
+        r != c_msg_client_to_gc_party_start_match_response::EResponse::KESuccess as i32
+    }) {
+        error!("Failed to start match: {username} {party_id} {result:?}");
+        return Err(APIError::internal(format!(
+            "Failed to start match: {result:?}"
         )));
     }
     Ok(())
