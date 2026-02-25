@@ -110,7 +110,7 @@ export default function Index() {
             </CardHeader>
             <CardContent className="flex-1">
               <p className="text-sm text-muted-foreground">
-                Real-time game events via Server-Sent Events for live match tracking and notifications.
+                Real-time game events via Server-Sent Events for live match tracking.
               </p>
             </CardContent>
             <CardFooter>
