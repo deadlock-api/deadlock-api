@@ -1,7 +1,5 @@
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
-import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
@@ -49,6 +47,53 @@ export default function Index() {
           player statistics, and more. Whether you are a developer looking to integrate game data into your application
           or a player wanting to analyze your performance, the Deadlock API has you covered.
         </p>
+      </section>
+
+      <section className="text-center">
+        <Card className="border-primary/40 bg-linear-to-br from-primary/10 to-primary/5">
+          <CardHeader>
+            <CardTitle className="text-2xl text-primary">Prioritized Fetching</CardTitle>
+            <CardDescription className="text-base">
+              Your matches tracked faster — starting at just $3/month
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to the
+              front of the queue — your matches and stats are updated more frequently so you always have the latest data
+              for analysis.
+            </p>
+            <div className="flex flex-wrap justify-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Priority queue updates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Up to 10 Steam accounts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Full match history from first to last game</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">100% funds infrastructure</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-primary font-semibold">&#10003;</span>
+                <span className="text-muted-foreground">Accurate rank data from Steam</span>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="justify-center">
+            <Link to="/patron" prefetch="intent">
+              <Button className="bg-primary hover:bg-amber-600 text-white font-semibold px-8">
+                Enable Prioritized Fetching
+              </Button>
+            </Link>
+          </CardFooter>
+        </Card>
       </section>
 
       <section>
@@ -151,134 +196,6 @@ export default function Index() {
             <CardFooter>
               <Link to="/chat" prefetch="intent" className="w-full">
                 <Button className="w-full">Try AI Chat</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-        </div>
-      </section>
-
-      <section className="text-center">
-        <Card className="border-primary/40 bg-linear-to-br from-primary/10 to-primary/5">
-          <CardHeader>
-            <CardTitle className="text-2xl text-primary">Prioritized Fetching</CardTitle>
-            <CardDescription className="text-base">
-              Your matches tracked faster — starting at just $3/month
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to the
-              front of the queue — your matches and stats are updated more frequently so you always have the latest data
-              for analysis.
-            </p>
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Priority queue updates</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Up to 10 Steam accounts</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Full match history from first to last game</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">100% funds infrastructure</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Accurate rank data from Steam</span>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="justify-center">
-            <Link to="/patron" prefetch="intent">
-              <Button className="bg-primary hover:bg-amber-600 text-white font-semibold px-8">
-                Enable Prioritized Fetching
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </section>
-
-      <section className="text-center">
-        <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Game Statistics Snapshot</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Best Heroes</CardTitle>
-              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["winRate"]} sortBy="winrate" />
-            </CardContent>
-            <CardFooter>
-              <Link to="/heroes" prefetch="intent" className="w-full">
-                <Button className="w-full">View All Heroes</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Popular Heroes</CardTitle>
-              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <HeroStatsTable hideIndex={true} hideHeader={true} limit={5} columns={["pickRate"]} sortBy="matches" />
-            </CardContent>
-            <CardFooter>
-              <Link to="/heroes" prefetch="intent" className="w-full">
-                <Button className="w-full">View All Heroes</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Best Items</CardTitle>
-              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ItemStatsTable
-                hideIndex={true}
-                hideDropdown={true}
-                hideHeader={true}
-                hideItemTierFilter={true}
-                limit={5}
-                columns={["winRate"]}
-                initialSort={{ field: "winRate", direction: "desc" }}
-              />
-            </CardContent>
-            <CardFooter>
-              <Link to="/items" prefetch="intent" className="w-full">
-                <Button className="w-full">View All Items</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Popular Items</CardTitle>
-              <CardDescription>(Last 7 days - Phantom+)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ItemStatsTable
-                hideIndex={true}
-                hideDropdown={true}
-                hideHeader={true}
-                hideItemTierFilter={true}
-                limit={5}
-                columns={["usage"]}
-                initialSort={{ field: "usage", direction: "desc" }}
-              />
-            </CardContent>
-            <CardFooter>
-              <Link to="/items" prefetch="intent" className="w-full">
-                <Button className="w-full">View All Items</Button>
               </Link>
             </CardFooter>
           </Card>
