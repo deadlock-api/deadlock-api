@@ -6,7 +6,7 @@ import "./dayjs.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import NavHeader from "~/components/NavHeader";
+import AppSidebar, { MobileMenuButton } from "~/components/AppSidebar";
 import { Toaster } from "~/components/ui/sonner";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import "@fontsource-variable/inter";
@@ -76,13 +76,17 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <PatronAuthProvider>
         <NuqsAdapter>
-          <NavHeader />
-
-          <main className="flex justify-center items-start">
-            <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
-              <Outlet />
-            </div>
-          </main>
+          <div className="flex min-h-screen">
+            <AppSidebar />
+            <main className="flex-1 md:ml-64">
+              <MobileMenuButton />
+              <div className="flex justify-center items-start">
+                <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
+                  <Outlet />
+                </div>
+              </div>
+            </main>
+          </div>
 
           <ReactQueryDevtools initialIsOpen={false} />
           <Toaster />
