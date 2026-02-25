@@ -160,10 +160,10 @@ export default function Index() {
             </CardContent>
             <CardFooter>
               <a
-                  href="https://files.deadlock-api.com/Default/buckets/db-snapshot/public/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full"
+                href="https://files.deadlock-api.com/Default/buckets/db-snapshot/public/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
               >
                 <Button className="w-full">Access Database Dumps</Button>
               </a>
