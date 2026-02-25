@@ -53,7 +53,7 @@ export default function Index() {
 
       <section>
         <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Our Services</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Assets API</CardTitle>
@@ -116,6 +116,21 @@ export default function Index() {
             <CardFooter>
               <Link to="/streamkit" prefetch="intent" className="w-full">
                 <Button className="w-full">Explore Stream Kit</Button>
+              </Link>
+            </CardFooter>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">AI Chat</CardTitle>
+            </CardHeader>
+            <CardContent className="min-h-16">
+              <p className="text-sm text-muted-foreground">
+                Ask questions about Deadlock heroes, items, abilities, and strategies powered by AI.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <Link to="/chat" prefetch="intent" className="w-full">
+                <Button className="w-full">Try AI Chat</Button>
               </Link>
             </CardFooter>
           </Card>
