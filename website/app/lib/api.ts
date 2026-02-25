@@ -1,5 +1,5 @@
 import axios from "axios";
-import { AnalyticsApi, PlayersApi } from "deadlock_api_client";
+import { AnalyticsApi, LeaderboardApi, PlayersApi } from "deadlock_api_client";
 import { BASE_PATH } from "deadlock_api_client/base";
 
 export interface ApiConfig {
@@ -12,6 +12,7 @@ export const DEFAULT_API_CONFIG: ApiConfig = {
 
 export class Api {
   public analytics_api: AnalyticsApi;
+  public leaderboard_api: LeaderboardApi;
   public players_api: PlayersApi;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
@@ -23,6 +24,7 @@ export class Api {
       },
     });
     this.analytics_api = new AnalyticsApi(undefined, BASE_PATH, axios_client);
+    this.leaderboard_api = new LeaderboardApi(undefined, BASE_PATH, axios_client);
     this.players_api = new PlayersApi(undefined, BASE_PATH, axios_client);
   }
 }

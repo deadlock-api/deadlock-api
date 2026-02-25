@@ -56,6 +56,9 @@ importers:
       deadlock_api_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript/api
         version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/f1ce16ef8d894a32f2c816f216bd115fb0f74d96#path:/typescript/api
+      fuse.js:
+        specifier: ^7.1.0
+        version: 7.1.0
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -2349,6 +2352,10 @@ packages:
 
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
+
+  fuse.js@7.1.0:
+    resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
+    engines: {node: '>=10'}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -5748,6 +5755,8 @@ snapshots:
     optional: true
 
   function-bind@1.1.2: {}
+
+  fuse.js@7.1.0: {}
 
   gensync@1.0.0-beta.2: {}
 

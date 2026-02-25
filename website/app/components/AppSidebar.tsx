@@ -11,6 +11,7 @@ const navLinks = [
   { to: "/patron", label: "Prioritized Fetching", special: true },
   { to: "/heroes", label: "Heroes" },
   { to: "/items", label: "Items" },
+  { to: "/leaderboard", label: "Leaderboard" },
   { to: "/chat", label: "AI Chat" },
   { to: "/streamkit", label: "Stream Kit" },
 ] as const;
