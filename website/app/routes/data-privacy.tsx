@@ -322,8 +322,8 @@ export default function DataPrivacy() {
             <h3 className="text-lg font-semibold mb-2">Contact</h3>
             <p className="text-muted-foreground">
               If you have questions about your data or need assistance, please contact us at{" "}
-              <a href="mailto:raimannma@outlook.de" className="text-primary hover:underline">
-                raimannma@outlook.de
+              <a href="mailto:info@deadlock-api.com" className="text-primary hover:underline">
+                info@deadlock-api.com
               </a>
             </p>
           </div>
