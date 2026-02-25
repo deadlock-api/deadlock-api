@@ -1,5 +1,5 @@
 import type { LinksFunction } from "react-router";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
 
 import "./tailwind.css";
 import "./dayjs.ts";
@@ -72,6 +72,17 @@ const queryClient = new QueryClient({
   },
 });
 export default function App() {
+  const { pathname } = useLocation();
+  const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
+
+  if (isWidgetEmbed) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <PatronAuthProvider>
