@@ -27,10 +27,10 @@ export default function PrivacyPolicy() {
           <p className="text-gray-300 mt-1">
             <strong className="font-semibold">Contact:</strong> Manuel Raimann (
             <a
-              href="mailto:raimannma@outlook.de"
+              href="mailto:info@deadlock-api.com"
               className="text-blue-400 hover:text-blue-300 hover:underline transition-colors duration-200"
             >
-              raimannma@outlook.de
+              info@deadlock-api.com
             </a>
             )
           </p>
