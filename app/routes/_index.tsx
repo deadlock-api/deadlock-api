@@ -131,26 +131,6 @@ export default function Index() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-center">Database Dumps</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Download up-to-date database snapshots for offline analysis or research.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <a
-                href="https://files.deadlock-api.com/Default/buckets/db-snapshot/public/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full"
-              >
-                <Button className="w-full">Access Database Dumps</Button>
-              </a>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
               <CardTitle className="text-center">Live Events API</CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
@@ -166,6 +146,26 @@ export default function Index() {
                 className="w-full"
               >
                 <Button className="w-full">View Live Events API</Button>
+              </a>
+            </CardFooter>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Database Dumps</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <p className="text-sm text-muted-foreground">
+                Download up-to-date database snapshots for offline analysis or research.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <a
+                  href="https://files.deadlock-api.com/Default/buckets/db-snapshot/public/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full"
+              >
+                <Button className="w-full">Access Database Dumps</Button>
               </a>
             </CardFooter>
           </Card>
