@@ -103,6 +103,91 @@ impl From<i32> for RegionMode {
 }
 
 #[derive(
+    FromRepr, Debug, Clone, Copy, Serialize, Deserialize, ToSchema, Display, PartialEq, Eq, Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+#[repr(u32)]
+pub(crate) enum ServerRegion {
+    // Europe
+    Europe = 3,
+    EuAmsterdam = 50,
+    EuPoland = 28,
+    EuStockholm = 8,
+    EuHelsinki = 44,
+    EuFalkenstein = 52,
+    EuSpain = 21,
+    EuEast = 9,
+    EuLondon = 45,
+    // Africa (grouped under Europe region mode)
+    SouthAfrica = 11,
+    // North America
+    UsWest = 1,
+    UsEast = 2,
+    UsNorthCentral = 27,
+    UsSouthCentral = 31,
+    UsSouthEast = 23,
+    UsSouthWest = 22,
+    // Oceania
+    Australia = 7,
+    // Southeast Asia
+    Singapore = 5,
+    Japan = 19,
+    HongKong = 24,
+    MpHongKong = 48,
+    Seoul = 39,
+    // South America
+    Chile = 14,
+    Peru = 15,
+    Argentina = 38,
+    SouthAmerica = 10,
+}
+
+impl ServerRegion {
+    pub(crate) fn region_mode(self) -> RegionMode {
+        match self {
+            Self::Europe
+            | Self::EuAmsterdam
+            | Self::EuPoland
+            | Self::EuStockholm
+            | Self::EuHelsinki
+            | Self::EuFalkenstein
+            | Self::EuSpain
+            | Self::EuEast
+            | Self::EuLondon
+            | Self::SouthAfrica => RegionMode::Europe,
+
+            Self::UsWest
+            | Self::UsEast
+            | Self::UsNorthCentral
+            | Self::UsSouthCentral
+            | Self::UsSouthEast
+            | Self::UsSouthWest => RegionMode::Row,
+
+            Self::Australia => RegionMode::Oceania,
+
+            Self::Singapore | Self::Japan | Self::HongKong | Self::MpHongKong | Self::Seoul => {
+                RegionMode::SeAsia
+            }
+
+            Self::Chile | Self::Peru | Self::Argentina | Self::SouthAmerica => RegionMode::SAmerica,
+        }
+    }
+}
+
+impl From<ServerRegion> for i32 {
+    fn from(val: ServerRegion) -> Self {
+        val as i32
+    }
+}
+
+impl From<ServerRegion> for u32 {
+    fn from(val: ServerRegion) -> Self {
+        val as u32
+    }
+}
+
+#[derive(
     FromRepr,
     Debug,
     Clone,

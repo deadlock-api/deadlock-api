@@ -27,7 +27,7 @@ use valveprotos::gcsdk::EgcPlatform;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::custom::utils;
-use crate::routes::v1::matches::types::{GameMode, RegionMode};
+use crate::routes::v1::matches::types::{GameMode, ServerRegion};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -46,7 +46,7 @@ pub(super) struct CreateCustomRequest {
     disable_auto_ready: Option<bool>,
     #[serde(default)]
     #[param(default)]
-    region_mode: Option<RegionMode>,
+    server_region: Option<ServerRegion>,
     #[serde(default = "GameMode::default_option")]
     #[param(default = "normal")]
     game_mode: Option<GameMode>,
@@ -87,6 +87,11 @@ async fn create_party(
     state: &AppState,
     settings: Option<CreateCustomRequest>,
 ) -> APIResult<SteamProxyResponse<CMsgClientToGcPartyCreateResponse>> {
+    let region_mode = settings
+        .as_ref()
+        .and_then(|m| m.server_region.map(ServerRegion::region_mode));
+    let server_region = settings.as_ref().and_then(|m| m.server_region);
+
     let msg = CMsgClientToGcPartyCreate {
         party_mm_info: CMsgPartyMmInfo {
             platform: (EgcPlatform::KEGcPlatformPc as i32).into(),
@@ -100,17 +105,13 @@ async fn create_party(
                 .get_current_client_version()
                 .await?
                 .into(),
-            region_mode: settings
-                .as_ref()
-                .and_then(|m| m.region_mode.map(Into::into)),
+            region_mode: region_mode.map(Into::into),
         }
         .into(),
         invite_account_id: None,
         disable_party_code: false.into(),
         is_private_lobby: true.into(),
-        region_mode: settings
-            .as_ref()
-            .and_then(|m| m.region_mode.map(Into::into)),
+        region_mode: region_mode.map(Into::into),
         game_mode: settings.as_ref().and_then(|m| m.game_mode.map(Into::into)),
         server_search_key: None,
         mm_preference: (ECitadelMmPreference::KECitadelMmPreferenceCasual as i32).into(),
@@ -118,9 +119,7 @@ async fn create_party(
             min_roster_size: settings.as_ref().and_then(|m| m.min_roster_size),
             match_slots: vec![],
             randomize_lanes: settings.as_ref().and_then(|m| m.randomize_lanes),
-            server_region: settings
-                .as_ref()
-                .and_then(|m| m.region_mode.map(Into::into)),
+            server_region: server_region.map(Into::into),
             is_publicly_visible: settings
                 .as_ref()
                 .map(|m| m.is_publicly_visible.unwrap_or(true)),
