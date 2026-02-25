@@ -58,7 +58,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="text-center">Assets API</CardTitle>
             </CardHeader>
-            <CardContent className="min-h-16">
+            <CardContent className="flex-1">
               <p className="text-sm text-muted-foreground">
                 Provides static game assets such as static heroes/item data, images, icons, sounds.
               </p>
@@ -73,7 +73,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="text-center">Game Data API</CardTitle>
             </CardHeader>
-            <CardContent className="min-h-16">
+            <CardContent className="flex-1">
               <p className="text-sm text-muted-foreground">
                 Offers game data including matches, players, and statistics.
               </p>
@@ -88,7 +88,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="text-center">Database Dumps</CardTitle>
             </CardHeader>
-            <CardContent className="min-h-16">
+            <CardContent className="flex-1">
               <p className="text-sm text-muted-foreground">
                 Download up-to-date database snapshots for offline analysis or research.
               </p>
@@ -108,7 +108,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="text-center">Stream Kit</CardTitle>
             </CardHeader>
-            <CardContent className="min-h-16">
+            <CardContent className="flex-1">
               <p className="text-sm text-muted-foreground">
                 Enhance your livestreams with real-time game data overlays and widgets.
               </p>
@@ -123,7 +123,7 @@ export default function Index() {
             <CardHeader>
               <CardTitle className="text-center">AI Chat</CardTitle>
             </CardHeader>
-            <CardContent className="min-h-16">
+            <CardContent className="flex-1">
               <p className="text-sm text-muted-foreground">
                 Ask questions about Deadlock heroes, items, abilities, and strategies powered by AI.
               </p>
