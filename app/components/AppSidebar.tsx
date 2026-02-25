@@ -12,6 +12,7 @@ const navLinks = [
   { to: "/heroes", label: "Heroes" },
   { to: "/items", label: "Items" },
   { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/badge-distribution", label: "Rank Distribution" },
   { to: "/chat", label: "AI Chat" },
   { to: "/streamkit", label: "Stream Kit" },
 ] as const;
@@ -27,7 +28,14 @@ const socialLinks = [
     title: "Support us on Patreon",
     hoverClass: "hover:text-[#f96854]",
     icon: (
-      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 180 180" aria-hidden>
+      <svg
+        className="w-5 h-5 md:w-6 md:h-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        viewBox="0 0 180 180"
+        aria-hidden
+      >
         <path
           fill="currentColor"
           d="M108.8135992 26.06720125c-26.468266 0-48.00213212 21.53066613-48.00213212 47.99733213 0 26.38653268 21.53386613 47.85426547 48.00213213 47.85426547 26.38639937 0 47.8530655-21.4677328 47.8530655-47.85426547 0-26.466666-21.46666613-47.99733213-47.85306547-47.99733213"
@@ -41,7 +49,14 @@ const socialLinks = [
     title: "Service Status",
     hoverClass: "hover:text-green-400",
     icon: (
-      <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+      <svg
+        className="w-5 h-5 md:w-6 md:h-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        viewBox="0 0 24 24"
+        aria-hidden
+      >
         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
         <circle cx="12" cy="12" r="6" fill="currentColor" />
       </svg>

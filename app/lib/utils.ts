@@ -40,3 +40,20 @@ export function hexToRgba(hex: string, alpha: number): string {
   const b = parseInt(cleaned.substring(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+export function range(start: number, stop: number, step = 0): number[] {
+  const result: number[] = [];
+  if (step === 0) {
+    step = start < stop ? 1 : -1;
+  }
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
+    }
+  } else {
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
+    }
+  }
+  return result;
+}
