@@ -102,7 +102,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               prefetch="intent"
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-100",
+                "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-all duration-100",
                 "bg-primary/20 text-primary border border-primary/40 animate-pulse hover:animate-none hover:bg-primary/30",
                 isActive(pathname, link.to) && "animate-none bg-primary/30",
               )}
@@ -117,7 +117,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               prefetch="intent"
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100",
+                "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors duration-100",
                 isActive(pathname, link.to)
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
@@ -138,7 +138,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             prefetch="intent"
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100",
+              "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors duration-100",
               isActive(pathname, link.to)
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
@@ -164,7 +164,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             href={link.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors duration-100"
+            className="flex items-center justify-between px-3 py-1.5 rounded-md text-base text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors duration-100"
           >
             {link.label}
             <ExternalLink className="h-3 w-3 opacity-50" />
