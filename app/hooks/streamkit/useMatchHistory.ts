@@ -38,8 +38,16 @@ export const useMatchHistory = ({
     error: matchesError,
   } = useQuery<Match[]>({
     queryKey: ["match-history", accountId],
-    queryFn: () =>
-      fetch(`https://api.deadlock-api.com/v1/players/${accountId}/match-history`).then((res) => res.json()),
+    queryFn: async () => {
+      const res = await fetch(`https://api.deadlock-api.com/v1/players/${accountId}/match-history`);
+      if (res.status === 429) {
+        const fallback = await fetch(
+          `https://api.deadlock-api.com/v1/players/${accountId}/match-history?only_stored_history=true`,
+        );
+        return await fallback.json();
+      }
+      return await res.json();
+    },
     staleTime: UPDATE_INTERVAL_MS - 10000,
     refetchInterval: UPDATE_INTERVAL_MS,
     refetchIntervalInBackground: true,
