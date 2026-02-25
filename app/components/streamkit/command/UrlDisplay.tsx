@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { Button } from "~/components/ui/button";
 
 interface UrlDisplayProps {
@@ -5,6 +6,14 @@ interface UrlDisplayProps {
 }
 
 export function UrlDisplay({ generatedUrl }: UrlDisplayProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(generatedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [generatedUrl]);
+
   return (
     <div>
       <h3 className="block text-sm font-medium text-foreground">Generated URL</h3>
@@ -15,10 +24,10 @@ export function UrlDisplay({ generatedUrl }: UrlDisplayProps) {
           </div>
           <Button
             size="sm"
-            onClick={() => navigator.clipboard.writeText(generatedUrl)}
+            onClick={handleCopy}
             className="absolute right-2 top-1/2 -translate-y-1/2"
           >
-            Copy
+            {copied ? "Copied!" : "Copy"}
           </Button>
         </div>
       ) : (

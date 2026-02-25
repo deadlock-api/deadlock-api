@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useEffect, useId, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { ExtraArguments } from "~/components/streamkit/widgets/ExtraArguments";
@@ -55,6 +55,15 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
   const showMatchHistoryId = useId();
   const matchHistoryShowsTodayId = useId();
   const previewBgImageId = useId();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    if (widgetUrl) {
+      navigator.clipboard.writeText(widgetUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [widgetUrl]);
 
   const { data, error } = useQuery<Variable[]>({
     queryKey: ["available-variables"],
@@ -439,10 +448,10 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
               </div>
               <Button
                 size="sm"
-                onClick={() => navigator.clipboard.writeText(widgetUrl)}
+                onClick={handleCopy}
                 className="absolute right-2 top-1/2 -translate-y-1/2"
               >
-                Copy
+                {copied ? "Copied!" : "Copy"}
               </Button>
             </div>
           ) : (
