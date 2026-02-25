@@ -46,7 +46,7 @@ export const useMatchHistory = ({
   });
 
   useEffect(() => {
-    if (heroesData) {
+    if (Array.isArray(heroesData)) {
       setHeroes(new Map(heroesData.map((h) => [h.id, h.images.icon_hero_card_webp])));
     }
     if (heroesError) {
@@ -59,8 +59,8 @@ export const useMatchHistory = ({
   useEffect(() => {
     if (matchesError) {
       console.error("Failed to fetch matches:", matchesError);
-    } else if (matchesData) {
-      setMatches(matchesData?.slice(0, numMatches));
+    } else if (Array.isArray(matchesData)) {
+      setMatches(matchesData.slice(0, numMatches));
     }
   }, [matchesData, matchesError, numMatches, refresh]);
 
