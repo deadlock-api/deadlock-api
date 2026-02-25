@@ -1,5 +1,4 @@
-import { useCallback, useState } from "react";
-import { Button } from "~/components/ui/button";
+import { CopyButton } from "~/components/ui/copy-button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
@@ -8,14 +7,6 @@ interface ChatBotInstructionsProps {
 }
 
 export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) {
-  const [copiedBot, setCopiedBot] = useState<string | null>(null);
-
-  const handleCopy = useCallback((name: string, command: string) => {
-    navigator.clipboard.writeText(command);
-    setCopiedBot(name);
-    setTimeout(() => setCopiedBot(null), 2000);
-  }, []);
-
   const chatBots = [
     { name: "StreamElements", command: `$(customapi ${generatedUrl || "https://your-command-url"})` },
     { name: "Fossabot", command: `$(customapi ${generatedUrl || "https://your-command-url"})` },
@@ -43,9 +34,7 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
               <TabsContent key={name} value={name}>
                 <div className="flex items-center justify-between rounded-md bg-card border p-3">
                   <code className="text-primary text-sm whitespace-pre-wrap break-all">{command}</code>
-                  <Button size="sm" onClick={() => handleCopy(name, command)} className="ml-4 shrink-0">
-                    {copiedBot === name ? "Copied!" : "Copy"}
-                  </Button>
+                  <CopyButton size="sm" text={command} className="ml-4 shrink-0" />
                 </div>
               </TabsContent>
             ))}
