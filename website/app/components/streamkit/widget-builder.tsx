@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useCallback, useEffect, useId, useState } from "react";
+import { type ReactElement, useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { ExtraArguments } from "~/components/streamkit/widgets/ExtraArguments";
@@ -7,6 +7,7 @@ import { RawWidget } from "~/components/streamkit/widgets/raw";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { CopyButton } from "~/components/ui/copy-button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -55,16 +56,6 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
   const showMatchHistoryId = useId();
   const matchHistoryShowsTodayId = useId();
   const previewBgImageId = useId();
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(() => {
-    if (widgetUrl) {
-      navigator.clipboard.writeText(widgetUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [widgetUrl]);
-
   const { data, error } = useQuery<Variable[]>({
     queryKey: ["available-variables"],
     queryFn: () => fetch("https://api.deadlock-api.com/v1/commands/variables/available").then((res) => res.json()),
@@ -446,13 +437,11 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
               <div className="break-all rounded-md border border-border bg-muted p-3 pr-24 text-sm text-muted-foreground">
                 {widgetUrl}
               </div>
-              <Button
+              <CopyButton
                 size="sm"
-                onClick={handleCopy}
+                text={widgetUrl}
                 className="absolute right-2 top-1/2 -translate-y-1/2"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </Button>
+              />
             </div>
           ) : (
             <div className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
