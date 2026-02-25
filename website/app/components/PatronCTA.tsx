@@ -15,7 +15,8 @@ export function PatronCTA({ message }: { message?: string }) {
         <div className="flex items-center gap-3">
           <Zap className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm text-muted-foreground">
-            {message || "Get your complete match history from first to last game, with faster updates via prioritized fetching."}
+            {message ||
+              "Get your complete match history from first to last game, with faster updates via prioritized fetching."}
           </p>
         </div>
         <Link to="/patron" prefetch="intent" className="shrink-0">

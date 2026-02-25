@@ -143,7 +143,6 @@ export function useReactivateSteamAccount() {
  */
 export function useRefetchMatchHistory() {
   return useMutation({
-    mutationFn: (accountId: number) =>
-      api.players_api.matchHistory({ accountId, forceRefetch: true }),
+    mutationFn: (accountId: number) => api.players_api.matchHistory({ accountId, forceRefetch: true }),
   });
 }

@@ -66,7 +66,11 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
     setTemplate(newTemplate);
   };
 
-  const { data: previewData, error: previewRequestError } = useQuery<string>({
+  const {
+    data: previewData,
+    error: previewRequestError,
+    isLoading: previewLoading,
+  } = useQuery<string>({
     queryKey: ["preview", debouncedGeneratedUrl],
     queryFn: async () => {
       if (!debouncedGeneratedUrl) return "";
@@ -100,7 +104,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
       <VariablesList variables={variables} onVariableClick={insertVariable} />
       <ExtraArguments extraArgs={extraArgs} usedArgs={usedExtraArgs()} onExtraArgChange={handleExtraArgChange} />
       <UrlDisplay generatedUrl={generatedUrl} />
-      <CommandPreview preview={preview} previewError={previewError} />
+      <CommandPreview preview={preview} previewError={previewError} loading={previewLoading} />
       <ChatBotInstructions generatedUrl={generatedUrl} />
     </div>
   );
