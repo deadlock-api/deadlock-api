@@ -173,6 +173,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             { href: "https://assets.deadlock-api.com", label: "Assets API" },
             { href: "https://api.deadlock-api.com", label: "Game Data API" },
             { href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/", label: "Database Dumps" },
+            { href: "https://github.com/deadlock-api/deadlock-live-events", label: "Live Events API" },
           ] as const
         ).map((link) => (
           <a

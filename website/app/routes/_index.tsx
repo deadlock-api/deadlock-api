@@ -53,7 +53,7 @@ export default function Index() {
 
       <section>
         <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Our Services</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-center">Assets API</CardTitle>
@@ -101,6 +101,26 @@ export default function Index() {
                 className="w-full"
               >
                 <Button className="w-full">Access Database Dumps</Button>
+              </a>
+            </CardFooter>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Live Events API</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <p className="text-sm text-muted-foreground">
+                Real-time game events via WebSocket for live match tracking and notifications.
+              </p>
+            </CardContent>
+            <CardFooter>
+              <a
+                href="https://github.com/deadlock-api/deadlock-live-events"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+              >
+                <Button className="w-full">View Live Events API</Button>
               </a>
             </CardFooter>
           </Card>
