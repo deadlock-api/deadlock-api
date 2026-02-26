@@ -87,7 +87,8 @@ function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           </h1>
           <p className="mx-auto max-w-xl text-muted-foreground">
             Patron accounts get a dedicated queue with reserved resources, guaranteeing fast and reliable data fetching
-            for your match history and stats.
+            for your match history and stats. Data is upstreamed to Statlocker, Tracklock, Lockblaze, or your favorite
+            stat tracking site.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Button
@@ -1105,7 +1106,8 @@ function NotSubscribedState() {
             <h2 className="text-xl font-semibold">Get prioritized fetching</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
               Subscribe on Patreon to unlock dedicated queue access with reserved resources. Your match data and stats
-              will be fetched faster and more reliably.
+              will be fetched faster and more reliably, and upstreamed to Statlocker, Tracklock, Lockblaze, or your
+              favorite stat tracking site.
             </p>
           </div>
           <div className="flex flex-col items-center gap-3 pt-2">
