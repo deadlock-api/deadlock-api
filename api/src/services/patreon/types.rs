@@ -173,7 +173,16 @@ pub(crate) fn calculate_slot_limit(
     slot_override: Option<i32>,
     pledge_amount_cents: Option<i32>,
 ) -> i32 {
-    slot_override.unwrap_or_else(|| (pledge_amount_cents.unwrap_or(0) / 250).min(10))
+    slot_override.unwrap_or_else(|| {
+        let pledge_amount_cents = pledge_amount_cents.unwrap_or_default();
+        if pledge_amount_cents <= 0 {
+            0
+        } else {
+            #[allow(clippy::cast_possible_truncation)]
+            let slots = (f64::from(pledge_amount_cents) / 300.0).round() as i32;
+            slots.clamp(1, 10)
+        }
+    })
 }
 
 #[cfg(test)]
