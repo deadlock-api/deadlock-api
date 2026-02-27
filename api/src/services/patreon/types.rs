@@ -202,8 +202,9 @@ mod tests {
     fn test_slot_limit_without_override_uses_pledge() {
         assert_eq!(calculate_slot_limit(None, Some(500)), 2);
         assert_eq!(calculate_slot_limit(None, Some(250)), 1);
-        assert_eq!(calculate_slot_limit(None, Some(2500)), 10);
+        assert_eq!(calculate_slot_limit(None, Some(2500)), 8);
         // Capped at 10
+        assert_eq!(calculate_slot_limit(None, Some(3000)), 10);
         assert_eq!(calculate_slot_limit(None, Some(5000)), 10);
     }
 
