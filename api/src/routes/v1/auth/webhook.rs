@@ -106,11 +106,13 @@ pub(crate) async fn webhook(
         .first()
         .map(|t| t.id.clone());
 
+    let cadence = payload.data.attributes.pledge_cadence.unwrap_or(1).max(1);
     let pledge_amount_cents = payload
         .data
         .attributes
-        .pledge_amount_cents
-        .or(payload.data.attributes.currently_entitled_amount_cents);
+        .currently_entitled_amount_cents
+        .or(payload.data.attributes.pledge_amount_cents)
+        .map(|amount| amount / cadence);
 
     let is_active = payload.data.attributes.patron_status.as_deref() == Some("active_patron");
 

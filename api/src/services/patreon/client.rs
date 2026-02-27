@@ -106,7 +106,7 @@ impl PatreonClient {
         access_token: &str,
     ) -> PatreonResult<Option<Membership>> {
         let url = format!(
-            "{IDENTITY_ENDPOINT}?include=memberships&fields[member]=currently_entitled_amount_cents,patron_status"
+            "{IDENTITY_ENDPOINT}?include=memberships&fields[member]=currently_entitled_amount_cents,patron_status,pledge_cadence"
         );
 
         let response = self
@@ -129,12 +129,15 @@ impl PatreonClient {
                     .first()
                     .map(|tier| tier.id.clone());
 
+                let cadence = member.attributes.pledge_cadence.unwrap_or(1).max(1);
+                let entitled_cents = member
+                    .attributes
+                    .currently_entitled_amount_cents
+                    .unwrap_or(0);
+
                 return Ok(Some(Membership {
                     tier_id,
-                    pledge_amount_cents: member
-                        .attributes
-                        .currently_entitled_amount_cents
-                        .unwrap_or(0),
+                    pledge_amount_cents: entitled_cents / cadence,
                     patron_status: member.attributes.patron_status,
                 }));
             }

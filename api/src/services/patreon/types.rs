@@ -87,6 +87,8 @@ pub(crate) struct MemberAttributes {
     pub(crate) currently_entitled_amount_cents: Option<i32>,
     /// Patron status
     pub(crate) patron_status: Option<String>,
+    /// Number of months between charges (1 = monthly, 12 = annual)
+    pub(crate) pledge_cadence: Option<i32>,
 }
 
 /// Member relationships from Patreon API
