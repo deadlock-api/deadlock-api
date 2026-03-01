@@ -99,7 +99,7 @@ export default function ItemCombsExplore({
     () =>
       data?.filter((d) =>
         assetsItems
-          ?.filter((i) => !i.disabled && i.shop_image_small_webp)
+          ?.filter((i) => !i.disabled && i.shop_image_webp)
           .map((i) => i.id)
           .includes(d.item_id),
       ),
@@ -190,7 +190,7 @@ export default function ItemCombsExplore({
                   {assetsItems
                     ?.filter(
                       (i) =>
-                        !i.disabled && i.shop_image_small_webp && i.item_slot_type === slot && i.item_tier === tier,
+                        !i.disabled && i.shop_image_webp && i.item_slot_type === slot && i.item_tier === tier,
                     )
                     .map((item) => (
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">
