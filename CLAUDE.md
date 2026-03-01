@@ -68,7 +68,7 @@ app
 ├── lib
 │   ├── api.ts                  # Game data API singleton (AnalyticsApi, LeaderboardApi, PlayersApi) — 10s timeout
 │   ├── assets-api.ts           # Assets API singleton (HeroesApi, ItemsApi, DefaultApi) — 5s timeout
-│   ├── constants.ts            # PATCHES array (date ranges), API_ORIGIN, ASSETS_ORIGIN, game duration bounds
+│   ├── constants.ts            # PATCHES array, API_ORIGIN (VITE_API_BASE_URL), ASSETS_ORIGIN (VITE_ASSETS_BASE_URL), game duration bounds
 │   ├── patron-api.ts           # Patron CRUD: status, list/add/delete/replace/reactivate steam accounts, player card, Steam ID conversion
 │   ├── data-privacy-api.ts     # POST to /v1/data-privacy/request-deletion and request-tracking
 │   ├── steam-auth.ts           # Steam OpenID: URL generation, response validation, callback parsing, claimed ID extraction
@@ -90,6 +90,60 @@ app
     ├── general.ts              # Color type (RGB | RGBA | HEX)
     └── streamkit/              # Widget props (BoxWidgetProps, RawWidgetProps), Variable, Region, Theme, Color types
 ```
+
+## Exploring the deadlock-api OpenAPI Specs
+
+Two OpenAPI specs power this app:
+- **Game data API**: `https://api.deadlock-api.com/openapi.json`
+- **Assets API**: `https://assets.deadlock-api.com/openapi.json`
+
+### Exploring endpoints: `scripts/get-openapi-info.ts`
+
+Use this when asked to use some endpoint to do something.
+
+```bash
+bun scripts/get-openapi-info.ts                              # List all game-data API endpoints grouped by tag
+bun scripts/get-openapi-info.ts --assets                     # List all assets API endpoints
+bun scripts/get-openapi-info.ts mmr                          # Search endpoints by keyword
+bun scripts/get-openapi-info.ts /v1/analytics/hero-stats     # Detailed endpoint info: params, response schema as pseudo-TS
+bun scripts/get-openapi-info.ts --assets /v2/heroes          # Detailed assets endpoint info
+bun scripts/get-openapi-info.ts --url http://localhost:3000/openapi.json         # Custom spec URL
+bun scripts/get-openapi-info.ts --url http://localhost:3000/openapi.json mmr     # Custom spec + search
+```
+
+### Generated clients
+
+Clients are generated in the sibling repo `/home/johnpyp/code/dl-api/openapi-clients/` using `openapi-typescript-codegen` with axios. Each OpenAPI tag becomes an API class (e.g. tag `Analytics` → `AnalyticsApi`, tag `MMR` → `MMRApi`).
+
+Available API classes in `deadlock_api_client`: `AnalyticsApi`, `BuildsApi`, `CommandsApi`, `CustomMatchesApi`, `InfoApi`, `InternalApi`, `LeaderboardApi`, `MMRApi`, `MatchesApi`, `PatchesApi`, `PlayersApi`, `SQLApi`.
+
+Available API classes in `assets_deadlock_api_client`: `DefaultApi`, `HeroesApi`, `ItemsApi`, `RawApi`.
+
+### Adding a new API class to the UI
+
+1. Check which class has the endpoint you need (tag → class name mapping above).
+2. Import it from the generated client and add it to the wrapper in `app/lib/api.ts` (or `app/lib/assets-api.ts`):
+
+```typescript
+// app/lib/api.ts
+import { AnalyticsApi, LeaderboardApi, MMRApi, PlayersApi } from "deadlock_api_client";
+import { API_ORIGIN } from "./constants";
+
+export class Api {
+  public analytics_api: AnalyticsApi;
+  public leaderboard_api: LeaderboardApi;
+  public mmr_api: MMRApi;  // ← add field
+  public players_api: PlayersApi;
+
+  constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
+    // ... existing axios_client setup ...
+    this.mmr_api = new MMRApi(undefined, API_ORIGIN, axios_client);  // ← instantiate
+  }
+}
+```
+
+3. Use it in components via the singleton: `api.mmr_api.mmrHistory(accountId, ...)`.
+4. Method names on the class are camelCase versions of the `operationId` from the spec.
 
 ## Source Code Reference
 
