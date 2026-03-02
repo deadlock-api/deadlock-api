@@ -817,7 +817,8 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
 
   if (cardQuery.isError) {
     const err = cardQuery.error;
-    if (Object.hasOwn(err, "invites") && Array.isArray(err.invites)) {
+    const errObj = err as unknown as Record<string, unknown>;
+    if (Object.hasOwn(errObj, "invites") && Array.isArray(errObj.invites)) {
       return (
         <>
           <button
@@ -831,7 +832,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
           <AddBotDialog
             open={dialogOpen}
             onOpenChange={setDialogOpen}
-            invites={err.invites}
+            invites={errObj.invites as string[]}
             isChecking={cardQuery.isFetching}
             onCheck={() => cardQuery.refetch()}
           />

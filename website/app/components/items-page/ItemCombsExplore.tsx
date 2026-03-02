@@ -1,18 +1,51 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets_deadlock_api_client/api";
+import type { RankV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import { formatDistanceToNow } from "date-fns";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
+import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { assetsApi } from "~/lib/assets-api";
+import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
+
+interface BulkMatchMetadata {
+  match_id: number;
+  start_time: string;
+  duration_s: number;
+  winning_team: string;
+  match_mode: string;
+  game_mode: string;
+  average_badge_team0: number | null;
+  average_badge_team1: number | null;
+  players: {
+    account_id: number;
+    hero_id: number;
+    team: string;
+    kills: number;
+    deaths: number;
+    assists: number;
+    items: {
+      item_id: number;
+      upgrade_id: number;
+      game_time_s: number;
+      sold_time_s: number;
+    }[];
+  }[];
+}
+
+function timeAgo(dateStr: string): string {
+  return formatDistanceToNow(new Date(`${dateStr}Z`), { addSuffix: true });
+}
 
 export default function ItemCombsExplore({
   minRankId,
@@ -62,6 +95,12 @@ export default function ItemCombsExplore({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
+  const { data: ranksData } = useQuery({
+    queryKey: ["assets-ranks"],
+    queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
   const queryStatOptions = useMemo(() => {
     return {
       minMatches,
@@ -90,6 +129,117 @@ export default function ItemCombsExplore({
   ]);
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery(itemStatsQueryOptions(queryStatOptions));
+
+  // Build lookup: class_name → item_id, and item_id → set of component class_names
+  const upgradeChainLookup = useMemo(() => {
+    if (!assetsItems) return null;
+    const classNameById = new Map<number, string>();
+    const componentsByItemId = new Map<number, string[]>();
+    for (const item of assetsItems) {
+      classNameById.set(item.id, item.class_name);
+      if (item.component_items?.length) {
+        componentsByItemId.set(item.id, item.component_items);
+      }
+    }
+    return { classNameById, componentsByItemId };
+  }, [assetsItems]);
+
+  const topBuildsEnabled = !!hero && includeItems.size > 0;
+  const { data: topBuildsData, isLoading: isLoadingTopBuilds } = useQuery({
+    queryKey: [
+      "top-builds",
+      hero,
+      Array.from(includeItems).sort(),
+      Array.from(excludeItems).sort(),
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("include_info", "true");
+      params.set("include_player_items", "true");
+      params.set("include_player_kda", "true");
+      params.set("include_player_info", "true");
+      params.set("hero_ids", String(hero));
+      params.set("item_filter_hero_id", String(hero));
+      params.set("include_item_ids", Array.from(includeItems).join(","));
+      if (excludeItems.size > 0) {
+        params.set("exclude_item_ids", Array.from(excludeItems).join(","));
+      }
+      if (minRankId != null) params.set("min_average_badge", String(minRankId));
+      if (maxRankId != null) params.set("max_average_badge", String(maxRankId));
+      if (minDateTimestamp != null) params.set("min_unix_timestamp", String(minDateTimestamp));
+      if (maxDateTimestamp != null) params.set("max_unix_timestamp", String(maxDateTimestamp));
+      params.set("order_by", "average_badge");
+      params.set("order_direction", "desc");
+      params.set("limit", "10");
+
+      const res = await fetch(`${API_ORIGIN}/v1/matches/metadata?${params}`);
+      if (!res.ok) throw new Error(`Failed to fetch top builds: ${res.status}`);
+      return (await res.json()) as BulkMatchMetadata[];
+    },
+    enabled: topBuildsEnabled,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const topBuildsCards = useMemo(() => {
+    if (!topBuildsData || !hero) return [];
+    return topBuildsData.flatMap((match) => {
+      const player = match.players.find((p) => p.hero_id === hero);
+      if (!player) return [];
+      const shopItems = player.items.filter((i) => i.upgrade_id === 1);
+      const boughtItemIds = new Set(shopItems.map((i) => i.item_id));
+
+      const fullBuildItems: FullBuildItem[] = shopItems
+        .sort((a, b) => a.game_time_s - b.game_time_s)
+        .map((i) => {
+          let sold = i.sold_time_s > 0;
+          // Check if this item was upgraded rather than truly sold
+          if (sold && upgradeChainLookup) {
+            const className = upgradeChainLookup.classNameById.get(i.item_id);
+            if (className) {
+              for (const [otherId, components] of upgradeChainLookup.componentsByItemId) {
+                if (components.includes(className) && boughtItemIds.has(otherId)) {
+                  sold = false;
+                  break;
+                }
+              }
+            }
+          }
+          return {
+            itemId: i.item_id,
+            gameTimeS: i.game_time_s,
+            sold,
+          };
+        });
+      const isWin = player.team === match.winning_team;
+      const badge0 = match.average_badge_team0;
+      const badge1 = match.average_badge_team1;
+      const averageBadge =
+        badge0 != null && badge1 != null
+          ? Math.round((badge0 + badge1) / 2)
+          : (badge0 ?? badge1 ?? undefined);
+      return [
+        {
+          matchId: match.match_id,
+          gameMode: match.match_mode,
+          timeAgo: timeAgo(match.start_time),
+          result: (isWin ? "win" : "loss") as "win" | "loss",
+          durationSeconds: match.duration_s,
+          heroId: hero,
+          accountId: player.account_id,
+          kills: player.kills,
+          deaths: player.deaths,
+          assists: player.assists,
+          itemIds: [] as number[],
+          fullBuildItems,
+          averageBadge,
+        },
+      ];
+    });
+  }, [topBuildsData, hero, upgradeChainLookup]);
 
   const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
@@ -233,28 +383,49 @@ export default function ItemCombsExplore({
         </Tabs>
       </div>
 
-      {/* Display the filtered data using ItemStatsTableDisplay */}
-      <div className="mt-4 rounded bg-gray-800 p-4">
-        <h2 className="text-center text-xl p-2">Items Stats</h2>
-        <ItemStatsTableDisplay
-          data={displayData}
-          isLoading={isLoadingItemStats || isLoadingItemAssets}
-          columns={["winRate", "usage", "itemsTier", "confidence"]}
-          hideHeader={false}
-          hideIndex={true}
-          hideItemTierFilter={false}
-          minWinRate={minWinRate}
-          maxWinRate={maxWinRate}
-          minUsage={minUsage}
-          maxUsage={maxUsage}
-          includedItemIds={Array.from(includeItems)}
-          excludedItemIds={Array.from(excludeItems)}
-          onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
-          onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
-          customDropdownContent={({ itemId, rowTotal }) => (
-            <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
-          )}
-        />
+      <div className={cn("mt-4 gap-4", topBuildsEnabled ? "flex" : "")}>
+        {/* Display the filtered data using ItemStatsTableDisplay */}
+        <div className="flex-1 min-w-0 rounded bg-gray-800 p-4">
+          <h2 className="text-center text-xl p-2">Items Stats</h2>
+          <ItemStatsTableDisplay
+            data={displayData}
+            isLoading={isLoadingItemStats || isLoadingItemAssets}
+            columns={["winRate", "usage", "itemsTier", "confidence"]}
+            hideHeader={false}
+            hideIndex={true}
+            hideItemTierFilter={false}
+            minWinRate={minWinRate}
+            maxWinRate={maxWinRate}
+            minUsage={minUsage}
+            maxUsage={maxUsage}
+            includedItemIds={Array.from(includeItems)}
+            excludedItemIds={Array.from(excludeItems)}
+            onItemInclude={(i) => setIncludeItems(new Set([...includeItems, i]))}
+            onItemExclude={(i) => setExcludeItems(new Set([...excludeItems, i]))}
+            customDropdownContent={({ itemId, rowTotal }) => (
+              <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+            )}
+          />
+        </div>
+
+        {topBuildsEnabled && (
+          <div className="w-1/3 shrink-0 overflow-x-auto">
+            <h2 className="text-center text-lg mb-2">Top Builds</h2>
+            {isLoadingTopBuilds ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+              </div>
+            ) : topBuildsCards.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {topBuildsCards.map((card) => (
+                  <MatchHistoryCard key={card.matchId} {...card} ranks={ranksData} expandable={false} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-4">No matching builds found.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
