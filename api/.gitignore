@@ -153,4 +153,4 @@ tags
 
 # End of https://www.toptal.com/developers/gitignore/api/rust,jetbrains+all,vim,visualstudiocode,dotenv
 
-.mise.local.toml
+*.local.*
