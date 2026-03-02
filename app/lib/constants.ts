@@ -36,5 +36,8 @@ export const PATCHES = [
 export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;
 
-export const API_ORIGIN = "https://api.deadlock-api.com";
-export const ASSETS_ORIGIN = "https://assets.deadlock-api.com";
+export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "https://api.deadlock-api.com").replace(/\/+$/, "");
+export const ASSETS_ORIGIN = (import.meta.env.VITE_ASSETS_BASE_URL || "https://assets.deadlock-api.com").replace(
+  /\/+$/,
+  "",
+);

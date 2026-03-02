@@ -1,6 +1,6 @@
 import axios from "axios";
 import { AnalyticsApi, LeaderboardApi, PlayersApi } from "deadlock_api_client";
-import { BASE_PATH } from "deadlock_api_client/base";
+import { API_ORIGIN } from "./constants";
 
 export interface ApiConfig {
   timeout: number;
@@ -23,9 +23,9 @@ export class Api {
         UserAgent: "DeadlockAPI/1.0.0",
       },
     });
-    this.analytics_api = new AnalyticsApi(undefined, BASE_PATH, axios_client);
-    this.leaderboard_api = new LeaderboardApi(undefined, BASE_PATH, axios_client);
-    this.players_api = new PlayersApi(undefined, BASE_PATH, axios_client);
+    this.analytics_api = new AnalyticsApi(undefined, API_ORIGIN, axios_client);
+    this.leaderboard_api = new LeaderboardApi(undefined, API_ORIGIN, axios_client);
+    this.players_api = new PlayersApi(undefined, API_ORIGIN, axios_client);
   }
 }
 

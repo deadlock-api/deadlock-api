@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { API_ORIGIN } from "~/lib/constants";
 import { useDebouncedState } from "~/lib/utils";
 import type { CommandBuilderProps, Variable } from "~/types/streamkit/command";
 import { ChatBotInstructions } from "./ChatBotInstructions";
@@ -18,7 +19,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
 
   const { data, error } = useQuery<Variable[]>({
     queryKey: ["available-variables"],
-    queryFn: () => fetch("https://api.deadlock-api.com/v1/commands/variables/available").then((res) => res.json()),
+    queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -34,7 +35,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
     if (!steamId || !region) {
       return "";
     }
-    const baseUrl = "https://api.deadlock-api.com/v1/commands";
+    const baseUrl = `${API_ORIGIN}/v1/commands`;
     const url = new URL(`${baseUrl}/resolve`);
     url.searchParams.set("region", region);
     url.searchParams.set("account_id", steamId);

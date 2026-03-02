@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router";
 import CommandBuilder from "~/components/streamkit/command/CommandBuilder";
 import WidgetBuilder from "~/components/streamkit/widget-builder";
 import { Alert, AlertDescription } from "~/components/ui/alert";
+import { API_ORIGIN } from "~/lib/constants";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -44,7 +45,7 @@ export default function StreamKit() {
   const fetchSteamName = async (region: string, steamId: string) => {
     if (!steamId) return null;
     if (!region) return null;
-    const url = new URL("https://api.deadlock-api.com/v1/commands/variables/resolve");
+    const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
     url.searchParams.append("region", region);
     url.searchParams.append("account_id", steamId);
     url.searchParams.append("variables", "steam_account_name");

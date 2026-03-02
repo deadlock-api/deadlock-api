@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useCallback, useEffect, useState } from "react";
+import { API_ORIGIN } from "~/lib/constants";
 
-const API_URL = "https://api.deadlock-api.com";
+const API_URL = API_ORIGIN;
 
 export interface PatronAuthState {
   isAuthenticated: boolean;
