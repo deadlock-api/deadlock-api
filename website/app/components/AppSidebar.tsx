@@ -4,9 +4,10 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "~/components/ui/sheet";
+import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
-const navLinks = [
+const navLinks: readonly { to: string; label: string; special?: boolean }[] = [
   { to: "/", label: "Home" },
   { to: "/patron", label: "Prioritized Fetching", special: true },
   { to: "/heroes", label: "Heroes" },
@@ -15,7 +16,7 @@ const navLinks = [
   { to: "/badge-distribution", label: "Rank Distribution" },
   { to: "/chat", label: "AI Chat" },
   { to: "/streamkit", label: "Stream Kit" },
-] as const;
+];
 
 const bottomNavLinks = [
   { to: "/ingest-cache", label: "Data Ingest" },
@@ -168,14 +169,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Service links */}
       <div className="p-3 border-t border-sidebar-border space-y-1">
         <p className="px-3 py-1 text-xs font-semibold uppercase text-sidebar-foreground/50 tracking-wider">Services</p>
-        {(
-          [
-            { href: "https://assets.deadlock-api.com", label: "Assets API" },
-            { href: "https://api.deadlock-api.com", label: "Game Data API" },
+        {[
+            { href: ASSETS_ORIGIN, label: "Assets API" },
+            { href: API_ORIGIN, label: "Game Data API" },
             { href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/", label: "Database Dumps" },
             { href: "https://github.com/deadlock-api/deadlock-live-events", label: "Live Events API" },
-          ] as const
-        ).map((link) => (
+          ].map((link) => (
           <a
             key={link.href}
             href={link.href}

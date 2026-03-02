@@ -6,6 +6,7 @@ import type {
   UseMatchHistoryResult,
 } from "~/components/streamkit/widgets/MatchHistory/MatchHistory.types";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
+import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 
 interface UseMatchHistoryParams {
   accountId: string;
@@ -28,7 +29,7 @@ export const useMatchHistory = ({
     error: heroesError,
   } = useQuery<Hero[]>({
     queryKey: ["heroes"],
-    queryFn: () => fetch("https://assets.deadlock-api.com/v2/heroes").then((res) => res.json()),
+    queryFn: () => fetch(`${ASSETS_ORIGIN}/v2/heroes`).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -39,10 +40,10 @@ export const useMatchHistory = ({
   } = useQuery<Match[]>({
     queryKey: ["match-history", accountId],
     queryFn: async () => {
-      const res = await fetch(`https://api.deadlock-api.com/v1/players/${accountId}/match-history`);
+      const res = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history`);
       if (res.status === 429) {
         const fallback = await fetch(
-          `https://api.deadlock-api.com/v1/players/${accountId}/match-history?only_stored_history=true`,
+          `${API_ORIGIN}/v1/players/${accountId}/match-history?only_stored_history=true`,
         );
         return await fallback.json();
       }

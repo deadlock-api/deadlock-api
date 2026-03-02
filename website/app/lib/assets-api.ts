@@ -1,6 +1,6 @@
 import { DefaultApi, HeroesApi, ItemsApi } from "assets_deadlock_api_client";
-import { BASE_PATH } from "assets_deadlock_api_client/base";
 import axios from "axios";
+import { ASSETS_ORIGIN } from "./constants";
 
 export interface ApiConfig {
   timeout: number;
@@ -24,9 +24,9 @@ export class Api {
         "Content-Type": "application/json",
       },
     });
-    this.heroes_api = new HeroesApi(undefined, BASE_PATH, axios_client);
-    this.items_api = new ItemsApi(undefined, BASE_PATH, axios_client);
-    this.default_api = new DefaultApi(undefined, BASE_PATH, axios_client);
+    this.heroes_api = new HeroesApi(undefined, ASSETS_ORIGIN, axios_client);
+    this.items_api = new ItemsApi(undefined, ASSETS_ORIGIN, axios_client);
+    this.default_api = new DefaultApi(undefined, ASSETS_ORIGIN, axios_client);
   }
 }
 

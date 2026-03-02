@@ -4,6 +4,7 @@ import type { MetaFunction } from "react-router";
 import { useParams, useSearchParams } from "react-router";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { RawWidget } from "~/components/streamkit/widgets/raw";
+import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
 import type { Color, Region, Theme } from "~/types/streamkit/widget";
 
@@ -19,7 +20,7 @@ export default function Widget() {
   const { data: fetchedVersion, error: versionError } = useQuery<number>({
     queryKey: ["version", widgetType],
     queryFn: () =>
-      fetch("https://api.deadlock-api.com/v1/commands/widgets/versions")
+      fetch(`${API_ORIGIN}/v1/commands/widgets/versions`)
         .then((res) => res.json())
         .then((data) => (widgetType ? data[widgetType] : data)),
     staleTime: (5 * 60 - 10) * 1000,

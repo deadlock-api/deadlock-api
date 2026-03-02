@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { API_ORIGIN } from "~/lib/constants";
 
 interface Salts {
   cluster_id: number;
@@ -224,7 +225,7 @@ export default function () {
       const salts = Array.from(await scanFn());
       setIsLoading(false);
 
-      const response = await fetch("https://api.deadlock-api.com/v1/matches/salts", {
+      const response = await fetch(`${API_ORIGIN}/v1/matches/salts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(salts),

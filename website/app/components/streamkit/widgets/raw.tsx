@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type FC, useEffect, useState } from "react";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
+import { API_ORIGIN } from "~/lib/constants";
 import type { RawWidgetProps, Region } from "~/types/streamkit/widget";
 
 export const RawWidget: FC<RawWidgetProps> = ({
@@ -17,7 +18,7 @@ export const RawWidget: FC<RawWidgetProps> = ({
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async (region: Region, accountId: string, variable: string, extraArgs: Record<string, string>) => {
-    const url = new URL("https://api.deadlock-api.com/v1/commands/variables/resolve");
+    const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
     url.searchParams.append("region", region);
     url.searchParams.append("account_id", accountId);
     url.searchParams.append("variables", [variable].join(","));

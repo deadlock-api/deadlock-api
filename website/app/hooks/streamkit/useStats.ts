@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
+import { API_ORIGIN } from "~/lib/constants";
 import type { Region } from "~/types/streamkit/widget";
 
 interface UseStatsParams {
@@ -26,7 +27,7 @@ const fetchStats = async (
   auxiliaryVariables: string[] = [],
   extraArgs: Record<string, string> = {},
 ): Promise<Record<string, string>> => {
-  const url = new URL("https://api.deadlock-api.com/v1/commands/variables/resolve");
+  const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
   url.searchParams.append("region", region);
   url.searchParams.append("account_id", accountId);
   url.searchParams.append("variables", [...variables, ...auxiliaryVariables].join(","));
