@@ -35,6 +35,11 @@ pub(crate) async fn webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> StatusCode {
+    let Some(patreon_config) = app_state.config.patreon.as_ref() else {
+        warn!("Patreon webhook called but Patreon integration is disabled");
+        return StatusCode::SERVICE_UNAVAILABLE;
+    };
+
     // Extract required headers
     let Some(signature) = headers
         .get("X-Patreon-Signature")
@@ -50,7 +55,7 @@ pub(crate) async fn webhook(
     };
 
     // Verify HMAC-MD5 signature
-    if !verify_signature(&body, &app_state.config.patreon.webhook_secret, signature) {
+    if !verify_signature(&body, &patreon_config.webhook_secret, signature) {
         warn!("Patreon webhook: invalid signature");
         return StatusCode::FORBIDDEN;
     }
@@ -77,7 +82,7 @@ pub(crate) async fn webhook(
         .campaign
         .data
         .as_ref()
-        .is_some_and(|c| c.id == app_state.config.patreon.campaign_id);
+        .is_some_and(|c| c.id == patreon_config.campaign_id);
 
     if !campaign_matches {
         warn!("Patreon webhook: campaign ID mismatch, ignoring");

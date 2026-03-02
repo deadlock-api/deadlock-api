@@ -37,11 +37,18 @@ fn build_patreon_auth_url(client_id: &str, redirect_uri: &str, state: &str) -> S
 /// 2. Storing the state in a cookie
 /// 3. Redirecting to Patreon's OAuth authorization URL
 pub(crate) async fn login(State(state): State<AppState>) -> impl IntoResponse {
+    let Some(patreon_config) = state.config.patreon.as_ref() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Patreon integration is disabled",
+        )
+            .into_response();
+    };
     let oauth_state = generate_state();
 
     let auth_url = build_patreon_auth_url(
-        &state.config.patreon.client_id,
-        &state.config.patreon.redirect_uri,
+        &patreon_config.client_id,
+        &patreon_config.redirect_uri,
         &oauth_state,
     );
 
@@ -125,12 +132,23 @@ pub(crate) async fn callback(
     headers: HeaderMap,
     Query(params): Query<CallbackParams>,
 ) -> impl IntoResponse {
+    let Some(patreon_config) = app_state.config.patreon.as_ref() else {
+        return Response::builder()
+            .status(StatusCode::SERVICE_UNAVAILABLE)
+            .body(axum::body::Body::from("Patreon integration is disabled"))
+            .expect("Failed to build error response");
+    };
+    let client_id = patreon_config.client_id.clone();
+    let client_secret = patreon_config.client_secret.clone();
+    let redirect_uri = patreon_config.redirect_uri.clone();
+    let frontend_redirect_url = patreon_config.frontend_redirect_url.clone();
+
     // If the user cancelled the OAuth flow, Patreon redirects back without a code.
     // Redirect them back to the frontend gracefully.
     let Some(code) = params.code else {
         return Response::builder()
             .status(StatusCode::FOUND)
-            .header("Location", &app_state.config.patreon.frontend_redirect_url)
+            .header("Location", &frontend_redirect_url)
             .body(axum::body::Body::empty())
             .expect("Failed to build redirect response");
     };
@@ -160,9 +178,9 @@ pub(crate) async fn callback(
     // Create Patreon client
     let patreon_client = PatreonClient::new(
         reqwest::Client::new(),
-        app_state.config.patreon.client_id.clone(),
-        app_state.config.patreon.client_secret.clone(),
-        app_state.config.patreon.redirect_uri.clone(),
+        client_id,
+        client_secret,
+        redirect_uri,
     );
 
     // Step 2: Exchange authorization code for tokens
@@ -277,7 +295,7 @@ pub(crate) async fn callback(
 
     let mut response = Response::builder()
         .status(StatusCode::FOUND)
-        .header("Location", &app_state.config.patreon.frontend_redirect_url)
+        .header("Location", &frontend_redirect_url)
         .body(axum::body::Body::empty())
         .expect("Failed to build redirect response");
 

@@ -34,6 +34,8 @@ pub enum AppStateError {
     ParsingJson(#[from] serde_json::Error),
     #[error("IO error: {0}")]
     Io(#[from] io::Error),
+    #[error("Invalid configuration: {0}")]
+    InvalidConfig(String),
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -62,6 +64,11 @@ impl AppState {
     #[allow(clippy::too_many_lines)]
     pub(crate) async fn from_env() -> Result<AppState, AppStateError> {
         let config = Config::from_env()?;
+        if config.enable_patreon && config.patreon.is_none() {
+            return Err(AppStateError::InvalidConfig(
+                "ENABLE_PATREON is true, but Patreon configuration is missing. Set ENABLE_PATREON=false or configure all required PATREON_* variables.".to_owned(),
+            ));
+        }
 
         // Create an HTTP client
         debug!("Creating HTTP client");

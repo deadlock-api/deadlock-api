@@ -116,6 +116,7 @@ fn default_assets_base_url() -> String {
 pub(crate) struct Config {
     #[serde(default)]
     pub(crate) emergency_mode: bool,
+    pub(crate) enable_patreon: bool,
     pub(crate) internal_api_key: String,
     pub(super) steam: SteamConfig,
     pub(super) redis: RedisConfig,
@@ -123,7 +124,8 @@ pub(crate) struct Config {
     pub(super) s3_cache: S3Config,
     pub(crate) clickhouse: ClickhouseConfig,
     pub(super) postgres: PostgresConfig,
-    pub(crate) patreon: PatreonConfig,
+    #[serde(default)]
+    pub(crate) patreon: Option<PatreonConfig>,
     pub(crate) jwt_secret: String,
     /// Encryption key for patron tokens (32-byte hex-encoded for AES-256-GCM)
     pub(crate) patron_encryption_key: String,
