@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
-import { Button, type ButtonProps } from "~/components/ui/button";
+import { type ComponentProps, useCallback, useState } from "react";
+import { Button } from "~/components/ui/button";
 
-interface CopyButtonProps extends Omit<ButtonProps, "onClick"> {
+interface CopyButtonProps extends Omit<ComponentProps<typeof Button>, "onClick"> {
   text: string;
 }
 
