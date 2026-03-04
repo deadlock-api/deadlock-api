@@ -224,12 +224,27 @@ export default function Index() {
             title="Statlocker.GG"
             target="_blank"
             rel="noreferrer"
-            className="max-w-[200px]"
+            className="max-w-[200px] max-h-16"
           >
-            <img src="/logo/statlocker.png" alt="Statlocker.GG Logo" />
+            <img src="/logo/statlocker.png" alt="Statlocker.GG Logo" className="max-w-[200px] max-h-16" />
           </a>
-          <a href="https://blast.tv/" title="Blast.TV" target="_blank" rel="noreferrer" className="max-w-[200px]">
-            <img src="/logo/blast.svg" alt="Blast.TV Logo" />
+          <a
+            href="https://www.youtube.com/@mattiadl"
+            title="Mattia DL"
+            target="_blank"
+            rel="noreferrer"
+            className="max-w-[200px] max-h-16"
+          >
+            <img src="/logo/mattia.png" alt="Mattia DL Logo" className="max-w-[200px] max-h-16" />
+          </a>
+          <a
+            href="https://blast.tv/"
+            title="Blast.TV"
+            target="_blank"
+            rel="noreferrer"
+            className="max-w-[200px] max-h-16"
+          >
+            <img src="/logo/blast.svg" alt="Blast.TV Logo" className="max-w-[200px] max-h-16" />
           </a>
         </div>
       </section>
