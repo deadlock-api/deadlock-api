@@ -99,7 +99,7 @@ export default function DataPrivacy() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-8">
+    <div className="w-full space-y-8">
       <div className="text-center">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-4">Data Privacy</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

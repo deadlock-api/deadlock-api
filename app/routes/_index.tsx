@@ -10,7 +10,7 @@ export const meta: MetaFunction = () => {
 
 export default function Index() {
   return (
-    <div className="container mx-auto space-y-12">
+    <div className="w-full space-y-12">
       <section className="text-center">
         <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">Deadlock API</h1>
         <h2 className="flex flex-nowrap justify-between gap-4 max-w-sm mx-auto mb-2">

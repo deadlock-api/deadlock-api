@@ -66,7 +66,7 @@ export default function StreamKit() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground text-center">Deadlock Stream Kit</h1>
 
-      <div className="max-w-[700px] mx-auto space-y-4">
+      <div className="w-full space-y-4">
         <div>
           <Label>Steam ID3</Label>
           <Input
@@ -99,7 +99,7 @@ export default function StreamKit() {
       </div>
 
       {steamId && region && (
-        <div className="max-w-[700px] mx-auto">
+        <div className="w-full">
           {steamAccountLoading ? (
             <Alert>
               <AlertDescription className="flex items-center gap-2">
@@ -125,12 +125,12 @@ export default function StreamKit() {
       )}
 
       {steamAccountName && !steamAccountLoading && !steamAccountError && (
-        <div className="flex flex-wrap gap-x-6">
-          <div className="flex-1 max-w-[700px] mx-auto mt-6">
+        <div className="flex flex-wrap gap-x-6 gap-y-6">
+          <div className="mt-6 min-w-0 flex-1">
             <h2 className="text-xl font-bold text-foreground">Command Builder</h2>
             <CommandBuilder region={region} accountId={parseSteamId(steamId)} />
           </div>
-          <div className="flex-1 max-w-[700px] mx-auto mt-6">
+          <div className="mt-6 min-w-0 flex-1">
             <h2 className="text-xl font-bold text-foreground">Widget Builder</h2>
             <WidgetBuilder region={region} accountId={parseSteamId(steamId)} />
           </div>
