@@ -55,7 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="bg-center bg-no-repeat bg-cover bg-fixed bg-[url('/background.svg')] dark overflow-x-hidden">
+      <body className="dark overflow-x-hidden">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -91,12 +91,10 @@ export default function App() {
           <TooltipProvider>
             <div className="flex min-h-screen">
               <AppSidebar />
-              <main className="flex-1 md:ml-64">
+              <main className="min-w-0 flex-1 md:ml-64">
                 <MobileMenuButton />
-                <div className="flex justify-center items-start">
-                  <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
-                    <Outlet />
-                  </div>
+                <div className="min-h-screen w-full min-w-0 p-4 pt-16 md:p-6">
+                  <Outlet />
                 </div>
               </main>
             </div>

@@ -68,7 +68,7 @@ export default function Leaderboard() {
             <LeaderboardFilter value={filter} onChange={setFilter} />
           </CardContent>
         </Card>
-        <div className="min-h-200 max-w-200 mx-auto">
+        <div className="min-h-200 w-full">
           {isPending ? (
             <div className="flex items-center justify-center gap-2 py-8">
               <Spinner className="size-6" />

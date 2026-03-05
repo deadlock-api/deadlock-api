@@ -12,9 +12,9 @@ export default function PrivacyPolicy() {
   const lastUpdated = "August 8, 2025";
   const effectiveDate = "August 8, 2025";
   return (
-    <div className="bg-gray-900 font-sans text-gray-300 antialiased">
+    <div className="w-full font-sans text-gray-300 antialiased">
       {/* Content container */}
-      <div className="container mx-auto max-w-4xl bg-gray-800 p-6 sm:p-10 my-8 rounded-lg border border-gray-700">
+      <div className="w-full rounded-lg border border-gray-700 bg-gray-800 p-6 sm:p-10">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Privacy Policy for DeadlockStats</h1>
 
         <p className="mb-6 text-gray-400">

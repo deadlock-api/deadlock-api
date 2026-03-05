@@ -337,7 +337,7 @@ export default function () {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
+    <div className="w-full">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold mb-2">Steam Cache Ingestion</h1>
         <p className="text-gray-600">Help improve Deadlock API by sharing your match data</p>
