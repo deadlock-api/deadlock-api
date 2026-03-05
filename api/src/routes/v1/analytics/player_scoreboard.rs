@@ -195,7 +195,7 @@ LIMIT {} OFFSET {}
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<Entry>>",
+    ty = "TimedCache<String, Vec<PlayerEntry>>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
     result = true,
     convert = "{ query_str.to_string() }",
