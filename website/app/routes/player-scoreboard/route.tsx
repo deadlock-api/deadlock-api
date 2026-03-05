@@ -7,14 +7,15 @@ import RankSelector from "~/components/selectors/RankSelector";
 import NumberSelector from "~/components/NumberSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Card, CardContent } from "~/components/ui/card";
-import { Spinner } from "~/components/ui/spinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { api } from "~/lib/api";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { ScoreboardTable } from "./ScoreboardTable";
 import { SortBySelector } from "./SortBySelector";
-import { ALL_SORT_BY_VALUES } from "./sort-options";
+import { ALL_SORT_BY_VALUES, getSortByLabel } from "./sort-options";
 
 export const meta: MetaFunction = () => {
   return [
@@ -119,7 +120,7 @@ export default function PlayerScoreboard() {
                 />
               </div>
               <div className="flex flex-wrap justify-center gap-2">
-                <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={5} min={1} />
+                <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={1} />
                 {gameMode !== "street_brawl" && (
                   <>
                     <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Min Rank" />
@@ -138,10 +139,31 @@ export default function PlayerScoreboard() {
 
         <div className="max-w-250 mx-auto">
           {scoreboardQuery.isPending ? (
-            <div className="flex items-center justify-center gap-2 py-8">
-              <Spinner className="size-6" />
-              <span className="text-sm text-muted-foreground">Loading scoreboard...</span>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[5ch] text-right">#</TableHead>
+                  <TableHead>Player</TableHead>
+                  {sortBy !== "matches" && <TableHead className="text-right">Matches</TableHead>}
+                  <TableHead className="text-right">{getSortByLabel(sortBy)}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from({ length: 25 }, (_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="text-right"><Skeleton className="h-4 w-6 ml-auto" /></TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-6 rounded-full" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </TableCell>
+                    {sortBy !== "matches" && <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>}
+                    <TableCell className="text-right"><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : scoreboardQuery.isError ? (
             <div className="text-center text-sm text-red-600 py-8">
               Failed to load scoreboard: {scoreboardQuery.error?.message}
