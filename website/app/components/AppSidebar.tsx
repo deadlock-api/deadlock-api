@@ -13,6 +13,7 @@ const navLinks: readonly { to: string; label: string; special?: boolean }[] = [
   { to: "/heroes", label: "Heroes" },
   { to: "/items", label: "Items" },
   { to: "/leaderboard", label: "Leaderboard" },
+  { to: "/player-scoreboard", label: "Player Scoreboard" },
   { to: "/badge-distribution", label: "Rank Distribution" },
   { to: "/chat", label: "AI Chat" },
   { to: "/streamkit", label: "Stream Kit" },
@@ -170,11 +171,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="p-3 border-t border-sidebar-border space-y-1">
         <p className="px-3 py-1 text-xs font-semibold uppercase text-sidebar-foreground/50 tracking-wider">Services</p>
         {[
-            { href: ASSETS_ORIGIN, label: "Assets API" },
-            { href: API_ORIGIN, label: "Game Data API" },
-            { href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/", label: "Database Dumps" },
-            { href: "https://github.com/deadlock-api/deadlock-live-events", label: "Live Events API" },
-          ].map((link) => (
+          { href: ASSETS_ORIGIN, label: "Assets API" },
+          { href: API_ORIGIN, label: "Game Data API" },
+          { href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/", label: "Database Dumps" },
+          { href: "https://github.com/deadlock-api/deadlock-live-events", label: "Live Events API" },
+        ].map((link) => (
           <a
             key={link.href}
             href={link.href}

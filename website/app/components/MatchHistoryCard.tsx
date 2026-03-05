@@ -65,13 +65,8 @@ function FullBuildPhase({ label, items }: { label: string; items: FullBuildItem[
         {items.length > 0 ? (
           items.map((item, i) => (
             <div key={`${item.itemId}-${i}`} className="relative">
-              <ItemImage
-                itemId={item.itemId}
-                className={cn("size-6 rounded-sm", item.sold && "opacity-50")}
-              />
-              {item.sold && (
-                <div className="absolute inset-0 rounded-sm bg-red-500/40 pointer-events-none" />
-              )}
+              <ItemImage itemId={item.itemId} className={cn("size-6 rounded-sm", item.sold && "opacity-50")} />
+              {item.sold && <div className="absolute inset-0 rounded-sm bg-red-500/40 pointer-events-none" />}
             </div>
           ))
         ) : (
@@ -122,7 +117,7 @@ export default function MatchHistoryCard({
   const { data: steamProfile } = useQuery({
     queryKey: ["steam-profile", accountId],
     queryFn: async () => {
-      const res = await api.players_api.steam({ accountIds: [accountId!] });
+      const res = await api.steam_api.steam({ accountIds: [accountId!] });
       return res.data[0] ?? null;
     },
     enabled: accountId != null,
@@ -152,7 +147,9 @@ export default function MatchHistoryCard({
             <div className="text-xs text-muted-foreground/60">{matchId}</div>
             <div className="my-1.5 h-px w-full bg-border/50" />
             {steamProfile?.personaname && (
-              <div className="text-xs font-medium text-foreground truncate max-w-28 mb-1">{steamProfile.personaname}</div>
+              <div className="text-xs font-medium text-foreground truncate max-w-28 mb-1">
+                {steamProfile.personaname}
+              </div>
             )}
             <div className="flex items-start gap-2">
               <HeroImage heroId={heroId} className="mt-0.5 size-8 shrink-0 rounded-md border border-border/50" />
@@ -267,9 +264,7 @@ export default function MatchHistoryCard({
           onClick={onToggleExpand}
           className={cn("flex w-8 shrink-0 cursor-pointer items-center justify-center transition-colors", expandBg)}
         >
-          <ChevronDown
-            className={cn("size-4 transition-transform", expandIconColor, expanded && "rotate-180")}
-          />
+          <ChevronDown className={cn("size-4 transition-transform", expandIconColor, expanded && "rotate-180")} />
         </button>
       )}
     </div>

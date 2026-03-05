@@ -218,9 +218,7 @@ export default function ItemCombsExplore({
       const badge0 = match.average_badge_team0;
       const badge1 = match.average_badge_team1;
       const averageBadge =
-        badge0 != null && badge1 != null
-          ? Math.round((badge0 + badge1) / 2)
-          : (badge0 ?? badge1 ?? undefined);
+        badge0 != null && badge1 != null ? Math.round((badge0 + badge1) / 2) : (badge0 ?? badge1 ?? undefined);
       return [
         {
           matchId: match.match_id,
@@ -339,8 +337,7 @@ export default function ItemCombsExplore({
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-2">
                   {assetsItems
                     ?.filter(
-                      (i) =>
-                        !i.disabled && i.shop_image_webp && i.item_slot_type === slot && i.item_tier === tier,
+                      (i) => !i.disabled && i.shop_image_webp && i.item_slot_type === slot && i.item_tier === tier,
                     )
                     .map((item) => (
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">
