@@ -229,17 +229,16 @@ async fn update_account_internal(
     account: u32,
     is_prioritized: bool,
 ) -> bool {
-    let (username, match_history) =
-        match fetch_account_match_history(http_client, account, is_prioritized).await {
-            Ok(r) => r,
-            Err(e) => {
-                counter!("history_fetcher.fetch_match_history.failure").increment(1);
-                warn!(
-                    "Failed to fetch match history for account {account}, error: {e:?}, skipping",
-                );
-                return false;
-            }
-        };
+    let match_history = match fetch_account_match_history(http_client, account, is_prioritized)
+        .await
+    {
+        Ok((_, r)) => r,
+        Err(e) => {
+            counter!("history_fetcher.fetch_match_history.failure").increment(1);
+            warn!("Failed to fetch match history for account {account}, error: {e:?}, skipping",);
+            return false;
+        }
+    };
     counter!("history_fetcher.fetch_match_history.status", "status" => match_history.result.unwrap_or_default().to_string()).increment(1);
     if match_history
         .result
@@ -259,7 +258,7 @@ async fn update_account_internal(
     }
     let match_history = match_history
         .into_iter()
-        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r, username.clone()));
+        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r));
     match insert_match_history(ch_client, match_history).await {
         Ok(()) => {
             counter!("history_fetcher.insert_match_history.success").increment(1);
