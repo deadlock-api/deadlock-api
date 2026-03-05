@@ -8,6 +8,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import AppSidebar, { MobileMenuButton } from "~/components/AppSidebar";
 import { Toaster } from "~/components/ui/sonner";
+import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import "@fontsource-variable/inter";
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
@@ -87,20 +88,22 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <PatronAuthProvider>
         <NuqsAdapter>
-          <div className="flex min-h-screen">
-            <AppSidebar />
-            <main className="flex-1 md:ml-64">
-              <MobileMenuButton />
-              <div className="flex justify-center items-start">
-                <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
-                  <Outlet />
+          <TooltipProvider>
+            <div className="flex min-h-screen">
+              <AppSidebar />
+              <main className="flex-1 md:ml-64">
+                <MobileMenuButton />
+                <div className="flex justify-center items-start">
+                  <div className="m-4 w-full max-w-7xl bg-gray-900 rounded-lg shadow-lg p-8">
+                    <Outlet />
+                  </div>
                 </div>
-              </div>
-            </main>
-          </div>
+              </main>
+            </div>
 
-          <ReactQueryDevtools initialIsOpen={false} />
-          <Toaster />
+            <ReactQueryDevtools initialIsOpen={false} />
+            <Toaster />
+          </TooltipProvider>
         </NuqsAdapter>
       </PatronAuthProvider>
     </QueryClientProvider>
