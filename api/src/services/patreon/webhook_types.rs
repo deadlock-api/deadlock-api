@@ -47,8 +47,6 @@ pub(crate) struct WebhookMemberAttributes {
     pub(crate) patron_status: Option<String>,
     pub(crate) currently_entitled_amount_cents: Option<i32>,
     pub(crate) pledge_amount_cents: Option<i32>,
-    /// Number of months between charges (1 = monthly, 12 = annual)
-    pub(crate) pledge_cadence: Option<i32>,
 }
 
 /// Member relationships from the webhook payload.
