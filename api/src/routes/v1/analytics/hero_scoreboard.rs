@@ -71,7 +71,7 @@ pub(super) struct HeroScoreboardQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct Entry {
+pub struct HeroEntry {
     /// tier = first digits, subtier = last digit, see more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u64,
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
@@ -173,7 +173,7 @@ ORDER BY value {}
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<Entry>>",
+    ty = "TimedCache<String, Vec<HeroEntry>>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
     result = true,
     convert = "{ query_str.to_string() }",
@@ -183,14 +183,14 @@ ORDER BY value {}
 async fn run_query(
     ch_client: &clickhouse::Client,
     query_str: &str,
-) -> clickhouse::error::Result<Vec<Entry>> {
+) -> clickhouse::error::Result<Vec<HeroEntry>> {
     ch_client.query(query_str).fetch_all().await
 }
 
 async fn get_hero_scoreboard(
     ch_client: &clickhouse::Client,
     mut query: HeroScoreboardQuery,
-) -> APIResult<Vec<Entry>> {
+) -> APIResult<Vec<HeroEntry>> {
     query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
     query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
     let query = build_query(&query);

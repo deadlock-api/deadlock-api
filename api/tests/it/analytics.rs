@@ -432,7 +432,7 @@ async fn test_hero_scoreboard(
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
     let response = request_endpoint("/v1/analytics/scoreboards/heroes", queries).await;
-    let hero_scoreboard: Vec<hero_scoreboard::Entry> =
+    let hero_scoreboard: Vec<hero_scoreboard::HeroEntry> =
         response.json().await.expect("Failed to parse response");
 
     // Verify min_matches requirement
@@ -451,7 +451,7 @@ async fn test_hero_scoreboard(
 
     // Verify sorting
     if hero_scoreboard.len() > 1 {
-        let check_sorted = |field_extractor: fn(&hero_scoreboard::Entry) -> f64,
+        let check_sorted = |field_extractor: fn(&hero_scoreboard::HeroEntry) -> f64,
                             desc: SortDirectionDesc| {
             let mut sorted = true;
             for i in 0..hero_scoreboard.len() - 1 {
@@ -464,7 +464,7 @@ async fn test_hero_scoreboard(
             }
             sorted
         };
-        let extractor = |entry: &hero_scoreboard::Entry| entry.value;
+        let extractor = |entry: &hero_scoreboard::HeroEntry| entry.value;
         assert!(check_sorted(extractor, sort_direction));
     }
 }
@@ -615,7 +615,7 @@ async fn test_player_scoreboard(
         .map(|(k, v)| (*k, v.as_str()))
         .collect::<Vec<_>>();
     let response = request_endpoint("/v1/analytics/scoreboards/players", queries).await;
-    let player_scoreboard: Vec<player_scoreboard::Entry> =
+    let player_scoreboard: Vec<player_scoreboard::PlayerEntry> =
         response.json().await.expect("Failed to parse response");
 
     // Verify we don't get more entries than the limit
@@ -639,7 +639,7 @@ async fn test_player_scoreboard(
 
     // Verify sorting
     if player_scoreboard.len() > 1 {
-        let check_sorted = |field_extractor: fn(&player_scoreboard::Entry) -> f64,
+        let check_sorted = |field_extractor: fn(&player_scoreboard::PlayerEntry) -> f64,
                             sort_direction: SortDirectionDesc| {
             let mut sorted = true;
             for i in 0..player_scoreboard.len() - 1 {
@@ -652,7 +652,7 @@ async fn test_player_scoreboard(
             }
             sorted
         };
-        let extractor = |entry: &player_scoreboard::Entry| entry.value;
+        let extractor = |entry: &player_scoreboard::PlayerEntry| entry.value;
         assert!(check_sorted(extractor, sort_direction.unwrap_or_default()));
     }
 }

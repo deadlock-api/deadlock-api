@@ -87,7 +87,7 @@ pub(crate) struct PlayerScoreboardQuery {
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
-pub struct Entry {
+pub struct PlayerEntry {
     /// tier = first digits, subtier = last digit, see more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u64,
     account_id: u32,
@@ -205,14 +205,14 @@ LIMIT {} OFFSET {}
 async fn run_query(
     ch_client: &clickhouse::Client,
     query_str: &str,
-) -> clickhouse::error::Result<Vec<Entry>> {
+) -> clickhouse::error::Result<Vec<PlayerEntry>> {
     ch_client.query(query_str).fetch_all().await
 }
 
 async fn get_player_scoreboard(
     ch_client: &clickhouse::Client,
     mut query: PlayerScoreboardQuery,
-) -> APIResult<Vec<Entry>> {
+) -> APIResult<Vec<PlayerEntry>> {
     query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
     query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
     let query = build_query(&query);
@@ -225,7 +225,7 @@ async fn get_player_scoreboard(
     path = "/players",
     params(PlayerScoreboardQuery),
     responses(
-        (status = OK, description = "Player Scoreboard", body = [Entry]),
+        (status = OK, description = "Player Scoreboard", body = [PlayerEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player scoreboard")
     ),
