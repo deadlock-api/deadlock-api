@@ -70,13 +70,12 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         // Fetch all prioritized account IDs from PostgreSQL
-        let prioritized_account_ids = match common::get_all_prioritized_accounts(&pg_pool).await {
-            Ok(ids) => ids,
-            Err(e) => {
+        let prioritized_account_ids = common::get_all_prioritized_accounts(&pg_pool)
+            .await
+            .unwrap_or_else(|e| {
                 warn!("Failed to fetch prioritized accounts: {e:?}");
                 Vec::new()
-            }
-        };
+            });
 
         // Query full match history for prioritized accounts (no LIMIT)
         let mut pending_matches: Vec<PendingMatch> = Vec::new();
@@ -188,7 +187,7 @@ async fn main() -> anyhow::Result<()> {
                     let match_id = prioritized_match.match_id;
                     if prioritized_match.is_prioritized {
                         // Prioritized match: use exponential backoff retry
-                        match fetch_prioritized_match(&ch_client, match_id, prioritized_match.target_account_id).await {
+                        match fetch_prioritized_match(&ch_client, match_id).await {
                             Ok(()) => {
                                 counter!("salt_scraper.prioritized_fetch.success").increment(1);
                                 info!("Fetched prioritized match {match_id}");
@@ -202,7 +201,7 @@ async fn main() -> anyhow::Result<()> {
                         }
                     } else {
                         // Regular match: use existing 30 retries with 1s fixed interval
-                        match fetch_match(&ch_client, match_id, prioritized_match.target_account_id).await {
+                        match fetch_match(&ch_client, match_id).await {
                             Ok(()) => info!("Fetched match {match_id}"),
                             Err(e) => warn!("Failed to fetch match {match_id}: {e:?}"),
                         }
@@ -230,11 +229,7 @@ async fn main() -> anyhow::Result<()> {
 /// Uses configurable max retries (default 5) with exponential backoff delays.
 /// Logs when fetching a prioritized match and tracks retry attempts.
 #[instrument(skip(ch_client))]
-async fn fetch_prioritized_match(
-    ch_client: &Client,
-    match_id: u64,
-    target_account_id: Option<u32>,
-) -> anyhow::Result<()> {
+async fn fetch_prioritized_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
     info!("Fetching prioritized match {match_id}");
 
     // Use exponential backoff for prioritized matches
@@ -246,19 +241,15 @@ async fn fetch_prioritized_match(
         if current > 0 {
             counter!("salt_scraper.prioritized_fetch.retry").increment(1);
         }
-        async { fetch_match_internal(ch_client, match_id, target_account_id).await }
+        async { fetch_match_internal(ch_client, match_id).await }
     })
     .await
 }
 
 /// Internal match fetch logic used by both regular and prioritized fetches.
-async fn fetch_match_internal(
-    ch_client: &Client,
-    match_id: u64,
-    target_account_id: Option<u32>,
-) -> anyhow::Result<()> {
+async fn fetch_match_internal(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
     // Fetch Salts
-    let salts = fetch_salts(match_id, target_account_id, true).await;
+    let salts = fetch_salts(match_id, true).await;
     let (username, salts) = match salts {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
@@ -298,13 +289,9 @@ async fn fetch_match_internal(
 }
 
 #[instrument(skip(ch_client))]
-async fn fetch_match(
-    ch_client: &Client,
-    match_id: u64,
-    target_account_id: Option<u32>,
-) -> anyhow::Result<()> {
+async fn fetch_match(ch_client: &Client, match_id: u64) -> anyhow::Result<()> {
     // Fetch Salts with fixed 30 retries and 1s interval for regular matches
-    let salts = tryhard::retry_fn(|| fetch_salts(match_id, target_account_id, false))
+    let salts = tryhard::retry_fn(|| fetch_salts(match_id, false))
         .retries(30)
         .fixed_backoff(Duration::from_secs(1))
         .await;
@@ -348,12 +335,10 @@ async fn fetch_match(
 
 async fn fetch_salts(
     match_id: u64,
-    target_account_id: Option<u32>,
     is_prioritized: bool,
 ) -> anyhow::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
     let msg = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
-        target_account_id,
         ..Default::default()
     };
     let job_cooldown = Duration::from_millis(*SALTS_COOLDOWN_MILLIS);
@@ -409,17 +394,8 @@ fn mark_prioritized_matches(
                 .participants
                 .iter()
                 .any(|&id| prioritized_accounts.contains(&i64::from(id)));
-            let target_account_id = prioritized_accounts
-                .iter()
-                .find(|&&id| {
-                    m.participants
-                        .contains(&u32::try_from(id).unwrap_or_default())
-                })
-                .copied()
-                .and_then(|id| u32::try_from(id).ok());
             PrioritizedMatch {
                 match_id: m.match_id,
-                target_account_id,
                 is_prioritized,
             }
         })
