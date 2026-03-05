@@ -88,7 +88,6 @@ pub(crate) struct PlayerScoreboardQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct PlayerEntry {
-    /// tier = first digits, subtier = last digit, see more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u64,
     account_id: u32,
     pub value: f64,

@@ -72,7 +72,6 @@ pub(super) struct HeroScoreboardQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub struct HeroEntry {
-    /// tier = first digits, subtier = last digit, see more: <https://assets.deadlock-api.com/v2/ranks>
     rank: u64,
     /// See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: u32,
