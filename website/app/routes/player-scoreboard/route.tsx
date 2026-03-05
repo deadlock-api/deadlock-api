@@ -55,10 +55,7 @@ export default function PlayerScoreboard() {
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
 
-  const [currentPage, setCurrentPage] = useQueryState("page", parseAsInteger.withDefault(0));
-  const [itemsPerPage, setItemsPerPage] = useQueryState("per_page", parseAsInteger.withDefault(25));
-
-  const start = currentPage * itemsPerPage;
+  const MAX_ENTRIES = 2000;
 
   const scoreboardQuery = useQuery({
     queryKey: [
@@ -72,8 +69,6 @@ export default function PlayerScoreboard() {
       maxRankId,
       startDate?.unix(),
       endDate?.unix(),
-      start,
-      itemsPerPage,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.playerScoreboard({
@@ -82,26 +77,17 @@ export default function PlayerScoreboard() {
         gameMode: gameMode as "normal" | "street_brawl",
         heroId: heroId ?? undefined,
         minMatches,
-        minAverageBadge: minRankId,
-        maxAverageBadge: maxRankId,
+        minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
+        maxAverageBadge: gameMode === "street_brawl" ? undefined : maxRankId,
         minUnixTimestamp: startDate?.unix() ?? 0,
         maxUnixTimestamp: endDate?.unix(),
-        start,
-        limit: itemsPerPage,
+        start: 0,
+        limit: MAX_ENTRIES,
       });
       return response.data;
     },
     staleTime: 60 * 60 * 1000,
   });
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleItemsPerPageChange = (perPage: number) => {
-    setItemsPerPage(perPage);
-    setCurrentPage(0);
-  };
 
   return (
     <div className="space-y-8">
@@ -134,8 +120,12 @@ export default function PlayerScoreboard() {
               </div>
               <div className="flex flex-wrap justify-center gap-2">
                 <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={5} min={1} />
-                <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Min Rank" />
-                <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Max Rank" />
+                {gameMode !== "street_brawl" && (
+                  <>
+                    <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Min Rank" />
+                    <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Max Rank" />
+                  </>
+                )}
                 <PatchOrDatePicker
                   patchDates={PATCHES}
                   value={{ startDate, endDate }}
@@ -160,10 +150,6 @@ export default function PlayerScoreboard() {
             <ScoreboardTable
               entries={scoreboardQuery.data ?? []}
               sortBy={sortBy}
-              currentPage={currentPage}
-              itemsPerPage={itemsPerPage}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
             />
           )}
         </div>

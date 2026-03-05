@@ -11,6 +11,7 @@ export interface ScoreboardControlsProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   hasNextPage: boolean;
+  totalEntries: number;
 }
 
 export function ScoreboardControls({
@@ -21,6 +22,7 @@ export function ScoreboardControls({
   currentPage,
   onPageChange,
   hasNextPage,
+  totalEntries,
 }: ScoreboardControlsProps) {
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +71,7 @@ export function ScoreboardControls({
           </SelectContent>
         </Select>
       </div>
+      <span className="text-sm text-muted-foreground">{totalEntries} results</span>
       <span className="text-sm text-muted-foreground flex items-center space-x-1">
         Page
         <span className="mx-2">

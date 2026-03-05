@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useMemo, useState } from "react";
@@ -11,52 +11,64 @@ interface SteamProfileMap {
   [accountId: number]: { personaname: string; avatar: string; profileurl: string };
 }
 
+const STEAM_BATCH_SIZE = 500;
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export interface ScoreboardTableProps {
   entries: PlayerEntry[];
   sortBy: string;
-  currentPage: number;
-  itemsPerPage: number;
-  onPageChange: (page: number) => void;
-  onItemsPerPageChange: (perPage: number) => void;
 }
 
 export function ScoreboardTable({
   entries,
   sortBy,
-  currentPage,
-  itemsPerPage,
-  onPageChange,
-  onItemsPerPageChange,
 }: ScoreboardTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   const steamAccountIds = useMemo(
     () => entries.map((e) => e.account_id).filter((id): id is number => id != null),
     [entries],
   );
 
-  const steamProfilesQuery = useQuery({
-    queryKey: ["steamProfiles", steamAccountIds],
-    queryFn: async () => {
-      if (steamAccountIds.length === 0) return {} as SteamProfileMap;
-      const response = await api.steam_api.steam({ accountIds: steamAccountIds });
-      const map: SteamProfileMap = {};
-      for (const profile of response.data) {
-        map[profile.account_id] = {
-          personaname: profile.personaname,
-          avatar: profile.avatar,
-          profileurl: profile.profileurl,
-        };
-      }
-      return map;
-    },
-    enabled: steamAccountIds.length > 0,
-    staleTime: 24 * 60 * 60 * 1000,
+  const batches = useMemo(() => chunk(steamAccountIds, STEAM_BATCH_SIZE), [steamAccountIds]);
+
+  const steamProfileQueries = useQueries({
+    queries: batches.map((batch) => ({
+      queryKey: ["steamProfiles", batch],
+      queryFn: async () => {
+        const response = await api.steam_api.steam({ accountIds: batch });
+        const map: SteamProfileMap = {};
+        for (const profile of response.data) {
+          map[profile.account_id] = {
+            personaname: profile.personaname,
+            avatar: profile.avatar,
+            profileurl: profile.profileurl,
+          };
+        }
+        return map;
+      },
+      enabled: batch.length > 0,
+      staleTime: 24 * 60 * 60 * 1000,
+    })),
   });
 
-  const profiles = steamProfilesQuery.data ?? {};
+  const profiles = useMemo(() => {
+    const merged: SteamProfileMap = {};
+    for (const query of steamProfileQueries) {
+      if (query.data) Object.assign(merged, query.data);
+    }
+    return merged;
+  }, [steamProfileQueries]);
 
-  // Build enriched entries for search
   const enrichedEntries = useMemo(
     () =>
       entries.map((entry) => {
@@ -80,17 +92,33 @@ export function ScoreboardTable({
     [searchQuery, enrichedEntries, fuse],
   );
 
-  const hasNextPage = entries.length >= itemsPerPage;
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+  const paginatedEntries = useMemo(
+    () => filteredEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
+    [filteredEntries, currentPage, itemsPerPage],
+  );
+  const hasNextPage = currentPage < totalPages - 1;
+
+  const handleItemsPerPageChange = (perPage: number) => {
+    setItemsPerPage(perPage);
+    setCurrentPage(0);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(0);
+  };
 
   const controls = (
     <ScoreboardControls
       searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
+      setSearchQuery={handleSearchChange}
       itemsPerPage={itemsPerPage}
-      onItemsPerPageChange={onItemsPerPageChange}
+      onItemsPerPageChange={handleItemsPerPageChange}
       currentPage={currentPage}
-      onPageChange={onPageChange}
+      onPageChange={setCurrentPage}
       hasNextPage={hasNextPage}
+      totalEntries={filteredEntries.length}
     />
   );
 
@@ -102,17 +130,17 @@ export function ScoreboardTable({
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
             <TableHead>Player</TableHead>
-            <TableHead className="text-right">Matches</TableHead>
+            {sortBy !== "matches" && <TableHead className="text-right">Matches</TableHead>}
             <TableHead className="text-right">{getSortByLabel(sortBy)}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredEntries.map((entry, i) => {
+          {paginatedEntries.map((entry, i) => {
             const accountId = entry.account_id;
             const profile = accountId != null ? profiles[accountId] : undefined;
             return (
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
-                <TableCell className="text-right">{entry.rank}</TableCell>
+                <TableCell className="text-right">{entry.rank + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {profile?.avatar && (
@@ -124,14 +152,14 @@ export function ScoreboardTable({
                     {accountId != null && <span className="text-xs text-muted-foreground">[{accountId}]</span>}
                   </div>
                 </TableCell>
-                <TableCell className="text-right">{entry.matches.toLocaleString()}</TableCell>
+                {sortBy !== "matches" && <TableCell className="text-right">{entry.matches.toLocaleString()}</TableCell>}
                 <TableCell className="text-right">{formatStatValue(entry.value, sortBy)}</TableCell>
               </TableRow>
             );
           })}
-          {filteredEntries.length === 0 && (
+          {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={sortBy === "matches" ? 3 : 4} className="text-center text-muted-foreground py-8">
                 No results found
               </TableCell>
             </TableRow>
