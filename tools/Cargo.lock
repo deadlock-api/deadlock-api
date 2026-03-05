@@ -2987,7 +2987,6 @@ dependencies = [
  "metrics",
  "reqwest 0.13.2",
  "serde",
- "sqlx",
  "tokio",
  "tracing",
  "tryhard",
