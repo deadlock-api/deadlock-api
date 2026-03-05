@@ -241,7 +241,9 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
         info_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
-    if let Some(min_match_id) = query.min_match_id {
+    if let Some(min_match_id) = query.min_match_id
+        && min_match_id > 0
+    {
         info_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
@@ -255,19 +257,25 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             match_ids.iter().map(ToString::to_string).join(",")
         ));
     }
-    if let Some(min_duration_s) = query.min_duration_s {
+    if let Some(min_duration_s) = query.min_duration_s
+        && min_duration_s > 0
+    {
         info_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
-    if let Some(min_average_badge) = query.min_average_badge {
-        info_filters.push(format!("average_badge_team0 >= {min_average_badge}"));
-        info_filters.push(format!("average_badge_team1 >= {min_average_badge}"));
+    if let Some(min_badge_level) = query.min_average_badge
+        && min_badge_level > 11
+    {
+        info_filters.push(format!("average_badge_team0 >= {min_badge_level}"));
+        info_filters.push(format!("average_badge_team1 >= {min_badge_level}"));
     }
-    if let Some(max_average_badge) = query.max_average_badge {
-        info_filters.push(format!("average_badge_team0 <= {max_average_badge}"));
-        info_filters.push(format!("average_badge_team1 <= {max_average_badge}"));
+    if let Some(max_badge_level) = query.max_average_badge
+        && max_badge_level < 116
+    {
+        info_filters.push(format!("average_badge_team0 <= {max_badge_level}"));
+        info_filters.push(format!("average_badge_team1 <= {max_badge_level}"));
     }
     if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
         info_filters.push(format!(
