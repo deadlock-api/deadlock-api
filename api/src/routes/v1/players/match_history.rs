@@ -273,9 +273,9 @@ Relevant Protobuf Messages:
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 2req/h<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 1req/h |
-| Key | 400req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
-| Global | 2000req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
+| IP | 3req/h<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 1req/h |
+| Key | 300req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
+| Global | 1500req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
     "
 )]
 pub(super) async fn match_history(
@@ -330,9 +330,9 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history",
                 &[
-                    Quota::ip_limit(2, Duration::from_hours(1)),
-                    Quota::key_limit(400, Duration::from_hours(1)),
-                    Quota::global_limit(2000, Duration::from_hours(1)),
+                    Quota::ip_limit(3, Duration::from_hours(1)),
+                    Quota::key_limit(300, Duration::from_hours(1)),
+                    Quota::global_limit(1500, Duration::from_hours(1)),
                 ],
             )
             .await
