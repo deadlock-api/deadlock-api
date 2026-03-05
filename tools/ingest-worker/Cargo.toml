@@ -4,17 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-async-compression = { version = "0.4.39", features = ["tokio", "bzip2"] }
+async-compression = { version = "0.4.41", features = ["tokio", "bzip2"] }
 clickhouse = { version = "0.14.2", features = ["test-util", "time"] }
-futures = "0.3.31"
+futures = "0.3.32"
 prost = "0.14.3"
 object_store = { version = "0.13.1", features = ["aws"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_repr = "0.1.20"
-tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
 valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "bec6cd7d8b6bd2a10fc80d6df38637a37fd920e1", features = ["gc-client"] }
 metrics = "0.24.3"
 tracing = "0.1.44"
 tryhard = "0.5.2"
 common = { version = "0.1.0", path = "../common" }
-anyhow = "1.0.101"
+anyhow = "1.0.102"
