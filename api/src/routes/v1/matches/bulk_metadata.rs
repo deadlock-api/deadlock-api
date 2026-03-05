@@ -334,8 +334,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     };
     let order_by_expr = match query.order_by {
         SortKey::AverageBadge => {
-            "(coalesce(average_badge_team0, 0) + coalesce(average_badge_team1, 0)) / 2"
-                .to_owned()
+            "(coalesce(average_badge_team0, 0) + coalesce(average_badge_team1, 0)) / 2".to_owned()
         }
         other => other.to_string(),
     };
