@@ -257,7 +257,7 @@ async fn fetch_match_internal(
     target_account_id: Option<u32>,
 ) -> anyhow::Result<()> {
     // Fetch Salts
-    let salts = fetch_salts(match_id, target_account_id).await;
+    let salts = fetch_salts(match_id, target_account_id, true).await;
     let (username, salts) = match salts {
         Ok(r) => {
             counter!("salt_scraper.fetch_salts.success").increment(1);
@@ -303,7 +303,7 @@ async fn fetch_match(
     target_account_id: Option<u32>,
 ) -> anyhow::Result<()> {
     // Fetch Salts with fixed 30 retries and 1s interval for regular matches
-    let salts = tryhard::retry_fn(|| fetch_salts(match_id, target_account_id))
+    let salts = tryhard::retry_fn(|| fetch_salts(match_id, target_account_id, false))
         .retries(30)
         .fixed_backoff(Duration::from_secs(1))
         .await;
@@ -348,11 +348,18 @@ async fn fetch_match(
 async fn fetch_salts(
     match_id: u64,
     target_account_id: Option<u32>,
+    is_prioritized: bool,
 ) -> anyhow::Result<(String, CMsgClientToGcGetMatchMetaDataResponse)> {
     let msg = CMsgClientToGcGetMatchMetaData {
         match_id: Some(match_id),
         target_account_id,
         ..Default::default()
+    };
+    let job_cooldown = Duration::from_millis(*SALTS_COOLDOWN_MILLIS);
+    let soft_cooldown = if is_prioritized {
+        Some(job_cooldown / 2)
+    } else {
+        None
     };
     common::call_steam_proxy(
         &HTTP_CLIENT,
@@ -360,8 +367,8 @@ async fn fetch_salts(
         &msg,
         None,
         None,
-        Duration::from_millis(*SALTS_COOLDOWN_MILLIS),
-        None,
+        job_cooldown,
+        soft_cooldown,
         Duration::from_secs(5),
     )
     .await
