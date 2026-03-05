@@ -57,7 +57,7 @@ jobs:
           rustup override set stable
           rustup update stable
       - name: Machete
-        uses: bnjbvr/cargo-machete@3026399e8ccbe119a9624e9376afc8c5f21fb60f
+        uses: bnjbvr/cargo-machete@6456c7b34a8c1245e0c186ac50c56666ccbd44f1
 
   lint:
     name: Lint
@@ -88,7 +88,7 @@ jobs:
       - name: Setup Docker Builder
         uses: useblacksmith/setup-docker-builder@v1
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -134,10 +134,10 @@ jobs:
           fi
       - name: Set up Docker
         if: steps.should_deploy.outputs.deploy == 'true'
-        uses: docker/setup-docker-action@v4
+        uses: docker/setup-docker-action@v5
       - name: Login to GitHub Container Registry
         if: steps.should_deploy.outputs.deploy == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
