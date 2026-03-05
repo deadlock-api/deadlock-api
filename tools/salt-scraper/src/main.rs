@@ -99,6 +99,7 @@ async fn main() -> anyhow::Result<()> {
             WHERE account_id IN ?
               AND match_mode IN ('Ranked', 'Unranked')
               AND start_time < now() - INTERVAL 2 HOUR
+              AND match_id >= 31247321
               AND match_id NOT IN (SELECT match_id FROM match_salts)
               AND match_id NOT IN (SELECT match_id FROM match_info)
             GROUP BY match_id
