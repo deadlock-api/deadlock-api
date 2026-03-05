@@ -141,7 +141,7 @@ pub(crate) async fn get_steam_many(
         (status = NOT_FOUND, description = "No Steam profile found."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profiles.")
     ),
-    tags = ["Players"],
+    tags = ["Steam"],
     summary = "Batch Steam Profile",
     description = "
 This endpoint returns Steam profiles of players.
@@ -229,7 +229,7 @@ async fn search_steam(
         (status = NOT_FOUND, description = "No Steam profiles found."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profiles.")
     ),
-    tags = ["Players"],
+    tags = ["Steam"],
     summary = "Steam Profile Search",
     description = "
 This endpoint lets you search for Steam profiles by account_id or personaname.
