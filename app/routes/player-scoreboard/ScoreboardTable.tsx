@@ -2,6 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useMemo, useState } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { api } from "~/lib/api";
 import { ScoreboardControls } from "./ScoreboardControls";
@@ -60,6 +61,8 @@ export function ScoreboardTable({
       staleTime: 24 * 60 * 60 * 1000,
     })),
   });
+
+  const isLoadingProfiles = steamProfileQueries.some((q) => q.isLoading);
 
   const profiles = useMemo(() => {
     const merged: SteamProfileMap = {};
@@ -143,12 +146,21 @@ export function ScoreboardTable({
                 <TableCell className="text-right">{entry.rank + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    {profile?.avatar && (
-                      <img src={profile.avatar} alt="" className="h-6 w-6 rounded-full" loading="lazy" />
+                    {isLoadingProfiles && !profile ? (
+                      <>
+                        <Skeleton className="h-6 w-6 rounded-full" />
+                        <Skeleton className="h-4 w-24" />
+                      </>
+                    ) : (
+                      <>
+                        {profile?.avatar && (
+                          <img src={profile.avatar} alt="" className="h-6 w-6 rounded-full" loading="lazy" />
+                        )}
+                        <span className="truncate max-w-[200px]">
+                          {profile?.personaname ?? (accountId != null ? `Player ${accountId}` : `#${entry.rank}`)}
+                        </span>
+                      </>
                     )}
-                    <span className="truncate max-w-[200px]">
-                      {profile?.personaname ?? (accountId != null ? `Player ${accountId}` : `#${entry.rank}`)}
-                    </span>
                     {accountId != null && <span className="text-xs text-muted-foreground">[{accountId}]</span>}
                   </div>
                 </TableCell>
