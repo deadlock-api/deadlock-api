@@ -185,11 +185,11 @@ GROUP BY account_id
 ORDER BY value {}
 LIMIT {} OFFSET {}
     ",
-        query.start.unwrap_or_default() + 1,
+        query.start.unwrap_or(1).max(1) - 1,
         query.sort_by.get_select_clause(),
         query.sort_direction,
         query.limit.unwrap_or_default(),
-        query.start.unwrap_or_default() + 1,
+        query.start.unwrap_or(1).max(1) - 1,
     )
 }
 
@@ -389,7 +389,7 @@ mod test {
             "toFloat64({}) as value",
             sort_by.get_select_clause()
         )));
-        assert!(query_str.contains("OFFSET 6"));
+        assert!(query_str.contains("OFFSET 4"));
         assert!(query_str.contains("LIMIT 10"));
     }
 
