@@ -26,7 +26,7 @@ export default function ItemPurchaseAnalysis({
   maxBoughtAtS?: number;
 }) {
   const [itemIds, setItemIds] = useQueryState("item_ids", parseAsSetOf(parseAsInteger).withDefault(new Set()));
-  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const queryStatOptions = useMemo(() => {

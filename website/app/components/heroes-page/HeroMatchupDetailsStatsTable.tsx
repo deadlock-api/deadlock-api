@@ -36,7 +36,7 @@ export default function HeroMatchupDetailsStatsTable({
   samePartyFilter?: boolean;
   minHeroMatches?: number;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHero } = useQuery({

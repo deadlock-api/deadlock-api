@@ -83,7 +83,7 @@ export default function HeroStatsOverTimeChart({
   minDate?: Dayjs;
   maxDate?: Dayjs;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({

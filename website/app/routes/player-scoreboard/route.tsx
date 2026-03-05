@@ -84,7 +84,7 @@ export default function PlayerScoreboard() {
         minMatches,
         minAverageBadge: minRankId,
         maxAverageBadge: maxRankId,
-        minUnixTimestamp: startDate?.unix(),
+        minUnixTimestamp: startDate?.unix() ?? 0,
         maxUnixTimestamp: endDate?.unix(),
         start,
         limit: itemsPerPage,

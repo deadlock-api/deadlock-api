@@ -35,7 +35,7 @@ export default function HeroStatsTable({
   maxDate?: Dayjs;
   fullWidth?: boolean;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery({
