@@ -203,7 +203,7 @@ async fn get_hero_scoreboard(
     path = "/heroes",
     params(HeroScoreboardQuery),
     responses(
-        (status = OK, description = "Hero Scoreboard", body = [Entry]),
+        (status = OK, description = "Hero Scoreboard", body = [HeroEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch hero scoreboard")
     ),
