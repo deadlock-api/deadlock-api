@@ -42,9 +42,7 @@ export const useMatchHistory = ({
     queryFn: async () => {
       const res = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history`);
       if (res.status === 429) {
-        const fallback = await fetch(
-          `${API_ORIGIN}/v1/players/${accountId}/match-history?only_stored_history=true`,
-        );
+        const fallback = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history?only_stored_history=true`);
         return await fallback.json();
       }
       return await res.json();
