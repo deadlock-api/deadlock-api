@@ -42,7 +42,7 @@ pub async fn call_steam_proxy<T: Message + Default>(
         .json(&json!({
             "message_kind": msg_type as i32,
             "job_cooldown_millis": cooldown_time.as_millis(),
-            "rate_limit_cooldown_millis": 2 * cooldown_time.as_millis(),
+            "rate_limit_cooldown_millis": 4 * cooldown_time.as_millis(),
             "soft_cooldown_millis": soft_cooldown_time.map_or(5 * 60 * 1000, |d| d.as_millis()),
             "bot_in_all_groups": in_all_groups,
             "bot_in_any_groups": in_any_groups,
