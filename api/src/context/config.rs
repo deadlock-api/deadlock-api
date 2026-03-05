@@ -116,7 +116,6 @@ fn default_assets_base_url() -> String {
 pub(crate) struct Config {
     #[serde(default)]
     pub(crate) emergency_mode: bool,
-    #[serde(default = "default_true")]
     pub(crate) enable_patreon: bool,
     pub(crate) internal_api_key: String,
     pub(super) steam: SteamConfig,
