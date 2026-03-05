@@ -138,7 +138,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut player_filters = vec![];
     if !info_filters.is_empty() {
         player_filters.push(format!(
-            "match_id IN (SELECT match_id FROM match_info {info_filters}) "
+            "match_id IN (SELECT match_id FROM match_info FINAL {info_filters}) "
         ));
     }
     if let Some(hero_id) = query.hero_id {
@@ -178,7 +178,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         "
 SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, uniq(\
          match_id) as matches
-FROM match_player
+FROM match_player FINAL
 {player_filters}
 GROUP BY account_id
 {having_clause}
