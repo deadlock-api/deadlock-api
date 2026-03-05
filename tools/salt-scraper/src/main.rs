@@ -366,7 +366,7 @@ async fn fetch_salts(
         &HTTP_CLIENT,
         EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
         &msg,
-        None,
+        Some(&["GetMatchMetaData"]),
         None,
         job_cooldown,
         soft_cooldown,
