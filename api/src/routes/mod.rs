@@ -15,7 +15,7 @@ use crate::utils::parse;
 
 pub mod v1;
 
-pub(super) fn router(patreon_enabled: bool) -> OpenApiRouter<AppState> {
+pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .route(
             "/v1/players/{account_id}/hero-stats",
@@ -53,7 +53,7 @@ pub(super) fn router(patreon_enabled: bool) -> OpenApiRouter<AppState> {
             "/v1/players/scoreboard",
             get(player_scoreboard::player_scoreboard),
         )
-        .nest("/v1", v1::router(patreon_enabled))
+        .nest("/v1", v1::router())
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {

@@ -15,8 +15,8 @@ mod patron;
 pub mod players;
 pub mod sql;
 
-pub(super) fn router(patreon_enabled: bool) -> OpenApiRouter<AppState> {
-    let mut router = OpenApiRouter::new()
+pub(super) fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
         .nest("/matches", matches::router())
         .nest("/players", players::router())
         .nest("/leaderboard", leaderboard::router())
@@ -25,13 +25,7 @@ pub(super) fn router(patreon_enabled: bool) -> OpenApiRouter<AppState> {
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())
         .nest("/info", info::router())
-        .nest("/sql", sql::router());
-
-    if patreon_enabled {
-        router = router
-            .nest("/auth", auth::router())
-            .nest("/patron", patron::router());
-    }
-
-    router
+        .nest("/sql", sql::router())
+        .nest("/auth", auth::router())
+        .nest("/patron", patron::router())
 }
