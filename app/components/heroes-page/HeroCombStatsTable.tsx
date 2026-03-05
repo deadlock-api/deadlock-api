@@ -37,7 +37,7 @@ export default function HeroCombStatsTable({
   const [combsToShow, setCombsToShow] = useQueryState("combs_to_show", parseAsInteger.withDefault(limit ?? 50));
   const [combsToShowT, setCombsToShowT] = useState<number>(limit ?? 50);
 
-  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery({

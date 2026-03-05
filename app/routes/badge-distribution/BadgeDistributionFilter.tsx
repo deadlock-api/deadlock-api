@@ -26,7 +26,7 @@ export default function BadgeDistributionFilter({ value, onChange }: BadgeDistri
     ({ startDate, endDate }: { startDate?: Dayjs; endDate?: Dayjs }) =>
       onChange({
         ...value,
-        minUnixTimestamp: startDate ? startDate.unix() : undefined,
+        minUnixTimestamp: startDate ? startDate.unix() : 0,
         maxUnixTimestamp: endDate ? endDate.unix() : undefined,
       }),
     [onChange, value],

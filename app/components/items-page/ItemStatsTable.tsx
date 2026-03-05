@@ -543,7 +543,7 @@ export default function ItemStatsTable({
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix(), [minDate]);
+  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
