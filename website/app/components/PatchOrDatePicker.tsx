@@ -82,17 +82,15 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center h-8">
-          <span className="text-sm text-foreground font-semibold">Date Range</span>
-        </div>
+      <div className="flex items-center gap-2 h-8">
+        <span className="text-sm text-foreground font-semibold">Date Range</span>
         <Tabs defaultValue={defaultTab} value={tab} onValueChange={(value) => setTab(value as "patch" | "custom")}>
-          <TabsList className="flex h-8">
-            <TabsTrigger value="patch" className="text-xs flex items-center gap-1">
+          <TabsList className="flex h-6">
+            <TabsTrigger value="patch" className="text-xs h-5 px-2 flex items-center gap-1">
               <ClockIcon className="h-3 w-3" />
               Patch
             </TabsTrigger>
-            <TabsTrigger value="custom" className="text-xs flex items-center gap-1">
+            <TabsTrigger value="custom" className="text-xs h-5 px-2 flex items-center gap-1">
               <CalendarIcon className="h-3 w-3" />
               Custom
             </TabsTrigger>
@@ -103,7 +101,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       <div>
         {tab === "patch" ? (
           <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-            <SelectTrigger id={patchSelectId} className="h-10 focus-visible:ring-0 min-w-full">
+            <SelectTrigger id={patchSelectId} className="h-9 focus-visible:ring-0 min-w-full">
               <SelectValue placeholder="Select a patch..." />
             </SelectTrigger>
             <SelectContent>

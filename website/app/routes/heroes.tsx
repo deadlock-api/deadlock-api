@@ -78,37 +78,32 @@ export default function Heroes(
 
       <Card className="mb-8 w-fit mx-auto">
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start text-center">
-            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-              {["stats", "stats-over-time"].includes(tab) ? (
-                <>
-                  <NumberSelector
-                    value={minHeroMatches}
-                    onChange={setMinHeroMatches}
-                    label={"Min Hero Matches (Timerange)"}
-                    step={10}
-                  />
-                  <NumberSelector
-                    value={minHeroMatchesTotal}
-                    onChange={setMinHeroMatchesTotal}
-                    label={"Min Hero Matches (Total)"}
-                    step={100}
-                  />
-                </>
-              ) : (
-                <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
-              )}
-              <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-              <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
-            </div>
-
-            <div className="flex justify-center md:justify-start">
-              <PatchOrDatePicker
-                patchDates={PATCHES}
-                value={{ startDate, endDate }}
-                onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
-              />
-            </div>
+          <div className="flex flex-wrap items-end gap-2 justify-center">
+            {["stats", "stats-over-time"].includes(tab) ? (
+              <>
+                <NumberSelector
+                  value={minHeroMatches}
+                  onChange={setMinHeroMatches}
+                  label={"Min Hero Matches (Timerange)"}
+                  step={10}
+                />
+                <NumberSelector
+                  value={minHeroMatchesTotal}
+                  onChange={setMinHeroMatchesTotal}
+                  label={"Min Hero Matches (Total)"}
+                  step={100}
+                />
+              </>
+            ) : (
+              <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
+            )}
+            <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
+            <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+            <PatchOrDatePicker
+              patchDates={PATCHES}
+              value={{ startDate, endDate }}
+              onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+            />
           </div>
         </CardContent>
       </Card>

@@ -33,7 +33,7 @@ export default function BadgeDistributionFilter({ value, onChange }: BadgeDistri
   );
 
   return (
-    <div className="flex flex-wrap justify-center items-center w-full gap-8">
+    <div className="flex flex-wrap justify-center items-center gap-8">
       <TimeRangeFilter
         value={[value.minDurationS ?? MIN_GAME_DURATION_S, value.maxDurationS ?? MAX_GAME_DURATION_S]}
         min={MIN_GAME_DURATION_S}
