@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { Bot, RotateCcw, Sparkles } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { ChatError } from "~/components/chat/ChatError";
@@ -7,7 +7,6 @@ import { ChatMessageList } from "~/components/chat/ChatMessageList";
 import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
 import { PatronCTA } from "~/components/PatronCTA";
 import { Button } from "~/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { useChatStream } from "~/hooks/useChatStream";
 import { useRateLimit } from "~/hooks/useRateLimit";
 
@@ -72,7 +71,11 @@ export default function ChatPage() {
     <div className="flex flex-col h-[85vh] w-full">
       {/* Chat header with New Conversation button */}
       {isVerified && hasMessages && (
-        <div className="border-b px-4 py-2 flex justify-end gap-2">
+        <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bot className="size-4 text-primary" />
+            <span className="text-sm font-medium">Deadlock AI</span>
+          </div>
           <Button variant="outline" size="sm" onClick={handleNewConversation} disabled={conversation.isStreaming}>
             <RotateCcw className="h-4 w-4 mr-2" />
             New Conversation
@@ -90,16 +93,21 @@ export default function ChatPage() {
         ) : !hasMessages ? (
           // Empty state - Welcome message
           <div className="flex-1 flex items-center justify-center p-4">
-            <div className="max-w-lg w-full space-y-4">
-              <Card>
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Welcome to Deadlock AI Assistant</CardTitle>
-                  <CardDescription className="text-base mt-2">
-                    Ask me anything about Deadlock - hero builds, item recommendations, game mechanics, match
+            <div className="max-w-lg w-full space-y-6">
+              <div className="text-center space-y-3">
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-center size-14 rounded-2xl bg-primary/10 border border-primary/20">
+                    <Sparkles className="size-7 text-primary" />
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Deadlock AI Assistant</h2>
+                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                    Ask me anything about Deadlock — hero builds, item recommendations, game mechanics, match
                     statistics, and more.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+                  </p>
+                </div>
+              </div>
               <PatronCTA message="Support the project and get your match data updated more frequently with prioritized fetching." />
             </div>
           </div>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useSearchParams } from "react-router";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import CommandBuilder from "~/components/streamkit/command/CommandBuilder";
 import WidgetBuilder from "~/components/streamkit/widget-builder";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -103,7 +104,7 @@ export default function StreamKit() {
           {steamAccountLoading ? (
             <Alert>
               <AlertDescription className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-primary" />
+                <LoadingLogo className="h-4 w-4" />
                 Fetching Steam account...
               </AlertDescription>
             </Alert>

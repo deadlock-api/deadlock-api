@@ -12,14 +12,14 @@ export const DEFAULT_LABELS = ["Rank", "Place", "Daily W-L", "K/D", "Hours Playe
 
 export const THEME_STYLES = {
   default: {
-    container: "bg-[#1A1B1E]",
+    container: "bg-[#0a0a0a]",
     header: "text-white/90",
-    stat: "bg-[#25262B] hover:bg-[#2C2E33]",
+    stat: "bg-[#111111] hover:bg-[#1a1a1a]",
   },
   dark: {
-    container: "bg-[#1A1B1E]",
+    container: "bg-[#0a0a0a]",
     header: "text-white/90",
-    stat: "bg-[#25262B] hover:bg-[#2C2E33]",
+    stat: "bg-[#111111] hover:bg-[#1a1a1a]",
   },
   light: {
     container: "bg-white",

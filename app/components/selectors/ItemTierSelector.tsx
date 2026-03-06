@@ -26,7 +26,9 @@ export default function ItemTierSelector({
             key={tier}
             type="button"
             className={`px-4 py-2 rounded ${
-              selectedItemTiers?.includes(tier) ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-800"
+              selectedItemTiers?.includes(tier)
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground"
             }`}
             onClick={() => handleToggle(tier)}
           >

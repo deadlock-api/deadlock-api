@@ -1,3 +1,5 @@
+import { LoadingLogo } from "~/components/LoadingLogo";
+
 interface CommandPreviewProps {
   preview: string | null;
   previewError: string | null;
@@ -11,7 +13,7 @@ export function CommandPreview({ preview, previewError, loading }: CommandPrevie
       <div className="mt-1 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
         {loading ? (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-primary" />
+            <LoadingLogo className="h-4 w-4" />
             <span>Loading preview...</span>
           </div>
         ) : previewError ? (

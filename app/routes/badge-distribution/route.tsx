@@ -2,7 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/api";
 import { useState } from "react";
 import { Card, CardContent } from "~/components/ui/card";
-import { Spinner } from "~/components/ui/spinner";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
@@ -50,7 +50,10 @@ export default function BadgeDistribution() {
   return (
     <div className="space-y-8">
       <section className="space-y-4 max-h-xl">
-        <h1 className="text-center text-4xl">Match Rank Distribution</h1>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
+          <p className="text-sm text-muted-foreground mt-1">Player rank distribution across all badges</p>
+        </div>
         <Card>
           <CardContent className="p-4">
             <BadgeDistributionFilter value={filter} onChange={setFilter} />
@@ -58,12 +61,11 @@ export default function BadgeDistribution() {
         </Card>
         <div className="h-200 flex justify-center items-center">
           {isPending ? (
-            <div className="flex items-center justify-center gap-2 py-8">
-              <Spinner className="size-6" />
-              <span className="text-sm text-muted-foreground">Loading rank distribution...</span>
+            <div className="flex items-center justify-center py-8">
+              <LoadingLogo className="w-12 h-12" />
             </div>
           ) : isError ? (
-            <div className="text-center text-sm text-red-600 py-8">
+            <div className="text-center text-sm text-destructive py-8">
               Failed to load rank distribution: {error?.message}
             </div>
           ) : badgeDistributionQuery.data ? (
