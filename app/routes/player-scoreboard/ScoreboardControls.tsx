@@ -83,6 +83,7 @@ export function ScoreboardControls({
             className="h-8 w-16 text-center"
           />
         </span>
+        of {Math.max(1, Math.ceil(totalEntries / itemsPerPage))}
       </span>
       <div className="flex items-center space-x-2">
         <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={currentPage === 0}>
