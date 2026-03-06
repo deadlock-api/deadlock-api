@@ -110,7 +110,7 @@ export default function AbilityOrderNode({
             <div
               data-ability-card
               className={cn(
-                "border rounded-md p-1.5 min-w-[120px] max-w-[180px] border-l-4 transition-all cursor-pointer",
+                "border rounded-md p-1.5 min-w-[120px] max-w-[180px] transition-all cursor-pointer",
                 slotColor,
                 slotBg,
                 isFocused ? "border-primary ring-1 ring-primary/50" : "border-border hover:border-muted-foreground",
