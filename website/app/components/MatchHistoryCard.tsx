@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import BadgeImage from "~/components/BadgeImage";
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { api } from "~/lib/api";
 import { cn } from "~/lib/utils";
 
@@ -16,6 +17,13 @@ export interface FullBuildItem {
   itemId: number;
   gameTimeS: number;
   sold: boolean;
+  imbuedAbilityNumber?: number;
+}
+
+export interface BuildData {
+  items: FullBuildItem[];
+  abilityBuildOrder?: number[];
+  abilityUpgradeSequence?: number[];
 }
 
 export interface MatchHistoryCardProps {
@@ -32,7 +40,7 @@ export interface MatchHistoryCardProps {
   killParticipation?: number;
   headshotPercent?: number;
   itemIds: number[];
-  fullBuildItems?: FullBuildItem[];
+  buildData?: BuildData;
   averageBadge?: number;
   ranks?: RankV2[];
   placement?: string;
@@ -56,6 +64,7 @@ function computeKDA(kills: number, deaths: number, assists: number): string {
 
 const EARLY_MAX_S = 10 * 60; // 0–10 min
 const MID_MAX_S = 20 * 60; // 10–20 min
+const ABILITY_SLOTS = [1, 2, 3, 4] as const;
 
 function FullBuildPhase({ label, items }: { label: string; items: FullBuildItem[] }) {
   return (
@@ -63,16 +72,51 @@ function FullBuildPhase({ label, items }: { label: string; items: FullBuildItem[
       <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide">{label}</span>
       <div className="flex flex-wrap gap-1.5">
         {items.length > 0 ? (
-          items.map((item, i) => (
-            <div key={`${item.itemId}-${i}`} className="relative">
+          items.map((item) => (
+            <div key={`${item.itemId}-${item.gameTimeS}`} className="relative">
               <ItemImage itemId={item.itemId} className={cn("size-6 rounded-sm", item.sold && "opacity-50")} />
               {item.sold && <div className="absolute inset-0 rounded-sm bg-red-500/40 pointer-events-none" />}
+              {item.imbuedAbilityNumber != null && (
+                <div className="pointer-events-none absolute right-0 bottom-0 z-10 flex size-3.5 items-center justify-center rounded-tl-sm rounded-br-sm bg-black/85 text-[9px] font-bold leading-none text-white">
+                  {item.imbuedAbilityNumber}
+                </div>
+              )}
             </div>
           ))
         ) : (
           <span className="text-[10px] text-muted-foreground/40 italic">—</span>
         )}
       </div>
+    </div>
+  );
+}
+
+function AbilityBuildTooltip({ abilityUpgradeSequence }: { abilityUpgradeSequence: number[] }) {
+  const seenCounts = new Map<number, number>();
+  const sequenceColumns = abilityUpgradeSequence.map((slot) => {
+    const count = (seenCounts.get(slot) ?? 0) + 1;
+    seenCounts.set(slot, count);
+    return { slot, key: `${slot}-${count}` };
+  });
+
+  return (
+    <div className="space-y-1.5 rounded-md border bg-popover px-3 py-2 text-popover-foreground shadow-md">
+      {ABILITY_SLOTS.map((abilityNumber) => (
+        <div key={abilityNumber} className="flex items-center gap-2">
+          <span className="w-2 text-[10px] font-semibold text-muted-foreground">{abilityNumber}</span>
+          <div className="flex gap-1">
+            {sequenceColumns.map(({ slot, key }) => (
+              <span
+                key={`${abilityNumber}-${key}`}
+                className={cn(
+                  "size-2 rounded-full border",
+                  slot === abilityNumber ? "border-blue-400 bg-blue-500" : "border-muted-foreground/35 bg-transparent",
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -91,7 +135,7 @@ export default function MatchHistoryCard({
   killParticipation,
   headshotPercent,
   itemIds,
-  fullBuildItems,
+  buildData,
   averageBadge,
   ranks,
   placement,
@@ -110,14 +154,15 @@ export default function MatchHistoryCard({
   const topRow = itemIds.slice(0, 6);
   const bottomRow = itemIds.slice(6, 12);
 
-  const earlyItems = fullBuildItems?.filter((i) => i.gameTimeS < EARLY_MAX_S);
-  const midItems = fullBuildItems?.filter((i) => i.gameTimeS >= EARLY_MAX_S && i.gameTimeS < MID_MAX_S);
-  const lateItems = fullBuildItems?.filter((i) => i.gameTimeS >= MID_MAX_S);
+  const earlyItems = buildData?.items.filter((i) => i.gameTimeS < EARLY_MAX_S) ?? [];
+  const midItems = buildData?.items.filter((i) => i.gameTimeS >= EARLY_MAX_S && i.gameTimeS < MID_MAX_S) ?? [];
+  const lateItems = buildData?.items.filter((i) => i.gameTimeS >= MID_MAX_S) ?? [];
 
   const { data: steamProfile } = useQuery({
     queryKey: ["steam-profile", accountId],
     queryFn: async () => {
-      const res = await api.steam_api.steam({ accountIds: [accountId!] });
+      if (accountId == null) return null;
+      const res = await api.steam_api.steam({ accountIds: [accountId] });
       return res.data[0] ?? null;
     },
     enabled: accountId != null,
@@ -132,7 +177,7 @@ export default function MatchHistoryCard({
       )}
     >
       {/* Main Content Area */}
-      {fullBuildItems ? (
+      {buildData ? (
         <div className="flex flex-1 items-start gap-4 p-2 pl-3">
           {/* Match Info + Player Stats */}
           <div className="flex shrink-0 flex-col">
@@ -168,9 +213,34 @@ export default function MatchHistoryCard({
 
           {/* Items */}
           <div className="flex shrink-0 flex-col gap-1.5">
-            <FullBuildPhase label="Early" items={earlyItems!} />
-            <FullBuildPhase label="Mid" items={midItems!} />
-            <FullBuildPhase label="Late" items={lateItems!} />
+            <FullBuildPhase label="Early" items={earlyItems} />
+            <FullBuildPhase label="Mid" items={midItems} />
+            <FullBuildPhase label="Late" items={lateItems} />
+            {buildData.abilityBuildOrder && buildData.abilityBuildOrder.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-fit text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70"
+                  >
+                    AP:{" "}
+                    <span className="text-foreground">
+                      {buildData.abilityBuildOrder.map((slot, i) => (
+                        <span key={i}>
+                          {i > 0 && <span className="text-muted-foreground"> › </span>}
+                          {slot}
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                {buildData.abilityUpgradeSequence && buildData.abilityUpgradeSequence.length > 0 && (
+                  <TooltipContent side="top" className="border bg-transparent p-0 shadow-none">
+                    <AbilityBuildTooltip abilityUpgradeSequence={buildData.abilityUpgradeSequence} />
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            )}
           </div>
         </div>
       ) : (

@@ -1,21 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import type { AbilityV2, HeroV2, RankV2, UpgradeV2 } from "assets_deadlock_api_client/api";
 import { formatDistanceToNow } from "date-fns";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
-import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
+import MatchHistoryCard, { type BuildData, type FullBuildItem } from "~/components/MatchHistoryCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { assetsApi } from "~/lib/assets-api";
 import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
-import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { cn } from "~/lib/utils";
+import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { Button } from "../ui/button";
 
 interface BulkMatchMetadata {
@@ -39,8 +39,85 @@ interface BulkMatchMetadata {
       upgrade_id: number;
       game_time_s: number;
       sold_time_s: number;
+      imbued_ability_id: number;
     }[];
   }[];
+}
+
+const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
+
+function getHeroAbilityMetadata(heroData?: HeroV2, abilityItems?: AbilityV2[]) {
+  if (!heroData || !abilityItems) return null;
+
+  const abilityEntries = HERO_ABILITY_SLOTS.map((slot, index) => {
+    const className = heroData.items?.[slot];
+    if (!className) return null;
+
+    const ability = abilityItems.find((item) => item.class_name === className);
+    if (!ability) return null;
+
+    return {
+      abilityId: ability.id,
+      slot: index + 1,
+      maxLevel: (ability.upgrades?.length ?? 0) + 1,
+    };
+  }).filter((entry): entry is { abilityId: number; slot: number; maxLevel: number } => entry != null);
+
+  if (abilityEntries.length === 0) return null;
+
+  return {
+    abilityIdToSlot: new Map(abilityEntries.map(({ abilityId, slot }) => [abilityId, slot])),
+    abilityIdToMaxLevel: new Map(abilityEntries.map(({ abilityId, maxLevel }) => [abilityId, maxLevel])),
+  };
+}
+
+function getAbilityBuildData(
+  items: BulkMatchMetadata["players"][number]["items"],
+  abilityIdToSlot?: Map<number, number>,
+  abilityIdToMaxLevel?: Map<number, number>,
+) {
+  if (!abilityIdToSlot || !abilityIdToMaxLevel) return undefined;
+
+  const abilities = Array.from(abilityIdToSlot.entries()).map(([abilityId, slot]) => ({
+    abilityId,
+    slot,
+    level: 0,
+    maxLevel: abilityIdToMaxLevel.get(abilityId) ?? 1,
+    maxedAt: undefined as number | undefined,
+    lastUpgradeAt: undefined as number | undefined,
+  }));
+
+  const abilitiesById = new Map(abilities.map((ability) => [ability.abilityId, ability]));
+  const abilityUpgradeSequence: number[] = [];
+
+  for (const item of [...items].sort((a, b) => a.game_time_s - b.game_time_s)) {
+    const ability = abilitiesById.get(item.item_id);
+    if (!ability || ability.level >= ability.maxLevel) continue;
+
+    ability.level += 1;
+    ability.lastUpgradeAt = item.game_time_s;
+    abilityUpgradeSequence.push(ability.slot);
+
+    if (ability.level === ability.maxLevel && ability.maxedAt == null) {
+      ability.maxedAt = item.game_time_s;
+    }
+  }
+
+  const abilityBuildOrder = [...abilities]
+    .sort((a, b) => {
+      if (a.maxedAt != null && b.maxedAt != null) {
+        return a.maxedAt - b.maxedAt || a.slot - b.slot;
+      }
+      if (a.maxedAt != null) return -1;
+      if (b.maxedAt != null) return 1;
+      return b.level - a.level || (b.lastUpgradeAt ?? -1) - (a.lastUpgradeAt ?? -1) || a.slot - b.slot;
+    })
+    .map((ability) => ability.slot);
+
+  return {
+    abilityBuildOrder,
+    abilityUpgradeSequence,
+  };
 }
 
 function timeAgo(dateStr: string): string {
@@ -91,6 +168,24 @@ export default function ItemCombsExplore({
     queryFn: async () => {
       const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
       return response.data as UpgradeV2[];
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const { data: heroesData } = useQuery({
+    queryKey: ["assets-heroes"],
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const { data: abilityItems } = useQuery({
+    queryKey: ["assets-items-abilities"],
+    queryFn: async () => {
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
+      return response.data as AbilityV2[];
     },
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -186,11 +281,19 @@ export default function ItemCombsExplore({
 
   const topBuildsCards = useMemo(() => {
     if (!topBuildsData || !hero) return [];
+    const heroData = heroesData?.find((currentHero) => currentHero.id === hero);
+    const heroAbilityMetadata = getHeroAbilityMetadata(heroData, abilityItems);
+
     return topBuildsData.flatMap((match) => {
       const player = match.players.find((p) => p.hero_id === hero);
       if (!player) return [];
       const shopItems = player.items.filter((i) => i.upgrade_id === 1);
       const boughtItemIds = new Set(shopItems.map((i) => i.item_id));
+      const abilityBuildData = getAbilityBuildData(
+        player.items,
+        heroAbilityMetadata?.abilityIdToSlot,
+        heroAbilityMetadata?.abilityIdToMaxLevel,
+      );
 
       const fullBuildItems: FullBuildItem[] = shopItems
         .sort((a, b) => a.game_time_s - b.game_time_s)
@@ -212,6 +315,7 @@ export default function ItemCombsExplore({
             itemId: i.item_id,
             gameTimeS: i.game_time_s,
             sold,
+            imbuedAbilityNumber: heroAbilityMetadata?.abilityIdToSlot.get(i.imbued_ability_id),
           };
         });
       const isWin = player.team === match.winning_team;
@@ -232,12 +336,16 @@ export default function ItemCombsExplore({
           deaths: player.deaths,
           assists: player.assists,
           itemIds: [] as number[],
-          fullBuildItems,
+          buildData: {
+            items: fullBuildItems,
+            abilityBuildOrder: abilityBuildData?.abilityBuildOrder,
+            abilityUpgradeSequence: abilityBuildData?.abilityUpgradeSequence,
+          },
           averageBadge,
         },
       ];
     });
-  }, [topBuildsData, hero, upgradeChainLookup]);
+  }, [topBuildsData, hero, upgradeChainLookup, heroesData, abilityItems]);
 
   const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
