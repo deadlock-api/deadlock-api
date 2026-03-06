@@ -68,7 +68,7 @@ export default function TimeWindowSelector({ minTime, maxTime, onTimeChange }: T
           <Button
             variant="outline"
             className={cn(
-              "w-[180px] justify-start text-left font-normal h-10",
+              "w-[180px] justify-start text-left font-normal h-9",
               !minTime && !maxTime && "text-muted-foreground",
             )}
           >

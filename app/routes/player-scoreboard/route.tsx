@@ -95,7 +95,7 @@ export default function PlayerScoreboard() {
       <section className="space-y-4">
         <h2 className="text-3xl font-bold text-center mb-2">Player Scoreboard</h2>
 
-        <Card className="mb-8 w-fit mx-auto">
+        <Card className="mb-8">
           <CardContent>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap justify-center gap-2">

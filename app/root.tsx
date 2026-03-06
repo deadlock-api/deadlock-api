@@ -55,7 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="dark overflow-x-hidden">
+      <body className="bg-center bg-no-repeat bg-cover bg-fixed bg-[url('/background.svg')] dark overflow-x-hidden">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -93,7 +93,7 @@ export default function App() {
               <AppSidebar />
               <main className="min-w-0 flex-1 md:ml-64">
                 <MobileMenuButton />
-                <div className="min-h-screen w-full min-w-0 p-4 pt-16 md:p-6">
+                <div className="w-full min-w-0 p-4 pt-16 md:p-8 2xl:mx-auto 2xl:my-4 2xl:w-[80%] bg-gray-900 rounded-lg shadow-lg">
                   <Outlet />
                 </div>
               </main>

@@ -40,59 +40,55 @@ export default function Items(
   return (
     <>
       <h2 className="text-3xl font-bold text-center mb-4">Item Stats</h2>
-      <Card className="mb-4 w-fit mx-auto">
+      <Card className="mb-4">
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start">
-            <div className="flex flex-wrap sm:flex-nowrap gap-2 justify-center md:justify-start">
-              <HeroSelector
-                onHeroSelected={(x) => setHero(x ?? null)}
-                selectedHero={hero ?? undefined}
-                allowSelectNull={true}
-              />
-              <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
-                <div className="flex justify-center md:justify-start items-center h-8">
-                  <span className="text-sm font-semibold text-foreground">Min Matches</span>
-                </div>
-                <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
-                  <button
-                    type="button"
-                    aria-label="Decrease min matches"
-                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches(Math.max(0, minMatches - 10))}
-                  >
-                    -
-                  </button>
-                  <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>
-                    {minMatches}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Increase min matches"
-                    className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                    onClick={() => setMinMatches(minMatches + 10)}
-                  >
-                    +
-                  </button>
-                </div>
+          <div className="flex flex-wrap items-end gap-2 justify-center">
+            <HeroSelector
+              onHeroSelected={(x) => setHero(x ?? null)}
+              selectedHero={hero ?? undefined}
+              allowSelectNull={true}
+            />
+            <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
+              <div className="flex justify-center md:justify-start items-center h-8">
+                <span className="text-sm font-semibold text-foreground">Min Matches</span>
               </div>
-              <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-              <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
-              <TimeWindowSelector
-                minTime={minBoughtAtS ?? undefined}
-                maxTime={maxBoughtAtS ?? undefined}
-                onTimeChange={(min, max) => {
-                  setMinBoughtAtS(min ?? null);
-                  setMaxBoughtAtS(max ?? null);
-                }}
-              />
+              <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
+                <button
+                  type="button"
+                  aria-label="Decrease min matches"
+                  className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
+                  onClick={() => setMinMatches(Math.max(0, minMatches - 10))}
+                >
+                  -
+                </button>
+                <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>
+                  {minMatches}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Increase min matches"
+                  className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
+                  onClick={() => setMinMatches(minMatches + 10)}
+                >
+                  +
+                </button>
+              </div>
             </div>
-            <div className="flex justify-center md:justify-start">
-              <PatchOrDatePicker
-                patchDates={PATCHES}
-                value={{ startDate, endDate }}
-                onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
-              />
-            </div>
+            <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
+            <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+            <TimeWindowSelector
+              minTime={minBoughtAtS ?? undefined}
+              maxTime={maxBoughtAtS ?? undefined}
+              onTimeChange={(min, max) => {
+                setMinBoughtAtS(min ?? null);
+                setMaxBoughtAtS(max ?? null);
+              }}
+            />
+            <PatchOrDatePicker
+              patchDates={PATCHES}
+              value={{ startDate, endDate }}
+              onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+            />
           </div>
         </CardContent>
       </Card>
