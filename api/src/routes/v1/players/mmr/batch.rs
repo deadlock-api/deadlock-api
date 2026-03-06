@@ -74,7 +74,8 @@ fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
         match_id,
         start_time,
         clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66) AS player_score,
-        toUInt32(if(player_score = 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
+        toUInt32(round(player_score)) AS player_score_rounded,
+        toUInt32(if(player_score_rounded = 0, 0, 10 * intDiv(player_score_rounded - 1, 6) + 11 + modulo(player_score_rounded - 1, 6))) AS rank,
         toUInt32(floor(rank / 10)) AS division,
         toUInt32(rank % 10) AS division_tier
     FROM mmr_data
@@ -127,7 +128,8 @@ fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u
         match_id,
         start_time,
         clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66) AS player_score,
-        toUInt32(if(player_score = 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
+        toUInt32(round(player_score)) AS player_score_rounded,
+        toUInt32(if(player_score_rounded = 0, 0, 10 * intDiv(player_score_rounded - 1, 6) + 11 + modulo(player_score_rounded - 1, 6))) AS rank,
         toUInt32(floor(rank / 10)) AS division,
         toUInt32(rank % 10) AS division_tier
     FROM mmr_data
