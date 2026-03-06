@@ -20,7 +20,10 @@ import { ALL_SORT_BY_VALUES, getSortByLabel } from "./sort-options";
 export const meta: MetaFunction = () => {
   return [
     { title: "Player Scoreboard - Deadlock API" },
-    { name: "description", content: "Top player performances ranked by various stats in Deadlock" },
+    {
+      name: "description",
+      content: "Top player performances ranked by various stats in Deadlock",
+    },
   ];
 };
 
@@ -92,9 +95,12 @@ export default function PlayerScoreboard() {
   return (
     <div className="space-y-8">
       <section className="space-y-4">
-        <h2 className="text-3xl font-bold text-center mb-2">Player Scoreboard</h2>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Player Scoreboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Top player performances ranked by various stats</p>
+        </div>
 
-        <Card className="mb-8">
+        <Card className="w-fit mx-auto">
           <CardContent>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap justify-center gap-2">
@@ -136,10 +142,10 @@ export default function PlayerScoreboard() {
           </CardContent>
         </Card>
 
-        <div className="w-full max-w-[960px] mx-auto">
+        <div>
           {scoreboardQuery.isPending ? (
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead className="w-[5ch] text-right">#</TableHead>
                   <TableHead>Player</TableHead>
@@ -172,7 +178,7 @@ export default function PlayerScoreboard() {
               </TableBody>
             </Table>
           ) : scoreboardQuery.isError ? (
-            <div className="text-center text-sm text-red-600 py-8">
+            <div className="text-center text-sm text-destructive py-8">
               Failed to load scoreboard: {scoreboardQuery.error?.message}
             </div>
           ) : (

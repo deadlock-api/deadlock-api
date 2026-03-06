@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
 import { Label } from "~/components/ui/label";
@@ -342,7 +343,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-120">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+              <LoadingLogo className="w-12 h-12" />
             </div>
           ) : !hasValidData ? (
             <div className="flex items-center justify-center h-120">
@@ -383,7 +384,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                             </div>
                             <div className="grid gap-1.5">
                               <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gray-500" />
+                                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
                                 <span className="text-muted-foreground">
                                   {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
                                 </span>
@@ -393,7 +394,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                               </div>
                               {useWilsonInterval && (
                                 <div className="flex items-center gap-2">
-                                  <div className="h-2 w-2 rounded-full bg-gray-300" />
+                                  <div className="h-2 w-2 rounded-full bg-muted-foreground" />
                                   <span className="text-muted-foreground">True Win Rate:</span>
                                   <span className="font-mono font-medium">
                                     {d.trueWinrate === null ? "-" : d.trueWinrate?.toFixed(1)}%
@@ -401,7 +402,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-gray-400" />
+                                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
                                 <span className="text-muted-foreground">Matches:</span>
                                 <span className="font-mono font-medium">{d.matches}</span>
                               </div>

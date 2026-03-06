@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
 import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 
@@ -341,120 +343,103 @@ export default function HeroMatchupStatsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      <div className="flex items-center justify-center w-full h-full py-16">
+        <LoadingLogo className="w-16 h-16" />
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-separate border-spacing-y-1 min-w-[800px]">
-        {!hideHeader && (
-          <thead>
-            <tr className="bg-gray-800 text-center">
-              <th className="p-2">#</th>
-              <th className="p-2 text-left">Hero</th>
-              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
-                Best Combination
-              </th>
-              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
-                Worst Combination
-              </th>
-              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
-                Best Against
-              </th>
-              <th className="p-2 text-left" title="Win Rate Increase/Decrease">
-                Worst Against
-              </th>
-            </tr>
-          </thead>
-        )}
-        <tbody>
-          {heroIds?.map((heroId, index) => (
-            <tr
-              key={heroId}
-              className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
+    <Table>
+      {!hideHeader && (
+        <TableHeader className="bg-muted">
+          <TableRow>
+            <TableHead>#</TableHead>
+            <TableHead>Hero</TableHead>
+            <TableHead title="Win Rate Increase/Decrease">Best Combination</TableHead>
+            <TableHead title="Win Rate Increase/Decrease">Worst Combination</TableHead>
+            <TableHead title="Win Rate Increase/Decrease">Best Against</TableHead>
+            <TableHead title="Win Rate Increase/Decrease">Worst Against</TableHead>
+          </TableRow>
+        </TableHeader>
+      )}
+      <TableBody>
+        {heroIds?.map((heroId, index) => (
+          <TableRow key={heroId}>
+            <TableCell className="font-semibold">{index + 1}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <HeroImage heroId={heroId} />
+                <HeroName heroId={heroId} />
+              </div>
+            </TableCell>
+            <TableCell
+              title={`${heroBestSynergies[heroId]?.wins.toLocaleString()} wins / ${heroBestSynergies[heroId]?.matches_played.toLocaleString()} matches`}
             >
-              <td className="p-2 align-middle font-semibold">{index + 1}</td>
-              <td className="p-2 align-middle">
-                <div className="flex items-center gap-2">
-                  <HeroImage heroId={heroId} />
-                  <HeroName heroId={heroId} />
+              <div className="flex flex-col gap-2">
+                <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
+                  <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
+                  <ProgressBarWithLabel
+                    min={heroMinBestSynergyWinrate}
+                    max={heroMaxBestSynergyWinrate}
+                    value={heroBestSynergies[heroId]?.rel_winrate}
+                    color={"#fa4454"}
+                    label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                  />
                 </div>
-              </td>
-              <td
-                className="p-2 align-middle"
-                title={`${heroBestSynergies[heroId]?.wins.toLocaleString()} wins / ${heroBestSynergies[heroId]?.matches_played.toLocaleString()} matches`}
-              >
-                <div className="flex flex-col gap-2">
-                  <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
-                    <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
-                    <ProgressBarWithLabel
-                      min={heroMinBestSynergyWinrate}
-                      max={heroMaxBestSynergyWinrate}
-                      value={heroBestSynergies[heroId]?.rel_winrate}
-                      color={"#ff00ff"}
-                      label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    />
-                  </div>
+              </div>
+            </TableCell>
+            <TableCell
+              title={`${heroWorstSynergies[heroId]?.wins.toLocaleString()} wins / ${heroWorstSynergies[heroId]?.matches_played.toLocaleString()} matches`}
+            >
+              <div className="flex flex-col gap-2">
+                <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
+                  <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
+                  <ProgressBarWithLabel
+                    min={heroMinWorstSynergyWinrate}
+                    max={heroMaxWorstSynergyWinrate}
+                    value={heroWorstSynergies[heroId]?.rel_winrate}
+                    color={"#fa4454"}
+                    label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                  />
                 </div>
-              </td>
-              <td
-                className="p-2 align-middle"
-                title={`${heroWorstSynergies[heroId]?.wins.toLocaleString()} wins / ${heroWorstSynergies[heroId]?.matches_played.toLocaleString()} matches`}
-              >
-                <div className="flex flex-col gap-2">
-                  <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
-                    <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
-                    <ProgressBarWithLabel
-                      min={heroMinWorstSynergyWinrate}
-                      max={heroMaxWorstSynergyWinrate}
-                      value={heroWorstSynergies[heroId]?.rel_winrate}
-                      color={"#ff00ff"}
-                      label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    />
-                  </div>
+              </div>
+            </TableCell>
+            <TableCell
+              title={`${heroBestAgainst[heroId]?.wins.toLocaleString()} wins / ${heroBestAgainst[heroId]?.matches_played.toLocaleString()} matches`}
+            >
+              <div className="flex flex-col gap-2">
+                <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
+                  <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
+                  <ProgressBarWithLabel
+                    min={heroMinBestAgainstWinrate}
+                    max={heroMaxBestAgainstWinrate}
+                    value={heroBestAgainst[heroId]?.rel_winrate}
+                    color={"#22d3ee"}
+                    label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${((Math.round(heroBestAgainst[heroId]?.rel_winrate * 100) / 100) * 100).toFixed(2)}% `}
+                  />
                 </div>
-              </td>
-              <td
-                className="p-2 align-middle"
-                title={`${heroBestAgainst[heroId]?.wins.toLocaleString()} wins / ${heroBestAgainst[heroId]?.matches_played.toLocaleString()} matches`}
-              >
-                <div className="flex flex-col gap-2">
-                  <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
-                    <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
-                    <ProgressBarWithLabel
-                      min={heroMinBestAgainstWinrate}
-                      max={heroMaxBestAgainstWinrate}
-                      value={heroBestAgainst[heroId]?.rel_winrate}
-                      color={"#00ffff"}
-                      label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${((Math.round(heroBestAgainst[heroId]?.rel_winrate * 100) / 100) * 100).toFixed(2)}% `}
-                    />
-                  </div>
+              </div>
+            </TableCell>
+            <TableCell
+              title={`${heroWorstAgainst[heroId]?.wins.toLocaleString()} wins / ${heroWorstAgainst[heroId]?.matches_played.toLocaleString()} matches`}
+            >
+              <div className="flex flex-col gap-2">
+                <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
+                  <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
+                  <ProgressBarWithLabel
+                    min={heroMinWorstAgainstWinrate}
+                    max={heroMaxWorstAgainstWinrate}
+                    value={heroWorstAgainst[heroId]?.rel_winrate}
+                    color={"#22d3ee"}
+                    label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                  />
                 </div>
-              </td>
-              <td
-                className="p-2 align-middle"
-                title={`${heroWorstAgainst[heroId]?.wins.toLocaleString()} wins / ${heroWorstAgainst[heroId]?.matches_played.toLocaleString()} matches`}
-              >
-                <div className="flex flex-col gap-2">
-                  <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
-                    <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
-                    <ProgressBarWithLabel
-                      min={heroMinWorstAgainstWinrate}
-                      max={heroMaxWorstAgainstWinrate}
-                      value={heroWorstAgainst[heroId]?.rel_winrate}
-                      color={"#00ffff"}
-                      label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    />
-                  </div>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

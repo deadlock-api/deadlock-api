@@ -4,6 +4,7 @@ import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
@@ -194,7 +195,7 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
       case 5:
         return "bg-emerald-500/30 border-emerald-500 text-emerald-400";
       default:
-        return "bg-gray-500/30 border-gray-500 text-gray-400";
+        return "bg-muted/30 border-border text-muted-foreground";
     }
   };
 
@@ -240,9 +241,7 @@ function ItemStatsTableRow({
   return (
     <>
       <TableRow
-        className={`bg-gray-900 border border-gray-800 hover:bg-gray-800 transition-all duration-200 cursor-pointer  ${
-          shouldDim ? "brightness-60" : ""
-        }`}
+        className={`cursor-pointer ${shouldDim ? "brightness-60" : ""}`}
         onClick={() => customDropdownContent && setOpen(!open)}
       >
         {customDropdownContent && (
@@ -279,7 +278,7 @@ function ItemStatsTableRow({
               min={minWinRate}
               max={maxWinRate}
               value={row.wins / row.matches}
-              color={"#ff00ff"}
+              color={"#fa4454"}
               label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
             />
           </TableCell>
@@ -290,7 +289,7 @@ function ItemStatsTableRow({
               min={minUsage}
               max={maxUsage}
               value={row.matches}
-              color={"#00ffff"}
+              color={"#22d3ee"}
               label={row.matches.toLocaleString()}
             />
           </TableCell>
@@ -308,7 +307,7 @@ function ItemStatsTableRow({
               <Button
                 variant="secondary"
                 disabled={includedItemIds.includes(row.item_id)}
-                className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-gray-500"
+                className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-muted"
                 onClick={() => onItemInclude?.(row.item_id)}
               >
                 <span className="icon-[mdi--plus]" />
@@ -316,7 +315,7 @@ function ItemStatsTableRow({
               <Button
                 variant="destructive"
                 disabled={excludedItemIds.includes(row.item_id)}
-                className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-gray-500"
+                className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-muted"
                 onClick={() => onItemExclude?.(row.item_id)}
               >
                 <span className="icon-[mdi--minus] text-lg" />
@@ -328,7 +327,7 @@ function ItemStatsTableRow({
       {customDropdownContent && open && (
         <TableRow>
           <TableCell colSpan={totalColumns} className="p-0 border-0">
-            <div className="p-4 bg-gray-800 border-t border-gray-700">
+            <div className="p-4 bg-muted border-t border-border">
               {customDropdownContent({
                 itemId: row.item_id,
                 rowWins: row.wins,
@@ -428,14 +427,14 @@ export function ItemStatsTableDisplay({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      <div className="flex items-center justify-center w-full h-full py-16">
+        <LoadingLogo className="w-16 h-16" />
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto w-full">
+    <div>
       <div className="flex justify-center items-center gap-6 my-4">
         {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
         {columns.includes("confidence") && (
@@ -447,9 +446,9 @@ export function ItemStatsTableDisplay({
           </div>
         )}
       </div>
-      <Table className="w-full min-w-fit table-auto">
+      <Table>
         {!hideHeader && (
-          <TableHeader className="bg-gray-800">
+          <TableHeader className="bg-muted">
             <TableRow>
               {customDropdownContent && <TableHead className="text-center w-4" />}
               {!hideIndex && <TableHead className="text-center">#</TableHead>}
@@ -457,7 +456,7 @@ export function ItemStatsTableDisplay({
               {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
               {columns.includes("winRate") && (
                 <TableHead
-                  className="text-center cursor-pointer hover:bg-gray-700 transition-colors"
+                  className="text-center cursor-pointer hover:bg-accent transition-colors"
                   onClick={() => toggleSort("winRate")}
                 >
                   <div className="flex items-center">
@@ -468,7 +467,7 @@ export function ItemStatsTableDisplay({
               )}
               {columns.includes("usage") && (
                 <TableHead
-                  className="text-center cursor-pointer hover:bg-gray-700 transition-colors"
+                  className="text-center cursor-pointer hover:bg-accent transition-colors"
                   onClick={() => toggleSort("usage")}
                 >
                   <div className="flex items-center">

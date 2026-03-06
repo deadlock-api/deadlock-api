@@ -5,6 +5,7 @@ import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import ItemName from "~/components/ItemName";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
@@ -379,15 +380,15 @@ export default function ItemCombsExplore({
 
   if (isLoadingItemAssets) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      <div className="flex items-center justify-center w-full h-full py-16">
+        <LoadingLogo className="w-16 h-16" />
       </div>
     );
   }
 
   return (
     <div>
-      <div className="grid grid-cols-2 text-center mt-2 rounded bg-gray-800 p-4 min-h-24">
+      <div className="grid grid-cols-2 text-center mt-2 rounded bg-muted p-4 min-h-24">
         <div className="border-r">
           <h2 className="text-center text-xl p-2">Included Items</h2>
           <div className="flex flex-wrap items-center justify-center p-2 gap-2">
@@ -424,7 +425,7 @@ export default function ItemCombsExplore({
         </div>
       </div>
 
-      <div className="mt-4 rounded bg-gray-800 px-4 py-2">
+      <div className="mt-4 rounded bg-muted px-4 py-2">
         <h2 className="text-center text-xl p-2">Select Items</h2>
         <Tabs value={slot} onValueChange={(i) => setSlot(i as "weapon" | "vitality" | "spirit")} className="w-full">
           <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
@@ -490,7 +491,7 @@ export default function ItemCombsExplore({
 
       <div className={cn("mt-4 gap-4", topBuildsEnabled ? "flex" : "")}>
         {/* Display the filtered data using ItemStatsTableDisplay */}
-        <div className="flex-1 min-w-0 rounded bg-gray-800 p-4">
+        <div className="flex-1 min-w-0 rounded bg-muted p-4">
           <h2 className="text-center text-xl p-2">Items Stats</h2>
           <ItemStatsTableDisplay
             data={displayData}
@@ -518,7 +519,7 @@ export default function ItemCombsExplore({
             <h2 className="text-center text-lg mb-2">Top Builds</h2>
             {isLoadingTopBuilds ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+                <LoadingLogo className="w-8 h-8" />
               </div>
             ) : topBuildsCards.length > 0 ? (
               <div className="flex flex-col gap-2">

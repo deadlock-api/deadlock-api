@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { ExtraArguments } from "~/components/streamkit/widgets/ExtraArguments";
 import { RawWidget } from "~/components/streamkit/widgets/raw";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
-import { CopyButton } from "~/components/ui/copy-button";
+import { CopyButton } from "~/components/copy-button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -295,7 +296,7 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
               <div className="space-y-3">
                 {!variables ? (
                   <div className="flex justify-center py-4">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-primary" />
+                    <LoadingLogo className="h-6 w-6" />
                   </div>
                 ) : (
                   <>

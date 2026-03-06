@@ -1,3 +1,4 @@
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import {
@@ -19,13 +20,19 @@ import { cleanupCallbackUrl, parseSteamCallback, redirectToSteamAuth } from "~/l
 export const meta: MetaFunction = () => {
   return [
     { title: "Data Privacy - Deadlock API" },
-    { name: "description", content: "Manage your data privacy settings for Deadlock API" },
+    {
+      name: "description",
+      content: "Manage your data privacy settings for Deadlock API",
+    },
   ];
 };
 
 export default function DataPrivacy() {
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Handle Steam authentication callback
   const handleSteamCallback = async () => {
@@ -99,19 +106,21 @@ export default function DataPrivacy() {
   };
 
   return (
-    <div className="w-full space-y-8">
+    <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-4">Data Privacy</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Manage your data privacy settings and control how your information is used by the Deadlock API.
+        <h1 className="text-3xl font-bold tracking-tight">Data Privacy</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage your data privacy settings and control how your information is used
         </p>
       </div>
 
       {/* Status Message */}
       {message && (
-        <Card className={`border-2 ${message.type === "success" ? "border-green-500" : "border-red-500"}`}>
+        <Card className={`border ${message.type === "success" ? "border-green-500/50" : "border-destructive/50"}`}>
           <CardContent className="p-6">
-            <p className={`text-center font-medium ${message.type === "success" ? "text-green-400" : "text-red-400"}`}>
+            <p
+              className={`text-center font-medium ${message.type === "success" ? "text-green-400" : "text-destructive"}`}
+            >
               {message.text}
             </p>
           </CardContent>
@@ -181,26 +190,7 @@ export default function DataPrivacy() {
                 <Button variant="destructive" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <>
-                      <svg
-                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <Loader2 className="size-4 mr-2 animate-spin" />
                       Processing...
                     </>
                   ) : (
@@ -266,26 +256,7 @@ export default function DataPrivacy() {
             <Button onClick={handleReEnableTracking} variant="default" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
                   Processing...
                 </>
               ) : (

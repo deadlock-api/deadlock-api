@@ -224,38 +224,38 @@ export default function AbilityOrderNode({
 
           {/* Children row */}
           <div ref={childrenRowRef} className="flex items-start">
-          {displayedChildren.map((child, i) => {
-            const childPath = `${currentPath}/${child.abilityId}`;
-            const isFirst = i === 0;
-            const isLast = i === displayedChildren.length - 1;
-            return (
-              <div key={child.abilityId} className="flex flex-col items-center flex-1">
-                {/* Horizontal connector segments + vertical drop */}
-                <div className="flex self-stretch h-4">
-                  <div className={cn("flex-1 border-muted-foreground/30", !isFirst && "border-t")} />
-                  <div className="h-full border-l border-muted-foreground/30" />
-                  <div className={cn("flex-1 border-muted-foreground/30", !isLast && "border-t")} />
+            {displayedChildren.map((child, i) => {
+              const childPath = `${currentPath}/${child.abilityId}`;
+              const isFirst = i === 0;
+              const isLast = i === displayedChildren.length - 1;
+              return (
+                <div key={child.abilityId} className="flex flex-col items-center flex-1">
+                  {/* Horizontal connector segments + vertical drop */}
+                  <div className="flex self-stretch h-4">
+                    <div className={cn("flex-1 border-muted-foreground/30", !isFirst && "border-t")} />
+                    <div className="h-full border-l border-muted-foreground/30" />
+                    <div className={cn("flex-1 border-muted-foreground/30", !isLast && "border-t")} />
+                  </div>
+                  <div className="px-0.5">
+                    <AbilityOrderNode
+                      node={child}
+                      parentMatches={node.matches}
+                      abilitySlotMap={abilitySlotMap}
+                      defaultDepth={defaultDepth}
+                      expandedPaths={expandedPaths}
+                      onToggleExpand={onToggleExpand}
+                      focusedPaths={focusedPaths}
+                      onToggleFocus={onToggleFocus}
+                      currentPath={childPath}
+                      ancestorAbilityIds={childAncestorIds}
+                      totalPointsSpent={cumulativePoints}
+                      isStreetBrawl={isStreetBrawl}
+                      siblingCount={displayedChildren.length}
+                    />
+                  </div>
                 </div>
-                <div className="px-0.5">
-                  <AbilityOrderNode
-                    node={child}
-                    parentMatches={node.matches}
-                    abilitySlotMap={abilitySlotMap}
-                    defaultDepth={defaultDepth}
-                    expandedPaths={expandedPaths}
-                    onToggleExpand={onToggleExpand}
-                    focusedPaths={focusedPaths}
-                    onToggleFocus={onToggleFocus}
-                    currentPath={childPath}
-                    ancestorAbilityIds={childAncestorIds}
-                    totalPointsSpent={cumulativePoints}
-                    isStreetBrawl={isStreetBrawl}
-                    siblingCount={displayedChildren.length}
-                  />
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         </div>
       )}

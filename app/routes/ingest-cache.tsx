@@ -1,4 +1,5 @@
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Loader2, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Upload } from "lucide-react";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import type React from "react";
 import { useRef, useState } from "react";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -337,18 +338,18 @@ export default function () {
   };
 
   return (
-    <div className="w-full">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Steam Cache Ingestion</h1>
-        <p className="text-gray-600">Help improve Deadlock API by sharing your match data</p>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Steam Cache Ingestion</h1>
+        <p className="text-sm text-muted-foreground mt-1">Help improve Deadlock API by sharing your match data</p>
       </div>
 
-      <div className="mb-6">
+      <div>
         <PatronCTA message="Already contributing match data? Get your own stats updated faster with prioritized fetching." />
       </div>
 
-      <Card className="mb-6 shadow-lg pt-0">
-        <CardHeader className="bg-linear-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 py-4 rounded-t-2xl">
+      <Card className="shadow-lg pt-0">
+        <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent py-4 border-b border-border rounded-t-2xl">
           <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
             Upload Match Data
@@ -388,7 +389,7 @@ export default function () {
           >
             {isLoading ? (
               <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-8 h-8 animate-spin" />
+                <LoadingLogo className="w-8 h-8" />
                 <div className="text-center">
                   <p className="font-semibold">Scanning directory...</p>
                   <p className="text-sm font-normal mt-1">{saltsFound} salts found</p>
@@ -419,77 +420,74 @@ export default function () {
         <CardHeader>
           <CardTitle className="text-xl">📁 Directory Location Guide</CardTitle>
           <CardDescription>
-            Find the <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">httpcache</code> folder in your
-            Steam installation
+            Find the <code className="bg-muted px-2 py-1 rounded">httpcache</code> folder in your Steam installation
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Collapsible open={openSection === "windows"} onOpenChange={() => toggleSection("windows")}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-card rounded-lg hover:bg-muted transition-colors">
               <span className="font-semibold flex items-center gap-2">🪟 Windows</span>
               {openSection === "windows" ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 pl-4 pb-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Default Steam installation path:</p>
-              <div className="bg-gray-900 text-gray-100 p-3 rounded font-mono text-sm overflow-x-auto">
+              <p className="text-sm text-muted-foreground mb-3">Default Steam installation path:</p>
+              <div className="bg-background text-foreground p-3 rounded font-mono text-sm overflow-x-auto">
                 C:\Program Files (x86)\Steam\appcache\httpcache
               </div>
             </CollapsibleContent>
           </Collapsible>
 
           <Collapsible open={openSection === "macos"} onOpenChange={() => toggleSection("macos")}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-card rounded-lg hover:bg-muted transition-colors">
               <span className="font-semibold flex items-center gap-2">🍎 macOS</span>
               {openSection === "macos" ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 pl-4 pb-2">
-              <div className="bg-gray-900 text-gray-100 p-3 rounded font-mono text-sm overflow-x-auto">
+              <div className="bg-background text-foreground p-3 rounded font-mono text-sm overflow-x-auto">
                 ~/Library/Application Support/Steam/appcache/httpcache
               </div>
             </CollapsibleContent>
           </Collapsible>
 
           <Collapsible open={openSection === "linux"} onOpenChange={() => toggleSection("linux")}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-card rounded-lg hover:bg-muted transition-colors">
               <span className="font-semibold flex items-center gap-2">🐧 Linux</span>
               {openSection === "linux" ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4 pl-4 pb-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Common locations (try these in order):</p>
+              <p className="text-sm text-muted-foreground mb-3">Common locations (try these in order):</p>
               <div className="space-y-2 text-sm">
-                <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                   ~/.local/share/Steam/appcache/httpcache
                 </div>
-                <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                   ~/.steam/steam/appcache/httpcache
                 </div>
-                <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                   ~/.var/app/com.valvesoftware.Steam/.local/share/Steam/appcache/httpcache
                 </div>
-                <details className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
-                  <summary className="hover:text-gray-700 dark:hover:text-gray-300">
-                    Show all possible locations...
-                  </summary>
+                <details className="text-xs text-muted-foreground cursor-pointer">
+                  <summary className="hover:text-foreground">Show all possible locations...</summary>
                   <div className="space-y-2 mt-2">
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/.var/app/com.valvesoftware.Steam/.steam/steam/appcache/httpcache
                     </div>
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/.var/app/com.valvesoftware.Steam/.steam/root/appcache/httpcache
                     </div>
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/.steam/root/appcache/httpcache
                     </div>
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/.steam/debian-installation/appcache/httpcache
                     </div>
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/snap/steam/common/.local/share/Steam/appcache/httpcache
                     </div>
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/snap/steam/common/.steam/steam/appcache/httpcache
                     </div>
-                    <div className="bg-gray-900 text-gray-100 p-2 rounded font-mono overflow-x-auto">
+                    <div className="bg-background text-foreground p-2 rounded font-mono overflow-x-auto">
                       ~/snap/steam/common/.steam/root/appcache/httpcache
                     </div>
                   </div>
@@ -505,9 +503,9 @@ export default function () {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {dialogType === "success" ? (
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <CheckCircle2 className="w-5 h-5 text-green-500" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-red-600" />
+                <AlertCircle className="w-5 h-5 text-destructive" />
               )}
               {dialogTitle}
             </DialogTitle>

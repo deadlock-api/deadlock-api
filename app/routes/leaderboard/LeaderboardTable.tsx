@@ -104,7 +104,7 @@ export const LeaderboardTable = forwardRef<LeaderboardTableHandle, LeaderboardTa
     <div>
       {controls}
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
             {shouldShowBadgeColumn && <TableHead className="text-center">Rank</TableHead>}
@@ -160,7 +160,7 @@ function LeaderboardTableRow({
           <div className="flex justify-end space-x-3">
             {entry.top_hero_ids?.map((heroId) => (
               <button key={heroId} type="button" onClick={() => onHeroClick(heroId)} className="cursor-pointer">
-                <HeroImage heroId={heroId} className="h-8 w-8 rounded-full object-cover border border-gray-700" />
+                <HeroImage heroId={heroId} className="h-8 w-8 rounded-full object-cover border border-border" />
               </button>
             ))}
           </div>

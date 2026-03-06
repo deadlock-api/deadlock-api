@@ -1,212 +1,297 @@
+import {
+  ArrowRight,
+  BarChart3,
+  Bot,
+  Code,
+  Database,
+  ExternalLink,
+  HardDrive,
+  Heart,
+  ImageIcon,
+  Radio,
+  Tv,
+  Zap,
+} from "lucide-react";
+import { motion } from "framer-motion";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { ElectricBorder } from "~/components/ElectricBorder";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Deadlock API" }, { name: "description", content: "Match Data, Player Data, and more" }];
 };
 
+const valueProps = [
+  {
+    label: "Open Source",
+    href: "https://github.com/deadlock-api/",
+    icon: Code,
+    title: "Visit our GitHub Organization",
+  },
+  {
+    label: "Open Data",
+    href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
+    icon: Database,
+    title: "Daily Data Dumps provided",
+  },
+  {
+    label: "Free to Use",
+    href: "https://www.patreon.com/c/manuelhexe",
+    icon: Heart,
+    title: "Based on Sponsoring",
+  },
+];
+
+const patronFeatures = [
+  "Priority queue updates",
+  "Up to 10 Steam accounts",
+  "Full match history from first to last game",
+  "100% funds infrastructure",
+  "Accurate rank data from Steam",
+];
+
+const services = [
+  {
+    title: "Game Data API",
+    description: "Offers game data including matches, players, and statistics.",
+    href: API_ORIGIN,
+    icon: BarChart3,
+    external: true,
+    cta: "Visit Game Data API",
+  },
+  {
+    title: "Assets API",
+    description: "Provides static game assets such as heroes/item data, images, icons, sounds.",
+    href: ASSETS_ORIGIN,
+    icon: ImageIcon,
+    external: true,
+    cta: "Visit Assets API",
+  },
+  {
+    title: "Live Events API",
+    description: "Real-time game events via Server-Sent Events for live match tracking.",
+    href: "https://github.com/deadlock-api/deadlock-live-events",
+    icon: Radio,
+    external: true,
+    cta: "View Live Events API",
+  },
+  {
+    title: "Database Dumps",
+    description: "Download up-to-date database snapshots for offline analysis or research.",
+    href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
+    icon: HardDrive,
+    external: true,
+    cta: "Access Database Dumps",
+  },
+  {
+    title: "Stream Kit",
+    description: "Enhance your livestreams with real-time game data overlays and widgets.",
+    href: "/streamkit",
+    icon: Tv,
+    external: false,
+    cta: "Explore Stream Kit",
+  },
+  {
+    title: "AI Chat",
+    description: "Ask questions about Deadlock heroes, items, abilities, and strategies powered by AI.",
+    href: "/chat",
+    icon: Bot,
+    external: false,
+    cta: "Try AI Chat",
+  },
+];
+
+const sponsors = [
+  {
+    href: "https://statlocker.gg/",
+    title: "Statlocker.GG",
+    logo: "/logo/statlocker.png",
+  },
+  {
+    href: "https://www.youtube.com/@mattiadl",
+    title: "Mattia DL",
+    logo: "/logo/mattia.png",
+  },
+  { href: "https://blast.tv/", title: "Blast.TV", logo: "/logo/blast.svg" },
+];
+
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: "easeOut" as const },
+  },
+};
+
 export default function Index() {
   return (
-    <div className="w-full space-y-12">
-      <section className="text-center">
-        <h1 className="text-4xl font-bold tracking-tight lg:text-5xl mb-2">Deadlock API</h1>
-        <h2 className="flex flex-nowrap justify-between gap-4 max-w-sm mx-auto mb-2">
-          <a
-            href="https://github.com/deadlock-api/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
-            title="Open Source | Visit our GitHub Organization"
-          >
-            Open Source
-          </a>
-          <a
-            href="https://files.deadlock-api.com/Default/buckets/db-snapshot/public/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
-            title="Open Data | Daily Data Dumps provided"
-          >
-            Open Data
-          </a>
-          <a
-            href="https://www.patreon.com/c/manuelhexe"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-lg font-medium hover:underline flex items-center gap-1 text-primary transition-colors duration-100"
-            title="Free to use | Based on Sponsoring"
-          >
-            Free to use
-          </a>
-        </h2>
-        <p className="mx-auto max-w-3xl text-lg text-muted-foreground">
-          The Deadlock API provides a comprehensive set of endpoints to access game data, including match history,
-          player statistics, and more. Whether you are a developer looking to integrate game data into your application
-          or a player wanting to analyze your performance, the Deadlock API has you covered.
-        </p>
+    <div className="space-y-16">
+      {/* Hero */}
+      <section className="relative text-center pt-4 pb-2">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-primary/8 rounded-full blur-[100px] pointer-events-none" />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="relative"
+        >
+          <h1 className="text-5xl font-bold tracking-tight lg:text-6xl mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
+            Deadlock API
+          </h1>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.4 }}
+          className="flex flex-wrap justify-center gap-3 mb-6"
+        >
+          {valueProps.map((prop) => (
+            <a
+              key={prop.label}
+              href={prop.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={prop.title}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-muted/50 text-sm font-medium text-foreground/80 hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              <prop.icon className="size-3.5" />
+              {prop.label}
+            </a>
+          ))}
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed"
+        >
+          A comprehensive set of endpoints to access Deadlock game data — match history, player statistics, hero
+          analytics, and more. Whether you're a developer integrating game data or a player analyzing performance, the
+          Deadlock API has you covered.
+        </motion.p>
       </section>
 
-      <section className="text-center">
-        <Card className="border-primary/40 bg-linear-to-br from-primary/10 to-primary/5">
-          <CardHeader>
-            <CardTitle className="text-2xl text-primary">Prioritized Fetching</CardTitle>
-            <CardDescription className="text-base">
-              Your matches tracked faster — starting at just $3/month
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to the
-              front of the queue — your matches and stats are updated more frequently so you always have the latest data
-              for analysis.
-            </p>
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Priority queue updates</span>
+      {/* Patron CTA */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.5 }}
+      >
+        <ElectricBorder color="#fa4454" speed={0.5} chaos={0.1} borderRadius={12}>
+          <div className="rounded-xl bg-card/80 backdrop-blur-sm px-6 py-7 sm:px-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="space-y-4 min-w-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+                    <Zap className="electric-bolt size-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Prioritized Fetching</h2>
+                    <p className="text-sm text-muted-foreground">Starting at just $3/month</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground max-w-xl">
+                  We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to
+                  the front of the queue — your matches and stats are updated more frequently so you always have the
+                  latest data for analysis.
+                </p>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {patronFeatures.map((feature) => (
+                    <div key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="size-1.5 rounded-full bg-primary shrink-0" />
+                      {feature}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Up to 10 Steam accounts</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Full match history from first to last game</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">100% funds infrastructure</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-primary font-semibold">&#10003;</span>
-                <span className="text-muted-foreground">Accurate rank data from Steam</span>
-              </div>
+              <Link to="/patron" prefetch="intent" className="shrink-0">
+                <Button className="bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] hover:from-[#e83d4c] hover:to-[#f05a68] text-white font-semibold px-8 h-11 w-full lg:w-auto">
+                  Enable Prioritized Fetching
+                  <ArrowRight className="size-4 ml-2" />
+                </Button>
+              </Link>
             </div>
-          </CardContent>
-          <CardFooter className="justify-center">
-            <Link to="/patron" prefetch="intent">
-              <Button className="bg-primary hover:bg-amber-600 text-white font-semibold px-8">
-                Enable Prioritized Fetching
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </section>
+          </div>
+        </ElectricBorder>
+      </motion.section>
 
+      {/* Services */}
       <section>
-        <h2 className="text-3xl font-semibold tracking-tight text-center mb-4">Our Services</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Assets API</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Provides static game assets such as static heroes/item data, images, icons, sounds.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <a href={ASSETS_ORIGIN} target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button className="w-full">Visit Assets API</Button>
-              </a>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Game Data API</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Offers game data including matches, players, and statistics.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <a href={API_ORIGIN} target="_blank" rel="noopener noreferrer" className="w-full">
-                <Button className="w-full">Visit Game Data API</Button>
-              </a>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Live Events API</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Real-time game events via Server-Sent Events for live match tracking.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <a
-                href="https://github.com/deadlock-api/deadlock-live-events"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full"
-              >
-                <Button className="w-full">View Live Events API</Button>
-              </a>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Database Dumps</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Download up-to-date database snapshots for offline analysis or research.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <a
-                href="https://files.deadlock-api.com/Default/buckets/db-snapshot/public/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full"
-              >
-                <Button className="w-full">Access Database Dumps</Button>
-              </a>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Stream Kit</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Enhance your livestreams with real-time game data overlays and widgets.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Link to="/streamkit" prefetch="intent" className="w-full">
-                <Button className="w-full">Explore Stream Kit</Button>
-              </Link>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">AI Chat</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                Ask questions about Deadlock heroes, items, abilities, and strategies powered by AI.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Link to="/chat" prefetch="intent" className="w-full">
-                <Button className="w-full">Try AI Chat</Button>
-              </Link>
-            </CardFooter>
-          </Card>
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-semibold tracking-tight">Developer Services</h2>
+          <p className="text-sm text-muted-foreground mt-1">APIs, tools, and data for the Deadlock community</p>
         </div>
+
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.1 }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {services.map((service) => {
+            const Icon = service.icon;
+            const card = (
+              <motion.div
+                variants={fadeUp}
+                className="group relative flex flex-col h-full rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30"
+              >
+                <div className="flex items-start gap-4 mb-3">
+                  <div className="flex items-center justify-center size-10 rounded-lg bg-muted border border-border shrink-0 group-hover:border-primary/20 group-hover:bg-primary/5 transition-colors">
+                    <Icon className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground flex items-center gap-1.5">
+                      {service.title}
+                      {service.external && (
+                        <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{service.description}</p>
+                  </div>
+                </div>
+                <div className="mt-auto pt-3">
+                  <span className="text-sm font-medium text-primary/80 group-hover:text-primary transition-colors flex items-center gap-1.5">
+                    {service.cta}
+                    <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+              </motion.div>
+            );
+
+            if (service.external) {
+              return (
+                <a key={service.title} href={service.href} target="_blank" rel="noopener noreferrer">
+                  {card}
+                </a>
+              );
+            }
+
+            return (
+              <Link key={service.title} to={service.href} prefetch="intent">
+                {card}
+              </Link>
+            );
+          })}
+        </motion.div>
       </section>
 
+      {/* Sponsors */}
       <section className="text-center">
-        <h2 className="text-3xl font-semibold tracking-tight mb-4">Our Sponsors</h2>
-        <p className="mb-6 text-muted-foreground">
-          We are grateful to our sponsors for their support. <br />
-          Please check out our{" "}
+        <h2 className="text-lg font-semibold tracking-tight mb-1">Our Sponsors</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          Grateful to our sponsors for their support.{" "}
           <a
             href="https://www.patreon.com/c/manuelhexe"
             target="_blank"
@@ -214,43 +299,28 @@ export default function Index() {
             className="font-medium text-primary underline underline-offset-4"
             title="Support on Patreon"
           >
-            Patreon
+            Become a sponsor
           </a>
-          .
         </p>
-        <div className="flex justify-center items-center gap-8 mt-4">
-          <a
-            href="https://statlocker.gg/"
-            title="Statlocker.GG"
-            target="_blank"
-            rel="noreferrer"
-            className="max-w-[200px] max-h-16"
-          >
-            <img src="/logo/statlocker.png" alt="Statlocker.GG Logo" className="max-w-[200px] max-h-16" />
-          </a>
-          <a
-            href="https://www.youtube.com/@mattiadl"
-            title="Mattia DL"
-            target="_blank"
-            rel="noreferrer"
-            className="max-w-[200px] max-h-16"
-          >
-            <img src="/logo/mattia.png" alt="Mattia DL Logo" className="max-w-[200px] max-h-16" />
-          </a>
-          <a
-            href="https://blast.tv/"
-            title="Blast.TV"
-            target="_blank"
-            rel="noreferrer"
-            className="max-w-[200px] max-h-16"
-          >
-            <img src="/logo/blast.svg" alt="Blast.TV Logo" className="max-w-[200px] max-h-16" />
-          </a>
+        <div className="flex justify-center items-center gap-10 flex-wrap">
+          {sponsors.map((sponsor) => (
+            <a
+              key={sponsor.href}
+              href={sponsor.href}
+              title={sponsor.title}
+              target="_blank"
+              rel="noreferrer"
+              className="opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <img src={sponsor.logo} alt={`${sponsor.title} Logo`} className="max-w-[160px] max-h-14" />
+            </a>
+          ))}
         </div>
       </section>
 
-      <section className="text-center border-t pt-8 mt-8">
-        <p className="text-sm text-muted-foreground text-pretty">
+      {/* Disclaimer */}
+      <section className="border-t border-border pt-6">
+        <p className="text-center text-xs text-muted-foreground">
           <a
             href="https://deadlock-api.com/"
             title="Deadlock API"

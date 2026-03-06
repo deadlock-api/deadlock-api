@@ -10,7 +10,7 @@ export function PatronCTA({ message }: { message?: string }) {
   if (isAuthenticated && isActive) return null;
 
   return (
-    <Card className="border-amber-500/40 bg-gradient-to-r from-amber-500/10 to-transparent">
+    <Card className="border-primary/30 bg-gradient-to-r from-primary/10 to-transparent">
       <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
         <div className="flex items-center gap-3">
           <Zap className="h-5 w-5 text-primary shrink-0" />
@@ -20,7 +20,10 @@ export function PatronCTA({ message }: { message?: string }) {
           </p>
         </div>
         <Link to="/patron" prefetch="intent" className="shrink-0">
-          <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
+          <Button
+            size="sm"
+            className="bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] hover:from-[#e83d4c] hover:to-[#f05a68] text-white font-semibold"
+          >
             Learn More
           </Button>
         </Link>

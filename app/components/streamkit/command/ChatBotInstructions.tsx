@@ -1,4 +1,4 @@
-import { CopyButton } from "~/components/ui/copy-button";
+import { CopyButton } from "~/components/copy-button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 

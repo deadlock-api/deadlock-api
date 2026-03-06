@@ -126,7 +126,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
     <div>
       {controls}
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted">
           <TableRow>
             <TableHead className="w-[5ch] text-right">#</TableHead>
             <TableHead>Player</TableHead>

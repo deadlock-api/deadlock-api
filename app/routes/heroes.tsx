@@ -26,7 +26,10 @@ import { HERO_STATS } from "~/types/api_hero_stats";
 export const meta: MetaFunction = () => {
   return [
     { title: "Heroes - Deadlock API" },
-    { name: "description", content: "Detailed analytics about Heroes in Deadlock" },
+    {
+      name: "description",
+      content: "Detailed analytics about Heroes in Deadlock",
+    },
   ];
 };
 export default function Heroes(
@@ -73,10 +76,13 @@ export default function Heroes(
   );
 
   return (
-    <>
-      <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Hero Stats</h1>
+        <p className="text-sm text-muted-foreground mt-1">Detailed analytics and matchup data for Deadlock heroes</p>
+      </div>
 
-      <Card className="mb-8">
+      <Card className="w-fit mx-auto">
         <CardContent>
           <div className="flex flex-wrap items-end gap-2 justify-center">
             {["stats", "stats-over-time"].includes(tab) ? (
@@ -109,7 +115,7 @@ export default function Heroes(
       </Card>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList className="flex items-center flex-wrap h-auto w-full">
+        <TabsList variant="line" className="flex items-center flex-wrap h-auto w-full">
           <TabsTrigger className="flex-1" value="stats">
             Overall Stats
           </TabsTrigger>
@@ -138,7 +144,6 @@ export default function Heroes(
               minHeroMatchesTotal={minHeroMatchesTotal}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
-              fullWidth
             />
           </div>
         </TabsContent>
@@ -304,6 +309,6 @@ export default function Heroes(
           </div>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 }
