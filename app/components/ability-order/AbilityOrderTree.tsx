@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AbilityV2 } from "assets_deadlock_api_client/api";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { Dayjs } from "~/dayjs";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
@@ -156,8 +156,52 @@ export default function AbilityOrderTree({
   const focusedRoot = rootChildren.find((child) => focusedPaths.has(String(child.abilityId)));
   const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ isDragging: false, didDrag: false, startX: 0, scrollLeft: 0 });
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragState.current = { isDragging: true, didDrag: false, startX: e.clientX, scrollLeft: el.scrollLeft };
+    el.style.cursor = "grabbing";
+    el.style.userSelect = "none";
+  }, []);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    const ds = dragState.current;
+    if (!ds.isDragging) return;
+    const dx = e.clientX - ds.startX;
+    if (Math.abs(dx) > 3) ds.didDrag = true;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollLeft = ds.scrollLeft - dx;
+  }, []);
+
+  const onMouseUp = useCallback(() => {
+    dragState.current.isDragging = false;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.style.cursor = "";
+    el.style.userSelect = "";
+  }, []);
+
+  const onClickCapture = useCallback((e: React.MouseEvent) => {
+    if (dragState.current.didDrag) {
+      e.stopPropagation();
+      dragState.current.didDrag = false;
+    }
+  }, []);
+
   return (
-    <div className="overflow-x-auto pb-4 flex flex-col items-center">
+    <div
+      ref={scrollRef}
+      className="overflow-x-auto pb-4 text-center cursor-grab"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      onClickCapture={onClickCapture}
+    >
       {gameMode === "street_brawl" && (
         <p className="text-sm text-muted-foreground mb-2">
           In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
