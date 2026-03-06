@@ -56,8 +56,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="overflow-x-hidden">
-        {children}
+      <body
+        className="overflow-x-hidden bg-fixed bg-cover bg-center bg-no-repeat bg-blend-difference"
+        style={{ backgroundImage: "url('/background.svg')" }}
+      >
+        <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black to-transparent" />
+        <div className="relative z-10">{children}</div>
         <ScrollRestoration />
         <Scripts />
       </body>
