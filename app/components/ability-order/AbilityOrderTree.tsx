@@ -136,26 +136,6 @@ export default function AbilityOrderTree({
     });
   }, []);
 
-  if (isLoadingOrder) {
-    return (
-      <div className="flex items-center justify-center w-full py-16">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
-      </div>
-    );
-  }
-
-  if (!trie || trie.children.size === 0) {
-    return (
-      <p className="text-center text-muted-foreground py-8">
-        No ability order data available for this hero with the selected filters.
-      </p>
-    );
-  }
-
-  const rootChildren = getSortedChildren(trie);
-  const focusedRoot = rootChildren.find((child) => focusedPaths.has(String(child.abilityId)));
-  const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragState = useRef({ isDragging: false, didDrag: false, startX: 0, scrollLeft: 0 });
 
@@ -191,6 +171,26 @@ export default function AbilityOrderTree({
       dragState.current.didDrag = false;
     }
   }, []);
+
+  if (isLoadingOrder) {
+    return (
+      <div className="flex items-center justify-center w-full py-16">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      </div>
+    );
+  }
+
+  if (!trie || trie.children.size === 0) {
+    return (
+      <p className="text-center text-muted-foreground py-8">
+        No ability order data available for this hero with the selected filters.
+      </p>
+    );
+  }
+
+  const rootChildren = getSortedChildren(trie);
+  const focusedRoot = rootChildren.find((child) => focusedPaths.has(String(child.abilityId)));
+  const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
 
   return (
     <div
