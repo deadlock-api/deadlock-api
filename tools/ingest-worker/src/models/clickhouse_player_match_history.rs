@@ -39,7 +39,6 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub brawl_score_team1: Option<u32>,
     pub brawl_avg_round_time_s: Option<u32>,
     pub source: Source,
-    pub username: Option<String>,
 }
 
 impl PlayerMatchHistoryEntry {
@@ -90,7 +89,6 @@ impl PlayerMatchHistoryEntry {
                     / match_info.street_brawl_rounds.len() as u32
             }),
             source: Source::MatchPlayer,
-            username: Some("ingest-worker".to_string()),
         })
     }
 }
