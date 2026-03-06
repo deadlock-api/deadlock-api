@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useEffect, useRef, useCallback, type ReactNode, type CSSProperties } from "react";
 
 interface ElectricBorderProps {
   children: ReactNode;
@@ -7,7 +7,7 @@ interface ElectricBorderProps {
   chaos?: number;
   borderRadius?: number;
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
 }
 
 export function ElectricBorder({
@@ -279,7 +279,7 @@ export function ElectricBorder({
           "--eb-color": color,
           borderRadius,
           ...style,
-        } as React.CSSProperties
+        } as CSSProperties
       }
     >
       <div className="eb-canvas-container">

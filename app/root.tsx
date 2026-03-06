@@ -130,8 +130,9 @@ export default function App() {
 
 export function HydrateFallback() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
+    <div className="fixed inset-0 flex items-center justify-center bg-background z-50" role="status" aria-live="polite">
       <LoadingLogo className="w-24 h-24" />
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
