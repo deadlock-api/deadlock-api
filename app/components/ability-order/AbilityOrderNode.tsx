@@ -135,7 +135,7 @@ export default function AbilityOrderNode({
                   </span>
                 </div>
               </div>
-              <div className="flex flex-nowrap justify-between gap-1 text-xs">
+              <div className="flex flex-nowrap justify-between gap-1 text-xs tabular-nums">
                 <span className={cn("font-semibold text-nowrap", winRate >= 0.5 ? "text-green-400" : "text-red-400")}>
                   {(winRate * 100).toFixed(1)}% WR
                 </span>
