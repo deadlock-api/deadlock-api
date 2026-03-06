@@ -60,7 +60,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         className="overflow-x-hidden bg-fixed bg-cover bg-center bg-no-repeat bg-blend-difference"
         style={{ backgroundImage: "url('/background.svg')" }}
       >
-        <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black to-transparent" />
+        <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
         <div className="relative z-10">{children}</div>
         <ScrollRestoration />
         <Scripts />
@@ -103,14 +103,14 @@ export default function App() {
                     src="/logo/hexe.svg"
                     alt=""
                     aria-hidden="true"
-                    className="pointer-events-none fixed bottom-0 right-0 w-[36rem] h-[36rem] opacity-[0.04] select-none"
+                    className="pointer-events-none fixed bottom-0 right-0 w-[36rem] h-[36rem] opacity-[0.10] select-none"
                     style={{
-                      transform: "perspective(900px) rotateX(32deg) rotateY(-18deg) rotateZ(-14deg)",
-                      maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%)",
-                      WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 70%)",
+                      transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
+                      maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                      WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
                     }}
                   />
-                  <div className="m-4 w-full max-w-7xl bg-card/90 backdrop-blur-sm rounded-xl shadow-xl border border-border p-8 relative">
+                  <div className="m-4 w-full xl:w-[80%] bg-card/90 backdrop-blur-sm rounded-xl shadow-xl border border-border p-8 relative">
                     <div key={pathname} className="page-fade-in">
                       <Outlet />
                     </div>
