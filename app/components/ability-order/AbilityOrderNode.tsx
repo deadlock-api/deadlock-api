@@ -216,12 +216,14 @@ export default function AbilityOrderNode({
         </button>
       )}
 
-      {/* Connector line down */}
-      {hasChildren && isExpanded && <div className="h-4 border-l border-muted-foreground/30" />}
-
-      {/* Children row */}
+      {/* Children (animated entry) */}
       {hasChildren && isExpanded && (
-        <div ref={childrenRowRef} className="flex items-start">
+        <div className="animate-expand-in flex flex-col items-center">
+          {/* Connector line down */}
+          <div className="h-4 border-l border-muted-foreground/30" />
+
+          {/* Children row */}
+          <div ref={childrenRowRef} className="flex items-start">
           {displayedChildren.map((child, i) => {
             const childPath = `${currentPath}/${child.abilityId}`;
             const isFirst = i === 0;
@@ -254,6 +256,7 @@ export default function AbilityOrderNode({
               </div>
             );
           })}
+          </div>
         </div>
       )}
     </div>
