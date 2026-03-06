@@ -15,12 +15,17 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 export const meta: MetaFunction = () => {
   return [
     { title: "Items - Deadlock API" },
-    { name: "description", content: "Detailed analytics about Items in Deadlock" },
+    {
+      name: "description",
+      content: "Detailed analytics about Items in Deadlock",
+    },
   ];
 };
 
 export default function Items(
-  { initialTab }: { initialTab?: "stats" | "item-purchase-analysis" | "item-combs" } = { initialTab: "stats" },
+  { initialTab }: { initialTab?: "stats" | "item-purchase-analysis" | "item-combs" } = {
+    initialTab: "stats",
+  },
 ) {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
@@ -38,9 +43,12 @@ export default function Items(
   );
 
   return (
-    <>
-      <h2 className="text-3xl font-bold text-center mb-4">Item Stats</h2>
-      <Card className="mb-4">
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Item Stats</h1>
+        <p className="text-sm text-muted-foreground mt-1">Win rates, purchase timing, and item combination analytics</p>
+      </div>
+      <Card className="w-fit mx-auto">
         <CardContent>
           <div className="flex flex-wrap items-end gap-2 justify-center">
             <HeroSelector
@@ -94,7 +102,7 @@ export default function Items(
       </Card>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
+        <TabsList variant="line" className="flex items-center justify-start flex-wrap h-auto w-full">
           <TabsTrigger className="flex-1" value="stats">
             Overall Stats
           </TabsTrigger>
@@ -145,6 +153,6 @@ export default function Items(
           />
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 }

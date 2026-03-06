@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { useCallback, useRef, useState } from "react";
-import { Spinner } from "~/components/ui/spinner";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { Card, CardContent } from "~/components/ui/card";
 import { LeaderboardFilter, type LeaderboardFilterType } from "~/routes/leaderboard/LeaderboardFilter";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
@@ -62,20 +62,24 @@ export default function Leaderboard() {
   return (
     <div className="space-y-8">
       <section className="space-y-4">
-        <h2 className="text-3xl font-bold text-center mb-2">Leaderboard</h2>
-        <Card className="mb-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Ranked player standings across all regions</p>
+        </div>
+        <Card className="w-fit mx-auto">
           <CardContent>
             <LeaderboardFilter value={filter} onChange={setFilter} />
           </CardContent>
         </Card>
-        <div className="min-h-200 w-full max-w-[960px] mx-auto">
+        <div className="min-h-200">
           {isPending ? (
-            <div className="flex items-center justify-center gap-2 py-8">
-              <Spinner className="size-6" />
-              <span className="text-sm text-muted-foreground">Loading leaderboard...</span>
+            <div className="flex items-center justify-center py-8">
+              <LoadingLogo className="w-12 h-12" />
             </div>
           ) : isError ? (
-            <div className="text-center text-sm text-red-600 py-8">Failed to load leaderboard: {error?.message}</div>
+            <div className="text-center text-sm text-destructive py-8">
+              Failed to load leaderboard: {error?.message}
+            </div>
           ) : leaderboardQuery.data ? (
             <>
               <LeaderboardSummary

@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
 import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
 
 export enum HeroMatchupDetailsStatsTableStat {
@@ -197,90 +199,79 @@ export default function HeroMatchupDetailsStatsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      <div className="flex items-center justify-center w-full h-full py-16">
+        <LoadingLogo className="w-16 h-16" />
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-separate border-spacing-y-1 min-w-[500px]">
-        <thead>
-          <tr className="bg-gray-800 text-center">
-            <th className="p-2">#</th>
-            <th className="p-2 text-left">Hero</th>
+    <Table>
+      <TableHeader className="bg-muted">
+        <TableRow>
+          <TableHead className="text-center">#</TableHead>
+          <TableHead>Hero</TableHead>
+          {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && <TableHead>Combination (Win Rate Change)</TableHead>}
+          {stat === HeroMatchupDetailsStatsTableStat.COUNTER && <TableHead>Against (Win Rate Change)</TableHead>}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
+          <TableRow
+            key={stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id}
+            className={cn(onHeroSelected && "cursor-pointer")}
+            onClick={() =>
+              onHeroSelected?.(
+                stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id,
+              )
+            }
+          >
+            <TableCell>{index + 1}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
+                  <>
+                    <HeroImage heroId={synergy.hero_id2} />
+                    <HeroName heroId={synergy.hero_id2} />
+                  </>
+                )}
+                {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
+                  <>
+                    <HeroImage heroId={counter.enemy_hero_id} />
+                    <HeroName heroId={counter.enemy_hero_id} />
+                  </>
+                )}
+              </div>
+            </TableCell>
             {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-              <th className="p-2 text-left">Combination (Win Rate Change)</th>
+              <TableCell
+                title={`${synergy?.wins.toLocaleString()} wins / ${synergy.matches_played.toLocaleString()} matches`}
+              >
+                <ProgressBarWithLabel
+                  min={minSynergyWinrate}
+                  max={maxSynergyWinrate}
+                  value={synergy.rel_winrate}
+                  color={"#fa4454"}
+                  label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100)).toFixed(0)}% `}
+                />
+              </TableCell>
             )}
             {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-              <th className="p-2 text-left">Against (Win Rate Change)</th>
+              <TableCell
+                title={`${counter?.wins.toLocaleString()} wins / ${counter?.matches_played.toLocaleString()} matches`}
+              >
+                <ProgressBarWithLabel
+                  min={minCounterWinrate}
+                  max={maxCounterWinrate}
+                  value={counter.rel_winrate}
+                  color={"#22d3ee"}
+                  label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100)).toFixed(0)}% `}
+                />
+              </TableCell>
             )}
-          </tr>
-        </thead>
-        <tbody>
-          {zip(heroSynergies, heroCounters).map(([synergy, counter], index) => (
-            <tr
-              key={stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id}
-              className={cn(
-                "bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center",
-                onHeroSelected && "cursor-pointer",
-              )}
-              onClick={() =>
-                onHeroSelected?.(
-                  stat === HeroMatchupDetailsStatsTableStat.SYNERGY ? synergy.hero_id2 : counter.enemy_hero_id,
-                )
-              }
-            >
-              <td className="p-2">{index + 1}</td>
-              <td className="p-2">
-                <div className="flex items-center gap-2">
-                  {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-                    <>
-                      <HeroImage heroId={synergy.hero_id2} />
-                      <HeroName heroId={synergy.hero_id2} />
-                    </>
-                  )}
-                  {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-                    <>
-                      <HeroImage heroId={counter.enemy_hero_id} />
-                      <HeroName heroId={counter.enemy_hero_id} />
-                    </>
-                  )}
-                </div>
-              </td>
-              {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-                <td
-                  className="p-2"
-                  title={`${synergy?.wins.toLocaleString()} wins / ${synergy.matches_played.toLocaleString()} matches`}
-                >
-                  <ProgressBarWithLabel
-                    min={minSynergyWinrate}
-                    max={maxSynergyWinrate}
-                    value={synergy.rel_winrate}
-                    color={"#ff00ff"}
-                    label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100)).toFixed(0)}% `}
-                  />
-                </td>
-              )}
-              {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-                <td
-                  className="p-2"
-                  title={`${counter?.wins.toLocaleString()} wins / ${counter?.matches_played.toLocaleString()} matches`}
-                >
-                  <ProgressBarWithLabel
-                    min={minCounterWinrate}
-                    max={maxCounterWinrate}
-                    value={counter.rel_winrate}
-                    color={"#00ffff"}
-                    label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100)).toFixed(0)}% `}
-                  />
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

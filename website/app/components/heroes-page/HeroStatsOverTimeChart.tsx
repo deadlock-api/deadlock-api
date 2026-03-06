@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { HeroStatsBucketEnum } from "deadlock_api_client/api";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import {
   Select,
   SelectContent,
@@ -184,17 +185,17 @@ export default function HeroStatsOverTimeChart({
 
   if (isLoadingHeroStats || isLoadingAssetsHeroes) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      <div className="flex items-center justify-center w-full h-full py-16">
+        <LoadingLogo className="w-16 h-16" />
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={800} className="p-4 bg-gray-800">
+    <ResponsiveContainer width="100%" height={800} className="p-4 bg-muted">
       <LineChart data={formattedData} margin={{ top: 20, bottom: 20 }}>
         <Legend layout="vertical" align="right" verticalAlign="top" />
-        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
         <XAxis
           dataKey="date"
           type="number"
@@ -205,7 +206,7 @@ export default function HeroStatsOverTimeChart({
           ]}
           tickFormatter={(timestamp) => day(timestamp).format("MM/DD/YY")}
           label={{ value: "Date", position: "insideBottom", offset: -15 }}
-          stroke="#9ca3af"
+          stroke="#525252"
         />
         <YAxis
           domain={[minStat * 0.9, maxStat * 1.1]}
@@ -213,12 +214,12 @@ export default function HeroStatsOverTimeChart({
           tickFormatter={(value) => Math.round(value).toLocaleString()}
           minTickGap={2}
           tickCount={10}
-          stroke="#9ca3af"
+          stroke="#525252"
         />
         <Tooltip
           labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
-          contentStyle={{ backgroundColor: "#1e293b", borderColor: "#4b5563" }}
-          itemStyle={{ color: "#e5e7eb" }}
+          contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
+          itemStyle={{ color: "#e5e5e5" }}
         />
         {(heroIds || []).map((heroId) => (
           <Line

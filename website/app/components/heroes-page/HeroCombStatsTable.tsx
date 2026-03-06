@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useId, useMemo, useState } from "react";
 import HeroImage from "~/components/HeroImage";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Slider } from "~/components/ui/slider";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 
@@ -125,79 +127,74 @@ export default function HeroCombStatsTable({
         </div>
       </div>
       {isLoading ? (
-        <div className="flex items-center justify-center w-full h-full">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+        <div className="flex items-center justify-center w-full h-full py-16">
+          <LoadingLogo className="w-16 h-16" />
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-y-1 min-w-[600px]">
-            {!hideHeader && (
-              <thead>
-                <tr className="bg-gray-800 text-center">
-                  {!hideIndex && <th className="p-2">#</th>}
-                  <th className="p-2 text-left">Hero Combination</th>
-                  {columns.includes("winRate") && <th className="p-2">Win Rate</th>}
-                  {columns.includes("pickRate") && <th className="p-2">Pick Rate</th>}
-                  {columns.includes("totalMatches") && <th className="p-2">Total Matches</th>}
-                </tr>
-              </thead>
-            )}
-            <tbody>
-              {limitedData?.map((row, index) => (
-                <tr
-                  key={row.hero_ids.join("-")}
-                  className="bg-gray-900 rounded-lg shadow border border-gray-800 hover:bg-gray-800 transition-all duration-200 text-center"
-                >
-                  {!hideIndex && <td className="p-2 align-middle font-semibold">{index + 1}</td>}
-                  <td className="p-2 align-middle">
-                    <div className="flex items-center gap-2">
-                      {row.hero_ids.map((heroId, i) => (
-                        <>
-                          {i > 0 && <span className="text-2xl">+</span>}
-                          <div key={heroId} className="flex items-center gap-2">
-                            <HeroImage heroId={heroId} />
-                            <HeroName heroId={heroId} />
-                          </div>
-                        </>
-                      ))}
-                    </div>
-                  </td>
-                  {columns.includes("winRate") && (
-                    <td
-                      className="p-2 align-middle"
-                      title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                    >
-                      <ProgressBarWithLabel
-                        min={minWinrate}
-                        max={maxWinrate}
-                        value={row.wins / row.matches}
-                        color={"#ff00ff"}
-                        label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
-                      />
-                    </td>
-                  )}
-                  {columns.includes("pickRate") && (
-                    <td
-                      className="p-2 align-middle"
-                      title={`${row.matches.toLocaleString()} / ${sumMatches.toLocaleString()} total matches`}
-                    >
-                      <ProgressBarWithLabel
-                        min={minMatches}
-                        max={maxMatches}
-                        value={row.matches}
-                        color={"#00ffff"}
-                        label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
-                      />
-                    </td>
-                  )}
-                  {columns.includes("totalMatches") && (
-                    <td className="p-2 align-middle">{row.matches.toLocaleString()}</td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          {!hideHeader && (
+            <TableHeader className="bg-muted">
+              <TableRow>
+                {!hideIndex && <TableHead className="text-center">#</TableHead>}
+                <TableHead>Hero Combination</TableHead>
+                {columns.includes("winRate") && <TableHead className="text-center">Win Rate</TableHead>}
+                {columns.includes("pickRate") && <TableHead className="text-center">Pick Rate</TableHead>}
+                {columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
+              </TableRow>
+            </TableHeader>
+          )}
+          <TableBody>
+            {limitedData?.map((row, index) => (
+              <TableRow key={row.hero_ids.join("-")}>
+                {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {row.hero_ids.map((heroId, i) => (
+                      <>
+                        {i > 0 && <span className="text-2xl">+</span>}
+                        <div key={heroId} className="flex items-center gap-2">
+                          <HeroImage heroId={heroId} />
+                          <HeroName heroId={heroId} />
+                        </div>
+                      </>
+                    ))}
+                  </div>
+                </TableCell>
+                {columns.includes("winRate") && (
+                  <TableCell
+                    className="text-center"
+                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
+                  >
+                    <ProgressBarWithLabel
+                      min={minWinrate}
+                      max={maxWinrate}
+                      value={row.wins / row.matches}
+                      color={"#fa4454"}
+                      label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                    />
+                  </TableCell>
+                )}
+                {columns.includes("pickRate") && (
+                  <TableCell
+                    className="text-center"
+                    title={`${row.matches.toLocaleString()} / ${sumMatches.toLocaleString()} total matches`}
+                  >
+                    <ProgressBarWithLabel
+                      min={minMatches}
+                      max={maxMatches}
+                      value={row.matches}
+                      color={"#22d3ee"}
+                      label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                    />
+                  </TableCell>
+                )}
+                {columns.includes("totalMatches") && (
+                  <TableCell className="text-center">{row.matches.toLocaleString()}</TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </>
   );
