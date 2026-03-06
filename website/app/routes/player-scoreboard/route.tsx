@@ -136,7 +136,7 @@ export default function PlayerScoreboard() {
           </CardContent>
         </Card>
 
-        <div className="w-full">
+        <div className="w-full max-w-[960px] mx-auto">
           {scoreboardQuery.isPending ? (
             <Table>
               <TableHeader>

@@ -38,7 +38,7 @@ export function LeaderboardFilter({ value, onChange }: LeaderboardFilterProps) {
   );
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center md:justify-start">
+    <div className="flex flex-col md:flex-row gap-4 md:gap-8 justify-center">
       <HeroSelector
         onHeroSelected={handleHeroSelect}
         selectedHero={"heroId" in value ? (value.heroId ?? null) : null}
