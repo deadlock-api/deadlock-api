@@ -38,6 +38,7 @@ interface AbilityOrderNodeProps {
   ancestorAbilityIds: number[];
   totalPointsSpent: number;
   isStreetBrawl: boolean;
+  siblingCount: number;
 }
 
 // Normal mode: T0 (unlock) = 0, T1 = 1, T2 = 2, T3 = 5
@@ -58,6 +59,7 @@ export default function AbilityOrderNode({
   ancestorAbilityIds,
   totalPointsSpent,
   isStreetBrawl,
+  siblingCount,
 }: AbilityOrderNodeProps) {
   const slot = node.abilityId != null ? abilitySlotMap.get(node.abilityId) : undefined;
   const rawLevel = node.abilityId != null ? ancestorAbilityIds.filter((id) => id === node.abilityId).length : 0;
@@ -72,7 +74,7 @@ export default function AbilityOrderNode({
   const hasChildren = sortedChildren.length > 0;
 
   const isWithinDefaultDepth = node.depth < defaultDepth;
-  const isExpanded = isWithinDefaultDepth || expandedPaths.has(currentPath);
+  const isExpanded = isWithinDefaultDepth || expandedPaths.has(currentPath) || siblingCount === 1;
   const isFocused = focusedPaths.has(currentPath);
 
   const focusedChild = sortedChildren.find((child) => focusedPaths.has(`${currentPath}/${child.abilityId}`));
@@ -246,6 +248,7 @@ export default function AbilityOrderNode({
                     ancestorAbilityIds={childAncestorIds}
                     totalPointsSpent={cumulativePoints}
                     isStreetBrawl={isStreetBrawl}
+                    siblingCount={displayedChildren.length}
                   />
                 </div>
               </div>
