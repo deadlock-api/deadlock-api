@@ -27,10 +27,7 @@ export interface ScoreboardTableProps {
   sortBy: string;
 }
 
-export function ScoreboardTable({
-  entries,
-  sortBy,
-}: ScoreboardTableProps) {
+export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(25);

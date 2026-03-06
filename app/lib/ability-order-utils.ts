@@ -73,8 +73,7 @@ export function splitIntoPointBlocks(abilities: number[]): number[][] {
   let blockCost = 0;
   const buyCounts = new Map<number, number>();
 
-  const getBudget = (idx: number) =>
-    idx < BLOCK_BUDGETS.length ? BLOCK_BUDGETS[idx] : 5;
+  const getBudget = (idx: number) => (idx < BLOCK_BUDGETS.length ? BLOCK_BUDGETS[idx] : 5);
 
   for (const ability of abilities) {
     const timesBought = buyCounts.get(ability) ?? 0;
@@ -104,9 +103,7 @@ export function normalizeStreetBrawlAbilities(abilities: number[]): number[] {
   return blocks.flatMap((block) => [...block].sort((a, b) => a - b));
 }
 
-export function mergeStreetBrawlRows(
-  data: AnalyticsAbilityOrderStats[],
-): AnalyticsAbilityOrderStats[] {
+export function mergeStreetBrawlRows(data: AnalyticsAbilityOrderStats[]): AnalyticsAbilityOrderStats[] {
   const groups = new Map<string, AnalyticsAbilityOrderStats>();
 
   for (const row of data) {
