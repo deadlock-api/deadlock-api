@@ -12,6 +12,7 @@ const navLinks: readonly { to: string; label: string; special?: boolean }[] = [
   { to: "/patron", label: "Prioritized Fetching", special: true },
   { to: "/heroes", label: "Heroes" },
   { to: "/items", label: "Items" },
+  { to: "/ability-order", label: "Ability Order" },
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/player-scoreboard", label: "Player Scoreboard" },
   { to: "/badge-distribution", label: "Rank Distribution" },
