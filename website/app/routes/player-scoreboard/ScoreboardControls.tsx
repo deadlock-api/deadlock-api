@@ -1,4 +1,5 @@
-import React, { useCallback } from "react";
+import type React from "react";
+import { useCallback } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -71,7 +72,6 @@ export function ScoreboardControls({
           </SelectContent>
         </Select>
       </div>
-      <span className="text-sm text-muted-foreground">{totalEntries} results</span>
       <span className="text-sm text-muted-foreground flex items-center space-x-1">
         Page
         <span className="mx-2">
