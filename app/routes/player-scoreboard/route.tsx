@@ -2,13 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
+import NumberSelector from "~/components/NumberSelector";
+import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankSelector from "~/components/selectors/RankSelector";
-import NumberSelector from "~/components/NumberSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
-import { Skeleton } from "~/components/ui/skeleton";
 import { Card, CardContent } from "~/components/ui/card";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { api } from "~/lib/api";
 import { PATCHES } from "~/lib/constants";
@@ -37,7 +37,7 @@ const GAME_MODE_OPTIONS = [
 export default function PlayerScoreboard() {
   const [sortBy, setSortBy] = useQueryState(
     "sort_by",
-    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("avg_kills_per_match"),
+    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("matches"),
   );
   const [sortDirection, setSortDirection] = useQueryState(
     "sort_dir",
@@ -48,15 +48,14 @@ export default function PlayerScoreboard() {
     parseAsStringLiteral(["normal", "street_brawl"] as const).withDefault("normal"),
   );
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
-  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
-  );
+  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange);
+  const startDate = dateRange?.[0];
+  const endDate = dateRange?.[1];
 
-  const MAX_ENTRIES = 2000;
+  const MAX_ENTRIES = 1000;
 
   const scoreboardQuery = useQuery({
     queryKey: [
@@ -151,15 +150,23 @@ export default function PlayerScoreboard() {
               <TableBody>
                 {Array.from({ length: 25 }, (_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="text-right"><Skeleton className="h-4 w-6 ml-auto" /></TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="h-4 w-6 ml-auto" />
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Skeleton className="h-6 w-6 rounded-full" />
                         <Skeleton className="h-4 w-24" />
                       </div>
                     </TableCell>
-                    {sortBy !== "matches" && <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>}
-                    <TableCell className="text-right"><Skeleton className="h-4 w-14 ml-auto" /></TableCell>
+                    {sortBy !== "matches" && (
+                      <TableCell className="text-right">
+                        <Skeleton className="h-4 w-12 ml-auto" />
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <Skeleton className="h-4 w-14 ml-auto" />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -169,10 +176,7 @@ export default function PlayerScoreboard() {
               Failed to load scoreboard: {scoreboardQuery.error?.message}
             </div>
           ) : (
-            <ScoreboardTable
-              entries={scoreboardQuery.data ?? []}
-              sortBy={sortBy}
-            />
+            <ScoreboardTable entries={scoreboardQuery.data ?? []} sortBy={sortBy} />
           )}
         </div>
       </section>
