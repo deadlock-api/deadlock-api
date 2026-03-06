@@ -116,6 +116,7 @@ export default function AbilityOrderTree({
         }
         setExpandedPaths((prevExpanded) => {
           const nextExpanded = new Set(prevExpanded);
+          nextExpanded.delete(path);
           for (const p of prevExpanded) {
             if (p.startsWith(prefix)) {
               nextExpanded.delete(p);
