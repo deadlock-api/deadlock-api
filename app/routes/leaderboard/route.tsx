@@ -63,12 +63,12 @@ export default function Leaderboard() {
     <div className="space-y-8">
       <section className="space-y-4">
         <h2 className="text-3xl font-bold text-center mb-2">Leaderboard</h2>
-        <Card className="mb-8 w-fit mx-auto">
+        <Card className="mb-8">
           <CardContent>
             <LeaderboardFilter value={filter} onChange={setFilter} />
           </CardContent>
         </Card>
-        <div className="min-h-200 w-full">
+        <div className="min-h-200 w-full max-w-[960px] mx-auto">
           {isPending ? (
             <div className="flex items-center justify-center gap-2 py-8">
               <Spinner className="size-6" />

@@ -51,7 +51,7 @@ export default function BadgeDistribution() {
     <div className="space-y-8">
       <section className="space-y-4 max-h-xl">
         <h1 className="text-center text-4xl">Match Rank Distribution</h1>
-        <Card className="w-fit mx-auto">
+        <Card>
           <CardContent className="p-4">
             <BadgeDistributionFilter value={filter} onChange={setFilter} />
           </CardContent>

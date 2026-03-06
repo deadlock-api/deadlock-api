@@ -76,7 +76,7 @@ export default function Heroes(
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Hero Stats</h2>
 
-      <Card className="mb-8 w-fit mx-auto">
+      <Card className="mb-8">
         <CardContent>
           <div className="flex flex-wrap items-end gap-2 justify-center">
             {["stats", "stats-over-time"].includes(tab) ? (
