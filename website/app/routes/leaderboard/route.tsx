@@ -1,13 +1,13 @@
 import { useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { useCallback, useRef, useState } from "react";
+import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { FilterCardCustom } from "~/components/FilterCard";
+import { api } from "~/lib/api";
+import { assetsApi } from "~/lib/assets-api";
 import { LeaderboardFilter, type LeaderboardFilterType } from "~/routes/leaderboard/LeaderboardFilter";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
-import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
 
 export function meta() {
   return [{ title: "Leaderboard | Deadlock API" }, { name: "description", content: "Deadlock ranked leaderboard" }];
@@ -176,9 +176,9 @@ export default function Leaderboard() {
           <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Ranked player standings across all regions</p>
         </div>
-        <FilterCardCustom>
+        <Filter.Root>
           <LeaderboardFilter value={filter} onChange={setFilter} />
-        </FilterCardCustom>
+        </Filter.Root>
         <div className="min-h-200">
           {isPending ? (
             <div className="flex items-center justify-center py-24">

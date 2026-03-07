@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/api";
 import { useState } from "react";
-import { FilterCardCustom } from "~/components/FilterCard";
+import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
@@ -54,9 +54,9 @@ export default function BadgeDistribution() {
           <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
           <p className="text-sm text-muted-foreground mt-1">Player rank distribution across all badges</p>
         </div>
-        <FilterCardCustom>
+        <Filter.Root>
           <BadgeDistributionFilter value={filter} onChange={setFilter} />
-        </FilterCardCustom>
+        </Filter.Root>
         <div className="h-200 flex justify-center items-center">
           {isPending ? (
             <div className="flex items-center justify-center py-24">

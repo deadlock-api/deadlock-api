@@ -2,14 +2,10 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 import AbilityOrderTree from "~/components/ability-order/AbilityOrderTree";
-import NumberSelector from "~/components/NumberSelector";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
-import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import HeroSelector from "~/components/selectors/HeroSelector";
+import { Filter } from "~/components/Filter";
+import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriState";
-import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
-import { FilterCard } from "~/components/FilterCard";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
@@ -45,32 +41,31 @@ export default function AbilityOrder() {
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Ability Order</h2>
 
-      <FilterCard className="mb-8">
-            <HeroSelector
-              selectedHero={heroId}
-              onHeroSelected={(id) => {
-                if (id != null) setHeroId(id);
-              }}
-            />
-            <GameModeSelector value={gameMode} onChange={setGameMode} />
-            <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={0} />
-            {gameMode !== "street_brawl" && (
-              <RankRangeSelector
-                minRank={minRankId}
-                maxRank={maxRankId}
-                onRankChange={(min, max) => {
-                  setMinRankId(min);
-                  setMaxRankId(max);
-                }}
-              />
-            )}
-            <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
-            <PatchOrDatePicker
-              patchDates={PATCHES}
-              value={{ startDate, endDate }}
-              onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
-            />
-      </FilterCard>
+      <Filter.Root className="mb-8">
+        <Filter.Hero
+          value={heroId}
+          onChange={(id) => {
+            if (id != null) setHeroId(id);
+          }}
+        />
+        <Filter.GameModeWithRank
+          gameMode={gameMode}
+          onGameModeChange={setGameMode}
+          minRank={minRankId}
+          maxRank={maxRankId}
+          onRankChange={(min, max) => {
+            setMinRankId(min);
+            setMaxRankId(max);
+          }}
+        />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} />
+        <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
+        <Filter.PatchOrDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => setDateRange([s, e])}
+        />
+      </Filter.Root>
 
       <AbilityOrderTree
         heroId={heroId}
