@@ -2,7 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { useCallback, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { Card, CardContent } from "~/components/ui/card";
+import { FilterCardCustom } from "~/components/FilterCard";
 import { LeaderboardFilter, type LeaderboardFilterType } from "~/routes/leaderboard/LeaderboardFilter";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
@@ -176,11 +176,9 @@ export default function Leaderboard() {
           <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Ranked player standings across all regions</p>
         </div>
-        <Card className="w-fit mx-auto">
-          <CardContent>
-            <LeaderboardFilter value={filter} onChange={setFilter} />
-          </CardContent>
-        </Card>
+        <FilterCardCustom>
+          <LeaderboardFilter value={filter} onChange={setFilter} />
+        </FilterCardCustom>
         <div className="min-h-200">
           {isPending ? (
             <div className="flex items-center justify-center py-24">
