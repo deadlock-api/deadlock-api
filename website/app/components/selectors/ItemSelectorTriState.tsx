@@ -16,7 +16,7 @@ const ITEM_GROUP_STYLES: Record<string, TriStateGroupStyle> = Object.fromEntries
     ["weapon", "vitality", "spirit"].map((cat) => [
       `${tier}-${cat}`,
       {
-        label: `Tier ${tier} — ${cat.charAt(0).toUpperCase() + cat.slice(1)}`,
+        label: `Tier ${tier} - ${cat.charAt(0).toUpperCase() + cat.slice(1)}`,
         color: CATEGORY_COLORS[cat],
       },
     ]),
