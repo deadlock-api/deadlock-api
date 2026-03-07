@@ -49,6 +49,7 @@ export interface ItemStatsTableDisplayProps {
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
   initialSort?: SortState;
+  prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
   customDropdownContent?: ({
     itemId,
     rowWins,
@@ -91,6 +92,7 @@ interface ItemStatsTableRowProps {
   maxUsage: number;
   includedItemIds: number[];
   excludedItemIds: number[];
+  prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
   onItemInclude?: (item: number) => void;
   onItemExclude?: (item: number) => void;
   customDropdownContent?: ({
@@ -221,6 +223,7 @@ function ItemStatsTableRow({
   maxUsage,
   includedItemIds,
   excludedItemIds,
+  prevStatsMap,
   onItemInclude,
   onItemExclude,
   customDropdownContent,
@@ -281,6 +284,9 @@ function ItemStatsTableRow({
               value={row.wins / row.matches}
               color={"#fa4454"}
               label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+              delta={prevStatsMap?.get(row.item_id) !== undefined
+                ? (row.wins / row.matches) - prevStatsMap.get(row.item_id)!.winrate
+                : undefined}
             />
           </TableCell>
         )}
@@ -292,6 +298,9 @@ function ItemStatsTableRow({
               value={row.matches}
               color={"#22d3ee"}
               label={row.matches.toLocaleString()}
+              delta={prevStatsMap?.get(row.item_id) !== undefined
+                ? (row.matches / maxUsage) - prevStatsMap.get(row.item_id)!.normalizedPickrate
+                : undefined}
             />
           </TableCell>
         )}
@@ -359,6 +368,7 @@ export function ItemStatsTableDisplay({
   onItemInclude,
   onItemExclude,
   initialSort = { field: "winRate" as SortField, direction: "desc" as SortDirection },
+  prevStatsMap,
   customDropdownContent,
 }: ItemStatsTableDisplayProps) {
   const [sortField, setSortField] = useQueryState("item_sort_field", parseAsSortField.withDefault(initialSort.field));
@@ -499,6 +509,7 @@ export function ItemStatsTableDisplay({
                 maxUsage={maxUsage}
                 includedItemIds={includedItemIds}
                 excludedItemIds={excludedItemIds}
+                prevStatsMap={prevStatsMap}
                 onItemInclude={onItemInclude}
                 onItemExclude={onItemExclude}
                 customDropdownContent={customDropdownContent}
@@ -548,6 +559,16 @@ export default function ItemStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const hasPreviousInterval = minDateTimestamp > 0 && maxDateTimestamp !== undefined;
+  const prevMinTimestamp = useMemo(
+    () => (hasPreviousInterval ? minDateTimestamp - (maxDateTimestamp - minDateTimestamp) : 0),
+    [hasPreviousInterval, minDateTimestamp, maxDateTimestamp],
+  );
+  const prevMaxTimestamp = useMemo(
+    () => (hasPreviousInterval ? minDateTimestamp : undefined),
+    [hasPreviousInterval, minDateTimestamp],
+  );
+
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
     queryKey: ["assets-items-upgrades"],
     queryFn: async () => {
@@ -586,6 +607,52 @@ export default function ItemStatsTable({
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
+
+  const { data: prevData } = useQuery({
+    queryKey: [
+      "api-item-stats",
+      minMatches,
+      hero,
+      minRankId,
+      maxRankId,
+      prevMinTimestamp,
+      prevMaxTimestamp,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+    ],
+    queryFn: async () => {
+      const response = await api.analytics_api.itemStats({
+        heroId: hero,
+        minAverageBadge: minRankId ?? 0,
+        maxAverageBadge: maxRankId ?? 116,
+        minUnixTimestamp: prevMinTimestamp,
+        maxUnixTimestamp: prevMaxTimestamp,
+        minMatches: minMatches,
+        minBoughtAtS: minBoughtAtS,
+        maxBoughtAtS: maxBoughtAtS,
+        gameMode,
+      });
+      return response.data;
+    },
+    staleTime: 24 * 60 * 60 * 1000,
+    enabled: hasPreviousInterval,
+  });
+
+  const prevStatsMap = useMemo(() => {
+    if (!prevData) return undefined;
+    const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
+    const prevMaxMatches = Math.max(...prevData.map((item) => item.matches));
+    const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
+    for (const row of prevData) {
+      map.set(row.item_id, {
+        winrate: row.wins / row.matches,
+        pickrate: row.matches / prevSumMatches,
+        normalizedPickrate: row.matches / prevMaxMatches,
+      });
+    }
+    return map;
+  }, [prevData]);
 
   const minWinRate = useMemo(() => Math.min(...data.map((item) => item.wins / item.matches)), [data]);
   const maxWinRate = useMemo(() => Math.max(...data.map((item) => item.wins / item.matches)), [data]);
@@ -631,6 +698,7 @@ export default function ItemStatsTable({
       maxWinRate={maxWinRate}
       minUsage={minUsage}
       maxUsage={maxUsage}
+      prevStatsMap={prevStatsMap}
       includedItemIds={[]}
       excludedItemIds={[]}
       customDropdownContent={
