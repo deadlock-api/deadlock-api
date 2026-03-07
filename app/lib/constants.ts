@@ -3,7 +3,7 @@ import { day } from "~/dayjs";
 export const PATCHES = [
   {
     id: "2026-03-06",
-    name: "2026-03-06",
+    name: "Balance Patch (2026-03-06)",
     startDate: day.utc("2026-03-06T21:37:48Z").local(),
     endDate: day.utc().endOf("day").local(),
   },
