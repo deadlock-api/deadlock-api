@@ -14,7 +14,7 @@ import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
-import RankSelector from "~/components/selectors/RankSelector";
+import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
@@ -103,8 +103,14 @@ export default function Heroes(
             ) : (
               <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
             )}
-            <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-            <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+            <RankRangeSelector
+              minRank={minRankId}
+              maxRank={maxRankId}
+              onRankChange={(min, max) => {
+                setMinRankId(min);
+                setMaxRankId(max);
+              }}
+            />
             <PatchOrDatePicker
               patchDates={PATCHES}
               value={{ startDate, endDate }}
