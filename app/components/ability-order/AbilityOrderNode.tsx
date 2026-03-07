@@ -191,7 +191,7 @@ export default function AbilityOrderNode({
       </TooltipProvider>
 
       {/* Expand/collapse button */}
-      {hasChildren && !isWithinDefaultDepth && (
+      {hasChildren && !isWithinDefaultDepth && siblingCount !== 1 && (
         <button
           type="button"
           className={cn(
