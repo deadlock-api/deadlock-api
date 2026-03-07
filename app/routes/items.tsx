@@ -130,7 +130,7 @@ export default function Items(
         </TabsList>
         <TabsContent value="stats">
           <ItemStatsTable
-            columns={["itemsTier", "winRate", "usage", "confidence"]}
+            columns={["itemsTier", "winRate", "matches", "confidence"]}
             initialSort={{ field: "winRate", direction: "desc" }}
             minRankId={effectiveMinRankId}
             maxRankId={effectiveMaxRankId}

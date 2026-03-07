@@ -508,7 +508,7 @@ export default function ItemCombsExplore({
           <ItemStatsTableDisplay
             data={displayData}
             isLoading={isLoadingItemStats || isLoadingItemAssets}
-            columns={["winRate", "usage", "itemsTier", "confidence"]}
+            columns={["winRate", "matches", "itemsTier", "confidence"]}
             hideHeader={false}
             hideIndex={true}
             hideItemTierFilter={false}

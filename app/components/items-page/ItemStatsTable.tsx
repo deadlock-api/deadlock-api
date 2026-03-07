@@ -9,6 +9,7 @@ import ItemTier from "~/components/ItemTier";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
@@ -18,14 +19,13 @@ import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
-import type { GameMode } from "~/components/selectors/GameModeSelector";
 
 // Parsers for sort field and direction using nuqs string literal parser
-const parseAsSortField = parseAsStringLiteral(["winRate", "usage"] as const);
+const parseAsSortField = parseAsStringLiteral(["winRate", "matches"] as const);
 const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
 
 // Infer types from parsers
-type SortField = "winRate" | "usage";
+type SortField = "winRate" | "matches";
 type SortDirection = "asc" | "desc";
 
 interface SortState {
@@ -234,7 +234,7 @@ function ItemStatsTableRow({
     1 + // Item column (always present)
     (columns.includes("itemsTier") ? 1 : 0) +
     (columns.includes("winRate") ? 1 : 0) +
-    (columns.includes("usage") ? 1 : 0) +
+    (columns.includes("matches") ? 1 : 0) +
     (columns.includes("confidence") ? 1 : 0) +
     (onItemInclude || onItemExclude ? 1 : 0) +
     (customDropdownContent ? 1 : 0);
@@ -284,7 +284,7 @@ function ItemStatsTableRow({
             />
           </TableCell>
         )}
-        {columns.includes("usage") && (
+        {columns.includes("matches") && (
           <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
             <ProgressBarWithLabel
               min={minUsage}
@@ -392,7 +392,7 @@ export function ItemStatsTableDisplay({
       if (sort.field === "winRate") {
         aValue = a.wins / a.matches;
         bValue = b.wins / b.matches;
-      } else if (sort.field === "usage") {
+      } else if (sort.field === "matches") {
         aValue = a.matches;
         bValue = b.matches;
       } else {
@@ -466,14 +466,14 @@ export function ItemStatsTableDisplay({
                   </div>
                 </TableHead>
               )}
-              {columns.includes("usage") && (
+              {columns.includes("matches") && (
                 <TableHead
                   className="text-center cursor-pointer hover:bg-accent transition-colors"
-                  onClick={() => toggleSort("usage")}
+                  onClick={() => toggleSort("matches")}
                 >
                   <div className="flex items-center">
-                    <span>Usage</span>
-                    {getSortArrow("usage")}
+                    <span>Matches</span>
+                    {getSortArrow("matches")}
                   </div>
                 </TableHead>
               )}
