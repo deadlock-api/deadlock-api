@@ -8,7 +8,8 @@ import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameMo
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
-import { Card, CardContent } from "~/components/ui/card";
+import { FilterCard } from "~/components/FilterCard";
+import NumberSelector from "~/components/NumberSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -54,40 +55,13 @@ export default function Items(
         <h1 className="text-3xl font-bold tracking-tight">Item Stats</h1>
         <p className="text-sm text-muted-foreground mt-1">Win rates, purchase timing, and item combination analytics</p>
       </div>
-      <Card className="w-fit mx-auto">
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-2 justify-center">
+      <FilterCard>
             <HeroSelector
               onHeroSelected={(x) => setHero(x ?? null)}
               selectedHero={hero ?? undefined}
               allowSelectNull={true}
             />
-            <div className="flex flex-col min-w-24 max-w-sm gap-1.5">
-              <div className="flex justify-center md:justify-start items-center h-8">
-                <span className="text-sm font-semibold text-foreground">Min Matches</span>
-              </div>
-              <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
-                <button
-                  type="button"
-                  aria-label="Decrease min matches"
-                  className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                  onClick={() => setMinMatches(Math.max(0, minMatches - 10))}
-                >
-                  -
-                </button>
-                <span className="flex-1 text-center select-none" style={{ minWidth: 32 }}>
-                  {minMatches}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Increase min matches"
-                  className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
-                  onClick={() => setMinMatches(minMatches + 10)}
-                >
-                  +
-                </button>
-              </div>
-            </div>
+            <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} />
             <GameModeSelector value={gameMode} onChange={setGameMode} />
             {gameMode !== "street_brawl" && (
               <RankRangeSelector
@@ -112,9 +86,7 @@ export default function Items(
               value={{ startDate, endDate }}
               onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
             />
-          </div>
-        </CardContent>
-      </Card>
+      </FilterCard>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList variant="line" className="flex items-center justify-start flex-wrap h-auto w-full">

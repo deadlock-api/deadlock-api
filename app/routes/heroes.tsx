@@ -16,7 +16,7 @@ import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
-import { Card, CardContent } from "~/components/ui/card";
+import { FilterCard } from "~/components/FilterCard";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -88,9 +88,7 @@ export default function Heroes(
         <p className="text-sm text-muted-foreground mt-1">Detailed analytics and matchup data for Deadlock heroes</p>
       </div>
 
-      <Card className="w-fit mx-auto">
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-2 justify-center">
+      <FilterCard>
             {["stats", "stats-over-time"].includes(tab) ? (
               <>
                 <NumberSelector
@@ -125,9 +123,7 @@ export default function Heroes(
               value={{ startDate, endDate }}
               onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
             />
-          </div>
-        </CardContent>
-      </Card>
+      </FilterCard>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList variant="line" className="flex items-center flex-wrap h-auto w-full">

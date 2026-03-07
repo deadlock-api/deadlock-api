@@ -9,7 +9,7 @@ import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameMo
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
+import { FilterCardCustom } from "~/components/FilterCard";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { api } from "~/lib/api";
 import { PATCHES } from "~/lib/constants";
@@ -88,8 +88,7 @@ export default function PlayerScoreboard() {
           <p className="text-sm text-muted-foreground mt-1">Top player performances ranked by various stats</p>
         </div>
 
-        <Card className="w-fit mx-auto">
-          <CardContent>
+        <FilterCardCustom>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap justify-center gap-2">
                 <SortBySelector value={sortBy} onChange={setSortBy} />
@@ -140,8 +139,7 @@ export default function PlayerScoreboard() {
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </FilterCardCustom>
 
         <div>
           {scoreboardQuery.isPending ? (

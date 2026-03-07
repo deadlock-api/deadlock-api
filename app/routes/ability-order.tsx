@@ -9,7 +9,7 @@ import HeroSelector from "~/components/selectors/HeroSelector";
 import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriState";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
-import { Card, CardContent } from "~/components/ui/card";
+import { FilterCard } from "~/components/FilterCard";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
@@ -45,9 +45,7 @@ export default function AbilityOrder() {
     <>
       <h2 className="text-3xl font-bold text-center mb-2">Ability Order</h2>
 
-      <Card className="mb-8">
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-2 justify-center">
+      <FilterCard className="mb-8">
             <HeroSelector
               selectedHero={heroId}
               onHeroSelected={(id) => {
@@ -72,9 +70,7 @@ export default function AbilityOrder() {
               value={{ startDate, endDate }}
               onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
             />
-          </div>
-        </CardContent>
-      </Card>
+      </FilterCard>
 
       <AbilityOrderTree
         heroId={heroId}
