@@ -75,6 +75,12 @@ pub(super) struct AbilityOrderStatsQuery {
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     account_ids: Option<Vec<u32>>,
+    /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    include_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    exclude_item_ids: Option<Vec<u32>>,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -153,6 +159,18 @@ fn build_query(query: &AbilityOrderStatsQuery) -> String {
     }
     if let Some(max_ability_upgrades) = query.max_ability_upgrades {
         player_filters.push(format!("length(abilities) <= {max_ability_upgrades}"));
+    }
+    if let Some(include_item_ids) = &query.include_item_ids {
+        player_filters.push(format!(
+            "hasAll(items.item_id, [{}])",
+            include_item_ids.iter().map(ToString::to_string).join(", ")
+        ));
+    }
+    if let Some(exclude_item_ids) = &query.exclude_item_ids {
+        player_filters.push(format!(
+            "not hasAny(items.item_id, [{}])",
+            exclude_item_ids.iter().map(ToString::to_string).join(", ")
+        ));
     }
     let player_filters = if player_filters.is_empty() {
         String::new()
@@ -477,6 +495,53 @@ mod test {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
         assert!(sql.contains("length(abilities) <= 100"));
+    }
+
+    #[test]
+    fn test_build_query_include_item_ids() {
+        let query = AbilityOrderStatsQuery {
+            include_item_ids: Some(vec![1, 2, 3]),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            warn!("Failed to parse SQL: {sql}: {e}");
+        }
+        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
+    }
+
+    #[test]
+    fn test_build_query_exclude_item_ids() {
+        let query = AbilityOrderStatsQuery {
+            exclude_item_ids: Some(vec![4, 5, 6]),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            warn!("Failed to parse SQL: {sql}: {e}");
+        }
+        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
+    }
+
+    #[test]
+    fn test_build_query_include_and_exclude_item_ids() {
+        let query = AbilityOrderStatsQuery {
+            include_item_ids: Some(vec![1, 2, 3]),
+            exclude_item_ids: Some(vec![4, 5, 6]),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            warn!("Failed to parse SQL: {sql}: {e}");
+        }
+        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
+        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
     }
 
     #[test]
