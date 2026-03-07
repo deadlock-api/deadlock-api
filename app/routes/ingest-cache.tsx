@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Upload } from "lucide-react";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import type React from "react";
 import { useRef, useState } from "react";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -345,11 +345,11 @@ export default function () {
       </div>
 
       <div>
-        <PatronCTA message="Already contributing match data? Get your own stats updated faster with prioritized fetching." />
+        <PatronCTA />
       </div>
 
       <Card className="shadow-lg pt-0">
-        <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent py-4 border-b border-border rounded-t-2xl">
+        <CardHeader className="bg-linear-to-r from-primary/10 to-transparent py-4 border-b border-border rounded-t-2xl">
           <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
             Upload Match Data

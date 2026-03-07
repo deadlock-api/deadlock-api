@@ -5,7 +5,6 @@ import { ChatError } from "~/components/chat/ChatError";
 import { ChatInput } from "~/components/chat/ChatInput";
 import { ChatMessageList } from "~/components/chat/ChatMessageList";
 import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
-import { PatronCTA } from "~/components/PatronCTA";
 import { Button } from "~/components/ui/button";
 import { useChatStream } from "~/hooks/useChatStream";
 import { useRateLimit } from "~/hooks/useRateLimit";
@@ -108,7 +107,6 @@ export default function ChatPage() {
                   </p>
                 </div>
               </div>
-              <PatronCTA message="Support the project and get your match data updated more frequently with prioritized fetching." />
             </div>
           </div>
         ) : (
