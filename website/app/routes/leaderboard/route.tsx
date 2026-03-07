@@ -5,7 +5,6 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
-import { LeaderboardFilter, type LeaderboardFilterType } from "~/routes/leaderboard/LeaderboardFilter";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
 
@@ -124,9 +123,8 @@ function getDefaultRegion(): LeaderboardRegionEnum {
 }
 
 export default function Leaderboard() {
-  const [filter, setFilter] = useState<LeaderboardFilterType>(() => ({
-    region: getDefaultRegion(),
-  }));
+  const [region, setRegion] = useState<LeaderboardRegionEnum>(getDefaultRegion);
+  const [heroId, setHeroId] = useState<number | null>(null);
 
   const [ranks, leaderboardQuery] = useQueries({
     queries: [
@@ -139,12 +137,11 @@ export default function Leaderboard() {
         staleTime: Number.MAX_SAFE_INTEGER,
       },
       {
-        queryKey: ["leaderboardData", filter],
+        queryKey: ["leaderboardData", region, heroId],
         queryFn: async () => {
-          const response =
-            "heroId" in filter && filter.heroId
-              ? await api.leaderboard_api.leaderboardHero(filter)
-              : await api.leaderboard_api.leaderboard(filter);
+          const response = heroId
+            ? await api.leaderboard_api.leaderboardHero({ region, heroId })
+            : await api.leaderboard_api.leaderboard({ region });
           return response.data;
         },
         staleTime: 60 * 60 * 1000,
@@ -159,10 +156,7 @@ export default function Leaderboard() {
   const tableRef = useRef<LeaderboardTableHandle>(null);
 
   const handleHeroClick = useCallback((heroId: number) => {
-    setFilter((prevFilter) => ({
-      ...prevFilter,
-      heroId: heroId,
-    }));
+    setHeroId(heroId);
   }, []);
 
   const handleBadgeClick = useCallback((rank: number) => {
@@ -177,7 +171,8 @@ export default function Leaderboard() {
           <p className="text-sm text-muted-foreground mt-1">Ranked player standings across all regions</p>
         </div>
         <Filter.Root>
-          <LeaderboardFilter value={filter} onChange={setFilter} />
+          <Filter.Hero value={heroId} onChange={setHeroId} allowNull />
+          <Filter.Region value={region} onChange={(r) => setRegion(r as LeaderboardRegionEnum)} />
         </Filter.Root>
         <div className="min-h-200">
           {isPending ? (

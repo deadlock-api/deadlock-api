@@ -1,8 +1,10 @@
+import { LeaderboardRegionEnum } from "deadlock_api_client";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
-import RankRangeSelector from "~/components/selectors/RankRangeSelector";
+import RankRange from "~/components/selectors/RankRangeSelector";
+import { StringSelector } from "~/components/selectors/StringSelector";
 import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import type { Dayjs } from "~/dayjs";
@@ -17,10 +19,6 @@ function Root({ children, className }: { children: React.ReactNode; className?: 
       </CardContent>
     </Card>
   );
-}
-
-function Row({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("flex flex-wrap justify-center gap-2", className)}>{children}</div>;
 }
 
 function Hero({
@@ -78,9 +76,7 @@ function GameModeWithRank({
   return (
     <>
       <GameModeSelector value={gameMode} onChange={onGameModeChange} />
-      {gameMode !== "street_brawl" && (
-        <RankRangeSelector minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />
-      )}
+      {gameMode !== "street_brawl" && <RankRange minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />}
     </>
   );
 }
@@ -106,6 +102,23 @@ function PatchOrDate({
   );
 }
 
+const regionOptions = Object.entries(LeaderboardRegionEnum).map(([key, val]) => ({
+  label: key,
+  value: val,
+}));
+
+function Region({ value, onChange }: { value: string; onChange: (region: string) => void }) {
+  return (
+    <StringSelector
+      label="Region"
+      placeholder="Select Region..."
+      options={regionOptions}
+      selected={value}
+      onSelect={onChange}
+    />
+  );
+}
+
 function TimeWindow({
   minTime,
   maxTime,
@@ -120,10 +133,10 @@ function TimeWindow({
 
 export const Filter = {
   Root,
-  Row,
   Hero,
+  Region,
   GameMode: GameModeSelector,
-  RankRange: RankRangeSelector,
+  RankRange: RankRange,
   GameModeWithRank,
   MinMatches,
   PatchOrDate,
