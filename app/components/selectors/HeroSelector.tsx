@@ -54,18 +54,14 @@ export default function HeroSelector({
 
   const isActive = selectedHero != null;
 
-  const icon = currentHero ? <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" /> : undefined;
+  const icon = currentHero ? (
+    <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" />
+  ) : undefined;
 
   const displayValue = currentHero ? currentHero.name : "Any";
 
   return (
-    <FilterPill
-      label={label ?? "Hero"}
-      value={displayValue}
-      active={isActive}
-      icon={icon}
-      className="w-52 p-2"
-    >
+    <FilterPill label={label ?? "Hero"} value={displayValue} active={isActive} icon={icon} className="w-52 p-2">
       {currentHero && (
         <div className="flex items-center gap-2 px-2 py-1 mb-1 text-sm font-medium">
           <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" />

@@ -29,9 +29,7 @@ export function TimeRangeFilter({
   const [internalRange, setInternalRange] = useState<[number, number]>(value);
 
   const isFullRange = value[0] === min && value[1] === max;
-  const displayValue = isFullRange
-    ? "Any"
-    : `${formatMinutes(value[0])} - ${formatMinutes(value[1])}`;
+  const displayValue = isFullRange ? "Any" : `${formatMinutes(value[0])} - ${formatMinutes(value[1])}`;
 
   return (
     <FilterPill

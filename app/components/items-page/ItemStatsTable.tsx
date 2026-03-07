@@ -274,33 +274,76 @@ function ItemStatsTableRow({
           </TableCell>
         )}
         {columns.includes("winRate") && (
-          <TableCell
-            className="text-center"
-            title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-          >
+          <TableCell className="text-center">
             <ProgressBarWithLabel
               min={minWinRate}
               max={maxWinRate}
               value={row.wins / row.matches}
               color={"#fa4454"}
               label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
-              delta={prevStatsMap?.get(row.item_id) !== undefined
-                ? (row.wins / row.matches) - prevStatsMap.get(row.item_id)!.winrate
-                : undefined}
+              delta={
+                prevStatsMap?.get(row.item_id) !== undefined
+                  ? row.wins / row.matches - prevStatsMap.get(row.item_id)!.winrate
+                  : undefined
+              }
+              tooltip={
+                <div className="flex flex-col gap-1 text-xs">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Matches</span>
+                    <span className="font-medium">{row.matches.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Wins</span>
+                    <span className="font-medium">{row.wins.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Win rate</span>
+                    <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
+                  </div>
+                  {prevStatsMap?.get(row.item_id) !== undefined && (
+                    <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                      <span className="text-muted-foreground">Previous</span>
+                      <span className="font-medium">{(prevStatsMap.get(row.item_id)!.winrate * 100).toFixed(2)}%</span>
+                    </div>
+                  )}
+                </div>
+              }
             />
           </TableCell>
         )}
         {columns.includes("matches") && (
-          <TableCell className="text-center" title={`${row.matches.toLocaleString()} matches`}>
+          <TableCell className="text-center">
             <ProgressBarWithLabel
               min={minUsage}
               max={maxUsage}
               value={row.matches}
               color={"#22d3ee"}
-              label={row.matches.toLocaleString()}
-              delta={prevStatsMap?.get(row.item_id) !== undefined
-                ? (row.matches / maxUsage) - prevStatsMap.get(row.item_id)!.normalizedPickrate
-                : undefined}
+              label={`${(Math.round((row.matches / maxUsage) * 100)).toFixed(0)}%`}
+              delta={
+                prevStatsMap?.get(row.item_id) !== undefined
+                  ? row.matches / maxUsage - prevStatsMap.get(row.item_id)!.normalizedPickrate
+                  : undefined
+              }
+              tooltip={
+                <div className="flex flex-col gap-1 text-xs">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Matches</span>
+                    <span className="font-medium">{row.matches.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Pick rate</span>
+                    <span className="font-medium">{((row.matches / maxUsage) * 100).toFixed(2)}%</span>
+                  </div>
+                  {prevStatsMap?.get(row.item_id) !== undefined && (
+                    <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                      <span className="text-muted-foreground">Previous</span>
+                      <span className="font-medium">
+                        {(prevStatsMap.get(row.item_id)!.normalizedPickrate * 100).toFixed(2)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              }
             />
           </TableCell>
         )}
@@ -482,7 +525,7 @@ export function ItemStatsTableDisplay({
                   onClick={() => toggleSort("matches")}
                 >
                   <div className="flex items-center">
-                    <span>Matches</span>
+                    <span>Pick Rate (Normalized)</span>
                     {getSortArrow("matches")}
                   </div>
                 </TableHead>
