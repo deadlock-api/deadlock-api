@@ -19,6 +19,8 @@ interface AbilityOrderTreeProps {
   minMatches?: number | null;
   gameMode?: AbilityOrderStatsGameModeEnum;
   defaultDepth: number;
+  includeItemIds?: number[];
+  excludeItemIds?: number[];
 }
 
 export default function AbilityOrderTree({
@@ -30,6 +32,8 @@ export default function AbilityOrderTree({
   minMatches,
   gameMode,
   defaultDepth,
+  includeItemIds,
+  excludeItemIds,
 }: AbilityOrderTreeProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [focusedPaths, setFocusedPaths] = useState<Set<string>>(new Set());
@@ -46,6 +50,8 @@ export default function AbilityOrderTree({
       maxDateTimestamp,
       minMatches,
       gameMode,
+      includeItemIds,
+      excludeItemIds,
     }),
   );
 

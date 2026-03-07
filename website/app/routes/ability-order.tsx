@@ -1,11 +1,14 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 import AbilityOrderTree from "~/components/ability-order/AbilityOrderTree";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
+import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriState";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
+import type { TriState } from "~/components/selectors/TriStateSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -35,6 +38,16 @@ export default function AbilityOrder() {
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
+  const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
+
+  const includeItemIds = useMemo(
+    () => [...itemSelections.entries()].filter(([_, s]) => s === "included").map(([id]) => id),
+    [itemSelections],
+  );
+  const excludeItemIds = useMemo(
+    () => [...itemSelections.entries()].filter(([_, s]) => s === "excluded").map(([id]) => id),
+    [itemSelections],
+  );
 
   return (
     <>
@@ -68,6 +81,11 @@ export default function AbilityOrder() {
                 />
               </>
             )}
+            <ItemSelectorTriState
+              selections={itemSelections}
+              onSelectionsChange={setItemSelections}
+              label="Items"
+            />
             <PatchOrDatePicker
               patchDates={PATCHES}
               value={{ startDate, endDate }}
@@ -86,6 +104,8 @@ export default function AbilityOrder() {
         minMatches={minMatches}
         gameMode={gameMode}
         defaultDepth={2}
+        includeItemIds={includeItemIds}
+        excludeItemIds={excludeItemIds}
       />
     </>
   );
