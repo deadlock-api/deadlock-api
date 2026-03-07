@@ -19,11 +19,10 @@ export function FilterPill({ label, value, active, icon, children, className, al
         <button
           type="button"
           className={cn(
-            "inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-colors",
-            "hover:bg-accent",
+            "inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-all",
             active
-              ? "bg-primary/10 border-primary/30 text-foreground"
-              : "bg-muted/50 border-border text-muted-foreground",
+              ? "bg-primary/15 border-primary/40 text-foreground shadow-[0_0_8px_rgba(250,68,84,0.15)]"
+              : "bg-secondary border-white/[0.08] text-muted-foreground hover:bg-accent hover:text-foreground hover:border-white/[0.14]",
           )}
         >
           {icon}
