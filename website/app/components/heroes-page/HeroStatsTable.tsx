@@ -66,6 +66,58 @@ export default function HeroStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
+  const hasPreviousInterval = minDateTimestamp > 0 && maxDateTimestamp !== undefined;
+  const prevMinTimestamp = useMemo(
+    () => (hasPreviousInterval ? minDateTimestamp - (maxDateTimestamp - minDateTimestamp) : 0),
+    [hasPreviousInterval, minDateTimestamp, maxDateTimestamp],
+  );
+  const prevMaxTimestamp = useMemo(
+    () => (hasPreviousInterval ? minDateTimestamp : undefined),
+    [hasPreviousInterval, minDateTimestamp],
+  );
+
+  const { data: prevHeroData } = useQuery({
+    queryKey: [
+      "api-hero-stats",
+      minRankId,
+      maxRankId,
+      prevMinTimestamp,
+      prevMaxTimestamp,
+      minHeroMatches,
+      minHeroMatchesTotal,
+      gameMode,
+    ],
+    queryFn: async () => {
+      const response = await api.analytics_api.heroStats({
+        minHeroMatches: minHeroMatches,
+        minHeroMatchesTotal: minHeroMatchesTotal,
+        minAverageBadge: minRankId,
+        maxAverageBadge: maxRankId,
+        minUnixTimestamp: prevMinTimestamp,
+        maxUnixTimestamp: prevMaxTimestamp,
+        gameMode: gameMode,
+      });
+      return response.data;
+    },
+    staleTime: 24 * 60 * 60 * 1000,
+    enabled: hasPreviousInterval,
+  });
+
+  const prevStatsMap = useMemo(() => {
+    if (!prevHeroData) return undefined;
+    const prevSumMatches = prevHeroData.reduce((acc, row) => acc + row.matches, 0);
+    const prevMaxMatches = Math.max(...prevHeroData.map((item) => item.matches));
+    const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
+    for (const row of prevHeroData) {
+      map.set(row.hero_id, {
+        winrate: row.wins / row.matches,
+        pickrate: 12 * (row.matches / prevSumMatches),
+        normalizedPickrate: row.matches / prevMaxMatches,
+      });
+    }
+    return map;
+  }, [prevHeroData]);
+
   const minWinrate = useMemo(() => Math.min(...(heroData || []).map((item) => item.wins / item.matches)), [heroData]);
   const maxWinrate = useMemo(() => Math.max(...(heroData || []).map((item) => item.wins / item.matches)), [heroData]);
   const minMatches = useMemo(() => Math.min(...(heroData || []).map((item) => item.matches)), [heroData]);
@@ -136,6 +188,9 @@ export default function HeroStatsTable({
                   value={row.wins / row.matches}
                   color={"#fa4454"}
                   label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                  delta={prevStatsMap?.get(row.hero_id) !== undefined
+                    ? (row.wins / row.matches) - prevStatsMap.get(row.hero_id)!.winrate
+                    : undefined}
                 />
               </TableCell>
             )}
@@ -153,6 +208,11 @@ export default function HeroStatsTable({
                       ? `${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `
                       : `${(Math.round(12 * (row.matches / sumMatches) * 100)).toFixed(0)}% `
                   }
+                  delta={prevStatsMap?.get(row.hero_id) !== undefined
+                    ? (minHeroMatchesTotal || minHeroMatches
+                        ? (row.matches / maxMatches) - prevStatsMap.get(row.hero_id)!.normalizedPickrate
+                        : 12 * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate)
+                    : undefined}
                 />
               </TableCell>
             )}

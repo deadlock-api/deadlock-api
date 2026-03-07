@@ -24,18 +24,30 @@ export function ProgressBarWithLabel({
   max,
   color,
   label,
+  delta,
 }: {
   value?: number;
   min?: number;
   max?: number;
   color?: Color;
   label?: string;
+  delta?: number;
 }) {
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
   return (
     <div className="flex flex-col gap-2  min-w-16">
       <ProgressBar value={value} min={min} max={max} color={color} />
-      <span className="text-sm text-muted-foreground text-left">{label || `${percentage}%` || 0}</span>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-sm text-muted-foreground text-left">{label || `${percentage}%` || 0}</span>
+        {delta !== undefined && delta !== 0 && (
+          <span
+            className={`text-xs font-medium ${delta > 0 ? "text-green-500" : "text-red-500"}`}
+          >
+            {delta > 0 ? "+" : ""}
+            {(delta * 100).toFixed(1)}%
+          </span>
+        )}
+      </div>
     </div>
   );
 }
