@@ -4,10 +4,10 @@ import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import ItemImage from "~/components/ItemImage";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import ItemName from "~/components/ItemName";
 import ItemTier from "~/components/ItemTier";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
@@ -590,7 +590,7 @@ export default function ItemStatsTable({
     () =>
       data?.filter((d) =>
         assetsItems
-          ?.filter((i) => !i.disabled)
+          ?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
           .map((i) => i.id)
           .includes(d.item_id),
       ),

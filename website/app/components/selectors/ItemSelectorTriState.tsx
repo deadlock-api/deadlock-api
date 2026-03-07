@@ -26,7 +26,7 @@ export function ItemSelectorTriState({
   const options = useMemo(() => {
     if (!data) return [];
     return data
-      .filter((i) => !i.disabled && i.shopable)
+      ?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
       .sort((a, b) => {
         if (a.item_tier !== b.item_tier) return a.item_tier - b.item_tier;
         return a.name.localeCompare(b.name);
