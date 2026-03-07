@@ -2,11 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
+import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -26,11 +28,6 @@ export const meta: MetaFunction = () => {
     },
   ];
 };
-
-const SORT_DIRECTION_OPTIONS = [
-  { value: "desc", label: "Descending" },
-  { value: "asc", label: "Ascending" },
-];
 
 const GAME_MODE_OPTIONS = [
   { value: "normal", label: "Normal" },
@@ -105,12 +102,24 @@ export default function PlayerScoreboard() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap justify-center gap-2">
                 <SortBySelector value={sortBy} onChange={setSortBy} />
-                <StringSelector
-                  options={SORT_DIRECTION_OPTIONS}
-                  onSelect={(v) => setSortDirection(v as "desc" | "asc")}
-                  selected={sortDirection}
-                  label="Direction"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex justify-center md:justify-start items-center h-8">
+                    <span className="text-sm font-semibold text-foreground">Direction</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5"
+                    onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+                  >
+                    {sortDirection === "desc" ? (
+                      <ArrowDownNarrowWide className="size-4" />
+                    ) : (
+                      <ArrowUpNarrowWide className="size-4" />
+                    )}
+                    {sortDirection === "desc" ? "DESC" : "ASC"}
+                  </Button>
+                </div>
                 <StringSelector
                   options={GAME_MODE_OPTIONS}
                   onSelect={(v) => setGameMode(v as "normal" | "street_brawl")}
