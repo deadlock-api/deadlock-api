@@ -6,6 +6,7 @@ import type { Dayjs } from "~/dayjs";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import AbilityOrderNode from "./AbilityOrderNode";
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
@@ -181,8 +182,8 @@ export default function AbilityOrderTree({
 
   if (isLoadingOrder) {
     return (
-      <div className="flex items-center justify-center w-full py-16">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500" />
+      <div className="flex items-center justify-center w-full py-24">
+        <LoadingLogo className="w-24 h-24" />
       </div>
     );
   }
