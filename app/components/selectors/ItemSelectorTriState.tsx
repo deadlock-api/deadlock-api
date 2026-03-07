@@ -5,11 +5,23 @@ import ItemImage from "~/components/ItemImage";
 import { type TriState, type TriStateGroupStyle, TriStateSelector } from "~/components/selectors/TriStateSelector";
 import { assetsApi } from "~/lib/assets-api";
 
-const ITEM_CATEGORY_STYLES: Record<string, TriStateGroupStyle> = {
-  weapon: { label: "Weapon", color: "rgb(229, 138, 0)" },
-  vitality: { label: "Vitality", color: "rgb(0, 255, 153)" },
-  spirit: { label: "Spirit", color: "rgb(0, 221, 255)" },
+const CATEGORY_COLORS: Record<string, string> = {
+  weapon: "rgb(229, 138, 0)",
+  vitality: "rgb(0, 255, 153)",
+  spirit: "rgb(0, 221, 255)",
 };
+
+const ITEM_GROUP_STYLES: Record<string, TriStateGroupStyle> = Object.fromEntries(
+  [1, 2, 3, 4].flatMap((tier) =>
+    ["weapon", "vitality", "spirit"].map((cat) => [
+      `${tier}-${cat}`,
+      {
+        label: `Tier ${tier} — ${cat.charAt(0).toUpperCase() + cat.slice(1)}`,
+        color: CATEGORY_COLORS[cat],
+      },
+    ]),
+  ),
+);
 
 export function ItemSelectorTriState({
   selections,
@@ -34,17 +46,17 @@ export function ItemSelectorTriState({
     return data
       ?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
       .sort((a, b) => {
+        if (a.item_tier !== b.item_tier) return a.item_tier - b.item_tier;
         const slotOrder = ["weapon", "vitality", "spirit"];
         const slotDiff = slotOrder.indexOf(a.item_slot_type) - slotOrder.indexOf(b.item_slot_type);
         if (slotDiff !== 0) return slotDiff;
-        if (a.item_tier !== b.item_tier) return a.item_tier - b.item_tier;
         return a.name.localeCompare(b.name);
       })
       .map((item) => ({
         id: item.id,
         label: item.name,
         icon: <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />,
-        group: item.item_slot_type as string,
+        group: `${item.item_tier}-${item.item_slot_type}`,
       }));
   }, [data]);
 
@@ -57,7 +69,7 @@ export function ItemSelectorTriState({
       onSelectionsChange={onSelectionsChange}
       placeholder="Filter items..."
       label={label || "Items"}
-      groupStyles={ITEM_CATEGORY_STYLES}
+      groupStyles={ITEM_GROUP_STYLES}
     />
   );
 }
