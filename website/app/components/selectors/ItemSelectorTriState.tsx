@@ -2,26 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
-import { type TriState, type TriStateGroupStyle, TriStateSelector } from "~/components/selectors/TriStateSelector";
+import { type TriState, type TriStateColumnLayout, TriStateSelector } from "~/components/selectors/TriStateSelector";
 import { assetsApi } from "~/lib/assets-api";
 
-const CATEGORY_COLORS: Record<string, string> = {
-  weapon: "rgb(229, 138, 0)",
-  vitality: "rgb(0, 255, 153)",
-  spirit: "rgb(0, 221, 255)",
+const ITEM_COLUMN_LAYOUT: TriStateColumnLayout = {
+  superGroups: [1, 2, 3, 4].map((tier) => ({ key: String(tier), label: `Tier ${tier}` })),
+  columns: [
+    { key: "weapon", label: "Weapon", color: "rgb(229, 138, 0)" },
+    { key: "vitality", label: "Vitality", color: "rgb(0, 255, 153)" },
+    { key: "spirit", label: "Spirit", color: "rgb(0, 221, 255)" },
+  ],
 };
-
-const ITEM_GROUP_STYLES: Record<string, TriStateGroupStyle> = Object.fromEntries(
-  [1, 2, 3, 4].flatMap((tier) =>
-    ["weapon", "vitality", "spirit"].map((cat) => [
-      `${tier}-${cat}`,
-      {
-        label: `Tier ${tier} - ${cat.charAt(0).toUpperCase() + cat.slice(1)}`,
-        color: CATEGORY_COLORS[cat],
-      },
-    ]),
-  ),
-);
 
 export function ItemSelectorTriState({
   selections,
@@ -69,7 +60,7 @@ export function ItemSelectorTriState({
       onSelectionsChange={onSelectionsChange}
       placeholder="Filter items..."
       label={label || "Items"}
-      groupStyles={ITEM_GROUP_STYLES}
+      columnLayout={ITEM_COLUMN_LAYOUT}
     />
   );
 }

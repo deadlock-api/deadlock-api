@@ -17,6 +17,13 @@ export interface TriStateGroupStyle {
   color: string;
 }
 
+export interface TriStateColumnLayout {
+  /** Maps super-group key (e.g. "1") to its display label (e.g. "Tier 1") */
+  superGroups: { key: string; label: string }[];
+  /** Column keys in display order (e.g. ["weapon", "vitality", "spirit"]) */
+  columns: { key: string; label: string; color: string }[];
+}
+
 function TriStateRow({
   option,
   state,
@@ -56,6 +63,62 @@ function TriStateRow({
   );
 }
 
+function TriStateColumnContent({
+  options,
+  selections,
+  columnLayout,
+  onToggle,
+}: {
+  options: TriStateOption[];
+  selections: Map<number, TriState>;
+  columnLayout: TriStateColumnLayout;
+  onToggle: (id: number, target: TriState) => void;
+}) {
+  // Build lookup: groupKey -> options[]
+  const grouped = new Map<string, TriStateOption[]>();
+  for (const option of options) {
+    const key = option.group || "";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(option);
+  }
+
+  return (
+    <div className="p-2">
+      {columnLayout.superGroups.map((sg) => (
+        <div key={sg.key} className="mb-3 last:mb-0">
+          <div className="text-xs font-semibold uppercase tracking-wide px-1 py-1 text-muted-foreground">
+            {sg.label}
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-x-3">
+            {columnLayout.columns.map((col) => {
+              const groupKey = `${sg.key}-${col.key}`;
+              const items = grouped.get(groupKey) || [];
+              return (
+                <div key={col.key}>
+                  <div
+                    className="text-xs font-semibold uppercase tracking-wide px-2 py-1"
+                    style={{ color: col.color }}
+                  >
+                    {col.label}
+                  </div>
+                  {items.map((option) => (
+                    <TriStateRow
+                      key={option.id}
+                      option={option}
+                      state={selections.get(option.id)}
+                      onToggle={onToggle}
+                    />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TriStateSelector({
   options,
   selections,
@@ -63,6 +126,7 @@ export function TriStateSelector({
   placeholder,
   label,
   groupStyles,
+  columnLayout,
 }: {
   options: TriStateOption[];
   selections: Map<number, TriState>;
@@ -70,6 +134,7 @@ export function TriStateSelector({
   placeholder?: string;
   label?: string;
   groupStyles?: Record<string, TriStateGroupStyle>;
+  columnLayout?: TriStateColumnLayout;
 }) {
   const includedItems = options.filter((o) => selections.get(o.id) === "included");
   const excludedItems = options.filter((o) => selections.get(o.id) === "excluded");
@@ -132,7 +197,9 @@ export function TriStateSelector({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[260px] max-h-[400px] overflow-y-auto p-0">
+        <PopoverContent
+          className={`max-h-[400px] overflow-y-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
+        >
           {hasSelections && (
             <div className="sticky top-0 z-10 flex items-center justify-end px-2 py-1.5 border-b bg-popover">
               <button
@@ -145,48 +212,57 @@ export function TriStateSelector({
               </button>
             </div>
           )}
-          <div className="flex flex-col gap-0.5 p-2">
-            {groupStyles
-              ? (() => {
-                  const groups = new Map<string, TriStateOption[]>();
-                  for (const option of options) {
-                    const key = option.group || "";
-                    if (!groups.has(key)) groups.set(key, []);
-                    groups.get(key)!.push(option);
-                  }
-                  return [...groups.entries()].map(([groupKey, groupOptions]) => {
-                    const style = groupStyles[groupKey];
-                    return (
-                      <div key={groupKey}>
-                        {style && (
-                          <div
-                            className="text-xs font-semibold uppercase tracking-wide px-2 py-1.5 mt-1 first:mt-0"
-                            style={{ color: style.color }}
-                          >
-                            {style.label}
-                          </div>
-                        )}
-                        {groupOptions.map((option) => (
-                          <TriStateRow
-                            key={option.id}
-                            option={option}
-                            state={selections.get(option.id)}
-                            onToggle={toggleState}
-                          />
-                        ))}
-                      </div>
-                    );
-                  });
-                })()
-              : options.map((option) => (
-                  <TriStateRow
-                    key={option.id}
-                    option={option}
-                    state={selections.get(option.id)}
-                    onToggle={toggleState}
-                  />
-                ))}
-          </div>
+          {columnLayout ? (
+            <TriStateColumnContent
+              options={options}
+              selections={selections}
+              columnLayout={columnLayout}
+              onToggle={toggleState}
+            />
+          ) : (
+            <div className="flex flex-col gap-0.5 p-2">
+              {groupStyles
+                ? (() => {
+                    const groups = new Map<string, TriStateOption[]>();
+                    for (const option of options) {
+                      const key = option.group || "";
+                      if (!groups.has(key)) groups.set(key, []);
+                      groups.get(key)!.push(option);
+                    }
+                    return [...groups.entries()].map(([groupKey, groupOptions]) => {
+                      const style = groupStyles[groupKey];
+                      return (
+                        <div key={groupKey}>
+                          {style && (
+                            <div
+                              className="text-xs font-semibold uppercase tracking-wide px-2 py-1.5 mt-1 first:mt-0"
+                              style={{ color: style.color }}
+                            >
+                              {style.label}
+                            </div>
+                          )}
+                          {groupOptions.map((option) => (
+                            <TriStateRow
+                              key={option.id}
+                              option={option}
+                              state={selections.get(option.id)}
+                              onToggle={toggleState}
+                            />
+                          ))}
+                        </div>
+                      );
+                    });
+                  })()
+                : options.map((option) => (
+                    <TriStateRow
+                      key={option.id}
+                      option={option}
+                      state={selections.get(option.id)}
+                      onToggle={toggleState}
+                    />
+                  ))}
+            </div>
+          )}
         </PopoverContent>
       </Popover>
     </div>
