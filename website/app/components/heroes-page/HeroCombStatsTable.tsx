@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useId, useMemo, useState } from "react";
 import HeroImage from "~/components/HeroImage";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 
@@ -45,6 +45,16 @@ export default function HeroCombStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const hasPreviousInterval = minDateTimestamp > 0 && maxDateTimestamp !== undefined;
+  const prevMinTimestamp = useMemo(
+    () => (hasPreviousInterval ? minDateTimestamp - (maxDateTimestamp - minDateTimestamp) : 0),
+    [hasPreviousInterval, minDateTimestamp, maxDateTimestamp],
+  );
+  const prevMaxTimestamp = useMemo(
+    () => (hasPreviousInterval ? minDateTimestamp : undefined),
+    [hasPreviousInterval, minDateTimestamp],
+  );
+
   const { data: heroData, isLoading } = useQuery({
     queryKey: [
       "api-hero-comb-stats",
@@ -71,6 +81,47 @@ export default function HeroCombStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
+  const { data: prevHeroData } = useQuery({
+    queryKey: [
+      "api-hero-comb-stats",
+      minRankId,
+      maxRankId,
+      prevMinTimestamp,
+      prevMaxTimestamp,
+      combSizeFilter,
+      minHeroMatches,
+      gameMode,
+    ],
+    queryFn: async () => {
+      const response = await api.analytics_api.heroCombStats({
+        combSize: combSizeFilter,
+        minMatches: minHeroMatches ?? 0,
+        minAverageBadge: minRankId ?? 0,
+        maxAverageBadge: maxRankId ?? 116,
+        minUnixTimestamp: prevMinTimestamp,
+        maxUnixTimestamp: prevMaxTimestamp,
+        gameMode: gameMode,
+      });
+      return response.data;
+    },
+    staleTime: 24 * 60 * 60 * 1000,
+    enabled: hasPreviousInterval,
+  });
+
+  const prevStatsMap = useMemo(() => {
+    if (!prevHeroData) return undefined;
+    const prevSumMatches = prevHeroData.reduce((acc, row) => acc + row.matches, 0);
+    const map = new Map<string, { winrate: number; pickrate: number }>();
+    for (const row of prevHeroData) {
+      const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+      map.set(key, {
+        winrate: row.wins / row.matches,
+        pickrate: row.matches / prevSumMatches,
+      });
+    }
+    return map;
+  }, [prevHeroData]);
+
   const sumMatches = useMemo(() => heroData?.reduce((acc, row) => acc + row.matches, 0) || 0, [heroData]);
   const minMatches = useMemo(() => Math.min(...(heroData || []).map((item) => item.matches)), [heroData]);
   const maxMatches = useMemo(() => Math.max(...(heroData || []).map((item) => item.matches)), [heroData]);
@@ -91,7 +142,7 @@ export default function HeroCombStatsTable({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-3 mx-auto gap-4">
+      <div className="flex flex-wrap mx-auto gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor={combSizeId} className="text-nowrap text-sm text-muted-foreground">
             Combination Size
@@ -176,6 +227,11 @@ export default function HeroCombStatsTable({
                       value={row.wins / row.matches}
                       color={"#fa4454"}
                       label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                      delta={(() => {
+                        const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+                        const prev = prevStatsMap?.get(key);
+                        return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
+                      })()}
                     />
                   </TableCell>
                 )}
@@ -190,6 +246,11 @@ export default function HeroCombStatsTable({
                       value={row.matches}
                       color={"#22d3ee"}
                       label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                      delta={(() => {
+                        const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+                        const prev = prevStatsMap?.get(key);
+                        return prev !== undefined ? row.matches / sumMatches - prev.pickrate : undefined;
+                      })()}
                     />
                   </TableCell>
                 )}
