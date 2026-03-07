@@ -147,10 +147,6 @@ export default function RankRangeSelector({ minRank, maxRank, onRankChange, labe
         </PopoverTrigger>
         <PopoverContent className="w-80 p-4" align="start">
           <div className="grid gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium leading-none">Rank Range</h4>
-              <p className="text-sm text-muted-foreground">Filter matches by average rank.</p>
-            </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {localMinOption && (
