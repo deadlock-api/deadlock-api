@@ -17,6 +17,7 @@ import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Button } from "../ui/button";
 
 interface BulkMatchMetadata {
@@ -136,6 +137,7 @@ export default function ItemCombsExplore({
   limit,
   minBoughtAtS,
   maxBoughtAtS,
+  gameMode,
 }: {
   minRankId?: number;
   maxRankId?: number;
@@ -147,6 +149,7 @@ export default function ItemCombsExplore({
   limit?: number;
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
+  gameMode?: GameMode;
 }) {
   const [includeItems, setIncludeItems] = useQueryState(
     "include_items",
@@ -210,6 +213,7 @@ export default function ItemCombsExplore({
       bucket: undefined,
       minBoughtAtS,
       maxBoughtAtS,
+      gameMode,
     } satisfies ItemStatsQueryParams;
   }, [
     minMatches,
@@ -222,6 +226,7 @@ export default function ItemCombsExplore({
     excludeItems,
     minBoughtAtS,
     maxBoughtAtS,
+    gameMode,
   ]);
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery(itemStatsQueryOptions(queryStatOptions));
@@ -251,6 +256,7 @@ export default function ItemCombsExplore({
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
+      gameMode,
     ],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -268,6 +274,7 @@ export default function ItemCombsExplore({
       if (maxRankId != null) params.set("max_average_badge", String(maxRankId));
       if (minDateTimestamp != null) params.set("min_unix_timestamp", String(minDateTimestamp));
       if (maxDateTimestamp != null) params.set("max_unix_timestamp", String(maxDateTimestamp));
+      if (gameMode) params.set("game_mode", gameMode);
       params.set("order_by", "average_badge");
       params.set("order_direction", "desc");
       params.set("limit", "10");

@@ -7,6 +7,7 @@ import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 
@@ -20,6 +21,7 @@ export default function HeroCombStatsTable({
   minMatches: minHeroMatches,
   minDate,
   maxDate,
+  gameMode,
 }: {
   columns: string[];
   limit?: number;
@@ -30,6 +32,7 @@ export default function HeroCombStatsTable({
   minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  gameMode?: GameMode;
 }) {
   const combSizeId = useId();
   const combsToShowId = useId();
@@ -51,6 +54,7 @@ export default function HeroCombStatsTable({
       maxDateTimestamp,
       combSizeFilter,
       minHeroMatches,
+      gameMode,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.heroCombStats({
@@ -60,6 +64,7 @@ export default function HeroCombStatsTable({
         maxAverageBadge: maxRankId ?? 116,
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
+        gameMode: gameMode,
       });
       return response.data;
     },

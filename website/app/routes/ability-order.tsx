@@ -1,13 +1,13 @@
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 import AbilityOrderTree from "~/components/ability-order/AbilityOrderTree";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriState";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
-import { StringSelector } from "~/components/selectors/StringSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { PATCHES } from "~/lib/constants";
@@ -20,19 +20,11 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-const GAME_MODE_OPTIONS = [
-  { value: "normal", label: "Normal" },
-  { value: "street_brawl", label: "Street Brawl" },
-];
-
 export default function AbilityOrder() {
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(15));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [gameMode, setGameMode] = useQueryState(
-    "game_mode",
-    parseAsStringLiteral(["normal", "street_brawl"] as const).withDefault("normal"),
-  );
+  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
@@ -62,24 +54,17 @@ export default function AbilityOrder() {
                 if (id != null) setHeroId(id);
               }}
             />
-            <StringSelector
-              options={GAME_MODE_OPTIONS}
-              onSelect={(v) => setGameMode(v as "normal" | "street_brawl")}
-              selected={gameMode}
-              label="Game Mode"
-            />
+            <GameModeSelector value={gameMode} onChange={setGameMode} />
             <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={0} />
             {gameMode !== "street_brawl" && (
-              <>
-                <RankRangeSelector
-                  minRank={minRankId}
-                  maxRank={maxRankId}
-                  onRankChange={(min, max) => {
-                    setMinRankId(min);
-                    setMaxRankId(max);
-                  }}
-                />
-              </>
+              <RankRangeSelector
+                minRank={minRankId}
+                maxRank={maxRankId}
+                onRankChange={(min, max) => {
+                  setMinRankId(min);
+                  setMaxRankId(max);
+                }}
+              />
             )}
             <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
             <PatchOrDatePicker

@@ -13,6 +13,7 @@ import HeroStatsOverTimeChart, {
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { Card, CardContent } from "~/components/ui/card";
@@ -37,6 +38,7 @@ export default function Heroes(
     initialTab: "stats",
   },
 ) {
+  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
   const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQueryState(
@@ -75,6 +77,10 @@ export default function Heroes(
     ),
   );
 
+  const isStreetBrawl = gameMode === "street_brawl";
+  const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
+  const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -103,14 +109,17 @@ export default function Heroes(
             ) : (
               <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
             )}
-            <RankRangeSelector
-              minRank={minRankId}
-              maxRank={maxRankId}
-              onRankChange={(min, max) => {
-                setMinRankId(min);
-                setMaxRankId(max);
-              }}
-            />
+            <GameModeSelector value={gameMode} onChange={setGameMode} />
+            {gameMode !== "street_brawl" && (
+              <RankRangeSelector
+                minRank={minRankId}
+                maxRank={maxRankId}
+                onRankChange={(min, max) => {
+                  setMinRankId(min);
+                  setMaxRankId(max);
+                }}
+              />
+            )}
             <PatchOrDatePicker
               patchDates={PATCHES}
               value={{ startDate, endDate }}
@@ -144,12 +153,13 @@ export default function Heroes(
             <HeroStatsTable
               columns={["winRate", "pickRate", "KDA", "totalMatches"]}
               sortBy="winrate"
-              minRankId={minRankId}
-              maxRankId={maxRankId}
+              minRankId={effectiveMinRankId}
+              maxRankId={effectiveMaxRankId}
               minHeroMatches={minHeroMatches}
               minHeroMatchesTotal={minHeroMatchesTotal}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
+              gameMode={gameMode}
             />
           </div>
         </TabsContent>
@@ -186,12 +196,13 @@ export default function Heroes(
               heroIds={heroIds}
               heroStat={heroStat as (typeof HERO_STATS)[number]}
               heroTimeInterval={heroTimeInterval}
-              minRankId={minRankId}
-              maxRankId={maxRankId}
+              minRankId={effectiveMinRankId}
+              maxRankId={effectiveMaxRankId}
               minHeroMatches={minHeroMatches}
               minHeroMatchesTotal={minHeroMatchesTotal}
               minDate={startDate}
               maxDate={endDate}
+              gameMode={gameMode}
             />
           </div>
         </TabsContent>
@@ -222,13 +233,14 @@ export default function Heroes(
             </div>
             <div className="flex flex-col gap-4">
               <HeroMatchupStatsTable
-                minRankId={minRankId}
-                maxRankId={maxRankId}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
                 minMatches={minMatches}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
+                gameMode={gameMode}
               />
             </div>
           </div>
@@ -238,11 +250,12 @@ export default function Heroes(
           <div className="flex flex-col gap-4">
             <HeroCombStatsTable
               columns={["winRate", "pickRate", "totalMatches"]}
-              minRankId={minRankId}
-              maxRankId={maxRankId}
+              minRankId={effectiveMinRankId}
+              maxRankId={effectiveMaxRankId}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
               minMatches={minMatches}
+              gameMode={gameMode}
             />
           </div>
         </TabsContent>
@@ -284,8 +297,8 @@ export default function Heroes(
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
                 stat={HeroMatchupDetailsStatsTableStat.SYNERGY}
-                minRankId={minRankId}
-                maxRankId={maxRankId}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
                 onHeroSelected={(selectedHeroId) => {
@@ -295,12 +308,13 @@ export default function Heroes(
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
                 minHeroMatches={minMatches}
+                gameMode={gameMode}
               />
               <HeroMatchupDetailsStatsTable
                 heroId={heroId}
                 stat={HeroMatchupDetailsStatsTableStat.COUNTER}
-                minRankId={minRankId}
-                maxRankId={maxRankId}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
                 onHeroSelected={(selectedHeroId) => {
@@ -310,6 +324,7 @@ export default function Heroes(
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}
                 minHeroMatches={minMatches}
+                gameMode={gameMode}
               />
             </div>
           </div>

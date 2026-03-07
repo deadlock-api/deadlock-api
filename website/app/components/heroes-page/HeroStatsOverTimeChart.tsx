@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { type Dayjs, day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
@@ -73,6 +74,7 @@ export default function HeroStatsOverTimeChart({
   minHeroMatchesTotal,
   minDate,
   maxDate,
+  gameMode,
 }: {
   heroIds?: number[];
   heroStat: (typeof HERO_STATS)[number];
@@ -83,6 +85,7 @@ export default function HeroStatsOverTimeChart({
   minHeroMatchesTotal?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  gameMode?: GameMode;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -97,6 +100,7 @@ export default function HeroStatsOverTimeChart({
       heroTimeInterval,
       minHeroMatches,
       minHeroMatchesTotal,
+      gameMode,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
@@ -107,6 +111,7 @@ export default function HeroStatsOverTimeChart({
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
         bucket: heroTimeInterval,
+        gameMode: gameMode,
       });
       return response.data;
     },

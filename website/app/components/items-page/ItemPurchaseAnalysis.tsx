@@ -5,6 +5,7 @@ import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
 import type { Dayjs } from "~/dayjs";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 
 export default function ItemPurchaseAnalysis({
   minRankId,
@@ -15,6 +16,7 @@ export default function ItemPurchaseAnalysis({
   minMatches,
   minBoughtAtS,
   maxBoughtAtS,
+  gameMode,
 }: {
   minRankId?: number;
   maxRankId?: number;
@@ -24,6 +26,7 @@ export default function ItemPurchaseAnalysis({
   minMatches?: number | null;
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
+  gameMode?: GameMode;
 }) {
   const [itemIds, setItemIds] = useQueryState("item_ids", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
@@ -40,8 +43,19 @@ export default function ItemPurchaseAnalysis({
       bucket: undefined,
       minBoughtAtS,
       maxBoughtAtS,
+      gameMode,
     } satisfies ItemStatsQueryParams;
-  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minBoughtAtS, maxBoughtAtS]);
+  }, [
+    minMatches,
+    hero,
+    minRankId,
+    maxRankId,
+    minDateTimestamp,
+    maxDateTimestamp,
+    minBoughtAtS,
+    maxBoughtAtS,
+    gameMode,
+  ]);
 
   return (
     <div>
