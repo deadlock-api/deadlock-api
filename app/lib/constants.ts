@@ -2,15 +2,15 @@ import { day } from "~/dayjs";
 
 export const PATCHES = [
   {
-    id: "2026-01-21",
-    name: "2026-01-21 Old Gods, New Blood",
-    startDate: day.utc("2026-01-21T02:10:58Z").local(),
+    id: "2026-03-06",
+    name: "2026-03-06",
+    startDate: day.utc("2026-03-06T21:37:48Z").local(),
     endDate: day.utc().endOf("day").local(),
   },
   {
-    id: "2025-11-21",
-    name: "2025-11-21 Patch (rev. Dec 4th)",
-    startDate: day.utc("2025-12-04T00:34:27Z").local(),
+    id: "2026-01-21",
+    name: "Old Gods, New Blood (2026-01-21)",
+    startDate: day.utc("2026-01-21T02:10:58Z").local(),
     endDate: day.utc().endOf("day").local(),
   },
   {
