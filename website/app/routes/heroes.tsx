@@ -1,6 +1,7 @@
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useId } from "react";
 import type { MetaFunction } from "react-router";
+import { FilterCard } from "~/components/FilterCard";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -16,7 +17,6 @@ import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
-import { FilterCard } from "~/components/FilterCard";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -89,59 +89,49 @@ export default function Heroes(
       </div>
 
       <FilterCard>
-            {["stats", "stats-over-time"].includes(tab) ? (
-              <>
-                <NumberSelector
-                  value={minHeroMatches}
-                  onChange={setMinHeroMatches}
-                  label={"Min Hero Matches (Timerange)"}
-                  step={10}
-                />
-                <NumberSelector
-                  value={minHeroMatchesTotal}
-                  onChange={setMinHeroMatchesTotal}
-                  label={"Min Hero Matches (Total)"}
-                  step={100}
-                />
-              </>
-            ) : (
-              <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
-            )}
-            <GameModeSelector value={gameMode} onChange={setGameMode} />
-            {gameMode !== "street_brawl" && (
-              <RankRangeSelector
-                minRank={minRankId}
-                maxRank={maxRankId}
-                onRankChange={(min, max) => {
-                  setMinRankId(min);
-                  setMaxRankId(max);
-                }}
-              />
-            )}
-            <PatchOrDatePicker
-              patchDates={PATCHES}
-              value={{ startDate, endDate }}
-              onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+        {["stats", "stats-over-time"].includes(tab) ? (
+          <>
+            <NumberSelector
+              value={minHeroMatches}
+              onChange={setMinHeroMatches}
+              label={"Min Hero Matches (Timerange)"}
+              step={10}
             />
+            <NumberSelector
+              value={minHeroMatchesTotal}
+              onChange={setMinHeroMatchesTotal}
+              label={"Min Hero Matches (Total)"}
+              step={100}
+            />
+          </>
+        ) : (
+          <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
+        )}
+        <GameModeSelector value={gameMode} onChange={setGameMode} />
+        {gameMode !== "street_brawl" && (
+          <RankRangeSelector
+            minRank={minRankId}
+            maxRank={maxRankId}
+            onRankChange={(min, max) => {
+              setMinRankId(min);
+              setMaxRankId(max);
+            }}
+          />
+        )}
+        <PatchOrDatePicker
+          patchDates={PATCHES}
+          value={{ startDate, endDate }}
+          onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+        />
       </FilterCard>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList variant="line" className="flex items-center flex-wrap h-auto w-full">
-          <TabsTrigger className="flex-1" value="stats">
-            Overall Stats
-          </TabsTrigger>
-          <TabsTrigger className="flex-1" value="stats-over-time">
-            Stats Over Time
-          </TabsTrigger>
-          <TabsTrigger className="flex-1" value="matchups">
-            Matchups
-          </TabsTrigger>
-          <TabsTrigger className="flex-1" value="hero-combs">
-            Hero Combs
-          </TabsTrigger>
-          <TabsTrigger className="flex-1" value="hero-matchup-details">
-            Matchup Details
-          </TabsTrigger>
+        <TabsList className="w-full">
+          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
+          <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
+          <TabsTrigger value="matchups">Matchups</TabsTrigger>
+          <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
+          <TabsTrigger value="hero-matchup-details">Matchup Details</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stats">
