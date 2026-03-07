@@ -9,7 +9,7 @@ import ItemTier from "~/components/ItemTier";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
-import ItemTierSelector, { type ItemCategory } from "~/components/selectors/ItemTierSelector";
+import ItemTierSelector from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
@@ -69,7 +69,6 @@ export interface DisplayItemStats {
   players: number;
   winRate: number;
   itemTier: number;
-  itemSlotType: string;
   confidenceTier: number;
   confidenceWidth: number;
   confidenceBaselineWidth: number;
@@ -146,7 +145,6 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
       ...d,
       winRate: d.wins / d.matches,
       itemTier: item?.item_tier || 0,
-      itemSlotType: (item as UpgradeV2 | undefined)?.item_slot_type || "",
       confidenceTier: confidenceTier,
       confidenceWidth: width,
       confidenceBaselineWidth: baselineWidth,
@@ -378,10 +376,6 @@ export function ItemStatsTableDisplay({
     "item_tiers",
     parseAsArrayOf(parseAsInteger).withDefault([1, 2, 3, 4]),
   );
-  const [itemCategories, setItemCategories] = useQueryState(
-    "item_categories",
-    parseAsArrayOf(parseAsStringLiteral(["weapon", "vitality", "spirit"] as const)).withDefault(["weapon", "vitality", "spirit"]),
-  );
   const [dimLowConfidence, setDimLowConfidence] = useQueryState(
     "dim_low_confidence",
     parseAsBoolean.withDefault(false),
@@ -442,14 +436,7 @@ export function ItemStatsTableDisplay({
   return (
     <div>
       <div className="flex justify-center items-center gap-6 my-4">
-        {!hideItemTierFilter && (
-          <ItemTierSelector
-            onItemTiersSelected={setItemTiers}
-            selectedItemTiers={itemTiers}
-            onItemCategoriesSelected={setItemCategories as (categories: ItemCategory[]) => void}
-            selectedItemCategories={itemCategories}
-          />
-        )}
+        {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
         {columns.includes("confidence") && (
           <div className="flex items-center gap-2">
             <Switch id={dimLowConfidenceId} checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
@@ -496,7 +483,7 @@ export function ItemStatsTableDisplay({
         )}
         <TableBody>
           {processedData
-            .filter((row) => itemTiers.includes(row.itemTier) && itemCategories.includes(row.itemSlotType as ItemCategory))
+            .filter((row) => itemTiers.includes(row.itemTier))
             .map((row, index) => (
               <ItemStatsTableRow
                 key={row.item_id}
