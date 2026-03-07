@@ -56,7 +56,7 @@ export default function HeroSelector({
 
   const icon = currentHero ? <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" /> : undefined;
 
-  const displayValue = currentHero ? undefined : "Any";
+  const displayValue = currentHero ? currentHero.name : "Any";
 
   return (
     <FilterPill
