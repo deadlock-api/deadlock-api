@@ -91,10 +91,14 @@ export default function RankRangeSelector({ minRank, maxRank, onRankChange, labe
   const committedMaxOption = options[maxIndex];
 
   const isFullRange = minIndex === 0 && maxIndex === options.length - 1;
+  const isMinAtStart = minIndex === 0;
+  const isMaxAtEnd = maxIndex === options.length - 1;
 
   const getTriggerLabel = () => {
     if (!committedMinOption || !committedMaxOption) return "Select Rank Range";
     if (isFullRange) return "All Ranks";
+    if (isMaxAtEnd) return `${committedMinOption.label}+`;
+    if (isMinAtStart) return `Up to ${committedMaxOption.label}`;
     return `${committedMinOption.label} – ${committedMaxOption.label}`;
   };
 
@@ -120,7 +124,7 @@ export default function RankRangeSelector({ minRank, maxRank, onRankChange, labe
             variant="outline"
             className={cn("w-fit max-w-[320px] justify-start text-left font-normal h-9", isFullRange && "text-muted-foreground")}
           >
-            {committedMinOption && (
+            {committedMinOption && !isMinAtStart && (
               <ImgWithSkeleton
                 src={getRankImageUrl(committedMinOption.rank, committedMinOption.subrank, "small", "webp") ?? ""}
                 alt={committedMinOption.label}
@@ -129,7 +133,7 @@ export default function RankRangeSelector({ minRank, maxRank, onRankChange, labe
             )}
             {!committedMinOption && <ShieldIcon className="h-4 w-4 shrink-0" />}
             <span className="truncate">{getTriggerLabel()}</span>
-            {committedMaxOption && !isFullRange && (
+            {committedMaxOption && !isFullRange && !isMaxAtEnd && (
               <ImgWithSkeleton
                 src={getRankImageUrl(committedMaxOption.rank, committedMaxOption.subrank, "small", "webp") ?? ""}
                 alt={committedMaxOption.label}
