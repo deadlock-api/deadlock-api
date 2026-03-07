@@ -17,7 +17,8 @@ export function GameModeSelector({ value, onChange }: { value: GameMode; onChang
       options={GAME_MODE_OPTIONS}
       onSelect={(v) => onChange(v as GameMode)}
       selected={value}
-      label="Game Mode"
+      label="Mode"
+      defaultValue="normal"
     />
   );
 }

@@ -1,12 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
-import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { Button } from "~/components/ui/button";
 import { api } from "~/lib/api";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { ScoreboardTable } from "./ScoreboardTable";
@@ -85,24 +83,7 @@ export default function PlayerScoreboard() {
 
         <Filter.Root>
           <SortBySelector value={sortBy} onChange={setSortBy} />
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-center md:justify-start items-center h-8">
-              <span className="text-sm font-semibold text-foreground">Direction</span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1.5"
-              onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
-            >
-              {sortDirection === "desc" ? (
-                <ArrowDownNarrowWide className="size-4" />
-              ) : (
-                <ArrowUpNarrowWide className="size-4" />
-              )}
-              {sortDirection === "desc" ? "DESC" : "ASC"}
-            </Button>
-          </div>
+          <Filter.SortDirection value={sortDirection} onChange={setSortDirection} />
           <Filter.GameMode value={gameMode} onChange={setGameMode} />
           <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
           <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />

@@ -1,16 +1,17 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useId } from "react";
+import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { day, type Dayjs } from "~/dayjs";
-import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
+import { DateRangePicker } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
-  id: string; // Unique identifier for the patch
-  name: string; // Display name, e.g., "Current Patch (05-08)"
+  id: string;
+  name: string;
   startDate: Dayjs;
-  endDate: Dayjs | "NOW"; // Can be a specific date or "NOW"
+  endDate: Dayjs | "NOW";
 }
 
 export interface PatchOrDatePickerProps {
@@ -47,13 +48,10 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
         setTab("patch");
       }
     } else if (value.startDate || value.endDate) {
-      // If dates are set but don't match a patch, switch to custom
-      // Only switch if not already on custom to avoid loops if defaultTab was custom
       if (tab !== "custom") {
         setTab("custom");
       }
     } else {
-      // If no dates are set, revert to defaultTab or stay if already there
       if (tab !== defaultTab) {
         setTab(defaultTab);
       }
@@ -68,40 +66,53 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
         endDate: resolveEndDate(selectedPatch.endDate),
       });
     } else {
-      // Handle case where "Select a patch" or an empty value is chosen
       onValueChange({});
     }
   };
 
-  const handleDateRangePickerChange: DateRangePickerProps["onDateRangeChange"] = (range) => {
+  const handleDateRangePickerChange = (range: { startDate?: Dayjs; endDate?: Dayjs }) => {
     onValueChange({
       startDate: range.startDate?.startOf("day"),
       endDate: range.endDate?.endOf("day"),
     });
   };
 
+  const getDisplayValue = () => {
+    if (!value.startDate && !value.endDate) return "All Time";
+    if (matchingPatch) return matchingPatch.name;
+    if (value.startDate && value.endDate) {
+      return `${value.startDate.format("MMM D")} - ${value.endDate.format("MMM D")}`;
+    }
+    return "Custom";
+  };
+
+  const isActive = value.startDate != null || value.endDate != null;
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 h-8">
-        <span className="text-sm text-foreground font-semibold">Date Range</span>
+    <FilterPill
+      label="Date"
+      value={getDisplayValue()}
+      active={isActive}
+      icon={<CalendarIcon className="size-3.5 shrink-0" />}
+      className="w-auto min-w-[340px] p-3"
+    >
+      <div className="flex flex-col gap-3">
         <Tabs defaultValue={defaultTab} value={tab} onValueChange={(value) => setTab(value as "patch" | "custom")}>
-          <TabsList className="flex h-6">
-            <TabsTrigger value="patch" className="text-xs h-5 px-2 flex items-center gap-1">
+          <TabsList className="flex w-full">
+            <TabsTrigger value="patch" className="text-xs flex-1 flex items-center gap-1">
               <ClockIcon className="h-3 w-3" />
               Patch
             </TabsTrigger>
-            <TabsTrigger value="custom" className="text-xs h-5 px-2 flex items-center gap-1">
+            <TabsTrigger value="custom" className="text-xs flex-1 flex items-center gap-1">
               <CalendarIcon className="h-3 w-3" />
               Custom
             </TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
 
-      <div>
         {tab === "patch" ? (
           <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-            <SelectTrigger id={patchSelectId} className="h-9 focus-visible:ring-0 min-w-full">
+            <SelectTrigger id={patchSelectId} className="h-9 focus-visible:ring-0 w-full">
               <SelectValue placeholder="Select a patch..." />
             </SelectTrigger>
             <SelectContent>
@@ -120,6 +131,6 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
           />
         )}
       </div>
-    </div>
+    </FilterPill>
   );
 }

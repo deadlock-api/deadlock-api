@@ -12,7 +12,6 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
-import NumberSelector from "~/components/NumberSelector";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -89,21 +88,21 @@ export default function Heroes(
       <Filter.Root>
         {["stats", "stats-over-time"].includes(tab) ? (
           <>
-            <NumberSelector
+            <Filter.MinMatches
               value={minHeroMatches}
               onChange={setMinHeroMatches}
-              label={"Min Hero Matches (Timerange)"}
+              label="Min Hero Matches (Timerange)"
               step={10}
             />
-            <NumberSelector
+            <Filter.MinMatches
               value={minHeroMatchesTotal}
               onChange={setMinHeroMatchesTotal}
-              label={"Min Hero Matches (Total)"}
+              label="Min Hero Matches (Total)"
               step={100}
             />
           </>
         ) : (
-          <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
+          <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Min Matches (Total)" step={10} />
         )}
         <Filter.GameModeWithRank
           gameMode={gameMode}
