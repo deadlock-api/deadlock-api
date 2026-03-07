@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { cn } from "~/lib/utils";
-import { type SortVariant, SORT_CATEGORIES, buildSortByValue, parseSortByValue } from "./sort-options";
+import { buildSortByValue, parseSortByValue, SORT_CATEGORIES, type SortVariant } from "./sort-options";
 
 interface SortBySelectorProps {
   value: string;

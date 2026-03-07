@@ -1,5 +1,5 @@
 import { createParser, parseAsArrayOf, type SingleParser } from "nuqs";
-import { type Dayjs, day } from "~/dayjs";
+import { day, type Dayjs } from "~/dayjs";
 
 // Custom parser for Dayjs
 export const parseAsDayjs = createParser({

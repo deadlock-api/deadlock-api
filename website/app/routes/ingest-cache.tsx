@@ -2,12 +2,14 @@ import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Uploa
 import type React from "react";
 import { useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { PatronCTA } from "~/components/PatronCTA";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { API_ORIGIN } from "~/lib/constants";
+import { cn } from "~/lib/utils";
 
 interface Salts {
   cluster_id: number;
@@ -203,9 +205,6 @@ async function scanEntry(
   }
   return salts;
 }
-
-import { PatronCTA } from "~/components/PatronCTA";
-import { cn } from "~/lib/utils";
 
 export default function () {
   const [isLoading, setIsLoading] = useState(false);
