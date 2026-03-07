@@ -122,7 +122,10 @@ export default function RankRangeSelector({ minRank, maxRank, onRankChange, labe
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn("w-fit max-w-[320px] justify-start text-left font-normal h-9", isFullRange && "text-muted-foreground")}
+            className={cn(
+              "w-fit max-w-[320px] justify-start text-left font-normal h-9",
+              isFullRange && "text-muted-foreground",
+            )}
           >
             {committedMinOption && !isMinAtStart && (
               <ImgWithSkeleton

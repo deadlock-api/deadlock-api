@@ -82,7 +82,9 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
             const subtier = entry.badge % 10;
             return (
               <div className="rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                <div className="font-medium">{rankName} {subtier}</div>
+                <div className="font-medium">
+                  {rankName} {subtier}
+                </div>
                 <div>{entry.matches.toLocaleString()} matches</div>
               </div>
             );

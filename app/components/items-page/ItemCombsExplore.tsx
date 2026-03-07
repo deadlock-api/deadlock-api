@@ -5,10 +5,10 @@ import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import ItemName from "~/components/ItemName";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type BuildData, type FullBuildItem } from "~/components/MatchHistoryCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
@@ -356,7 +356,7 @@ export default function ItemCombsExplore({
     () =>
       data?.filter((d) =>
         assetsItems
-          ?.filter((i) => !i.disabled && i.shop_image_webp)
+          ?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
           .map((i) => i.id)
           .includes(d.item_id),
       ),
@@ -446,7 +446,12 @@ export default function ItemCombsExplore({
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-2">
                   {assetsItems
                     ?.filter(
-                      (i) => !i.disabled && i.shop_image_webp && i.item_slot_type === slot && i.item_tier === tier,
+                      (i) =>
+                        !i.disabled &&
+                        i.shopable &&
+                        i.shop_image_webp &&
+                        i.item_slot_type === slot &&
+                        i.item_tier === tier,
                     )
                     .map((item) => (
                       <div key={item.id} className="flex items-center justify-between w-full gap-2">

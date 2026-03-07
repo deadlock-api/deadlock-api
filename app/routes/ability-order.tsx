@@ -81,11 +81,7 @@ export default function AbilityOrder() {
                 />
               </>
             )}
-            <ItemSelectorTriState
-              selections={itemSelections}
-              onSelectionsChange={setItemSelections}
-              label="Items"
-            />
+            <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
             <PatchOrDatePicker
               patchDates={PATCHES}
               value={{ startDate, endDate }}

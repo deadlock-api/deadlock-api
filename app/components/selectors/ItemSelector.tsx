@@ -38,7 +38,10 @@ export default function ItemSelector({
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Function
-  const sortedItems = useMemo(() => data?.filter((i) => !i.disabled).sort(sortItems) || [], [data]);
+  const sortedItems = useMemo(
+    () => data?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems) || [],
+    [data],
+  );
 
   const handleValueChange = (value: string) => {
     if (value === "none" || value === "") {
@@ -118,7 +121,10 @@ export function ItemSelectorMultiple({
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Function
-  const sortedItems = useMemo(() => data?.filter((i) => !i.disabled).sort(sortItems) || [], [data]);
+  const sortedItems = useMemo(
+    () => data?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems) || [],
+    [data],
+  );
 
   if (isLoading) {
     return "";
