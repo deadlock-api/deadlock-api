@@ -1,15 +1,15 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
+import { FilterCard } from "~/components/FilterCard";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
+import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
-import { FilterCard } from "~/components/FilterCard";
-import NumberSelector from "~/components/NumberSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -56,49 +56,43 @@ export default function Items(
         <p className="text-sm text-muted-foreground mt-1">Win rates, purchase timing, and item combination analytics</p>
       </div>
       <FilterCard>
-            <HeroSelector
-              onHeroSelected={(x) => setHero(x ?? null)}
-              selectedHero={hero ?? undefined}
-              allowSelectNull={true}
-            />
-            <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} />
-            <GameModeSelector value={gameMode} onChange={setGameMode} />
-            {gameMode !== "street_brawl" && (
-              <RankRangeSelector
-                minRank={minRankId}
-                maxRank={maxRankId}
-                onRankChange={(min, max) => {
-                  setMinRankId(min);
-                  setMaxRankId(max);
-                }}
-              />
-            )}
-            <TimeWindowSelector
-              minTime={minBoughtAtS ?? undefined}
-              maxTime={maxBoughtAtS ?? undefined}
-              onTimeChange={(min, max) => {
-                setMinBoughtAtS(min ?? null);
-                setMaxBoughtAtS(max ?? null);
-              }}
-            />
-            <PatchOrDatePicker
-              patchDates={PATCHES}
-              value={{ startDate, endDate }}
-              onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
-            />
+        <HeroSelector
+          onHeroSelected={(x) => setHero(x ?? null)}
+          selectedHero={hero ?? undefined}
+          allowSelectNull={true}
+        />
+        <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} />
+        <GameModeSelector value={gameMode} onChange={setGameMode} />
+        {gameMode !== "street_brawl" && (
+          <RankRangeSelector
+            minRank={minRankId}
+            maxRank={maxRankId}
+            onRankChange={(min, max) => {
+              setMinRankId(min);
+              setMaxRankId(max);
+            }}
+          />
+        )}
+        <TimeWindowSelector
+          minTime={minBoughtAtS ?? undefined}
+          maxTime={maxBoughtAtS ?? undefined}
+          onTimeChange={(min, max) => {
+            setMinBoughtAtS(min ?? null);
+            setMaxBoughtAtS(max ?? null);
+          }}
+        />
+        <PatchOrDatePicker
+          patchDates={PATCHES}
+          value={{ startDate, endDate }}
+          onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+        />
       </FilterCard>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList variant="line" className="flex items-center justify-start flex-wrap h-auto w-full">
-          <TabsTrigger className="flex-1" value="stats">
-            Overall Stats
-          </TabsTrigger>
-          <TabsTrigger className="flex-1" value="item-purchase-analysis">
-            Purchase Analysis
-          </TabsTrigger>
-          <TabsTrigger className="flex-1" value="item-combs">
-            Combination Stats
-          </TabsTrigger>
+        <TabsList className="w-full">
+          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
+          <TabsTrigger value="item-purchase-analysis">Purchase Analysis</TabsTrigger>
+          <TabsTrigger value="item-combs">Combination Stats</TabsTrigger>
         </TabsList>
         <TabsContent value="stats">
           <ItemStatsTable
