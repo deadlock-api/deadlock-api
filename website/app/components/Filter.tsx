@@ -1,4 +1,5 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
+import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
@@ -6,18 +7,13 @@ import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRange from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
-import { Card, CardContent } from "~/components/ui/card";
 import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
 function Root({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <Card className={cn("w-fit mx-auto", className)}>
-      <CardContent>
-        <div className="flex flex-wrap items-end gap-4 justify-center">{children}</div>
-      </CardContent>
-    </Card>
+    <div className={cn("flex flex-wrap items-center gap-2 justify-center mx-auto w-fit", className)}>{children}</div>
   );
 }
 
@@ -109,13 +105,7 @@ const regionOptions = Object.entries(LeaderboardRegionEnum).map(([key, val]) => 
 
 function Region({ value, onChange }: { value: string; onChange: (region: string) => void }) {
   return (
-    <StringSelector
-      label="Region"
-      placeholder="Select Region..."
-      options={regionOptions}
-      selected={value}
-      onSelect={onChange}
-    />
+    <StringSelector label="Region" options={regionOptions} selected={value} onSelect={onChange} />
   );
 }
 
@@ -131,6 +121,26 @@ function TimeWindow({
   return <TimeWindowSelector minTime={minTime} maxTime={maxTime} onTimeChange={onTimeChange} />;
 }
 
+function SortDirection({
+  value,
+  onChange,
+}: {
+  value: "desc" | "asc";
+  onChange: (dir: "desc" | "asc") => void;
+}) {
+  const isDesc = value === "desc";
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-colors hover:bg-accent bg-muted/50 border-border text-muted-foreground"
+      onClick={() => onChange(isDesc ? "asc" : "desc")}
+    >
+      {isDesc ? <ArrowDownNarrowWide className="size-3.5" /> : <ArrowUpNarrowWide className="size-3.5" />}
+      <span>{isDesc ? "DESC" : "ASC"}</span>
+    </button>
+  );
+}
+
 export const Filter = {
   Root,
   Hero,
@@ -141,4 +151,5 @@ export const Filter = {
   MinMatches,
   PatchOrDate,
   TimeWindow,
+  SortDirection,
 };

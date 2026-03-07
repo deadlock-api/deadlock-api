@@ -1,5 +1,6 @@
+import { CheckIcon } from "lucide-react";
 import { useMemo } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { FilterPill } from "~/components/FilterPill";
 import { cn } from "~/lib/utils";
 import { buildSortByValue, parseSortByValue, SORT_CATEGORIES, type SortVariant } from "./sort-options";
 
@@ -24,7 +25,6 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
     const cat = SORT_CATEGORIES.find((c) => c.key === newKey);
     if (!cat) return;
     if (cat.variants) {
-      // Keep current variant if possible, default to "avg"
       onChange(buildSortByValue(newKey, variant && cat.variants.includes(variant) ? variant : "avg"));
     } else {
       onChange(newKey);
@@ -35,44 +35,45 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
     onChange(buildSortByValue(key, newVariant));
   };
 
+  const displayValue = currentCategory?.label ?? key;
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex justify-center md:justify-start items-center h-8">
-        <span className="text-sm font-semibold text-foreground">Sort By</span>
+    <FilterPill label="Sort" value={displayValue} active={false} className="w-52 p-2">
+      {hasVariants && (
+        <div className="flex rounded-md border border-input overflow-hidden mb-2">
+          {VARIANT_LABELS.map((v) => (
+            <button
+              key={v.value}
+              type="button"
+              onClick={() => handleVariantChange(v.value)}
+              className={cn(
+                "flex-1 px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                variant === v.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="max-h-[300px] overflow-y-auto flex flex-col">
+        {SORT_CATEGORIES.map((cat) => (
+          <button
+            key={cat.key}
+            type="button"
+            className={cn(
+              "flex items-center justify-between gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent cursor-pointer text-left",
+              key === cat.key && "font-medium",
+            )}
+            onClick={() => handleCategoryChange(cat.key)}
+          >
+            {cat.label}
+            {key === cat.key && <CheckIcon className="size-3.5" />}
+          </button>
+        ))}
       </div>
-      <div className="flex items-center gap-1.5">
-        <Select value={key} onValueChange={handleCategoryChange}>
-          <SelectTrigger className="w-40 focus-visible:ring-0">
-            <SelectValue>{currentCategory?.label ?? key}</SelectValue>
-          </SelectTrigger>
-          <SelectContent className="max-h-[70vh] overflow-y-scroll">
-            {SORT_CATEGORIES.map((cat) => (
-              <SelectItem key={cat.key} value={cat.key}>
-                {cat.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasVariants && (
-          <div className="flex rounded-md border border-input overflow-hidden">
-            {VARIANT_LABELS.map((v) => (
-              <button
-                key={v.value}
-                type="button"
-                onClick={() => handleVariantChange(v.value)}
-                className={cn(
-                  "px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer",
-                  variant === v.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    </FilterPill>
   );
 }

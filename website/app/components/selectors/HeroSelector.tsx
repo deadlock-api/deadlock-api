@@ -1,14 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroV2 } from "assets_deadlock_api_client";
-import { useId, useMemo } from "react";
+import { SearchIcon } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { FilterPill } from "~/components/FilterPill";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Input } from "~/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { Skeleton } from "~/components/ui/skeleton";
 import { assetsApi } from "~/lib/assets-api";
+
+function useHeroes() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["assets-heroes"],
+    queryFn: async () => {
+      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
+      return response.data;
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const sortedHeroes = useMemo(
+    () =>
+      data?.filter((h) => h.in_development !== true).sort((a: HeroV2, b: HeroV2) => a.name.localeCompare(b.name)) ?? [],
+    [data],
+  );
+
+  return { sortedHeroes, isLoading };
+}
 
 export default function HeroSelector({
   onHeroSelected,
@@ -21,70 +41,76 @@ export default function HeroSelector({
   allowSelectNull?: boolean;
   label?: string;
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { sortedHeroes } = useHeroes();
+  const [search, setSearch] = useState("");
 
-  const sortedHeroes = useMemo(
-    () =>
-      data?.filter((h) => h.in_development !== true).sort((a: HeroV2, b: HeroV2) => a.name.localeCompare(b.name)) ?? [],
-    [data],
-  );
+  const currentHero = selectedHero ? sortedHeroes.find((h: HeroV2) => h.id === selectedHero) : undefined;
 
-  const handleValueChange = (value: string) => {
-    if (value === "none" || value === "") {
-      onHeroSelected(null);
-    } else {
-      onHeroSelected(Number(value));
-    }
-  };
+  const filteredHeroes = useMemo(() => {
+    if (!search) return sortedHeroes;
+    const lower = search.toLowerCase();
+    return sortedHeroes.filter((h: HeroV2) => h.name.toLowerCase().includes(lower));
+  }, [sortedHeroes, search]);
 
-  const selectValue = selectedHero === null || selectedHero === undefined ? "" : String(selectedHero);
+  const isActive = selectedHero != null;
 
-  const currentHero = selectedHero ? sortedHeroes.find((opt: HeroV2) => opt.id === selectedHero) : undefined;
+  const icon = currentHero ? <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" /> : undefined;
+
+  const displayValue = currentHero ? undefined : "Any";
 
   return (
-    <div className="flex flex-col gap-1.5 max-w-[200px]">
-      <div className="flex justify-center md:justify-start items-center h-8">
-        <span className="text-sm font-semibold text-foreground">{label || "Hero"}</span>
-      </div>
-      {isLoading ? (
-        <Skeleton className="h-10 w-32" />
-      ) : (
-        <Select value={selectValue} onValueChange={handleValueChange}>
-          <SelectTrigger className="w-full focus-visible:ring-0">
-            <SelectValue placeholder={"Select Hero..."}>
-              {currentHero ? (
-                <div className="flex items-center gap-2">
-                  <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" />
-                  <HeroName heroId={currentHero.id} />
-                </div>
-              ) : null}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
-            {allowSelectNull && (
-              <SelectItem value="none">
-                <span className="truncate">None</span>
-              </SelectItem>
-            )}
-            {sortedHeroes.map((hero: HeroV2) => (
-              <SelectItem key={hero.id} value={String(hero.id)}>
-                <div className="flex items-center gap-2 flex-nowrap">
-                  <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
-                  <HeroName heroId={hero.id} />
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <FilterPill
+      label={label ?? "Hero"}
+      value={displayValue}
+      active={isActive}
+      icon={icon}
+      className="w-52 p-2"
+    >
+      {currentHero && (
+        <div className="flex items-center gap-2 px-2 py-1 mb-1 text-sm font-medium">
+          <HeroImage heroId={currentHero.id} className="size-4 object-contain shrink-0" />
+          <HeroName heroId={currentHero.id} />
+        </div>
       )}
-    </div>
+      <div className="relative mb-2">
+        <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+        <Input
+          placeholder="Search heroes..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-7 pl-7 text-sm"
+        />
+      </div>
+      <div className="max-h-[300px] overflow-y-auto flex flex-col">
+        {allowSelectNull && (
+          <button
+            type="button"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent cursor-pointer"
+            onClick={() => {
+              onHeroSelected(null);
+              setSearch("");
+            }}
+          >
+            <span className="size-5" />
+            <span className="text-muted-foreground">Any Hero</span>
+          </button>
+        )}
+        {filteredHeroes.map((hero: HeroV2) => (
+          <button
+            key={hero.id}
+            type="button"
+            className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent cursor-pointer"
+            onClick={() => {
+              onHeroSelected(hero.id);
+              setSearch("");
+            }}
+          >
+            <HeroImage heroId={hero.id} className="size-5 object-contain shrink-0" />
+            <HeroName heroId={hero.id} />
+          </button>
+        ))}
+      </div>
+    </FilterPill>
   );
 }
 
@@ -97,21 +123,7 @@ export function HeroSelectorMultiple({
   selectedHeroes: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  const sortedHeroes = useMemo(
-    () =>
-      data?.filter((h) => h.in_development !== true).sort((a: HeroV2, b: HeroV2) => a.name.localeCompare(b.name)) ?? [],
-    [data],
-  );
-
+  const { sortedHeroes, isLoading } = useHeroes();
   const selectAllId = useId();
 
   if (isLoading) {

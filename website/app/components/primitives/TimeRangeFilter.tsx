@@ -1,6 +1,7 @@
+import { ClockIcon } from "lucide-react";
 import { useState } from "react";
+import { FilterPill } from "~/components/FilterPill";
 import { DualRangeSlider, type DualRangeSliderProps } from "~/components/primitives/DualRangeSlider";
-import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 
 export interface DurationRangeFilterProps extends DualRangeSliderProps {
@@ -12,38 +13,53 @@ export interface DurationRangeFilterProps extends DualRangeSliderProps {
   labelText?: string;
 }
 
+function formatMinutes(seconds: number) {
+  return `${Math.floor(seconds / 60)}m`;
+}
+
 export function TimeRangeFilter({
   value,
   onRangeChange,
-  min,
-  max,
+  min = 0,
+  max = 3600,
   step = 60,
-  labelText = "Time Range",
+  labelText = "Duration",
   ...props
 }: DurationRangeFilterProps) {
   const [internalRange, setInternalRange] = useState<[number, number]>(value);
+
+  const isFullRange = value[0] === min && value[1] === max;
+  const displayValue = isFullRange
+    ? "Any"
+    : `${formatMinutes(value[0])} - ${formatMinutes(value[1])}`;
+
   return (
-    <div className="flex flex-col gap-4 w-42">
-      <Label htmlFor="duration-range-slider" className="mb-2 block font-medium">
-        {labelText}
-      </Label>
-      <DualRangeSlider
-        id="duration-range-slider"
-        min={min}
-        max={max}
-        step={step}
-        value={internalRange}
-        aria-label={labelText}
-        onValueChange={(value) => setInternalRange([value[0], value[1]])}
-        onValueCommit={(value) => onRangeChange([value[0], value[1]])}
-        label={(value) => (
-          <span className={cn("text-sm text-nowrap", value === internalRange[0] ? "mr-4" : "ml-4")}>
-            {value !== undefined ? `${Math.floor(value / 60)}m` : ""}
-          </span>
-        )}
-        labelPosition="bottom"
-        {...props}
-      />
-    </div>
+    <FilterPill
+      label={labelText}
+      value={displayValue}
+      active={!isFullRange}
+      icon={<ClockIcon className="size-3.5 shrink-0" />}
+      className="w-56 p-4"
+    >
+      <div className="grid gap-4">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{formatMinutes(internalRange[0])}</span>
+          <span>{internalRange[1] === max ? "Max" : formatMinutes(internalRange[1])}</span>
+        </div>
+        <div className="pt-2 pb-2">
+          <DualRangeSlider
+            min={min}
+            max={max}
+            step={step}
+            value={internalRange}
+            aria-label={labelText}
+            onValueChange={(v) => setInternalRange([v[0], v[1]])}
+            onValueCommit={(v) => onRangeChange([v[0], v[1]])}
+            className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+            {...props}
+          />
+        </div>
+      </div>
+    </FilterPill>
   );
 }

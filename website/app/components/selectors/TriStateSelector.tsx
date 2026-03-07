@@ -1,7 +1,6 @@
 import { CircleMinus, CirclePlus, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button } from "~/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { FilterPill } from "~/components/FilterPill";
 
 export type TriState = "included" | "excluded";
 
@@ -18,9 +17,7 @@ export interface TriStateGroupStyle {
 }
 
 export interface TriStateColumnLayout {
-  /** Maps super-group key (e.g. "1") to its display label (e.g. "Tier 1") */
   superGroups: { key: string; label: string }[];
-  /** Column keys in display order (e.g. ["weapon", "vitality", "spirit"]) */
   columns: { key: string; label: string; color: string }[];
 }
 
@@ -74,7 +71,6 @@ function TriStateColumnContent({
   columnLayout: TriStateColumnLayout;
   onToggle: (id: number, target: TriState) => void;
 }) {
-  // Build lookup: groupKey -> options[]
   const grouped = new Map<string, TriStateOption[]>();
   for (const option of options) {
     const key = option.group || "";
@@ -116,11 +112,33 @@ function TriStateColumnContent({
   );
 }
 
+function buildPillValue(
+  includedItems: TriStateOption[],
+  excludedItems: TriStateOption[],
+): string | undefined {
+  if (includedItems.length === 0 && excludedItems.length === 0) return "Any";
+  const parts: string[] = [];
+  if (includedItems.length > 0) {
+    parts.push(`+${includedItems.length}`);
+  }
+  if (excludedItems.length > 0) {
+    parts.push(`-${excludedItems.length}`);
+  }
+  return parts.join(" / ");
+}
+
+function buildPillIcon(
+  includedItems: TriStateOption[],
+  excludedItems: TriStateOption[],
+): ReactNode | undefined {
+  const first = includedItems[0] || excludedItems[0];
+  return first?.icon;
+}
+
 export function TriStateSelector({
   options,
   selections,
   onSelectionsChange,
-  placeholder,
   label,
   groupStyles,
   columnLayout,
@@ -148,120 +166,76 @@ export function TriStateSelector({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {label && (
-        <div className="flex justify-center md:justify-start items-center h-8">
-          <span className="text-sm font-semibold text-foreground">{label}</span>
+    <FilterPill
+      label={label || "Items"}
+      value={buildPillValue(includedItems, excludedItems)}
+      active={hasSelections}
+      icon={buildPillIcon(includedItems, excludedItems)}
+      className={`max-h-[400px] overflow-y-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
+    >
+      {hasSelections && (
+        <div className="sticky top-0 z-10 flex items-center justify-end px-2 py-1.5 border-b bg-popover">
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+            onClick={() => onSelectionsChange(new Map())}
+          >
+            Clear all
+            <X className="size-3" />
+          </button>
         </div>
       )}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-fit min-w-[150px] max-w-[300px] overflow-hidden max-h-20 min-h-9 h-min p-1 box-border"
-          >
-            <div className="flex flex-wrap gap-1 items-center justify-start">
-              {!hasSelections ? (
-                <span className="truncate text-muted-foreground px-1">{placeholder || "Select..."}</span>
-              ) : (
-                <>
-                  {includedItems.slice(0, 3).map((item) => (
-                    <span
-                      key={item.id}
-                      className="flex items-center gap-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded px-1 p-0.5"
-                    >
-                      {item.icon}
-                      <span className="truncate text-xs">{item.label}</span>
-                    </span>
-                  ))}
-                  {includedItems.length > 3 && (
-                    <span className="text-xs text-green-400">+{includedItems.length - 3}</span>
-                  )}
-                  {excludedItems.slice(0, 3).map((item) => (
-                    <span
-                      key={item.id}
-                      className="flex items-center gap-1 bg-red-500/15 text-red-400 border border-red-500/30 rounded px-1 p-0.5"
-                    >
-                      {item.icon}
-                      <span className="truncate text-xs">{item.label}</span>
-                    </span>
-                  ))}
-                  {excludedItems.length > 3 && (
-                    <span className="text-xs text-red-400">+{excludedItems.length - 3}</span>
-                  )}
-                </>
-              )}
-            </div>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className={`max-h-[400px] overflow-y-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
-        >
-          {hasSelections && (
-            <div className="sticky top-0 z-10 flex items-center justify-end px-2 py-1.5 border-b bg-popover">
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                onClick={() => onSelectionsChange(new Map())}
-              >
-                Clear all
-                <X className="size-3" />
-              </button>
-            </div>
-          )}
-          {columnLayout ? (
-            <TriStateColumnContent
-              options={options}
-              selections={selections}
-              columnLayout={columnLayout}
-              onToggle={toggleState}
-            />
-          ) : (
-            <div className="flex flex-col gap-0.5 p-2">
-              {groupStyles
-                ? (() => {
-                    const groups = new Map<string, TriStateOption[]>();
-                    for (const option of options) {
-                      const key = option.group || "";
-                      if (!groups.has(key)) groups.set(key, []);
-                      groups.get(key)!.push(option);
-                    }
-                    return [...groups.entries()].map(([groupKey, groupOptions]) => {
-                      const style = groupStyles[groupKey];
-                      return (
-                        <div key={groupKey}>
-                          {style && (
-                            <div
-                              className="text-xs font-semibold uppercase tracking-wide px-2 py-1.5 mt-1 first:mt-0"
-                              style={{ color: style.color }}
-                            >
-                              {style.label}
-                            </div>
-                          )}
-                          {groupOptions.map((option) => (
-                            <TriStateRow
-                              key={option.id}
-                              option={option}
-                              state={selections.get(option.id)}
-                              onToggle={toggleState}
-                            />
-                          ))}
+      {columnLayout ? (
+        <TriStateColumnContent
+          options={options}
+          selections={selections}
+          columnLayout={columnLayout}
+          onToggle={toggleState}
+        />
+      ) : (
+        <div className="flex flex-col gap-0.5 p-2">
+          {groupStyles
+            ? (() => {
+                const groups = new Map<string, TriStateOption[]>();
+                for (const option of options) {
+                  const key = option.group || "";
+                  if (!groups.has(key)) groups.set(key, []);
+                  groups.get(key)!.push(option);
+                }
+                return [...groups.entries()].map(([groupKey, groupOptions]) => {
+                  const style = groupStyles[groupKey];
+                  return (
+                    <div key={groupKey}>
+                      {style && (
+                        <div
+                          className="text-xs font-semibold uppercase tracking-wide px-2 py-1.5 mt-1 first:mt-0"
+                          style={{ color: style.color }}
+                        >
+                          {style.label}
                         </div>
-                      );
-                    });
-                  })()
-                : options.map((option) => (
-                    <TriStateRow
-                      key={option.id}
-                      option={option}
-                      state={selections.get(option.id)}
-                      onToggle={toggleState}
-                    />
-                  ))}
-            </div>
-          )}
-        </PopoverContent>
-      </Popover>
-    </div>
+                      )}
+                      {groupOptions.map((option) => (
+                        <TriStateRow
+                          key={option.id}
+                          option={option}
+                          state={selections.get(option.id)}
+                          onToggle={toggleState}
+                        />
+                      ))}
+                    </div>
+                  );
+                });
+              })()
+            : options.map((option) => (
+                <TriStateRow
+                  key={option.id}
+                  option={option}
+                  state={selections.get(option.id)}
+                  onToggle={toggleState}
+                />
+              ))}
+        </div>
+      )}
+    </FilterPill>
   );
 }
