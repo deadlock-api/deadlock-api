@@ -95,10 +95,7 @@ function TriStateColumnContent({
               const items = grouped.get(groupKey) || [];
               return (
                 <div key={col.key}>
-                  <div
-                    className="text-xs font-semibold uppercase tracking-wide px-2 py-1"
-                    style={{ color: col.color }}
-                  >
+                  <div className="text-xs font-semibold uppercase tracking-wide px-2 py-1" style={{ color: col.color }}>
                     {col.label}
                   </div>
                   {items.map((option) => (

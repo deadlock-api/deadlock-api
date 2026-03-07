@@ -5,9 +5,9 @@ import type { MetaFunction } from "react-router";
 import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
-import { StringSelector } from "~/components/selectors/StringSelector";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -28,11 +28,6 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-const GAME_MODE_OPTIONS = [
-  { value: "normal", label: "Normal" },
-  { value: "street_brawl", label: "Street Brawl" },
-];
-
 export default function PlayerScoreboard() {
   const [sortBy, setSortBy] = useQueryState(
     "sort_by",
@@ -42,10 +37,7 @@ export default function PlayerScoreboard() {
     "sort_dir",
     parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
   );
-  const [gameMode, setGameMode] = useQueryState(
-    "game_mode",
-    parseAsStringLiteral(["normal", "street_brawl"] as const).withDefault("normal"),
-  );
+  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
@@ -73,7 +65,7 @@ export default function PlayerScoreboard() {
       const response = await api.analytics_api.playerScoreboard({
         sortBy: sortBy as PlayerScoreboardSortByEnum,
         sortDirection: sortDirection as "desc" | "asc",
-        gameMode: gameMode as "normal" | "street_brawl",
+        gameMode,
         heroId: heroId ?? undefined,
         minMatches,
         minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
@@ -119,12 +111,7 @@ export default function PlayerScoreboard() {
                     {sortDirection === "desc" ? "DESC" : "ASC"}
                   </Button>
                 </div>
-                <StringSelector
-                  options={GAME_MODE_OPTIONS}
-                  onSelect={(v) => setGameMode(v as "normal" | "street_brawl")}
-                  selected={gameMode}
-                  label="Game Mode"
-                />
+                <GameModeSelector value={gameMode} onChange={setGameMode} />
                 <HeroSelector
                   onHeroSelected={setHeroId}
                   selectedHero={heroId ?? undefined}

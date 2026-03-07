@@ -18,6 +18,7 @@ import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 
 // Parsers for sort field and direction using nuqs string literal parser
 const parseAsSortField = parseAsStringLiteral(["winRate", "usage"] as const);
@@ -525,6 +526,7 @@ export default function ItemStatsTable({
   minMatches,
   minBoughtAtS,
   maxBoughtAtS,
+  gameMode,
 }: {
   columns: string[];
   limit?: number;
@@ -541,6 +543,7 @@ export default function ItemStatsTable({
   minMatches?: number | null;
   minBoughtAtS?: number;
   maxBoughtAtS?: number;
+  gameMode?: GameMode;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -565,6 +568,7 @@ export default function ItemStatsTable({
       maxDateTimestamp,
       minBoughtAtS,
       maxBoughtAtS,
+      gameMode,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
@@ -576,6 +580,7 @@ export default function ItemStatsTable({
         minMatches: minMatches,
         minBoughtAtS: minBoughtAtS,
         maxBoughtAtS: maxBoughtAtS,
+        gameMode,
       });
       return response.data;
     },
@@ -609,8 +614,9 @@ export default function ItemStatsTable({
       minDateTimestamp,
       maxDateTimestamp,
       bucket: undefined,
+      gameMode,
     } satisfies ItemStatsQueryParams;
-  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp]);
+  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, gameMode]);
 
   return (
     <ItemStatsTableDisplay

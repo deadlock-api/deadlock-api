@@ -4,6 +4,7 @@ import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
+import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
@@ -27,6 +28,7 @@ export default function Items(
     initialTab: "stats",
   },
 ) {
+  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
@@ -37,6 +39,10 @@ export default function Items(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
+  const isStreetBrawl = gameMode === "street_brawl";
+  const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
+  const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
+
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault(initialTab || "stats"),
@@ -82,14 +88,17 @@ export default function Items(
                 </button>
               </div>
             </div>
-            <RankRangeSelector
-              minRank={minRankId}
-              maxRank={maxRankId}
-              onRankChange={(min, max) => {
-                setMinRankId(min);
-                setMaxRankId(max);
-              }}
-            />
+            <GameModeSelector value={gameMode} onChange={setGameMode} />
+            {gameMode !== "street_brawl" && (
+              <RankRangeSelector
+                minRank={minRankId}
+                maxRank={maxRankId}
+                onRankChange={(min, max) => {
+                  setMinRankId(min);
+                  setMaxRankId(max);
+                }}
+              />
+            )}
             <TimeWindowSelector
               minTime={minBoughtAtS ?? undefined}
               maxTime={maxBoughtAtS ?? undefined}
@@ -123,39 +132,42 @@ export default function Items(
           <ItemStatsTable
             columns={["itemsTier", "winRate", "usage", "confidence"]}
             initialSort={{ field: "winRate", direction: "desc" }}
-            minRankId={minRankId}
-            maxRankId={maxRankId}
+            minRankId={effectiveMinRankId}
+            maxRankId={effectiveMaxRankId}
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
             hero={hero}
             minMatches={minMatches}
             minBoughtAtS={minBoughtAtS ?? undefined}
             maxBoughtAtS={maxBoughtAtS ?? undefined}
+            gameMode={gameMode}
           />
         </TabsContent>
         <TabsContent value="item-purchase-analysis">
           <ItemPurchaseAnalysis
-            minRankId={minRankId}
-            maxRankId={maxRankId}
+            minRankId={effectiveMinRankId}
+            maxRankId={effectiveMaxRankId}
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
             hero={hero}
             minMatches={minMatches}
             minBoughtAtS={minBoughtAtS ?? undefined}
             maxBoughtAtS={maxBoughtAtS ?? undefined}
+            gameMode={gameMode}
           />
         </TabsContent>
         <TabsContent value="item-combs">
           <ItemCombsExplore
             sortBy="winrate"
-            minRankId={minRankId}
-            maxRankId={maxRankId}
+            minRankId={effectiveMinRankId}
+            maxRankId={effectiveMaxRankId}
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
             hero={hero}
             minMatches={minMatches}
             minBoughtAtS={minBoughtAtS ?? undefined}
             maxBoughtAtS={maxBoughtAtS ?? undefined}
+            gameMode={gameMode}
           />
         </TabsContent>
       </Tabs>

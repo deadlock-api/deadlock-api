@@ -6,6 +6,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 
@@ -21,6 +22,7 @@ export default function HeroStatsTable({
   minHeroMatchesTotal,
   minDate,
   maxDate,
+  gameMode,
 }: {
   columns: string[];
   limit?: number;
@@ -33,6 +35,7 @@ export default function HeroStatsTable({
   minHeroMatchesTotal?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  gameMode?: GameMode;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -46,6 +49,7 @@ export default function HeroStatsTable({
       maxDateTimestamp,
       minHeroMatches,
       minHeroMatchesTotal,
+      gameMode,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
@@ -55,6 +59,7 @@ export default function HeroStatsTable({
         maxAverageBadge: maxRankId,
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
+        gameMode: gameMode,
       });
       return response.data;
     },

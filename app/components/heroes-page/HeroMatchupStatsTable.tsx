@@ -6,6 +6,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 
@@ -18,6 +19,7 @@ export default function HeroMatchupStatsTable({
   maxDate,
   sameLaneFilter,
   samePartyFilter,
+  gameMode,
 }: {
   hideHeader?: boolean;
   minRankId?: number;
@@ -27,12 +29,13 @@ export default function HeroMatchupStatsTable({
   maxDate?: Dayjs;
   sameLaneFilter?: boolean;
   samePartyFilter?: boolean;
+  gameMode?: GameMode;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHero } = useQuery({
-    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minMatches],
+    queryKey: ["api-hero-stats", minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minMatches, gameMode],
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minMatches,
@@ -40,6 +43,7 @@ export default function HeroMatchupStatsTable({
         maxAverageBadge: maxRankId,
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
+        gameMode: gameMode,
       });
       return response.data;
     },
@@ -56,6 +60,7 @@ export default function HeroMatchupStatsTable({
       sameLaneFilter,
       samePartyFilter,
       minMatches,
+      gameMode,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.heroSynergiesStats({
@@ -66,6 +71,7 @@ export default function HeroMatchupStatsTable({
         maxAverageBadge: maxRankId,
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
+        gameMode: gameMode,
       });
       return response.data;
     },
@@ -81,6 +87,7 @@ export default function HeroMatchupStatsTable({
       maxDateTimestamp,
       sameLaneFilter,
       minMatches,
+      gameMode,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.heroCountersStats({
@@ -90,6 +97,7 @@ export default function HeroMatchupStatsTable({
         maxAverageBadge: maxRankId,
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
+        gameMode: gameMode,
       });
       return response.data;
     },
