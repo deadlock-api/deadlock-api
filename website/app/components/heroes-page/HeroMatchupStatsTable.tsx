@@ -381,9 +381,7 @@ export default function HeroMatchupStatsTable({
                 <HeroName heroId={heroId} />
               </div>
             </TableCell>
-            <TableCell
-              title={`${heroBestSynergies[heroId]?.wins.toLocaleString()} wins / ${heroBestSynergies[heroId]?.matches_played.toLocaleString()} matches`}
-            >
+            <TableCell>
               <div className="flex flex-col gap-2">
                 <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
                   <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
@@ -393,13 +391,32 @@ export default function HeroMatchupStatsTable({
                     value={heroBestSynergies[heroId]?.rel_winrate}
                     color={"#fa4454"}
                     label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    tooltip={
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Matches</span>
+                          <span className="font-medium">
+                            {heroBestSynergies[heroId]?.matches_played.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Wins</span>
+                          <span className="font-medium">{heroBestSynergies[heroId]?.wins.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate change</span>
+                          <span className="font-medium">
+                            {heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}
+                            {(heroBestSynergies[heroId]?.rel_winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    }
                   />
                 </div>
               </div>
             </TableCell>
-            <TableCell
-              title={`${heroWorstSynergies[heroId]?.wins.toLocaleString()} wins / ${heroWorstSynergies[heroId]?.matches_played.toLocaleString()} matches`}
-            >
+            <TableCell>
               <div className="flex flex-col gap-2">
                 <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
                   <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
@@ -409,13 +426,32 @@ export default function HeroMatchupStatsTable({
                     value={heroWorstSynergies[heroId]?.rel_winrate}
                     color={"#fa4454"}
                     label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    tooltip={
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Matches</span>
+                          <span className="font-medium">
+                            {heroWorstSynergies[heroId]?.matches_played.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Wins</span>
+                          <span className="font-medium">{heroWorstSynergies[heroId]?.wins.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate change</span>
+                          <span className="font-medium">
+                            {heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}
+                            {(heroWorstSynergies[heroId]?.rel_winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    }
                   />
                 </div>
               </div>
             </TableCell>
-            <TableCell
-              title={`${heroBestAgainst[heroId]?.wins.toLocaleString()} wins / ${heroBestAgainst[heroId]?.matches_played.toLocaleString()} matches`}
-            >
+            <TableCell>
               <div className="flex flex-col gap-2">
                 <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
                   <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
@@ -425,13 +461,32 @@ export default function HeroMatchupStatsTable({
                     value={heroBestAgainst[heroId]?.rel_winrate}
                     color={"#22d3ee"}
                     label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${((Math.round(heroBestAgainst[heroId]?.rel_winrate * 100) / 100) * 100).toFixed(2)}% `}
+                    tooltip={
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Matches</span>
+                          <span className="font-medium">
+                            {heroBestAgainst[heroId]?.matches_played.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Wins</span>
+                          <span className="font-medium">{heroBestAgainst[heroId]?.wins.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate change</span>
+                          <span className="font-medium">
+                            {heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}
+                            {(heroBestAgainst[heroId]?.rel_winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    }
                   />
                 </div>
               </div>
             </TableCell>
-            <TableCell
-              title={`${heroWorstAgainst[heroId]?.wins.toLocaleString()} wins / ${heroWorstAgainst[heroId]?.matches_played.toLocaleString()} matches`}
-            >
+            <TableCell>
               <div className="flex flex-col gap-2">
                 <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
                   <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
@@ -441,6 +496,27 @@ export default function HeroMatchupStatsTable({
                     value={heroWorstAgainst[heroId]?.rel_winrate}
                     color={"#22d3ee"}
                     label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    tooltip={
+                      <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Matches</span>
+                          <span className="font-medium">
+                            {heroWorstAgainst[heroId]?.matches_played.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Wins</span>
+                          <span className="font-medium">{heroWorstAgainst[heroId]?.wins.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate change</span>
+                          <span className="font-medium">
+                            {heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}
+                            {(heroWorstAgainst[heroId]?.rel_winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    }
                   />
                 </div>
               </div>

@@ -111,12 +111,14 @@ export default function HeroCombStatsTable({
   const prevStatsMap = useMemo(() => {
     if (!prevHeroData) return undefined;
     const prevSumMatches = prevHeroData.reduce((acc, row) => acc + row.matches, 0);
-    const map = new Map<string, { winrate: number; pickrate: number }>();
+    const prevMaxMatches = Math.max(...prevHeroData.map((row) => row.matches));
+    const map = new Map<string, { winrate: number; pickrate: number; normalizedPickrate: number }>();
     for (const row of prevHeroData) {
       const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
       map.set(key, {
         winrate: row.wins / row.matches,
         pickrate: row.matches / prevSumMatches,
+        normalizedPickrate: row.matches / prevMaxMatches,
       });
     }
     return map;
@@ -194,7 +196,13 @@ export default function HeroCombStatsTable({
                 {!hideIndex && <TableHead className="text-center">#</TableHead>}
                 <TableHead>Hero Combination</TableHead>
                 {columns.includes("winRate") && <TableHead className="text-center">Win Rate</TableHead>}
-                {columns.includes("pickRate") && <TableHead className="text-center">Pick Rate</TableHead>}
+                {columns.includes("pickRate") && (
+                  <TableHead className="text-center">
+                    Pick Rate
+                    <br />
+                    (Normalized)
+                  </TableHead>
+                )}
                 {columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
               </TableRow>
             </TableHeader>
@@ -217,10 +225,7 @@ export default function HeroCombStatsTable({
                   </div>
                 </TableCell>
                 {columns.includes("winRate") && (
-                  <TableCell
-                    className="text-center"
-                    title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}
-                  >
+                  <TableCell className="text-center">
                     <ProgressBarWithLabel
                       min={minWinrate}
                       max={maxWinrate}
@@ -232,25 +237,72 @@ export default function HeroCombStatsTable({
                         const prev = prevStatsMap?.get(key);
                         return prev !== undefined ? row.wins / row.matches - prev.winrate : undefined;
                       })()}
+                      tooltip={
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Matches</span>
+                            <span className="font-medium">{row.matches.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Wins</span>
+                            <span className="font-medium">{row.wins.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Win rate</span>
+                            <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
+                          </div>
+                          {(() => {
+                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+                            const prev = prevStatsMap?.get(key);
+                            return prev !== undefined ? (
+                              <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                                <span className="text-muted-foreground">Previous</span>
+                                <span className="font-medium">{(prev.winrate * 100).toFixed(2)}%</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      }
                     />
                   </TableCell>
                 )}
                 {columns.includes("pickRate") && (
-                  <TableCell
-                    className="text-center"
-                    title={`${row.matches.toLocaleString()} / ${sumMatches.toLocaleString()} total matches`}
-                  >
+                  <TableCell className="text-center">
                     <ProgressBarWithLabel
                       min={minMatches}
                       max={maxMatches}
                       value={row.matches}
                       color={"#22d3ee"}
-                      label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                      label={`${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}%`}
                       delta={(() => {
                         const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
                         const prev = prevStatsMap?.get(key);
-                        return prev !== undefined ? row.matches / sumMatches - prev.pickrate : undefined;
+                        return prev !== undefined ? row.matches / maxMatches - prev.normalizedPickrate : undefined;
                       })()}
+                      tooltip={
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Matches</span>
+                            <span className="font-medium">
+                              {row.matches.toLocaleString()} / {sumMatches.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Pick rate</span>
+                            <span className="font-medium">{((row.matches / sumMatches) * 100).toFixed(4)}%</span>
+                          </div>
+                          {(() => {
+                            const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
+                            const prev = prevStatsMap?.get(key);
+                            return prev !== undefined ? (
+                              <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                                <span className="text-muted-foreground">Previous</span>
+                                <span className="font-medium">{(prev.pickrate * 100).toFixed(4)}%</span>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      }
                     />
                   </TableCell>
                 )}

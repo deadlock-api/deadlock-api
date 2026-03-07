@@ -113,9 +113,7 @@ const regionOptions = Object.entries(LeaderboardRegionEnum).map(([key, val]) => 
 }));
 
 function Region({ value, onChange }: { value: string; onChange: (region: string) => void }) {
-  return (
-    <StringSelector label="Region" options={regionOptions} selected={value} onSelect={onChange} />
-  );
+  return <StringSelector label="Region" options={regionOptions} selected={value} onSelect={onChange} />;
 }
 
 function TimeWindow({
@@ -130,13 +128,7 @@ function TimeWindow({
   return <TimeWindowSelector minTime={minTime} maxTime={maxTime} onTimeChange={onTimeChange} />;
 }
 
-function SortDirection({
-  value,
-  onChange,
-}: {
-  value: "desc" | "asc";
-  onChange: (dir: "desc" | "asc") => void;
-}) {
+function SortDirection({ value, onChange }: { value: "desc" | "asc"; onChange: (dir: "desc" | "asc") => void }) {
   const isDesc = value === "desc";
   return (
     <button

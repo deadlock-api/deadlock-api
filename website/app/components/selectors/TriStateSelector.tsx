@@ -112,10 +112,7 @@ function TriStateColumnContent({
   );
 }
 
-function buildPillValue(
-  includedItems: TriStateOption[],
-  excludedItems: TriStateOption[],
-): string | undefined {
+function buildPillValue(includedItems: TriStateOption[], excludedItems: TriStateOption[]): string | undefined {
   if (includedItems.length === 0 && excludedItems.length === 0) return "Any";
   const parts: string[] = [];
   if (includedItems.length > 0) {
@@ -127,10 +124,7 @@ function buildPillValue(
   return parts.join(" / ");
 }
 
-function buildPillIcon(
-  includedItems: TriStateOption[],
-  excludedItems: TriStateOption[],
-): ReactNode | undefined {
+function buildPillIcon(includedItems: TriStateOption[], excludedItems: TriStateOption[]): ReactNode | undefined {
   const first = includedItems[0] || excludedItems[0];
   return first?.icon;
 }
@@ -227,12 +221,7 @@ export function TriStateSelector({
                 });
               })()
             : options.map((option) => (
-                <TriStateRow
-                  key={option.id}
-                  option={option}
-                  state={selections.get(option.id)}
-                  onToggle={toggleState}
-                />
+                <TriStateRow key={option.id} option={option} state={selections.get(option.id)} onToggle={toggleState} />
               ))}
         </div>
       )}

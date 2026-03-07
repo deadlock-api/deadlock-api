@@ -252,28 +252,62 @@ export default function HeroMatchupDetailsStatsTable({
               </div>
             </TableCell>
             {stat === HeroMatchupDetailsStatsTableStat.SYNERGY && (
-              <TableCell
-                title={`${synergy?.wins.toLocaleString()} wins / ${synergy.matches_played.toLocaleString()} matches`}
-              >
+              <TableCell>
                 <ProgressBarWithLabel
                   min={minSynergyWinrate}
                   max={maxSynergyWinrate}
                   value={synergy.rel_winrate}
                   color={"#fa4454"}
                   label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100)).toFixed(0)}% `}
+                  tooltip={
+                    <div className="flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Matches</span>
+                        <span className="font-medium">{synergy.matches_played.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Wins</span>
+                        <span className="font-medium">{synergy?.wins.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Win rate change</span>
+                        <span className="font-medium">
+                          {synergy?.rel_winrate > 0 ? "+" : ""}
+                          {(synergy?.rel_winrate * 100).toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  }
                 />
               </TableCell>
             )}
             {stat === HeroMatchupDetailsStatsTableStat.COUNTER && (
-              <TableCell
-                title={`${counter?.wins.toLocaleString()} wins / ${counter?.matches_played.toLocaleString()} matches`}
-              >
+              <TableCell>
                 <ProgressBarWithLabel
                   min={minCounterWinrate}
                   max={maxCounterWinrate}
                   value={counter.rel_winrate}
                   color={"#22d3ee"}
                   label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100)).toFixed(0)}% `}
+                  tooltip={
+                    <div className="flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Matches</span>
+                        <span className="font-medium">{counter?.matches_played.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Wins</span>
+                        <span className="font-medium">{counter?.wins.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Win rate change</span>
+                        <span className="font-medium">
+                          {counter?.rel_winrate > 0 ? "+" : ""}
+                          {(counter?.rel_winrate * 100).toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  }
                 />
               </TableCell>
             )}

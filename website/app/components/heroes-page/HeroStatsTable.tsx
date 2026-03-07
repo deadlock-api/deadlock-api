@@ -181,23 +181,47 @@ export default function HeroStatsTable({
               </div>
             </TableCell>
             {columns.includes("winRate") && (
-              <TableCell title={`${row.wins.toLocaleString()} wins / ${row.matches.toLocaleString()} matches`}>
+              <TableCell>
                 <ProgressBarWithLabel
                   min={minWinrate}
                   max={maxWinrate}
                   value={row.wins / row.matches}
                   color={"#fa4454"}
                   label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
-                  delta={prevStatsMap?.get(row.hero_id) !== undefined
-                    ? (row.wins / row.matches) - prevStatsMap.get(row.hero_id)!.winrate
-                    : undefined}
+                  delta={
+                    prevStatsMap?.get(row.hero_id) !== undefined
+                      ? row.wins / row.matches - prevStatsMap.get(row.hero_id)!.winrate
+                      : undefined
+                  }
+                  tooltip={
+                    <div className="flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Matches</span>
+                        <span className="font-medium">{row.matches.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Wins</span>
+                        <span className="font-medium">{row.wins.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Win rate</span>
+                        <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
+                      </div>
+                      {prevStatsMap?.get(row.hero_id) !== undefined && (
+                        <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                          <span className="text-muted-foreground">Previous</span>
+                          <span className="font-medium">
+                            {(prevStatsMap.get(row.hero_id)!.winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  }
                 />
               </TableCell>
             )}
             {columns.includes("pickRate") && (
-              <TableCell
-                title={`${row.matches.toLocaleString()} matches / ${maxMatches.toLocaleString()} total matches`}
-              >
+              <TableCell>
                 <ProgressBarWithLabel
                   min={minMatches}
                   max={maxMatches}
@@ -208,11 +232,44 @@ export default function HeroStatsTable({
                       ? `${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `
                       : `${(Math.round(12 * (row.matches / sumMatches) * 100)).toFixed(0)}% `
                   }
-                  delta={prevStatsMap?.get(row.hero_id) !== undefined
-                    ? (minHeroMatchesTotal || minHeroMatches
-                        ? (row.matches / maxMatches) - prevStatsMap.get(row.hero_id)!.normalizedPickrate
-                        : 12 * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate)
-                    : undefined}
+                  delta={
+                    prevStatsMap?.get(row.hero_id) !== undefined
+                      ? minHeroMatchesTotal || minHeroMatches
+                        ? row.matches / maxMatches - prevStatsMap.get(row.hero_id)!.normalizedPickrate
+                        : 12 * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
+                      : undefined
+                  }
+                  tooltip={
+                    <div className="flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Matches</span>
+                        <span className="font-medium">{row.matches.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Pick rate</span>
+                        <span className="font-medium">
+                          {(minHeroMatchesTotal || minHeroMatches
+                            ? (row.matches / maxMatches) * 100
+                            : 12 * (row.matches / sumMatches) * 100
+                          ).toFixed(2)}
+                          %
+                        </span>
+                      </div>
+                      {prevStatsMap?.get(row.hero_id) !== undefined && (
+                        <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                          <span className="text-muted-foreground">Previous</span>
+                          <span className="font-medium">
+                            {(
+                              (minHeroMatchesTotal || minHeroMatches
+                                ? prevStatsMap.get(row.hero_id)!.normalizedPickrate
+                                : prevStatsMap.get(row.hero_id)!.pickrate) * 100
+                            ).toFixed(2)}
+                            %
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  }
                 />
               </TableCell>
             )}
