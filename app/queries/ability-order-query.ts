@@ -10,6 +10,8 @@ export interface AbilityOrderQueryParams {
   maxDateTimestamp?: number;
   minMatches?: number | null;
   gameMode?: AbilityOrderStatsGameModeEnum;
+  includeItemIds?: number[];
+  excludeItemIds?: number[];
 }
 
 export function abilityOrderQueryOptions({
@@ -20,6 +22,8 @@ export function abilityOrderQueryOptions({
   maxDateTimestamp,
   minMatches,
   gameMode,
+  includeItemIds,
+  excludeItemIds,
 }: AbilityOrderQueryParams) {
   return queryOptions({
     queryKey: [
@@ -31,6 +35,8 @@ export function abilityOrderQueryOptions({
       maxDateTimestamp,
       minMatches,
       gameMode,
+      includeItemIds,
+      excludeItemIds,
     ],
     queryFn: async () => {
       const response = await api.analytics_api.abilityOrderStats({
@@ -41,6 +47,8 @@ export function abilityOrderQueryOptions({
         minUnixTimestamp: minDateTimestamp,
         maxUnixTimestamp: maxDateTimestamp,
         minMatches: minMatches,
+        includeItemIds: includeItemIds?.length ? includeItemIds : undefined,
+        excludeItemIds: excludeItemIds?.length ? excludeItemIds : undefined,
       });
       return response.data;
     },
