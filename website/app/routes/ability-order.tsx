@@ -4,7 +4,7 @@ import AbilityOrderTree from "~/components/ability-order/AbilityOrderTree";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
-import RankSelector from "~/components/selectors/RankSelector";
+import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { PATCHES } from "~/lib/constants";
@@ -58,8 +58,14 @@ export default function AbilityOrder() {
             <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={0} />
             {gameMode !== "street_brawl" && (
               <>
-                <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-                <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+                <RankRangeSelector
+                  minRank={minRankId}
+                  maxRank={maxRankId}
+                  onRankChange={(min, max) => {
+                    setMinRankId(min);
+                    setMaxRankId(max);
+                  }}
+                />
               </>
             )}
             <PatchOrDatePicker

@@ -1,0 +1,186 @@
+import { useQuery } from "@tanstack/react-query";
+import type { RankV2 } from "assets_deadlock_api_client";
+import { ShieldIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Button } from "~/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { Skeleton } from "~/components/ui/skeleton";
+import { Slider } from "~/components/ui/slider";
+import { assetsApi } from "~/lib/assets-api";
+import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
+import { cn } from "~/lib/utils";
+import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
+
+function getRankId(tier: number, subrank: number): number {
+  if (tier === 0) return 0;
+  return tier * 10 + subrank;
+}
+
+interface RankOption {
+  rankId: number;
+  rank: RankV2;
+  subrank: number;
+  label: string;
+}
+
+interface RankRangeSelectorProps {
+  minRank: number;
+  maxRank: number;
+  onRankChange: (min: number, max: number) => void;
+  label?: string;
+}
+
+export default function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
+  const { data: ranksData, isLoading } = useQuery({
+    queryKey: ["assets-ranks"],
+    queryFn: async () => {
+      const response = await assetsApi.default_api.getRanksV2RanksGet();
+      return response.data;
+    },
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  const sortedRanks = useMemo(() => ranksData?.sort((a: RankV2, b: RankV2) => a.tier - b.tier) ?? [], [ranksData]);
+
+  const options: RankOption[] = useMemo(() => {
+    const opts: RankOption[] = [];
+    for (const rank of sortedRanks) {
+      const subRanksToShow = rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6];
+      for (const subrank of subRanksToShow) {
+        opts.push({
+          rankId: getRankId(rank.tier, subrank),
+          rank,
+          subrank,
+          label: getRankLabel(rank, subrank),
+        });
+      }
+    }
+    return opts;
+  }, [sortedRanks]);
+
+  const rankIdToIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    for (let i = 0; i < options.length; i++) {
+      map.set(options[i].rankId, i);
+    }
+    return map;
+  }, [options]);
+
+  const minIndex = rankIdToIndex.get(minRank) ?? 0;
+  const maxIndex = rankIdToIndex.get(maxRank) ?? options.length - 1;
+
+  const [localValue, setLocalValue] = useState([minIndex, maxIndex]);
+
+  useEffect(() => {
+    setLocalValue([minIndex, maxIndex]);
+  }, [minIndex, maxIndex]);
+
+  const handleValueCommit = (newValue: number[]) => {
+    const [startIdx, endIdx] = newValue;
+    if (options[startIdx] && options[endIdx]) {
+      onRankChange(options[startIdx].rankId, options[endIdx].rankId);
+    }
+  };
+
+  // Local (dragging) values for popover content
+  const localMinOption = options[localValue[0]];
+  const localMaxOption = options[localValue[1]];
+
+  // Committed (prop) values for the trigger button — prevents width jitter while dragging
+  const committedMinOption = options[minIndex];
+  const committedMaxOption = options[maxIndex];
+
+  const isFullRange = minIndex === 0 && maxIndex === options.length - 1;
+
+  const getTriggerLabel = () => {
+    if (!committedMinOption || !committedMaxOption) return "Select Rank Range";
+    if (isFullRange) return "All Ranks";
+    return `${committedMinOption.label} – ${committedMaxOption.label}`;
+  };
+
+  if (isLoading || options.length === 0) {
+    return (
+      <div className="flex flex-col gap-1.5 shrink-0">
+        <div className="flex items-center h-8">
+          <span className="text-sm font-semibold text-foreground">{label || "Rank Range"}</span>
+        </div>
+        <Skeleton className="h-9 w-[220px]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 shrink-0">
+      <div className="flex justify-center md:justify-start items-center h-8">
+        <span className="text-sm font-semibold text-foreground">{label || "Rank Range"}</span>
+      </div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn("w-fit max-w-[320px] justify-start text-left font-normal h-9", isFullRange && "text-muted-foreground")}
+          >
+            {committedMinOption && (
+              <ImgWithSkeleton
+                src={getRankImageUrl(committedMinOption.rank, committedMinOption.subrank, "small", "webp") ?? ""}
+                alt={committedMinOption.label}
+                className="size-5 object-contain shrink-0"
+              />
+            )}
+            {!committedMinOption && <ShieldIcon className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{getTriggerLabel()}</span>
+            {committedMaxOption && !isFullRange && (
+              <ImgWithSkeleton
+                src={getRankImageUrl(committedMaxOption.rank, committedMaxOption.subrank, "small", "webp") ?? ""}
+                alt={committedMaxOption.label}
+                className="size-5 object-contain shrink-0"
+              />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-4" align="start">
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Rank Range</h4>
+              <p className="text-sm text-muted-foreground">Filter matches by average rank.</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {localMinOption && (
+                  <ImgWithSkeleton
+                    src={getRankImageUrl(localMinOption.rank, localMinOption.subrank, "small", "webp") ?? ""}
+                    alt={localMinOption.label}
+                    className="size-6 object-contain shrink-0"
+                  />
+                )}
+                <span className="text-sm font-medium">{localMinOption?.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{localMaxOption?.label}</span>
+                {localMaxOption && (
+                  <ImgWithSkeleton
+                    src={getRankImageUrl(localMaxOption.rank, localMaxOption.subrank, "small", "webp") ?? ""}
+                    alt={localMaxOption.label}
+                    className="size-6 object-contain shrink-0"
+                  />
+                )}
+              </div>
+            </div>
+            <div className="pt-2 pb-2">
+              <Slider
+                value={localValue}
+                min={0}
+                max={options.length - 1}
+                step={1}
+                minStepsBetweenThumbs={0}
+                onValueChange={setLocalValue}
+                onValueCommit={handleValueCommit}
+                className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+              />
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}

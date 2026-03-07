@@ -5,7 +5,7 @@ import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
-import RankSelector from "~/components/selectors/RankSelector";
+import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -82,8 +82,14 @@ export default function Items(
                 </button>
               </div>
             </div>
-            <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Minimum Rank" />
-            <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Maximum Rank" />
+            <RankRangeSelector
+              minRank={minRankId}
+              maxRank={maxRankId}
+              onRankChange={(min, max) => {
+                setMinRankId(min);
+                setMaxRankId(max);
+              }}
+            />
             <TimeWindowSelector
               minTime={minBoughtAtS ?? undefined}
               maxTime={maxBoughtAtS ?? undefined}

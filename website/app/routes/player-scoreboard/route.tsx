@@ -5,7 +5,7 @@ import type { MetaFunction } from "react-router";
 import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import HeroSelector from "~/components/selectors/HeroSelector";
-import RankSelector from "~/components/selectors/RankSelector";
+import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -128,8 +128,14 @@ export default function PlayerScoreboard() {
                 <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} min={1} />
                 {gameMode !== "street_brawl" && (
                   <>
-                    <RankSelector onRankSelected={setMinRankId} selectedRank={minRankId} label="Min Rank" />
-                    <RankSelector onRankSelected={setMaxRankId} selectedRank={maxRankId} label="Max Rank" />
+                    <RankRangeSelector
+                      minRank={minRankId}
+                      maxRank={maxRankId}
+                      onRankChange={(min, max) => {
+                        setMinRankId(min);
+                        setMaxRankId(max);
+                      }}
+                    />
                   </>
                 )}
                 <PatchOrDatePicker
