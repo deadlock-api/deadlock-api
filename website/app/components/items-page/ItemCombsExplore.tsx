@@ -381,7 +381,7 @@ export default function ItemCombsExplore({
   if (isLoadingItemAssets) {
     return (
       <div className="flex items-center justify-center w-full h-full py-16">
-        <LoadingLogo className="w-16 h-16" />
+        <LoadingLogo />
       </div>
     );
   }
@@ -524,7 +524,7 @@ export default function ItemCombsExplore({
             <h2 className="text-center text-lg mb-2">Top Builds</h2>
             {isLoadingTopBuilds ? (
               <div className="flex items-center justify-center py-8">
-                <LoadingLogo className="w-8 h-8" />
+                <LoadingLogo />
               </div>
             ) : topBuildsCards.length > 0 ? (
               <div className="flex flex-col gap-2">

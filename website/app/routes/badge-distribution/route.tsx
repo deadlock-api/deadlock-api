@@ -62,7 +62,7 @@ export default function BadgeDistribution() {
         <div className="h-200 flex justify-center items-center">
           {isPending ? (
             <div className="flex items-center justify-center py-24">
-              <LoadingLogo className="w-24 h-24" />
+              <LoadingLogo />
             </div>
           ) : isError ? (
             <div className="text-center text-sm text-destructive py-8">

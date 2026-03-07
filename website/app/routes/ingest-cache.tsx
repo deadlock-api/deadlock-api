@@ -389,7 +389,7 @@ export default function () {
           >
             {isLoading ? (
               <div className="flex flex-col items-center gap-3">
-                <LoadingLogo className="w-8 h-8" />
+                <LoadingLogo />
                 <div className="text-center">
                   <p className="font-semibold">Scanning directory...</p>
                   <p className="text-sm font-normal mt-1">{saltsFound} salts found</p>

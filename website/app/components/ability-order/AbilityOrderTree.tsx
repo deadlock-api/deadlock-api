@@ -183,7 +183,7 @@ export default function AbilityOrderTree({
   if (isLoadingOrder) {
     return (
       <div className="flex items-center justify-center w-full py-24">
-        <LoadingLogo className="w-24 h-24" />
+        <LoadingLogo />
       </div>
     );
   }

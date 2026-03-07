@@ -296,7 +296,7 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
               <div className="space-y-3">
                 {!variables ? (
                   <div className="flex justify-center py-4">
-                    <LoadingLogo className="h-6 w-6" />
+                    <LoadingLogo />
                   </div>
                 ) : (
                   <>

@@ -104,7 +104,7 @@ export default function StreamKit() {
           {steamAccountLoading ? (
             <Alert>
               <AlertDescription className="flex items-center gap-2">
-                <LoadingLogo className="h-4 w-4" />
+                <LoadingLogo />
                 Fetching Steam account...
               </AlertDescription>
             </Alert>
