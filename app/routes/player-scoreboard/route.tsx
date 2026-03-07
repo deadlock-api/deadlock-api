@@ -10,8 +10,7 @@ import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
-import { Skeleton } from "~/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { api } from "~/lib/api";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -159,39 +158,9 @@ export default function PlayerScoreboard() {
 
         <div>
           {scoreboardQuery.isPending ? (
-            <Table>
-              <TableHeader className="bg-muted">
-                <TableRow>
-                  <TableHead className="w-[5ch] text-right">#</TableHead>
-                  <TableHead>Player</TableHead>
-                  {sortBy !== "matches" && <TableHead className="text-right">Matches</TableHead>}
-                  <TableHead className="text-right">{getSortByLabel(sortBy)}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Array.from({ length: 25 }, (_, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-4 w-6 ml-auto" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-6 w-6 rounded-full" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                    </TableCell>
-                    {sortBy !== "matches" && (
-                      <TableCell className="text-right">
-                        <Skeleton className="h-4 w-12 ml-auto" />
-                      </TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      <Skeleton className="h-4 w-14 ml-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="flex items-center justify-center py-24">
+              <LoadingLogo className="w-24 h-24" />
+            </div>
           ) : scoreboardQuery.isError ? (
             <div className="text-center text-sm text-destructive py-8">
               Failed to load scoreboard: {scoreboardQuery.error?.message}
