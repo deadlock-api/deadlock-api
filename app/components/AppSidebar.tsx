@@ -3,7 +3,7 @@ import { VisuallyHidden } from "radix-ui";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "~/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 

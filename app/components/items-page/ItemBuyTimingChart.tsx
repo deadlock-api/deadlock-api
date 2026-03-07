@@ -11,7 +11,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
 import { assetsApi } from "~/lib/assets-api";
 import { randomColorHex } from "~/lib/utils";
-import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { itemStatsQueryOptions, type ItemStatsQueryParams } from "~/queries/item-stats-query";
 
 const chartConfig = {
   winrate: { label: "Win Rate", color: "hsl(var(--chart-1))" },

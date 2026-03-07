@@ -3,7 +3,7 @@ import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useId } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { type Dayjs, day } from "~/dayjs";
+import { day, type Dayjs } from "~/dayjs";
 import { DateRangePicker, type DateRangePickerProps } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {

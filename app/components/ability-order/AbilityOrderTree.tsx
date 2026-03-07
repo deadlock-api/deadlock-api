@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import type { AbilityV2 } from "assets_deadlock_api_client/api";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import AbilityOrderNode from "./AbilityOrderNode";
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;

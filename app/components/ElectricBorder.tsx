@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, type ReactNode, type CSSProperties } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef } from "react";
 
 interface ElectricBorderProps {
   children: ReactNode;

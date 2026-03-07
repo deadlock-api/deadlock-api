@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
-import { type Dayjs, day } from "~/dayjs";
+import { day, type Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { HERO_STATS, hero_stats_transform, TIME_INTERVALS } from "~/types/api_hero_stats";

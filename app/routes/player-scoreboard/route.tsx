@@ -16,7 +16,7 @@ import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { ScoreboardTable } from "./ScoreboardTable";
 import { SortBySelector } from "./SortBySelector";
-import { ALL_SORT_BY_VALUES, getSortByLabel } from "./sort-options";
+import { ALL_SORT_BY_VALUES } from "./sort-options";
 
 export const meta: MetaFunction = () => {
   return [

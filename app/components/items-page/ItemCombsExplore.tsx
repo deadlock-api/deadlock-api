@@ -9,14 +9,14 @@ import ItemName from "~/components/ItemName";
 import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import MatchHistoryCard, { type BuildData, type FullBuildItem } from "~/components/MatchHistoryCard";
+import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { assetsApi } from "~/lib/assets-api";
 import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
-import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { itemStatsQueryOptions, type ItemStatsQueryParams } from "~/queries/item-stats-query";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Button } from "../ui/button";
 

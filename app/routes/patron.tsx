@@ -44,7 +44,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { assetsApi } from "~/lib/assets-api";
-import { BotNotFriendError, type PlayerCard, parseSteamIdInput, steamId3ToSteamId64 } from "~/lib/patron-api";
+import { parseSteamIdInput, type PlayerCard, steamId3ToSteamId64 } from "~/lib/patron-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import {
   useAddSteamAccount,
