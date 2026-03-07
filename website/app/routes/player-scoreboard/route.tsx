@@ -84,49 +84,39 @@ export default function PlayerScoreboard() {
         </div>
 
         <Filter.Root>
-          <div className="flex flex-col gap-4">
-            <Filter.Row>
-              <SortBySelector value={sortBy} onChange={setSortBy} />
-              <div className="flex flex-col gap-1.5">
-                <div className="flex justify-center md:justify-start items-center h-8">
-                  <span className="text-sm font-semibold text-foreground">Direction</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
-                >
-                  {sortDirection === "desc" ? (
-                    <ArrowDownNarrowWide className="size-4" />
-                  ) : (
-                    <ArrowUpNarrowWide className="size-4" />
-                  )}
-                  {sortDirection === "desc" ? "DESC" : "ASC"}
-                </Button>
-              </div>
-              <Filter.GameMode value={gameMode} onChange={setGameMode} />
-              <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
-            </Filter.Row>
-            <Filter.Row>
-              <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />
-              {gameMode !== "street_brawl" && (
-                <Filter.RankRange
-                  minRank={minRankId}
-                  maxRank={maxRankId}
-                  onRankChange={(min, max) => {
-                    setMinRankId(min);
-                    setMaxRankId(max);
-                  }}
-                />
+          <SortBySelector value={sortBy} onChange={setSortBy} />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex justify-center md:justify-start items-center h-8">
+              <span className="text-sm font-semibold text-foreground">Direction</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5"
+              onClick={() => setSortDirection(sortDirection === "desc" ? "asc" : "desc")}
+            >
+              {sortDirection === "desc" ? (
+                <ArrowDownNarrowWide className="size-4" />
+              ) : (
+                <ArrowUpNarrowWide className="size-4" />
               )}
-              <Filter.PatchOrDate
-                startDate={startDate}
-                endDate={endDate}
-                onDateChange={(s, e) => setDateRange([s, e])}
-              />
-            </Filter.Row>
+              {sortDirection === "desc" ? "DESC" : "ASC"}
+            </Button>
           </div>
+          <Filter.GameMode value={gameMode} onChange={setGameMode} />
+          <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
+          <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />
+          {gameMode !== "street_brawl" && (
+            <Filter.RankRange
+              minRank={minRankId}
+              maxRank={maxRankId}
+              onRankChange={(min, max) => {
+                setMinRankId(min);
+                setMaxRankId(max);
+              }}
+            />
+          )}
+          <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
         </Filter.Root>
 
         <div>

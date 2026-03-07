@@ -115,11 +115,7 @@ export default function Heroes(
             setMaxRankId(max);
           }}
         />
-        <Filter.PatchOrDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e) => setDateRange([s, e])}
-        />
+        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">

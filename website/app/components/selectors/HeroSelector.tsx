@@ -49,7 +49,7 @@ export default function HeroSelector({
   const currentHero = selectedHero ? sortedHeroes.find((opt: HeroV2) => opt.id === selectedHero) : undefined;
 
   return (
-    <div className="flex flex-col gap-1.5 w-full max-w-[200px]">
+    <div className="flex flex-col gap-1.5 max-w-[200px]">
       <div className="flex justify-center md:justify-start items-center h-8">
         <span className="text-sm font-semibold text-foreground">{label || "Hero"}</span>
       </div>

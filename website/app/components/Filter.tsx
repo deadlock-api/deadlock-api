@@ -15,7 +15,7 @@ function Root({ children, className }: { children: React.ReactNode; className?: 
   return (
     <Card className={cn("w-fit mx-auto", className)}>
       <CardContent>
-        <div className="flex flex-wrap items-end gap-2 justify-center">{children}</div>
+        <div className="flex flex-wrap items-end gap-4 justify-center">{children}</div>
       </CardContent>
     </Card>
   );

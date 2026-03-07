@@ -60,11 +60,7 @@ export default function AbilityOrder() {
         />
         <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} />
         <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
-        <Filter.PatchOrDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e) => setDateRange([s, e])}
-        />
+        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
       </Filter.Root>
 
       <AbilityOrderTree
