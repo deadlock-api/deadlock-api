@@ -75,7 +75,8 @@ export default function AbilityOrderNode({
 
   const isWithinDefaultDepth = node.depth < defaultDepth;
   const isExpanded = isWithinDefaultDepth || expandedPaths.has(currentPath) || siblingCount === 1;
-  const isFocused = focusedPaths.has(currentPath);
+  const isFocusable = siblingCount !== 1;
+  const isFocused = isFocusable && focusedPaths.has(currentPath);
 
   const focusedChild = sortedChildren.find((child) => focusedPaths.has(`${currentPath}/${child.abilityId}`));
   const displayedChildren = focusedChild ? [focusedChild] : sortedChildren;
@@ -112,13 +113,14 @@ export default function AbilityOrderNode({
             <div
               data-ability-card
               className={cn(
-                "border rounded-md p-1.5 min-w-[120px] max-w-[180px] transition-all cursor-pointer",
+                "border rounded-md p-1.5 min-w-[120px] max-w-[180px] transition-all",
+                isFocusable && "cursor-pointer",
                 slotColor,
                 slotBg,
                 isFocused ? "border-primary ring-1 ring-primary/50" : "border-border hover:border-muted-foreground",
               )}
               style={{ opacity }}
-              onClick={() => onToggleFocus(currentPath)}
+              onClick={isFocusable ? () => onToggleFocus(currentPath) : undefined}
             >
               <div className="flex items-center gap-2 mb-1">
                 {node.abilityId != null ? (
