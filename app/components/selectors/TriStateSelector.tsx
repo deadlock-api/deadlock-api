@@ -9,6 +9,51 @@ export interface TriStateOption {
   id: number;
   label: string;
   icon?: ReactNode;
+  group?: string;
+}
+
+export interface TriStateGroupStyle {
+  label: string;
+  color: string;
+}
+
+function TriStateRow({
+  option,
+  state,
+  onToggle,
+}: {
+  option: TriStateOption;
+  state: TriState | undefined;
+  onToggle: (id: number, target: TriState) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-sm">
+      <button
+        type="button"
+        className={`shrink-0 rounded-sm p-0.5 transition-colors ${
+          state === "included"
+            ? "bg-green-500/20 text-green-400"
+            : "text-muted-foreground/40 hover:text-green-400 hover:bg-green-500/10"
+        }`}
+        onClick={() => onToggle(option.id, "included")}
+      >
+        <CirclePlus className="size-4" />
+      </button>
+      <button
+        type="button"
+        className={`shrink-0 rounded-sm p-0.5 transition-colors ${
+          state === "excluded"
+            ? "bg-red-500/20 text-red-400"
+            : "text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10"
+        }`}
+        onClick={() => onToggle(option.id, "excluded")}
+      >
+        <CircleMinus className="size-4" />
+      </button>
+      {option.icon && <span className="shrink-0">{option.icon}</span>}
+      <span className="truncate text-sm">{option.label}</span>
+    </div>
+  );
 }
 
 export function TriStateSelector({
@@ -17,12 +62,14 @@ export function TriStateSelector({
   onSelectionsChange,
   placeholder,
   label,
+  groupStyles,
 }: {
   options: TriStateOption[];
   selections: Map<number, TriState>;
   onSelectionsChange: (selections: Map<number, TriState>) => void;
   placeholder?: string;
   label?: string;
+  groupStyles?: Record<string, TriStateGroupStyle>;
 }) {
   const includedItems = options.filter((o) => selections.get(o.id) === "included");
   const excludedItems = options.filter((o) => selections.get(o.id) === "excluded");
@@ -99,37 +146,46 @@ export function TriStateSelector({
             </div>
           )}
           <div className="flex flex-col gap-0.5 p-2">
-            {options.map((option) => {
-              const state = selections.get(option.id);
-              return (
-                <div key={option.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-sm">
-                  <button
-                    type="button"
-                    className={`shrink-0 rounded-sm p-0.5 transition-colors ${
-                      state === "included"
-                        ? "bg-green-500/20 text-green-400"
-                        : "text-muted-foreground/40 hover:text-green-400 hover:bg-green-500/10"
-                    }`}
-                    onClick={() => toggleState(option.id, "included")}
-                  >
-                    <CirclePlus className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className={`shrink-0 rounded-sm p-0.5 transition-colors ${
-                      state === "excluded"
-                        ? "bg-red-500/20 text-red-400"
-                        : "text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10"
-                    }`}
-                    onClick={() => toggleState(option.id, "excluded")}
-                  >
-                    <CircleMinus className="size-4" />
-                  </button>
-                  {option.icon && <span className="shrink-0">{option.icon}</span>}
-                  <span className="truncate text-sm">{option.label}</span>
-                </div>
-              );
-            })}
+            {groupStyles
+              ? (() => {
+                  const groups = new Map<string, TriStateOption[]>();
+                  for (const option of options) {
+                    const key = option.group || "";
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key)!.push(option);
+                  }
+                  return [...groups.entries()].map(([groupKey, groupOptions]) => {
+                    const style = groupStyles[groupKey];
+                    return (
+                      <div key={groupKey}>
+                        {style && (
+                          <div
+                            className="text-xs font-semibold uppercase tracking-wide px-2 py-1.5 mt-1 first:mt-0"
+                            style={{ color: style.color }}
+                          >
+                            {style.label}
+                          </div>
+                        )}
+                        {groupOptions.map((option) => (
+                          <TriStateRow
+                            key={option.id}
+                            option={option}
+                            state={selections.get(option.id)}
+                            onToggle={toggleState}
+                          />
+                        ))}
+                      </div>
+                    );
+                  });
+                })()
+              : options.map((option) => (
+                  <TriStateRow
+                    key={option.id}
+                    option={option}
+                    state={selections.get(option.id)}
+                    onToggle={toggleState}
+                  />
+                ))}
           </div>
         </PopoverContent>
       </Popover>
