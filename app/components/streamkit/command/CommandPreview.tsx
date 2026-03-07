@@ -13,7 +13,7 @@ export function CommandPreview({ preview, previewError, loading }: CommandPrevie
       <div className="mt-1 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
         {loading ? (
           <div className="flex items-center gap-2">
-            <LoadingLogo className="h-4 w-4" />
+            <LoadingLogo />
             <span>Loading preview...</span>
           </div>
         ) : previewError ? (

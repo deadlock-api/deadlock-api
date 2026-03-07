@@ -428,7 +428,7 @@ export function ItemStatsTableDisplay({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center w-full h-full py-16">
-        <LoadingLogo className="w-16 h-16" />
+        <LoadingLogo />
       </div>
     );
   }

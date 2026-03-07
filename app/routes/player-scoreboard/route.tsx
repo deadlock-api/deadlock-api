@@ -159,7 +159,7 @@ export default function PlayerScoreboard() {
         <div>
           {scoreboardQuery.isPending ? (
             <div className="flex items-center justify-center py-24">
-              <LoadingLogo className="w-24 h-24" />
+              <LoadingLogo />
             </div>
           ) : scoreboardQuery.isError ? (
             <div className="text-center text-sm text-destructive py-8">

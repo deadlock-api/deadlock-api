@@ -128,7 +128,7 @@ export default function HeroCombStatsTable({
       </div>
       {isLoading ? (
         <div className="flex items-center justify-center w-full h-full py-16">
-          <LoadingLogo className="w-16 h-16" />
+          <LoadingLogo />
         </div>
       ) : (
         <Table>

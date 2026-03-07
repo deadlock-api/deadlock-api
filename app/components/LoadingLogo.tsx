@@ -24,7 +24,7 @@ const PATHS = [
 
 export function LoadingLogo({ className }: LoadingLogoProps) {
   return (
-    <svg viewBox="0 0 729 790" className={cn("text-primary", className)} xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 729 790" className={cn("text-primary w-24 h-24", className)} xmlns="http://www.w3.org/2000/svg">
       {PATHS.map((path, i) => (
         <path
           key={i}

@@ -343,7 +343,7 @@ export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotal
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-120">
-              <LoadingLogo className="w-12 h-12" />
+              <LoadingLogo />
             </div>
           ) : !hasValidData ? (
             <div className="flex items-center justify-center h-120">
