@@ -1,15 +1,10 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
-import { FilterCard } from "~/components/FilterCard";
+import { Filter } from "~/components/Filter";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
-import NumberSelector from "~/components/NumberSelector";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
-import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import HeroSelector from "~/components/selectors/HeroSelector";
-import RankRangeSelector from "~/components/selectors/RankRangeSelector";
-import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
+import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -55,25 +50,20 @@ export default function Items(
         <h1 className="text-3xl font-bold tracking-tight">Item Stats</h1>
         <p className="text-sm text-muted-foreground mt-1">Win rates, purchase timing, and item combination analytics</p>
       </div>
-      <FilterCard>
-        <HeroSelector
-          onHeroSelected={(x) => setHero(x ?? null)}
-          selectedHero={hero ?? undefined}
-          allowSelectNull={true}
+      <Filter.Root>
+        <Filter.Hero value={hero} onChange={setHero} allowNull />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} />
+        <Filter.GameModeWithRank
+          gameMode={gameMode}
+          onGameModeChange={setGameMode}
+          minRank={minRankId}
+          maxRank={maxRankId}
+          onRankChange={(min, max) => {
+            setMinRankId(min);
+            setMaxRankId(max);
+          }}
         />
-        <NumberSelector value={minMatches} onChange={setMinMatches} label="Min Matches" step={10} />
-        <GameModeSelector value={gameMode} onChange={setGameMode} />
-        {gameMode !== "street_brawl" && (
-          <RankRangeSelector
-            minRank={minRankId}
-            maxRank={maxRankId}
-            onRankChange={(min, max) => {
-              setMinRankId(min);
-              setMaxRankId(max);
-            }}
-          />
-        )}
-        <TimeWindowSelector
+        <Filter.TimeWindow
           minTime={minBoughtAtS ?? undefined}
           maxTime={maxBoughtAtS ?? undefined}
           onTimeChange={(min, max) => {
@@ -81,12 +71,12 @@ export default function Items(
             setMaxBoughtAtS(max ?? null);
           }}
         />
-        <PatchOrDatePicker
-          patchDates={PATCHES}
-          value={{ startDate, endDate }}
-          onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+        <Filter.PatchOrDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => setDateRange([s, e])}
         />
-      </FilterCard>
+      </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList className="w-full">

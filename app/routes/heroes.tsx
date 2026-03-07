@@ -1,7 +1,7 @@
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useId } from "react";
 import type { MetaFunction } from "react-router";
-import { FilterCard } from "~/components/FilterCard";
+import { Filter } from "~/components/Filter";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -13,10 +13,8 @@ import HeroStatsOverTimeChart, {
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import NumberSelector from "~/components/NumberSelector";
-import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
-import { GameModeSelector, parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
-import RankRangeSelector from "~/components/selectors/RankRangeSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -88,7 +86,7 @@ export default function Heroes(
         <p className="text-sm text-muted-foreground mt-1">Detailed analytics and matchup data for Deadlock heroes</p>
       </div>
 
-      <FilterCard>
+      <Filter.Root>
         {["stats", "stats-over-time"].includes(tab) ? (
           <>
             <NumberSelector
@@ -107,23 +105,22 @@ export default function Heroes(
         ) : (
           <NumberSelector value={minMatches} onChange={setMinMatches} label={"Min Matches (Total)"} step={10} />
         )}
-        <GameModeSelector value={gameMode} onChange={setGameMode} />
-        {gameMode !== "street_brawl" && (
-          <RankRangeSelector
-            minRank={minRankId}
-            maxRank={maxRankId}
-            onRankChange={(min, max) => {
-              setMinRankId(min);
-              setMaxRankId(max);
-            }}
-          />
-        )}
-        <PatchOrDatePicker
-          patchDates={PATCHES}
-          value={{ startDate, endDate }}
-          onValueChange={({ startDate, endDate }) => setDateRange([startDate, endDate])}
+        <Filter.GameModeWithRank
+          gameMode={gameMode}
+          onGameModeChange={setGameMode}
+          minRank={minRankId}
+          maxRank={maxRankId}
+          onRankChange={(min, max) => {
+            setMinRankId(min);
+            setMaxRankId(max);
+          }}
         />
-      </FilterCard>
+        <Filter.PatchOrDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => setDateRange([s, e])}
+        />
+      </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
         <TabsList className="w-full">
