@@ -13,7 +13,16 @@ import { cn } from "~/lib/utils";
 
 function Root({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-2 justify-center mx-auto w-fit", className)}>{children}</div>
+    <div
+      className={cn(
+        "relative flex flex-wrap items-center gap-2 justify-center mx-auto w-fit",
+        "rounded-2xl border border-white/[0.06] bg-white/[0.03] px-5 py-3.5",
+        "shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.25)]",
+        className,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -132,7 +141,7 @@ function SortDirection({
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-colors hover:bg-accent bg-muted/50 border-border text-muted-foreground"
+      className="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-all bg-secondary border-white/[0.08] text-muted-foreground hover:bg-accent hover:text-foreground hover:border-white/[0.14]"
       onClick={() => onChange(isDesc ? "asc" : "desc")}
     >
       {isDesc ? <ArrowDownNarrowWide className="size-3.5" /> : <ArrowUpNarrowWide className="size-3.5" />}
