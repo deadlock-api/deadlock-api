@@ -136,10 +136,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               prefetch="intent"
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors duration-100",
+                "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors duration-100 border-l-2",
                 isActive(pathname, link.to)
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-primary"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
+                  : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
               )}
             >
               {link.label}
@@ -157,10 +157,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             prefetch="intent"
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100",
+              "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100 border-l-2",
               isActive(pathname, link.to)
-                ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-primary"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
+                : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
             )}
           >
             {link.label}
