@@ -204,7 +204,7 @@ fn build_query(query: &GameStatsQuery) -> String {
         assumeNotNull(coalesce(avg(max_gold_treasure), 0)) AS avg_gold_treasure,
         assumeNotNull(coalesce(avg(max_gold_denied), 0)) AS avg_gold_denied,
         assumeNotNull(coalesce(avg(max_gold_death_loss), 0)) AS avg_gold_death_loss,
-        assumeNotNull(coalesce(avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss), 0)) AS avg_first_mid_boss_time_s,
+        if(isNaN(avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)), 0, avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)) AS avg_first_mid_boss_time_s,
         uniqIf(mp.match_id, tm.has_mid_boss) / greatest(1, uniq(mp.match_id)) AS mid_boss_kill_rate,
         avg(abandon_match_time_s > 0) AS abandon_rate
     FROM match_player mp
