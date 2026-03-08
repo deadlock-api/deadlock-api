@@ -257,7 +257,7 @@ export default function AbilityOrderTree({
                 ancestorAbilityIds={[]}
                 totalPointsSpent={0}
                 isStreetBrawl={gameMode === "street_brawl"}
-                siblingCount={displayedRoots.length}
+                siblingCount={rootChildren.length}
                 index={i}
               />
             </div>

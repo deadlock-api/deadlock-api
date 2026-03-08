@@ -310,7 +310,7 @@ export default function AbilityOrderNode({
                       ancestorAbilityIds={childAncestorIds}
                       totalPointsSpent={cumulativePoints}
                       isStreetBrawl={isStreetBrawl}
-                      siblingCount={displayedChildren.length}
+                      siblingCount={sortedChildren.length}
                       index={i}
                     />
                   </div>
