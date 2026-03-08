@@ -103,6 +103,8 @@ export default function HeroStatsTable({
     enabled: hasPreviousInterval,
   });
 
+  const pickrateMultiplier = gameMode === "street_brawl" ? 8 : 12;
+
   const prevStatsMap = useMemo(() => {
     if (!prevHeroData) return undefined;
     const prevSumMatches = prevHeroData.reduce((acc, row) => acc + row.matches, 0);
@@ -111,12 +113,12 @@ export default function HeroStatsTable({
     for (const row of prevHeroData) {
       map.set(row.hero_id, {
         winrate: row.wins / row.matches,
-        pickrate: 12 * (row.matches / prevSumMatches),
+        pickrate: pickrateMultiplier * (row.matches / prevSumMatches),
         normalizedPickrate: row.matches / prevMaxMatches,
       });
     }
     return map;
-  }, [prevHeroData]);
+  }, [prevHeroData, pickrateMultiplier]);
 
   const minWinrate = useMemo(() => Math.min(...(heroData || []).map((item) => item.wins / item.matches)), [heroData]);
   const maxWinrate = useMemo(() => Math.max(...(heroData || []).map((item) => item.wins / item.matches)), [heroData]);
@@ -230,13 +232,13 @@ export default function HeroStatsTable({
                   label={
                     minHeroMatchesTotal || minHeroMatches
                       ? `${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `
-                      : `${(Math.round(12 * (row.matches / sumMatches) * 100)).toFixed(0)}% `
+                      : `${(Math.round(pickrateMultiplier * (row.matches / sumMatches) * 100)).toFixed(0)}% `
                   }
                   delta={
                     prevStatsMap?.get(row.hero_id) !== undefined
                       ? minHeroMatchesTotal || minHeroMatches
                         ? row.matches / maxMatches - prevStatsMap.get(row.hero_id)!.normalizedPickrate
-                        : 12 * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
+                        : pickrateMultiplier * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
                       : undefined
                   }
                   tooltip={
@@ -250,7 +252,7 @@ export default function HeroStatsTable({
                         <span className="font-medium">
                           {(minHeroMatchesTotal || minHeroMatches
                             ? (row.matches / maxMatches) * 100
-                            : 12 * (row.matches / sumMatches) * 100
+                            : pickrateMultiplier * (row.matches / sumMatches) * 100
                           ).toFixed(2)}
                           %
                         </span>

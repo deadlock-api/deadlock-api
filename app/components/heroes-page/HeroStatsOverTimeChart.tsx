@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroStatsBucketEnum } from "deadlock_api_client/api";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import {
   Select,
   SelectContent,
@@ -12,19 +13,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import type { GameMode } from "~/components/selectors/GameModeSelector";
-import { day, type Dayjs } from "~/dayjs";
+import { type Dayjs, day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { HERO_STATS, hero_stats_transform, TIME_INTERVALS } from "~/types/api_hero_stats";
 
-export function HeroStatSelector({
+export function HeroStatSelector<T extends readonly string[]>({
   value,
   onChange,
+  options,
 }: {
-  value: (typeof HERO_STATS)[number];
-  onChange: (val: (typeof HERO_STATS)[number]) => void;
+  value: T[number];
+  onChange: (val: T[number]) => void;
+  options?: T;
 }) {
+  const items = options ?? HERO_STATS;
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="min-w-[120px]">
@@ -33,7 +36,7 @@ export function HeroStatSelector({
       <SelectContent>
         <SelectGroup>
           <SelectLabel>Stat</SelectLabel>
-          {HERO_STATS.map((key) => (
+          {items.map((key) => (
             <SelectItem key={key as string} value={key as string}>
               {key}
             </SelectItem>
@@ -64,8 +67,9 @@ export function HeroTimeIntervalSelector({ value, onChange }: { value: string; o
   );
 }
 
+const BEBOP_HERO_ID = 15;
+
 export default function HeroStatsOverTimeChart({
-  heroIds,
   heroStat,
   heroTimeInterval,
   minRankId,
@@ -76,7 +80,6 @@ export default function HeroStatsOverTimeChart({
   maxDate,
   gameMode,
 }: {
-  heroIds?: number[];
   heroStat: (typeof HERO_STATS)[number];
   heroTimeInterval: HeroStatsBucketEnum;
   minRankId?: number;
@@ -188,6 +191,33 @@ export default function HeroStatsOverTimeChart({
     return data;
   }, [heroStatMap]);
 
+  const allHeroIds = useMemo(
+    () =>
+      Object.keys(heroIdMap)
+        .map(Number)
+        .sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? "")),
+    [heroIdMap],
+  );
+
+  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([BEBOP_HERO_ID]));
+
+  const handleLegendClick = useCallback(
+    (entry: { value?: string }) => {
+      const heroId = allHeroIds.find((id) => (heroIdMap[id]?.name ?? `Hero ${id}`) === entry.value);
+      if (heroId === undefined) return;
+      setVisibleHeroSet((prev) => {
+        const next = new Set(prev);
+        if (next.has(heroId)) {
+          next.delete(heroId);
+        } else {
+          next.add(heroId);
+        }
+        return next;
+      });
+    },
+    [allHeroIds, heroIdMap],
+  );
+
   if (isLoadingHeroStats || isLoadingAssetsHeroes) {
     return (
       <div className="flex items-center justify-center w-full h-full py-16">
@@ -196,10 +226,11 @@ export default function HeroStatsOverTimeChart({
     );
   }
 
+  const visibleHeroIds = allHeroIds.filter((id) => visibleHeroSet.has(id));
+
   return (
     <ResponsiveContainer width="100%" height={800} className="p-4 bg-muted">
-      <LineChart data={formattedData} margin={{ top: 20, bottom: 20 }}>
-        <Legend layout="vertical" align="right" verticalAlign="top" />
+      <LineChart data={formattedData} margin={{ top: 20, bottom: 60 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
         <XAxis
           dataKey="date"
@@ -210,13 +241,19 @@ export default function HeroStatsOverTimeChart({
             maxDataDate ? day.unix(maxDataDate).valueOf() : "auto",
           ]}
           tickFormatter={(timestamp) => day(timestamp).format("MM/DD/YY")}
-          label={{ value: "Date", position: "insideBottom", offset: -15 }}
+          label={{ value: "Date", position: "insideBottom", offset: -10 }}
           stroke="#525252"
         />
         <YAxis
           domain={[minStat * 0.9, maxStat * 1.1]}
-          label={{ value: heroStat, angle: -90, position: "insideLeft" }}
-          tickFormatter={(value) => Math.round(value).toLocaleString()}
+          label={{
+            value: heroStat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            angle: -90,
+            position: "insideLeft",
+          }}
+          tickFormatter={(value) =>
+            heroStat === "winrate" ? `${Math.round(value)}%` : Math.round(value).toLocaleString()
+          }
           minTickGap={2}
           tickCount={10}
           stroke="#525252"
@@ -226,7 +263,19 @@ export default function HeroStatsOverTimeChart({
           contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
           itemStyle={{ color: "#e5e5e5" }}
         />
-        {(heroIds || []).map((heroId) => (
+        <Legend
+          layout="horizontal"
+          align="center"
+          verticalAlign="bottom"
+          onClick={handleLegendClick}
+          payload={allHeroIds.map((heroId) => ({
+            value: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
+            type: "line",
+            color: visibleHeroSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
+          }))}
+          wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
+        />
+        {visibleHeroIds.map((heroId) => (
           <Line
             key={heroId}
             type="monotone"
