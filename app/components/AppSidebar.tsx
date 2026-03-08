@@ -16,6 +16,7 @@ const navLinks: readonly { to: string; label: string; special?: boolean }[] = [
   { to: "/leaderboard", label: "Leaderboard" },
   { to: "/player-scoreboard", label: "Player Scoreboard" },
   { to: "/badge-distribution", label: "Rank Distribution" },
+  { to: "/game-stats", label: "Game Stats" },
   { to: "/heatmap", label: "Kill Heatmap" },
   { to: "/chat", label: "AI Chat" },
   { to: "/streamkit", label: "Stream Kit" },
