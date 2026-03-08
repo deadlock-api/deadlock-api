@@ -2,17 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { day } from "~/dayjs";
 import type { GameStatsBucket, GameStatsParams } from "~/lib/game-stats-api";
+import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/game-stats-query";
 import { StatSelector } from "./StatSelector";
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
@@ -56,30 +48,25 @@ export default function GameStatsOverTimeChart({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted-foreground">Stat</span>
-          <StatSelector value={stat} onChange={onStatChange} />
+      <StatSelector value={stat} onChange={onStatChange}>
+        <div className="flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
+          {TIME_BUCKETS.map((b) => (
+            <button
+              key={b.value}
+              type="button"
+              onClick={() => onTimeBucketChange(b.value as GameStatsBucket)}
+              className={cn(
+                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                timeBucket === b.value
+                  ? "bg-white/[0.1] text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/[0.05]",
+              )}
+            >
+              {b.label}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted-foreground">Time Interval</span>
-          <Select value={timeBucket} onValueChange={(v) => onTimeBucketChange(v as GameStatsBucket)}>
-            <SelectTrigger className="min-w-[120px]">
-              <SelectValue placeholder="Interval" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Time Interval</SelectLabel>
-                {TIME_BUCKETS.map((b) => (
-                  <SelectItem key={b.value} value={b.value}>
-                    {b.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </StatSelector>
 
       {isPending ? (
         <div className="flex items-center justify-center py-16">

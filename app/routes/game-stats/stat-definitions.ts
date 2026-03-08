@@ -45,6 +45,14 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     ],
   },
   {
+    label: "Farming",
+    stats: [
+      { key: "avg_last_hits", label: "Avg Last Hits", format: "decimal1" },
+      { key: "avg_denies", label: "Avg Denies", format: "decimal1" },
+      { key: "avg_ending_level", label: "Avg Ending Level", format: "decimal1" },
+    ],
+  },
+  {
     label: "Economy",
     stats: [
       { key: "avg_net_worth", label: "Avg Net Worth", format: "integer" },
@@ -55,14 +63,6 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "avg_gold_treasure", label: "Avg Gold (Treasure)", format: "integer" },
       { key: "avg_gold_denied", label: "Avg Gold (Denied)", format: "integer" },
       { key: "avg_gold_death_loss", label: "Avg Gold (Death Loss)", format: "integer" },
-    ],
-  },
-  {
-    label: "Farming",
-    stats: [
-      { key: "avg_last_hits", label: "Avg Last Hits", format: "decimal1" },
-      { key: "avg_denies", label: "Avg Denies", format: "decimal1" },
-      { key: "avg_ending_level", label: "Avg Ending Level", format: "decimal1" },
     ],
   },
 ];
