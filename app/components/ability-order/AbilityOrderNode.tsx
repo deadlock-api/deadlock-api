@@ -221,6 +221,10 @@ export default function AbilityOrderNode({
                   <span className="font-medium text-cyan-400">{prPercent.toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Players</span>
+                  <span className="font-medium">{node.players.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Matches</span>
                   <span className="font-medium">{node.matches.toLocaleString()}</span>
                 </div>
