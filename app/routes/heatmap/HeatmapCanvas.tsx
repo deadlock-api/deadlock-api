@@ -31,7 +31,7 @@ export default function HeatmapCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [mapImageLoaded, setMapImageLoaded] = useState(false);
+  const [mapImagesLoaded, setMapImagesLoaded] = useState(false);
   const mapImageRef = useRef<HTMLImageElement | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
@@ -44,10 +44,10 @@ export default function HeatmapCanvas({
     img.crossOrigin = "anonymous";
     img.onload = () => {
       mapImageRef.current = img;
-      setMapImageLoaded(true);
+      setMapImagesLoaded(true);
     };
-    img.src = "/map.png";
-  }, []);
+    img.src = mapData.images.minimap;
+  }, [mapData.images.minimap]);
 
   const renderHeatmap = useCallback(() => {
     const mapCanvas = mapCanvasRef.current;
@@ -89,12 +89,12 @@ export default function HeatmapCanvas({
       const cx = canvasWidth / 2;
       const cy = canvasHeight / 2;
       const circleRadius = Math.min(canvasWidth, canvasHeight) * 0.48;
-      mapCtx.fillStyle = "#0a0e1a";
+      mapCtx.save();
       mapCtx.beginPath();
       mapCtx.arc(cx, cy, circleRadius, 0, Math.PI * 2);
-      mapCtx.fill();
-
+      mapCtx.clip();
       mapCtx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+      mapCtx.restore();
     }
 
     const heatCtx = heatCanvas.getContext("2d");
@@ -128,16 +128,16 @@ export default function HeatmapCanvas({
     }
 
     heatCtx.putImageData(imageData, 0, 0);
-  }, [data, radius, viewMode, mapImageLoaded, sensitivity]);
+  }, [data, radius, viewMode, mapImagesLoaded, sensitivity]);
 
   useEffect(() => {
-    if (!mapImageLoaded) return;
+    if (!mapImagesLoaded) return;
     renderHeatmap();
 
     const observer = new ResizeObserver(() => renderHeatmap());
     if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
-  }, [mapImageLoaded, renderHeatmap]);
+  }, [mapImagesLoaded, renderHeatmap]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -188,7 +188,7 @@ export default function HeatmapCanvas({
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       />
-      {!mapImageLoaded && (
+      {!mapImagesLoaded && (
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-sm text-muted-foreground">Loading map...</span>
         </div>
