@@ -68,13 +68,16 @@ export default function Items(
             setMaxRankId(max);
           }}
         />
-        <Filter.ItemPurchaseTimeWindow
+        <Filter.TimeRange
           minTime={minBoughtAtS ?? undefined}
           maxTime={maxBoughtAtS ?? undefined}
           onTimeChange={(min, max) => {
             setMinBoughtAtS(min ?? null);
             setMaxBoughtAtS(max ?? null);
           }}
+          label="Time"
+          title="Purchase Time Window"
+          description="Filter items by when they were purchased in the match."
         />
         <Filter.PatchOrDate
           startDate={startDate}

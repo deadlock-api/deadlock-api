@@ -118,23 +118,35 @@ function Region({ value, onChange }: { value: string; onChange: (region: string)
   return <StringSelector label="Region" options={regionOptions} selected={value} onSelect={onChange} />;
 }
 
-function ItemPurchaseTimeWindow({
+function TimeRange({
   minTime,
   maxTime,
   onTimeChange,
+  label = "Time",
+  title = "Match Time Window",
+  description = "Filter by when events occurred in the match.",
+  max,
+  presets,
 }: {
   minTime?: number;
   maxTime?: number;
   onTimeChange: (min: number | undefined, max: number | undefined) => void;
+  label?: string;
+  title?: string;
+  description?: string;
+  max?: number;
+  presets?: { label: string; start: number; end: number }[] | null;
 }) {
   return (
     <MatchTimeRangeSelector
       minTime={minTime}
       maxTime={maxTime}
       onTimeChange={onTimeChange}
-      label="Time"
-      title="Purchase Time Window"
-      description="Filter items by when they were purchased in the match."
+      label={label}
+      title={title}
+      description={description}
+      max={max}
+      presets={presets}
     />
   );
 }
@@ -189,7 +201,7 @@ export const Filter = {
   GameModeWithRank,
   MinMatches,
   PatchOrDate,
-  ItemPurchaseTimeWindow,
+  TimeRange,
   MatchDuration,
   SortDirection,
 };
