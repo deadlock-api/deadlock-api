@@ -2,9 +2,9 @@
 
 use deadlock_api_rust::routes::v1::analytics::ability_order_stats::AnalyticsAbilityOrderStats;
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
+use deadlock_api_rust::routes::v1::analytics::game_stats::AnalyticsGameStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
-use deadlock_api_rust::routes::v1::analytics::game_stats::AnalyticsGameStats;
 use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
 use deadlock_api_rust::routes::v1::analytics::hero_synergies_stats::HeroSynergyStats;
 use deadlock_api_rust::routes::v1::analytics::item_stats::ItemStats;
@@ -1339,7 +1339,7 @@ async fn test_player_performance_curve(
     Some(1000),
     Some(5000),
     Some(40),
-    Some(100),
+    Some(100)
 )]
 #[tokio::test]
 async fn test_game_stats(
