@@ -20,43 +20,23 @@ export const meta: MetaFunction = () => {
 };
 
 export default function AbilityOrder() {
-  const [heroId, setHeroId] = useQueryState(
-    "hero_id",
-    parseAsInteger.withDefault(15),
-  );
-  const [minRankId, setMinRankId] = useQueryState(
-    "min_rank",
-    parseAsInteger.withDefault(0),
-  );
-  const [maxRankId, setMaxRankId] = useQueryState(
-    "max_rank",
-    parseAsInteger.withDefault(116),
-  );
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(15));
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [minMatches, setMinMatches] = useQueryState(
-    "min_matches",
-    parseAsInteger.withDefault(20),
-  );
-  const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(
-    new Map(),
-  );
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
+  const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
 
   const includeItemIds = useMemo(
-    () =>
-      [...itemSelections.entries()]
-        .filter(([_, s]) => s === "included")
-        .map(([id]) => id),
+    () => [...itemSelections.entries()].filter(([_, s]) => s === "included").map(([id]) => id),
     [itemSelections],
   );
   const excludeItemIds = useMemo(
-    () =>
-      [...itemSelections.entries()]
-        .filter(([_, s]) => s === "excluded")
-        .map(([id]) => id),
+    () => [...itemSelections.entries()].filter(([_, s]) => s === "excluded").map(([id]) => id),
     [itemSelections],
   );
 
@@ -86,21 +66,9 @@ export default function AbilityOrder() {
             setMaxRankId(max);
           }}
         />
-        <Filter.MinMatches
-          value={minMatches}
-          onChange={setMinMatches}
-          min={0}
-        />
-        <ItemSelectorTriState
-          selections={itemSelections}
-          onSelectionsChange={setItemSelections}
-          label="Items"
-        />
-        <Filter.PatchOrDate
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e) => setDateRange([s, e])}
-        />
+        <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} />
+        <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
+        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
       </Filter.Root>
 
       <AbilityOrderTree

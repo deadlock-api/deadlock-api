@@ -5,21 +5,12 @@ import { motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
-import {
-  buildAbilityTrie,
-  getSortedChildren,
-  mergeStreetBrawlRows,
-} from "~/lib/ability-order-utils";
+import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import AbilityOrderNode from "./AbilityOrderNode";
 
-const HERO_ABILITY_SLOTS = [
-  "signature1",
-  "signature2",
-  "signature3",
-  "signature4",
-] as const;
+const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
 
 interface AbilityOrderTreeProps {
   heroId: number;
@@ -80,10 +71,9 @@ export default function AbilityOrderTree({
   const { data: abilityItems } = useQuery({
     queryKey: ["assets-items-abilities"],
     queryFn: async () => {
-      const response =
-        await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
-          type: "ability",
-        });
+      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
+        type: "ability",
+      });
       return response.data as AbilityV2[];
     },
     staleTime: Number.POSITIVE_INFINITY,
@@ -98,9 +88,7 @@ export default function AbilityOrderTree({
       const className = heroData.items?.[slot];
       if (!className) continue;
 
-      const ability = abilityItems.find(
-        (item) => item.class_name === className,
-      );
+      const ability = abilityItems.find((item) => item.class_name === className);
       if (!ability) continue;
 
       map.set(ability.id, i + 1);
@@ -111,10 +99,7 @@ export default function AbilityOrderTree({
 
   const trie = useMemo(() => {
     if (!abilityOrderData) return null;
-    const rows =
-      gameMode === "street_brawl"
-        ? mergeStreetBrawlRows(abilityOrderData)
-        : abilityOrderData;
+    const rows = gameMode === "street_brawl" ? mergeStreetBrawlRows(abilityOrderData) : abilityOrderData;
     return buildAbilityTrie(rows);
   }, [abilityOrderData, gameMode]);
 
@@ -227,9 +212,7 @@ export default function AbilityOrderTree({
   }
 
   const rootChildren = getSortedChildren(trie);
-  const focusedRoot = rootChildren.find((child) =>
-    focusedPaths.has(String(child.abilityId)),
-  );
+  const focusedRoot = rootChildren.find((child) => focusedPaths.has(String(child.abilityId)));
   const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
 
   return (
@@ -244,9 +227,8 @@ export default function AbilityOrderTree({
     >
       {gameMode === "street_brawl" && (
         <p className="text-sm text-muted-foreground mb-2">
-          In Street Brawl, you unlock multiple abilities at once per round.
-          Since the order within each round doesn't matter, paths that only
-          differ in that order are shown as one.
+          In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
+          matter, paths that only differ in that order are shown as one.
         </p>
       )}
       <motion.div
