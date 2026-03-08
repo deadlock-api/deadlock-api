@@ -1,3 +1,4 @@
+DROP DICTIONARY IF EXISTS match_info_dict;
 DROP TABLE IF EXISTS match_info;
 
 CREATE TABLE match_info
@@ -1120,7 +1121,6 @@ VALUES (34000002, '2025-03-17 06:19:56', 'Team0', 1241, 'TeamWin', 'Unranked', '
         ['Team0', 'Team0', 'Team1', 'Team0', 'Team1', 'Team1', 'Team0', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team1', 'Team0', 'Team1', 'Team1'],
         ['Team0'], ['Team0'], [1622], false, false, false, 76, 76, '2025-03-18 07:27:41', 2);
 
-DROP DICTIONARY IF EXISTS match_info_dict;
 
 CREATE DICTIONARY match_info_dict
 (
