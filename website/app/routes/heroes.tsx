@@ -60,7 +60,9 @@ export default function Heroes(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [prevDates, setPrevDates] = useState(() => computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES));
+  const [prevDates, setPrevDates] = useState(() =>
+    computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES),
+  );
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral([
