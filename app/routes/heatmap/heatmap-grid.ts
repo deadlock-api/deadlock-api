@@ -72,7 +72,7 @@ function buildRawGrid(data: KillDeathStats[], viewMode: "kills" | "deaths", radi
 }
 
 /** Clamp to given percentile then normalize to [0,1] */
-function clampAndNormalize(grid: Float32Array, percentile = 0.99): Float32Array {
+function clampAndNormalize(grid: Float32Array, percentile = 0.99): { grid: Float32Array; maxValue: number } {
   const nonZero: number[] = [];
   for (let i = 0; i < grid.length; i++) {
     if (grid[i] > 0) nonZero.push(grid[i]);
@@ -94,7 +94,7 @@ function clampAndNormalize(grid: Float32Array, percentile = 0.99): Float32Array 
       grid[i] /= gridMax;
     }
   }
-  return grid;
+  return { grid, maxValue: gridMax };
 }
 
 /** Build a normalized [0,1] heat grid from kill/death data with splat smoothing */
@@ -103,7 +103,7 @@ export function buildHeatGrid(
   viewMode: "kills" | "deaths" | "kd",
   radius: number,
   sensitivity = 0.99,
-): Float32Array {
+): { grid: Float32Array; maxValue: number } {
   if (viewMode === "kd") {
     const killsRaw = buildRawGrid(data, "kills", radius);
     const deathsRaw = buildRawGrid(data, "deaths", radius);
