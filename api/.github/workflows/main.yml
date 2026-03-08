@@ -144,8 +144,6 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
           load: true
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       ###############################
       ##         Test Code         ##
