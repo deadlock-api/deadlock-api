@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosInstance } from "axios";
 import { AnalyticsApi, LeaderboardApi, PlayersApi, SteamApi } from "deadlock_api_client";
 import { API_ORIGIN } from "./constants";
 
@@ -15,6 +15,7 @@ export class Api {
   public leaderboard_api: LeaderboardApi;
   public players_api: PlayersApi;
   public steam_api: SteamApi;
+  public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
     const axios_client = axios.create({
@@ -24,6 +25,7 @@ export class Api {
         UserAgent: "DeadlockAPI/1.0.0",
       },
     });
+    this.client = axios_client;
     this.analytics_api = new AnalyticsApi(undefined, API_ORIGIN, axios_client);
     this.leaderboard_api = new LeaderboardApi(undefined, API_ORIGIN, axios_client);
     this.players_api = new PlayersApi(undefined, API_ORIGIN, axios_client);
