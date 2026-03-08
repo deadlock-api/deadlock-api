@@ -110,7 +110,7 @@ export default function App() {
                       WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
                     }}
                   />
-                  <div className="m-4 w-full xl:w-[80%] bg-background/90 backdrop-blur-sm rounded-xl shadow-xl border border-border p-8 relative">
+                  <div className="m-4 w-full xl:w-[80%] bg-background/60 backdrop-blur-md rounded-xl shadow-xl border border-white/10 p-8 relative">
                     <div key={pathname} className="page-fade-in">
                       <Outlet />
                     </div>
