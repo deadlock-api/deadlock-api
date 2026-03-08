@@ -1,15 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AbilityV2 } from "assets_deadlock_api_client/api";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
+import { motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
-import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
+import {
+  buildAbilityTrie,
+  getSortedChildren,
+  mergeStreetBrawlRows,
+} from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import AbilityOrderNode from "./AbilityOrderNode";
 
-const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
+const HERO_ABILITY_SLOTS = [
+  "signature1",
+  "signature2",
+  "signature3",
+  "signature4",
+] as const;
 
 interface AbilityOrderTreeProps {
   heroId: number;
@@ -59,7 +69,9 @@ export default function AbilityOrderTree({
   const { data: heroData } = useQuery({
     queryKey: ["assets-hero", heroId],
     queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroV2HeroesIdGet({ id: heroId });
+      const response = await assetsApi.heroes_api.getHeroV2HeroesIdGet({
+        id: heroId,
+      });
       return response.data;
     },
     staleTime: Number.POSITIVE_INFINITY,
@@ -68,7 +80,10 @@ export default function AbilityOrderTree({
   const { data: abilityItems } = useQuery({
     queryKey: ["assets-items-abilities"],
     queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
+      const response =
+        await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
+          type: "ability",
+        });
       return response.data as AbilityV2[];
     },
     staleTime: Number.POSITIVE_INFINITY,
@@ -83,7 +98,9 @@ export default function AbilityOrderTree({
       const className = heroData.items?.[slot];
       if (!className) continue;
 
-      const ability = abilityItems.find((item) => item.class_name === className);
+      const ability = abilityItems.find(
+        (item) => item.class_name === className,
+      );
       if (!ability) continue;
 
       map.set(ability.id, i + 1);
@@ -94,7 +111,10 @@ export default function AbilityOrderTree({
 
   const trie = useMemo(() => {
     if (!abilityOrderData) return null;
-    const rows = gameMode === "street_brawl" ? mergeStreetBrawlRows(abilityOrderData) : abilityOrderData;
+    const rows =
+      gameMode === "street_brawl"
+        ? mergeStreetBrawlRows(abilityOrderData)
+        : abilityOrderData;
     return buildAbilityTrie(rows);
   }, [abilityOrderData, gameMode]);
 
@@ -145,12 +165,22 @@ export default function AbilityOrderTree({
   }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({ isDragging: false, didDrag: false, startX: 0, scrollLeft: 0 });
+  const dragState = useRef({
+    isDragging: false,
+    didDrag: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     const el = scrollRef.current;
     if (!el) return;
-    dragState.current = { isDragging: true, didDrag: false, startX: e.clientX, scrollLeft: el.scrollLeft };
+    dragState.current = {
+      isDragging: true,
+      didDrag: false,
+      startX: e.clientX,
+      scrollLeft: el.scrollLeft,
+    };
     el.style.cursor = "grabbing";
     el.style.userSelect = "none";
   }, []);
@@ -197,7 +227,9 @@ export default function AbilityOrderTree({
   }
 
   const rootChildren = getSortedChildren(trie);
-  const focusedRoot = rootChildren.find((child) => focusedPaths.has(String(child.abilityId)));
+  const focusedRoot = rootChildren.find((child) =>
+    focusedPaths.has(String(child.abilityId)),
+  );
   const displayedRoots = focusedRoot ? [focusedRoot] : rootChildren;
 
   return (
@@ -212,12 +244,21 @@ export default function AbilityOrderTree({
     >
       {gameMode === "street_brawl" && (
         <p className="text-sm text-muted-foreground mb-2">
-          In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
-          matter, paths that only differ in that order are shown as one.
+          In Street Brawl, you unlock multiple abilities at once per round.
+          Since the order within each round doesn't matter, paths that only
+          differ in that order are shown as one.
         </p>
       )}
-      <div className="inline-flex items-start gap-0.5 min-w-max p-4">
-        {displayedRoots.map((child) => {
+      <motion.div
+        className="inline-flex items-start gap-0.5 min-w-max p-4"
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: {},
+          show: { transition: { staggerChildren: 0.06 } },
+        }}
+      >
+        {displayedRoots.map((child, i) => {
           const childPath = String(child.abilityId);
           return (
             <div key={child.abilityId} className="flex flex-col items-center">
@@ -235,11 +276,12 @@ export default function AbilityOrderTree({
                 totalPointsSpent={0}
                 isStreetBrawl={gameMode === "street_brawl"}
                 siblingCount={displayedRoots.length}
+                index={i}
               />
             </div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

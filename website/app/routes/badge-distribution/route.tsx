@@ -48,29 +48,34 @@ export default function BadgeDistribution() {
   const error = badgeDistributionQuery?.error || ranks?.error;
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-4 max-h-xl">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
-          <p className="text-sm text-muted-foreground mt-1">Player rank distribution across all badges</p>
-        </div>
-        <Filter.Root>
-          <BadgeDistributionFilter value={filter} onChange={setFilter} />
-        </Filter.Root>
-        <div className="h-200 flex justify-center items-center">
-          {isPending ? (
-            <div className="flex items-center justify-center py-24">
-              <LoadingLogo />
-            </div>
-          ) : isError ? (
-            <div className="text-center text-sm text-destructive py-8">
-              Failed to load rank distribution: {error?.message}
-            </div>
-          ) : badgeDistributionQuery.data ? (
-            <BadgeDistributionChart badgeDistributionData={badgeDistributionQuery.data} ranksData={ranks.data ?? []} />
-          ) : null}
-        </div>
-      </section>
+    <div className="flex flex-col gap-4 h-[calc(100dvh-2rem)]">
+      <div className="text-center shrink-0">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Match Rank Distribution
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Player rank distribution across all badges
+        </p>
+      </div>
+      <Filter.Root>
+        <BadgeDistributionFilter value={filter} onChange={setFilter} />
+      </Filter.Root>
+      <div className="flex-1 min-h-0 flex justify-center items-center">
+        {isPending ? (
+          <div className="flex items-center justify-center">
+            <LoadingLogo />
+          </div>
+        ) : isError ? (
+          <div className="text-center text-sm text-destructive">
+            Failed to load rank distribution: {error?.message}
+          </div>
+        ) : badgeDistributionQuery.data ? (
+          <BadgeDistributionChart
+            badgeDistributionData={badgeDistributionQuery.data}
+            ranksData={ranks.data ?? []}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
