@@ -1,6 +1,7 @@
 import type { MapV1 } from "assets_deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HeatmapLegend } from "./HeatmapLegend";
 import { buildHeatGrid, buildHeatGrids, COLOR_LUT, GRID_RES, sampleBilinear } from "./heatmap-grid";
 import { SensitivitySlider } from "./SensitivitySlider";
 
@@ -34,6 +35,7 @@ export default function HeatmapCanvas({
   const [mapImagesLoaded, setMapImagesLoaded] = useState(false);
   const compositeRef = useRef<HTMLCanvasElement | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [legendMax, setLegendMax] = useState(0);
 
   const radius = mapData.radius ?? 10752;
 
@@ -121,7 +123,8 @@ export default function HeatmapCanvas({
 
     if (data.length === 0) return;
 
-    const grid = buildHeatGrid(data, viewMode, radius, sensitivity);
+    const { grid, maxValue } = buildHeatGrid(data, viewMode, radius, sensitivity);
+    setLegendMax(maxValue);
 
     const imageData = heatCtx.createImageData(canvasWidth, canvasHeight);
     const pixels = imageData.data;
@@ -146,7 +149,7 @@ export default function HeatmapCanvas({
     }
 
     heatCtx.putImageData(imageData, 0, 0);
-  }, [data, radius, viewMode, mapImagesLoaded, sensitivity]);
+  }, [data, radius, viewMode, sensitivity]);
 
   useEffect(() => {
     if (!mapImagesLoaded) return;
@@ -237,17 +240,7 @@ export default function HeatmapCanvas({
           </div>
         </div>
       )}
-      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
-        <span className="text-[10px] text-muted-foreground">Low</span>
-        <div
-          className="h-2.5 w-24 rounded-full"
-          style={{
-            background:
-              "linear-gradient(to right, rgb(20,0,200), rgb(0,100,255), rgb(0,230,230), rgb(50,255,50), rgb(230,255,0), rgb(255,130,0), rgb(255,0,0))",
-          }}
-        />
-        <span className="text-[10px] text-muted-foreground">High</span>
-      </div>
+      <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
 
       <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} className="absolute bottom-3 left-3" />
     </div>
