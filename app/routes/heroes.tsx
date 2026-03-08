@@ -1,7 +1,8 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
+import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -59,6 +60,7 @@ export default function Heroes(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
+  const [prevDates, setPrevDates] = useState(() => computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES));
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral([
@@ -124,7 +126,14 @@ export default function Heroes(
             }}
           />
         )}
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
+        <Filter.PatchOrDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e, ps, pe) => {
+            setDateRange([s, e]);
+            setPrevDates({ prevStartDate: ps, prevEndDate: pe });
+          }}
+        />
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
@@ -148,6 +157,8 @@ export default function Heroes(
               minHeroMatchesTotal={minHeroMatchesTotal}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
+              prevMinDate={prevDates.prevStartDate}
+              prevMaxDate={prevDates.prevEndDate}
               gameMode={gameMode}
             />
           </div>
@@ -256,6 +267,8 @@ export default function Heroes(
               maxRankId={effectiveMaxRankId}
               minDate={startDate || undefined}
               maxDate={endDate || undefined}
+              prevMinDate={prevDates.prevStartDate}
+              prevMaxDate={prevDates.prevEndDate}
               minMatches={minMatches}
               gameMode={gameMode}
             />

@@ -14,12 +14,50 @@ export interface PatchInfo {
   endDate: Dayjs | "NOW";
 }
 
+export interface PatchOrDatePickerValue {
+  startDate?: Dayjs;
+  endDate?: Dayjs;
+  prevStartDate?: Dayjs;
+  prevEndDate?: Dayjs;
+}
+
 export interface PatchOrDatePickerProps {
   patchDates: PatchInfo[];
   value: { startDate?: Dayjs; endDate?: Dayjs };
-  onValueChange: (value: { startDate?: Dayjs; endDate?: Dayjs }) => void;
+  onValueChange: (value: PatchOrDatePickerValue) => void;
   className?: string;
   defaultTab?: "patch" | "custom";
+}
+
+export function computePreviousPeriod(
+  startDate?: Dayjs,
+  endDate?: Dayjs,
+  patches?: PatchInfo[],
+): { prevStartDate?: Dayjs; prevEndDate?: Dayjs } {
+  if (!startDate || !endDate) return {};
+
+  if (patches) {
+    const patchIndex = patches.findIndex((p) => {
+      const resolvedStart = p.startDate.startOf("day");
+      const resolvedEnd = resolveEndDate(p.endDate).endOf("day");
+      return resolvedStart.isSame(startDate, "day") && resolvedEnd.isSame(endDate, "day");
+    });
+
+    if (patchIndex >= 0 && patchIndex + 1 < patches.length) {
+      const prevPatch = patches[patchIndex + 1];
+      return {
+        prevStartDate: prevPatch.startDate,
+        prevEndDate: patches[patchIndex].startDate,
+      };
+    }
+  }
+
+  // Duration shift fallback
+  const durationSeconds = endDate.unix() - startDate.unix();
+  return {
+    prevStartDate: startDate.subtract(durationSeconds, "second"),
+    prevEndDate: startDate,
+  };
 }
 
 const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
@@ -61,20 +99,20 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
   const handlePatchSelect = (patchId: string) => {
     const selectedPatch = patchDates.find((p) => p.id === patchId);
     if (selectedPatch) {
-      onValueChange({
-        startDate: selectedPatch.startDate,
-        endDate: resolveEndDate(selectedPatch.endDate),
-      });
+      const startDate = selectedPatch.startDate;
+      const endDate = resolveEndDate(selectedPatch.endDate);
+      const prev = computePreviousPeriod(startDate, endDate, patchDates);
+      onValueChange({ startDate, endDate, ...prev });
     } else {
       onValueChange({});
     }
   };
 
   const handleDateRangePickerChange = (range: { startDate?: Dayjs; endDate?: Dayjs }) => {
-    onValueChange({
-      startDate: range.startDate?.startOf("day"),
-      endDate: range.endDate?.endOf("day"),
-    });
+    const startDate = range.startDate?.startOf("day");
+    const endDate = range.endDate?.endOf("day");
+    const prev = computePreviousPeriod(startDate, endDate, patchDates);
+    onValueChange({ startDate, endDate, ...prev });
   };
 
   const getDisplayValue = () => {

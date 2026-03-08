@@ -576,6 +576,8 @@ export default function ItemStatsTable({
   maxRankId,
   minDate,
   maxDate,
+  prevMinDate,
+  prevMaxDate,
   hero,
   minMatches,
   minBoughtAtS,
@@ -593,6 +595,8 @@ export default function ItemStatsTable({
   maxRankId?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  prevMinDate?: Dayjs;
+  prevMaxDate?: Dayjs;
   hero?: number | null;
   minMatches?: number | null;
   minBoughtAtS?: number;
@@ -602,15 +606,9 @@ export default function ItemStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const hasPreviousInterval = minDateTimestamp > 0 && maxDateTimestamp !== undefined;
-  const prevMinTimestamp = useMemo(
-    () => (hasPreviousInterval ? minDateTimestamp - (maxDateTimestamp - minDateTimestamp) : 0),
-    [hasPreviousInterval, minDateTimestamp, maxDateTimestamp],
-  );
-  const prevMaxTimestamp = useMemo(
-    () => (hasPreviousInterval ? minDateTimestamp : undefined),
-    [hasPreviousInterval, minDateTimestamp],
-  );
+  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
+  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
     queryKey: ["assets-items-upgrades"],
