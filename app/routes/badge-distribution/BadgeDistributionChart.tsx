@@ -1,17 +1,7 @@
 import type { RankV2 } from "assets_deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Customized,
-  Label,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartContainer } from "~/components/ui/chart";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
@@ -28,10 +18,7 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
-export default function BadgeDistributionChart({
-  badgeDistributionData,
-  ranksData,
-}: BadgeDistributionChartProps) {
+export default function BadgeDistributionChart({ badgeDistributionData, ranksData }: BadgeDistributionChartProps) {
   const tierData = useMemo(() => {
     const map = new Map<number, RankV2>();
     ranksData.forEach((r) => {
@@ -77,8 +64,7 @@ export default function BadgeDistributionChart({
     return range(minTier, maxTier + 1).map((tier) => tier * 10 + 3);
   }, [badgeDistributionData]);
 
-  const xAxisTickFormatter = (badge: number) =>
-    tierData.get(Math.floor(badge / 10))?.name ?? "";
+  const xAxisTickFormatter = (badge: number) => tierData.get(Math.floor(badge / 10))?.name ?? "";
 
   const tierCenters = useMemo(() => {
     const badges = badgeDistributionData.map((item) => item.badge_level);
@@ -95,14 +81,9 @@ export default function BadgeDistributionChart({
   const RankIconsOverlay = useMemo(() => {
     return function RankIcons(props: Record<string, unknown>) {
       const xAxisMap = props.xAxisMap as
-        | Record<
-            string,
-            { scale: (v: number) => number | undefined; bandSize?: number }
-          >
+        | Record<string, { scale: (v: number) => number | undefined; bandSize?: number }>
         | undefined;
-      const offset = props.offset as
-        | { top: number; height: number }
-        | undefined;
+      const offset = props.offset as { top: number; height: number } | undefined;
       if (!xAxisMap || !offset) return null;
 
       const xAxis = Object.values(xAxisMap)[0];
@@ -117,20 +98,8 @@ export default function BadgeDistributionChart({
       return (
         <g>
           <defs>
-            <filter
-              id="rank-icon-shadow"
-              x="-30%"
-              y="-30%"
-              width="160%"
-              height="160%"
-            >
-              <feDropShadow
-                dx="0"
-                dy="1"
-                stdDeviation="2"
-                floodColor="#000"
-                floodOpacity="0.7"
-              />
+            <filter id="rank-icon-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.7" />
             </filter>
           </defs>
           {tierCenters.map(({ tier, firstBadge, lastBadge }) => {
@@ -145,8 +114,7 @@ export default function BadgeDistributionChart({
             if (!imageUrl) return null;
 
             // Higher-tier badges have more transparent padding in source images
-            const tierScale =
-              tier === 8 || tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1;
+            const tierScale = tier === 8 || tier === 9 ? 1.6 : tier >= 10 ? 1.4 : 1;
             const size = iconSize * tierScale;
 
             return (
@@ -168,21 +136,14 @@ export default function BadgeDistributionChart({
   }, [tierCenters, tierData, badgeMap]);
 
   return (
-    <ChartContainer
-      config={{ matches: { label: "Matches" } }}
-      className="h-full w-full"
-    >
+    <ChartContainer config={{ matches: { label: "Matches" } }} className="h-full w-full">
       <BarChart accessibilityLayer data={chartData}>
         <CartesianGrid vertical={false} />
         <Bar dataKey="matches" fill="var(--color-accent)" radius={4}>
           {chartData.map((entry) => (
             <Cell
               key={`cell-${entry.badge}`}
-              fill={
-                entry.isSpacer
-                  ? "transparent"
-                  : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")
-              }
+              fill={entry.isSpacer ? "transparent" : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")}
             />
           ))}
         </Bar>
@@ -199,13 +160,7 @@ export default function BadgeDistributionChart({
             const imageUrl = info?.small_webp ?? info?.small;
             return (
               <div className="rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md flex items-center gap-2">
-                {imageUrl && (
-                  <img
-                    src={imageUrl}
-                    alt={`${rankName} ${subtier}`}
-                    className="size-5"
-                  />
-                )}
+                {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}
                 <div>
                   <div className="font-medium">
                     {rankName} {subtier}

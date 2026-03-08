@@ -50,12 +50,8 @@ export default function BadgeDistribution() {
   return (
     <div className="flex flex-col gap-4 h-[calc(100dvh-2rem)]">
       <div className="text-center shrink-0">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Match Rank Distribution
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Player rank distribution across all badges
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
+        <p className="text-sm text-muted-foreground mt-1">Player rank distribution across all badges</p>
       </div>
       <Filter.Root>
         <BadgeDistributionFilter value={filter} onChange={setFilter} />
@@ -66,14 +62,9 @@ export default function BadgeDistribution() {
             <LoadingLogo />
           </div>
         ) : isError ? (
-          <div className="text-center text-sm text-destructive">
-            Failed to load rank distribution: {error?.message}
-          </div>
+          <div className="text-center text-sm text-destructive">Failed to load rank distribution: {error?.message}</div>
         ) : badgeDistributionQuery.data ? (
-          <BadgeDistributionChart
-            badgeDistributionData={badgeDistributionQuery.data}
-            ranksData={ranks.data ?? []}
-          />
+          <BadgeDistributionChart badgeDistributionData={badgeDistributionQuery.data} ranksData={ranks.data ?? []} />
         ) : null}
       </div>
     </div>

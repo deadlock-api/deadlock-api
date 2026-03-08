@@ -49,8 +49,7 @@
   0%,
   100% {
     opacity: 1;
-    filter: drop-shadow(0 0 4px rgba(250, 68, 84, 0.6))
-      drop-shadow(0 0 10px rgba(250, 68, 84, 0.25));
+    filter: drop-shadow(0 0 4px rgba(250, 68, 84, 0.6)) drop-shadow(0 0 10px rgba(250, 68, 84, 0.25));
   }
   19.9% {
     opacity: 1;
@@ -71,8 +70,7 @@
   }
   50% {
     opacity: 1;
-    filter: drop-shadow(0 0 6px rgba(250, 68, 84, 0.7))
-      drop-shadow(0 0 14px rgba(250, 68, 84, 0.3));
+    filter: drop-shadow(0 0 6px rgba(250, 68, 84, 0.7)) drop-shadow(0 0 14px rgba(250, 68, 84, 0.3));
   }
   54.5% {
     opacity: 0.78;
@@ -85,8 +83,7 @@
 
 .electric-bolt {
   animation: electric-bolt 3.5s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(250, 68, 84, 0.6))
-    drop-shadow(0 0 10px rgba(250, 68, 84, 0.25));
+  filter: drop-shadow(0 0 4px rgba(250, 68, 84, 0.6)) drop-shadow(0 0 10px rgba(250, 68, 84, 0.25));
 }
 
 /* Electric Border */
@@ -149,12 +146,7 @@
   transform: scale(1.1);
   filter: blur(32px);
   opacity: 0.3;
-  background: linear-gradient(
-    -30deg,
-    var(--eb-color),
-    transparent,
-    var(--eb-color)
-  );
+  background: linear-gradient(-30deg, var(--eb-color), transparent, var(--eb-color));
 }
 
 @plugin "@iconify/tailwind4"; /* Not unused, this is used for icons */
@@ -306,16 +298,11 @@
   --spacing: 0.25rem;
   --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.1);
   --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.15);
-  --shadow-sm:
-    0px 1px 3px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
-  --shadow:
-    0px 2px 4px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
-  --shadow-md:
-    0px 2px 6px 0px hsl(0 0% 0% / 0.25), 0px 2px 4px -1px hsl(0 0% 0% / 0.2);
-  --shadow-lg:
-    0px 4px 8px 0px hsl(0 0% 0% / 0.3), 0px 4px 6px -1px hsl(0 0% 0% / 0.2);
-  --shadow-xl:
-    0px 8px 16px 0px hsl(0 0% 0% / 0.35), 0px 8px 10px -1px hsl(0 0% 0% / 0.2);
+  --shadow-sm: 0px 1px 3px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
+  --shadow: 0px 2px 4px 0px hsl(0 0% 0% / 0.2), 0px 1px 2px -1px hsl(0 0% 0% / 0.2);
+  --shadow-md: 0px 2px 6px 0px hsl(0 0% 0% / 0.25), 0px 2px 4px -1px hsl(0 0% 0% / 0.2);
+  --shadow-lg: 0px 4px 8px 0px hsl(0 0% 0% / 0.3), 0px 4px 6px -1px hsl(0 0% 0% / 0.2);
+  --shadow-xl: 0px 8px 16px 0px hsl(0 0% 0% / 0.35), 0px 8px 10px -1px hsl(0 0% 0% / 0.2);
   --shadow-2xl: 0px 16px 32px 0px hsl(0 0% 0% / 0.5);
   --tracking-normal: 0em;
 }
@@ -327,11 +314,7 @@
 
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(
-      ellipse 80% 50% at 50% -20%,
-      rgba(250, 68, 84, 0.03) 0%,
-      transparent 70%
-    );
+    background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(250, 68, 84, 0.03) 0%, transparent 70%);
   }
 
   .h-120 {
