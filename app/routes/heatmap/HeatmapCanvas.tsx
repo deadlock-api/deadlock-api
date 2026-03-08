@@ -32,7 +32,7 @@ export default function HeatmapCanvas({
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
   const [mapImagesLoaded, setMapImagesLoaded] = useState(false);
-  const mapImageRef = useRef<HTMLImageElement | null>(null);
+  const compositeRef = useRef<HTMLCanvasElement | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const radius = mapData.radius ?? 10752;
@@ -40,25 +40,43 @@ export default function HeatmapCanvas({
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
 
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      mapImageRef.current = img;
+    const loadImage = (src: string): Promise<HTMLImageElement> =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.src = src;
+      });
+
+    Promise.all([
+      loadImage(mapData.images.background),
+      loadImage(mapData.images.mid),
+      loadImage(mapData.images.frame),
+    ]).then(([bg, mid, frame]) => {
+      const size = Math.max(bg.naturalWidth, mid.naturalWidth, frame.naturalWidth);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bg, 0, 0, size, size);
+      ctx.drawImage(mid, 0, 0, size, size);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.drawImage(frame, 0, 0, size, size);
+      compositeRef.current = canvas;
       setMapImagesLoaded(true);
-    };
-    img.src = mapData.images.minimap;
-  }, [mapData.images.minimap]);
+    });
+  }, [mapData.images.background, mapData.images.mid, mapData.images.frame]);
 
   const renderHeatmap = useCallback(() => {
     const mapCanvas = mapCanvasRef.current;
     const heatCanvas = heatCanvasRef.current;
-    const img = mapImageRef.current;
+    const composite = compositeRef.current;
     const container = containerRef.current;
-    if (!mapCanvas || !heatCanvas || !img || !container) return;
+    if (!mapCanvas || !heatCanvas || !composite || !container) return;
 
     const dpr = window.devicePixelRatio || 1;
     const containerRect = container.getBoundingClientRect();
-    const aspectRatio = img.naturalWidth / img.naturalHeight;
+    const aspectRatio = composite.width / composite.height;
 
     let drawWidth: number;
     let drawHeight: number;
@@ -93,7 +111,7 @@ export default function HeatmapCanvas({
       mapCtx.beginPath();
       mapCtx.arc(cx, cy, circleRadius, 0, Math.PI * 2);
       mapCtx.clip();
-      mapCtx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+      mapCtx.drawImage(composite, 0, 0, canvasWidth, canvasHeight);
       mapCtx.restore();
     }
 
