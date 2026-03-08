@@ -1,7 +1,8 @@
-import type { KillDeathStats } from "deadlock_api_client";
 import type { MapV1 } from "assets_deadlock_api_client";
+import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildHeatGrid, buildHeatGrids, sampleBilinear, COLOR_LUT, GRID_RES } from "./heatmap-grid";
+import { buildHeatGrid, buildHeatGrids, COLOR_LUT, GRID_RES, sampleBilinear } from "./heatmap-grid";
+import { SensitivitySlider } from "./SensitivitySlider";
 
 type ViewMode = "kills" | "deaths" | "kd";
 
@@ -16,9 +17,17 @@ interface HeatmapCanvasProps {
   data: KillDeathStats[];
   mapData: MapV1;
   viewMode: ViewMode;
+  sensitivity: number;
+  onSensitivityChange: (value: number) => void;
 }
 
-export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvasProps) {
+export default function HeatmapCanvas({
+  data,
+  mapData,
+  viewMode,
+  sensitivity,
+  onSensitivityChange,
+}: HeatmapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapCanvasRef = useRef<HTMLCanvasElement>(null);
   const heatCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -28,10 +37,7 @@ export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvas
 
   const radius = mapData.radius ?? 10752;
 
-  const rawGrids = useMemo(
-    () => (data.length > 0 ? buildHeatGrids(data, radius) : null),
-    [data, radius],
-  );
+  const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
 
   useEffect(() => {
     const img = new Image();
@@ -97,7 +103,7 @@ export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvas
 
     if (data.length === 0) return;
 
-    const grid = buildHeatGrid(data, viewMode, radius);
+    const grid = buildHeatGrid(data, viewMode, radius, sensitivity);
 
     const imageData = heatCtx.createImageData(canvasWidth, canvasHeight);
     const pixels = imageData.data;
@@ -110,7 +116,7 @@ export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvas
         const raw = sampleBilinear(grid, GRID_RES, GRID_RES, gx, gy);
         if (raw < 0.001) continue;
 
-        const t = Math.pow(raw, 0.45);
+        const t = raw ** 0.45;
         const lutIdx = Math.min(255, Math.round(t * 255)) * 4;
 
         const off = (py * canvasWidth + px) * 4;
@@ -122,7 +128,7 @@ export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvas
     }
 
     heatCtx.putImageData(imageData, 0, 0);
-  }, [data, radius, viewMode, mapImageLoaded]);
+  }, [data, radius, viewMode, mapImageLoaded, sensitivity]);
 
   useEffect(() => {
     if (!mapImageLoaded) return;
@@ -207,9 +213,7 @@ export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvas
             {tooltip.deaths > 0 && (
               <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-1">
                 <span className="text-muted-foreground">K/D</span>
-                <span className="font-medium text-foreground">
-                  {(tooltip.kills / tooltip.deaths).toFixed(2)}
-                </span>
+                <span className="font-medium text-foreground">{(tooltip.kills / tooltip.deaths).toFixed(2)}</span>
               </div>
             )}
           </div>
@@ -226,6 +230,8 @@ export default function HeatmapCanvas({ data, mapData, viewMode }: HeatmapCanvas
         />
         <span className="text-[10px] text-muted-foreground">High</span>
       </div>
+
+      <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} className="absolute bottom-3 left-3" />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client/api";
-import { lazy, Suspense } from "react";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { lazy, Suspense } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
@@ -34,6 +34,7 @@ export default function Heatmap() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
+  const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
@@ -126,10 +127,22 @@ export default function Heatmap() {
         ) : mapQuery.data && killDeathQuery.data ? (
           is3D ? (
             <Suspense fallback={<LoadingLogo />}>
-              <Heatmap3D data={killDeathQuery.data} mapData={mapQuery.data} viewMode={viewMode} />
+              <Heatmap3D
+                data={killDeathQuery.data}
+                mapData={mapQuery.data}
+                viewMode={viewMode}
+                sensitivity={sensitivity / 10000}
+                onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+              />
             </Suspense>
           ) : (
-            <HeatmapCanvas data={killDeathQuery.data} mapData={mapQuery.data} viewMode={viewMode} />
+            <HeatmapCanvas
+              data={killDeathQuery.data}
+              mapData={mapQuery.data}
+              viewMode={viewMode}
+              sensitivity={sensitivity / 10000}
+              onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+            />
           )
         ) : null}
       </div>
