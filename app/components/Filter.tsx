@@ -178,6 +178,32 @@ function MatchDuration({
   );
 }
 
+const TEAMS = [
+  { value: 0, label: "The Hidden King" },
+  { value: 1, label: "The Archmother" },
+] as const;
+
+function Team({ value, onChange }: { value: number; onChange: (team: number) => void }) {
+  return (
+    <div className="inline-flex items-center rounded-full border border-white/[0.08] bg-secondary p-0.5">
+      {TEAMS.map((team) => (
+        <button
+          key={team.value}
+          type="button"
+          onClick={() => onChange(team.value)}
+          className={`px-3 py-1 text-sm rounded-full transition-all cursor-pointer ${
+            value === team.value
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {team.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function SortDirection({ value, onChange }: { value: "desc" | "asc"; onChange: (dir: "desc" | "asc") => void }) {
   const isDesc = value === "desc";
   return (
@@ -204,4 +230,5 @@ export const Filter = {
   TimeRange,
   MatchDuration,
   SortDirection,
+  Team,
 };
