@@ -6,7 +6,7 @@ import { useMemo, useEffect, useState, useRef } from "react";
 import * as THREE from "three";
 import { buildHeatGrid, interpolateColor, sampleBilinear, GRID_RES } from "./heatmap-grid";
 
-type ViewMode = "kills" | "deaths";
+type ViewMode = "kills" | "deaths" | "kd";
 
 interface Heatmap3DProps {
   data: KillDeathStats[];
