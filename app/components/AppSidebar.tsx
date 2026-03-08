@@ -96,7 +96,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { pathname } = useLocation();
 
   return (
-    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
+    <div className="flex flex-col h-full text-sidebar-foreground">
       {/* Logo */}
       <div className="p-4 border-b border-sidebar-border">
         <Link to="/" prefetch="intent" onClick={onNavigate} className="flex items-center gap-3">
