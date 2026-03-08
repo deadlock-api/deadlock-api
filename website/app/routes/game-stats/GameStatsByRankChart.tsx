@@ -193,7 +193,7 @@ export default function GameStatsByRankChart({ params, stat, onStatChange }: Gam
               }}
             />
             <YAxis
-              domain={["auto", "auto"]}
+              domain={["dataMin", "auto"]}
               tickFormatter={(v) => statDef ? formatStatValue(v, statDef.format) : String(v)}
               stroke="#525252"
               label={{

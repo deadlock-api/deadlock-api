@@ -27,9 +27,10 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 interface GameStatsOverviewProps {
   params: GameStatsParams;
   prevParams: GameStatsParams | null;
+  onStatClick?: (statKey: string) => void;
 }
 
-export default function GameStatsOverview({ params, prevParams }: GameStatsOverviewProps) {
+export default function GameStatsOverview({ params, prevParams, onStatClick }: GameStatsOverviewProps) {
   const { data: currentData, isPending } = useQuery(
     gameStatsQueryOptions({ ...params, bucket: "no_bucket" }),
   );
@@ -90,12 +91,14 @@ export default function GameStatsOverview({ params, prevParams }: GameStatsOverv
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.2, delay: catIdx * 0.06 + statIdx * 0.02 }}
                     className={cn(
-                      "flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors",
+                      "flex items-center justify-between px-4 py-2.5 transition-colors",
                       "border-b border-white/[0.04]",
                       !isWide && statIdx === category.stats.length - 1 && "border-b-0",
                       isWide && statIdx >= category.stats.length - 2 && "sm:border-b-0",
                       isWide && statIdx === category.stats.length - 1 && "border-b-0",
+                      onStatClick && "cursor-pointer hover:bg-white/[0.04]",
                     )}
+                    onClick={() => onStatClick?.(stat.key)}
                   >
                     <span className="text-sm text-muted-foreground">{stat.label}</span>
                     <div className="flex items-center gap-2.5">
