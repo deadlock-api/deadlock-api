@@ -4,11 +4,11 @@ import NumberSelector from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
+import MatchTimeRangeSelector from "~/components/selectors/MatchTimeRangeSelector";
 import RankRange from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
-import TimeWindowSelector from "~/components/selectors/TimeWindowSelector";
 import type { Dayjs } from "~/dayjs";
-import { PATCHES } from "~/lib/constants";
+import { MAX_GAME_DURATION_S, PATCHES } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
 function Root({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -118,7 +118,7 @@ function Region({ value, onChange }: { value: string; onChange: (region: string)
   return <StringSelector label="Region" options={regionOptions} selected={value} onSelect={onChange} />;
 }
 
-function TimeWindow({
+function ItemPurchaseTimeWindow({
   minTime,
   maxTime,
   onTimeChange,
@@ -127,7 +127,43 @@ function TimeWindow({
   maxTime?: number;
   onTimeChange: (min: number | undefined, max: number | undefined) => void;
 }) {
-  return <TimeWindowSelector minTime={minTime} maxTime={maxTime} onTimeChange={onTimeChange} />;
+  return (
+    <MatchTimeRangeSelector
+      minTime={minTime}
+      maxTime={maxTime}
+      onTimeChange={onTimeChange}
+      label="Time"
+      title="Purchase Time Window"
+      description="Filter items by when they were purchased in the match."
+    />
+  );
+}
+
+function MatchDuration({
+  minTime,
+  maxTime,
+  onTimeChange,
+}: {
+  minTime?: number;
+  maxTime?: number;
+  onTimeChange: (min: number | undefined, max: number | undefined) => void;
+}) {
+  return (
+    <MatchTimeRangeSelector
+      minTime={minTime}
+      maxTime={maxTime}
+      onTimeChange={onTimeChange}
+      label="Duration"
+      title="Match Duration"
+      description="Filter matches by their total duration."
+      max={MAX_GAME_DURATION_S}
+      presets={[
+        { label: "Short (<20m)", start: 0, end: 20 * 60 },
+        { label: "Mid (20-40m)", start: 20 * 60, end: 40 * 60 },
+        { label: "Long (40m+)", start: 40 * 60, end: MAX_GAME_DURATION_S },
+      ]}
+    />
+  );
 }
 
 function SortDirection({ value, onChange }: { value: "desc" | "asc"; onChange: (dir: "desc" | "asc") => void }) {
@@ -153,6 +189,7 @@ export const Filter = {
   GameModeWithRank,
   MinMatches,
   PatchOrDate,
-  TimeWindow,
+  ItemPurchaseTimeWindow,
+  MatchDuration,
   SortDirection,
 };

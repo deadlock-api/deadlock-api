@@ -2,10 +2,10 @@ import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
-import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
+import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
@@ -37,7 +37,9 @@ export default function Items(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [prevDates, setPrevDates] = useState(() => computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES));
+  const [prevDates, setPrevDates] = useState(() =>
+    computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES),
+  );
   const isStreetBrawl = gameMode === "street_brawl";
   const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
   const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
@@ -66,7 +68,7 @@ export default function Items(
             setMaxRankId(max);
           }}
         />
-        <Filter.TimeWindow
+        <Filter.ItemPurchaseTimeWindow
           minTime={minBoughtAtS ?? undefined}
           maxTime={maxBoughtAtS ?? undefined}
           onTimeChange={(min, max) => {

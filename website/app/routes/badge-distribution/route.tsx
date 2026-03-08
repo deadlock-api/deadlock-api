@@ -1,13 +1,14 @@
 import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/api";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
+import { MAX_GAME_DURATION_S, MIN_GAME_DURATION_S } from "~/lib/constants";
 import BadgeDistributionChart from "./BadgeDistributionChart";
-import BadgeDistributionFilter from "./BadgeDistributionFilter";
 
 export function meta() {
   return [
@@ -21,6 +22,26 @@ export default function BadgeDistribution() {
     minUnixTimestamp: day().subtract(30, "day").startOf("day").unix(),
     maxUnixTimestamp: day().endOf("day").unix(),
   });
+
+  const handleDurationChange = useCallback(
+    (min: number | undefined, max: number | undefined) =>
+      setFilter((prev) => ({
+        ...prev,
+        minDurationS: min ?? MIN_GAME_DURATION_S,
+        maxDurationS: max ?? MAX_GAME_DURATION_S,
+      })),
+    [],
+  );
+
+  const handleDateChange = useCallback(
+    (startDate?: Dayjs, endDate?: Dayjs) =>
+      setFilter((prev) => ({
+        ...prev,
+        minUnixTimestamp: startDate ? startDate.unix() : 0,
+        maxUnixTimestamp: endDate ? endDate.unix() : undefined,
+      })),
+    [],
+  );
 
   const [ranks, badgeDistributionQuery] = useQueries({
     queries: [
@@ -54,7 +75,16 @@ export default function BadgeDistribution() {
         <p className="text-sm text-muted-foreground mt-1">Player rank distribution across all badges</p>
       </div>
       <Filter.Root>
-        <BadgeDistributionFilter value={filter} onChange={setFilter} />
+        <Filter.MatchDuration
+          minTime={filter.minDurationS ?? undefined}
+          maxTime={filter.maxDurationS ?? undefined}
+          onTimeChange={handleDurationChange}
+        />
+        <Filter.PatchOrDate
+          startDate={filter.minUnixTimestamp ? day.unix(filter.minUnixTimestamp) : undefined}
+          endDate={filter.maxUnixTimestamp ? day.unix(filter.maxUnixTimestamp) : undefined}
+          onDateChange={handleDateChange}
+        />
       </Filter.Root>
       <div className="flex-1 min-h-0 flex justify-center items-center">
         {isPending ? (
