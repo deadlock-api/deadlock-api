@@ -88,7 +88,7 @@ export default function GameStatsOverTimeChart({
               stroke="#525252"
             />
             <YAxis
-              domain={["auto", "auto"]}
+              domain={["dataMin", "auto"]}
               tickFormatter={(v) => statDef ? formatStatValue(v, statDef.format) : String(v)}
               stroke="#525252"
               label={{

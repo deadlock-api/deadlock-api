@@ -114,7 +114,14 @@ export default function GameStats() {
         </TabsList>
 
         <TabsContent value="overview">
-          <GameStatsOverview params={baseParams} prevParams={prevParams} />
+          <GameStatsOverview
+            params={baseParams}
+            prevParams={prevParams}
+            onStatClick={(key) => {
+              setStat(key);
+              setTab("over-time");
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="over-time">
