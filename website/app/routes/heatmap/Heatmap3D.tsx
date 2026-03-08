@@ -5,6 +5,7 @@ import type { KillDeathStats } from "deadlock_api_client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { buildHeatGrid, GRID_RES, interpolateColor, sampleBilinear } from "./heatmap-grid";
+import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
 type ViewMode = "kills" | "deaths" | "kd";
@@ -138,15 +139,16 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
 
     Promise.all([load(mapImages.background), load(mapImages.frame), load(mapImages.mid)]).then(
       ([bgTex, frameTex, midTex]) => {
-        const size = bgTex.image.width;
+        const bgImg = bgTex.image as HTMLImageElement;
+        const size = bgImg.width;
         const canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(bgTex.image, 0, 0, size, size);
-        ctx.drawImage(midTex.image, 0, 0, size, size);
+        ctx.drawImage(bgImg, 0, 0, size, size);
+        ctx.drawImage(midTex.image as HTMLImageElement, 0, 0, size, size);
         ctx.globalCompositeOperation = "multiply";
-        ctx.drawImage(frameTex.image, 0, 0, size, size);
+        ctx.drawImage(frameTex.image as HTMLImageElement, 0, 0, size, size);
 
         const tex = new THREE.CanvasTexture(canvas);
         tex.colorSpace = THREE.SRGBColorSpace;
@@ -180,9 +182,10 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
   const radius = mapData.radius ?? 10752;
   const [opacity, setOpacity] = useState(0.85);
 
-  const grid = useMemo(() => {
-    if (data.length === 0) return new Float32Array(GRID_RES * GRID_RES);
-    return buildHeatGrid(data, viewMode, radius, sensitivity);
+  const { grid, legendMax } = useMemo(() => {
+    if (data.length === 0) return { grid: new Float32Array(GRID_RES * GRID_RES), legendMax: 0 };
+    const result = buildHeatGrid(data, viewMode, radius, sensitivity);
+    return { grid: result.grid, legendMax: result.maxValue };
   }, [data, viewMode, radius, sensitivity]);
 
   return (
@@ -208,17 +211,7 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
         />
       </Canvas>
 
-      <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
-        <span className="text-[10px] text-muted-foreground">Low</span>
-        <div
-          className="h-2.5 w-24 rounded-full"
-          style={{
-            background:
-              "linear-gradient(to right, rgb(20,0,200), rgb(0,100,255), rgb(0,230,230), rgb(50,255,50), rgb(230,255,0), rgb(255,130,0), rgb(255,0,0))",
-          }}
-        />
-        <span className="text-[10px] text-muted-foreground">High</span>
-      </div>
+      <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
 
       <div className="absolute bottom-3 left-3 flex flex-col gap-1.5">
         <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
