@@ -25,13 +25,15 @@ pub enum BucketQuery {
     /// No Bucketing
     #[default]
     NoBucket,
-    /// Bucket Item Stats By Start Time (Hour)
+    /// Bucket Hero Stats By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    AvgBadge,
+    /// Bucket Hero Stats By Start Time (Hour)
     StartTimeHour,
-    /// Bucket Item Stats By Start Time (Day)
+    /// Bucket Hero Stats By Start Time (Day)
     StartTimeDay,
-    /// Bucket Item Stats By Start Time (Week)
+    /// Bucket Hero Stats By Start Time (Week)
     StartTimeWeek,
-    /// Bucket Item Stats By Start Time (Month)
+    /// Bucket Hero Stats By Start Time (Month)
     StartTimeMonth,
 }
 
@@ -39,10 +41,24 @@ impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
+            Self::AvgBadge => "toUInt32(max_avg_badge)",
             Self::StartTimeHour => "toStartOfHour(start_time)",
             Self::StartTimeDay => "toStartOfDay(start_time)",
             Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
             Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
+        }
+    }
+
+    fn get_info_select_clause(self) -> &'static str {
+        match self {
+            Self::StartTimeHour
+            | Self::StartTimeDay
+            | Self::StartTimeWeek
+            | Self::StartTimeMonth => ", start_time",
+            Self::AvgBadge => {
+                ", assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)) as max_avg_badge"
+            }
+            Self::NoBucket => "",
         }
     }
 }
@@ -235,16 +251,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
         player_hero_total_filters.join(" AND ")
     };
     let bucket = query.bucket.get_select_clause();
-    let start_time_select = if query.bucket == BucketQuery::NoBucket {
-        ""
-    } else {
-        ", start_time"
-    };
+    let match_info_select = query.bucket.get_info_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     WITH t_matches AS (
-            SELECT match_id {start_time_select}
+            SELECT match_id {match_info_select}
             FROM match_info
             WHERE match_mode IN ('Ranked', 'Unranked')
                 AND {game_mode_filter}
