@@ -1,10 +1,20 @@
 import { ChevronDown } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { useRef } from "react";
+import { motion } from "framer-motion";
 import AbilityImage from "~/components/AbilityImage";
 import AbilityName from "~/components/AbilityName";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import type { AbilityTrieNode } from "~/lib/ability-order-utils";
-import { getPickRate, getSortedChildren, getWinRate } from "~/lib/ability-order-utils";
+import {
+  getPickRate,
+  getSortedChildren,
+  getWinRate,
+} from "~/lib/ability-order-utils";
 import { cn } from "~/lib/utils";
 
 interface AbilitySlotMap {
@@ -25,7 +35,7 @@ const SLOT_BG_COLORS: Record<number, string> = {
   4: "bg-orange-500/10",
 };
 
-interface AbilityOrderNodeProps {
+export interface AbilityOrderNodeProps {
   node: AbilityTrieNode;
   parentMatches: number;
   abilitySlotMap: AbilitySlotMap;
@@ -39,12 +49,27 @@ interface AbilityOrderNodeProps {
   totalPointsSpent: number;
   isStreetBrawl: boolean;
   siblingCount: number;
+  index: number;
 }
 
 // Normal mode: T0 (unlock) = 0, T1 = 1, T2 = 2, T3 = 5
 const NORMAL_LEVEL_COST = [0, 1, 2, 5] as const;
 // Street Brawl: all start at T0, so T1 = 1, T2 = 2, T3 = 5
 const BRAWL_LEVEL_COST = [1, 2, 5] as const;
+
+const childStagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" as const },
+  },
+};
 
 export default function AbilityOrderNode({
   node,
@@ -60,52 +85,64 @@ export default function AbilityOrderNode({
   totalPointsSpent,
   isStreetBrawl,
   siblingCount,
+  index,
 }: AbilityOrderNodeProps) {
-  const slot = node.abilityId != null ? abilitySlotMap.get(node.abilityId) : undefined;
-  const rawLevel = node.abilityId != null ? ancestorAbilityIds.filter((id) => id === node.abilityId).length : 0;
+  const slot =
+    node.abilityId != null ? abilitySlotMap.get(node.abilityId) : undefined;
+  const rawLevel =
+    node.abilityId != null
+      ? ancestorAbilityIds.filter((id) => id === node.abilityId).length
+      : 0;
   const abilityLevel = isStreetBrawl ? rawLevel + 1 : rawLevel;
   const costTable = isStreetBrawl ? BRAWL_LEVEL_COST : NORMAL_LEVEL_COST;
   const nodeCost = costTable[rawLevel] ?? 0;
   const cumulativePoints = totalPointsSpent + nodeCost;
-  const childAncestorIds = node.abilityId != null ? [...ancestorAbilityIds, node.abilityId] : ancestorAbilityIds;
+  const childAncestorIds =
+    node.abilityId != null
+      ? [...ancestorAbilityIds, node.abilityId]
+      : ancestorAbilityIds;
   const winRate = getWinRate(node);
   const pickRate = getPickRate(node, parentMatches);
   const sortedChildren = getSortedChildren(node);
   const hasChildren = sortedChildren.length > 0;
 
   const isWithinDefaultDepth = node.depth < defaultDepth;
-  const isExpanded = isWithinDefaultDepth || expandedPaths.has(currentPath) || siblingCount === 1;
+  const isExpanded =
+    isWithinDefaultDepth ||
+    expandedPaths.has(currentPath) ||
+    siblingCount === 1;
   const isFocusable = siblingCount !== 1;
   const isFocused = isFocusable && focusedPaths.has(currentPath);
 
-  const focusedChild = sortedChildren.find((child) => focusedPaths.has(`${currentPath}/${child.abilityId}`));
+  const focusedChild = sortedChildren.find((child) =>
+    focusedPaths.has(`${currentPath}/${child.abilityId}`),
+  );
   const displayedChildren = focusedChild ? [focusedChild] : sortedChildren;
 
   const opacity = Math.max(0.6, Math.min(1.0, pickRate * 2));
   const slotColor = slot ? SLOT_COLORS[slot] : "border-l-muted-foreground";
   const slotBg = slot ? SLOT_BG_COLORS[slot] : "";
 
-  const avgKills = node.matches > 0 ? (node.totalKills / node.matches).toFixed(1) : "0";
-  const avgDeaths = node.matches > 0 ? (node.totalDeaths / node.matches).toFixed(1) : "0";
-  const avgAssists = node.matches > 0 ? (node.totalAssists / node.matches).toFixed(1) : "0";
+  const wrPercent = winRate * 100;
+  const prPercent = pickRate * 100;
+
+  const avgKills =
+    node.matches > 0 ? (node.totalKills / node.matches).toFixed(1) : "0";
+  const avgDeaths =
+    node.matches > 0 ? (node.totalDeaths / node.matches).toFixed(1) : "0";
+  const avgAssists =
+    node.matches > 0 ? (node.totalAssists / node.matches).toFixed(1) : "0";
 
   const childrenRowRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const row = childrenRowRef.current;
-    if (!row) return;
-    const cards: HTMLElement[] = [];
-    for (const col of row.children) {
-      const c = col.querySelector<HTMLElement>("[data-ability-card]");
-      if (c) cards.push(c);
-    }
-    if (cards.length === 0) return;
-    for (const c of cards) c.style.width = "";
-    const maxW = Math.max(...cards.map((c) => c.offsetWidth));
-    for (const c of cards) c.style.width = `${maxW}px`;
-  });
 
   return (
-    <div className="flex flex-col items-center">
+    <motion.div
+      className="flex flex-col items-center"
+      variants={fadeUp}
+      initial="hidden"
+      animate="show"
+      transition={{ delay: index * 0.06 }}
+    >
       {/* Node card with tooltip */}
       <TooltipProvider>
         <Tooltip>
@@ -113,37 +150,94 @@ export default function AbilityOrderNode({
             <div
               data-ability-card
               className={cn(
-                "border rounded-md p-1.5 min-w-[120px] max-w-[180px] transition-all",
+                "border border-l-2 rounded-lg p-2 w-[160px] transition-all",
                 isFocusable && "cursor-pointer",
+                "bg-card/80 backdrop-blur-sm",
                 slotColor,
                 slotBg,
-                isFocused ? "border-primary ring-1 ring-primary/50" : "border-border hover:border-muted-foreground",
+                isFocused
+                  ? "border-primary ring-1 ring-primary/50"
+                  : "border-border hover:border-muted-foreground",
               )}
               style={{ opacity }}
-              onClick={isFocusable ? () => onToggleFocus(currentPath) : undefined}
+              onClick={
+                isFocusable ? () => onToggleFocus(currentPath) : undefined
+              }
             >
-              <div className="flex items-center gap-2 mb-1">
+              {/* Header: icon + name + tier pill */}
+              <div className="flex items-center gap-2 mb-2">
                 {node.abilityId != null ? (
-                  <AbilityImage abilityId={node.abilityId} className="size-8 rounded" />
+                  <AbilityImage
+                    abilityId={node.abilityId}
+                    className="size-10 shrink-0 rounded-lg"
+                  />
                 ) : (
-                  <div className="size-8 rounded bg-muted" />
+                  <div className="size-10 shrink-0 rounded-lg bg-muted" />
                 )}
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col min-w-0 gap-0.5">
                   {node.abilityId != null ? (
-                    <AbilityName abilityId={node.abilityId} className="text-xs font-medium" />
+                    <AbilityName
+                      abilityId={node.abilityId}
+                      className="text-xs font-semibold leading-tight"
+                    />
                   ) : (
-                    <span className="text-xs font-medium">Root</span>
+                    <span className="text-xs font-semibold leading-tight">
+                      Root
+                    </span>
                   )}
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    T{abilityLevel} · {cumulativePoints} pts
+                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <span className="px-1.5 py-px rounded-full bg-muted text-[10px] font-medium">
+                      T{abilityLevel}
+                    </span>
+                    <span>{cumulativePoints} pts</span>
                   </span>
                 </div>
               </div>
-              <div className="flex flex-nowrap justify-between gap-1 text-xs tabular-nums">
-                <span className={cn("font-semibold text-nowrap", winRate >= 0.5 ? "text-green-400" : "text-red-400")}>
-                  {(winRate * 100).toFixed(1)}% WR
-                </span>
-                <span className="text-muted-foreground text-nowrap">PR {(pickRate * 100).toFixed(1)}%</span>
+
+              {/* Stat bars */}
+              <div className="space-y-1">
+                {/* Win Rate */}
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <span className="text-muted-foreground font-medium w-[18px] shrink-0">
+                    WR
+                  </span>
+                  <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300 ease-out"
+                      style={{
+                        width: `${wrPercent}%`,
+                        backgroundColor: "#fa4454",
+                      }}
+                    />
+                  </div>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums w-[38px] text-right shrink-0",
+                      winRate >= 0.5 ? "text-green-400" : "text-red-400",
+                    )}
+                  >
+                    {wrPercent.toFixed(1)}%
+                  </span>
+                </div>
+
+                {/* Pick Rate */}
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <span className="text-muted-foreground font-medium w-[18px] shrink-0">
+                    PR
+                  </span>
+                  <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300 ease-out"
+                      style={{
+                        width: `${prPercent}%`,
+                        backgroundColor: "#22d3ee",
+                      }}
+                    />
+                  </div>
+                  <span className="font-semibold tabular-nums text-cyan-400 w-[38px] text-right shrink-0">
+                    {prPercent.toFixed(1)}%
+                  </span>
+                </div>
               </div>
             </div>
           </TooltipTrigger>
@@ -160,24 +254,37 @@ export default function AbilityOrderNode({
               <div className="px-3 py-2 space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Win Rate</span>
-                  <span className={cn("font-medium", winRate >= 0.5 ? "text-green-400" : "text-red-400")}>
-                    {(winRate * 100).toFixed(1)}%
+                  <span
+                    className={cn(
+                      "font-medium",
+                      winRate >= 0.5 ? "text-green-400" : "text-red-400",
+                    )}
+                  >
+                    {wrPercent.toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Pick Rate</span>
-                  <span className="font-medium">{(pickRate * 100).toFixed(1)}%</span>
+                  <span className="font-medium text-cyan-400">
+                    {prPercent.toFixed(1)}%
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Matches</span>
-                  <span className="font-medium">{node.matches.toLocaleString()}</span>
+                  <span className="font-medium">
+                    {node.matches.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">W / L</span>
                   <span>
-                    <span className="text-green-400 font-medium">{node.wins.toLocaleString()}</span>
+                    <span className="text-green-400 font-medium">
+                      {node.wins.toLocaleString()}
+                    </span>
                     {" / "}
-                    <span className="text-red-400 font-medium">{node.losses.toLocaleString()}</span>
+                    <span className="text-red-400 font-medium">
+                      {node.losses.toLocaleString()}
+                    </span>
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -212,7 +319,8 @@ export default function AbilityOrderNode({
           ) : (
             <>
               <ChevronDown className="size-3" />
-              {sortedChildren.length} {sortedChildren.length === 1 ? "path" : "paths"}
+              {sortedChildren.length}{" "}
+              {sortedChildren.length === 1 ? "path" : "paths"}
             </>
           )}
         </button>
@@ -220,23 +328,43 @@ export default function AbilityOrderNode({
 
       {/* Children (animated entry) */}
       {hasChildren && isExpanded && (
-        <div className="animate-expand-in flex flex-col items-center">
+        <div className="flex flex-col items-center">
           {/* Connector line down */}
           <div className="h-4 border-l border-muted-foreground/30" />
 
           {/* Children row */}
-          <div ref={childrenRowRef} className="flex items-start">
+          <motion.div
+            ref={childrenRowRef}
+            className="flex items-start"
+            variants={childStagger}
+            initial="hidden"
+            animate="show"
+          >
             {displayedChildren.map((child, i) => {
               const childPath = `${currentPath}/${child.abilityId}`;
               const isFirst = i === 0;
               const isLast = i === displayedChildren.length - 1;
               return (
-                <div key={child.abilityId} className="flex flex-col items-center flex-1">
+                <motion.div
+                  key={child.abilityId}
+                  className="flex flex-col items-center flex-1"
+                  variants={fadeUp}
+                >
                   {/* Horizontal connector segments + vertical drop */}
                   <div className="flex self-stretch h-4">
-                    <div className={cn("flex-1 border-muted-foreground/30", !isFirst && "border-t")} />
+                    <div
+                      className={cn(
+                        "flex-1 border-muted-foreground/30",
+                        !isFirst && "border-t",
+                      )}
+                    />
                     <div className="h-full border-l border-muted-foreground/30" />
-                    <div className={cn("flex-1 border-muted-foreground/30", !isLast && "border-t")} />
+                    <div
+                      className={cn(
+                        "flex-1 border-muted-foreground/30",
+                        !isLast && "border-t",
+                      )}
+                    />
                   </div>
                   <div className="px-0.5">
                     <AbilityOrderNode
@@ -253,14 +381,15 @@ export default function AbilityOrderNode({
                       totalPointsSpent={cumulativePoints}
                       isStreetBrawl={isStreetBrawl}
                       siblingCount={displayedChildren.length}
+                      index={i}
                     />
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
