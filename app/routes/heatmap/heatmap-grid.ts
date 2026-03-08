@@ -31,8 +31,14 @@ export function interpolateColor(t: number): [number, number, number] {
   return [last.r, last.g, last.b];
 }
 
-/** Build a normalized [0,1] heat grid from kill/death data with splat smoothing */
-export function buildHeatGrid(
+export interface HeatGridResult {
+  normalized: Float32Array;
+  raw: Float32Array;
+  maxValue: number;
+}
+
+/** Build a raw heat grid from kill/death data with splat smoothing */
+function buildRawGrid(
   data: KillDeathStats[],
   viewMode: "kills" | "deaths",
   radius: number,
@@ -66,7 +72,23 @@ export function buildHeatGrid(
     }
   }
 
-  // Normalize
+  return grid;
+}
+
+/** Clamp to 95th percentile then normalize to [0,1] */
+function clampAndNormalize(grid: Float32Array): Float32Array {
+  const nonZero: number[] = [];
+  for (let i = 0; i < grid.length; i++) {
+    if (grid[i] > 0) nonZero.push(grid[i]);
+  }
+  if (nonZero.length > 0) {
+    nonZero.sort((a, b) => a - b);
+    const p95 = nonZero[Math.floor(nonZero.length * 0.99)];
+    for (let i = 0; i < grid.length; i++) {
+      if (grid[i] > p95) grid[i] = p95;
+    }
+  }
+
   let gridMax = 0;
   for (let i = 0; i < grid.length; i++) {
     if (grid[i] > gridMax) gridMax = grid[i];
@@ -76,8 +98,44 @@ export function buildHeatGrid(
       grid[i] /= gridMax;
     }
   }
-
   return grid;
+}
+
+/** Build a normalized [0,1] heat grid from kill/death data with splat smoothing */
+export function buildHeatGrid(
+  data: KillDeathStats[],
+  viewMode: "kills" | "deaths" | "kd",
+  radius: number,
+): Float32Array {
+  if (viewMode === "kd") {
+    const killsRaw = buildRawGrid(data, "kills", radius);
+    const deathsRaw = buildRawGrid(data, "deaths", radius);
+    const grid = new Float32Array(GRID_RES * GRID_RES);
+
+    // Only compute K/D where there's meaningful activity
+    const minActivity = 1;
+    for (let i = 0; i < grid.length; i++) {
+      if (killsRaw[i] + deathsRaw[i] >= minActivity) {
+        grid[i] = deathsRaw[i] > 0.5 ? killsRaw[i] / deathsRaw[i] : killsRaw[i];
+      }
+    }
+
+    return clampAndNormalize(grid);
+  }
+
+  const grid = buildRawGrid(data, viewMode, radius);
+  return clampAndNormalize(grid);
+}
+
+/** Build both kill and death raw grids for tooltip sampling */
+export function buildHeatGrids(
+  data: KillDeathStats[],
+  radius: number,
+): { killsRaw: Float32Array; deathsRaw: Float32Array } {
+  return {
+    killsRaw: buildRawGrid(data, "kills", radius),
+    deathsRaw: buildRawGrid(data, "deaths", radius),
+  };
 }
 
 /** Bilinear sample from a Float32 grid */

@@ -14,7 +14,7 @@ import HeatmapCanvas from "./HeatmapCanvas";
 
 const Heatmap3D = lazy(() => import("./Heatmap3D"));
 
-const VIEW_MODES = ["kills", "deaths"] as const;
+const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 
 export function meta() {
@@ -151,7 +151,7 @@ function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (mode:
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          {mode === "kills" ? "Kills" : "Deaths"}
+          {mode === "kills" ? "Kills" : mode === "deaths" ? "Deaths" : "K/D"}
         </button>
       ))}
     </div>
