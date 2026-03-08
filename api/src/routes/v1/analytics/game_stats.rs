@@ -193,7 +193,7 @@ fn build_query(query: &GameStatsQuery) -> String {
         avg(max_player_damage) AS avg_player_damage,
         avg(max_player_damage_taken) AS avg_player_damage_taken,
         avg(max_boss_damage) AS avg_boss_damage,
-        avg(arrayMax(stats.player_healing)) AS avg_player_healing,
+        avg(max_player_healing) AS avg_player_healing,
         avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS avg_accuracy,
         avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + max_hero_bullets_hit)) AS avg_crit_rate,
         avg(max_level) AS avg_ending_level,
