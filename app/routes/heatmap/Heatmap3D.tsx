@@ -128,24 +128,39 @@ function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
   );
 }
 
-/** Flat plane with the map texture at y=0 */
-function MapPlane() {
+/** Flat plane with the composited map texture (background → frame → mid) at y=0 */
+function MapPlane({ mapImages }: { mapImages: { background: string; frame: string; mid: string } }) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
   useEffect(() => {
     const loader = new THREE.TextureLoader();
-    loader.load("/map.png", (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.needsUpdate = true;
-      setTexture(tex);
-    });
-  }, []);
+    const load = (url: string) => new Promise<THREE.Texture>((res) => loader.load(url, res));
+
+    Promise.all([load(mapImages.background), load(mapImages.frame), load(mapImages.mid)]).then(
+      ([bgTex, frameTex, midTex]) => {
+        const size = bgTex.image.width;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(bgTex.image, 0, 0, size, size);
+        ctx.drawImage(midTex.image, 0, 0, size, size);
+        ctx.globalCompositeOperation = "multiply";
+        ctx.drawImage(frameTex.image, 0, 0, size, size);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+        setTexture(tex);
+      },
+    );
+  }, [mapImages.background, mapImages.frame, mapImages.mid]);
 
   if (!texture) return null;
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]} renderOrder={1}>
-      <planeGeometry args={[4, 4]} />
+      <circleGeometry args={[2, 128]} />
       <meshBasicMaterial map={texture} transparent alphaTest={0.1} />
     </mesh>
   );
@@ -179,7 +194,7 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
         <directionalLight position={[-3, 5, -3]} intensity={0.3} />
 
         <BasePlane />
-        <MapPlane />
+        <MapPlane mapImages={mapData.images} />
         <HeatBars grid={grid} opacity={opacity} />
 
         <OrbitControls
