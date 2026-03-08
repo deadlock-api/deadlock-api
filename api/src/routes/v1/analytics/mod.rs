@@ -1,6 +1,7 @@
 pub mod ability_order_stats;
 pub mod badge_distribution;
 pub mod build_item_stats;
+pub mod game_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
 pub mod hero_scoreboard;
@@ -45,6 +46,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             .routes(routes!(hero_comb_stats::hero_comb_stats))
             .routes(routes!(build_item_stats::build_item_stats))
             .routes(routes!(badge_distribution::badge_distribution))
+            .routes(routes!(game_stats::game_stats))
             .routes(routes!(player_performance_curve::player_performance_curve))
             .nest(
                 "/scoreboards",

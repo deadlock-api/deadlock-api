@@ -4,13 +4,14 @@ use deadlock_api_rust::routes::v1::analytics::ability_order_stats::AnalyticsAbil
 use deadlock_api_rust::routes::v1::analytics::build_item_stats::BuildItemStats;
 use deadlock_api_rust::routes::v1::analytics::hero_comb_stats::HeroCombStats;
 use deadlock_api_rust::routes::v1::analytics::hero_counters_stats::HeroCounterStats;
+use deadlock_api_rust::routes::v1::analytics::game_stats::AnalyticsGameStats;
 use deadlock_api_rust::routes::v1::analytics::hero_stats::AnalyticsHeroStats;
 use deadlock_api_rust::routes::v1::analytics::hero_synergies_stats::HeroSynergyStats;
 use deadlock_api_rust::routes::v1::analytics::item_stats::ItemStats;
 use deadlock_api_rust::routes::v1::analytics::player_performance_curve::PlayerPerformanceCurvePoint;
 use deadlock_api_rust::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
 use deadlock_api_rust::routes::v1::analytics::{
-    hero_scoreboard, hero_stats, item_stats, player_scoreboard,
+    game_stats, hero_scoreboard, hero_stats, item_stats, player_scoreboard,
 };
 use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
@@ -1328,5 +1329,93 @@ async fn test_player_performance_curve(
 
         // Verify net_worth_std is non-negative
         assert!(point.net_worth_std >= 0.0);
+    }
+}
+
+#[rstest]
+#[case(
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(40),
+    Some(100),
+)]
+#[tokio::test]
+async fn test_game_stats(
+    #[values(
+        None,
+        Some(game_stats::BucketQuery::NoBucket),
+        Some(game_stats::BucketQuery::AvgBadge),
+        Some(game_stats::BucketQuery::StartTimeHour),
+        Some(game_stats::BucketQuery::StartTimeDay),
+        Some(game_stats::BucketQuery::StartTimeWeek),
+        Some(game_stats::BucketQuery::StartTimeMonth)
+    )]
+    bucket: Option<game_stats::BucketQuery>,
+    #[case] min_unix_timestamp: Option<i64>,
+    #[case] max_unix_timestamp: Option<i64>,
+    #[case] min_duration_s: Option<u64>,
+    #[case] max_duration_s: Option<u64>,
+    #[case] min_average_badge: Option<u8>,
+    #[case] max_average_badge: Option<u8>,
+    #[values(None, Some(34000226))] min_match_id: Option<u64>,
+    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+) {
+    let mut queries = vec![];
+    if let Some(bucket) = bucket {
+        queries.push(("bucket", bucket.to_string()));
+    }
+    if let Some(min_unix_timestamp) = min_unix_timestamp {
+        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
+    }
+    if let Some(max_unix_timestamp) = max_unix_timestamp {
+        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
+    }
+    if let Some(min_duration_s) = min_duration_s {
+        queries.push(("min_duration_s", min_duration_s.to_string()));
+    }
+    if let Some(max_duration_s) = max_duration_s {
+        queries.push(("max_duration_s", max_duration_s.to_string()));
+    }
+    if let Some(min_average_badge) = min_average_badge {
+        queries.push(("min_average_badge", min_average_badge.to_string()));
+    }
+    if let Some(max_average_badge) = max_average_badge {
+        queries.push(("max_average_badge", max_average_badge.to_string()));
+    }
+    if let Some(min_match_id) = min_match_id {
+        queries.push(("min_match_id", min_match_id.to_string()));
+    }
+    if let Some(max_match_id) = max_match_id {
+        queries.push(("max_match_id", max_match_id.to_string()));
+    }
+    let queries = queries
+        .iter()
+        .map(|(k, v)| (*k, v.as_str()))
+        .collect::<Vec<_>>();
+    let response = request_endpoint("/v1/analytics/game-stats", queries).await;
+    let game_stats: Vec<AnalyticsGameStats> =
+        response.json().await.expect("Failed to parse response");
+
+    for stat in &game_stats {
+        assert!(stat.total_matches > 0);
+        assert!(stat.avg_duration_s >= 0.0);
+        assert!(stat.avg_kills >= 0.0);
+        assert!(stat.avg_deaths >= 0.0);
+        assert!(stat.avg_assists >= 0.0);
+        assert!(stat.avg_kd_ratio >= 0.0);
+        assert!(stat.avg_net_worth >= 0.0);
+        assert!(stat.avg_last_hits >= 0.0);
+        assert!(stat.avg_denies >= 0.0);
+        assert!(stat.avg_player_damage >= 0.0);
+        assert!(stat.avg_player_damage_taken >= 0.0);
+        assert!(stat.avg_boss_damage >= 0.0);
+        assert!(stat.avg_player_healing >= 0.0);
+        assert!(stat.avg_accuracy >= 0.0 && stat.avg_accuracy <= 1.0);
+        assert!(stat.avg_crit_rate >= 0.0 && stat.avg_crit_rate <= 1.0);
+        assert!(stat.avg_ending_level >= 0.0);
+        assert!(stat.mid_boss_kill_rate >= 0.0 && stat.mid_boss_kill_rate <= 1.0);
+        assert!(stat.abandon_rate >= 0.0 && stat.abandon_rate <= 1.0);
     }
 }
