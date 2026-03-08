@@ -247,6 +247,7 @@ export default function AbilityOrderTree({
               <AbilityOrderNode
                 node={child}
                 parentMatches={trie.matches}
+                rootMatches={trie.matches}
                 abilitySlotMap={abilitySlotMap}
                 defaultDepth={defaultDepth}
                 expandedPaths={expandedPaths}
