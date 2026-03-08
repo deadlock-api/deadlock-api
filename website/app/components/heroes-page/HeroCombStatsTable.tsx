@@ -21,6 +21,8 @@ export default function HeroCombStatsTable({
   minMatches: minHeroMatches,
   minDate,
   maxDate,
+  prevMinDate,
+  prevMaxDate,
   gameMode,
 }: {
   columns: string[];
@@ -32,6 +34,8 @@ export default function HeroCombStatsTable({
   minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  prevMinDate?: Dayjs;
+  prevMaxDate?: Dayjs;
   gameMode?: GameMode;
 }) {
   const combSizeId = useId();
@@ -45,15 +49,9 @@ export default function HeroCombStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const hasPreviousInterval = minDateTimestamp > 0 && maxDateTimestamp !== undefined;
-  const prevMinTimestamp = useMemo(
-    () => (hasPreviousInterval ? minDateTimestamp - (maxDateTimestamp - minDateTimestamp) : 0),
-    [hasPreviousInterval, minDateTimestamp, maxDateTimestamp],
-  );
-  const prevMaxTimestamp = useMemo(
-    () => (hasPreviousInterval ? minDateTimestamp : undefined),
-    [hasPreviousInterval, minDateTimestamp],
-  );
+  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
+  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: heroData, isLoading } = useQuery({
     queryKey: [

@@ -1,6 +1,8 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
+import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
 import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
@@ -35,6 +37,7 @@ export default function Items(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
+  const [prevDates, setPrevDates] = useState(() => computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES));
   const isStreetBrawl = gameMode === "street_brawl";
   const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
   const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
@@ -71,7 +74,14 @@ export default function Items(
             setMaxBoughtAtS(max ?? null);
           }}
         />
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
+        <Filter.PatchOrDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e, ps, pe) => {
+            setDateRange([s, e]);
+            setPrevDates({ prevStartDate: ps, prevEndDate: pe });
+          }}
+        />
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
@@ -88,6 +98,8 @@ export default function Items(
             maxRankId={effectiveMaxRankId}
             minDate={startDate || undefined}
             maxDate={endDate || undefined}
+            prevMinDate={prevDates.prevStartDate}
+            prevMaxDate={prevDates.prevEndDate}
             hero={hero}
             minMatches={minMatches}
             minBoughtAtS={minBoughtAtS ?? undefined}

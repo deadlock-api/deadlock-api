@@ -22,6 +22,8 @@ export default function HeroStatsTable({
   minHeroMatchesTotal,
   minDate,
   maxDate,
+  prevMinDate,
+  prevMaxDate,
   gameMode,
 }: {
   columns: string[];
@@ -35,6 +37,8 @@ export default function HeroStatsTable({
   minHeroMatchesTotal?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  prevMinDate?: Dayjs;
+  prevMaxDate?: Dayjs;
   gameMode?: GameMode;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
@@ -66,15 +70,9 @@ export default function HeroStatsTable({
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
-  const hasPreviousInterval = minDateTimestamp > 0 && maxDateTimestamp !== undefined;
-  const prevMinTimestamp = useMemo(
-    () => (hasPreviousInterval ? minDateTimestamp - (maxDateTimestamp - minDateTimestamp) : 0),
-    [hasPreviousInterval, minDateTimestamp, maxDateTimestamp],
-  );
-  const prevMaxTimestamp = useMemo(
-    () => (hasPreviousInterval ? minDateTimestamp : undefined),
-    [hasPreviousInterval, minDateTimestamp],
-  );
+  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
+  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: prevHeroData } = useQuery({
     queryKey: [

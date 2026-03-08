@@ -94,14 +94,16 @@ function PatchOrDate({
 }: {
   startDate?: Dayjs;
   endDate?: Dayjs;
-  onDateChange: (startDate?: Dayjs, endDate?: Dayjs) => void;
+  onDateChange: (startDate?: Dayjs, endDate?: Dayjs, prevStartDate?: Dayjs, prevEndDate?: Dayjs) => void;
   defaultTab?: "patch" | "custom";
 }) {
   return (
     <PatchOrDatePicker
       patchDates={PATCHES}
       value={{ startDate, endDate }}
-      onValueChange={({ startDate, endDate }) => onDateChange(startDate, endDate)}
+      onValueChange={({ startDate, endDate, prevStartDate, prevEndDate }) =>
+        onDateChange(startDate, endDate, prevStartDate, prevEndDate)
+      }
       defaultTab={defaultTab}
     />
   );
