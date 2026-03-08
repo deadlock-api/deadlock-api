@@ -1,4 +1,4 @@
-import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useId } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
@@ -7,13 +7,14 @@ import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
 } from "~/components/heroes-page/HeroMatchupDetailsStatsTable";
 import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
+import HeroStatsByRankChart, { BY_RANK_STATS } from "~/components/heroes-page/HeroStatsByRankChart";
 import HeroStatsOverTimeChart, {
   HeroStatSelector,
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import HeroSelector, { HeroSelectorMultiple } from "~/components/selectors/HeroSelector";
+import HeroSelector from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -31,7 +32,11 @@ export const meta: MetaFunction = () => {
   ];
 };
 export default function Heroes(
-  { initialTab }: { initialTab?: "stats" | "stats-over-time" | "matchups" | "hero-combs" | "hero-matchup-details" } = {
+  {
+    initialTab,
+  }: {
+    initialTab?: "stats" | "stats-over-time" | "stats-by-rank" | "matchups" | "hero-combs" | "hero-matchup-details";
+  } = {
     initialTab: "stats",
   },
 ) {
@@ -59,13 +64,14 @@ export default function Heroes(
     parseAsStringLiteral([
       "stats",
       "stats-over-time",
+      "stats-by-rank",
       "matchups",
       "hero-combs",
       "hero-matchup-details",
     ] as const).withDefault(initialTab || "stats"),
   );
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(7));
-  const [heroIds, setHeroIds] = useQueryState("hero_ids", parseAsArrayOf(parseAsInteger).withDefault([15]));
+
   const [heroStat, setHeroStat] = useQueryState("hero_stat", parseAsStringLiteral(HERO_STATS).withDefault("winrate"));
   const [heroTimeInterval, setHeroTimeInterval] = useQueryState(
     "time_interval",
@@ -73,6 +79,8 @@ export default function Heroes(
       "start_time_day",
     ),
   );
+  const [byRankX, setByRankX] = useQueryState("by_rank_x", parseAsStringLiteral(BY_RANK_STATS).withDefault("pickrate"));
+  const [byRankY, setByRankY] = useQueryState("by_rank_y", parseAsStringLiteral(BY_RANK_STATS).withDefault("winrate"));
 
   const isStreetBrawl = gameMode === "street_brawl";
   const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
@@ -86,7 +94,7 @@ export default function Heroes(
       </div>
 
       <Filter.Root>
-        {["stats", "stats-over-time"].includes(tab) ? (
+        {["stats", "stats-over-time", "stats-by-rank"].includes(tab) ? (
           <>
             <Filter.MinMatches
               value={minHeroMatches}
@@ -104,16 +112,18 @@ export default function Heroes(
         ) : (
           <Filter.MinMatches value={minMatches} onChange={setMinMatches} label="Min Matches (Total)" step={10} />
         )}
-        <Filter.GameModeWithRank
-          gameMode={gameMode}
-          onGameModeChange={setGameMode}
-          minRank={minRankId}
-          maxRank={maxRankId}
-          onRankChange={(min, max) => {
-            setMinRankId(min);
-            setMaxRankId(max);
-          }}
-        />
+        {tab !== "stats-by-rank" && (
+          <Filter.GameModeWithRank
+            gameMode={gameMode}
+            onGameModeChange={setGameMode}
+            minRank={minRankId}
+            maxRank={maxRankId}
+            onRankChange={(min, max) => {
+              setMinRankId(min);
+              setMaxRankId(max);
+            }}
+          />
+        )}
         <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
       </Filter.Root>
 
@@ -121,6 +131,7 @@ export default function Heroes(
         <TabsList className="w-full">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
           <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
+          <TabsTrigger value="stats-by-rank">Stats by Rank</TabsTrigger>
           <TabsTrigger value="matchups">Matchups</TabsTrigger>
           <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
           <TabsTrigger value="hero-matchup-details">Matchup Details</TabsTrigger>
@@ -146,16 +157,6 @@ export default function Heroes(
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm text-muted-foreground">Heroes</span>
-                <HeroSelectorMultiple
-                  selectedHeroes={heroIds}
-                  onHeroesSelected={(selectedHeroIds) => {
-                    if (!selectedHeroIds) return;
-                    setHeroIds(selectedHeroIds);
-                  }}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
                   value={heroStat as (typeof HERO_STATS)[number]}
@@ -171,7 +172,6 @@ export default function Heroes(
               </div>
             </div>
             <HeroStatsOverTimeChart
-              heroIds={heroIds}
               heroStat={heroStat as (typeof HERO_STATS)[number]}
               heroTimeInterval={heroTimeInterval}
               minRankId={effectiveMinRankId}
@@ -181,6 +181,30 @@ export default function Heroes(
               minDate={startDate}
               maxDate={endDate}
               gameMode={gameMode}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-by-rank">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">X Axis</span>
+                <HeroStatSelector value={byRankX} onChange={(val) => setByRankX(val)} options={BY_RANK_STATS} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Y Axis</span>
+                <HeroStatSelector value={byRankY} onChange={(val) => setByRankY(val)} options={BY_RANK_STATS} />
+              </div>
+            </div>
+            <HeroStatsByRankChart
+              minHeroMatches={minHeroMatches}
+              minHeroMatchesTotal={minHeroMatchesTotal}
+              minDate={startDate}
+              maxDate={endDate}
+              gameMode={"normal"}
+              xStat={byRankX}
+              yStat={byRankY}
             />
           </div>
         </TabsContent>
