@@ -12,36 +12,64 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 export const meta: MetaFunction = () => {
   return [
     { title: "Ability Order - Deadlock API" },
-    { name: "description", content: "Ability upgrade order mind map for Heroes in Deadlock" },
+    {
+      name: "description",
+      content: "Ability upgrade order mind map for Heroes in Deadlock",
+    },
   ];
 };
 
 export default function AbilityOrder() {
-  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(15));
-  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
-  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const [heroId, setHeroId] = useQueryState(
+    "hero_id",
+    parseAsInteger.withDefault(15),
+  );
+  const [minRankId, setMinRankId] = useQueryState(
+    "min_rank",
+    parseAsInteger.withDefault(0),
+  );
+  const [maxRankId, setMaxRankId] = useQueryState(
+    "max_rank",
+    parseAsInteger.withDefault(116),
+  );
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
   );
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
-  const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
+  const [minMatches, setMinMatches] = useQueryState(
+    "min_matches",
+    parseAsInteger.withDefault(20),
+  );
+  const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(
+    new Map(),
+  );
 
   const includeItemIds = useMemo(
-    () => [...itemSelections.entries()].filter(([_, s]) => s === "included").map(([id]) => id),
+    () =>
+      [...itemSelections.entries()]
+        .filter(([_, s]) => s === "included")
+        .map(([id]) => id),
     [itemSelections],
   );
   const excludeItemIds = useMemo(
-    () => [...itemSelections.entries()].filter(([_, s]) => s === "excluded").map(([id]) => id),
+    () =>
+      [...itemSelections.entries()]
+        .filter(([_, s]) => s === "excluded")
+        .map(([id]) => id),
     [itemSelections],
   );
 
   return (
-    <>
-      <h2 className="text-3xl font-bold text-center mb-2">Ability Order</h2>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">Ability Order</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Explore the most common ability upgrade paths and their win rates
+        </p>
+      </div>
 
-      <Filter.Root className="mb-8">
+      <Filter.Root>
         <Filter.Hero
           value={heroId}
           onChange={(id) => {
@@ -58,9 +86,21 @@ export default function AbilityOrder() {
             setMaxRankId(max);
           }}
         />
-        <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={0} />
-        <ItemSelectorTriState selections={itemSelections} onSelectionsChange={setItemSelections} label="Items" />
-        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
+        <Filter.MinMatches
+          value={minMatches}
+          onChange={setMinMatches}
+          min={0}
+        />
+        <ItemSelectorTriState
+          selections={itemSelections}
+          onSelectionsChange={setItemSelections}
+          label="Items"
+        />
+        <Filter.PatchOrDate
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => setDateRange([s, e])}
+        />
       </Filter.Root>
 
       <AbilityOrderTree
@@ -75,6 +115,6 @@ export default function AbilityOrder() {
         includeItemIds={includeItemIds}
         excludeItemIds={excludeItemIds}
       />
-    </>
+    </div>
   );
 }
