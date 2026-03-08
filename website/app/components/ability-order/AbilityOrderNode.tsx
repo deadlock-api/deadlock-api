@@ -29,6 +29,7 @@ const SLOT_BG_COLORS: Record<number, string> = {
 export interface AbilityOrderNodeProps {
   node: AbilityTrieNode;
   parentMatches: number;
+  rootMatches: number;
   abilitySlotMap: AbilitySlotMap;
   defaultDepth: number;
   expandedPaths: Set<string>;
@@ -65,6 +66,7 @@ const fadeUp = {
 export default function AbilityOrderNode({
   node,
   parentMatches,
+  rootMatches,
   abilitySlotMap,
   defaultDepth,
   expandedPaths,
@@ -102,8 +104,10 @@ export default function AbilityOrderNode({
   const slotColor = slot ? SLOT_COLORS[slot] : "border-l-muted-foreground";
   const slotBg = slot ? SLOT_BG_COLORS[slot] : "";
 
+  const chainPickRate = rootMatches > 0 ? node.matches / rootMatches : 0;
   const wrPercent = winRate * 100;
   const prPercent = pickRate * 100;
+  const chainPrPercent = chainPickRate * 100;
 
   const avgKills = node.matches > 0 ? (node.totalKills / node.matches).toFixed(1) : "0";
   const avgDeaths = node.matches > 0 ? (node.totalDeaths / node.matches).toFixed(1) : "0";
@@ -221,6 +225,10 @@ export default function AbilityOrderNode({
                   <span className="font-medium text-cyan-400">{prPercent.toFixed(1)}%</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Chain Pick Rate</span>
+                  <span className="font-medium text-cyan-400/70">{chainPrPercent.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Players</span>
                   <span className="font-medium">{node.players.toLocaleString()}</span>
                 </div>
@@ -304,6 +312,7 @@ export default function AbilityOrderNode({
                     <AbilityOrderNode
                       node={child}
                       parentMatches={node.matches}
+                      rootMatches={rootMatches}
                       abilitySlotMap={abilitySlotMap}
                       defaultDepth={defaultDepth}
                       expandedPaths={expandedPaths}
