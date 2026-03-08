@@ -1,10 +1,11 @@
-import type { KillDeathStats } from "deadlock_api_client";
-import type { MapV1 } from "assets_deadlock_api_client";
-import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { useMemo, useEffect, useState, useRef } from "react";
+import { Canvas } from "@react-three/fiber";
+import type { MapV1 } from "assets_deadlock_api_client";
+import type { KillDeathStats } from "deadlock_api_client";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { buildHeatGrid, interpolateColor, sampleBilinear, GRID_RES } from "./heatmap-grid";
+import { buildHeatGrid, GRID_RES, interpolateColor, sampleBilinear } from "./heatmap-grid";
+import { SensitivitySlider } from "./SensitivitySlider";
 
 type ViewMode = "kills" | "deaths" | "kd";
 
@@ -12,6 +13,8 @@ interface Heatmap3DProps {
   data: KillDeathStats[];
   mapData: MapV1;
   viewMode: ViewMode;
+  sensitivity: number;
+  onSensitivityChange: (value: number) => void;
 }
 
 const HEAT_THRESHOLD = 0.005;
@@ -30,7 +33,12 @@ function HeatBarBand({
   colorData,
   count,
   opacity,
-}: { matrices: THREE.Matrix4[]; colorData: number[]; count: number; opacity: number }) {
+}: {
+  matrices: THREE.Matrix4[];
+  colorData: number[];
+  count: number;
+  opacity: number;
+}) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
   useEffect(() => {
@@ -82,7 +90,7 @@ function HeatBars({ grid, opacity }: { grid: Float32Array; opacity: number }) {
 
         if (raw < HEAT_THRESHOLD) continue;
 
-        const t = Math.pow(raw, 0.45);
+        const t = raw ** 0.45;
         const height = Math.max(t * heightScale, 0.01);
 
         const x = (ix / (BAR_RES - 1)) * 4 - 2;
@@ -153,21 +161,18 @@ function BasePlane() {
   );
 }
 
-export default function Heatmap3D({ data, mapData, viewMode }: Heatmap3DProps) {
+export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSensitivityChange }: Heatmap3DProps) {
   const radius = mapData.radius ?? 10752;
   const [opacity, setOpacity] = useState(0.85);
 
   const grid = useMemo(() => {
     if (data.length === 0) return new Float32Array(GRID_RES * GRID_RES);
-    return buildHeatGrid(data, viewMode, radius);
-  }, [data, viewMode, radius]);
+    return buildHeatGrid(data, viewMode, radius, sensitivity);
+  }, [data, viewMode, radius, sensitivity]);
 
   return (
     <div className="relative w-full h-full rounded-lg overflow-hidden">
-      <Canvas
-        camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }}
-        gl={{ antialias: true, alpha: true }}
-      >
+      <Canvas camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }} gl={{ antialias: true, alpha: true }}>
         <color attach="background" args={["#050810"]} />
         <ambientLight intensity={0.6} />
         <directionalLight position={[5, 8, 5]} intensity={1} />
@@ -200,17 +205,20 @@ export default function Heatmap3D({ data, mapData, viewMode }: Heatmap3DProps) {
         <span className="text-[10px] text-muted-foreground">High</span>
       </div>
 
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
-        <span className="text-[10px] text-muted-foreground whitespace-nowrap">Opacity</span>
-        <input
-          type="range"
-          min={10}
-          max={100}
-          value={Math.round(opacity * 100)}
-          onChange={(e) => setOpacity(Number(e.target.value) / 100)}
-          className="w-20 h-1 accent-primary cursor-pointer"
-        />
-        <span className="text-[10px] text-muted-foreground tabular-nums w-7">{Math.round(opacity * 100)}%</span>
+      <div className="absolute bottom-3 left-3 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">Opacity</span>
+          <input
+            type="range"
+            min={10}
+            max={100}
+            value={Math.round(opacity * 100)}
+            onChange={(e) => setOpacity(Number(e.target.value) / 100)}
+            className="w-20 h-1 accent-primary cursor-pointer"
+          />
+          <span className="text-[10px] text-muted-foreground tabular-nums w-7">{Math.round(opacity * 100)}%</span>
+        </div>
+        <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
       </div>
 
       <div className="absolute top-3 left-3 text-[10px] text-muted-foreground/60">
