@@ -1,5 +1,5 @@
-import type { RankV2 } from "assets_deadlock_api_client";
 import { useQuery } from "@tanstack/react-query";
+import type { RankV2 } from "assets_deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -14,6 +14,7 @@ interface GameStatsByRankChartProps {
   params: GameStatsParams;
   stat: string;
   onStatChange: (stat: string) => void;
+  isStreetBrawl?: boolean;
 }
 
 interface ChartEntry {
@@ -25,10 +26,8 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
-export default function GameStatsByRankChart({ params, stat, onStatChange }: GameStatsByRankChartProps) {
-  const { data, isPending } = useQuery(
-    gameStatsQueryOptions({ ...params, bucket: "avg_badge" }),
-  );
+export default function GameStatsByRankChart({ params, stat, onStatChange, isStreetBrawl = false }: GameStatsByRankChartProps) {
+  const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "avg_badge" }));
 
   const { data: ranksData } = useQuery({
     queryKey: ["ranks"],
@@ -51,9 +50,7 @@ export default function GameStatsByRankChart({ params, stat, onStatChange }: Gam
 
   const chartData = useMemo(() => {
     if (!data) return [];
-    const sorted = data
-      .filter((entry) => entry.bucket > 0)
-      .sort((a, b) => a.bucket - b.bucket);
+    const sorted = data.filter((entry) => entry.bucket > 0).sort((a, b) => a.bucket - b.bucket);
 
     if (sorted.length === 0) return [];
 
@@ -166,7 +163,7 @@ export default function GameStatsByRankChart({ params, stat, onStatChange }: Gam
 
   return (
     <div className="flex flex-col gap-4">
-      <StatSelector value={stat} onChange={onStatChange} />
+      <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl} />
 
       {isPending ? (
         <div className="flex items-center justify-center py-16">
@@ -194,7 +191,7 @@ export default function GameStatsByRankChart({ params, stat, onStatChange }: Gam
             />
             <YAxis
               domain={["dataMin", "auto"]}
-              tickFormatter={(v) => statDef ? formatStatValue(v, statDef.format) : String(v)}
+              tickFormatter={(v) => (statDef ? formatStatValue(v, statDef.format) : String(v))}
               stroke="#525252"
               label={{
                 value: statDef?.label ?? stat,

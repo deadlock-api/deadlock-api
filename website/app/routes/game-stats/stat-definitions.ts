@@ -40,7 +40,7 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     stats: [
       { key: "avg_player_damage", label: "Avg Player Damage", format: "integer" },
       { key: "avg_player_damage_taken", label: "Avg Damage Taken", format: "integer" },
-      { key: "avg_boss_damage", label: "Avg Boss Damage", format: "integer" },
+      { key: "avg_boss_damage", label: "Avg Objective Damage", format: "integer" },
       { key: "avg_player_healing", label: "Avg Healing", format: "integer" },
     ],
   },
@@ -59,13 +59,23 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "avg_gold_player", label: "Avg Gold (Players)", format: "integer" },
       { key: "avg_gold_lane_creep", label: "Avg Gold (Lane Creep)", format: "integer" },
       { key: "avg_gold_neutral_creep", label: "Avg Gold (Neutral Creep)", format: "integer" },
-      { key: "avg_gold_boss", label: "Avg Gold (Boss)", format: "integer" },
+      { key: "avg_gold_boss", label: "Avg Gold (Objectives)", format: "integer" },
       { key: "avg_gold_treasure", label: "Avg Gold (Treasure)", format: "integer" },
       { key: "avg_gold_denied", label: "Avg Gold (Denied)", format: "integer" },
       { key: "avg_gold_death_loss", label: "Avg Gold (Death Loss)", format: "integer" },
     ],
   },
 ];
+
+const MID_BOSS_STATS = new Set(["mid_boss_kill_rate", "avg_first_mid_boss_time_s"]);
+
+export function getFilteredCategories(isStreetBrawl: boolean): StatCategory[] {
+  if (!isStreetBrawl) return GAME_STAT_CATEGORIES;
+  return GAME_STAT_CATEGORIES.map((c) => ({
+    ...c,
+    stats: c.stats.filter((s) => !MID_BOSS_STATS.has(s.key)),
+  })).filter((c) => c.stats.length > 0);
+}
 
 export const ALL_STAT_KEYS = GAME_STAT_CATEGORIES.flatMap((c) => c.stats.map((s) => s.key));
 

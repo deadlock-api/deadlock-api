@@ -117,6 +117,7 @@ export default function GameStats() {
           <GameStatsOverview
             params={baseParams}
             prevParams={prevParams}
+            isStreetBrawl={isStreetBrawl}
             onStatClick={(key) => {
               setStat(key);
               setTab("over-time");
@@ -131,6 +132,7 @@ export default function GameStats() {
             onStatChange={setStat}
             timeBucket={timeBucket as GameStatsBucket}
             onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
+            isStreetBrawl={isStreetBrawl}
           />
         </TabsContent>
 
@@ -139,6 +141,7 @@ export default function GameStats() {
             params={baseParams}
             stat={stat}
             onStatChange={setStat}
+            isStreetBrawl={isStreetBrawl}
           />
         </TabsContent>
       </Tabs>
