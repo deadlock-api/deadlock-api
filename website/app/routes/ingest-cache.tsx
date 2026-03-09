@@ -75,7 +75,7 @@ export default function IngestCache() {
   const openDirectoryPicker = async () => {
     if ("showDirectoryPicker" in window) {
       try {
-        const dirHandle = await (window as any).showDirectoryPicker();
+        const dirHandle = await window.showDirectoryPicker();
         await runScanAndUpload(() => scanDirHandle(dirHandle, setSaltsFound));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -127,7 +127,7 @@ export default function IngestCache() {
       try {
         const item = e.dataTransfer.items[0];
         if ("getAsFileSystemHandle" in item) {
-          const handle = await (item as any).getAsFileSystemHandle();
+          const handle = await (item as FileSystemAccessDataTransferItem).getAsFileSystemHandle();
           if (handle && handle.kind === "directory") {
             await runScanAndUpload(() => scanDirHandle(handle as FileSystemDirectoryHandle, setSaltsFound));
           } else {
@@ -197,7 +197,6 @@ export default function IngestCache() {
           <input
             ref={fileInputRef}
             type="file"
-            // @ts-expect-error webkitdirectory is not in standard types
             webkitdirectory=""
             className="hidden"
             onChange={async (e) => {

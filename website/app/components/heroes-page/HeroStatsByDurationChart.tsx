@@ -72,7 +72,8 @@ export function HeroStatsByDurationChart({
   const heroIdMap = useMemo(() => {
     const map: Record<number, { name: string; color: string }> = {};
     for (const hero of assetsHeroes || []) {
-      map[hero.id] = { name: hero.name, color: `rgb(${hero.colors.ui.join(",")})` };
+      const uiColor = hero.colors?.ui;
+      map[hero.id] = { name: hero.name, color: uiColor ? `rgb(${uiColor.join(",")})` : "#ffffff" };
     }
     return map;
   }, [assetsHeroes]);

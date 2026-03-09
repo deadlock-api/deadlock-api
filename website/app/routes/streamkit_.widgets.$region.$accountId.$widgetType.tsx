@@ -63,8 +63,10 @@ export default function Widget() {
       const showBranding = searchParams.get("showBranding") !== "false";
       const showMatchHistory = searchParams.get("showMatchHistory") !== "false";
       const matchHistoryShowsToday = searchParams.get("matchHistoryShowsToday") !== "false";
-      const numMatches = Number.parseInt(searchParams.get("numMatches") ?? "10", 10);
-      const opacity = Number.parseInt(searchParams.get("opacity") ?? "100", 10);
+      const parsedNumMatches = Number.parseInt(searchParams.get("numMatches") ?? "10", 10);
+      const numMatches = Math.max(1, Math.min(20, Number.isNaN(parsedNumMatches) ? 10 : parsedNumMatches));
+      const parsedOpacity = Number.parseInt(searchParams.get("opacity") ?? "100", 10);
+      const opacity = Math.max(0, Math.min(100, Number.isNaN(parsedOpacity) ? 100 : parsedOpacity));
       const extraArgs = Object.fromEntries(
         Array.from(searchParams.entries()).filter(
           ([key]) =>
