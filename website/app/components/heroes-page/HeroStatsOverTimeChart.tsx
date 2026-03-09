@@ -4,15 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { type Dayjs, day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
@@ -29,41 +21,25 @@ export function HeroStatSelector<T extends readonly string[]>({
 }) {
   const items = options ?? HERO_STATS;
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="min-w-[120px]">
-        <SelectValue placeholder="Stat" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Stat</SelectLabel>
-          {items.map((key) => (
-            <SelectItem key={key as string} value={key as string}>
-              {key}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    <ToggleGroup type="single" value={value} onValueChange={(val) => val && onChange(val)} variant="outline" className="flex-wrap">
+      {items.map((key) => (
+        <ToggleGroupItem key={key as string} value={key as string} className="text-xs capitalize">
+          {(key as string).replace(/_/g, " ")}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }
 
 export function HeroTimeIntervalSelector({ value, onChange }: { value: string; onChange: (val: string) => void }) {
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="min-w-[160px]">
-        <SelectValue placeholder="Time Interval" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectLabel>Time Interval</SelectLabel>
-          {TIME_INTERVALS.map((key) => (
-            <SelectItem key={key.label} value={key.query}>
-              {key.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    <ToggleGroup type="single" value={value} onValueChange={(val) => val && onChange(val)} variant="outline">
+      {TIME_INTERVALS.map((key) => (
+        <ToggleGroupItem key={key.label} value={key.query} className="text-xs capitalize">
+          {key.label}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }
 

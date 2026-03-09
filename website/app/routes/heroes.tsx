@@ -238,7 +238,7 @@ export default function Heroes(
 
         <TabsContent value="stats-by-rank">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+            <div className="flex flex-col items-center gap-3">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">X Axis</span>
                 <HeroStatSelector value={byRankX} onChange={(val) => setByRankX(val)} options={BY_RANK_STATS} />
