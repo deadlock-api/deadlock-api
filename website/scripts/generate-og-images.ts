@@ -42,7 +42,7 @@ const PAGES: OGPage[] = [
   },
 ];
 
-function createCard(page: OGPage): Parameters<typeof satori>[0] {
+function createCard(page: OGPage) {
   return {
     type: "div",
     props: {
@@ -179,7 +179,7 @@ export async function generateOGImages(outDir: string) {
   const fonts = await loadFonts();
 
   for (const page of PAGES) {
-    const svg = await satori(createCard(page), {
+    const svg = await satori(createCard(page) as Parameters<typeof satori>[0], {
       width: WIDTH,
       height: HEIGHT,
       fonts: [
