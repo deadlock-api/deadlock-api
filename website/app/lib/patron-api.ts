@@ -4,6 +4,7 @@
  */
 
 import { API_ORIGIN } from "./constants";
+import { ApiError, fetchApi } from "./http";
 
 // ============================================================================
 // Types
@@ -56,11 +57,6 @@ export interface DeleteSteamAccountResponse {
   message: string;
 }
 
-export interface PatronApiError {
-  error: string;
-  message: string;
-}
-
 export interface PlayerCardSlot {
   slot_id: number | null;
   hero: { id: number | null; kills: number | null; wins: number | null } | null;
@@ -94,23 +90,14 @@ export class BotNotFriendError extends Error {
  * @returns PatronStatus or null if not authenticated
  */
 export async function getPatronStatus(): Promise<PatronStatus | null> {
-  const response = await fetch(`${API_ORIGIN}/v1/patron/status`, {
-    credentials: "include",
-  });
-
-  if (response.status === 401) {
-    return null;
+  try {
+    return await fetchApi<PatronStatus>("/v1/patron/status");
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      return null;
+    }
+    throw error;
   }
-
-  if (!response.ok) {
-    const errorData: PatronApiError = await response.json().catch(() => ({
-      error: "Unknown error",
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(errorData.message);
-  }
-
-  return response.json();
 }
 
 /**
@@ -118,19 +105,7 @@ export async function getPatronStatus(): Promise<PatronStatus | null> {
  * @returns SteamAccountsResponse with accounts and summary
  */
 export async function listSteamAccounts(): Promise<SteamAccountsResponse> {
-  const response = await fetch(`${API_ORIGIN}/v1/patron/steam-accounts`, {
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    const errorData: PatronApiError = await response.json().catch(() => ({
-      error: "Unknown error",
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(errorData.message);
-  }
-
-  return response.json();
+  return fetchApi<SteamAccountsResponse>("/v1/patron/steam-accounts");
 }
 
 /**
@@ -139,22 +114,10 @@ export async function listSteamAccounts(): Promise<SteamAccountsResponse> {
  * @returns The created SteamAccount
  */
 export async function addSteamAccount(steamId3: number): Promise<SteamAccount> {
-  const response = await fetch(`${API_ORIGIN}/v1/patron/steam-accounts`, {
+  return fetchApi<SteamAccount>("/v1/patron/steam-accounts", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ steam_id3: steamId3 } satisfies AddSteamAccountRequest),
+    body: { steam_id3: steamId3 } satisfies AddSteamAccountRequest,
   });
-
-  if (!response.ok) {
-    const errorData: PatronApiError = await response.json().catch(() => ({
-      error: "Unknown error",
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(errorData.message);
-  }
-
-  return response.json();
 }
 
 /**
@@ -163,20 +126,9 @@ export async function addSteamAccount(steamId3: number): Promise<SteamAccount> {
  * @returns Success message
  */
 export async function deleteSteamAccount(accountId: string): Promise<DeleteSteamAccountResponse> {
-  const response = await fetch(`${API_ORIGIN}/v1/patron/steam-accounts/${accountId}`, {
+  return fetchApi<DeleteSteamAccountResponse>(`/v1/patron/steam-accounts/${accountId}`, {
     method: "DELETE",
-    credentials: "include",
   });
-
-  if (!response.ok) {
-    const errorData: PatronApiError = await response.json().catch(() => ({
-      error: "Unknown error",
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(errorData.message);
-  }
-
-  return response.json();
 }
 
 /**
@@ -186,22 +138,10 @@ export async function deleteSteamAccount(accountId: string): Promise<DeleteSteam
  * @returns The new SteamAccount
  */
 export async function replaceSteamAccount(accountId: string, steamId3: number): Promise<SteamAccount> {
-  const response = await fetch(`${API_ORIGIN}/v1/patron/steam-accounts/${accountId}`, {
+  return fetchApi<SteamAccount>(`/v1/patron/steam-accounts/${accountId}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ steam_id3: steamId3 } satisfies ReplaceSteamAccountRequest),
+    body: { steam_id3: steamId3 } satisfies ReplaceSteamAccountRequest,
   });
-
-  if (!response.ok) {
-    const errorData: PatronApiError = await response.json().catch(() => ({
-      error: "Unknown error",
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(errorData.message);
-  }
-
-  return response.json();
 }
 
 /**
@@ -210,20 +150,9 @@ export async function replaceSteamAccount(accountId: string, steamId3: number): 
  * @returns The reactivated SteamAccount
  */
 export async function reactivateSteamAccount(accountId: string): Promise<SteamAccount> {
-  const response = await fetch(`${API_ORIGIN}/v1/patron/steam-accounts/${accountId}/reactivate`, {
+  return fetchApi<SteamAccount>(`/v1/patron/steam-accounts/${accountId}/reactivate`, {
     method: "POST",
-    credentials: "include",
   });
-
-  if (!response.ok) {
-    const errorData: PatronApiError = await response.json().catch(() => ({
-      error: "Unknown error",
-      message: `HTTP ${response.status}: ${response.statusText}`,
-    }));
-    throw new Error(errorData.message);
-  }
-
-  return response.json();
 }
 
 // ============================================================================

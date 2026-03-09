@@ -3,7 +3,7 @@
  * Handles API calls to the backend for data privacy requests
  */
 
-import { API_ORIGIN } from "./constants";
+import { fetchApi } from "./http";
 
 export interface DataPrivacyRequest {
   steam_id: string;
@@ -16,49 +16,26 @@ export interface DataPrivacyResponse {
   error?: string;
 }
 
-/**
- * Send data deletion request to the backend
- * @param requestData - Steam ID and OpenID parameters for verification
- * @returns Promise resolving to the API response
- */
-export async function requestDataDeletion(requestData: DataPrivacyRequest): Promise<DataPrivacyResponse> {
+const PRIVACY_TIMEOUT = 30_000;
+
+async function sendPrivacyRequest(
+  path: string,
+  requestData: DataPrivacyRequest,
+  successMessage: string,
+): Promise<DataPrivacyResponse> {
   try {
-    const url = `${API_ORIGIN}/v1/data-privacy/request-deletion`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30_000);
-
-    const response = await fetch(url, {
+    await fetchApi(path, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestData),
-      signal: controller.signal,
+      body: requestData,
+      timeout: PRIVACY_TIMEOUT,
+      credentials: "same-origin",
     });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-      };
-    }
-
-    return {
-      success: true,
-      message: "Data deletion request submitted successfully",
-    };
+    return { success: true, message: successMessage };
   } catch (error) {
-    console.error("Error requesting data deletion:", error);
+    console.error(`Error requesting ${path}:`, error);
 
     if (error instanceof Error && error.name === "AbortError") {
-      return {
-        success: false,
-        error: "Request timed out. Please try again.",
-      };
+      return { success: false, error: "Request timed out. Please try again." };
     }
 
     return {
@@ -69,55 +46,29 @@ export async function requestDataDeletion(requestData: DataPrivacyRequest): Prom
 }
 
 /**
+ * Send data deletion request to the backend
+ * @param requestData - Steam ID and OpenID parameters for verification
+ * @returns Promise resolving to the API response
+ */
+export async function requestDataDeletion(requestData: DataPrivacyRequest): Promise<DataPrivacyResponse> {
+  return sendPrivacyRequest(
+    "/v1/data-privacy/request-deletion",
+    requestData,
+    "Data deletion request submitted successfully",
+  );
+}
+
+/**
  * Send tracking re-enablement request to the backend
  * @param requestData - Steam ID and OpenID parameters for verification
  * @returns Promise resolving to the API response
  */
 export async function requestTrackingReEnable(requestData: DataPrivacyRequest): Promise<DataPrivacyResponse> {
-  try {
-    const url = `${API_ORIGIN}/v1/data-privacy/request-tracking`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30_000);
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestData),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-      };
-    }
-
-    return {
-      success: true,
-      message: "Tracking re-enablement request submitted successfully",
-    };
-  } catch (error) {
-    console.error("Error requesting tracking re-enablement:", error);
-
-    if (error instanceof Error && error.name === "AbortError") {
-      return {
-        success: false,
-        error: "Request timed out. Please try again.",
-      };
-    }
-
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Network error occurred",
-    };
-  }
+  return sendPrivacyRequest(
+    "/v1/data-privacy/request-tracking",
+    requestData,
+    "Tracking re-enablement request submitted successfully",
+  );
 }
 
 /**
@@ -132,7 +83,6 @@ export async function sendDataPrivacyRequest(
 ): Promise<DataPrivacyResponse> {
   if (action === "deletion") {
     return requestDataDeletion(requestData);
-  } else {
-    return requestTrackingReEnable(requestData);
   }
+  return requestTrackingReEnable(requestData);
 }
