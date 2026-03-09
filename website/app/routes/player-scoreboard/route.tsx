@@ -4,6 +4,7 @@ import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { QueryRenderer } from "~/components/QueryRenderer";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
@@ -100,17 +101,21 @@ export default function PlayerScoreboard() {
         </Filter.Root>
 
         <div>
-          {scoreboardQuery.isPending ? (
-            <div className="flex items-center justify-center py-24">
-              <LoadingLogo />
-            </div>
-          ) : scoreboardQuery.isError ? (
-            <div className="text-center text-sm text-destructive py-8">
-              Failed to load scoreboard: {scoreboardQuery.error?.message}
-            </div>
-          ) : (
-            <ScoreboardTable entries={scoreboardQuery.data ?? []} sortBy={sortBy} />
-          )}
+          <QueryRenderer
+            query={scoreboardQuery}
+            loadingFallback={
+              <div className="flex items-center justify-center py-24">
+                <LoadingLogo />
+              </div>
+            }
+            errorFallback={(error) => (
+              <div className="text-center text-sm text-destructive py-8">
+                Failed to load scoreboard: {error.message}
+              </div>
+            )}
+          >
+            {(data) => <ScoreboardTable entries={data} sortBy={sortBy} />}
+          </QueryRenderer>
         </div>
       </section>
     </div>

@@ -3,6 +3,7 @@ import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/a
 import { lazy, Suspense, useCallback, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { combineQueryStates } from "~/components/QueryRenderer";
 import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
@@ -68,9 +69,7 @@ export default function BadgeDistribution() {
     ],
   });
 
-  const isPending = badgeDistributionQuery?.isPending || ranks?.isPending;
-  const isError = badgeDistributionQuery?.isError || ranks?.isError;
-  const error = badgeDistributionQuery?.error || ranks?.error;
+  const { isPending, isError, error } = combineQueryStates(badgeDistributionQuery, ranks);
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100dvh-2rem)]">
