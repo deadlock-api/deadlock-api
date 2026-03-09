@@ -1,17 +1,18 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
-import ItemCombsExplore from "~/components/items-page/ItemCombsExplore";
-import ItemPurchaseAnalysis from "~/components/items-page/ItemPurchaseAnalysis";
 import ItemStatsTable from "~/components/items-page/ItemStatsTable";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
+import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
-import { createPageMeta } from "~/lib/meta";
+const ItemPurchaseAnalysis = lazy(() => import("~/components/items-page/ItemPurchaseAnalysis"));
+const ItemCombsExplore = lazy(() => import("~/components/items-page/ItemCombsExplore"));
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -117,6 +118,7 @@ export default function Items(
           />
         </TabsContent>
         <TabsContent value="item-purchase-analysis">
+          <Suspense fallback={<LoadingLogo />}>
           <ItemPurchaseAnalysis
             minRankId={effectiveMinRankId}
             maxRankId={effectiveMaxRankId}
@@ -128,8 +130,10 @@ export default function Items(
             maxBoughtAtS={maxBoughtAtS ?? undefined}
             gameMode={gameMode}
           />
+          </Suspense>
         </TabsContent>
         <TabsContent value="item-combs">
+          <Suspense fallback={<LoadingLogo />}>
           <ItemCombsExplore
             sortBy="winrate"
             minRankId={effectiveMinRankId}
@@ -142,6 +146,7 @@ export default function Items(
             maxBoughtAtS={maxBoughtAtS ?? undefined}
             gameMode={gameMode}
           />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

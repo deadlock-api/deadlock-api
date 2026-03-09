@@ -1,14 +1,20 @@
 import { Bot, RotateCcw, Sparkles } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Suspense, lazy, useCallback, useState } from "react";
 import type { MetaFunction } from "react-router";
-import { ChatError } from "~/components/chat/ChatError";
 import { ChatInput } from "~/components/chat/ChatInput";
-import { ChatMessageList } from "~/components/chat/ChatMessageList";
-import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { useChatStream } from "~/hooks/useChatStream";
 import { useRateLimit } from "~/hooks/useRateLimit";
 import { createPageMeta } from "~/lib/meta";
+
+const ChatError = lazy(() => import("~/components/chat/ChatError").then((m) => ({ default: m.ChatError })));
+const ChatMessageList = lazy(
+  () => import("~/components/chat/ChatMessageList").then((m) => ({ default: m.ChatMessageList })),
+);
+const TurnstileVerification = lazy(
+  () => import("~/components/chat/TurnstileVerification").then((m) => ({ default: m.TurnstileVerification })),
+);
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -86,7 +92,9 @@ export default function ChatPage() {
         {!isVerified ? (
           // Turnstile verification required
           <div className="flex-1 flex items-center justify-center p-4">
-            <TurnstileVerification onVerified={handleTurnstileVerified} />
+            <Suspense fallback={<LoadingLogo />}>
+              <TurnstileVerification onVerified={handleTurnstileVerified} />
+            </Suspense>
           </div>
         ) : !hasMessages ? (
           // Empty state - Welcome message
@@ -110,18 +118,21 @@ export default function ChatPage() {
           </div>
         ) : (
           // Message list area
+          <Suspense fallback={<LoadingLogo />}>
           <ChatMessageList
             messages={conversation.messages}
             currentStreamingMessage={conversation.currentStreamingMessage}
             isStreaming={conversation.isStreaming}
             activeTools={conversation.activeTools}
           />
+          </Suspense>
         )}
 
         {/* Error display - shown when there's an error */}
         {conversation.error && isVerified && (
           <div className="border-t px-4 py-3">
             <div className="max-w-3xl mx-auto">
+              <Suspense fallback={<LoadingLogo />}>
               <ChatError
                 error={conversation.error}
                 onDismiss={handleDismissError}
@@ -129,6 +140,7 @@ export default function ChatPage() {
                 onReVerify={handleReVerify}
                 resetTime={rateLimit.timeUntilReset}
               />
+              </Suspense>
             </div>
           </div>
         )}

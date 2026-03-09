@@ -1,8 +1,10 @@
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
-import AbilityOrderTree from "~/components/abilities/AbilityOrderTree";
 import { Filter } from "~/components/Filter";
+import { LoadingLogo } from "~/components/LoadingLogo";
+
+const AbilityOrderTree = lazy(() => import("~/components/abilities/AbilityOrderTree"));
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriState";
 import type { TriState } from "~/components/selectors/TriStateSelector";
@@ -70,18 +72,20 @@ export default function AbilityOrder() {
         <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
       </Filter.Root>
 
-      <AbilityOrderTree
-        heroId={heroId}
-        minRankId={gameMode !== "street_brawl" ? minRankId : undefined}
-        maxRankId={gameMode !== "street_brawl" ? maxRankId : undefined}
-        minDate={startDate}
-        maxDate={endDate}
-        minMatches={minMatches}
-        gameMode={gameMode}
-        defaultDepth={2}
-        includeItemIds={includeItemIds}
-        excludeItemIds={excludeItemIds}
-      />
+      <Suspense fallback={<LoadingLogo />}>
+        <AbilityOrderTree
+          heroId={heroId}
+          minRankId={gameMode !== "street_brawl" ? minRankId : undefined}
+          maxRankId={gameMode !== "street_brawl" ? maxRankId : undefined}
+          minDate={startDate}
+          maxDate={endDate}
+          minMatches={minMatches}
+          gameMode={gameMode}
+          defaultDepth={2}
+          includeItemIds={includeItemIds}
+          excludeItemIds={excludeItemIds}
+        />
+      </Suspense>
     </div>
   );
 }

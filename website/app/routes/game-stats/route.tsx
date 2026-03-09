@@ -1,20 +1,21 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
-import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { PATCHES } from "~/lib/constants";
+import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import GameStatsByRankChart from "./GameStatsByRankChart";
-import GameStatsOverTimeChart from "./GameStatsOverTimeChart";
-import GameStatsOverview from "./GameStatsOverview";
+import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
-import { createPageMeta } from "~/lib/meta";
+const GameStatsOverview = lazy(() => import("./GameStatsOverview"));
+const GameStatsOverTimeChart = lazy(() => import("./GameStatsOverTimeChart"));
+const GameStatsByRankChart = lazy(() => import("./GameStatsByRankChart"));
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -121,6 +122,7 @@ export default function GameStats() {
         </TabsList>
 
         <TabsContent value="overview">
+          <Suspense fallback={<LoadingLogo />}>
           <GameStatsOverview
             params={baseParams}
             prevParams={prevParams}
@@ -130,9 +132,11 @@ export default function GameStats() {
               setTab("over-time");
             }}
           />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="over-time">
+          <Suspense fallback={<LoadingLogo />}>
           <GameStatsOverTimeChart
             params={baseParams}
             stat={stat}
@@ -141,10 +145,13 @@ export default function GameStats() {
             onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
             isStreetBrawl={isStreetBrawl}
           />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="by-rank">
-          <GameStatsByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
+          <Suspense fallback={<LoadingLogo />}>
+            <GameStatsByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
