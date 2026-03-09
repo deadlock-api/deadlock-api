@@ -2,6 +2,7 @@ import type { RankV2 } from "assets_deadlock_api_client";
 import { CircleQuestionMark } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { cn } from "~/lib/utils";
 
@@ -18,6 +19,10 @@ export default function BadgeImage({
   className,
   ...props
 }: BadgeImageProps & React.ComponentProps<"img">) {
+  if (!ranks.length) {
+    return <Skeleton className={cn("size-8 rounded-md", className)} />;
+  }
+
   const badgeMap = extractBadgeMap(ranks);
   const badgeInfo = badgeMap.get(badge);
   const [isError, setIsError] = useState(!badgeInfo);
