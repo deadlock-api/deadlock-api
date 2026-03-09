@@ -1,7 +1,7 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
-import AbilityOrderTree from "~/components/ability-order/AbilityOrderTree";
+import AbilityOrderTree from "~/components/abilities/AbilityOrderTree";
 import { Filter } from "~/components/Filter";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriState";
@@ -11,10 +11,10 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Ability Order - Deadlock API" },
+    { title: "Abilities - Deadlock API" },
     {
       name: "description",
-      content: "Ability upgrade order mind map for Heroes in Deadlock",
+      content: "Ability upgrade paths and win rates for Heroes in Deadlock",
     },
   ];
 };
@@ -43,7 +43,7 @@ export default function AbilityOrder() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Ability Order</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Abilities</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Explore the most common ability upgrade paths and their win rates
         </p>
