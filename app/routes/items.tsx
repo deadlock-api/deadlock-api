@@ -89,8 +89,8 @@ export default function Items(
         />
       </Filter.Root>
 
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList className="w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
+        <TabsList variant="line" className="w-full overflow-x-auto scrollbar-none">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
           <TabsTrigger value="item-purchase-analysis">Purchase Analysis</TabsTrigger>
           <TabsTrigger value="item-combs">Combination Stats</TabsTrigger>

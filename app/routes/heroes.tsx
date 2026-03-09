@@ -37,7 +37,14 @@ export default function Heroes(
   {
     initialTab,
   }: {
-    initialTab?: "stats" | "stats-over-time" | "stats-by-duration" | "stats-by-rank" | "matchups" | "hero-combs" | "hero-matchup-details";
+    initialTab?:
+      | "stats"
+      | "stats-over-time"
+      | "stats-by-duration"
+      | "stats-by-rank"
+      | "matchups"
+      | "hero-combs"
+      | "hero-matchup-details";
   } = {
     initialTab: "stats",
   },
@@ -140,8 +147,8 @@ export default function Heroes(
         />
       </Filter.Root>
 
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList className="w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
+        <TabsList variant="line" className="w-full overflow-x-auto scrollbar-none">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
           <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
           <TabsTrigger value="stats-by-duration">Stats by Duration</TabsTrigger>
