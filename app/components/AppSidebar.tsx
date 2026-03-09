@@ -191,7 +191,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Link to="/" prefetch="intent" onClick={onNavigate} className="flex items-center gap-3">
           <img
             src="https://deadlock-api.com/favicon.webp"
-            alt="Icon"
+            alt="Deadlock API Logo"
             width={32}
             height={32}
             className="aspect-square object-contain"

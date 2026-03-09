@@ -54,6 +54,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="twitter:description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
         <meta name="twitter:image" content="https://deadlock-api.com/favicon.webp" />
 
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content="#fa4454" />
+
         <link rel="dns-prefetch" href="https://api.deadlock-api.com" />
         <link rel="dns-prefetch" href="https://assets.deadlock-api.com" />
 

@@ -1,0 +1,26 @@
+{
+  "name": "Deadlock API - Game Stats, Hero Analytics & Leaderboards",
+  "short_name": "Deadlock API",
+  "description": "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#fa4454",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.webp",
+      "sizes": "512x512",
+      "type": "image/webp"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
