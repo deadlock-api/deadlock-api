@@ -1,3 +1,5 @@
+import type { Color } from "~/types/general";
+
 export type StatValue = string | number | null;
 
 export type Stat = {
@@ -30,8 +32,6 @@ export type BoxWidgetProps = {
   numMatches?: number;
   opacity?: number;
 };
-
-import type { Color } from "~/types/general";
 
 export type RawWidgetProps = {
   region: Region;
