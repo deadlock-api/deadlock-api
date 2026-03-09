@@ -8,6 +8,7 @@ import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
 } from "~/components/heroes-page/HeroMatchupDetailsStatsTable";
 import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
+import HeroStatsByDurationChart from "~/components/heroes-page/HeroStatsByDurationChart";
 import HeroStatsByRankChart, { BY_RANK_STATS } from "~/components/heroes-page/HeroStatsByRankChart";
 import HeroStatsOverTimeChart, {
   HeroStatSelector,
@@ -36,7 +37,7 @@ export default function Heroes(
   {
     initialTab,
   }: {
-    initialTab?: "stats" | "stats-over-time" | "stats-by-rank" | "matchups" | "hero-combs" | "hero-matchup-details";
+    initialTab?: "stats" | "stats-over-time" | "stats-by-duration" | "stats-by-rank" | "matchups" | "hero-combs" | "hero-matchup-details";
   } = {
     initialTab: "stats",
   },
@@ -68,6 +69,7 @@ export default function Heroes(
     parseAsStringLiteral([
       "stats",
       "stats-over-time",
+      "stats-by-duration",
       "stats-by-rank",
       "matchups",
       "hero-combs",
@@ -98,7 +100,7 @@ export default function Heroes(
       </div>
 
       <Filter.Root>
-        {["stats", "stats-over-time", "stats-by-rank"].includes(tab) ? (
+        {["stats", "stats-over-time", "stats-by-duration", "stats-by-rank"].includes(tab) ? (
           <>
             <Filter.MinMatches
               value={minHeroMatches}
@@ -142,6 +144,7 @@ export default function Heroes(
         <TabsList className="w-full">
           <TabsTrigger value="stats">Overall Stats</TabsTrigger>
           <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
+          <TabsTrigger value="stats-by-duration">Stats by Duration</TabsTrigger>
           <TabsTrigger value="stats-by-rank">Stats by Rank</TabsTrigger>
           <TabsTrigger value="matchups">Matchups</TabsTrigger>
           <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
@@ -187,6 +190,30 @@ export default function Heroes(
             <HeroStatsOverTimeChart
               heroStat={heroStat as (typeof HERO_STATS)[number]}
               heroTimeInterval={heroTimeInterval}
+              minRankId={effectiveMinRankId}
+              maxRankId={effectiveMaxRankId}
+              minHeroMatches={minHeroMatches}
+              minHeroMatchesTotal={minHeroMatchesTotal}
+              minDate={startDate}
+              maxDate={endDate}
+              gameMode={gameMode}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stats-by-duration">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Stat</span>
+                <HeroStatSelector
+                  value={heroStat as (typeof HERO_STATS)[number]}
+                  onChange={(val) => setHeroStat(val as typeof heroStat)}
+                />
+              </div>
+            </div>
+            <HeroStatsByDurationChart
+              heroStat={heroStat as (typeof HERO_STATS)[number]}
               minRankId={effectiveMinRankId}
               maxRankId={effectiveMaxRankId}
               minHeroMatches={minHeroMatches}
