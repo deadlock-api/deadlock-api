@@ -81,19 +81,18 @@ export default function GuessItem() {
   const hints = useMemo(() => {
     if (!dailyItem) return [];
 
-    const tierSlot = `Tier ${dailyItem.item_tier} — ${formatSlotType(dailyItem.item_slot_type)}`;
-
-    const costHint = dailyItem.cost != null ? `Cost: ${dailyItem.cost} Souls` : "Cost: Unknown";
+    const slot = formatSlotType(dailyItem.item_slot_type);
+    const activation = dailyItem.is_active_item ? "Active" : "Passive";
 
     const propertyHint = getPropertyHint(
       dailyItem.properties as Record<string, { value?: unknown; label?: string | null }> | null,
     );
 
     return [
-      { label: "CATEGORY", value: tierSlot },
-      { label: "COST", value: costHint },
+      { label: "SLOT", value: slot },
+      { label: "ACTIVATION", value: activation },
       { label: "PROPERTY", value: propertyHint },
-      { label: "REVEAL", value: "Image blur greatly reduced" },
+      { label: "TIER", value: `Tier ${dailyItem.item_tier}` },
     ];
   }, [dailyItem]);
 

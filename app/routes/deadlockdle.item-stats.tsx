@@ -28,7 +28,7 @@ const SLOT_TYPES = ["weapon", "spirit", "vitality"] as const;
 type SlotType = (typeof SLOT_TYPES)[number];
 
 interface ItemAnswer {
-  cost?: number;
+  active?: boolean;
   tier?: number;
   slot?: string;
 }
@@ -129,7 +129,7 @@ export default function ItemStatsQuiz() {
   }, [shopableItems, today]);
 
   const setAnswer = useCallback(
-    (itemId: number, field: keyof ItemAnswer, value: number | string) => {
+    (itemId: number, field: keyof ItemAnswer, value: number | string | boolean) => {
       if (state.submitted) return;
       setState((prev) => {
         const next: ItemStatsState = {
@@ -153,17 +153,17 @@ export default function ItemStatsQuiz() {
     if (dailyItems.length === 0) return false;
     return dailyItems.every((item) => {
       const answer = state.answers[item.id];
-      return answer != null && answer.cost != null && answer.tier != null && answer.slot != null;
+      return answer != null && answer.active != null && answer.tier != null && answer.slot != null;
     });
   }, [dailyItems, state.answers]);
 
   const fieldResults = useMemo(() => {
     if (!state.submitted || dailyItems.length === 0) return null;
-    const results: Record<number, { cost: boolean; tier: boolean; slot: boolean }> = {};
+    const results: Record<number, { active: boolean; tier: boolean; slot: boolean }> = {};
     for (const item of dailyItems) {
       const answer = state.answers[item.id];
       results[item.id] = {
-        cost: answer?.cost === item.cost,
+        active: answer?.active === item.is_active_item,
         tier: answer?.tier === item.item_tier,
         slot: answer?.slot === item.item_slot_type,
       };
@@ -176,7 +176,7 @@ export default function ItemStatsQuiz() {
     let score = 0;
     for (const item of dailyItems) {
       const answer = state.answers[item.id];
-      if (answer?.cost === item.cost) score++;
+      if (answer?.active === item.is_active_item) score++;
       if (answer?.tier === item.item_tier) score++;
       if (answer?.slot === item.item_slot_type) score++;
     }
@@ -273,57 +273,50 @@ export default function ItemStatsQuiz() {
 
               {/* Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Cost input */}
+                {/* Active/Passive selector */}
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">
-                    Cost (Souls)
+                    Activation
                   </p>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      step={50}
-                      value={answer.cost ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "") {
-                          // Allow clearing
-                          setState((prev) => {
-                            const next: ItemStatsState = {
-                              ...prev,
-                              answers: {
-                                ...prev.answers,
-                                [item.id]: {
-                                  ...prev.answers[item.id],
-                                  cost: undefined,
-                                },
-                              },
-                            };
-                            saveState(next);
-                            return next;
-                          });
-                        } else {
-                          setAnswer(item.id, "cost", Number.parseInt(val, 10));
-                        }
-                      }}
-                      disabled={state.submitted}
-                      placeholder="0"
-                      className={cn(
-                        "w-full bg-black/40 border px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground/30 outline-none transition-all",
-                        "focus:border-primary/60 focus:shadow-[0_0_8px_rgba(250,68,84,0.15)]",
-                        "disabled:opacity-60",
-                        result
-                          ? result.cost
-                            ? "border-green-500/60 bg-green-500/10"
-                            : "border-red-500/60 bg-red-500/10"
-                          : "border-muted-foreground/30",
-                      )}
-                    />
-                    {result && !result.cost && (
-                      <p className="text-[10px] font-mono text-red-400/80 mt-1">Correct: {item.cost}</p>
-                    )}
+                  <div className="flex gap-1">
+                    {([true, false] as const).map((isActive) => {
+                      const label = isActive ? "Active" : "Passive";
+                      const isSelected = answer.active === isActive;
+                      const isCorrect = result && isActive === item.is_active_item;
+                      const isWrongSelection = result && isSelected && !result.active;
+
+                      return (
+                        <motion.button
+                          key={label}
+                          type="button"
+                          whileTap={!state.submitted ? { scale: 0.93, transition: { duration: 0 } } : undefined}
+                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                          onClick={() => setAnswer(item.id, "active", isActive)}
+                          disabled={state.submitted}
+                          className={cn(
+                            "flex-1 py-2 text-[11px] font-mono font-semibold border transition-colors",
+                            "disabled:cursor-default",
+                            result
+                              ? isCorrect
+                                ? "border-green-500/60 bg-green-500/15 text-green-400"
+                                : isWrongSelection
+                                  ? "border-red-500/60 bg-red-500/15 text-red-400"
+                                  : "border-muted-foreground/10 bg-transparent text-muted-foreground/30"
+                              : isSelected
+                                ? "border-primary/60 bg-primary/15 text-primary"
+                                : "border-muted-foreground/20 bg-black/30 text-muted-foreground/50 hover:border-muted-foreground/40",
+                          )}
+                        >
+                          {label}
+                        </motion.button>
+                      );
+                    })}
                   </div>
+                  {result && !result.active && (
+                    <p className="text-[10px] font-mono text-red-400/80">
+                      Correct: {item.is_active_item ? "Active" : "Passive"}
+                    </p>
+                  )}
                 </div>
 
                 {/* Tier selector */}
