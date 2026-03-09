@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import ItemName from "~/components/ItemName";
 import { Button } from "~/components/ui/button";
@@ -9,6 +9,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+
+function sortItems(a: UpgradeV2, b: UpgradeV2) {
+  if (a.item_tier !== b.item_tier) {
+    return a.item_tier - b.item_tier;
+  }
+  return a.name.localeCompare(b.name);
+}
+
+function useItems() {
+  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
+  const sortedItems = useMemo(
+    () => data?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems) ?? [],
+    [data],
+  );
+  return { sortedItems, isLoading };
+}
 
 export default function ItemSelector({
   onItemSelected,
@@ -21,20 +37,7 @@ export default function ItemSelector({
   allowSelectNull?: boolean;
   label?: string;
 }) {
-  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
-
-  function sortItems(a: UpgradeV2, b: UpgradeV2) {
-    if (a.item_tier !== b.item_tier) {
-      return a.item_tier - b.item_tier;
-    }
-    return a.name.localeCompare(b.name);
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Function
-  const sortedItems = useMemo(
-    () => data?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems) || [],
-    [data],
-  );
+  const { sortedItems, isLoading } = useItems();
 
   const handleValueChange = (value: string) => {
     if (value === "none" || value === "") {
@@ -97,20 +100,8 @@ export function ItemSelectorMultiple({
   selectedItems: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
-
-  function sortItems(a: UpgradeV2, b: UpgradeV2) {
-    if (a.item_tier !== b.item_tier) {
-      return a.item_tier - b.item_tier;
-    }
-    return a.name.localeCompare(b.name);
-  }
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Function
-  const sortedItems = useMemo(
-    () => data?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems) || [],
-    [data],
-  );
+  const { sortedItems, isLoading } = useItems();
+  const selectAllId = useId();
 
   if (isLoading) {
     return "";
@@ -131,14 +122,12 @@ export function ItemSelectorMultiple({
             {selectedItems.length === 0 ? (
               <span className="truncate text-muted-foreground">{label || "Select Items..."}</span>
             ) : (
-              selectedItems
-                .map((itemId) => (
-                  <span key={itemId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
-                    <ItemImage itemId={itemId} className="size-4 object-contain shrink-0" />
-                    <ItemName itemId={itemId} className="truncate text-xs" />
-                  </span>
-                ))
-                .slice(0, 5)
+              selectedItems.slice(0, 5).map((itemId) => (
+                <span key={itemId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
+                  <ItemImage itemId={itemId} className="size-4 object-contain shrink-0" />
+                  <ItemName itemId={itemId} className="truncate text-xs" />
+                </span>
+              ))
             )}
             {selectedItems.length > 5 && (
               <span className="truncate text-muted-foreground">+{selectedItems.length - 5}</span>
@@ -158,9 +147,9 @@ export function ItemSelectorMultiple({
                   onItemsSelected([]);
                 }
               }}
-              id="select-all-items"
+              id={`${selectAllId}-select-all`}
             />
-            <label htmlFor="select-all-items" className="text-sm cursor-pointer select-none">
+            <label htmlFor={`${selectAllId}-select-all`} className="text-sm cursor-pointer select-none">
               Select all
             </label>
           </div>
