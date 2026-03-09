@@ -3,8 +3,8 @@
  * Handles API calls for patron Steam account management
  */
 
-import { API_ORIGIN } from "./constants";
-import { ApiError, fetchApi } from "./http";
+import { API_ORIGIN } from "~/lib/constants";
+import { ApiError, fetchApi } from "~/lib/http";
 
 // ============================================================================
 // Types

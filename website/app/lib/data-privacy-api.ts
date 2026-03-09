@@ -3,7 +3,7 @@
  * Handles API calls to the backend for data privacy requests
  */
 
-import { fetchApi } from "./http";
+import { fetchApi } from "~/lib/http";
 
 export interface DataPrivacyRequest {
   steam_id: string;
