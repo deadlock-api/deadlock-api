@@ -24,7 +24,7 @@ function getRankId(tier: number, subrank: number): number {
   return baseId + subrank;
 }
 
-export default function RankSelector({
+export function RankSelector({
   onRankSelected,
   selectedRank,
   label,

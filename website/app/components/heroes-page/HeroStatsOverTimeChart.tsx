@@ -11,7 +11,7 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
-export default function HeroStatsOverTimeChart({
+export function HeroStatsOverTimeChart({
   heroStat,
   heroTimeInterval,
   minRankId,

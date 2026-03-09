@@ -29,7 +29,7 @@ interface RankRangeSelectorProps {
   label?: string;
 }
 
-export default function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
+export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
   const { data: ranksData, isLoading } = useQuery({
     queryKey: queryKeys.assets.ranks(),
     queryFn: async () => {

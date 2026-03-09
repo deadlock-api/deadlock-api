@@ -35,7 +35,7 @@ interface HeroStatsByDurationChartProps {
   gameMode?: GameMode;
 }
 
-export default function HeroStatsByDurationChart({
+export function HeroStatsByDurationChart({
   heroStat,
   minRankId,
   maxRankId,

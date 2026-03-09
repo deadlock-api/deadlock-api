@@ -2,7 +2,7 @@ import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
-import ItemStatsTable from "~/components/items-page/ItemStatsTable";
+import { ItemStatsTable } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
@@ -12,8 +12,12 @@ import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
-const ItemPurchaseAnalysis = lazy(() => import("~/components/items-page/ItemPurchaseAnalysis"));
-const ItemCombsExplore = lazy(() => import("~/components/items-page/ItemCombsExplore"));
+const ItemPurchaseAnalysis = lazy(() =>
+	import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
+);
+const ItemCombsExplore = lazy(() =>
+	import("~/components/items-page/ItemCombsExplore").then((m) => ({ default: m.ItemCombsExplore })),
+);
 
 export const meta: MetaFunction = () => {
   return createPageMeta({

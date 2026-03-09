@@ -6,7 +6,7 @@ import "./dayjs.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import AppSidebar, { MobileMenuButton } from "~/components/AppSidebar";
+import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";

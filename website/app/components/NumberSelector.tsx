@@ -38,7 +38,7 @@ export function NumberSelectorBare({
   );
 }
 
-export default function NumberSelector({
+export function NumberSelector({
   value,
   onChange,
   label,

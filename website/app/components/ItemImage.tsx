@@ -4,7 +4,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
-export default function ItemImage({ itemId, className }: { itemId: number; className?: string }) {
+export function ItemImage({ itemId, className }: { itemId: number; className?: string }) {
   const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
 
   const item = useMemo(() => data?.find((item) => item.id === itemId), [data, itemId]);

@@ -32,7 +32,7 @@ type RGBA = `rgba(${number}, ${number}, ${number}, ${number})`;
 type HEX = `#${string}`;
 type PreviewBackgroundColor = RGB | RGBA | HEX;
 
-export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
+export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const [searchParams] = useSearchParams();
   const [widgetType, setWidgetType] = useState<string>(searchParams.get("widget-type") ?? widgetTypes[0]);
   const [theme, setTheme] = useState<Theme>("dark");

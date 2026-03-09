@@ -12,7 +12,7 @@ import { TemplateInput } from "./TemplateInput";
 import { UrlDisplay } from "./UrlDisplay";
 import { VariablesList } from "./VariablesList";
 
-export default function CommandBuilder({ region, accountId }: CommandBuilderProps) {
+export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const [template, debouncedTemplate, setTemplate] = useDebouncedState("", 500);
   const [extraArgs, setExtraArgs] = useState<{ [key: string]: string }>({});
   const [variables, setVariables] = useState<Variable[]>([]);

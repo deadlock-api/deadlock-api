@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client/api";
 import { ChevronDown } from "lucide-react";
-import BadgeImage from "~/components/BadgeImage";
-import HeroImage from "~/components/HeroImage";
-import ItemImage from "~/components/ItemImage";
+import { BadgeImage } from "~/components/BadgeImage";
+import { HeroImage } from "~/components/HeroImage";
+import { ItemImage } from "~/components/ItemImage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";

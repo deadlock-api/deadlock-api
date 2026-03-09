@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
 import { useMemo } from "react";
-import HeroImage from "~/components/HeroImage";
-import HeroName from "~/components/HeroName";
+import { HeroImage } from "~/components/HeroImage";
+import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
@@ -18,7 +18,7 @@ export enum HeroMatchupDetailsStatsTableStat {
   COUNTER = 1,
 }
 
-export default function HeroMatchupDetailsStatsTable({
+export function HeroMatchupDetailsStatsTable({
   heroId,
   stat,
   minRankId,

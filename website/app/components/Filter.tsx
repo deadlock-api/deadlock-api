@@ -1,11 +1,11 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
-import NumberSelector from "~/components/NumberSelector";
+import { NumberSelector } from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
-import HeroSelector from "~/components/selectors/HeroSelector";
-import MatchTimeRangeSelector from "~/components/selectors/MatchTimeRangeSelector";
-import RankRange from "~/components/selectors/RankRangeSelector";
+import { HeroSelector } from "~/components/selectors/HeroSelector";
+import { MatchTimeRangeSelector } from "~/components/selectors/MatchTimeRangeSelector";
+import { RankRangeSelector } from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import type { Dayjs } from "~/dayjs";
 import { MAX_GAME_DURATION_S, PATCHES } from "~/lib/constants";
@@ -81,7 +81,7 @@ function GameModeWithRank({
   return (
     <>
       <GameModeSelector value={gameMode} onChange={onGameModeChange} />
-      {gameMode !== "street_brawl" && <RankRange minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />}
+      {gameMode !== "street_brawl" && <RankRangeSelector minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />}
     </>
   );
 }
@@ -223,7 +223,7 @@ export const Filter = {
   Hero,
   Region,
   GameMode: GameModeSelector,
-  RankRange: RankRange,
+  RankRange: RankRangeSelector,
   GameModeWithRank,
   MinMatches,
   PatchOrDate,

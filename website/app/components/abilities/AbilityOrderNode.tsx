@@ -1,8 +1,8 @@
 import { ChevronDown } from "lucide-react";
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import AbilityImage from "~/components/AbilityImage";
-import AbilityName from "~/components/AbilityName";
+import { AbilityImage } from "~/components/AbilityImage";
+import { AbilityName } from "~/components/AbilityName";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
 import type { AbilityTrieNode } from "~/lib/ability-order-utils";
 import { getPickRate, getSortedChildren, getWinRate } from "~/lib/ability-order-utils";

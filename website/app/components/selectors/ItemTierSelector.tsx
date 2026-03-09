@@ -2,7 +2,7 @@ import { Button } from "../ui/button";
 
 const TIERS = [1, 2, 3, 4];
 
-export default function ItemTierSelector({
+export function ItemTierSelector({
   onItemTiersSelected,
   selectedItemTiers = [],
 }: {

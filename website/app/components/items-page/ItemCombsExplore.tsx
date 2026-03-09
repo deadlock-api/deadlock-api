@@ -4,9 +4,9 @@ import { formatDistanceToNow } from "date-fns";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
-import ItemImage from "~/components/ItemImage";
-import ItemName from "~/components/ItemName";
-import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
+import { ItemImage } from "~/components/ItemImage";
+import { ItemName } from "~/components/ItemName";
+import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
@@ -129,7 +129,7 @@ function timeAgo(dateStr: string): string {
   return formatDistanceToNow(new Date(`${dateStr}Z`), { addSuffix: true });
 }
 
-export default function ItemCombsExplore({
+export function ItemCombsExplore({
   minRankId,
   maxRankId,
   minDate,
