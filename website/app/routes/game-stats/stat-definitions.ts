@@ -83,7 +83,6 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "avg_gold_lane_creep", label: "Avg Souls (Lane Creep)", format: "integer" },
       { key: "avg_gold_neutral_creep", label: "Avg Souls (Neutral Creep)", format: "integer" },
       { key: "avg_gold_boss", label: "Avg Souls (Objectives)", format: "integer" },
-      { key: "avg_gold_boss_orb", label: "Avg Souls (Boss Orb)", format: "integer" },
       { key: "avg_gold_treasure", label: "Avg Souls (Urn)", format: "integer" },
       { key: "avg_gold_denied", label: "Avg Souls (Denied)", format: "integer" },
       { key: "avg_gold_death_loss", label: "Avg Souls (Death Loss)", format: "integer" },
