@@ -111,7 +111,7 @@ async function processFileObject(file: File): Promise<Salts | null> {
 
 export async function scanDirHandle(
   dirHandle: FileSystemDirectoryHandle,
-  setSaltsFound: React.Dispatch<React.SetStateAction<number>>,
+  onSaltFound: () => void,
 ): Promise<Set<Salts>> {
   const salts: Set<Salts> = new Set();
   // @ts-expect-error
@@ -120,10 +120,10 @@ export async function scanDirHandle(
       const salt = await processFile(entry);
       if (salt) {
         salts.add(salt);
-        setSaltsFound((prev) => prev + 1);
+        onSaltFound();
       }
     } else if (entry.kind === "directory") {
-      const subSalts = await scanDirHandle(entry, setSaltsFound);
+      const subSalts = await scanDirHandle(entry, onSaltFound);
       for (const subSalt of subSalts) {
         salts.add(subSalt);
       }
@@ -132,16 +132,13 @@ export async function scanDirHandle(
   return salts;
 }
 
-export async function scanFileList(
-  files: FileList,
-  setSaltsFound: React.Dispatch<React.SetStateAction<number>>,
-): Promise<Set<Salts>> {
+export async function scanFileList(files: FileList, onSaltFound: () => void): Promise<Set<Salts>> {
   const salts: Set<Salts> = new Set();
   for (let i = 0; i < files.length; i++) {
     const salt = await processFileObject(files[i]);
     if (salt) {
       salts.add(salt);
-      setSaltsFound((prev) => prev + 1);
+      onSaltFound();
     }
   }
   return salts;
@@ -168,23 +165,20 @@ function getFileFromEntry(entry: FileSystemFileEntry): Promise<File> {
   return new Promise((resolve, reject) => entry.file(resolve, reject));
 }
 
-export async function scanEntry(
-  entry: FileSystemEntry,
-  setSaltsFound: React.Dispatch<React.SetStateAction<number>>,
-): Promise<Set<Salts>> {
+export async function scanEntry(entry: FileSystemEntry, onSaltFound: () => void): Promise<Set<Salts>> {
   const salts: Set<Salts> = new Set();
   if (entry.isFile) {
     const file = await getFileFromEntry(entry as FileSystemFileEntry);
     const salt = await processFileObject(file);
     if (salt) {
       salts.add(salt);
-      setSaltsFound((prev) => prev + 1);
+      onSaltFound();
     }
   } else if (entry.isDirectory) {
     const reader = (entry as FileSystemDirectoryEntry).createReader();
     const entries = await readAllEntries(reader);
     for (const childEntry of entries) {
-      const subSalts = await scanEntry(childEntry, setSaltsFound);
+      const subSalts = await scanEntry(childEntry, onSaltFound);
       for (const s of subSalts) {
         salts.add(s);
       }
