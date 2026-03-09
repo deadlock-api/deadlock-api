@@ -18,6 +18,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
+import { getPickrateMultiplier } from "~/lib/constants";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -128,7 +129,7 @@ function CustomTooltip({
 
 function computeStatValue(stat: ByRankStat, agg: AggregatedTier, gameMode?: GameMode): number {
   if (stat === "pickrate") {
-    return (agg.matches / agg.matchesPerBucket) * 100 * (gameMode === "street_brawl" ? 8 : 12);
+    return (agg.matches / agg.matchesPerBucket) * 100 * getPickrateMultiplier(gameMode);
   }
   return hero_stats_transform(agg as unknown as AnalyticsHeroStats, stat as (typeof HERO_STATS)[number]);
 }

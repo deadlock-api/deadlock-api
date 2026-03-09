@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { getPickrateMultiplier } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
 
 export function HeroStatsTable({
@@ -101,7 +102,7 @@ export function HeroStatsTable({
     enabled: hasPreviousInterval,
   });
 
-  const pickrateMultiplier = gameMode === "street_brawl" ? 8 : 12;
+  const pickrateMultiplier = getPickrateMultiplier(gameMode);
 
   const prevStatsMap = useMemo(() => {
     if (!prevHeroData) return undefined;

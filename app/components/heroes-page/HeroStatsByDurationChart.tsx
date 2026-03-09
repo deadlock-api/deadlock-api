@@ -6,23 +6,10 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
-
-const DURATION_BUCKETS = [
-  { label: "< 15m", minS: 0, maxS: 900 },
-  { label: "15-20m", minS: 900, maxS: 1200 },
-  { label: "20-25m", minS: 1200, maxS: 1500 },
-  { label: "25-30m", minS: 1500, maxS: 1800 },
-  { label: "30-35m", minS: 1800, maxS: 2100 },
-  { label: "35-40m", minS: 2100, maxS: 2400 },
-  { label: "40-45m", minS: 2400, maxS: 2700 },
-  { label: "45-50m", minS: 2700, maxS: 3000 },
-  { label: "50+m", minS: 3000, maxS: 7000 },
-] as const;
-
-const MIN_MATCHES_PER_BUCKET = 10;
 
 interface HeroStatsByDurationChartProps {
   heroStat: (typeof HERO_STATS)[number];

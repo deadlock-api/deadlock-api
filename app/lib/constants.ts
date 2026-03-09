@@ -36,6 +36,27 @@ export const PATCHES = [
 export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;
 
+/** Pickrate multiplier = 2 * team_size (both teams), used to normalize pick rates */
+export function getPickrateMultiplier(gameMode?: "normal" | "street_brawl"): number {
+  return gameMode === "street_brawl" ? 8 : 12;
+}
+
+/** Duration buckets for hero stats by game length */
+export const DURATION_BUCKETS = [
+  { label: "< 15m", minS: 0, maxS: 900 },
+  { label: "15-20m", minS: 900, maxS: 1200 },
+  { label: "20-25m", minS: 1200, maxS: 1500 },
+  { label: "25-30m", minS: 1500, maxS: 1800 },
+  { label: "30-35m", minS: 1800, maxS: 2100 },
+  { label: "35-40m", minS: 2100, maxS: 2400 },
+  { label: "40-45m", minS: 2400, maxS: 2700 },
+  { label: "45-50m", minS: 2700, maxS: 3000 },
+  { label: "50+m", minS: 3000, maxS: 7000 },
+] as const;
+
+/** Minimum matches required per duration bucket to display data */
+export const MIN_MATCHES_PER_BUCKET = 10;
+
 export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "https://api.deadlock-api.com").replace(/\/+$/, "");
 export const ASSETS_ORIGIN = (import.meta.env.VITE_ASSETS_BASE_URL || "https://assets.deadlock-api.com").replace(
   /\/+$/,
