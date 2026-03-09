@@ -8,6 +8,7 @@ import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
@@ -76,7 +77,7 @@ export default function HeroCombStatsTable({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
   const { data: prevHeroData } = useQuery({
@@ -101,7 +102,7 @@ export default function HeroCombStatsTable({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_DAY,
     enabled: hasPreviousInterval,
   });
 

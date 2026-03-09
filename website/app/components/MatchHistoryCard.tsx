@@ -5,6 +5,7 @@ import BadgeImage from "~/components/BadgeImage";
 import HeroImage from "~/components/HeroImage";
 import ItemImage from "~/components/ItemImage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { cn } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -167,7 +168,7 @@ export default function MatchHistoryCard({
       return res.data[0] ?? null;
     },
     enabled: accountId != null,
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   return (

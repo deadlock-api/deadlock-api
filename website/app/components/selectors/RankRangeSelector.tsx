@@ -4,6 +4,7 @@ import { ShieldIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -35,7 +36,7 @@ export default function RankRangeSelector({ minRank, maxRank, onRankChange, labe
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;
     },
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   const sortedRanks = useMemo(() => ranksData?.sort((a: RankV2, b: RankV2) => a.tier - b.tier) ?? [], [ranksData]);

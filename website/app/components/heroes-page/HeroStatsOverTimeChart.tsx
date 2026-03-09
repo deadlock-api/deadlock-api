@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -58,7 +59,7 @@ export default function HeroStatsOverTimeChart({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
   const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {

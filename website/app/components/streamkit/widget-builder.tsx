@@ -12,6 +12,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { DEFAULT_LABELS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
@@ -61,7 +62,7 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
   const { data, error } = useQuery<Variable[]>({
     queryKey: queryKeys.streamkit.availableVariables(),
     queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   useEffect(() => {

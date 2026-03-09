@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { createPageMeta } from "~/lib/meta";
@@ -141,7 +142,7 @@ export default function Leaderboard() {
           const response = await assetsApi.default_api.getRanksV2RanksGet();
           return response.data;
         },
-        staleTime: Number.MAX_SAFE_INTEGER,
+        staleTime: CACHE_DURATIONS.FOREVER,
       },
       {
         queryKey: queryKeys.leaderboard.data(region, heroId),
@@ -151,7 +152,7 @@ export default function Leaderboard() {
             : await api.leaderboard_api.leaderboard({ region });
           return response.data;
         },
-        staleTime: 60 * 60 * 1000,
+        staleTime: CACHE_DURATIONS.ONE_HOUR,
       },
     ],
   });

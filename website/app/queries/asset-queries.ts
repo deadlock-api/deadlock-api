@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { AbilityV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { queryKeys } from "./query-keys";
 
@@ -9,7 +10,7 @@ export const heroesQueryOptions = queryOptions({
     const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
     return response.data;
   },
-  staleTime: Number.POSITIVE_INFINITY,
+  staleTime: CACHE_DURATIONS.FOREVER,
 });
 
 export const itemUpgradesQueryOptions = queryOptions({
@@ -18,7 +19,7 @@ export const itemUpgradesQueryOptions = queryOptions({
     const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
     return response.data as UpgradeV2[];
   },
-  staleTime: Number.POSITIVE_INFINITY,
+  staleTime: CACHE_DURATIONS.FOREVER,
 });
 
 export const abilitiesQueryOptions = queryOptions({
@@ -27,5 +28,5 @@ export const abilitiesQueryOptions = queryOptions({
     const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
     return response.data as AbilityV2[];
   },
-  staleTime: Number.POSITIVE_INFINITY,
+  staleTime: CACHE_DURATIONS.FOREVER,
 });

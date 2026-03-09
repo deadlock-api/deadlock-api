@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
@@ -56,7 +57,7 @@ export default function BadgeDistribution() {
           const response = await assetsApi.default_api.getRanksV2RanksGet();
           return response.data;
         },
-        staleTime: Number.MAX_SAFE_INTEGER,
+        staleTime: CACHE_DURATIONS.FOREVER,
       },
       {
         queryKey: queryKeys.analytics.badgeDistribution(filter),
@@ -64,7 +65,7 @@ export default function BadgeDistribution() {
           const response = await api.analytics_api.badgeDistribution(filter);
           return response.data;
         },
-        staleTime: 24 * 60 * 60 * 1000,
+        staleTime: CACHE_DURATIONS.ONE_DAY,
       },
     ],
   });

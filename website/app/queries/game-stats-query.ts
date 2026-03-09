@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { queryKeys } from "./query-keys";
 
@@ -40,6 +41,6 @@ export function gameStatsQueryOptions(params: GameStatsQueryParams) {
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 }

@@ -7,6 +7,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
@@ -60,7 +61,7 @@ export default function HeroMatchupStatsTable({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
@@ -87,7 +88,7 @@ export default function HeroMatchupStatsTable({
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({
@@ -112,7 +113,7 @@ export default function HeroMatchupStatsTable({
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
   const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
@@ -140,7 +141,7 @@ export default function HeroMatchupStatsTable({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_DAY,
     enabled: hasPreviousInterval,
   });
 
@@ -168,7 +169,7 @@ export default function HeroMatchupStatsTable({
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
     enabled: hasPreviousInterval,
   });
 
@@ -194,7 +195,7 @@ export default function HeroMatchupStatsTable({
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
     enabled: hasPreviousInterval,
   });
 

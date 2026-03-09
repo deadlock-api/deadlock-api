@@ -19,6 +19,7 @@ const Heatmap3D = lazy(() => import("./Heatmap3D"));
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { createPageMeta } from "~/lib/meta";
 
 export function meta() {
@@ -65,7 +66,7 @@ export default function Heatmap() {
           const response = await assetsApi.default_api.getMapV1MapGet();
           return response.data;
         },
-        staleTime: Number.MAX_SAFE_INTEGER,
+        staleTime: CACHE_DURATIONS.FOREVER,
       },
       {
         queryKey: queryKeys.analytics.killDeathStats(requestParams),
@@ -73,7 +74,7 @@ export default function Heatmap() {
           const response = await api.analytics_api.killDeathStats(requestParams);
           return response.data;
         },
-        staleTime: 24 * 60 * 60 * 1000,
+        staleTime: CACHE_DURATIONS.ONE_DAY,
       },
     ],
   });

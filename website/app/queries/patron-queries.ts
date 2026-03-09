@@ -3,6 +3,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import {
   addSteamAccount,
@@ -64,7 +65,7 @@ export function usePlayerCard(steamId3: number, enabled = true) {
     queryFn: () => getPlayerCard(steamId3),
     enabled,
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 min — matches server-side cache
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
 }
 

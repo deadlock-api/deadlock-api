@@ -42,6 +42,7 @@ import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { assetsApi } from "~/lib/assets-api";
 import { createPageMeta } from "~/lib/meta";
@@ -206,7 +207,7 @@ function formatRelativeTime(dateString: string): string {
   return `${diffYears} year${diffYears !== 1 ? "s" : ""} ago`;
 }
 
-const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const COOLDOWN_DURATION_MS = 24 * 60 * 60 * 1000;
 
 function formatCooldownRemaining(deletedAt: string): string | null {
   const deletedDate = new Date(deletedAt);
@@ -797,7 +798,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
   const ranksQuery = useQuery({
     queryKey: queryKeys.assets.ranks(),
     queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   // Close dialog automatically once card loads successfully after a refetch

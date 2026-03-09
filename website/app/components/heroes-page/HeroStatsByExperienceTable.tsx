@@ -8,6 +8,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -73,7 +74,7 @@ export default function HeroStatsByExperienceTable({
         });
         return response.data;
       },
-      staleTime: 24 * 60 * 60 * 1000,
+      staleTime: CACHE_DURATIONS.ONE_DAY,
     })),
   });
 

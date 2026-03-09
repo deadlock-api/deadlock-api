@@ -26,7 +26,7 @@ export async function requestDataDeletion(requestData: DataPrivacyRequest): Prom
     const url = `${API_ORIGIN}/v1/data-privacy/request-deletion`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
     const response = await fetch(url, {
       method: "POST",
@@ -78,7 +78,7 @@ export async function requestTrackingReEnable(requestData: DataPrivacyRequest): 
     const url = `${API_ORIGIN}/v1/data-privacy/request-tracking`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
     const response = await fetch(url, {
       method: "POST",

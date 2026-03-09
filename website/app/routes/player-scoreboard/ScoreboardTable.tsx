@@ -4,6 +4,7 @@ import Fuse from "fuse.js";
 import { useMemo, useState } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
 import { ScoreboardControls } from "./ScoreboardControls";
@@ -56,7 +57,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
         return map;
       },
       enabled: batch.length > 0,
-      staleTime: 24 * 60 * 60 * 1000,
+      staleTime: CACHE_DURATIONS.ONE_DAY,
     })),
   });
 

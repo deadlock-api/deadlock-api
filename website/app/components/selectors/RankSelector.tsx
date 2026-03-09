@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -38,7 +39,7 @@ export default function RankSelector({
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;
     },
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   // Add type annotation to fix linter error

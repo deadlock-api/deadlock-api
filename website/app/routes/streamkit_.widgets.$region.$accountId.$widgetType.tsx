@@ -4,6 +4,7 @@ import type { MetaFunction } from "react-router";
 import { useParams, useSearchParams } from "react-router";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { RawWidget } from "~/components/streamkit/widgets/raw";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -25,7 +26,7 @@ export default function Widget() {
         .then((res) => res.json())
         .then((data) => (widgetType ? data[widgetType] : data)),
     staleTime: (5 * 60 - 10) * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: CACHE_DURATIONS.FIVE_MINUTES,
     refetchIntervalInBackground: true,
   });
 
