@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
+import { TURNSTILE_SITE_KEY } from "~/lib/constants";
 
 interface TurnstileVerificationProps {
   onVerified: (token: string) => void;
@@ -50,17 +51,7 @@ export function TurnstileVerification({ onVerified }: TurnstileVerificationProps
     turnstileRef.current?.reset();
   }, []);
 
-  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAABs5lyUV9iomsdK2";
-
-  if (!siteKey) {
-    return (
-      <Alert variant="destructive" className="max-w-md mx-auto">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Configuration Error</AlertTitle>
-        <AlertDescription>Turnstile site key is not configured. Please contact support.</AlertDescription>
-      </Alert>
-    );
-  }
+  const siteKey = TURNSTILE_SITE_KEY;
 
   return (
     <Card className="max-w-md mx-auto min-w-sm">
