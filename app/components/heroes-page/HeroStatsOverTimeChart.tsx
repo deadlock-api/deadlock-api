@@ -7,6 +7,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { type Dayjs, day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
+import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 export default function HeroStatsOverTimeChart({
@@ -34,8 +35,7 @@ export default function HeroStatsOverTimeChart({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
-    queryKey: [
-      "api-hero-stats-over-time",
+    queryKey: queryKeys.analytics.heroStatsOverTime(
       minRankId,
       maxRankId,
       minDateTimestamp,
@@ -44,7 +44,7 @@ export default function HeroStatsOverTimeChart({
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,

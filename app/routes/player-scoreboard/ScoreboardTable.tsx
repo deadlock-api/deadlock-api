@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { api } from "~/lib/api";
+import { queryKeys } from "~/queries/query-keys";
 import { ScoreboardControls } from "./ScoreboardControls";
 import { formatStatValue, getSortByLabel } from "./sort-options";
 
@@ -41,7 +42,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
 
   const steamProfileQueries = useQueries({
     queries: batches.map((batch) => ({
-      queryKey: ["steamProfiles", batch],
+      queryKey: queryKeys.steam.profiles(batch),
       queryFn: async () => {
         const response = await api.steam_api.steam({ accountIds: batch });
         const map: SteamProfileMap = {};

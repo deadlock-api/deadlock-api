@@ -7,6 +7,7 @@ import ItemImage from "~/components/ItemImage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { api } from "~/lib/api";
 import { cn } from "~/lib/utils";
+import { queryKeys } from "~/queries/query-keys";
 
 export interface MatchHistoryCardPlayer {
   heroId: number;
@@ -159,7 +160,7 @@ export default function MatchHistoryCard({
   const lateItems = buildData?.items.filter((i) => i.gameTimeS >= MID_MAX_S) ?? [];
 
   const { data: steamProfile } = useQuery({
-    queryKey: ["steam-profile", accountId],
+    queryKey: queryKeys.steam.profile(accountId),
     queryFn: async () => {
       if (accountId == null) return null;
       const res = await api.steam_api.steam({ accountIds: [accountId] });

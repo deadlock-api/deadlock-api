@@ -19,6 +19,7 @@ import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
+import { queryKeys } from "~/queries/query-keys";
 
 // Parsers for sort field and direction using nuqs string literal parser
 const parseAsSortField = parseAsStringLiteral(["winRate", "matches"] as const);
@@ -613,8 +614,7 @@ export default function ItemStatsTable({
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery({
-    queryKey: [
-      "api-item-stats",
+    queryKey: queryKeys.analytics.itemStats(
       minMatches,
       hero,
       minRankId,
@@ -624,7 +624,7 @@ export default function ItemStatsTable({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,
@@ -643,8 +643,7 @@ export default function ItemStatsTable({
   });
 
   const { data: prevData } = useQuery({
-    queryKey: [
-      "api-item-stats",
+    queryKey: queryKeys.analytics.itemStats(
       minMatches,
       hero,
       minRankId,
@@ -654,7 +653,7 @@ export default function ItemStatsTable({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,

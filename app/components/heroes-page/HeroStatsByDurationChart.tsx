@@ -6,6 +6,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
+import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 const DURATION_BUCKETS = [
@@ -48,8 +49,7 @@ export default function HeroStatsByDurationChart({
 
   const bucketQueries = useQueries({
     queries: DURATION_BUCKETS.map((bucket) => ({
-      queryKey: [
-        "api-hero-stats-by-duration",
+      queryKey: queryKeys.analytics.heroStatsByDuration(
         bucket.minS,
         bucket.maxS,
         minRankId,
@@ -59,7 +59,7 @@ export default function HeroStatsByDurationChart({
         minHeroMatches,
         minHeroMatchesTotal,
         gameMode,
-      ],
+      ),
       queryFn: async () => {
         const response = await api.analytics_api.heroStats({
           minHeroMatches,

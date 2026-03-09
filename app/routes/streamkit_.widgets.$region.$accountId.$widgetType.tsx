@@ -6,6 +6,7 @@ import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { RawWidget } from "~/components/streamkit/widgets/raw";
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
+import { queryKeys } from "~/queries/query-keys";
 import type { Color, Region, Theme } from "~/types/streamkit/widget";
 
 export const meta: MetaFunction = () => {
@@ -18,7 +19,7 @@ export default function Widget() {
   const [searchParams] = useSearchParams();
 
   const { data: fetchedVersion, error: versionError } = useQuery<number>({
-    queryKey: ["version", widgetType],
+    queryKey: queryKeys.streamkit.version(widgetType),
     queryFn: () =>
       fetch(`${API_ORIGIN}/v1/commands/widgets/versions`)
         .then((res) => res.json())

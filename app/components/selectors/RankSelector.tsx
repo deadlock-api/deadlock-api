@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl } from "~/lib/rank-utils";
+import { queryKeys } from "~/queries/query-keys";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";
 
@@ -32,7 +33,7 @@ export default function RankSelector({
   label?: string;
 }) {
   const { data: ranksData, isLoading } = useQuery({
-    queryKey: ["assets-ranks"],
+    queryKey: queryKeys.assets.ranks(),
     queryFn: async () => {
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;

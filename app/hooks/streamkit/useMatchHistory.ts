@@ -7,6 +7,7 @@ import type {
 } from "~/components/streamkit/widgets/MatchHistory/MatchHistory.types";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { queryKeys } from "~/queries/query-keys";
 
 interface UseMatchHistoryParams {
   accountId: string;
@@ -28,7 +29,7 @@ export const useMatchHistory = ({
     isLoading: loadingHeroes,
     error: heroesError,
   } = useQuery<Hero[]>({
-    queryKey: ["heroes"],
+    queryKey: queryKeys.streamkit.heroes(),
     queryFn: () => fetch(`${ASSETS_ORIGIN}/v2/heroes`).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -38,7 +39,7 @@ export const useMatchHistory = ({
     isLoading: loadingMatches,
     error: matchesError,
   } = useQuery<Match[]>({
-    queryKey: ["match-history", accountId],
+    queryKey: queryKeys.streamkit.matchHistory(accountId),
     queryFn: async () => {
       const res = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history`);
       if (res.status === 429) {

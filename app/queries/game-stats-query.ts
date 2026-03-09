@@ -1,7 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
-import { api } from "~/lib/api";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { api } from "~/lib/api";
+import { queryKeys } from "./query-keys";
 
 export interface GameStatsQueryParams {
   bucket?: GameStatsBucketEnum;
@@ -16,8 +17,7 @@ export interface GameStatsQueryParams {
 
 export function gameStatsQueryOptions(params: GameStatsQueryParams) {
   return queryOptions({
-    queryKey: [
-      "api-game-stats",
+    queryKey: queryKeys.analytics.gameStats(
       params.bucket,
       params.gameMode,
       params.minUnixTimestamp,
@@ -26,7 +26,7 @@ export function gameStatsQueryOptions(params: GameStatsQueryParams) {
       params.maxDurationS,
       params.minAverageBadge,
       params.maxAverageBadge,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.gameStats({
         bucket: params.bucket,

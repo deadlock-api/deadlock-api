@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type FC, useEffect, useState } from "react";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
+import { queryKeys } from "~/queries/query-keys";
 import type { RawWidgetProps, Region } from "~/types/streamkit/widget";
 
 export const RawWidget: FC<RawWidgetProps> = ({
@@ -35,7 +36,7 @@ export const RawWidget: FC<RawWidgetProps> = ({
     isLoading: statsLoading,
     error: statsError,
   } = useQuery<Record<string, string>>({
-    queryKey: ["stats", region, accountId, variable, extraArgs],
+    queryKey: queryKeys.streamkit.stats(region, accountId, variable, extraArgs),
     queryFn: () => fetchStats(region, accountId, variable, extraArgs),
     staleTime: refreshInterval - 10000,
     refetchInterval: refreshInterval,

@@ -6,6 +6,7 @@ import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
 import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
+import { queryKeys } from "~/queries/query-keys";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 
 function getRankId(tier: number, subrank: number): number {
@@ -29,7 +30,7 @@ interface RankRangeSelectorProps {
 
 export default function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
   const { data: ranksData, isLoading } = useQuery({
-    queryKey: ["assets-ranks"],
+    queryKey: queryKeys.assets.ranks(),
     queryFn: async () => {
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;
