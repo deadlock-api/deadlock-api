@@ -36,7 +36,7 @@ export function VariablesList({ variables, onVariableClick }: VariablesListProps
   const groupedVariables = groupBy(variables, (item) => item.category || "Miscellaneous");
   return (
     <div>
-      <h3 className="block text-lg font-medium text-foreground mb-2">Available Variables</h3>
+      <h3 className="block text-sm font-medium text-foreground mb-2">Available Variables</h3>
       <div className="space-y-2">
         {Object.entries(groupedVariables)
           .sort((a, b) => sort_weight(a[0]) - sort_weight(b[0]))

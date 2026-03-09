@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { CheckCircle, Layers, Loader2, Terminal } from "lucide-react";
+import { parseAsString, useQueryState } from "nuqs";
+import { useEffect } from "react";
 import type { MetaFunction } from "react-router";
 import { useSearchParams } from "react-router";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import CommandBuilder from "~/components/streamkit/command/CommandBuilder";
 import WidgetBuilder from "~/components/streamkit/widget-builder";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -25,8 +26,8 @@ export const meta: MetaFunction = () => {
 
 export default function StreamKit() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [steamId, setSteamId] = useState(searchParams.get("steamid") ?? "");
-  const [region, setRegion] = useState(searchParams.get("region") ?? "");
+  const [steamId, setSteamId] = useQueryState("steamid", parseAsString.withDefault(""));
+  const [region, setRegion] = useQueryState("region", parseAsString.withDefault(""));
 
   useEffect(() => {
     if (!validateSteamResponse(searchParams)) return;
@@ -40,12 +41,13 @@ export default function StreamKit() {
     const id3 = steamId64ToSteamId3(steamId64);
     setSteamId(id3.toString());
 
-    // Clean openid params from URL, keep region
-    const regionParam = searchParams.get("region");
+    // Clean openid params from URL, keep steamid and region
     const newParams = new URLSearchParams();
+    newParams.set("steamid", id3.toString());
+    const regionParam = searchParams.get("region");
     if (regionParam) newParams.set("region", regionParam);
     setSearchParams(newParams, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, setSteamId]);
 
   const parseSteamId = (steamId: string) => {
     try {
@@ -85,47 +87,71 @@ export default function StreamKit() {
     queryFn: () => fetchSteamName(region, steamId),
   });
 
+  const isAccountConnected = steamAccountName && !steamAccountLoading && !steamAccountError;
+
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">Deadlock Stream Kit</h1>
-        <p className="text-sm text-muted-foreground">
-          Connect your Steam account to build chat commands and OBS widgets for your stream.
-        </p>
-      </div>
+      {/* Hero Section — matches patron/index hero pattern */}
+      <section className="relative text-center space-y-4 py-6">
+        <div className="absolute inset-0 -top-12 flex items-center justify-center pointer-events-none" aria-hidden>
+          <div className="w-80 h-80 rounded-full bg-primary/8 blur-3xl" />
+        </div>
+        <div className="relative space-y-3">
+          <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">Stream Kit</h1>
+          <p className="mx-auto max-w-xl text-muted-foreground">
+            Build chat commands and OBS widgets for your Deadlock stream
+          </p>
+        </div>
+      </section>
 
-      <div className="mx-auto max-w-xl rounded-lg border border-border bg-card p-5 space-y-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Account Identification</h2>
-
-        <div className="flex flex-col sm:flex-row items-stretch gap-4">
+      {/* Account Setup */}
+      <div className="rounded-xl border border-border bg-card p-5 md:p-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_1fr]">
           {/* Manual input */}
-          <div className="flex-1 space-y-2">
-            <Label>Steam ID3</Label>
-            <Input
-              type="number"
-              value={steamId}
-              onChange={(e) => setSteamId(e.target.value)}
-              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              placeholder="e.g. 123456789"
-            />
-            <p className="text-xs text-muted-foreground">
-              Find it in your Steam profile URL or with a Steam ID finder tool.
-            </p>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <h3 className="font-semibold text-foreground">Connect Your Account</h3>
+              <p className="text-sm text-muted-foreground">Enter your Steam ID manually</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="steamid-input">Steam ID3</Label>
+              <Input
+                id="steamid-input"
+                type="number"
+                value={steamId}
+                onChange={(e) => setSteamId(e.target.value)}
+                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                placeholder="e.g. 123456789"
+              />
+              <p className="text-xs text-muted-foreground">
+                Find it in your Steam profile URL or with a Steam ID finder tool.
+              </p>
+            </div>
           </div>
 
-          {/* "or" divider — vertical on desktop, horizontal on mobile */}
-          <div className="flex sm:flex-col items-center gap-2 sm:py-2">
-            <div className="flex-1 border-t sm:border-t-0 sm:border-l border-border sm:h-full" />
-            <span className="text-xs uppercase text-muted-foreground shrink-0">or</span>
-            <div className="flex-1 border-t sm:border-t-0 sm:border-l border-border sm:h-full" />
+          {/* Divider */}
+          <div className="hidden items-center md:flex">
+            <div className="relative flex h-full flex-col items-center justify-center">
+              <div className="h-full w-px bg-border" />
+              <span className="absolute bg-card px-2 text-xs font-medium uppercase text-muted-foreground">or</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:hidden">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs font-medium uppercase text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
           </div>
 
           {/* Quick connect */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Quick Connect</span>
+          <div className="flex flex-col items-center justify-center gap-3 md:items-start">
+            <div className="space-y-1 text-center md:text-left">
+              <h3 className="font-semibold text-foreground">Quick Connect</h3>
+              <p className="text-sm text-muted-foreground">Sign in directly with Steam</p>
+            </div>
             <Button
+              size="lg"
               variant="outline"
-              className="w-full max-w-56"
+              className="w-full border-[#2a2f3a] bg-[#171a21] font-semibold hover:bg-[#1f232b] sm:w-auto"
               onClick={() => {
                 const returnPath = region ? `/streamkit?region=${encodeURIComponent(region)}` : "/streamkit";
                 window.location.href = generateSteamAuthUrl({ returnPath });
@@ -139,8 +165,8 @@ export default function StreamKit() {
           </div>
         </div>
 
-        {/* Region selector */}
-        <div className="border-t border-border pt-4 space-y-2">
+        {/* Region selector — inside account card */}
+        <div className="mt-5 border-t border-border pt-5 space-y-2">
           <Label>Region</Label>
           <ToggleGroup
             type="single"
@@ -157,11 +183,12 @@ export default function StreamKit() {
           </ToggleGroup>
         </div>
 
+        {/* Account status */}
         {steamId && region && (
-          <div className="border-t border-border pt-4">
+          <div className="mt-5 border-t border-border pt-5">
             {steamAccountLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <LoadingLogo />
+                <Loader2 className="size-4 animate-spin" />
                 Fetching Steam account...
               </div>
             ) : steamAccountError || !steamAccountName ? (
@@ -171,27 +198,50 @@ export default function StreamKit() {
                 </AlertDescription>
               </Alert>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Found Steam account:{" "}
-                <span className="font-bold text-foreground">
-                  {steamAccountName} ({steamId})
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle className="size-4 text-green-500" />
+                <span className="text-muted-foreground">
+                  Found Steam account:{" "}
+                  <span className="font-semibold text-foreground">
+                    {steamAccountName} ({steamId})
+                  </span>
                 </span>
-              </p>
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {steamAccountName && !steamAccountLoading && !steamAccountError && (
-        <div className="flex flex-wrap gap-x-6 gap-y-6">
-          <div className="mt-6 min-w-0 flex-1">
-            <h2 className="text-xl font-bold text-foreground">Command Builder</h2>
+      {/* Builder Grid */}
+      {isAccountConnected && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Command Builder */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-start gap-4 mb-5">
+              <div className="flex items-center justify-center size-10 rounded-lg bg-muted border border-border shrink-0">
+                <Terminal className="size-5 text-muted-foreground" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">Command Builder</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Create dynamic chatbot commands</p>
+              </div>
+            </div>
             <CommandBuilder region={region} accountId={parseSteamId(steamId)} />
-          </div>
-          <div className="mt-6 min-w-0 flex-1">
-            <h2 className="text-xl font-bold text-foreground">Widget Builder</h2>
+          </section>
+
+          {/* Widget Builder */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-start gap-4 mb-5">
+              <div className="flex items-center justify-center size-10 rounded-lg bg-muted border border-border shrink-0">
+                <Layers className="size-5 text-muted-foreground" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">Widget Builder</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Build OBS overlays for your stream</p>
+              </div>
+            </div>
             <WidgetBuilder region={region} accountId={parseSteamId(steamId)} />
-          </div>
+          </section>
         </div>
       )}
     </div>

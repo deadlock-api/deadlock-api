@@ -1,4 +1,4 @@
-import { LoadingLogo } from "~/components/LoadingLogo";
+import { Loader2 } from "lucide-react";
 
 interface CommandPreviewProps {
   preview: string | null;
@@ -8,12 +8,12 @@ interface CommandPreviewProps {
 
 export function CommandPreview({ preview, previewError, loading }: CommandPreviewProps) {
   return (
-    <div>
-      <h3 className="block text-sm font-medium text-foreground">Command Preview</h3>
-      <div className="mt-1 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
+    <div className="space-y-1">
+      <h3 className="text-sm font-medium text-foreground">Command Preview</h3>
+      <div className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
         {loading ? (
           <div className="flex items-center gap-2">
-            <LoadingLogo />
+            <Loader2 className="size-4 animate-spin" />
             <span>Loading preview...</span>
           </div>
         ) : previewError ? (

@@ -100,7 +100,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
   };
 
   return (
-    <div className="mt-4 space-y-6">
+    <div className="flex flex-col gap-6">
       <TemplateInput template={template} setTemplate={setTemplate} />
       <VariablesList variables={variables} onVariableClick={insertVariable} />
       <ExtraArguments extraArgs={extraArgs} usedArgs={usedExtraArgs()} onExtraArgChange={handleExtraArgChange} />
