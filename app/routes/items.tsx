@@ -6,7 +6,8 @@ import ItemStatsTable from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -95,11 +96,15 @@ export default function Items(
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
-        <TabsList variant="line" className="w-full overflow-x-auto scrollbar-none">
-          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
-          <TabsTrigger value="item-purchase-analysis">Purchase Analysis</TabsTrigger>
-          <TabsTrigger value="item-combs">Combination Stats</TabsTrigger>
-        </TabsList>
+        <ResponsiveTabsList
+          value={tab ?? undefined}
+          onValueChange={(value) => setTab(value as typeof tab)}
+          options={[
+            { value: "stats", label: "Overall Stats" },
+            { value: "item-purchase-analysis", label: "Purchase Analysis" },
+            { value: "item-combs", label: "Combination Stats" },
+          ]}
+        />
         <TabsContent value="stats">
           <ItemStatsTable
             columns={["itemsTier", "winRate", "matches", "confidence"]}

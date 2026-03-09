@@ -5,7 +5,8 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { Tabs, TabsContent } from "~/components/ui/tabs";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
@@ -115,11 +116,15 @@ export default function GameStats() {
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
-        <TabsList variant="line" className="w-full overflow-x-auto scrollbar-none">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="over-time">Over Time</TabsTrigger>
-          <TabsTrigger value="by-rank">By Rank</TabsTrigger>
-        </TabsList>
+        <ResponsiveTabsList
+          value={tab ?? undefined}
+          onValueChange={(value) => setTab(value as typeof tab)}
+          options={[
+            { value: "overview", label: "Overview" },
+            { value: "over-time", label: "Over Time" },
+            { value: "by-rank", label: "By Rank" },
+          ]}
+        />
 
         <TabsContent value="overview">
           <Suspense fallback={<LoadingLogo />}>
