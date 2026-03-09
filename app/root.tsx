@@ -3,6 +3,7 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "re
 
 import "./tailwind.css";
 import "./dayjs.ts";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
@@ -105,15 +106,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 3,
-      retryDelay: 100,
-    },
-  },
-});
 export default function App() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 3,
+            retryDelay: 100,
+          },
+        },
+      }),
+  );
   const { pathname } = useLocation();
   const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
 

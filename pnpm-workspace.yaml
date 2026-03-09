@@ -1,3 +1,5 @@
 onlyBuiltDependencies:
-  - "deadlock_api_client"
-  - "assets_deadlock_api_client"
+  - assets_deadlock_api_client
+  - deadlock_api_client
+  - sharp
+  - workerd
