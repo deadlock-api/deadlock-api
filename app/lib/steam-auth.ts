@@ -19,12 +19,17 @@ export function getCurrentDomain(): string {
 
 /**
  * Generate Steam OpenID authentication URL
- * @param action - The action to perform after authentication (deletion or tracking)
+ * @param actionOrOptions - The action for data-privacy, or an options object with returnPath
  * @returns Steam authentication URL
  */
-export function generateSteamAuthUrl(action: "deletion" | "tracking"): string {
+export function generateSteamAuthUrl(action: "deletion" | "tracking"): string;
+export function generateSteamAuthUrl(options: { returnPath: string }): string;
+export function generateSteamAuthUrl(actionOrOptions: "deletion" | "tracking" | { returnPath: string }): string {
   const currentDomain = getCurrentDomain();
-  const returnUrl = `${currentDomain}/data-privacy?action=${action}`;
+  const returnUrl =
+    typeof actionOrOptions === "string"
+      ? `${currentDomain}/data-privacy?action=${actionOrOptions}`
+      : `${currentDomain}${actionOrOptions.returnPath}`;
 
   const params = new URLSearchParams({
     "openid.ns": "http://specs.openid.net/auth/2.0",
