@@ -1,16 +1,7 @@
-import { Activity, Coins, Flame, Swords, Wheat, type LucideIcon } from "lucide-react";
 import type React from "react";
 import { useMemo } from "react";
 import { cn } from "~/lib/utils";
-import { getFilteredCategories } from "./stat-definitions";
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  "Match Flow": Activity,
-  Combat: Swords,
-  Damage: Flame,
-  Farming: Wheat,
-  Economy: Coins,
-};
+import { CATEGORY_ICONS, getFilteredCategories } from "./stat-definitions";
 
 export function StatSelector({
   value,

@@ -1,19 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, ArrowDown, ArrowUp, Coins, Flame, Swords, Wheat, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/game-stats-query";
-import { formatStatValue, getFilteredCategories } from "./stat-definitions";
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  "Match Flow": Activity,
-  Combat: Swords,
-  Damage: Flame,
-  Economy: Coins,
-  Farming: Wheat,
-};
+import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
 
 interface GameStatsOverviewProps {
   params: GameStatsQueryParams;
