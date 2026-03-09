@@ -21,8 +21,6 @@ import { heroesQueryOptions } from "~/queries/asset-queries";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 import type { ByRankStat } from "./HeroStatSelectors";
 
-const BEBOP_HERO_ID = 15;
-
 interface HeroStatsByRankChartProps {
   minHeroMatches?: number;
   minHeroMatchesTotal?: number;
@@ -278,7 +276,7 @@ export default function HeroStatsByRankChart({
     [heroDataByHero, heroIdMap],
   );
 
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([BEBOP_HERO_ID]));
+  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
 
   const handleLegendClick = useCallback(
     (entry: { value?: string }) => {
