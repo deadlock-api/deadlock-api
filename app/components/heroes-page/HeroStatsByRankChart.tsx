@@ -225,9 +225,9 @@ export function HeroStatsByRankChart({
 
   const badgeMap = useMemo(() => (ranksData ? extractBadgeMap(ranksData) : new Map()), [ranksData]);
 
-  const heroDataByHero = useMemo(() => {
+  // Aggregate subtiers into tiers per hero (only depends on raw data)
+  const tierAggByHero = useMemo(() => {
     if (!heroData) return {};
-    // Aggregate subtiers into tiers per hero
     const tierAgg: Record<number, Record<number, AggregatedTier>> = {};
     for (const entry of heroData) {
       const tier = Math.floor(entry.bucket / 10);
@@ -235,9 +235,13 @@ export function HeroStatsByRankChart({
       if (!tierAgg[entry.hero_id][tier]) tierAgg[entry.hero_id][tier] = newAggregatedTier();
       addToAggregatedTier(tierAgg[entry.hero_id][tier], entry);
     }
-    // Convert to data points
+    return tierAgg;
+  }, [heroData]);
+
+  // Convert aggregated tiers to data points (depends on display settings)
+  const heroDataByHero = useMemo(() => {
     const grouped: Record<number, DataPoint[]> = {};
-    for (const [heroIdStr, tiers] of Object.entries(tierAgg)) {
+    for (const [heroIdStr, tiers] of Object.entries(tierAggByHero)) {
       const heroId = Number(heroIdStr);
       grouped[heroId] = [];
       for (const [tierStr, agg] of Object.entries(tiers)) {
@@ -260,7 +264,7 @@ export function HeroStatsByRankChart({
       grouped[heroId].sort((a, b) => a.badge - b.badge);
     }
     return grouped;
-  }, [heroData, badgeMap, gameMode, heroIdMap, xStat, yStat]);
+  }, [tierAggByHero, badgeMap, gameMode, heroIdMap, xStat, yStat]);
 
   const heroIdsWithData = useMemo(
     () =>
