@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
-import { useCallback, useRef, useState } from "react";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useCallback, useRef } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -130,9 +131,14 @@ function getDefaultRegion(): LeaderboardRegionEnum {
   return LeaderboardRegionEnum.Europe;
 }
 
+const REGION_VALUES = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
+
 export default function Leaderboard() {
-  const [region, setRegion] = useState<LeaderboardRegionEnum>(getDefaultRegion);
-  const [heroId, setHeroId] = useState<number | null>(null);
+  const [region, setRegion] = useQueryState(
+    "region",
+    parseAsStringLiteral(REGION_VALUES).withDefault(getDefaultRegion()),
+  );
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
 
   const [ranks, leaderboardQuery] = useQueries({
     queries: [
@@ -161,9 +167,12 @@ export default function Leaderboard() {
 
   const tableRef = useRef<LeaderboardTableHandle>(null);
 
-  const handleHeroClick = useCallback((heroId: number) => {
-    setHeroId(heroId);
-  }, []);
+  const handleHeroClick = useCallback(
+    (heroId: number) => {
+      setHeroId(heroId);
+    },
+    [setHeroId],
+  );
 
   const handleBadgeClick = useCallback((rank: number) => {
     tableRef.current?.jumpToRank(rank);
