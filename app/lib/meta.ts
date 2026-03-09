@@ -39,4 +39,5 @@ const OG_IMAGES: Record<string, string> = {
   "/player-scoreboard": "/og/leaderboard.png",
   "/streamkit": "/og/default.png",
   "/chat": "/og/default.png",
+  "/deadlockdle": "/og/default.png",
 };

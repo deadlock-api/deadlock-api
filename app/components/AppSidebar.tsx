@@ -4,6 +4,7 @@ import {
   BarChart3,
   Database,
   ExternalLink,
+  Gamepad2,
   Home,
   ListOrdered,
   Map,
@@ -69,6 +70,12 @@ const navGroups: NavGroup[] = [
     links: [
       { to: "/chat", label: "AI Chat", icon: MessageSquare },
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
+    ],
+  },
+  {
+    label: "Games",
+    links: [
+      { to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 },
     ],
   },
 ];
