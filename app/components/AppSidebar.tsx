@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Database,
@@ -16,7 +17,6 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
@@ -46,10 +46,10 @@ const navGroups: NavGroup[] = [
   {
     label: "Analytics",
     links: [
+      { to: "/game-stats", label: "Game Stats", icon: BarChart3 },
       { to: "/heroes", label: "Heroes", icon: Swords },
       { to: "/items", label: "Items", icon: ShoppingBag },
-      { to: "/ability-order", label: "Ability Order", icon: ListOrdered },
-      { to: "/game-stats", label: "Game Stats", icon: BarChart3 },
+      { to: "/abilities", label: "Abilities", icon: ListOrdered },
     ],
   },
   {
