@@ -4,6 +4,7 @@ import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } f
 import { lazy, Suspense } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
@@ -77,9 +78,7 @@ export default function Heatmap() {
     ],
   });
 
-  const isPending = mapQuery.isPending || killDeathQuery.isPending;
-  const isError = mapQuery.isError || killDeathQuery.isError;
-  const error = mapQuery.error || killDeathQuery.error;
+  const { isPending, isError, error } = combineQueryStates(mapQuery, killDeathQuery);
 
   const handleDateChange = (start?: Dayjs, end?: Dayjs) => {
     setDateRange([start, end]);

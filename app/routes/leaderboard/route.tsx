@@ -3,6 +3,7 @@ import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { useCallback, useRef, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { combineQueryStates } from "~/components/QueryRenderer";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { createPageMeta } from "~/lib/meta";
@@ -155,9 +156,7 @@ export default function Leaderboard() {
     ],
   });
 
-  const isPending = ranks?.isPending || leaderboardQuery?.isPending;
-  const isError = ranks?.isError || leaderboardQuery?.isError;
-  const error = ranks?.error || leaderboardQuery?.error;
+  const { isPending, isError, error } = combineQueryStates(ranks, leaderboardQuery);
 
   const tableRef = useRef<LeaderboardTableHandle>(null);
 
