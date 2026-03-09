@@ -32,9 +32,7 @@ export default function GameStatsOverTimeChart({
   onTimeBucketChange,
   isStreetBrawl = false,
 }: GameStatsOverTimeChartProps) {
-  const { data, isPending } = useQuery(
-    gameStatsQueryOptions({ ...params, bucket: timeBucket }),
-  );
+  const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: timeBucket }));
 
   const statDef = getStatDefinition(stat);
 
@@ -91,7 +89,7 @@ export default function GameStatsOverTimeChart({
             />
             <YAxis
               domain={["dataMin", "auto"]}
-              tickFormatter={(v) => statDef ? formatStatValue(v, statDef.format) : String(v)}
+              tickFormatter={(v) => (statDef ? formatStatValue(v, statDef.format) : String(v))}
               stroke="#525252"
               label={{
                 value: statDef?.label ?? stat,
@@ -102,7 +100,10 @@ export default function GameStatsOverTimeChart({
             />
             <Tooltip
               labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
-              formatter={(value: number) => [statDef ? formatStatValue(value, statDef.format) : value, statDef?.label ?? stat]}
+              formatter={(value: number) => [
+                statDef ? formatStatValue(value, statDef.format) : value,
+                statDef?.label ?? stat,
+              ]}
               contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
               itemStyle={{ color: "#e5e5e5" }}
             />
