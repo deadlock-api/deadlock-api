@@ -11,14 +11,14 @@ import { ScoreboardTable } from "./ScoreboardTable";
 import { SortBySelector } from "./SortBySelector";
 import { ALL_SORT_BY_VALUES } from "./sort-options";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Player Scoreboard | Deadlock API" },
-    {
-      name: "description",
-      content: "Top Deadlock player performances ranked by kills, damage, healing, and other in-game stats.",
-    },
-  ];
+  return createPageMeta({
+    title: "Player Scoreboard | Deadlock API",
+    description: "View top player scores and performance metrics across the Deadlock community.",
+    path: "/player-scoreboard",
+  });
 };
 
 export default function PlayerScoreboard() {

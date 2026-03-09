@@ -18,16 +18,15 @@ import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { ElectricBorder } from "~/components/ElectricBorder";
+import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Deadlock API - Game Stats, Hero Analytics & Leaderboards" },
-    {
-      name: "description",
-      content:
-        "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve. Open source and open data.",
-    },
-  ];
+  return createPageMeta({
+    title: "Deadlock API - Game Stats, Hero Analytics & Leaderboards",
+    description:
+      "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve. Open source and open data.",
+    path: "/",
+  });
 };
 
 const valueProps = [

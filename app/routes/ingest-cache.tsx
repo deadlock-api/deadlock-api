@@ -12,14 +12,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { API_ORIGIN } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Community Data Ingestion | Deadlock API" },
-    {
-      name: "description",
-      content: "Upload match replay data from your Steam cache to help expand the Deadlock API database.",
-    },
-  ];
+  return createPageMeta({
+    title: "Community Data Ingestion | Deadlock API",
+    description: "Upload match replay data from your Steam cache to help expand the Deadlock API database.",
+    path: "/ingest-cache",
+  });
 };
 
 interface Salts {

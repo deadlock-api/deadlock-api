@@ -7,10 +7,16 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
   return [
-    { title: "Patreon Login | Deadlock API" },
-    { name: "description", content: "Complete your Patreon authentication" },
+    ...createPageMeta({
+      title: "Patreon Login | Deadlock API",
+      description: "Complete your Patreon authentication",
+      path: "/auth/patreon/callback",
+    }),
+    { name: "robots", content: "noindex, nofollow" },
   ];
 };
 

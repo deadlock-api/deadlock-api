@@ -17,15 +17,15 @@ import { extractSteamId, generateSteamAuthUrl, validateSteamResponse } from "~/l
 
 const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Stream Toolkit & OBS Widgets | Deadlock API" },
-    {
-      name: "description",
-      content:
-        "Build chat commands and OBS widgets for your Deadlock stream. Show live stats, match history, and more.",
-    },
-  ];
+  return createPageMeta({
+    title: "Stream Toolkit & OBS Widgets | Deadlock API",
+    description:
+      "Build chat commands and OBS widgets for your Deadlock stream. Show live stats, match history, and more.",
+    path: "/streamkit",
+  });
 };
 
 export default function StreamKit() {

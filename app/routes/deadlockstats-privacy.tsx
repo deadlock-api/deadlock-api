@@ -1,9 +1,13 @@
 import type { MetaFunction } from "react-router";
+import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Deadlock Stats Privacy Policy" },
-    { name: "description", content: "Deadlock Stats Privacy Policy" },
+    ...createPageMeta({
+      title: "Deadlock Stats Privacy Policy",
+      description: "Deadlock Stats Privacy Policy",
+      path: "/deadlockstats-privacy",
+    }),
     { name: "robots", content: "noindex, nofollow" },
   ];
 };

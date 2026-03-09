@@ -11,14 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Item Stats & Build Analytics | Deadlock API" },
-    {
-      name: "description",
-      content: "Item win rates, purchase timing, confidence intervals, and combo analytics for Deadlock.",
-    },
-  ];
+  return createPageMeta({
+    title: "Item Stats & Build Analytics | Deadlock API",
+    description: "Item win rates, purchase timing, confidence intervals, and combo analytics for Deadlock.",
+    path: "/items",
+  });
 };
 
 export default function Items(

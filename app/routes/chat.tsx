@@ -8,15 +8,14 @@ import { TurnstileVerification } from "~/components/chat/TurnstileVerification";
 import { Button } from "~/components/ui/button";
 import { useChatStream } from "~/hooks/useChatStream";
 import { useRateLimit } from "~/hooks/useRateLimit";
+import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
-  return [
-    { title: "AI Chat Assistant | Deadlock API" },
-    {
-      name: "description",
-      content: "Chat with the Deadlock AI Assistant to get help with game data, statistics, and more.",
-    },
-  ];
+  return createPageMeta({
+    title: "AI Chat Assistant | Deadlock API",
+    description: "Ask questions about Deadlock heroes, items, and strategies with the AI chat assistant.",
+    path: "/chat",
+  });
 };
 
 export default function ChatPage() {

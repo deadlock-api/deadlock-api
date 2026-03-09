@@ -17,11 +17,14 @@ const Heatmap3D = lazy(() => import("./Heatmap3D"));
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 
+import { createPageMeta } from "~/lib/meta";
+
 export function meta() {
-  return [
-    { title: "Kill/Death Heatmap | Deadlock API" },
-    { name: "description", content: "Visualize kill and death hotspots on the Deadlock map" },
-  ];
+  return createPageMeta({
+    title: "Kill/Death Heatmap | Deadlock API",
+    description: "Interactive kill heatmaps showing combat hotspots across Deadlock maps.",
+    path: "/heatmap",
+  });
 }
 
 export default function Heatmap() {

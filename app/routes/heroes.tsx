@@ -24,15 +24,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { HERO_STATS } from "~/types/api_hero_stats";
+import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Hero Stats & Analytics | Deadlock API" },
-    {
-      name: "description",
-      content: "View win rates, pick rates, matchups, and performance analytics for all Deadlock heroes.",
-    },
-  ];
+  return createPageMeta({
+    title: "Hero Stats & Analytics | Deadlock API",
+    description: "View win rates, pick rates, matchups, and performance analytics for all Deadlock heroes.",
+    path: "/heroes",
+  });
 };
 export default function Heroes(
   {
