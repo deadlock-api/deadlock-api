@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useEffect, useState } from "react";
+import { createContext, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { API_ORIGIN } from "~/lib/constants";
 
 const API_URL = API_ORIGIN;
@@ -121,12 +121,15 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
     refreshStatus();
   }, [refreshStatus]);
 
-  const contextValue: PatronAuthContextValue = {
-    ...authState,
-    login,
-    logout,
-    refreshStatus,
-  };
+  const contextValue: PatronAuthContextValue = useMemo(
+    () => ({
+      ...authState,
+      login,
+      logout,
+      refreshStatus,
+    }),
+    [authState, login, logout, refreshStatus],
+  );
 
   return <PatronAuthContext.Provider value={contextValue}>{children}</PatronAuthContext.Provider>;
 }
