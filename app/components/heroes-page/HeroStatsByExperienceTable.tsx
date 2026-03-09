@@ -262,7 +262,11 @@ export default function HeroStatsByExperienceTable({
                 {bucketLoading[i] ? (
                   <Skeleton className="h-4 w-12 mx-auto" />
                 ) : (
-                  <BucketTooltip entry={row.bucketEntries[i]} heroStat={heroStat} bucketLabel={EXPERIENCE_BUCKETS[i].label}>
+                  <BucketTooltip
+                    entry={row.bucketEntries[i]}
+                    heroStat={heroStat}
+                    bucketLabel={EXPERIENCE_BUCKETS[i].label}
+                  >
                     {formatValue(val)}
                   </BucketTooltip>
                 )}
@@ -272,7 +276,11 @@ export default function HeroStatsByExperienceTable({
               {!allBucketsLoaded ? (
                 <Skeleton className="h-4 w-12 mx-auto" />
               ) : (
-                <DeltaTooltip firstEntry={row.bucketEntries.find((e) => e !== null) ?? null} lastEntry={[...row.bucketEntries].reverse().find((e) => e !== null) ?? null} heroStat={heroStat}>
+                <DeltaTooltip
+                  firstEntry={row.bucketEntries.find((e) => e !== null) ?? null}
+                  lastEntry={[...row.bucketEntries].reverse().find((e) => e !== null) ?? null}
+                  heroStat={heroStat}
+                >
                   {formatDelta(row.delta)}
                 </DeltaTooltip>
               )}

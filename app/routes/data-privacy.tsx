@@ -22,7 +22,8 @@ export const meta: MetaFunction = () => {
     { title: "Data Privacy & GDPR | Deadlock API" },
     {
       name: "description",
-      content: "Manage your data privacy settings. Request data deletion or re-enable tracking via Steam authentication.",
+      content:
+        "Manage your data privacy settings. Request data deletion or re-enable tracking via Steam authentication.",
     },
   ];
 };

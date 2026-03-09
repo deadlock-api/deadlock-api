@@ -15,7 +15,10 @@ import { cn } from "~/lib/utils";
 export const meta: MetaFunction = () => {
   return [
     { title: "Community Data Ingestion | Deadlock API" },
-    { name: "description", content: "Upload match replay data from your Steam cache to help expand the Deadlock API database." },
+    {
+      name: "description",
+      content: "Upload match replay data from your Steam cache to help expand the Deadlock API database.",
+    },
   ];
 };
 

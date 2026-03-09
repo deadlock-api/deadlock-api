@@ -36,12 +36,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/png" href="https://deadlock-api.com/favicon.png" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
-        <meta name="keywords" content="Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics" />
+        <meta
+          name="description"
+          content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve."
+        />
+        <meta
+          name="keywords"
+          content="Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics"
+        />
         <meta name="robots" content="index, follow" />
 
         <meta property="og:title" content="Deadlock API - Game Stats, Hero Analytics & Leaderboards" />
-        <meta property="og:description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
+        <meta
+          property="og:description"
+          content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve."
+        />
         <meta property="og:image" content="https://deadlock-api.com/favicon.webp" />
         <meta property="og:url" content="https://deadlock-api.com" />
         <meta property="og:type" content="website" />
@@ -51,7 +60,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta property="twitter:domain" content="deadlock-api.com" />
         <meta property="twitter:url" content="https://deadlock-api.com" />
         <meta name="twitter:title" content="Deadlock API - Game Stats, Hero Analytics & Leaderboards" />
-        <meta name="twitter:description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
+        <meta
+          name="twitter:description"
+          content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve."
+        />
         <meta name="twitter:image" content="https://deadlock-api.com/favicon.webp" />
 
         <link rel="manifest" href="/manifest.webmanifest" />
@@ -82,7 +94,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         <noscript>
           <p style={{ padding: "2rem", textAlign: "center", color: "#fff" }}>
-            Deadlock API requires JavaScript to display hero stats, item analytics, and leaderboard data. Please enable JavaScript to continue.
+            Deadlock API requires JavaScript to display hero stats, item analytics, and leaderboard data. Please enable
+            JavaScript to continue.
           </p>
         </noscript>
         <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
