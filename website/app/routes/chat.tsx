@@ -6,6 +6,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { useChatStream } from "~/hooks/useChatStream";
 import { useRateLimit } from "~/hooks/useRateLimit";
+import { IS_DEV } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 
 const ChatError = lazy(() => import("~/components/chat/ChatError").then((m) => ({ default: m.ChatError })));
@@ -25,9 +26,8 @@ export const meta: MetaFunction = () => {
 };
 
 export default function ChatPage() {
-  const isDev = import.meta.env.DEV;
   // In development, bypass Turnstile verification
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(isDev ? "DEV_BYPASS" : null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(IS_DEV ? "DEV_BYPASS" : null);
   const [lastMessage, setLastMessage] = useState<string | null>(null);
 
   const rateLimit = useRateLimit();
@@ -68,7 +68,7 @@ export default function ChatPage() {
   const handleReVerify = useCallback(() => {
     clearError();
     // In development, just reset to bypass token
-    setTurnstileToken(isDev ? "DEV_BYPASS" : null);
+    setTurnstileToken(IS_DEV ? "DEV_BYPASS" : null);
   }, [clearError]);
 
   return (

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-// Import SSE from sse.js
 import { SSE } from "sse.js";
 import type { SSE as SSEType, SSEvent } from "sse.js/types/sse";
 import type {
@@ -15,6 +14,7 @@ import type {
   SSEEvent,
   ToolExecution,
 } from "~/types/chat";
+import { AI_ASSISTANT_API_URL, IS_DEV } from "~/lib/constants";
 
 interface UseChatStreamOptions {
   turnstileToken: string | null;
@@ -54,9 +54,7 @@ export function useChatStream({
   apiUrl,
   onRateLimitHeaders,
 }: UseChatStreamOptions): UseChatStreamReturn {
-  const isDev = import.meta.env.DEV;
-  const defaultApiUrl = import.meta.env.VITE_AI_ASSISTANT_API_URL || "https://ai-assistant.deadlock-api.com";
-  const effectiveApiUrl = apiUrl || defaultApiUrl;
+  const effectiveApiUrl = apiUrl || AI_ASSISTANT_API_URL;
 
   const [conversation, setConversation] = useState<ConversationState>(initialConversationState);
   const [isConnected, setIsConnected] = useState(false);
@@ -212,7 +210,7 @@ export function useChatStream({
 
       // In development mode, skip verification requirements
       // In production, require either Patreon token or Turnstile token
-      if (!isDev && !hasPatreonAuth && !turnstileToken) {
+      if (!IS_DEV && !hasPatreonAuth && !turnstileToken) {
         setConversation((prev) => ({
           ...prev,
           error: {
@@ -262,7 +260,7 @@ export function useChatStream({
       };
       if (hasPatreonAuth) {
         headers["X-Patreon-Token"] = patreonToken;
-      } else if (!isDev && turnstileToken) {
+      } else if (!IS_DEV && turnstileToken) {
         headers["cf-turnstile-response"] = turnstileToken;
       }
 

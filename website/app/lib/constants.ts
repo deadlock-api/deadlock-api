@@ -57,8 +57,13 @@ export const DURATION_BUCKETS = [
 /** Minimum matches required per duration bucket to display data */
 export const MIN_MATCHES_PER_BUCKET = 10;
 
+export const IS_DEV = import.meta.env.DEV;
+
 export const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || "https://api.deadlock-api.com").replace(/\/+$/, "");
 export const ASSETS_ORIGIN = (import.meta.env.VITE_ASSETS_BASE_URL || "https://assets.deadlock-api.com").replace(
   /\/+$/,
   "",
 );
+export const AI_ASSISTANT_API_URL =
+  import.meta.env.VITE_AI_ASSISTANT_API_URL || "https://ai-assistant.deadlock-api.com";
+export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAABs5lyUV9iomsdK2";
