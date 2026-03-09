@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { cn } from "~/lib/utils";
 
 interface LoadingLogoProps {
   className?: string;
+  /** Delay in ms before showing the loading logo (default: 150) */
+  delay?: number;
 }
 
 const PATHS = [
@@ -22,7 +25,17 @@ const PATHS = [
   },
 ];
 
-export function LoadingLogo({ className }: LoadingLogoProps) {
+export function LoadingLogo({ className, delay = 150 }: LoadingLogoProps) {
+  const [show, setShow] = useState(delay <= 0);
+
+  useEffect(() => {
+    if (delay <= 0) return;
+    const timer = setTimeout(() => setShow(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  if (!show) return null;
+
   return (
     <div className="flex justify-center py-12">
     <svg viewBox="0 0 729 790" className={cn("text-primary w-24 h-24", className)} xmlns="http://www.w3.org/2000/svg">
