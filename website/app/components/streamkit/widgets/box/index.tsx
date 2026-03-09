@@ -64,7 +64,7 @@ export const BoxWidget = ({
     return labels || variables.map((v) => v);
   }, [labels, variables, extraArgs]);
 
-  const { stats, loading, refreshTrigger } = useStats({
+  const { stats, loading } = useStats({
     region,
     accountId,
     variables,
@@ -92,13 +92,7 @@ export const BoxWidget = ({
       {showMatchHistory && (
         <div className="flex">
           <div className="grow w-0 overflow-clip">
-            <MatchHistory
-              theme={theme}
-              refresh={refreshTrigger}
-              numMatches={numMatchesToShow}
-              accountId={accountId}
-              opacity={opacity}
-            />
+            <MatchHistory theme={theme} numMatches={numMatchesToShow} accountId={accountId} opacity={opacity} />
           </div>
         </div>
       )}

@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
@@ -18,7 +17,6 @@ interface UseStatsResult {
   stats: Record<string, string> | null;
   loading: boolean;
   error: unknown;
-  refreshTrigger: number;
 }
 
 const fetchStats = async (
@@ -49,15 +47,7 @@ export const useStats = ({
   extraArgs = {},
   refreshInterval = UPDATE_INTERVAL_MS,
 }: UseStatsParams): UseStatsResult => {
-  const [stats, setStats] = useState<Record<string, string> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  const {
-    data,
-    isLoading: statsLoading,
-    error: statsError,
-  } = useQuery<Record<string, string>>({
+  const { data, isLoading, error } = useQuery<Record<string, string>>({
     queryKey: queryKeys.streamkit.stats(region, accountId, variables, auxiliaryVariables, extraArgs),
     queryFn: () => fetchStats(region, accountId, variables, auxiliaryVariables, extraArgs),
     staleTime: refreshInterval - 10000,
@@ -65,20 +55,5 @@ export const useStats = ({
     refetchIntervalInBackground: true,
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stats is not a dependency
-  useEffect(() => {
-    setLoading(statsLoading);
-    if (statsError) {
-      console.error(`Failed to fetch stats: ${statsError}`);
-    } else if (data) {
-      setRefreshTrigger((prev) => prev + 1);
-      const newStats = { ...stats };
-      for (const [key, value] of Object.entries(data)) {
-        if (value) newStats[key] = value;
-      }
-      setStats(newStats);
-    }
-  }, [data, statsLoading, statsError]);
-
-  return { stats, loading, error: statsError, refreshTrigger };
+  return { stats: data ?? null, loading: isLoading, error };
 };

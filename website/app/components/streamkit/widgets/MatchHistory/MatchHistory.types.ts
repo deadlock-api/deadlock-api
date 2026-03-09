@@ -18,7 +18,7 @@ export interface MatchHistoryProps {
   theme: Theme;
   numMatches?: number;
   accountId: string;
-  refresh?: number;
+
   opacity?: number;
 }
 

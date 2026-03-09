@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import type {
   Hero,
   Match,
@@ -13,33 +13,16 @@ import { queryKeys } from "~/queries/query-keys";
 interface UseMatchHistoryParams {
   accountId: string;
   numMatches?: number;
-  refresh?: number;
 }
 
-export const useMatchHistory = ({
-  accountId,
-  numMatches = 10,
-  refresh = 0,
-}: UseMatchHistoryParams): UseMatchHistoryResult => {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [heroes, setHeroes] = useState<Map<number, string>>(new Map());
-  const [loading, setLoading] = useState(true);
-
-  const {
-    data: heroesData,
-    isLoading: loadingHeroes,
-    error: heroesError,
-  } = useQuery<Hero[]>({
+export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryParams): UseMatchHistoryResult => {
+  const { data: heroesData, isLoading: loadingHeroes } = useQuery<Hero[]>({
     queryKey: queryKeys.streamkit.heroes(),
     queryFn: () => fetch(`${ASSETS_ORIGIN}/v2/heroes`).then((res) => res.json()),
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  const {
-    data: matchesData,
-    isLoading: loadingMatches,
-    error: matchesError,
-  } = useQuery<Match[]>({
+  const { data: matchesData, isLoading: loadingMatches } = useQuery<Match[]>({
     queryKey: queryKeys.streamkit.matchHistory(accountId),
     queryFn: async () => {
       const res = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history`);
@@ -54,28 +37,15 @@ export const useMatchHistory = ({
     refetchIntervalInBackground: true,
   });
 
-  useEffect(() => {
-    if (Array.isArray(heroesData)) {
-      setHeroes(new Map(heroesData.map((h) => [h.id, h.images.icon_hero_card_webp])));
-    }
-    if (heroesError) {
-      console.error("Failed to fetch heroes:", heroesError);
-      setHeroes(new Map());
-    }
-  }, [heroesData, heroesError]);
+  const heroes = useMemo(() => {
+    if (!Array.isArray(heroesData)) return new Map<number, string>();
+    return new Map(heroesData.map((h) => [h.id, h.images.icon_hero_card_webp]));
+  }, [heroesData]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh trigger dependency
-  useEffect(() => {
-    if (matchesError) {
-      console.error("Failed to fetch matches:", matchesError);
-    } else if (Array.isArray(matchesData)) {
-      setMatches(matchesData.slice(0, numMatches));
-    }
-  }, [matchesData, matchesError, numMatches, refresh]);
+  const matches = useMemo(() => {
+    if (!Array.isArray(matchesData)) return [];
+    return matchesData.slice(0, numMatches);
+  }, [matchesData, numMatches]);
 
-  useEffect(() => {
-    setLoading(loadingHeroes || loadingMatches);
-  }, [loadingHeroes, loadingMatches]);
-
-  return { matches, heroes, loading };
+  return { matches, heroes, loading: loadingHeroes || loadingMatches };
 };
