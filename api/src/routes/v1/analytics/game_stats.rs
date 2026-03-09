@@ -120,7 +120,21 @@ pub struct AnalyticsGameStats {
     pub avg_gold_treasure: f64,
     pub avg_gold_denied: f64,
     pub avg_gold_death_loss: f64,
+    pub avg_creep_damage: f64,
+    pub avg_neutral_damage: f64,
+    pub avg_self_healing: f64,
+    pub avg_damage_mitigated: f64,
+    pub avg_damage_absorbed: f64,
+    pub avg_heal_prevented: f64,
+    pub avg_creep_kills: f64,
+    pub avg_neutral_kills: f64,
+    pub avg_gold_boss_orb: f64,
+    pub avg_possible_creeps: f64,
+    pub avg_max_health: f64,
+    pub avg_weapon_power: f64,
+    pub avg_tech_power: f64,
     pub avg_first_mid_boss_time_s: f64,
+    pub avg_objectives_destroyed_time_s: f64,
     pub mid_boss_kill_rate: f64,
     pub abandon_rate: f64,
 }
@@ -174,6 +188,8 @@ fn build_query(query: &GameStatsQuery) -> String {
             {info_select}
             , arrayMin(arrayFilter(x -> x > 0, `mid_boss.destroyed_time_s`)) AS first_mid_boss_time_s
             , length(`mid_boss.destroyed_time_s`) > 0 AS has_mid_boss
+            , arrayAvg(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) AS avg_obj_destroyed_time_s
+            , length(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) > 0 AS has_objectives
         FROM match_info
         WHERE match_mode IN ('Ranked', 'Unranked')
             AND {game_mode_filter}
@@ -204,7 +220,21 @@ fn build_query(query: &GameStatsQuery) -> String {
         assumeNotNull(coalesce(avg(max_gold_treasure), 0)) AS avg_gold_treasure,
         assumeNotNull(coalesce(avg(max_gold_denied), 0)) AS avg_gold_denied,
         assumeNotNull(coalesce(avg(max_gold_death_loss), 0)) AS avg_gold_death_loss,
+        assumeNotNull(coalesce(avg(max_creep_damage), 0)) AS avg_creep_damage,
+        assumeNotNull(coalesce(avg(max_neutral_damage), 0)) AS avg_neutral_damage,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.self_healing)), 0)) AS avg_self_healing,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.damage_mitigated)), 0)) AS avg_damage_mitigated,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.absorption_provided)), 0)) AS avg_damage_absorbed,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.heal_prevented)), 0)) AS avg_heal_prevented,
+        assumeNotNull(coalesce(avg(max_creep_kills), 0)) AS avg_creep_kills,
+        assumeNotNull(coalesce(avg(max_neutral_kills), 0)) AS avg_neutral_kills,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.gold_boss_orb)), 0)) AS avg_gold_boss_orb,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.possible_creeps)), 0)) AS avg_possible_creeps,
+        assumeNotNull(coalesce(avg(max_max_health), 0)) AS avg_max_health,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.weapon_power)), 0)) AS avg_weapon_power,
+        assumeNotNull(coalesce(avg(arrayMax(mp.stats.tech_power)), 0)) AS avg_tech_power,
         if(isNaN(avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)), 0, avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)) AS avg_first_mid_boss_time_s,
+        if(isNaN(avgIf(tm.avg_obj_destroyed_time_s, tm.has_objectives)), 0, avgIf(tm.avg_obj_destroyed_time_s, tm.has_objectives)) AS avg_objectives_destroyed_time_s,
         uniqIf(mp.match_id, tm.has_mid_boss) / greatest(1, uniq(mp.match_id)) AS mid_boss_kill_rate,
         avg(abandon_match_time_s > 0) AS abandon_rate
     FROM match_player mp
