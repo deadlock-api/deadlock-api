@@ -6,10 +6,10 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
-import { GameShell } from "./components/GameShell";
-import { filterShopableItems, useItems } from "./lib/queries";
-import { getDayNumber, getModeSeed, getTodayDate, seededRandom, seededShuffle } from "./lib/seed";
-import { useCountdown } from "./lib/use-countdown";
+import { GameShell } from "./deadlockdle/components/GameShell";
+import { filterShopableItems, useItems } from "./deadlockdle/lib/queries";
+import { getDayNumber, getModeSeed, getTodayDate, seededRandom, seededShuffle } from "./deadlockdle/lib/seed";
+import { useCountdown } from "./deadlockdle/lib/use-countdown";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({

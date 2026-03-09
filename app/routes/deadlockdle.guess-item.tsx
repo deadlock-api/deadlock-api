@@ -4,13 +4,13 @@ import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
-import { GameShell } from "./components/GameShell";
-import { GuessInput } from "./components/GuessInput";
-import { HintReveal } from "./components/HintReveal";
-import { ResultModal } from "./components/ResultModal";
-import { filterShopableItems, useItems } from "./lib/queries";
-import { getModeSeed, seededPick, seededRandom } from "./lib/seed";
-import { useDailyGame } from "./lib/use-daily-game";
+import { GameShell } from "./deadlockdle/components/GameShell";
+import { GuessInput } from "./deadlockdle/components/GuessInput";
+import { HintReveal } from "./deadlockdle/components/HintReveal";
+import { ResultModal } from "./deadlockdle/components/ResultModal";
+import { filterShopableItems, useItems } from "./deadlockdle/lib/queries";
+import { getModeSeed, seededPick, seededRandom } from "./deadlockdle/lib/seed";
+import { useDailyGame } from "./deadlockdle/lib/use-daily-game";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({

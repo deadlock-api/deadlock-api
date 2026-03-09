@@ -6,11 +6,11 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
-import { GameShell } from "./components/GameShell";
-import { useHeroes, useItems, useNpcUnits } from "./lib/queries";
-import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "./lib/seed";
-import { generateDailyQuestions, type TriviaQuestion } from "./lib/trivia-questions";
-import { useCountdown } from "./lib/use-countdown";
+import { GameShell } from "./deadlockdle/components/GameShell";
+import { useHeroes, useItems, useNpcUnits } from "./deadlockdle/lib/queries";
+import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "./deadlockdle/lib/seed";
+import { generateDailyQuestions, type TriviaQuestion } from "./deadlockdle/lib/trivia-questions";
+import { useCountdown } from "./deadlockdle/lib/use-countdown";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
