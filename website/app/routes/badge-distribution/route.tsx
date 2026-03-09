@@ -13,7 +13,10 @@ import BadgeDistributionChart from "./BadgeDistributionChart";
 export function meta() {
   return [
     { title: "Rank Distribution | Deadlock API" },
-    { name: "description", content: "Deadlock rank distribution data over time. See how players are spread across ranks." },
+    {
+      name: "description",
+      content: "Deadlock rank distribution data over time. See how players are spread across ranks.",
+    },
   ];
 }
 

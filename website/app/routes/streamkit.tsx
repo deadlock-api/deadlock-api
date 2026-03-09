@@ -20,7 +20,11 @@ const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
 export const meta: MetaFunction = () => {
   return [
     { title: "Stream Toolkit & OBS Widgets | Deadlock API" },
-    { name: "description", content: "Build chat commands and OBS widgets for your Deadlock stream. Show live stats, match history, and more." },
+    {
+      name: "description",
+      content:
+        "Build chat commands and OBS widgets for your Deadlock stream. Show live stats, match history, and more.",
+    },
   ];
 };
 

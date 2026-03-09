@@ -21,7 +21,13 @@ export function HeroStatSelector<T extends readonly string[]>({
 }) {
   const items = options ?? HERO_STATS;
   return (
-    <ToggleGroup type="single" value={value} onValueChange={(val) => val && onChange(val)} variant="outline" className="flex-wrap">
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(val) => val && onChange(val)}
+      variant="outline"
+      className="flex-wrap"
+    >
       {items.map((key) => (
         <ToggleGroupItem key={key as string} value={key as string} className="text-xs capitalize">
           {(key as string).replace(/_/g, " ")}

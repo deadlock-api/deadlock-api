@@ -517,7 +517,8 @@ export default function HeroMatchupStatsTable({
                     label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     delta={
                       prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2] !== undefined
-                        ? heroBestSynergies[heroId]?.rel_winrate - prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2]
+                        ? heroBestSynergies[heroId]?.rel_winrate -
+                          prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2]
                         : undefined
                     }
                     tooltip={
@@ -540,7 +541,11 @@ export default function HeroMatchupStatsTable({
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate</span>
                           <span className="font-medium">
-                            {((heroBestSynergies[heroId]?.wins / heroBestSynergies[heroId]?.matches_played) * 100).toFixed(2)}%
+                            {(
+                              (heroBestSynergies[heroId]?.wins / heroBestSynergies[heroId]?.matches_played) *
+                              100
+                            ).toFixed(2)}
+                            %
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -555,7 +560,8 @@ export default function HeroMatchupStatsTable({
                             <span className="text-muted-foreground">Previous</span>
                             <span className="font-medium">
                               {prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] > 0 ? "+" : ""}
-                              {(prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] * 100).toFixed(2)}%
+                              {(prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] * 100).toFixed(2)}
+                              %
                             </span>
                           </div>
                         )}
@@ -577,7 +583,8 @@ export default function HeroMatchupStatsTable({
                     label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     delta={
                       prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2] !== undefined
-                        ? heroWorstSynergies[heroId]?.rel_winrate - prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2]
+                        ? heroWorstSynergies[heroId]?.rel_winrate -
+                          prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2]
                         : undefined
                     }
                     tooltip={
@@ -600,7 +607,11 @@ export default function HeroMatchupStatsTable({
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate</span>
                           <span className="font-medium">
-                            {((heroWorstSynergies[heroId]?.wins / heroWorstSynergies[heroId]?.matches_played) * 100).toFixed(2)}%
+                            {(
+                              (heroWorstSynergies[heroId]?.wins / heroWorstSynergies[heroId]?.matches_played) *
+                              100
+                            ).toFixed(2)}
+                            %
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -615,7 +626,10 @@ export default function HeroMatchupStatsTable({
                             <span className="text-muted-foreground">Previous</span>
                             <span className="font-medium">
                               {prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] > 0 ? "+" : ""}
-                              {(prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] * 100).toFixed(2)}%
+                              {(prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] * 100).toFixed(
+                                2,
+                              )}
+                              %
                             </span>
                           </div>
                         )}
@@ -637,7 +651,8 @@ export default function HeroMatchupStatsTable({
                     label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     delta={
                       prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id] !== undefined
-                        ? heroBestAgainst[heroId]?.rel_winrate - prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id]
+                        ? heroBestAgainst[heroId]?.rel_winrate -
+                          prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id]
                         : undefined
                     }
                     tooltip={
@@ -660,7 +675,10 @@ export default function HeroMatchupStatsTable({
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate</span>
                           <span className="font-medium">
-                            {((heroBestAgainst[heroId]?.wins / heroBestAgainst[heroId]?.matches_played) * 100).toFixed(2)}%
+                            {((heroBestAgainst[heroId]?.wins / heroBestAgainst[heroId]?.matches_played) * 100).toFixed(
+                              2,
+                            )}
+                            %
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -675,7 +693,10 @@ export default function HeroMatchupStatsTable({
                             <span className="text-muted-foreground">Previous</span>
                             <span className="font-medium">
                               {prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] > 0 ? "+" : ""}
-                              {(prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] * 100).toFixed(2)}%
+                              {(prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] * 100).toFixed(
+                                2,
+                              )}
+                              %
                             </span>
                           </div>
                         )}
@@ -697,7 +718,8 @@ export default function HeroMatchupStatsTable({
                     label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
                     delta={
                       prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id] !== undefined
-                        ? heroWorstAgainst[heroId]?.rel_winrate - prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id]
+                        ? heroWorstAgainst[heroId]?.rel_winrate -
+                          prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id]
                         : undefined
                     }
                     tooltip={
@@ -720,7 +742,11 @@ export default function HeroMatchupStatsTable({
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate</span>
                           <span className="font-medium">
-                            {((heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played) * 100).toFixed(2)}%
+                            {(
+                              (heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played) *
+                              100
+                            ).toFixed(2)}
+                            %
                           </span>
                         </div>
                         <div className="flex justify-between gap-4">
@@ -735,7 +761,10 @@ export default function HeroMatchupStatsTable({
                             <span className="text-muted-foreground">Previous</span>
                             <span className="font-medium">
                               {prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] > 0 ? "+" : ""}
-                              {(prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] * 100).toFixed(2)}%
+                              {(
+                                prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] * 100
+                              ).toFixed(2)}
+                              %
                             </span>
                           </div>
                         )}
