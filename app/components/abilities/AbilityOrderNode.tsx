@@ -1,6 +1,6 @@
+import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useRef } from "react";
-import { motion } from "framer-motion";
 import { AbilityImage } from "~/components/AbilityImage";
 import { AbilityName } from "~/components/AbilityName";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
@@ -127,6 +127,7 @@ export default function AbilityOrderNode({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: role="button" is conditionally applied when isFocusable */}
             <div
               data-ability-card
               className={cn(
@@ -139,6 +140,18 @@ export default function AbilityOrderNode({
               )}
               style={{ opacity }}
               onClick={isFocusable ? () => onToggleFocus(currentPath) : undefined}
+              onKeyDown={
+                isFocusable
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onToggleFocus(currentPath);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={isFocusable ? 0 : undefined}
+              role={isFocusable ? "button" : undefined}
             >
               {/* Header: icon + name + tier pill */}
               <div className="flex items-center gap-2 mb-2">

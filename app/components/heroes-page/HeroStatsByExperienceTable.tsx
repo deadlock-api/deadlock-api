@@ -206,6 +206,18 @@ export function HeroStatsByExperienceTable({
     return sortAsc ? " \u25B2" : " \u25BC";
   };
 
+  const ariaSort = (key: SortKey): "ascending" | "descending" | undefined => {
+    if (sortKey !== key) return undefined;
+    return sortAsc ? "ascending" : "descending";
+  };
+
+  const handleKeyDown = (key: SortKey) => (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleSort(key);
+    }
+  };
+
   const allBucketsLoaded = bucketLoading.every((l) => !l);
 
   if (allLoading) {
@@ -221,7 +233,13 @@ export function HeroStatsByExperienceTable({
       <TableHeader className="bg-muted">
         <TableRow>
           <TableHead className="text-center">#</TableHead>
-          <TableHead className="cursor-pointer select-none" onClick={() => handleSort("name")}>
+          <TableHead
+            className="cursor-pointer select-none"
+            onClick={() => handleSort("name")}
+            onKeyDown={handleKeyDown("name")}
+            tabIndex={0}
+            aria-sort={ariaSort("name")}
+          >
             Hero{sortIndicator("name")}
           </TableHead>
           {EXPERIENCE_BUCKETS.map((bucket, i) => (
@@ -229,6 +247,9 @@ export function HeroStatsByExperienceTable({
               key={bucket.label}
               className="text-center cursor-pointer select-none"
               onClick={() => handleSort(`bucket-${i}`)}
+              onKeyDown={handleKeyDown(`bucket-${i}`)}
+              tabIndex={0}
+              aria-sort={ariaSort(`bucket-${i}`)}
             >
               {bucket.label}
               <br />
@@ -236,7 +257,13 @@ export function HeroStatsByExperienceTable({
               {sortIndicator(`bucket-${i}`)}
             </TableHead>
           ))}
-          <TableHead className="text-center cursor-pointer select-none" onClick={() => handleSort("delta")}>
+          <TableHead
+            className="text-center cursor-pointer select-none"
+            onClick={() => handleSort("delta")}
+            onKeyDown={handleKeyDown("delta")}
+            tabIndex={0}
+            aria-sort={ariaSort("delta")}
+          >
             Change{sortIndicator("delta")}
           </TableHead>
         </TableRow>
