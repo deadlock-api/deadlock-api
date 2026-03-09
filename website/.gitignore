@@ -9,5 +9,8 @@ node_modules
 pnpm-workspace.yaml
 *.tsbuildinfo
 
+# Generated OG images (built at build time)
+public/og/*.png
+
 # opensrc - source code for packages
 opensrc/
