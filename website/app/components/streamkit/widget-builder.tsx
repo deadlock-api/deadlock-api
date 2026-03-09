@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactElement, useEffect, useId, useState } from "react";
+import { type ReactElement, useId, useReducer } from "react";
 import { useSearchParams } from "react-router";
 import { CopyButton } from "~/components/copy-button";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
@@ -23,146 +23,198 @@ import type { Region, Theme } from "~/types/streamkit/widget";
 
 const widgetTypes: string[] = ["box", "raw"];
 
+const themes: { value: Theme; label: string }[] = [
+  { value: "dark", label: "Dark Theme" },
+  { value: "light", label: "Light Theme" },
+  { value: "glass", label: "Glass Theme" },
+];
+
 interface WidgetBuilderProps {
   region: string;
   accountId: string;
 }
 
-type RGB = `rgb(${number}, ${number}, ${number})`;
-type RGBA = `rgba(${number}, ${number}, ${number}, ${number})`;
-type HEX = `#${string}`;
-type PreviewBackgroundColor = RGB | RGBA | HEX;
+type PreviewBackgroundColor = Color;
+
+interface WidgetConfig {
+  widgetType: string;
+  theme: Theme;
+  variables: string[];
+  variable: string;
+  prefix: string;
+  suffix: string;
+  fontColor: Color;
+  labels: string[];
+  extraArgs: { [key: string]: string };
+  showHeader: boolean;
+  showBranding: boolean;
+  showMatchHistory: boolean;
+  matchHistoryShowsToday: boolean;
+  numMatches: number;
+  opacity: number;
+  previewBackgroundImage: boolean;
+  previewBackgroundColor: PreviewBackgroundColor;
+}
+
+type WidgetConfigAction = Partial<WidgetConfig>;
+
+function widgetConfigReducer(state: WidgetConfig, action: WidgetConfigAction): WidgetConfig {
+  return { ...state, ...action };
+}
+
+function buildWidgetUrl(
+  region: string,
+  accountId: string,
+  config: WidgetConfig,
+): string | null {
+  if (!accountId || !region) return null;
+
+  const url = new URL(`${window.location.origin}/streamkit/widgets/${region}/${accountId}/${config.widgetType}`);
+  for (const [arg, value] of Object.entries(config.extraArgs)) {
+    if (value) url.searchParams.set(arg, value);
+  }
+  switch (config.widgetType) {
+    case "box":
+      if (config.variables.length > 0) url.searchParams.set("vars", config.variables.join(","));
+      if (config.labels.length > 0) url.searchParams.set("labels", config.labels.join(","));
+      url.searchParams.set("theme", config.theme);
+      url.searchParams.set("showHeader", config.showHeader.toString());
+      url.searchParams.set("showBranding", config.showBranding.toString());
+      url.searchParams.set("showMatchHistory", config.showMatchHistory.toString());
+      url.searchParams.set("matchHistoryShowsToday", config.matchHistoryShowsToday.toString());
+      url.searchParams.set("numMatches", config.numMatches.toString());
+      url.searchParams.set("opacity", config.opacity.toString());
+      return url.toString();
+    case "raw":
+      url.searchParams.set("fontColor", config.fontColor);
+      url.searchParams.set("variable", config.variable);
+      url.searchParams.set("prefix", config.prefix);
+      url.searchParams.set("suffix", config.suffix);
+      return url.toString();
+    default:
+      return null;
+  }
+}
+
+function buildWidgetPreview(
+  region: string,
+  accountId: string,
+  config: WidgetConfig,
+): ReactElement | null {
+  if (!accountId || !region) return null;
+
+  switch (config.widgetType) {
+    case "box":
+      return (
+        <BoxWidget
+          region={region as Region}
+          accountId={accountId}
+          variables={config.variables}
+          labels={config.labels}
+          extraArgs={config.extraArgs}
+          theme={config.theme}
+          showHeader={config.showHeader}
+          showBranding={config.showBranding}
+          showMatchHistory={config.showMatchHistory}
+          matchHistoryShowsToday={config.matchHistoryShowsToday}
+          numMatches={config.numMatches}
+          opacity={config.opacity}
+        />
+      );
+    case "raw":
+      return (
+        <RawWidget
+          region={region as Region}
+          accountId={accountId}
+          variable={config.variable}
+          fontColor={config.fontColor}
+          extraArgs={config.extraArgs}
+          prefix={config.prefix}
+          suffix={config.suffix}
+        />
+      );
+    default:
+      return null;
+  }
+}
 
 export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
   const [searchParams] = useSearchParams();
-  const [widgetType, setWidgetType] = useState<string>(searchParams.get("widget-type") ?? widgetTypes[0]);
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
-  const [widgetPreview, setWidgetPreview] = useState<ReactElement | null>(null);
-  const [widgetPreviewBackgroundImage, setWidgetPreviewBackgroundImage] = useState<boolean>(true);
-  const [widgetPreviewBackgroundColor, setWidgetPreviewBackgroundColor] = useState<PreviewBackgroundColor>("#f3f4f6");
-  const [variables, setVariables] = useState<string[]>(DEFAULT_VARIABLES);
-  const [variable, setVariable] = useState<string>("wins_losses_today");
-  const [prefix, setPrefix] = useState<string>("Score: ");
-  const [suffix, setSuffix] = useState<string>("");
-  const [fontColor, setFontColor] = useState<Color>("#ffffff");
-  const [labels, setLabels] = useState<string[]>(DEFAULT_LABELS);
-  const [extraArgs, setExtraArgs] = useState<{ [key: string]: string }>({});
-  const [availableVariables, setAvailableVariables] = useState<Variable[]>([]);
-  const [showHeader, setShowHeader] = useState(true);
-  const [showBranding, setShowBranding] = useState(true);
-  const [showMatchHistory, setShowMatchHistory] = useState(true);
-  const [matchHistoryShowsToday, setMatchHistoryShowsToday] = useState(false);
-  const [numMatches, setNumMatches] = useState(10);
-  const [opacity, setOpacity] = useState(100);
+
+  const [config, updateConfig] = useReducer(widgetConfigReducer, {
+    widgetType: searchParams.get("widget-type") ?? widgetTypes[0],
+    theme: "dark" as Theme,
+    variables: DEFAULT_VARIABLES,
+    variable: "wins_losses_today",
+    prefix: "Score: ",
+    suffix: "",
+    fontColor: "#ffffff" as Color,
+    labels: DEFAULT_LABELS,
+    extraArgs: {},
+    showHeader: true,
+    showBranding: true,
+    showMatchHistory: true,
+    matchHistoryShowsToday: false,
+    numMatches: 10,
+    opacity: 100,
+    previewBackgroundImage: true,
+    previewBackgroundColor: "#f3f4f6" as PreviewBackgroundColor,
+  });
+
   const showHeaderId = useId();
   const showBrandingId = useId();
   const showMatchHistoryId = useId();
   const matchHistoryShowsTodayId = useId();
   const previewBgImageId = useId();
-  const { data, error } = useQuery<Variable[]>({
+
+  const { data: availableVariables = [] } = useQuery<Variable[]>({
     queryKey: queryKeys.streamkit.availableVariables(),
     queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  useEffect(() => {
-    if (data) setAvailableVariables(data);
-    if (error) {
-      setAvailableVariables([]);
-      console.error(error);
-    }
-  }, [data, error]);
+  const widgetUrl = buildWidgetUrl(region, accountId, config);
+  const widgetPreview = buildWidgetPreview(region, accountId, config);
 
-  useEffect(() => {
-    if (!accountId || !region) return;
+  function updateVariable(index: number, value: string) {
+    const newVariables = [...config.variables];
+    newVariables[index] = value;
+    const newLabels = [...config.labels];
+    const availableVariable = availableVariables.find((v) => v.name === value);
+    newLabels[index] = value ? (availableVariable?.default_label ?? snakeToPretty(value)) : "";
+    updateConfig({ variables: newVariables, labels: newLabels });
+  }
 
-    const url = new URL(`${window.location.origin}/streamkit/widgets/${region}/${accountId}/${widgetType}`);
-    for (const [arg, value] of Object.entries(extraArgs)) {
-      if (value) url.searchParams.set(arg, value);
-    }
-    switch (widgetType) {
-      case "box":
-        if (variables.length > 0) url.searchParams.set("vars", variables.join(","));
-        if (labels.length > 0) url.searchParams.set("labels", labels.join(","));
-        url.searchParams.set("theme", theme);
-        url.searchParams.set("showHeader", showHeader.toString());
-        url.searchParams.set("showBranding", showBranding.toString());
-        url.searchParams.set("showMatchHistory", showMatchHistory.toString());
-        url.searchParams.set("matchHistoryShowsToday", matchHistoryShowsToday.toString());
-        url.searchParams.set("numMatches", numMatches.toString());
-        url.searchParams.set("opacity", opacity.toString());
-        setWidgetUrl(url.toString());
-        setWidgetPreview(
-          <BoxWidget
-            region={region as Region}
-            accountId={accountId}
-            variables={variables}
-            labels={labels}
-            extraArgs={extraArgs}
-            theme={theme}
-            showHeader={showHeader}
-            showBranding={showBranding}
-            showMatchHistory={showMatchHistory}
-            matchHistoryShowsToday={matchHistoryShowsToday}
-            numMatches={numMatches}
-            opacity={opacity}
-          />,
-        );
-        break;
-      case "raw":
-        url.searchParams.set("fontColor", fontColor);
-        url.searchParams.set("variable", variable);
-        url.searchParams.set("prefix", prefix);
-        url.searchParams.set("suffix", suffix);
-        setWidgetUrl(url.toString());
-        setWidgetPreview(
-          <RawWidget
-            region={region as Region}
-            accountId={accountId}
-            variable={variable}
-            fontColor={fontColor}
-            extraArgs={extraArgs}
-            prefix={prefix}
-            suffix={suffix}
-          />,
-        );
-        break;
-      default:
-        setWidgetPreview(null);
-    }
-  }, [
-    region,
-    accountId,
-    widgetType,
-    variables,
-    variable,
-    fontColor,
-    labels,
-    extraArgs,
-    theme,
-    showHeader,
-    showBranding,
-    matchHistoryShowsToday,
-    showMatchHistory,
-    numMatches,
-    opacity,
-    prefix,
-    suffix,
-  ]);
+  function updateLabel(index: number, value: string) {
+    const newLabels = [...config.labels];
+    newLabels[index] = value;
+    updateConfig({ labels: newLabels });
+  }
 
-  const themes: { value: Theme; label: string }[] = [
-    { value: "dark", label: "Dark Theme" },
-    { value: "light", label: "Light Theme" },
-    { value: "glass", label: "Glass Theme" },
-  ];
+  function removeVariable(index: number) {
+    updateConfig({
+      variables: config.variables.filter((_, i) => i !== index),
+      labels: config.labels.filter((_, i) => i !== index),
+    });
+  }
+
+  function addVariable() {
+    updateConfig({
+      variables: [...config.variables, ""],
+      labels: [...config.labels, ""],
+    });
+  }
+
+  function updateExtraArg(arg: string, value: string) {
+    updateConfig({ extraArgs: { ...config.extraArgs, [arg]: value } });
+  }
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Type</Label>
-          <Select value={widgetType} onValueChange={setWidgetType}>
+          <Select value={config.widgetType} onValueChange={(v) => updateConfig({ widgetType: v })}>
             <SelectTrigger className="mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
@@ -176,10 +228,10 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           </Select>
         </div>
 
-        {widgetType === "box" && (
+        {config.widgetType === "box" && (
           <div>
             <Label>Theme</Label>
-            <Select value={theme} onValueChange={(v) => setTheme(v as Theme)}>
+            <Select value={config.theme} onValueChange={(v) => updateConfig({ theme: v as Theme })}>
               <SelectTrigger className="mt-1 w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -195,12 +247,12 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
         )}
       </div>
 
-      {widgetType === "raw" && (
+      {config.widgetType === "raw" && (
         <>
           <div className="grid grid-cols-2 items-center w-full gap-4">
             <div>
               <Label>Variable</Label>
-              <Select value={variable} onValueChange={setVariable}>
+              <Select value={config.variable} onValueChange={(v) => updateConfig({ variable: v })}>
                 <SelectTrigger className="mt-1 w-full">
                   <SelectValue placeholder="Select a variable" />
                 </SelectTrigger>
@@ -217,8 +269,8 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
               <Label>Font Color</Label>
               <input
                 type="color"
-                value={fontColor}
-                onChange={(e) => setFontColor(e.target.value as Color)}
+                value={config.fontColor}
+                onChange={(e) => updateConfig({ fontColor: e.target.value as Color })}
                 className="mt-1 block w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 shadow-xs"
               />
             </div>
@@ -226,29 +278,41 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           <div className="grid grid-cols-2 items-center w-full gap-4">
             <div>
               <Label>Prefix</Label>
-              <Input type="text" value={prefix} onChange={(e) => setPrefix(e.target.value)} className="mt-1" />
+              <Input
+                type="text"
+                value={config.prefix}
+                onChange={(e) => updateConfig({ prefix: e.target.value })}
+                className="mt-1"
+              />
             </div>
             <div>
               <Label>Suffix</Label>
-              <Input type="text" value={suffix} onChange={(e) => setSuffix(e.target.value)} className="mt-1" />
+              <Input
+                type="text"
+                value={config.suffix}
+                onChange={(e) => updateConfig({ suffix: e.target.value })}
+                className="mt-1"
+              />
             </div>
           </div>
           <ExtraArguments
-            extraArgs={availableVariables.filter((v) => variable === v.name).flatMap((v) => v.extra_args ?? [])}
-            extraValues={extraArgs || {}}
-            onChange={(arg, value) => setExtraArgs({ ...extraArgs, [arg]: value })}
+            extraArgs={availableVariables
+              .filter((v) => config.variable === v.name)
+              .flatMap((v) => v.extra_args ?? [])}
+            extraValues={config.extraArgs || {}}
+            onChange={updateExtraArg}
           />
         </>
       )}
 
-      {widgetType === "box" && (
+      {config.widgetType === "box" && (
         <>
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Checkbox
                 id={showHeaderId}
-                checked={showHeader}
-                onCheckedChange={(checked) => setShowHeader(checked === true)}
+                checked={config.showHeader}
+                onCheckedChange={(checked) => updateConfig({ showHeader: checked === true })}
               />
               <Label htmlFor={showHeaderId}>Show Player Name Header</Label>
             </div>
@@ -256,8 +320,8 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
             <div className="flex items-center gap-2">
               <Checkbox
                 id={showBrandingId}
-                checked={showBranding}
-                onCheckedChange={(checked) => setShowBranding(checked === true)}
+                checked={config.showBranding}
+                onCheckedChange={(checked) => updateConfig({ showBranding: checked === true })}
               />
               <Label htmlFor={showBrandingId}>Show Branding</Label>
             </div>
@@ -265,8 +329,8 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
             <div className="flex items-center gap-2">
               <Checkbox
                 id={showMatchHistoryId}
-                checked={showMatchHistory}
-                onCheckedChange={(checked) => setShowMatchHistory(checked === true)}
+                checked={config.showMatchHistory}
+                onCheckedChange={(checked) => updateConfig({ showMatchHistory: checked === true })}
               />
               <Label htmlFor={showMatchHistoryId}>Show Recent Matches</Label>
             </div>
@@ -274,9 +338,9 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
               <div className="flex items-center gap-2">
                 <Checkbox
                   id={matchHistoryShowsTodayId}
-                  checked={matchHistoryShowsToday}
-                  disabled={!showMatchHistory}
-                  onCheckedChange={(checked) => setMatchHistoryShowsToday(checked === true)}
+                  checked={config.matchHistoryShowsToday}
+                  disabled={!config.showMatchHistory}
+                  onCheckedChange={(checked) => updateConfig({ matchHistoryShowsToday: checked === true })}
                 />
                 <Label htmlFor={matchHistoryShowsTodayId}>Show Todays Matches</Label>
               </div>
@@ -284,12 +348,12 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                 <Slider
                   min={1}
                   max={20}
-                  disabled={!showMatchHistory || matchHistoryShowsToday}
-                  value={[numMatches]}
-                  onValueChange={([v]) => setNumMatches(v)}
+                  disabled={!config.showMatchHistory || config.matchHistoryShowsToday}
+                  value={[config.numMatches]}
+                  onValueChange={([v]) => updateConfig({ numMatches: v })}
                   className="w-32"
                 />
-                <span className="text-sm font-medium text-foreground">{numMatches} Matches</span>
+                <span className="text-sm font-medium text-foreground">{config.numMatches} Matches</span>
               </div>
             </div>
           </div>
@@ -297,22 +361,10 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           <div>
             <h3 className="block text-sm font-medium text-foreground mb-2">Variables and Labels</h3>
             <div className="space-y-3">
-              {variables.map((variable, index) => (
+              {config.variables.map((variable, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
                 <div key={index} className="flex gap-3">
-                  <Select
-                    value={variable}
-                    onValueChange={(value) => {
-                      const newVariables = [...variables];
-                      newVariables[index] = value;
-                      const newLabels = [...labels];
-                      const availableVariable = availableVariables.find((v) => v.name === value);
-                      newLabels[index] = value ? (availableVariable?.default_label ?? snakeToPretty(value)) : "";
-
-                      setVariables(newVariables);
-                      setLabels(newLabels);
-                    }}
-                  >
+                  <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
                     <SelectTrigger className="w-1/2">
                       <SelectValue placeholder="Select a variable" />
                     </SelectTrigger>
@@ -326,52 +378,41 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                   </Select>
                   <Input
                     type="text"
-                    value={labels[index]}
-                    onChange={(e) => {
-                      const newLabels = [...labels];
-                      newLabels[index] = e.target.value;
-                      setLabels(newLabels);
-                    }}
+                    value={config.labels[index]}
+                    onChange={(e) => updateLabel(index, e.target.value)}
                     className="w-1/2"
                     placeholder="Label (optional)"
                   />
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setVariables(variables.filter((_, i) => i !== index));
-                      setLabels(labels.filter((_, i) => i !== index));
-                    }}
-                  >
+                  <Button variant="destructive" onClick={() => removeVariable(index)}>
                     Remove
                   </Button>
                 </div>
               ))}
               <ExtraArguments
                 extraArgs={availableVariables
-                  .filter((v) => variables.includes(v.name))
+                  .filter((v) => config.variables.includes(v.name))
                   .flatMap((v) => v.extra_args ?? [])}
-                extraValues={extraArgs || {}}
-                onChange={(arg, value) => setExtraArgs({ ...extraArgs, [arg]: value })}
+                extraValues={config.extraArgs || {}}
+                onChange={updateExtraArg}
               />
-              <Button
-                onClick={() => {
-                  setVariables([...variables, ""]);
-                  setLabels([...labels, ""]);
-                }}
-              >
-                Add Variable
-              </Button>
+              <Button onClick={addVariable}>Add Variable</Button>
             </div>
           </div>
         </>
       )}
 
-      {theme !== "glass" && widgetType === "box" && (
+      {config.theme !== "glass" && config.widgetType === "box" && (
         <div>
           <Label>Background Opacity</Label>
           <div className="mt-1 flex items-center gap-2">
-            <Slider min={0} max={100} value={[opacity]} onValueChange={([v]) => setOpacity(v)} className="w-full" />
-            <span className="text-sm text-muted-foreground min-w-[3ch]">{opacity}%</span>
+            <Slider
+              min={0}
+              max={100}
+              value={[config.opacity]}
+              onValueChange={([v]) => updateConfig({ opacity: v })}
+              className="w-full"
+            />
+            <span className="text-sm text-muted-foreground min-w-[3ch]">{config.opacity}%</span>
           </div>
         </div>
       )}
@@ -382,13 +423,13 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           <div
             className="p-4 rounded-lg flex items-center justify-center bg-cover"
             style={
-              widgetPreviewBackgroundImage
+              config.previewBackgroundImage
                 ? {
                     background: "url('/streamkit/deadlock-background.webp'), url('/streamkit/deadlock-background.png')",
                     backgroundSize: "cover",
                     backgroundRepeat: "no-repeat",
                   }
-                : { backgroundColor: widgetPreviewBackgroundColor }
+                : { backgroundColor: config.previewBackgroundColor }
             }
           >
             {widgetPreview}
@@ -399,19 +440,19 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           <div className="flex items-center gap-2">
             <Checkbox
               id={previewBgImageId}
-              checked={widgetPreviewBackgroundImage}
-              onCheckedChange={(checked) => setWidgetPreviewBackgroundImage(checked === true)}
+              checked={config.previewBackgroundImage}
+              onCheckedChange={(checked) => updateConfig({ previewBackgroundImage: checked === true })}
             />
             <Label htmlFor={previewBgImageId}>Show Image</Label>
           </div>
-          {!widgetPreviewBackgroundImage && (
+          {!config.previewBackgroundImage && (
             <div className="flex items-center gap-2">
               <Label>Background Color</Label>
               <input
                 type="color"
-                disabled={widgetPreviewBackgroundImage}
-                value={widgetPreviewBackgroundColor}
-                onChange={(e) => setWidgetPreviewBackgroundColor(e.target.value as PreviewBackgroundColor)}
+                disabled={config.previewBackgroundImage}
+                value={config.previewBackgroundColor}
+                onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
                 className="rounded-md border border-input w-8 h-8 p-0"
               />
             </div>
