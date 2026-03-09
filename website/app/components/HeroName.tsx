@@ -13,5 +13,5 @@ export default function HeroName({ heroId, className }: { heroId: number; classN
     return <Skeleton className={cn("h-4 w-20 inline-block", className)} />;
   }
 
-  return <span className={cn("truncate", className)}>{hero?.name}</span>;
+  return <span className={cn("truncate", className)}>{hero?.name ?? "Unknown Hero"}</span>;
 }

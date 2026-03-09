@@ -12,5 +12,5 @@ export default function ItemTier({ itemId }: { itemId: number }) {
     return <Skeleton className="h-4 w-4 inline-block" />;
   }
 
-  return <>{item?.item_tier}</>;
+  return <>{item?.item_tier ?? "?"}</>;
 }

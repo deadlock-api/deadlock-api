@@ -13,5 +13,5 @@ export default function ItemName({ itemId, className }: { itemId: number; classN
     return <Skeleton className={cn("h-4 w-24 inline-block", className)} />;
   }
 
-  return <span className={className}>{item?.name}</span>;
+  return <span className={className}>{item?.name ?? "Unknown Item"}</span>;
 }
