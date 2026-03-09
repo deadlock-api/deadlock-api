@@ -84,7 +84,7 @@ export default function Heroes(
       "hero-matchup-details",
     ] as const).withDefault(initialTab || "stats"),
   );
-  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(7));
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
 
   const [heroStat, setHeroStat] = useQueryState("hero_stat", parseAsStringLiteral(HERO_STATS).withDefault("winrate"));
   const [heroTimeInterval, setHeroTimeInterval] = useQueryState(
