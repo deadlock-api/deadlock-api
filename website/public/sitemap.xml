@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://deadlock-api.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://deadlock-api.com/heroes</loc><priority>0.9</priority></url>
-  <url><loc>https://deadlock-api.com/items</loc><priority>0.9</priority></url>
-  <url><loc>https://deadlock-api.com/abilities</loc><priority>0.8</priority></url>
-  <url><loc>https://deadlock-api.com/leaderboard</loc><priority>0.8</priority></url>
-  <url><loc>https://deadlock-api.com/badge-distribution</loc><priority>0.7</priority></url>
-  <url><loc>https://deadlock-api.com/game-stats</loc><priority>0.7</priority></url>
-  <url><loc>https://deadlock-api.com/heatmap</loc><priority>0.7</priority></url>
-  <url><loc>https://deadlock-api.com/player-scoreboard</loc><priority>0.7</priority></url>
-  <url><loc>https://deadlock-api.com/streamkit</loc><priority>0.6</priority></url>
-  <url><loc>https://deadlock-api.com/chat</loc><priority>0.5</priority></url>
-  <url><loc>https://deadlock-api.com/ingest-cache</loc><priority>0.4</priority></url>
-  <url><loc>https://deadlock-api.com/data-privacy</loc><priority>0.4</priority></url>
+  <url><loc>https://deadlock-api.com/</loc><lastmod>2026-03-09</lastmod><priority>1.0</priority></url>
+  <url><loc>https://deadlock-api.com/heroes</loc><lastmod>2026-03-09</lastmod><priority>0.9</priority></url>
+  <url><loc>https://deadlock-api.com/items</loc><lastmod>2026-03-09</lastmod><priority>0.9</priority></url>
+  <url><loc>https://deadlock-api.com/abilities</loc><lastmod>2026-03-09</lastmod><priority>0.8</priority></url>
+  <url><loc>https://deadlock-api.com/leaderboard</loc><lastmod>2026-03-09</lastmod><priority>0.8</priority></url>
+  <url><loc>https://deadlock-api.com/badge-distribution</loc><lastmod>2026-03-09</lastmod><priority>0.7</priority></url>
+  <url><loc>https://deadlock-api.com/game-stats</loc><lastmod>2026-03-09</lastmod><priority>0.7</priority></url>
+  <url><loc>https://deadlock-api.com/heatmap</loc><lastmod>2026-03-09</lastmod><priority>0.7</priority></url>
+  <url><loc>https://deadlock-api.com/player-scoreboard</loc><lastmod>2026-03-09</lastmod><priority>0.7</priority></url>
+  <url><loc>https://deadlock-api.com/streamkit</loc><lastmod>2026-03-09</lastmod><priority>0.6</priority></url>
+  <url><loc>https://deadlock-api.com/chat</loc><lastmod>2026-03-09</lastmod><priority>0.5</priority></url>
+  <url><loc>https://deadlock-api.com/ingest-cache</loc><lastmod>2026-03-09</lastmod><priority>0.4</priority></url>
+  <url><loc>https://deadlock-api.com/data-privacy</loc><lastmod>2026-03-09</lastmod><priority>0.4</priority></url>
 </urlset>

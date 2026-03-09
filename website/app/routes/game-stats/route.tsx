@@ -14,14 +14,14 @@ import GameStatsOverTimeChart from "./GameStatsOverTimeChart";
 import GameStatsOverview from "./GameStatsOverview";
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Game Stats & Match Trends | Deadlock API" },
-    {
-      name: "description",
-      content: "Aggregate match statistics, trends over time, and stats by rank for Deadlock.",
-    },
-  ];
+  return createPageMeta({
+    title: "Game Stats & Match Trends | Deadlock API",
+    description: "Aggregate game statistics and match analytics for Deadlock by Valve.",
+    path: "/game-stats",
+  });
 };
 
 export default function GameStats() {

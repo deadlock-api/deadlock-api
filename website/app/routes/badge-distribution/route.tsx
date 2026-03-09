@@ -9,15 +9,14 @@ import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { MAX_GAME_DURATION_S, MIN_GAME_DURATION_S } from "~/lib/constants";
 import BadgeDistributionChart from "./BadgeDistributionChart";
+import { createPageMeta } from "~/lib/meta";
 
 export function meta() {
-  return [
-    { title: "Rank Distribution | Deadlock API" },
-    {
-      name: "description",
-      content: "Deadlock rank distribution data over time. See how players are spread across ranks.",
-    },
-  ];
+  return createPageMeta({
+    title: "Rank Distribution | Deadlock API",
+    description: "See the distribution of player ranks and badges across the Deadlock competitive ladder.",
+    path: "/badge-distribution",
+  });
 }
 
 export default function BadgeDistribution() {

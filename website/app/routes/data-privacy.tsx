@@ -17,15 +17,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
 import { cleanupCallbackUrl, parseSteamCallback, redirectToSteamAuth } from "~/lib/steam-auth";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Data Privacy & GDPR | Deadlock API" },
-    {
-      name: "description",
-      content:
-        "Manage your data privacy settings. Request data deletion or re-enable tracking via Steam authentication.",
-    },
-  ];
+  return createPageMeta({
+    title: "Data Privacy & GDPR | Deadlock API",
+    description:
+      "Manage your data privacy settings. Request data deletion or re-enable tracking via Steam authentication.",
+    path: "/data-privacy",
+  });
 };
 
 export default function DataPrivacy() {

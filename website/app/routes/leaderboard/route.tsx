@@ -7,12 +7,14 @@ import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
+import { createPageMeta } from "~/lib/meta";
 
 export function meta() {
-  return [
-    { title: "Ranked Leaderboard | Deadlock API" },
-    { name: "description", content: "View the top ranked Deadlock players by region with hero filters and search." },
-  ];
+  return createPageMeta({
+    title: "Ranked Leaderboard | Deadlock API",
+    description: "Browse the ranked Deadlock leaderboard with region filters, hero filters, and player search.",
+    path: "/leaderboard",
+  });
 }
 
 function getDefaultRegion(): LeaderboardRegionEnum {

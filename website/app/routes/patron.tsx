@@ -57,14 +57,14 @@ import {
   useSteamAccounts,
 } from "~/queries/patron-queries";
 
+import { createPageMeta } from "~/lib/meta";
+
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Prioritized Fetching | Deadlock API" },
-    {
-      name: "description",
-      content: "Get priority data fetching for your Steam accounts. Your matches and stats updated faster.",
-    },
-  ];
+  return createPageMeta({
+    title: "Prioritized Fetching | Deadlock API",
+    description: "Get priority data fetching for your Steam accounts. Your matches and stats updated faster.",
+    path: "/patron",
+  });
 };
 
 // ============================================================================

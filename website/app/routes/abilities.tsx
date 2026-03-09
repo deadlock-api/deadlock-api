@@ -8,15 +8,14 @@ import { ItemSelectorTriState } from "~/components/selectors/ItemSelectorTriStat
 import type { TriState } from "~/components/selectors/TriStateSelector";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
-  return [
-    { title: "Ability Stats & Upgrade Paths | Deadlock API" },
-    {
-      name: "description",
-      content: "Ability upgrade paths and win rates for every Deadlock hero. Analyze optimal skill orders by rank.",
-    },
-  ];
+  return createPageMeta({
+    title: "Ability Stats & Upgrade Paths | Deadlock API",
+    description: "Ability upgrade paths and win rates for every Deadlock hero. Analyze optimal skill orders by rank.",
+    path: "/abilities",
+  });
 };
 
 export default function AbilityOrder() {
