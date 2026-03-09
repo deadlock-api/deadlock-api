@@ -11,22 +11,22 @@ import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import type { GameStatsQueryParams } from "~/queries/game-stats-query";
+import type { GameStatsQueryParams } from "~/queries/games-query";
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
-const GameStatsOverview = lazy(() => import("./GameStatsOverview"));
-const GameStatsOverTimeChart = lazy(() => import("./GameStatsOverTimeChart"));
-const GameStatsByRankChart = lazy(() => import("./GameStatsByRankChart"));
+const GamesOverview = lazy(() => import("./GamesOverview"));
+const GamesOverTimeChart = lazy(() => import("./GamesOverTimeChart"));
+const GamesByRankChart = lazy(() => import("./GamesByRankChart"));
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
     title: "Game Stats & Match Trends | Deadlock API",
     description: "Aggregate game statistics and match analytics for Deadlock by Valve.",
-    path: "/game-stats",
+    path: "/games",
   });
 };
 
-export default function GameStats() {
+export default function Games() {
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral(["overview", "over-time", "by-rank"] as const).withDefault("overview"),
@@ -128,7 +128,7 @@ export default function GameStats() {
 
         <TabsContent value="overview">
           <Suspense fallback={<LoadingLogo />}>
-            <GameStatsOverview
+            <GamesOverview
               params={baseParams}
               prevParams={prevParams}
               isStreetBrawl={isStreetBrawl}
@@ -142,7 +142,7 @@ export default function GameStats() {
 
         <TabsContent value="over-time">
           <Suspense fallback={<LoadingLogo />}>
-            <GameStatsOverTimeChart
+            <GamesOverTimeChart
               params={baseParams}
               stat={stat}
               onStatChange={setStat}
@@ -155,12 +155,7 @@ export default function GameStats() {
 
         <TabsContent value="by-rank">
           <Suspense fallback={<LoadingLogo />}>
-            <GameStatsByRankChart
-              params={baseParams}
-              stat={stat}
-              onStatChange={setStat}
-              isStreetBrawl={isStreetBrawl}
-            />
+            <GamesByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
           </Suspense>
         </TabsContent>
       </Tabs>

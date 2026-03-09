@@ -11,7 +11,7 @@ const suggestions = [
   { to: "/heroes", label: "Hero Stats" },
   { to: "/items", label: "Item Stats" },
   { to: "/leaderboard", label: "Leaderboard" },
-  { to: "/game-stats", label: "Game Stats" },
+  { to: "/games", label: "Games" },
 ];
 
 export default function NotFound() {
