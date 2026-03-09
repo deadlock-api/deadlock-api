@@ -94,47 +94,6 @@ export function validateSteamResponse(params: URLSearchParams): boolean {
 }
 
 /**
- * Parse Steam OpenID callback parameters
- * @param searchParams - URL search parameters from the callback
- * @returns Parsed authentication data or null if invalid
- */
-export function parseSteamCallback(searchParams: URLSearchParams): {
-  action: "deletion" | "tracking";
-  steamId: string;
-  openIdParams: Record<string, string>;
-} | null {
-  const action = searchParams.get("action") as "deletion" | "tracking" | null;
-  const claimedId = searchParams.get("openid.claimed_id");
-
-  if (!action || !claimedId) {
-    return null;
-  }
-
-  if (!validateSteamResponse(searchParams)) {
-    return null;
-  }
-
-  const steamId = extractSteamId(claimedId);
-  if (!steamId) {
-    return null;
-  }
-
-  // Extract all OpenID parameters for backend verification
-  const openIdParams: Record<string, string> = {};
-  searchParams.forEach((value, key) => {
-    if (key.startsWith("openid.")) {
-      openIdParams[key] = value;
-    }
-  });
-
-  return {
-    action,
-    steamId,
-    openIdParams,
-  };
-}
-
-/**
  * Redirect to Steam authentication
  * @param action - The action to perform after authentication
  */

@@ -3,7 +3,7 @@ import { CheckCircle, Layers, Loader2, Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect } from "react";
 import type { MetaFunction } from "react-router";
-import { useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { CommandBuilder } from "~/components/streamkit/command/CommandBuilder";
 import { WidgetBuilder } from "~/components/streamkit/widget-builder";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -11,14 +11,14 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { API_ORIGIN } from "~/lib/constants";
+import { createPageMeta } from "~/lib/meta";
 import { steamId64ToSteamId3 } from "~/lib/patron-api";
-import { extractSteamId, generateSteamAuthUrl, validateSteamResponse } from "~/lib/steam-auth";
+import { generateSteamAuthUrl } from "~/lib/steam-auth";
 import { queryKeys } from "~/queries/query-keys";
 
 const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
-
-import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -30,17 +30,12 @@ export const meta: MetaFunction = () => {
 };
 
 export default function StreamKit() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const [steamId, setSteamId] = useQueryState("steamid", parseAsString.withDefault(""));
   const [region, setRegion] = useQueryState("region", parseAsString.withDefault(""));
+  const { steamId64 } = useSteamAuthCallback();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!validateSteamResponse(searchParams)) return;
-
-    const claimedId = searchParams.get("openid.claimed_id");
-    if (!claimedId) return;
-
-    const steamId64 = extractSteamId(claimedId);
     if (!steamId64) return;
 
     const id3 = steamId64ToSteamId3(steamId64);
@@ -49,10 +44,9 @@ export default function StreamKit() {
     // Clean openid params from URL, keep steamid and region
     const newParams = new URLSearchParams();
     newParams.set("steamid", id3.toString());
-    const regionParam = searchParams.get("region");
-    if (regionParam) newParams.set("region", regionParam);
-    setSearchParams(newParams, { replace: true });
-  }, [searchParams, setSearchParams, setSteamId]);
+    if (region) newParams.set("region", region);
+    navigate(`/streamkit?${newParams.toString()}`, { replace: true });
+  }, [steamId64, setSteamId, region, navigate]);
 
   const parseSteamId = (steamId: string) => {
     try {

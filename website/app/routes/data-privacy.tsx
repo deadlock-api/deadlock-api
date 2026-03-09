@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
 import {
   AlertDialog,
@@ -14,10 +14,10 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
-import { cleanupCallbackUrl, parseSteamCallback, redirectToSteamAuth } from "~/lib/steam-auth";
-
 import { createPageMeta } from "~/lib/meta";
+import { cleanupCallbackUrl, redirectToSteamAuth } from "~/lib/steam-auth";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -34,46 +34,48 @@ export default function DataPrivacy() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const { steamId64, openIdParams } = useSteamAuthCallback();
+  const hasProcessedCallback = useRef(false);
 
   // Handle Steam authentication callback
-  const handleSteamCallback = useCallback(async () => {
-    if (typeof window === "undefined") return;
+  useEffect(() => {
+    if (!steamId64 || hasProcessedCallback.current) return;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const callbackData = parseSteamCallback(urlParams);
+    const action = urlParams.get("action") as "deletion" | "tracking" | null;
+    if (!action) return;
 
-    if (!callbackData) return;
+    hasProcessedCallback.current = true;
 
-    setIsLoading(true);
-    setMessage(null);
+    const processCallback = async () => {
+      setIsLoading(true);
+      setMessage(null);
 
-    try {
-      await sendDataPrivacyRequest(callbackData.action, {
-        steam_id: callbackData.steamId,
-        open_id_params: callbackData.openIdParams,
-      });
+      try {
+        await sendDataPrivacyRequest(action, {
+          steam_id: steamId64,
+          open_id_params: openIdParams,
+        });
 
-      const actionText = callbackData.action === "deletion" ? "Data deletion request" : "Tracking re-enablement";
-      setMessage({
-        type: "success",
-        text: `${actionText} submitted successfully. You will receive confirmation via Steam.`,
-      });
-    } catch (error) {
-      console.error("Error processing Steam callback:", error);
-      setMessage({
-        type: "error",
-        text: error instanceof Error ? error.message : "Failed to process your request. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-      cleanupCallbackUrl();
-    }
-  }, []);
+        const actionText = action === "deletion" ? "Data deletion request" : "Tracking re-enablement";
+        setMessage({
+          type: "success",
+          text: `${actionText} submitted successfully. You will receive confirmation via Steam.`,
+        });
+      } catch (error) {
+        console.error("Error processing Steam callback:", error);
+        setMessage({
+          type: "error",
+          text: error instanceof Error ? error.message : "Failed to process your request. Please try again.",
+        });
+      } finally {
+        setIsLoading(false);
+        cleanupCallbackUrl();
+      }
+    };
 
-  // Check for Steam callback on component mount
-  useEffect(() => {
-    handleSteamCallback();
-  }, [handleSteamCallback]);
+    processCallback();
+  }, [steamId64, openIdParams]);
 
   const handleDataDeletion = () => {
     try {
