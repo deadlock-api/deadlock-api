@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
-import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/api";
-import { lazy, Suspense, useCallback, useState } from "react";
+import { parseAsInteger, useQueryState } from "nuqs";
+import { lazy, Suspense } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -9,8 +9,8 @@ import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
-import { MAX_GAME_DURATION_S, MIN_GAME_DURATION_S } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
+import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { queryKeys } from "~/queries/query-keys";
 
 const BadgeDistributionChart = lazy(() => import("./BadgeDistributionChart"));
@@ -23,31 +23,34 @@ export function meta() {
   });
 }
 
+const defaultDateRange: [Dayjs | undefined, Dayjs | undefined] = [
+  day().subtract(30, "day").startOf("day"),
+  day().endOf("day"),
+];
+
 export default function BadgeDistribution() {
-  const [filter, setFilter] = useState<AnalyticsApiBadgeDistributionRequest>({
-    minUnixTimestamp: day().subtract(30, "day").startOf("day").unix(),
-    maxUnixTimestamp: day().endOf("day").unix(),
-  });
-
-  const handleDurationChange = useCallback(
-    (min: number | undefined, max: number | undefined) =>
-      setFilter((prev) => ({
-        ...prev,
-        minDurationS: min ?? MIN_GAME_DURATION_S,
-        maxDurationS: max ?? MAX_GAME_DURATION_S,
-      })),
-    [],
+  const [[startDate, endDate], setDateRange] = useQueryState(
+    "date_range",
+    parseAsDayjsRange.withDefault(defaultDateRange),
   );
+  const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
+  const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
 
-  const handleDateChange = useCallback(
-    (startDate?: Dayjs, endDate?: Dayjs) =>
-      setFilter((prev) => ({
-        ...prev,
-        minUnixTimestamp: startDate ? startDate.unix() : 0,
-        maxUnixTimestamp: endDate ? endDate.unix() : undefined,
-      })),
-    [],
-  );
+  const filter = {
+    minUnixTimestamp: startDate ? startDate.unix() : 0,
+    maxUnixTimestamp: endDate ? endDate.unix() : undefined,
+    minDurationS: minDurationS ?? undefined,
+    maxDurationS: maxDurationS ?? undefined,
+  };
+
+  const handleDurationChange = (min: number | undefined, max: number | undefined) => {
+    setMinDurationS(min ?? null);
+    setMaxDurationS(max ?? null);
+  };
+
+  const handleDateChange = (newStartDate?: Dayjs, newEndDate?: Dayjs) => {
+    setDateRange([newStartDate, newEndDate]);
+  };
 
   const [ranks, badgeDistributionQuery] = useQueries({
     queries: [
@@ -80,15 +83,11 @@ export default function BadgeDistribution() {
       </div>
       <Filter.Root>
         <Filter.MatchDuration
-          minTime={filter.minDurationS ?? undefined}
-          maxTime={filter.maxDurationS ?? undefined}
+          minTime={minDurationS ?? undefined}
+          maxTime={maxDurationS ?? undefined}
           onTimeChange={handleDurationChange}
         />
-        <Filter.PatchOrDate
-          startDate={filter.minUnixTimestamp ? day.unix(filter.minUnixTimestamp) : undefined}
-          endDate={filter.maxUnixTimestamp ? day.unix(filter.maxUnixTimestamp) : undefined}
-          onDateChange={handleDateChange}
-        />
+        <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
       <div className="flex-1 min-h-0 flex justify-center items-center">
         {isPending ? (
