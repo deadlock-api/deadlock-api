@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
 import { useDebouncedState } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -21,7 +22,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
   const { data, error } = useQuery<Variable[]>({
     queryKey: queryKeys.streamkit.availableVariables(),
     queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   useEffect(() => {

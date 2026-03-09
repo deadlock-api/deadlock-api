@@ -7,6 +7,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { cn } from "~/lib/utils";
@@ -66,7 +67,7 @@ export default function HeroMatchupDetailsStatsTable({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
@@ -93,7 +94,7 @@ export default function HeroMatchupDetailsStatsTable({
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({
@@ -118,7 +119,7 @@ export default function HeroMatchupDetailsStatsTable({
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000, // 1 hour
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
   const isLoading = useMemo(

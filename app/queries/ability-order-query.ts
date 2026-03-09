@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { queryKeys } from "./query-keys";
 
@@ -52,6 +53,6 @@ export function abilityOrderQueryOptions({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 }

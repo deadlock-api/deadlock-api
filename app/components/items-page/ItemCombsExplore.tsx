@@ -12,6 +12,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { assetsApi } from "~/lib/assets-api";
 import { API_ORIGIN } from "~/lib/constants";
@@ -178,7 +179,7 @@ export default function ItemCombsExplore({
   const { data: ranksData } = useQuery({
     queryKey: queryKeys.assets.ranks(),
     queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   const queryStatOptions = useMemo(() => {
@@ -264,7 +265,7 @@ export default function ItemCombsExplore({
       return (await res.json()) as BulkMatchMetadata[];
     },
     enabled: topBuildsEnabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
 
   const topBuildsCards = useMemo(() => {

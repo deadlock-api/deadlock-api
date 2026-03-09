@@ -3,6 +3,7 @@ import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
@@ -66,7 +67,7 @@ export default function AbilityOrderTree({
       });
       return response.data;
     },
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   const { data: abilityItems } = useQuery(abilitiesQueryOptions);

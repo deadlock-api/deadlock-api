@@ -6,6 +6,7 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -70,7 +71,7 @@ export default function PlayerScoreboard() {
       });
       return response.data;
     },
-    staleTime: 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
   return (

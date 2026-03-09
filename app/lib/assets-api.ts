@@ -7,7 +7,7 @@ export interface ApiConfig {
 }
 
 export const DEFAULT_API_CONFIG: ApiConfig = {
-  timeout: 5000,
+  timeout: 5_000,
 };
 
 export class Api {

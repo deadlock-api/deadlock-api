@@ -3,6 +3,7 @@ import type { RankV2 } from "assets_deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import type { GameStatsQueryParams } from "~/queries/game-stats-query";
@@ -41,7 +42,7 @@ export default function GameStatsByRankChart({
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;
     },
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   const tierData = useMemo(() => {

@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
@@ -207,7 +208,7 @@ export default function HeroStatsByRankChart({
       });
       return response.data;
     },
-    staleTime: 24 * 60 * 60 * 1000,
+    staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
   const { data: ranksData, isLoading: isLoadingRanks } = useQuery({
@@ -216,7 +217,7 @@ export default function HeroStatsByRankChart({
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;
     },
-    staleTime: Number.MAX_SAFE_INTEGER,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);

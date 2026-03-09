@@ -5,6 +5,7 @@ import type {
   Match,
   UseMatchHistoryResult,
 } from "~/components/streamkit/widgets/MatchHistory/MatchHistory.types";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
@@ -31,7 +32,7 @@ export const useMatchHistory = ({
   } = useQuery<Hero[]>({
     queryKey: queryKeys.streamkit.heroes(),
     queryFn: () => fetch(`${ASSETS_ORIGIN}/v2/heroes`).then((res) => res.json()),
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: CACHE_DURATIONS.FOREVER,
   });
 
   const {
