@@ -74,9 +74,7 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Games",
-    links: [
-      { to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 },
-    ],
+    links: [{ to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 }],
   },
 ];
 

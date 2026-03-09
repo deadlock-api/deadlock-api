@@ -199,7 +199,9 @@ function useAudioPlayer(url: string | null) {
     setVolume(clamped);
     try {
       localStorage.setItem("deadlockdle:sound-volume", String(clamped));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const updateProgress = useCallback(() => {
@@ -311,8 +313,17 @@ export default function GuessSound() {
     return codenameMap.get(dailySound.heroCodename) ?? null;
   }, [dailySound, codenameMap]);
 
-  const { audioRef, isPlaying, progress, duration, volume, changeVolume, togglePlayPause, handleEnded, handleLoadedMetadata } =
-    useAudioPlayer(dailySound?.url ?? null);
+  const {
+    audioRef,
+    isPlaying,
+    progress,
+    duration,
+    volume,
+    changeVolume,
+    togglePlayPause,
+    handleEnded,
+    handleLoadedMetadata,
+  } = useAudioPlayer(dailySound?.url ?? null);
 
   // Hints for progressive reveal
   const hints = useMemo(() => {
