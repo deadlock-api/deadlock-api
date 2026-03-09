@@ -19,9 +19,7 @@ import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
-
-export const BY_RANK_STATS = [...HERO_STATS, "pickrate"] as const;
-export type ByRankStat = (typeof BY_RANK_STATS)[number];
+import type { ByRankStat } from "./HeroStatSelectors";
 
 const BEBOP_HERO_ID = 15;
 

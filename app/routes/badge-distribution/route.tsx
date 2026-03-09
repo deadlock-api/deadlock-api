@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/api";
-import { useCallback, useState } from "react";
+import { Suspense, lazy, useCallback, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
@@ -8,8 +8,9 @@ import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { MAX_GAME_DURATION_S, MIN_GAME_DURATION_S } from "~/lib/constants";
-import BadgeDistributionChart from "./BadgeDistributionChart";
 import { createPageMeta } from "~/lib/meta";
+
+const BadgeDistributionChart = lazy(() => import("./BadgeDistributionChart"));
 
 export function meta() {
   return createPageMeta({
@@ -96,7 +97,9 @@ export default function BadgeDistribution() {
         ) : isError ? (
           <div className="text-center text-sm text-destructive">Failed to load rank distribution: {error?.message}</div>
         ) : badgeDistributionQuery.data ? (
-          <BadgeDistributionChart badgeDistributionData={badgeDistributionQuery.data} ranksData={ranks.data ?? []} />
+          <Suspense fallback={<LoadingLogo />}>
+            <BadgeDistributionChart badgeDistributionData={badgeDistributionQuery.data} ranksData={ranks.data ?? []} />
+          </Suspense>
         ) : null}
       </div>
     </div>

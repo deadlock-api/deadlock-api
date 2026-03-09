@@ -1,20 +1,14 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useId, useState } from "react";
+import { Suspense, lazy, useId, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
-import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
-import HeroMatchupDetailsStatsTable, {
-  HeroMatchupDetailsStatsTableStat,
-} from "~/components/heroes-page/HeroMatchupDetailsStatsTable";
-import HeroMatchupStatsTable from "~/components/heroes-page/HeroMatchupStatsTable";
-import HeroStatsByDurationChart from "~/components/heroes-page/HeroStatsByDurationChart";
-import HeroStatsByExperienceTable from "~/components/heroes-page/HeroStatsByExperienceTable";
-import HeroStatsByRankChart, { BY_RANK_STATS } from "~/components/heroes-page/HeroStatsByRankChart";
-import HeroStatsOverTimeChart, {
+import {
+  BY_RANK_STATS,
   HeroStatSelector,
   HeroTimeIntervalSelector,
-} from "~/components/heroes-page/HeroStatsOverTimeChart";
+} from "~/components/heroes-page/HeroStatSelectors";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
@@ -22,9 +16,17 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
+import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { HERO_STATS } from "~/types/api_hero_stats";
-import { createPageMeta } from "~/lib/meta";
+
+const HeroStatsOverTimeChart = lazy(() => import("~/components/heroes-page/HeroStatsOverTimeChart"));
+const HeroStatsByDurationChart = lazy(() => import("~/components/heroes-page/HeroStatsByDurationChart"));
+const HeroStatsByRankChart = lazy(() => import("~/components/heroes-page/HeroStatsByRankChart"));
+const HeroStatsByExperienceTable = lazy(() => import("~/components/heroes-page/HeroStatsByExperienceTable"));
+const HeroMatchupStatsTable = lazy(() => import("~/components/heroes-page/HeroMatchupStatsTable"));
+const HeroCombStatsTable = lazy(() => import("~/components/heroes-page/HeroCombStatsTable"));
+const HeroMatchupDetailsStatsTable = lazy(() => import("~/components/heroes-page/HeroMatchupDetailsStatsTable"));
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -201,17 +203,19 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <HeroStatsOverTimeChart
-              heroStat={heroStat as (typeof HERO_STATS)[number]}
-              heroTimeInterval={heroTimeInterval}
-              minRankId={effectiveMinRankId}
-              maxRankId={effectiveMaxRankId}
-              minHeroMatches={minHeroMatches}
-              minHeroMatchesTotal={minHeroMatchesTotal}
-              minDate={startDate}
-              maxDate={endDate}
-              gameMode={gameMode}
-            />
+            <Suspense fallback={<LoadingLogo />}>
+              <HeroStatsOverTimeChart
+                heroStat={heroStat as (typeof HERO_STATS)[number]}
+                heroTimeInterval={heroTimeInterval}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minHeroMatches={minHeroMatches}
+                minHeroMatchesTotal={minHeroMatchesTotal}
+                minDate={startDate}
+                maxDate={endDate}
+                gameMode={gameMode}
+              />
+            </Suspense>
           </div>
         </TabsContent>
 
@@ -226,16 +230,18 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <HeroStatsByDurationChart
-              heroStat={heroStat as (typeof HERO_STATS)[number]}
-              minRankId={effectiveMinRankId}
-              maxRankId={effectiveMaxRankId}
-              minHeroMatches={minHeroMatches}
-              minHeroMatchesTotal={minHeroMatchesTotal}
-              minDate={startDate}
-              maxDate={endDate}
-              gameMode={gameMode}
-            />
+            <Suspense fallback={<LoadingLogo />}>
+              <HeroStatsByDurationChart
+                heroStat={heroStat as (typeof HERO_STATS)[number]}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minHeroMatches={minHeroMatches}
+                minHeroMatchesTotal={minHeroMatchesTotal}
+                minDate={startDate}
+                maxDate={endDate}
+                gameMode={gameMode}
+              />
+            </Suspense>
           </div>
         </TabsContent>
 
@@ -251,15 +257,17 @@ export default function Heroes(
                 <HeroStatSelector value={byRankY} onChange={(val) => setByRankY(val)} options={BY_RANK_STATS} />
               </div>
             </div>
-            <HeroStatsByRankChart
-              minHeroMatches={minHeroMatches}
-              minHeroMatchesTotal={minHeroMatchesTotal}
-              minDate={startDate}
-              maxDate={endDate}
-              gameMode={"normal"}
-              xStat={byRankX}
-              yStat={byRankY}
-            />
+            <Suspense fallback={<LoadingLogo />}>
+              <HeroStatsByRankChart
+                minHeroMatches={minHeroMatches}
+                minHeroMatchesTotal={minHeroMatchesTotal}
+                minDate={startDate}
+                maxDate={endDate}
+                gameMode={"normal"}
+                xStat={byRankX}
+                yStat={byRankY}
+              />
+            </Suspense>
           </div>
         </TabsContent>
 
@@ -274,15 +282,17 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <HeroStatsByExperienceTable
-              heroStat={heroStat as (typeof HERO_STATS)[number]}
-              minRankId={effectiveMinRankId}
-              maxRankId={effectiveMaxRankId}
-              minHeroMatches={minHeroMatches}
-              minDate={startDate}
-              maxDate={endDate}
-              gameMode={gameMode}
-            />
+            <Suspense fallback={<LoadingLogo />}>
+              <HeroStatsByExperienceTable
+                heroStat={heroStat as (typeof HERO_STATS)[number]}
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minHeroMatches={minHeroMatches}
+                minDate={startDate}
+                maxDate={endDate}
+                gameMode={gameMode}
+              />
+            </Suspense>
           </div>
         </TabsContent>
 
@@ -311,7 +321,29 @@ export default function Heroes(
               </div>
             </div>
             <div className="flex flex-col gap-4">
-              <HeroMatchupStatsTable
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroMatchupStatsTable
+                  minRankId={effectiveMinRankId}
+                  maxRankId={effectiveMaxRankId}
+                  minDate={startDate || undefined}
+                  maxDate={endDate || undefined}
+                  prevMinDate={prevDates.prevStartDate}
+                  prevMaxDate={prevDates.prevEndDate}
+                  minMatches={minMatches}
+                  sameLaneFilter={sameLaneFilter}
+                  samePartyFilter={samePartyFilter}
+                  gameMode={gameMode}
+                />
+              </Suspense>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hero-combs">
+          <div className="flex flex-col gap-4">
+            <Suspense fallback={<LoadingLogo />}>
+              <HeroCombStatsTable
+                columns={["winRate", "pickRate", "totalMatches"]}
                 minRankId={effectiveMinRankId}
                 maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
@@ -319,27 +351,9 @@ export default function Heroes(
                 prevMinDate={prevDates.prevStartDate}
                 prevMaxDate={prevDates.prevEndDate}
                 minMatches={minMatches}
-                sameLaneFilter={sameLaneFilter}
-                samePartyFilter={samePartyFilter}
                 gameMode={gameMode}
               />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="hero-combs">
-          <div className="flex flex-col gap-4">
-            <HeroCombStatsTable
-              columns={["winRate", "pickRate", "totalMatches"]}
-              minRankId={effectiveMinRankId}
-              maxRankId={effectiveMaxRankId}
-              minDate={startDate || undefined}
-              maxDate={endDate || undefined}
-              prevMinDate={prevDates.prevStartDate}
-              prevMaxDate={prevDates.prevEndDate}
-              minMatches={minMatches}
-              gameMode={gameMode}
-            />
+            </Suspense>
           </div>
         </TabsContent>
 
@@ -376,40 +390,42 @@ export default function Heroes(
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <HeroMatchupDetailsStatsTable
-                heroId={heroId}
-                stat={HeroMatchupDetailsStatsTableStat.SYNERGY}
-                minRankId={effectiveMinRankId}
-                maxRankId={effectiveMaxRankId}
-                minDate={startDate || undefined}
-                maxDate={endDate || undefined}
-                onHeroSelected={(selectedHeroId) => {
-                  if (!selectedHeroId) return;
-                  setHeroId(selectedHeroId);
-                }}
-                sameLaneFilter={sameLaneFilter}
-                samePartyFilter={samePartyFilter}
-                minHeroMatches={minMatches}
-                gameMode={gameMode}
-              />
-              <HeroMatchupDetailsStatsTable
-                heroId={heroId}
-                stat={HeroMatchupDetailsStatsTableStat.COUNTER}
-                minRankId={effectiveMinRankId}
-                maxRankId={effectiveMaxRankId}
-                minDate={startDate || undefined}
-                maxDate={endDate || undefined}
-                onHeroSelected={(selectedHeroId) => {
-                  if (!selectedHeroId) return;
-                  setHeroId(selectedHeroId);
-                }}
-                sameLaneFilter={sameLaneFilter}
-                samePartyFilter={samePartyFilter}
-                minHeroMatches={minMatches}
-                gameMode={gameMode}
-              />
-            </div>
+            <Suspense fallback={<LoadingLogo />}>
+              <div className="grid grid-cols-2 gap-4">
+                <HeroMatchupDetailsStatsTable
+                  heroId={heroId}
+                  stat={0}
+                  minRankId={effectiveMinRankId}
+                  maxRankId={effectiveMaxRankId}
+                  minDate={startDate || undefined}
+                  maxDate={endDate || undefined}
+                  onHeroSelected={(selectedHeroId) => {
+                    if (!selectedHeroId) return;
+                    setHeroId(selectedHeroId);
+                  }}
+                  sameLaneFilter={sameLaneFilter}
+                  samePartyFilter={samePartyFilter}
+                  minHeroMatches={minMatches}
+                  gameMode={gameMode}
+                />
+                <HeroMatchupDetailsStatsTable
+                  heroId={heroId}
+                  stat={1}
+                  minRankId={effectiveMinRankId}
+                  maxRankId={effectiveMaxRankId}
+                  minDate={startDate || undefined}
+                  maxDate={endDate || undefined}
+                  onHeroSelected={(selectedHeroId) => {
+                    if (!selectedHeroId) return;
+                    setHeroId(selectedHeroId);
+                  }}
+                  sameLaneFilter={sameLaneFilter}
+                  samePartyFilter={samePartyFilter}
+                  minHeroMatches={minMatches}
+                  gameMode={gameMode}
+                />
+              </div>
+            </Suspense>
           </div>
         </TabsContent>
       </Tabs>

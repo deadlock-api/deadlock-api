@@ -4,50 +4,10 @@ import { useCallback, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { type Dayjs, day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
-import { HERO_STATS, hero_stats_transform, TIME_INTERVALS } from "~/types/api_hero_stats";
-
-export function HeroStatSelector<T extends readonly string[]>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T[number];
-  onChange: (val: T[number]) => void;
-  options?: T;
-}) {
-  const items = options ?? HERO_STATS;
-  return (
-    <ToggleGroup
-      type="single"
-      value={value}
-      onValueChange={(val) => val && onChange(val)}
-      variant="outline"
-      className="flex-wrap"
-    >
-      {items.map((key) => (
-        <ToggleGroupItem key={key as string} value={key as string} className="text-xs capitalize">
-          {(key as string).replace(/_/g, " ")}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
-  );
-}
-
-export function HeroTimeIntervalSelector({ value, onChange }: { value: string; onChange: (val: string) => void }) {
-  return (
-    <ToggleGroup type="single" value={value} onValueChange={(val) => val && onChange(val)} variant="outline">
-      {TIME_INTERVALS.map((key) => (
-        <ToggleGroupItem key={key.label} value={key.query} className="text-xs capitalize">
-          {key.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
-  );
-}
+import { HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 const BEBOP_HERO_ID = 15;
 
