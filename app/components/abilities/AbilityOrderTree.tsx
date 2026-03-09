@@ -1,13 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AbilityV2 } from "assets_deadlock_api_client/api";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
-import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
+import { abilitiesQueryOptions } from "~/queries/asset-queries";
 import AbilityOrderNode from "./AbilityOrderNode";
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
@@ -68,16 +67,7 @@ export default function AbilityOrderTree({
     staleTime: Number.POSITIVE_INFINITY,
   });
 
-  const { data: abilityItems } = useQuery({
-    queryKey: ["assets-items-abilities"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
-        type: "ability",
-      });
-      return response.data as AbilityV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: abilityItems } = useQuery(abilitiesQueryOptions);
 
   const abilitySlotMap = useMemo(() => {
     const map = new Map<number, number>();

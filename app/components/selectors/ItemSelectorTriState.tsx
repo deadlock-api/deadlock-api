@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useMemo } from "react";
 import ItemImage from "~/components/ItemImage";
 import { type TriState, type TriStateColumnLayout, TriStateSelector } from "~/components/selectors/TriStateSelector";
-import { assetsApi } from "~/lib/assets-api";
+import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 const ITEM_COLUMN_LAYOUT: TriStateColumnLayout = {
   superGroups: [1, 2, 3, 4].map((tier) => ({ key: String(tier), label: `Tier ${tier}` })),
@@ -23,14 +22,7 @@ export function ItemSelectorTriState({
   onSelectionsChange: (selections: Map<number, TriState>) => void;
   label?: string;
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-items"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
-      return response.data as UpgradeV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
 
   const options = useMemo(() => {
     if (!data) return [];

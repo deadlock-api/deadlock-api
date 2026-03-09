@@ -16,9 +16,9 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import { HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
+import { heroesQueryOptions } from "~/queries/asset-queries";
+import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 import type { ByRankStat } from "./HeroStatSelectors";
 
 const BEBOP_HERO_ID = 15;
@@ -220,14 +220,7 @@ export default function HeroStatsByRankChart({
     staleTime: Number.MAX_SAFE_INTEGER,
   });
 
-  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);
 
   const badgeMap = useMemo(() => (ranksData ? extractBadgeMap(ranksData) : new Map()), [ranksData]);
 

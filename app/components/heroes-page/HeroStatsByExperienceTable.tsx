@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 const EXPERIENCE_BUCKETS = [
@@ -77,14 +77,7 @@ export default function HeroStatsByExperienceTable({
     })),
   });
 
-  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);
 
   const heroIdMap = useMemo(() => {
     const map: Record<number, { name: string }> = {};

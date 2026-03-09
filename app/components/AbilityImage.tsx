@@ -1,18 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AbilityV2 } from "assets_deadlock_api_client/api";
 import { useMemo } from "react";
-import { assetsApi } from "~/lib/assets-api";
 import { cn } from "~/lib/utils";
+import { abilitiesQueryOptions } from "~/queries/asset-queries";
 
 export default function AbilityImage({ abilityId, className }: { abilityId: number; className?: string }) {
-  const { data } = useQuery({
-    queryKey: ["assets-items-abilities"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
-      return response.data as AbilityV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data } = useQuery(abilitiesQueryOptions);
 
   const ability = useMemo(() => data?.find((item) => item.id === abilityId), [data, abilityId]);
 

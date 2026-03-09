@@ -8,7 +8,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Skeleton } from "~/components/ui/skeleton";
-import { assetsApi } from "~/lib/assets-api";
+import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 export default function ItemSelector({
   onItemSelected,
@@ -21,14 +21,7 @@ export default function ItemSelector({
   allowSelectNull?: boolean;
   label?: string;
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-items"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
-      return response.data as UpgradeV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
 
   function sortItems(a: UpgradeV2, b: UpgradeV2) {
     if (a.item_tier !== b.item_tier) {
@@ -104,14 +97,7 @@ export function ItemSelectorMultiple({
   selectedItems: number[];
   label?: string;
 }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-items"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
-      return response.data as UpgradeV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
 
   function sortItems(a: UpgradeV2, b: UpgradeV2) {
     if (a.item_tier !== b.item_tier) {

@@ -9,17 +9,10 @@ import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { assetsApi } from "~/lib/assets-api";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 
 function useHeroes() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data, isLoading } = useQuery(heroesQueryOptions);
 
   const sortedHeroes = useMemo(
     () =>
