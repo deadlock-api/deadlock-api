@@ -6,13 +6,13 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import type { GameStatsQueryParams } from "~/queries/game-stats-query";
-import { gameStatsQueryOptions } from "~/queries/game-stats-query";
+import type { GameStatsQueryParams } from "~/queries/games-query";
+import { gameStatsQueryOptions } from "~/queries/games-query";
 import { queryKeys } from "~/queries/query-keys";
 import { StatSelector } from "./StatSelector";
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
 
-interface GameStatsByRankChartProps {
+interface GamesByRankChartProps {
   params: GameStatsQueryParams;
   stat: string;
   onStatChange: (stat: string) => void;
@@ -28,12 +28,7 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
-export default function GameStatsByRankChart({
-  params,
-  stat,
-  onStatChange,
-  isStreetBrawl = false,
-}: GameStatsByRankChartProps) {
+export default function GamesByRankChart({ params, stat, onStatChange, isStreetBrawl = false }: GamesByRankChartProps) {
   const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "avg_badge" }));
 
   const { data: ranksData } = useQuery({

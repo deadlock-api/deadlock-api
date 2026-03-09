@@ -4,9 +4,9 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
-import type { GameStatsQueryParams } from "~/queries/game-stats-query";
+import type { GameStatsQueryParams } from "~/queries/games-query";
 import { cn } from "~/lib/utils";
-import { gameStatsQueryOptions } from "~/queries/game-stats-query";
+import { gameStatsQueryOptions } from "~/queries/games-query";
 import { StatSelector } from "./StatSelector";
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
 
@@ -16,7 +16,7 @@ const TIME_BUCKETS = [
   { value: "start_time_month", label: "Monthly" },
 ] as const;
 
-interface GameStatsOverTimeChartProps {
+interface GamesOverTimeChartProps {
   params: GameStatsQueryParams;
   stat: string;
   onStatChange: (stat: string) => void;
@@ -25,14 +25,14 @@ interface GameStatsOverTimeChartProps {
   isStreetBrawl?: boolean;
 }
 
-export default function GameStatsOverTimeChart({
+export default function GamesOverTimeChart({
   params,
   stat,
   onStatChange,
   timeBucket,
   onTimeBucketChange,
   isStreetBrawl = false,
-}: GameStatsOverTimeChartProps) {
+}: GamesOverTimeChartProps) {
   const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: timeBucket }));
 
   const statDef = getStatDefinition(stat);

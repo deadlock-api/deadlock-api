@@ -7,7 +7,7 @@ const ROUTE_LABELS: Record<string, string> = {
   abilities: "Ability Stats",
   leaderboard: "Leaderboard",
   "badge-distribution": "Rank Distribution",
-  "game-stats": "Game Stats",
+  games: "Games",
   heatmap: "Kill Heatmap",
   "player-scoreboard": "Player Scoreboard",
   chat: "AI Chat",

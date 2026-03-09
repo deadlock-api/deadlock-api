@@ -2,24 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import type { GameStatsQueryParams } from "~/queries/game-stats-query";
+import type { GameStatsQueryParams } from "~/queries/games-query";
 import { cn } from "~/lib/utils";
-import { gameStatsQueryOptions } from "~/queries/game-stats-query";
+import { gameStatsQueryOptions } from "~/queries/games-query";
 import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
 
-interface GameStatsOverviewProps {
+interface GamesOverviewProps {
   params: GameStatsQueryParams;
   prevParams: GameStatsQueryParams | null;
   onStatClick?: (statKey: string) => void;
   isStreetBrawl?: boolean;
 }
 
-export default function GameStatsOverview({
-  params,
-  prevParams,
-  onStatClick,
-  isStreetBrawl = false,
-}: GameStatsOverviewProps) {
+export default function GamesOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GamesOverviewProps) {
   const { data: currentData, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
   const { data: prevData } = useQuery({
     ...gameStatsQueryOptions({ ...prevParams!, bucket: "no_bucket" }),
