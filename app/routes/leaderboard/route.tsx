@@ -174,6 +174,10 @@ export default function Leaderboard() {
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">Leaderboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Ranked player standings across all regions</p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+            Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
+            characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
+          </p>
         </div>
         <Filter.Root>
           <Filter.Hero value={heroId} onChange={setHeroId} allowNull />

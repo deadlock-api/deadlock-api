@@ -78,6 +78,10 @@ export default function GameStats() {
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Game Stats</h1>
         <p className="text-sm text-muted-foreground mt-1">Aggregate match statistics and trends</p>
+        <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+          Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
+          compare across ranks, and spot meta shifts as patches roll out.
+        </p>
       </div>
 
       <Filter.Root>

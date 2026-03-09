@@ -106,6 +106,10 @@ export default function Heroes(
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Hero Stats</h1>
         <p className="text-sm text-muted-foreground mt-1">Detailed analytics and matchup data for Deadlock heroes</p>
+        <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+          Explore win rates, pick rates, and matchup data for every Deadlock hero. Filter by rank, patch, and game mode
+          to find the strongest heroes in the current meta or analyze how hero performance changes over time.
+        </p>
       </div>
 
       <Filter.Root>
