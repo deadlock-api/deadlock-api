@@ -31,7 +31,13 @@ export interface AnalyticsGameStats {
   total_matches: number;
 }
 
-export type GameStatsBucket = "no_bucket" | "avg_badge" | "start_time_hour" | "start_time_day" | "start_time_week" | "start_time_month";
+export type GameStatsBucket =
+  | "no_bucket"
+  | "avg_badge"
+  | "start_time_hour"
+  | "start_time_day"
+  | "start_time_week"
+  | "start_time_month";
 
 export interface GameStatsParams {
   bucket?: GameStatsBucket;

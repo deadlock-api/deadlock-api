@@ -111,8 +111,7 @@ export default function HeroStatsByDurationChart({
       for (const entry of queryData) {
         if (entry.matches < MIN_MATCHES_PER_BUCKET) continue;
         const statValue = hero_stats_transform(entry, heroStat);
-        row[entry.hero_id] =
-          statValue > 100 ? Math.round(statValue) : Math.round(statValue * 100) / 100;
+        row[entry.hero_id] = statValue > 100 ? Math.round(statValue) : Math.round(statValue * 100) / 100;
       }
       return row;
     });
@@ -130,14 +129,8 @@ export default function HeroStatsByDurationChart({
     return out;
   }, [formattedData]);
 
-  const minStat = useMemo(
-    () => sortedStats[Math.floor(sortedStats.length * 0.2)] ?? 0,
-    [sortedStats],
-  );
-  const maxStat = useMemo(
-    () => sortedStats[Math.floor(sortedStats.length * 0.8)] ?? 100,
-    [sortedStats],
-  );
+  const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)] ?? 0, [sortedStats]);
+  const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)] ?? 100, [sortedStats]);
 
   const allHeroIds = useMemo(
     () =>
@@ -151,9 +144,7 @@ export default function HeroStatsByDurationChart({
 
   const handleLegendClick = useCallback(
     (entry: { value?: string }) => {
-      const heroId = allHeroIds.find(
-        (id) => (heroIdMap[id]?.name ?? `Hero ${id}`) === entry.value,
-      );
+      const heroId = allHeroIds.find((id) => (heroIdMap[id]?.name ?? `Hero ${id}`) === entry.value);
       if (heroId === undefined) return;
       setVisibleHeroSet((prev) => {
         const next = new Set(prev);
@@ -195,9 +186,7 @@ export default function HeroStatsByDurationChart({
             position: "insideLeft",
           }}
           tickFormatter={(value) =>
-            heroStat === "winrate"
-              ? `${Number(value).toFixed(1)}%`
-              : Math.round(value).toLocaleString()
+            heroStat === "winrate" ? `${Number(value).toFixed(1)}%` : Math.round(value).toLocaleString()
           }
           minTickGap={2}
           tickCount={10}
@@ -206,9 +195,7 @@ export default function HeroStatsByDurationChart({
         <Tooltip
           contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
           itemStyle={{ color: "#e5e5e5" }}
-          formatter={(value: number) =>
-            heroStat === "winrate" ? `${value.toFixed(2)}%` : value.toLocaleString()
-          }
+          formatter={(value: number) => (heroStat === "winrate" ? `${value.toFixed(2)}%` : value.toLocaleString())}
         />
         <Legend
           layout="horizontal"
@@ -218,9 +205,7 @@ export default function HeroStatsByDurationChart({
           payload={allHeroIds.map((heroId) => ({
             value: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
             type: "line" as const,
-            color: visibleHeroSet.has(heroId)
-              ? (heroIdMap[heroId]?.color ?? "#ffffff")
-              : "#555555",
+            color: visibleHeroSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
           }))}
           wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
         />

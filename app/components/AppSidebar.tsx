@@ -177,9 +177,7 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
           : "border-transparent text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
       )}
     >
-      <Icon
-        className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-sidebar-foreground/40")}
-      />
+      <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-sidebar-foreground/40")} />
       {link.label}
     </Link>
   );
@@ -235,9 +233,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Service links */}
       <div className="px-3 py-2 border-t border-sidebar-border">
-        <p className="px-3 pb-1 text-xs font-semibold uppercase text-sidebar-foreground/40 tracking-wider">
-          Services
-        </p>
+        <p className="px-3 pb-1 text-xs font-semibold uppercase text-sidebar-foreground/40 tracking-wider">Services</p>
         <div className="space-y-0.5">
           {[
             { href: ASSETS_ORIGIN, label: "Assets API" },

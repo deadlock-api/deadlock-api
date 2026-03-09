@@ -1,15 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import {
-  Activity,
-  ArrowDown,
-  ArrowUp,
-  Coins,
-  Flame,
-  Swords,
-  Wheat,
-  type LucideIcon,
-} from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, Coins, Flame, Swords, Wheat, type LucideIcon } from "lucide-react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameStatsParams } from "~/lib/game-stats-api";
 import { cn } from "~/lib/utils";
@@ -31,10 +22,13 @@ interface GameStatsOverviewProps {
   isStreetBrawl?: boolean;
 }
 
-export default function GameStatsOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GameStatsOverviewProps) {
-  const { data: currentData, isPending } = useQuery(
-    gameStatsQueryOptions({ ...params, bucket: "no_bucket" }),
-  );
+export default function GameStatsOverview({
+  params,
+  prevParams,
+  onStatClick,
+  isStreetBrawl = false,
+}: GameStatsOverviewProps) {
+  const { data: currentData, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "no_bucket" }));
   const { data: prevData } = useQuery({
     ...gameStatsQueryOptions({ ...prevParams!, bucket: "no_bucket" }),
     enabled: prevParams != null,
@@ -50,7 +44,9 @@ export default function GameStatsOverview({ params, prevParams, onStatClick, isS
 
   const current = currentData?.[0];
   if (!current) {
-    return <div className="text-center text-sm text-muted-foreground py-8">No data available for the selected filters.</div>;
+    return (
+      <div className="text-center text-sm text-muted-foreground py-8">No data available for the selected filters.</div>
+    );
   }
 
   const prev = prevData?.[0];
@@ -74,9 +70,7 @@ export default function GameStatsOverview({ params, prevParams, onStatClick, isS
           >
             <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2 bg-white/[0.015]">
               {Icon && <Icon className="size-4 text-primary/80" />}
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {category.label}
-              </h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category.label}</h3>
             </div>
 
             <div className={cn(isWide && "sm:grid sm:grid-cols-2")}>
@@ -103,9 +97,7 @@ export default function GameStatsOverview({ params, prevParams, onStatClick, isS
                   >
                     <span className="text-sm text-muted-foreground">{stat.label}</span>
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold tabular-nums">
-                        {formatStatValue(value, stat.format)}
-                      </span>
+                      <span className="text-sm font-semibold tabular-nums">{formatStatValue(value, stat.format)}</span>
                       {delta != null && (
                         <span
                           className={cn(

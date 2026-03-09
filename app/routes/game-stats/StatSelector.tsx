@@ -12,7 +12,17 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Economy: Coins,
 };
 
-export function StatSelector({ value, onChange, children, isStreetBrawl = false }: { value: string; onChange: (val: string) => void; children?: React.ReactNode; isStreetBrawl?: boolean }) {
+export function StatSelector({
+  value,
+  onChange,
+  children,
+  isStreetBrawl = false,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  children?: React.ReactNode;
+  isStreetBrawl?: boolean;
+}) {
   const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
   const activeCategory = useMemo(() => {
     return categories.find((c) => c.stats.some((s) => s.key === value)) ?? categories[0];

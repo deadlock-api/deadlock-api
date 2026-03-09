@@ -26,7 +26,12 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
-export default function GameStatsByRankChart({ params, stat, onStatChange, isStreetBrawl = false }: GameStatsByRankChartProps) {
+export default function GameStatsByRankChart({
+  params,
+  stat,
+  onStatChange,
+  isStreetBrawl = false,
+}: GameStatsByRankChartProps) {
   const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "avg_badge" }));
 
   const { data: ranksData } = useQuery({
