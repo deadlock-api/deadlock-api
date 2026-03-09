@@ -57,6 +57,7 @@ export default function IngestCache() {
           <Button
             onClick={openDirectoryPicker}
             disabled={state.isLoading}
+            aria-busy={state.isLoading}
             className={cn(
               "w-full h-32 text-lg relative overflow-hidden group border-primary border-2 border-dashed transition-colors",
               state.isDragging && "bg-primary/10 border-primary",

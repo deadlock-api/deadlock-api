@@ -38,6 +38,7 @@ export function LeaderboardSummary({ ranks, leaderboard, onBadgeClick }: Leaderb
             key={badge}
             type="button"
             onClick={() => onBadgeClick?.(rank)}
+            aria-label={`Jump to rank #${rank} (${badgeInfo.name})`}
             className="flex flex-col items-center justify-center px-2 py-1 rounded-md bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors"
           >
             <BadgeImage badge={badge} ranks={ranks} imageType="small" className="size-8" />
