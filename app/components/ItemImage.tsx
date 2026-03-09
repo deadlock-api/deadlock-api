@@ -13,12 +13,8 @@ export default function ItemImage({ itemId, className }: { itemId: number; class
     return <Skeleton className={cn("size-8", className)} />;
   }
 
-  if (!item) {
-    return <div>ENOITEM</div>;
-  }
-
-  if (!item?.shop_image_webp) {
-    return <div>ENOIMG</div>;
+  if (!item || !item.shop_image_webp) {
+    return <div className={cn("size-8 aspect-square bg-muted rounded", className)} />;
   }
 
   return (
