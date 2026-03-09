@@ -3,11 +3,10 @@ import { cn } from "~/lib/utils";
 import type { MatchHistoryProps } from "./MatchHistory.types";
 import { MatchItem } from "./MatchItem";
 
-export const MatchHistory = ({ theme, numMatches = 10, accountId, refresh = 0, opacity = 100 }: MatchHistoryProps) => {
+export const MatchHistory = ({ theme, numMatches = 10, accountId, opacity = 100 }: MatchHistoryProps) => {
   const { matches, heroes, loading } = useMatchHistory({
     accountId,
     numMatches,
-    refresh,
   });
 
   if (loading) return null;
