@@ -16,10 +16,18 @@ interface UseMatchHistoryParams {
 }
 
 export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryParams): UseMatchHistoryResult => {
-  const { data: heroesData, isLoading: loadingHeroes } = useQuery<Hero[]>({
+  const { data: heroes = new Map<number, string>(), isLoading: loadingHeroes } = useQuery<
+    Hero[],
+    Error,
+    Map<number, string>
+  >({
     queryKey: queryKeys.streamkit.heroes(),
     queryFn: () => fetch(`${ASSETS_ORIGIN}/v2/heroes`).then((res) => res.json()),
     staleTime: CACHE_DURATIONS.FOREVER,
+    select: (heroesData) =>
+      Array.isArray(heroesData)
+        ? new Map(heroesData.map((h) => [h.id, h.images.icon_hero_card_webp]))
+        : new Map<number, string>(),
   });
 
   const { data: matchesData, isLoading: loadingMatches } = useQuery<Match[]>({
@@ -36,11 +44,6 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
     refetchInterval: UPDATE_INTERVAL_MS,
     refetchIntervalInBackground: true,
   });
-
-  const heroes = useMemo(() => {
-    if (!Array.isArray(heroesData)) return new Map<number, string>();
-    return new Map(heroesData.map((h) => [h.id, h.images.icon_hero_card_webp]));
-  }, [heroesData]);
 
   const matches = useMemo(() => {
     if (!Array.isArray(matchesData)) return [];

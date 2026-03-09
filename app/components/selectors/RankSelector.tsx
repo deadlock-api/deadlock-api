@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
-import { useMemo } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
@@ -33,36 +32,33 @@ export function RankSelector({
   selectedRank?: number | null;
   label?: string;
 }) {
-  const { data: ranksData, isLoading } = useQuery({
+  type RankOption = { value: number; label: string; rank: RankV2; subrank: number };
+
+  const { data: selectOptions = [], isLoading } = useQuery({
     queryKey: queryKeys.assets.ranks(),
     queryFn: async () => {
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;
     },
     staleTime: CACHE_DURATIONS.FOREVER,
-  });
-
-  // Add type annotation to fix linter error
-  const sortedRanks = useMemo(() => ranksData?.sort((a: RankV2, b: RankV2) => a.tier - b.tier) ?? [], [ranksData]);
-
-  // Prepare options for shadcn Select
-  const selectOptions = useMemo(() => {
-    type RankOption = { value: number; label: string; rank: RankV2; subrank: number };
-    const options: RankOption[] = [];
-    for (const rank of sortedRanks) {
-      const subRanksToShow = rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6];
-      for (const subrank of subRanksToShow) {
-        const rankId = getRankId(rank.tier, subrank);
-        options.push({
-          value: rankId,
-          label: `${rank.name} ${rank.tier === 0 ? "" : subrank}`.trim(),
-          rank: rank,
-          subrank: subrank,
-        });
+    select: (ranks): RankOption[] => {
+      const sorted = [...ranks].sort((a, b) => a.tier - b.tier);
+      const options: RankOption[] = [];
+      for (const rank of sorted) {
+        const subRanksToShow = rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6];
+        for (const subrank of subRanksToShow) {
+          const rankId = getRankId(rank.tier, subrank);
+          options.push({
+            value: rankId,
+            label: `${rank.name} ${rank.tier === 0 ? "" : subrank}`.trim(),
+            rank: rank,
+            subrank: subrank,
+          });
+        }
       }
-    }
-    return options;
-  }, [sortedRanks]);
+      return options;
+    },
+  });
 
   const handleValueChange = (value: string) => {
     if (value && value !== "") {

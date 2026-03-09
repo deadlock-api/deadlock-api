@@ -196,7 +196,7 @@ export default function Leaderboard() {
           ) : leaderboardQuery.data ? (
             <>
               <LeaderboardSummary
-                ranks={ranks.data}
+                ranks={ranks.data ?? []}
                 leaderboard={leaderboardQuery.data}
                 onBadgeClick={handleBadgeClick}
               />
