@@ -11,6 +11,200 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
+import type { Color } from "~/types/general";
+
+type SynergyEntry = Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
+  rel_winrate: number;
+};
+
+type CounterEntry = HeroCounterStats & { rel_winrate: number };
+
+function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
+  const map: Record<number, AnalyticsHeroStats> = {};
+  for (const hero of data || []) {
+    if (!hero?.matches || !hero?.wins) continue;
+    map[hero.hero_id] = hero;
+  }
+  return map;
+}
+
+function buildSynergyMap(
+  synergyData: HeroSynergyStats[] | undefined,
+  heroStatsMap: Record<number, AnalyticsHeroStats>,
+): Record<number, SynergyEntry[]> {
+  const synergyMap: Record<number, SynergyEntry[]> = {};
+  for (const synergy of synergyData || []) {
+    if (!synergy?.matches_played || !synergy?.wins) continue;
+    if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
+    if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
+    if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
+    const rel_winrate =
+      synergy.wins / synergy.matches_played -
+      (heroStatsMap[synergy.hero_id1].wins / heroStatsMap[synergy.hero_id1].matches +
+        heroStatsMap[synergy.hero_id2].wins / heroStatsMap[synergy.hero_id2].matches) /
+        2;
+    synergyMap[synergy.hero_id1].push({ ...synergy, rel_winrate });
+    synergyMap[synergy.hero_id2].push({
+      hero_id1: synergy.hero_id2,
+      hero_id2: synergy.hero_id1,
+      wins: synergy.wins,
+      matches_played: synergy.matches_played,
+      rel_winrate,
+    });
+  }
+  return synergyMap;
+}
+
+function pickTopFromMap<T extends { rel_winrate: number }>(
+  map: Record<number, T[]>,
+  direction: "best" | "worst",
+): Record<number, T> {
+  const result: Record<number, T> = {};
+  for (const heroId of Object.keys(map)) {
+    const heroIdParsed = Number.parseInt(heroId, 10);
+    const sorted = map[heroIdParsed].sort((a, b) =>
+      direction === "best" ? b.rel_winrate - a.rel_winrate : a.rel_winrate - b.rel_winrate,
+    );
+    if (sorted[0]) result[heroIdParsed] = sorted[0];
+  }
+  return result;
+}
+
+function buildCounterMap(
+  counterData: HeroCounterStats[] | undefined,
+  heroStatsMap: Record<number, AnalyticsHeroStats>,
+): Record<number, CounterEntry[]> {
+  const counterMap: Record<number, CounterEntry[]> = {};
+  for (const counter of counterData || []) {
+    if (!counter?.matches_played || !counter?.wins) continue;
+    if (!heroStatsMap[counter.hero_id]?.matches || !heroStatsMap[counter.hero_id]?.wins) continue;
+    if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
+    counterMap[counter.hero_id].push({
+      ...counter,
+      rel_winrate:
+        counter.wins / counter.matches_played -
+        heroStatsMap[counter.hero_id].wins / heroStatsMap[counter.hero_id].matches,
+    });
+  }
+  return counterMap;
+}
+
+function getMinMax(entries: Record<number, { rel_winrate: number }>): { min: number; max: number } {
+  const values = Object.values(entries).map((e) => e.rel_winrate);
+  if (values.length === 0) return { min: 0, max: 0 };
+  return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+function MatchupTooltip({
+  heroId,
+  partnerId,
+  separator,
+  matchesPlayed,
+  wins,
+  relWinrate,
+  prevRelWinrate,
+}: {
+  heroId: number;
+  partnerId: number;
+  separator: string;
+  matchesPlayed: number;
+  wins: number;
+  relWinrate: number;
+  prevRelWinrate: number | undefined;
+}) {
+  return (
+    <div className="flex flex-col gap-1 text-xs">
+      <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
+        <HeroName heroId={heroId} />
+        <span className="text-muted-foreground">{separator}</span>
+        <HeroName heroId={partnerId} />
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Matches</span>
+        <span className="font-medium">{matchesPlayed.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Wins</span>
+        <span className="font-medium">{wins.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Win rate</span>
+        <span className="font-medium">{((wins / matchesPlayed) * 100).toFixed(2)}%</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-muted-foreground">Win rate change</span>
+        <span className="font-medium">
+          {relWinrate > 0 ? "+" : ""}
+          {(relWinrate * 100).toFixed(2)}%
+        </span>
+      </div>
+      {prevRelWinrate !== undefined && (
+        <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+          <span className="text-muted-foreground">Previous</span>
+          <span className="font-medium">
+            {prevRelWinrate > 0 ? "+" : ""}
+            {(prevRelWinrate * 100).toFixed(2)}%
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchupCell({
+  heroId,
+  partnerId,
+  relWinrate,
+  prevRelWinrate,
+  min,
+  max,
+  color,
+  separator,
+  matchesPlayed,
+  wins,
+}: {
+  heroId: number;
+  partnerId?: number;
+  relWinrate?: number;
+  prevRelWinrate: number | undefined;
+  min: number;
+  max: number;
+  color: Color;
+  separator: string;
+  matchesPlayed?: number;
+  wins?: number;
+}) {
+  if (partnerId == null || relWinrate == null || matchesPlayed == null || wins == null) {
+    return <TableCell />;
+  }
+
+  return (
+    <TableCell>
+      <div className="flex items-center gap-2">
+        <HeroImage heroId={partnerId} />
+        <ProgressBarWithLabel
+          min={min}
+          max={max}
+          value={relWinrate}
+          color={color}
+          label={`${relWinrate > 0 ? "+" : ""}${Math.round(relWinrate * 100).toFixed(0)}% `}
+          delta={prevRelWinrate !== undefined ? relWinrate - prevRelWinrate : undefined}
+          tooltip={
+            <MatchupTooltip
+              heroId={heroId}
+              partnerId={partnerId}
+              separator={separator}
+              matchesPlayed={matchesPlayed}
+              wins={wins}
+              relWinrate={relWinrate}
+              prevRelWinrate={prevRelWinrate}
+            />
+          }
+        />
+      </div>
+    </TableCell>
+  );
+}
 
 export function HeroMatchupStatsTable({
   hideHeader,
@@ -199,30 +393,11 @@ export function HeroMatchupStatsTable({
     enabled: hasPreviousInterval,
   });
 
-  const isLoading = useMemo(
-    () => isLoadingSynergy || isLoadingCounter || isLoadingHero,
-    [isLoadingSynergy, isLoadingCounter, isLoadingHero],
-  );
+  const isLoading = isLoadingSynergy || isLoadingCounter || isLoadingHero;
 
-  const heroStatsMap = useMemo(() => {
-    const map: Record<number, AnalyticsHeroStats> = {};
-    for (const hero of heroData || []) {
-      if (!hero?.matches || !hero?.wins) continue;
-      map[hero.hero_id] = hero;
-    }
-    return map;
-  }, [heroData]);
+  const heroStatsMap = useMemo(() => buildHeroStatsMap(heroData), [heroData]);
+  const prevHeroStatsMap = useMemo(() => buildHeroStatsMap(prevHeroData), [prevHeroData]);
 
-  const prevHeroStatsMap = useMemo(() => {
-    const map: Record<number, AnalyticsHeroStats> = {};
-    for (const hero of prevHeroData || []) {
-      if (!hero?.matches || !hero?.wins) continue;
-      map[hero.hero_id] = hero;
-    }
-    return map;
-  }, [prevHeroData]);
-
-  // Map of (heroId -> partnerId -> rel_winrate) for previous period synergies
   const prevSynergyRelWinrateMap = useMemo(() => {
     const map: Record<number, Record<number, number>> = {};
     for (const synergy of prevSynergyData || []) {
@@ -241,7 +416,6 @@ export function HeroMatchupStatsTable({
     return map;
   }, [prevSynergyData, prevHeroStatsMap]);
 
-  // Map of (heroId -> enemyHeroId -> rel_winrate) for previous period counters
   const prevCounterRelWinrateMap = useMemo(() => {
     const map: Record<number, Record<number, number>> = {};
     for (const counter of prevCounterData || []) {
@@ -256,225 +430,18 @@ export function HeroMatchupStatsTable({
     return map;
   }, [prevCounterData, prevHeroStatsMap]);
 
-  const heroBestSynergies = useMemo(() => {
-    function bestCombination(
-      synergyMap: Record<
-        number,
-        (Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-          rel_winrate: number;
-        })[]
-      >,
-      heroId: number,
-    ) {
-      if (!synergyMap[heroId]) return null;
-      return synergyMap[heroId].sort((a, b) => b.rel_winrate - a.rel_winrate)[0];
-    }
+  const synergyMap = useMemo(() => buildSynergyMap(synergyData, heroStatsMap), [synergyData, heroStatsMap]);
+  const counterMap = useMemo(() => buildCounterMap(counterData, heroStatsMap), [counterData, heroStatsMap]);
 
-    const synergyMap: Record<
-      number,
-      (Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-        rel_winrate: number;
-      })[]
-    > = {};
-    for (const synergy of synergyData || []) {
-      if (!synergy?.matches_played || !synergy?.wins) continue;
-      if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
-      if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
-      if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
-      synergyMap[synergy.hero_id1].push({
-        ...synergy,
-        rel_winrate:
-          synergy?.wins / synergy?.matches_played -
-          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
-            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
-            2,
-      });
-      synergyMap[synergy.hero_id2].push({
-        hero_id1: synergy.hero_id2,
-        hero_id2: synergy.hero_id1,
-        wins: synergy?.wins,
-        matches_played: synergy.matches_played,
-        rel_winrate:
-          synergy?.wins / synergy?.matches_played -
-          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
-            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
-            2,
-      });
-    }
-    const bestSynergies: Record<
-      number,
-      Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-        rel_winrate: number;
-      }
-    > = {};
-    for (const heroId of Object.keys(synergyMap)) {
-      const heroIdParsed = Number.parseInt(heroId, 10);
-      const best = bestCombination(synergyMap, heroIdParsed);
-      if (best) {
-        bestSynergies[heroIdParsed] = best;
-      }
-    }
-    return bestSynergies;
-  }, [synergyData, heroStatsMap]);
+  const heroBestSynergies = useMemo(() => pickTopFromMap(synergyMap, "best"), [synergyMap]);
+  const heroWorstSynergies = useMemo(() => pickTopFromMap(synergyMap, "worst"), [synergyMap]);
+  const heroBestAgainst = useMemo(() => pickTopFromMap(counterMap, "best"), [counterMap]);
+  const heroWorstAgainst = useMemo(() => pickTopFromMap(counterMap, "worst"), [counterMap]);
 
-  const heroMinBestSynergyWinrate = useMemo(() => {
-    if (Object.keys(heroBestSynergies).length === 0) return 0;
-    return Math.min(...Object.values(heroBestSynergies).map((synergy) => synergy.rel_winrate));
-  }, [heroBestSynergies]);
-
-  const heroMaxBestSynergyWinrate = useMemo(() => {
-    if (Object.keys(heroBestSynergies).length === 0) return 0;
-    return Math.max(...Object.values(heroBestSynergies).map((synergy) => synergy.rel_winrate));
-  }, [heroBestSynergies]);
-
-  const heroWorstSynergies = useMemo(() => {
-    function worstCombination(
-      synergyMap: Record<
-        number,
-        (Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-          rel_winrate: number;
-        })[]
-      >,
-      heroId: number,
-    ) {
-      if (!synergyMap[heroId]) return null;
-      return synergyMap[heroId].sort((a, b) => a.rel_winrate - b.rel_winrate)[0];
-    }
-
-    const synergyMap: Record<
-      number,
-      (Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-        rel_winrate: number;
-      })[]
-    > = {};
-    for (const synergy of synergyData || []) {
-      if (!synergy?.matches_played || !synergy?.wins) continue;
-      if (!heroStatsMap[synergy.hero_id2]?.matches || !heroStatsMap[synergy.hero_id1]?.matches) continue;
-      if (!synergyMap[synergy.hero_id1]) synergyMap[synergy.hero_id1] = [];
-      if (!synergyMap[synergy.hero_id2]) synergyMap[synergy.hero_id2] = [];
-      synergyMap[synergy.hero_id1].push({
-        ...synergy,
-        rel_winrate:
-          synergy?.wins / synergy.matches_played -
-          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
-            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
-            2,
-      });
-      synergyMap[synergy.hero_id2].push({
-        hero_id1: synergy.hero_id2,
-        hero_id2: synergy.hero_id1,
-        wins: synergy?.wins,
-        matches_played: synergy.matches_played,
-        rel_winrate:
-          synergy?.wins / synergy.matches_played -
-          (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
-            heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
-            2,
-      });
-    }
-    const bestSynergies: Record<
-      number,
-      Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
-        rel_winrate: number;
-      }
-    > = {};
-    for (const heroId of Object.keys(synergyMap)) {
-      const heroIdParsed = Number.parseInt(heroId, 10);
-      const worst = worstCombination(synergyMap, heroIdParsed);
-      if (worst) {
-        bestSynergies[heroIdParsed] = worst;
-      }
-    }
-    return bestSynergies;
-  }, [synergyData, heroStatsMap]);
-
-  const heroMinWorstSynergyWinrate = useMemo(() => {
-    if (Object.keys(heroWorstSynergies).length === 0) return 0;
-    return Math.min(...Object.values(heroWorstSynergies).map((synergy) => synergy.rel_winrate));
-  }, [heroWorstSynergies]);
-
-  const heroMaxWorstSynergyWinrate = useMemo(() => {
-    if (Object.keys(heroWorstSynergies).length === 0) return 0;
-    return Math.max(...Object.values(heroWorstSynergies).map((synergy) => synergy.rel_winrate));
-  }, [heroWorstSynergies]);
-
-  const heroBestAgainst = useMemo(() => {
-    function bestAgainst(counterMap: Record<number, (HeroCounterStats & { rel_winrate: number })[]>, heroId: number) {
-      if (!counterMap[heroId]) return null;
-      return counterMap[heroId].sort((a, b) => b.rel_winrate - a.rel_winrate)[0];
-    }
-
-    const counterMap: Record<number, (HeroCounterStats & { rel_winrate: number })[]> = {};
-    for (const counter of counterData || []) {
-      if (!counter?.matches_played || !counter?.wins) continue;
-      if (!heroStatsMap[counter.hero_id]?.matches || !heroStatsMap[counter.hero_id]?.wins) continue;
-      if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
-      counterMap[counter.hero_id].push({
-        ...counter,
-        rel_winrate:
-          counter?.wins / counter?.matches_played -
-          heroStatsMap[counter.hero_id]?.wins / heroStatsMap[counter.hero_id]?.matches,
-      });
-    }
-    const bestCounters: Record<number, HeroCounterStats & { rel_winrate: number }> = {};
-    for (const heroId of Object.keys(counterMap)) {
-      const heroIdParsed = Number.parseInt(heroId, 10);
-      const best = bestAgainst(counterMap, heroIdParsed);
-      if (best) {
-        bestCounters[heroIdParsed] = best;
-      }
-    }
-    return bestCounters;
-  }, [counterData, heroStatsMap]);
-
-  const heroMinBestAgainstWinrate = useMemo(() => {
-    if (Object.keys(heroBestAgainst).length === 0) return 0;
-    return Math.min(...Object.values(heroBestAgainst).map((counter) => counter.rel_winrate));
-  }, [heroBestAgainst]);
-
-  const heroMaxBestAgainstWinrate = useMemo(() => {
-    if (Object.keys(heroBestAgainst).length === 0) return 0;
-    return Math.max(...Object.values(heroBestAgainst).map((counter) => counter.rel_winrate));
-  }, [heroBestAgainst]);
-
-  const heroWorstAgainst = useMemo(() => {
-    function worstAgainst(counterMap: Record<number, (HeroCounterStats & { rel_winrate: number })[]>, heroId: number) {
-      if (!counterMap[heroId]) return null;
-      return counterMap[heroId].sort((a, b) => a.rel_winrate - b.rel_winrate)[0];
-    }
-
-    const counterMap: Record<number, (HeroCounterStats & { rel_winrate: number })[]> = {};
-    for (const counter of counterData || []) {
-      if (!counter?.matches_played || !counter?.wins) continue;
-      if (!heroStatsMap[counter.hero_id]?.matches) continue;
-      if (!counterMap[counter.hero_id]) counterMap[counter.hero_id] = [];
-      counterMap[counter.hero_id].push({
-        ...counter,
-        rel_winrate:
-          counter?.wins / counter?.matches_played -
-          heroStatsMap[counter.hero_id]?.wins / heroStatsMap[counter.hero_id]?.matches,
-      });
-    }
-    const worstCounters: Record<number, HeroCounterStats & { rel_winrate: number }> = {};
-    for (const heroId of Object.keys(counterMap)) {
-      const heroIdParsed = Number.parseInt(heroId, 10);
-      const worst = worstAgainst(counterMap, heroIdParsed);
-      if (worst) {
-        worstCounters[heroIdParsed] = worst;
-      }
-    }
-    return worstCounters;
-  }, [counterData, heroStatsMap]);
-
-  const heroMinWorstAgainstWinrate = useMemo(() => {
-    if (Object.keys(heroWorstAgainst).length === 0) return 0;
-    return Math.min(...Object.values(heroWorstAgainst).map((counter) => counter.rel_winrate));
-  }, [heroWorstAgainst]);
-
-  const heroMaxWorstAgainstWinrate = useMemo(() => {
-    if (Object.keys(heroWorstAgainst).length === 0) return 0;
-    return Math.max(...Object.values(heroWorstAgainst).map((counter) => counter.rel_winrate));
-  }, [heroWorstAgainst]);
+  const bestSynergyRange = useMemo(() => getMinMax(heroBestSynergies), [heroBestSynergies]);
+  const worstSynergyRange = useMemo(() => getMinMax(heroWorstSynergies), [heroWorstSynergies]);
+  const bestAgainstRange = useMemo(() => getMinMax(heroBestAgainst), [heroBestAgainst]);
+  const worstAgainstRange = useMemo(() => getMinMax(heroWorstAgainst), [heroWorstAgainst]);
 
   const heroIds = useMemo(() => {
     const allHeroIds = new Set<number>();
@@ -519,275 +486,54 @@ export function HeroMatchupStatsTable({
                 <HeroName heroId={heroId} />
               </div>
             </TableCell>
-            <TableCell>
-              <div className="flex flex-col gap-2">
-                <div key={heroBestSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
-                  <HeroImage heroId={heroBestSynergies[heroId]?.hero_id2} />
-                  <ProgressBarWithLabel
-                    min={heroMinBestSynergyWinrate}
-                    max={heroMaxBestSynergyWinrate}
-                    value={heroBestSynergies[heroId]?.rel_winrate}
-                    color={"#fa4454"}
-                    label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    delta={
-                      prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2] !== undefined
-                        ? heroBestSynergies[heroId]?.rel_winrate -
-                          prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2]
-                        : undefined
-                    }
-                    tooltip={
-                      <div className="flex flex-col gap-1 text-xs">
-                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
-                          <HeroName heroId={heroId} />
-                          <span className="text-muted-foreground">+</span>
-                          <HeroName heroId={heroBestSynergies[heroId]?.hero_id2} />
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Matches</span>
-                          <span className="font-medium">
-                            {heroBestSynergies[heroId]?.matches_played.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Wins</span>
-                          <span className="font-medium">{heroBestSynergies[heroId]?.wins.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate</span>
-                          <span className="font-medium">
-                            {(
-                              (heroBestSynergies[heroId]?.wins / heroBestSynergies[heroId]?.matches_played) *
-                              100
-                            ).toFixed(2)}
-                            %
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate change</span>
-                          <span className="font-medium">
-                            {heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}
-                            {(heroBestSynergies[heroId]?.rel_winrate * 100).toFixed(2)}%
-                          </span>
-                        </div>
-                        {prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2] !== undefined && (
-                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
-                            <span className="text-muted-foreground">Previous</span>
-                            <span className="font-medium">
-                              {prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] > 0 ? "+" : ""}
-                              {(prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] * 100).toFixed(2)}
-                              %
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    }
-                  />
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex flex-col gap-2">
-                <div key={heroWorstSynergies[heroId]?.hero_id2} className="flex items-center gap-2">
-                  <HeroImage heroId={heroWorstSynergies[heroId]?.hero_id2} />
-                  <ProgressBarWithLabel
-                    min={heroMinWorstSynergyWinrate}
-                    max={heroMaxWorstSynergyWinrate}
-                    value={heroWorstSynergies[heroId]?.rel_winrate}
-                    color={"#fa4454"}
-                    label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    delta={
-                      prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2] !== undefined
-                        ? heroWorstSynergies[heroId]?.rel_winrate -
-                          prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2]
-                        : undefined
-                    }
-                    tooltip={
-                      <div className="flex flex-col gap-1 text-xs">
-                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
-                          <HeroName heroId={heroId} />
-                          <span className="text-muted-foreground">+</span>
-                          <HeroName heroId={heroWorstSynergies[heroId]?.hero_id2} />
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Matches</span>
-                          <span className="font-medium">
-                            {heroWorstSynergies[heroId]?.matches_played.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Wins</span>
-                          <span className="font-medium">{heroWorstSynergies[heroId]?.wins.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate</span>
-                          <span className="font-medium">
-                            {(
-                              (heroWorstSynergies[heroId]?.wins / heroWorstSynergies[heroId]?.matches_played) *
-                              100
-                            ).toFixed(2)}
-                            %
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate change</span>
-                          <span className="font-medium">
-                            {heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}
-                            {(heroWorstSynergies[heroId]?.rel_winrate * 100).toFixed(2)}%
-                          </span>
-                        </div>
-                        {prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2] !== undefined && (
-                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
-                            <span className="text-muted-foreground">Previous</span>
-                            <span className="font-medium">
-                              {prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] > 0 ? "+" : ""}
-                              {(prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] * 100).toFixed(
-                                2,
-                              )}
-                              %
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    }
-                  />
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex flex-col gap-2">
-                <div key={heroBestAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
-                  <HeroImage heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
-                  <ProgressBarWithLabel
-                    min={heroMinBestAgainstWinrate}
-                    max={heroMaxBestAgainstWinrate}
-                    value={heroBestAgainst[heroId]?.rel_winrate}
-                    color={"#22d3ee"}
-                    label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    delta={
-                      prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id] !== undefined
-                        ? heroBestAgainst[heroId]?.rel_winrate -
-                          prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id]
-                        : undefined
-                    }
-                    tooltip={
-                      <div className="flex flex-col gap-1 text-xs">
-                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
-                          <HeroName heroId={heroId} />
-                          <span className="text-muted-foreground">vs</span>
-                          <HeroName heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Matches</span>
-                          <span className="font-medium">
-                            {heroBestAgainst[heroId]?.matches_played.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Wins</span>
-                          <span className="font-medium">{heroBestAgainst[heroId]?.wins.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate</span>
-                          <span className="font-medium">
-                            {((heroBestAgainst[heroId]?.wins / heroBestAgainst[heroId]?.matches_played) * 100).toFixed(
-                              2,
-                            )}
-                            %
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate change</span>
-                          <span className="font-medium">
-                            {heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}
-                            {(heroBestAgainst[heroId]?.rel_winrate * 100).toFixed(2)}%
-                          </span>
-                        </div>
-                        {prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id] !== undefined && (
-                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
-                            <span className="text-muted-foreground">Previous</span>
-                            <span className="font-medium">
-                              {prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] > 0 ? "+" : ""}
-                              {(prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] * 100).toFixed(
-                                2,
-                              )}
-                              %
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    }
-                  />
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <div className="flex flex-col gap-2">
-                <div key={heroWorstAgainst[heroId]?.enemy_hero_id} className="flex items-center gap-2">
-                  <HeroImage heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
-                  <ProgressBarWithLabel
-                    min={heroMinWorstAgainstWinrate}
-                    max={heroMaxWorstAgainstWinrate}
-                    value={heroWorstAgainst[heroId]?.rel_winrate}
-                    color={"#22d3ee"}
-                    label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
-                    delta={
-                      prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id] !== undefined
-                        ? heroWorstAgainst[heroId]?.rel_winrate -
-                          prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id]
-                        : undefined
-                    }
-                    tooltip={
-                      <div className="flex flex-col gap-1 text-xs">
-                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
-                          <HeroName heroId={heroId} />
-                          <span className="text-muted-foreground">vs</span>
-                          <HeroName heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Matches</span>
-                          <span className="font-medium">
-                            {heroWorstAgainst[heroId]?.matches_played.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Wins</span>
-                          <span className="font-medium">{heroWorstAgainst[heroId]?.wins.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate</span>
-                          <span className="font-medium">
-                            {(
-                              (heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played) *
-                              100
-                            ).toFixed(2)}
-                            %
-                          </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                          <span className="text-muted-foreground">Win rate change</span>
-                          <span className="font-medium">
-                            {heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}
-                            {(heroWorstAgainst[heroId]?.rel_winrate * 100).toFixed(2)}%
-                          </span>
-                        </div>
-                        {prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id] !== undefined && (
-                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
-                            <span className="text-muted-foreground">Previous</span>
-                            <span className="font-medium">
-                              {prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] > 0 ? "+" : ""}
-                              {(
-                                prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] * 100
-                              ).toFixed(2)}
-                              %
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    }
-                  />
-                </div>
-              </div>
-            </TableCell>
+            <MatchupCell
+              heroId={heroId}
+              partnerId={heroBestSynergies[heroId]?.hero_id2}
+              relWinrate={heroBestSynergies[heroId]?.rel_winrate}
+              prevRelWinrate={prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2]}
+              min={bestSynergyRange.min}
+              max={bestSynergyRange.max}
+              color="#fa4454"
+              separator="+"
+              matchesPlayed={heroBestSynergies[heroId]?.matches_played}
+              wins={heroBestSynergies[heroId]?.wins}
+            />
+            <MatchupCell
+              heroId={heroId}
+              partnerId={heroWorstSynergies[heroId]?.hero_id2}
+              relWinrate={heroWorstSynergies[heroId]?.rel_winrate}
+              prevRelWinrate={prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2]}
+              min={worstSynergyRange.min}
+              max={worstSynergyRange.max}
+              color="#fa4454"
+              separator="+"
+              matchesPlayed={heroWorstSynergies[heroId]?.matches_played}
+              wins={heroWorstSynergies[heroId]?.wins}
+            />
+            <MatchupCell
+              heroId={heroId}
+              partnerId={heroBestAgainst[heroId]?.enemy_hero_id}
+              relWinrate={heroBestAgainst[heroId]?.rel_winrate}
+              prevRelWinrate={prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id]}
+              min={bestAgainstRange.min}
+              max={bestAgainstRange.max}
+              color="#22d3ee"
+              separator="vs"
+              matchesPlayed={heroBestAgainst[heroId]?.matches_played}
+              wins={heroBestAgainst[heroId]?.wins}
+            />
+            <MatchupCell
+              heroId={heroId}
+              partnerId={heroWorstAgainst[heroId]?.enemy_hero_id}
+              relWinrate={heroWorstAgainst[heroId]?.rel_winrate}
+              prevRelWinrate={prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id]}
+              min={worstAgainstRange.min}
+              max={worstAgainstRange.max}
+              color="#22d3ee"
+              separator="vs"
+              matchesPlayed={heroWorstAgainst[heroId]?.matches_played}
+              wins={heroWorstAgainst[heroId]?.wins}
+            />
           </TableRow>
         ))}
       </TableBody>
