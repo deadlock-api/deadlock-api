@@ -8,7 +8,8 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
-import type { Color, Region, Theme } from "~/types/streamkit/widget";
+import type { Color } from "~/types/general";
+import type { Region, Theme } from "~/types/streamkit/widget";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Deadlock Stats Widget" }, { name: "description", content: "Stats widget powered by Deadlock API" }];
