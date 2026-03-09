@@ -14,7 +14,8 @@ import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -156,16 +157,21 @@ export default function Heroes(
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
-        <TabsList variant="line" className="w-full overflow-x-auto scrollbar-none">
-          <TabsTrigger value="stats">Overall Stats</TabsTrigger>
-          <TabsTrigger value="stats-over-time">Stats Over Time</TabsTrigger>
-          <TabsTrigger value="stats-by-duration">Stats by Duration</TabsTrigger>
-          <TabsTrigger value="stats-by-rank">Stats by Rank</TabsTrigger>
-          <TabsTrigger value="stats-by-experience">Stats by Experience</TabsTrigger>
-          <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
-          <TabsTrigger value="matchups">Matchups</TabsTrigger>
-          <TabsTrigger value="hero-matchup-details">Matchup Details</TabsTrigger>
-        </TabsList>
+        <ResponsiveTabsList
+          value={tab ?? undefined}
+          onValueChange={(value) => setTab(value as typeof tab)}
+
+          options={[
+            { value: "stats", label: "Overall" },
+            { value: "stats-over-time", label: "Over Time" },
+            { value: "stats-by-duration", label: "By Duration" },
+            { value: "stats-by-rank", label: "By Rank" },
+            { value: "stats-by-experience", label: "By Experience" },
+            { value: "hero-combs", label: "Combs" },
+            { value: "matchups", label: "Matchups" },
+            { value: "hero-matchup-details", label: "Matchup Details" },
+          ]}
+        />
 
         <TabsContent value="stats">
           <div className="flex flex-col gap-4">
