@@ -54,6 +54,10 @@ export default function Items(
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Item Stats</h1>
         <p className="text-sm text-muted-foreground mt-1">Win rates, purchase timing, and item combination analytics</p>
+        <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+          Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
+          combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder.
+        </p>
       </div>
       <Filter.Root>
         <Filter.Hero value={hero} onChange={setHero} allowNull />

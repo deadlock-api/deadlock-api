@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import AppSidebar, { MobileMenuButton } from "~/components/AppSidebar";
+import { Breadcrumbs } from "~/components/Breadcrumbs";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
@@ -146,6 +147,7 @@ export default function App() {
                     }}
                   />
                   <div className="m-2 w-full xl:w-[92%] bg-background/60 backdrop-blur-md rounded-xl shadow-xl border border-white/10 p-4 sm:p-6 relative">
+                    <Breadcrumbs />
                     <div key={pathname} className="page-fade-in">
                       <Outlet />
                     </div>
