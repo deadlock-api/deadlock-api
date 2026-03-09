@@ -1,5 +1,6 @@
+import { ChevronDown } from "lucide-react";
 import { CopyButton } from "~/components/copy-button";
-import { Card, CardContent } from "~/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 interface ChatBotInstructionsProps {
@@ -14,13 +15,15 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
   ];
 
   return (
-    <div>
-      <h3 className="block text-sm font-medium text-foreground">How to use?</h3>
-      <Card className="mt-2">
-        <CardContent className="pt-4">
+    <Collapsible className="rounded-md border border-border">
+      <CollapsibleTrigger className="flex w-full items-center justify-between p-3 text-sm font-medium hover:bg-muted/50 transition-colors">
+        How to use?
+        <ChevronDown className="size-4 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="border-t border-border p-3 pt-3">
           <p className="mb-3 text-sm text-muted-foreground">
-            Use the generated URL in your favorite chat bot to create dynamic commands. Below are examples of how to use
-            it with popular bots:
+            Use the generated URL in your favorite chat bot to create dynamic commands:
           </p>
           <Tabs defaultValue={chatBots[0].name}>
             <TabsList>
@@ -32,15 +35,15 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
             </TabsList>
             {chatBots.map(({ name, command }) => (
               <TabsContent key={name} value={name}>
-                <div className="flex items-center justify-between rounded-md bg-card border p-3">
+                <div className="flex items-center justify-between rounded-md bg-card border border-border p-3">
                   <code className="text-primary text-sm whitespace-pre-wrap break-all">{command}</code>
                   <CopyButton size="sm" text={command} className="ml-4 shrink-0" />
                 </div>
               </TabsContent>
             ))}
           </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

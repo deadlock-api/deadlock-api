@@ -6,10 +6,10 @@ interface UrlDisplayProps {
 
 export function UrlDisplay({ generatedUrl }: UrlDisplayProps) {
   return (
-    <div>
-      <h3 className="block text-sm font-medium text-foreground">Generated URL</h3>
+    <div className="space-y-1">
+      <h3 className="text-sm font-medium text-foreground">Generated URL</h3>
       {generatedUrl ? (
-        <div className="relative mt-1">
+        <div className="relative">
           <div className="break-all rounded-md border border-border bg-muted p-3 pr-24 text-sm text-muted-foreground">
             {generatedUrl}
           </div>
