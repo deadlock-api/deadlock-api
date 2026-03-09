@@ -1,4 +1,5 @@
 import type { AnalyticsGameStats } from "deadlock_api_client";
+import { Activity, Coins, Flame, HeartPulse, Shield, Swords, Wheat, type LucideIcon } from "lucide-react";
 
 export type StatFormat = "integer" | "duration" | "percent" | "decimal1" | "decimal2";
 
@@ -89,6 +90,16 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     ],
   },
 ];
+
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  "Match Flow": Activity,
+  Combat: Swords,
+  Damage: Flame,
+  "Healing & Mitigation": HeartPulse,
+  Farming: Wheat,
+  "Character Stats": Shield,
+  Economy: Coins,
+};
 
 const MID_BOSS_STATS = new Set(["mid_boss_kill_rate", "avg_first_mid_boss_time_s"]);
 
