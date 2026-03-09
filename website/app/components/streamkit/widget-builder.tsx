@@ -62,11 +62,7 @@ function widgetConfigReducer(state: WidgetConfig, action: WidgetConfigAction): W
   return { ...state, ...action };
 }
 
-function buildWidgetUrl(
-  region: string,
-  accountId: string,
-  config: WidgetConfig,
-): string | null {
+function buildWidgetUrl(region: string, accountId: string, config: WidgetConfig): string | null {
   if (!accountId || !region) return null;
 
   const url = new URL(`${window.location.origin}/streamkit/widgets/${region}/${accountId}/${config.widgetType}`);
@@ -96,11 +92,7 @@ function buildWidgetUrl(
   }
 }
 
-function buildWidgetPreview(
-  region: string,
-  accountId: string,
-  config: WidgetConfig,
-): ReactElement | null {
+function buildWidgetPreview(region: string, accountId: string, config: WidgetConfig): ReactElement | null {
   if (!accountId || !region) return null;
 
   switch (config.widgetType) {
@@ -296,9 +288,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
             </div>
           </div>
           <ExtraArguments
-            extraArgs={availableVariables
-              .filter((v) => config.variable === v.name)
-              .flatMap((v) => v.extra_args ?? [])}
+            extraArgs={availableVariables.filter((v) => config.variable === v.name).flatMap((v) => v.extra_args ?? [])}
             extraValues={config.extraArgs || {}}
             onChange={updateExtraArg}
           />
