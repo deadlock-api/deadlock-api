@@ -21,7 +21,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function AbilityOrder() {
-  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(15));
+  const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
