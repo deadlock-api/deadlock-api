@@ -9,11 +9,11 @@ import { useRateLimit } from "~/hooks/useRateLimit";
 import { createPageMeta } from "~/lib/meta";
 
 const ChatError = lazy(() => import("~/components/chat/ChatError").then((m) => ({ default: m.ChatError })));
-const ChatMessageList = lazy(
-  () => import("~/components/chat/ChatMessageList").then((m) => ({ default: m.ChatMessageList })),
+const ChatMessageList = lazy(() =>
+  import("~/components/chat/ChatMessageList").then((m) => ({ default: m.ChatMessageList })),
 );
-const TurnstileVerification = lazy(
-  () => import("~/components/chat/TurnstileVerification").then((m) => ({ default: m.TurnstileVerification })),
+const TurnstileVerification = lazy(() =>
+  import("~/components/chat/TurnstileVerification").then((m) => ({ default: m.TurnstileVerification })),
 );
 
 export const meta: MetaFunction = () => {
@@ -119,12 +119,12 @@ export default function ChatPage() {
         ) : (
           // Message list area
           <Suspense fallback={<LoadingLogo />}>
-          <ChatMessageList
-            messages={conversation.messages}
-            currentStreamingMessage={conversation.currentStreamingMessage}
-            isStreaming={conversation.isStreaming}
-            activeTools={conversation.activeTools}
-          />
+            <ChatMessageList
+              messages={conversation.messages}
+              currentStreamingMessage={conversation.currentStreamingMessage}
+              isStreaming={conversation.isStreaming}
+              activeTools={conversation.activeTools}
+            />
           </Suspense>
         )}
 
@@ -133,13 +133,13 @@ export default function ChatPage() {
           <div className="border-t px-4 py-3">
             <div className="max-w-3xl mx-auto">
               <Suspense fallback={<LoadingLogo />}>
-              <ChatError
-                error={conversation.error}
-                onDismiss={handleDismissError}
-                onRetry={lastMessage ? handleRetry : undefined}
-                onReVerify={handleReVerify}
-                resetTime={rateLimit.timeUntilReset}
-              />
+                <ChatError
+                  error={conversation.error}
+                  onDismiss={handleDismissError}
+                  onRetry={lastMessage ? handleRetry : undefined}
+                  onReVerify={handleReVerify}
+                  resetTime={rateLimit.timeUntilReset}
+                />
               </Suspense>
             </div>
           </div>

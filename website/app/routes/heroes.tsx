@@ -2,11 +2,7 @@ import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } f
 import { Suspense, lazy, useId, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
-import {
-  BY_RANK_STATS,
-  HeroStatSelector,
-  HeroTimeIntervalSelector,
-} from "~/components/heroes-page/HeroStatSelectors";
+import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
@@ -160,7 +156,6 @@ export default function Heroes(
         <ResponsiveTabsList
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
-
           options={[
             { value: "stats", label: "Overall Stats" },
             { value: "stats-over-time", label: "Over Time" },

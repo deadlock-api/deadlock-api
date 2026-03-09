@@ -128,34 +128,39 @@ export default function GameStats() {
 
         <TabsContent value="overview">
           <Suspense fallback={<LoadingLogo />}>
-          <GameStatsOverview
-            params={baseParams}
-            prevParams={prevParams}
-            isStreetBrawl={isStreetBrawl}
-            onStatClick={(key) => {
-              setStat(key);
-              setTab("over-time");
-            }}
-          />
+            <GameStatsOverview
+              params={baseParams}
+              prevParams={prevParams}
+              isStreetBrawl={isStreetBrawl}
+              onStatClick={(key) => {
+                setStat(key);
+                setTab("over-time");
+              }}
+            />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="over-time">
           <Suspense fallback={<LoadingLogo />}>
-          <GameStatsOverTimeChart
-            params={baseParams}
-            stat={stat}
-            onStatChange={setStat}
-            timeBucket={timeBucket as GameStatsBucketEnum}
-            onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
-            isStreetBrawl={isStreetBrawl}
-          />
+            <GameStatsOverTimeChart
+              params={baseParams}
+              stat={stat}
+              onStatChange={setStat}
+              timeBucket={timeBucket as GameStatsBucketEnum}
+              onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
+              isStreetBrawl={isStreetBrawl}
+            />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="by-rank">
           <Suspense fallback={<LoadingLogo />}>
-            <GameStatsByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
+            <GameStatsByRankChart
+              params={baseParams}
+              stat={stat}
+              onStatChange={setStat}
+              isStreetBrawl={isStreetBrawl}
+            />
           </Suspense>
         </TabsContent>
       </Tabs>
