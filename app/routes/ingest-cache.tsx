@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, FolderOpen, Upload } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
+import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { PatronCTA } from "~/components/PatronCTA";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -10,6 +11,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/component
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { API_ORIGIN } from "~/lib/constants";
 import { cn } from "~/lib/utils";
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: "Community Data Ingestion | Deadlock API" },
+    { name: "description", content: "Upload match replay data from your Steam cache to help expand the Deadlock API database." },
+  ];
+};
 
 interface Salts {
   cluster_id: number;

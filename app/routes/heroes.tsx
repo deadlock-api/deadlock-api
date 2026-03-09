@@ -27,10 +27,10 @@ import { HERO_STATS } from "~/types/api_hero_stats";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Heroes - Deadlock API" },
+    { title: "Hero Stats & Analytics | Deadlock API" },
     {
       name: "description",
-      content: "Detailed analytics about Heroes in Deadlock",
+      content: "View win rates, pick rates, matchups, and performance analytics for all Deadlock heroes.",
     },
   ];
 };
