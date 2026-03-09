@@ -1,10 +1,10 @@
 /**
- * React Query hooks for patron data and Steam account management
+ * React Query options and hooks for patron data and Steam account management.
+ * Uses queryOptions() factories for composability (loaders, prefetching, etc.).
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
 import {
   addSteamAccount,
   deleteSteamAccount,
@@ -12,6 +12,7 @@ import {
   getPlayerCard,
   listSteamAccounts,
   reactivateSteamAccount,
+  refetchMatchHistory,
   replaceSteamAccount,
 } from "~/lib/patron-api";
 
@@ -27,88 +28,76 @@ export const patronQueryKeys = {
 };
 
 // ============================================================================
-// Query Hooks
+// Query Options Factories
 // ============================================================================
 
-/**
- * Hook to fetch the current patron's status including slot usage
- * Returns null if not authenticated
- */
-export function usePatronStatus() {
-  return useQuery({
+export function patronStatusQueryOptions() {
+  return queryOptions({
     queryKey: patronQueryKeys.status(),
     queryFn: getPatronStatus,
     refetchOnWindowFocus: true,
   });
 }
 
-/**
- * Hook to fetch the list of Steam accounts for the current patron
- */
-export function useSteamAccounts() {
-  return useQuery({
+export function steamAccountsQueryOptions() {
+  return queryOptions({
     queryKey: patronQueryKeys.steamAccounts(),
     queryFn: listSteamAccounts,
     refetchOnWindowFocus: true,
   });
 }
 
-/**
- * Hook to fetch the Steam profile card for a prioritized account.
- * Returns ranked badge level and display slots.
- * Throws BotNotFriendError if the account hasn't friended a bot yet.
- * Only runs when enabled=true (pass false for inactive/deleted accounts).
- */
-export function usePlayerCard(steamId3: number, enabled = true) {
-  return useQuery({
+export function playerCardQueryOptions(steamId3: number) {
+  return queryOptions({
     queryKey: patronQueryKeys.playerCard(steamId3),
     queryFn: () => getPlayerCard(steamId3),
-    enabled,
     retry: false,
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
   });
 }
 
 // ============================================================================
+// Query Hooks (thin wrappers for convenience)
+// ============================================================================
+
+export function usePatronStatus() {
+  return useQuery(patronStatusQueryOptions());
+}
+
+export function useSteamAccounts() {
+  return useQuery(steamAccountsQueryOptions());
+}
+
+export function usePlayerCard(steamId3: number, enabled = true) {
+  return useQuery({ ...playerCardQueryOptions(steamId3), enabled });
+}
+
+// ============================================================================
 // Mutation Hooks
 // ============================================================================
 
-/**
- * Hook to add a new Steam account
- * Invalidates both steam accounts and patron status queries on success
- */
 export function useAddSteamAccount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (steamId3: number) => addSteamAccount(steamId3),
+    mutationFn: addSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.steamAccounts() });
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
+      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
     },
   });
 }
 
-/**
- * Hook to delete a Steam account (soft delete with 24-hour cooldown)
- * Invalidates both steam accounts and patron status queries on success
- */
 export function useDeleteSteamAccount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (accountId: string) => deleteSteamAccount(accountId),
+    mutationFn: deleteSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.steamAccounts() });
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
+      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
     },
   });
 }
 
-/**
- * Hook to replace a deleted Steam account with a new Steam ID
- * Invalidates both steam accounts and patron status queries on success
- */
 export function useReplaceSteamAccount() {
   const queryClient = useQueryClient();
 
@@ -116,34 +105,24 @@ export function useReplaceSteamAccount() {
     mutationFn: ({ accountId, steamId3 }: { accountId: string; steamId3: number }) =>
       replaceSteamAccount(accountId, steamId3),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.steamAccounts() });
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
+      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
     },
   });
 }
 
-/**
- * Hook to reactivate a previously deleted Steam account
- * Invalidates both steam accounts and patron status queries on success
- */
 export function useReactivateSteamAccount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (accountId: string) => reactivateSteamAccount(accountId),
+    mutationFn: reactivateSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.steamAccounts() });
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
+      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
     },
   });
 }
 
-/**
- * Hook to force-refetch the full match history for a player from Steam.
- * Calls the PlayersApi match-history endpoint with force_refetch=true.
- */
 export function useRefetchMatchHistory() {
   return useMutation({
-    mutationFn: (accountId: number) => api.players_api.matchHistory({ accountId, forceRefetch: true }),
+    mutationFn: refetchMatchHistory,
   });
 }
