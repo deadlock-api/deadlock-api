@@ -124,33 +124,33 @@ export default function Items(
         </TabsContent>
         <TabsContent value="item-purchase-analysis">
           <Suspense fallback={<LoadingLogo />}>
-          <ItemPurchaseAnalysis
-            minRankId={effectiveMinRankId}
-            maxRankId={effectiveMaxRankId}
-            minDate={startDate || undefined}
-            maxDate={endDate || undefined}
-            hero={hero}
-            minMatches={minMatches}
-            minBoughtAtS={minBoughtAtS ?? undefined}
-            maxBoughtAtS={maxBoughtAtS ?? undefined}
-            gameMode={gameMode}
-          />
+            <ItemPurchaseAnalysis
+              minRankId={effectiveMinRankId}
+              maxRankId={effectiveMaxRankId}
+              minDate={startDate || undefined}
+              maxDate={endDate || undefined}
+              hero={hero}
+              minMatches={minMatches}
+              minBoughtAtS={minBoughtAtS ?? undefined}
+              maxBoughtAtS={maxBoughtAtS ?? undefined}
+              gameMode={gameMode}
+            />
           </Suspense>
         </TabsContent>
         <TabsContent value="item-combs">
           <Suspense fallback={<LoadingLogo />}>
-          <ItemCombsExplore
-            sortBy="winrate"
-            minRankId={effectiveMinRankId}
-            maxRankId={effectiveMaxRankId}
-            minDate={startDate || undefined}
-            maxDate={endDate || undefined}
-            hero={hero}
-            minMatches={minMatches}
-            minBoughtAtS={minBoughtAtS ?? undefined}
-            maxBoughtAtS={maxBoughtAtS ?? undefined}
-            gameMode={gameMode}
-          />
+            <ItemCombsExplore
+              sortBy="winrate"
+              minRankId={effectiveMinRankId}
+              maxRankId={effectiveMaxRankId}
+              minDate={startDate || undefined}
+              maxDate={endDate || undefined}
+              hero={hero}
+              minMatches={minMatches}
+              minBoughtAtS={minBoughtAtS ?? undefined}
+              maxBoughtAtS={maxBoughtAtS ?? undefined}
+              gameMode={gameMode}
+            />
           </Suspense>
         </TabsContent>
       </Tabs>

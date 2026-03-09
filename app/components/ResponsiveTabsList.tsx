@@ -63,11 +63,7 @@ export function ResponsiveTabsList({
         ref={tabsRef}
         variant={variant}
         inert={overflows || undefined}
-        className={cn(
-          "w-full overflow-x-auto scrollbar-none",
-          overflows && "hidden",
-          className,
-        )}
+        className={cn("w-full overflow-x-auto scrollbar-none", overflows && "hidden", className)}
       >
         {options.map((opt) => (
           <TabsTrigger key={opt.value} value={opt.value}>
