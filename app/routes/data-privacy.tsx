@@ -28,6 +28,94 @@ export const meta: MetaFunction = () => {
   });
 };
 
+function DataPrivacyActionCard({
+  title,
+  description,
+  details,
+  listItems,
+  notice,
+  buttonText,
+  onAction,
+  isLoading,
+  variant,
+  confirmDialog,
+}: {
+  title: string;
+  description: string;
+  details: string;
+  listItems: string[];
+  notice: React.ReactNode;
+  buttonText: string;
+  onAction: () => void;
+  isLoading: boolean;
+  variant: "danger" | "safe";
+  confirmDialog?: {
+    title: string;
+    description: React.ReactNode;
+    confirmText: string;
+  };
+}) {
+  const titleClassName = variant === "danger" ? "text-red-400" : "text-green-400";
+  const buttonVariant = variant === "danger" ? "destructive" : "default";
+
+  const button = (
+    <Button
+      onClick={confirmDialog ? undefined : onAction}
+      variant={buttonVariant}
+      className="w-full"
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="size-4 mr-2 animate-spin" />
+          Processing...
+        </>
+      ) : (
+        buttonText
+      )}
+    </Button>
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className={titleClassName}>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">{details}</p>
+        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
+          {listItems.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+        {notice}
+        {confirmDialog ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>{button}</AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className={titleClassName}>{confirmDialog.title}</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  {confirmDialog.description}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onAction} className="bg-red-600 hover:bg-red-700">
+                  {confirmDialog.confirmText}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          button
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DataPrivacy() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -77,21 +165,9 @@ export default function DataPrivacy() {
     processCallback();
   }, [steamId64, openIdParams]);
 
-  const handleDataDeletion = () => {
+  const handleSteamAuth = (action: "deletion" | "tracking") => {
     try {
-      redirectToSteamAuth("deletion");
-    } catch (error) {
-      console.error(error);
-      setMessage({
-        type: "error",
-        text: "Failed to initiate Steam authentication. Please try again.",
-      });
-    }
-  };
-
-  const handleReEnableTracking = () => {
-    try {
-      redirectToSteamAuth("tracking");
+      redirectToSteamAuth(action);
     } catch (error) {
       console.error(error);
       setMessage({
@@ -159,108 +235,73 @@ export default function DataPrivacy() {
 
       {/* Privacy Actions */}
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-red-400">Request Data Deletion</CardTitle>
-            <CardDescription>Remove all your personal data from our systems</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              This will permanently delete all data associated with your Steam account and block future API requests,
-              including:
-            </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
-              <li>Match history and statistics</li>
-              <li>Profile information</li>
-              <li>Ranking data</li>
-              <li>Any stored preferences</li>
-            </ul>
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3 mb-4">
+        <DataPrivacyActionCard
+          title="Request Data Deletion"
+          description="Remove all your personal data from our systems"
+          details="This will permanently delete all data associated with your Steam account and block future API requests, including:"
+          listItems={["Match history and statistics", "Profile information", "Ranking data", "Any stored preferences"]}
+          notice={
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3">
               <p className="text-sm text-yellow-400 font-medium">
                 ⚠️ Warning: This action is permanent and cannot be undone. Even if you re-enable tracking later, your
                 historical data may not be recovered.
               </p>
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="size-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Request Data Deletion"
-                  )}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-red-400">⚠️ Permanent Data Deletion Warning</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-3">
-                    <p>
-                      <strong>This action is permanent and cannot be undone.</strong>
-                    </p>
-                    <p>
-                      Once you confirm data deletion, all your information will be permanently removed from our systems,
-                      including:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1 ml-4">
-                      <li>Match history and statistics</li>
-                      <li>Profile information</li>
-                      <li>Ranking data</li>
-                      <li>Any stored preferences</li>
-                    </ul>
-                    <p className="font-semibold text-yellow-400">
-                      Important: Even if you re-enable tracking later, we will not be able to recover your historical
-                      data. You will start with a completely fresh profile.
-                    </p>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDataDeletion} className="bg-red-600 hover:bg-red-700">
-                    Yes, Delete My Data Permanently
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
+          }
+          buttonText="Request Data Deletion"
+          variant="danger"
+          onAction={() => handleSteamAuth("deletion")}
+          isLoading={isLoading}
+          confirmDialog={{
+            title: "⚠️ Permanent Data Deletion Warning",
+            description: (
+              <>
+                <p>
+                  <strong>This action is permanent and cannot be undone.</strong>
+                </p>
+                <p>
+                  Once you confirm data deletion, all your information will be permanently removed from our systems,
+                  including:
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-4">
+                  <li>Match history and statistics</li>
+                  <li>Profile information</li>
+                  <li>Ranking data</li>
+                  <li>Any stored preferences</li>
+                </ul>
+                <p className="font-semibold text-yellow-400">
+                  Important: Even if you re-enable tracking later, we will not be able to recover your historical data.
+                  You will start with a completely fresh profile.
+                </p>
+              </>
+            ),
+            confirmText: "Yes, Delete My Data Permanently",
+          }}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-green-400">Re-enable Data Tracking</CardTitle>
-            <CardDescription>Restore data collection for your account</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              If you previously requested data deletion, you can re-enable tracking to:
-            </p>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
-              <li>Resume match data collection</li>
-              <li>Restore access to statistics</li>
-              <li>Enable personalized features</li>
-              <li>Contribute to community analytics</li>
-            </ul>
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3 mt-4">
+        <DataPrivacyActionCard
+          title="Re-enable Data Tracking"
+          description="Restore data collection for your account"
+          details="If you previously requested data deletion, you can re-enable tracking to:"
+          listItems={[
+            "Resume match data collection",
+            "Restore access to statistics",
+            "Enable personalized features",
+            "Contribute to community analytics",
+          ]}
+          notice={
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3">
               <p className="text-sm text-blue-400">
                 <strong>Note:</strong> Re-enabling tracking will start fresh data collection. Any historical data from
                 before deletion may not be recovered.
               </p>
             </div>
-            <Button onClick={handleReEnableTracking} variant="default" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="size-4 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Re-enable Tracking"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+          }
+          buttonText="Re-enable Tracking"
+          variant="safe"
+          onAction={() => handleSteamAuth("tracking")}
+          isLoading={isLoading}
+        />
       </div>
 
       {/* Additional Information */}
