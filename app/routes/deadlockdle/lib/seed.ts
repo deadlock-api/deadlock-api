@@ -40,6 +40,11 @@ export function getTodayDate(): string {
 	return day().format("YYYY-MM-DD");
 }
 
+/** Mode-specific seed to prevent collision across game modes */
+export function getModeSeed(date: string, mode: string): number {
+	return getDailySeed(`${date}:${mode}`);
+}
+
 /** Day number since epoch (for share text "Deadlockdle #N") */
 export function getDayNumber(date: string): number {
 	const epoch = day("2026-03-09");

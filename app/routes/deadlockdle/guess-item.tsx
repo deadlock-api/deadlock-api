@@ -9,7 +9,7 @@ import { GuessInput } from "./components/GuessInput";
 import { HintReveal } from "./components/HintReveal";
 import { ResultModal } from "./components/ResultModal";
 import { filterShopableItems, useItems } from "./lib/queries";
-import { getDailySeed, seededPick, seededRandom } from "./lib/seed";
+import { getModeSeed, seededPick, seededRandom } from "./lib/seed";
 import { useDailyGame } from "./lib/use-daily-game";
 
 export const meta: MetaFunction = () => {
@@ -71,7 +71,7 @@ export default function GuessItem() {
 
   const dailyItem = useMemo(() => {
     if (shopableItems.length === 0) return null;
-    const seed = getDailySeed(today);
+    const seed = getModeSeed(today, "guess-item");
     const rng = seededRandom(seed);
     return seededPick(shopableItems, rng);
   }, [shopableItems, today]);

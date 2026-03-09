@@ -10,7 +10,7 @@ import { GuessInput } from "./components/GuessInput";
 import { HintReveal } from "./components/HintReveal";
 import { ResultModal } from "./components/ResultModal";
 import { filterPlayableHeroes, useHeroes, useSounds } from "./lib/queries";
-import { getDailySeed, seededPick, seededRandom, seededShuffle } from "./lib/seed";
+import { getModeSeed, seededPick, seededRandom, seededShuffle } from "./lib/seed";
 import { useDailyGame } from "./lib/use-daily-game";
 
 export const meta: MetaFunction = () => {
@@ -280,10 +280,8 @@ export default function GuessSound() {
   /** Today's selected sound, deterministically chosen */
   const dailySound = useMemo(() => {
     if (allSounds.length === 0) return null;
-    const seed = getDailySeed(today);
+    const seed = getModeSeed(today, "guess-sound");
     const rng = seededRandom(seed);
-    // Shuffle a copy so the seed offsets are unique per game mode
-    // (getDailySeed is shared, advancing the rng differentiates)
     const shuffled = seededShuffle([...allSounds], rng);
     return seededPick(shuffled, rng);
   }, [allSounds, today]);
@@ -443,11 +441,11 @@ export default function GuessSound() {
         <div className="space-y-1.5">
           <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">Previous Guesses</p>
           <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess) => {
+            {gameState.guesses.map((guess, i) => {
               const isCorrect = guess.toLowerCase() === answerHero.name.toLowerCase();
               return (
                 <span
-                  key={`guess-${guess}`}
+                  key={`${guess}-${i}`}
                   className={cn(
                     "px-2.5 py-1 text-xs font-mono border",
                     isCorrect

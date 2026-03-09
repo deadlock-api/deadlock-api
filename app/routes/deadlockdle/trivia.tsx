@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
-import { day } from "~/dayjs";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
 import { GameShell } from "./components/GameShell";
 import { useHeroes, useItems, useNpcUnits } from "./lib/queries";
-import { getDailySeed, getDayNumber, getTodayDate, seededRandom } from "./lib/seed";
+import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "./lib/seed";
 import { generateDailyQuestions, type TriviaQuestion } from "./lib/trivia-questions";
+import { useCountdown } from "./lib/use-countdown";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -54,27 +54,6 @@ function saveState(state: TriviaState): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-function useCountdown() {
-  const [timeLeft, setTimeLeft] = useState("");
-
-  useEffect(() => {
-    function update() {
-      const now = day();
-      const tomorrow = now.add(1, "day").startOf("day");
-      const diff = tomorrow.diff(now, "second");
-      const h = Math.floor(diff / 3600);
-      const m = Math.floor((diff % 3600) / 60);
-      const s = diff % 60;
-      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-    }
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return timeLeft;
-}
-
 export default function Trivia() {
   const { data: heroes, isLoading: heroesLoading } = useHeroes();
   const { data: items, isLoading: itemsLoading } = useItems();
@@ -104,7 +83,7 @@ export default function Trivia() {
   const questions: TriviaQuestion[] = useMemo(() => {
     if (!heroes || !items || !npcUnits) return [];
 
-    const seed = getDailySeed(today);
+    const seed = getModeSeed(today, "trivia");
     const rng = seededRandom(seed);
     return generateDailyQuestions(heroes, items, npcUnits, rng);
   }, [heroes, items, npcUnits, today]);

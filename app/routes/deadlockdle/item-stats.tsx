@@ -1,13 +1,15 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { day } from "~/dayjs";
+import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
 import { GameShell } from "./components/GameShell";
 import { filterShopableItems, useItems } from "./lib/queries";
-import { getDailySeed, getTodayDate, seededRandom, seededShuffle } from "./lib/seed";
+import { getDayNumber, getModeSeed, getTodayDate, seededRandom, seededShuffle } from "./lib/seed";
+import { useCountdown } from "./lib/use-countdown";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -93,31 +95,12 @@ function getSlotColor(slot: SlotType): {
   }
 }
 
-function useCountdown() {
-  const [timeLeft, setTimeLeft] = useState("");
-
-  useEffect(() => {
-    function update() {
-      const now = day();
-      const tomorrow = now.add(1, "day").startOf("day");
-      const diff = tomorrow.diff(now, "second");
-      const h = Math.floor(diff / 3600);
-      const m = Math.floor((diff % 3600) / 60);
-      const s = diff % 60;
-      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
-    }
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return timeLeft;
-}
-
 export default function ItemStatsQuiz() {
   const { data: items, isLoading } = useItems();
   const today = getTodayDate();
   const countdown = useCountdown();
+
+  const [copied, setCopied] = useState(false);
 
   const [state, setState] = useState<ItemStatsState>(() => {
     const saved = loadState();
@@ -139,7 +122,7 @@ export default function ItemStatsQuiz() {
 
   const dailyItems = useMemo(() => {
     if (shopableItems.length === 0) return [];
-    const seed = getDailySeed(today);
+    const seed = getModeSeed(today, "item-stats");
     const rng = seededRandom(seed);
     const shuffled = seededShuffle([...shopableItems], rng);
     return shuffled.slice(0, ITEMS_COUNT);
@@ -453,17 +436,41 @@ export default function ItemStatsQuiz() {
         </motion.div>
       )}
 
-      {/* Post-submission: countdown */}
+      {/* Post-submission: countdown + share */}
       <AnimatePresence>
         {state.submitted && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-center py-4 border border-muted-foreground/10"
+            className="space-y-4"
           >
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1">Next Quiz</p>
-            <p className="text-lg font-mono font-bold tracking-widest">{countdown}</p>
+            <div className="text-center py-4 border border-muted-foreground/10">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1">Next Quiz</p>
+              <p className="text-lg font-mono font-bold tracking-widest">{countdown}</p>
+            </div>
+            <div className="flex justify-center">
+              <Button
+                onClick={async () => {
+                  const text = `Deadlockdle #${getDayNumber(state.date)} - Stats ${state.score}/${state.totalFields}\nhttps://deadlock-api.com/deadlockdle`;
+                  await navigator.clipboard.writeText(text);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                variant="outline"
+                className="font-mono uppercase tracking-wider text-xs border-primary/40 hover:bg-primary/10 hover:border-primary/60"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 mr-1.5" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Share Result
+                  </>
+                )}
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

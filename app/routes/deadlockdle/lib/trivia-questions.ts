@@ -70,7 +70,7 @@ function generateNumericOptions(
 
   // Fallback: if we still need more, offset by fixed amounts
   let offset = 1;
-  while (wrongValues.size < count) {
+  while (wrongValues.size < count && offset < 100) {
     const candidate = correctValue + offset * (wrongValues.size % 2 === 0 ? 1 : -1);
     if (candidate > 0 && candidate !== correctValue) {
       wrongValues.add(candidate);

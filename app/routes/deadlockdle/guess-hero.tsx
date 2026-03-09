@@ -9,7 +9,7 @@ import { GuessInput } from "./components/GuessInput";
 import { HintReveal } from "./components/HintReveal";
 import { ResultModal } from "./components/ResultModal";
 import { filterPlayableHeroes, useHeroes } from "./lib/queries";
-import { getDailySeed, seededPick, seededRandom } from "./lib/seed";
+import { getModeSeed, seededPick, seededRandom } from "./lib/seed";
 import { useDailyGame } from "./lib/use-daily-game";
 
 export const meta: MetaFunction = () => {
@@ -51,7 +51,7 @@ export default function GuessHero() {
 
 	const dailyHero = useMemo(() => {
 		if (playableHeroes.length === 0) return null;
-		const seed = getDailySeed(today);
+		const seed = getModeSeed(today, "guess-hero");
 		const rng = seededRandom(seed);
 		return seededPick(playableHeroes, rng);
 	}, [playableHeroes, today]);

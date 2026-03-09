@@ -10,7 +10,7 @@ import { GuessInput } from "./components/GuessInput";
 import { HintReveal } from "./components/HintReveal";
 import { ResultModal } from "./components/ResultModal";
 import { filterPlayableHeroes, useAbilities, useHeroes } from "./lib/queries";
-import { getDailySeed, seededPick, seededRandom, seededShuffle } from "./lib/seed";
+import { getModeSeed, seededPick, seededRandom, seededShuffle } from "./lib/seed";
 import { useDailyGame } from "./lib/use-daily-game";
 
 export const meta: MetaFunction = () => {
@@ -87,9 +87,8 @@ export default function GuessAbility() {
   /** Today's selected ability, deterministically chosen */
   const dailyEntry = useMemo(() => {
     if (guessableAbilities.length === 0) return null;
-    const seed = getDailySeed(today);
+    const seed = getModeSeed(today, "guess-ability");
     const rng = seededRandom(seed);
-    // Shuffle then pick to differentiate from other game modes sharing the same seed
     const shuffled = seededShuffle([...guessableAbilities], rng);
     return seededPick(shuffled, rng);
   }, [guessableAbilities, today]);

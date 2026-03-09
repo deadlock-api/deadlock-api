@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { day } from "~/dayjs";
 import type {
 	DailyGameState,
 	GameMode,
@@ -41,10 +42,7 @@ const DEFAULT_STREAK_STATE: StreakState = {
 };
 
 function dayDiff(a: string, b: string): number {
-	const msPerDay = 86400000;
-	return Math.round(
-		(new Date(b).getTime() - new Date(a).getTime()) / msPerDay,
-	);
+	return day(b).diff(day(a), "day");
 }
 
 export function useDailyGame(mode: GameMode, maxAttempts: number) {
@@ -99,6 +97,7 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
 			if (isFinished) return;
 
 			setGameState((prev) => {
+				if (prev.guesses.includes(guess)) return prev;
 				const guesses = [...prev.guesses, guess];
 				let status: GameStatus = "playing";
 
