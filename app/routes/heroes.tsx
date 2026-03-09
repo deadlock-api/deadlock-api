@@ -2,7 +2,6 @@ import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } f
 import { useId, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
-import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import HeroCombStatsTable from "~/components/heroes-page/HeroCombStatsTable";
 import HeroMatchupDetailsStatsTable, {
   HeroMatchupDetailsStatsTableStat,
@@ -16,6 +15,7 @@ import HeroStatsOverTimeChart, {
   HeroTimeIntervalSelector,
 } from "~/components/heroes-page/HeroStatsOverTimeChart";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -157,8 +157,8 @@ export default function Heroes(
           <TabsTrigger value="stats-by-duration">Stats by Duration</TabsTrigger>
           <TabsTrigger value="stats-by-rank">Stats by Rank</TabsTrigger>
           <TabsTrigger value="stats-by-experience">Stats by Experience</TabsTrigger>
-          <TabsTrigger value="matchups">Matchups</TabsTrigger>
           <TabsTrigger value="hero-combs">Hero Combs</TabsTrigger>
+          <TabsTrigger value="matchups">Matchups</TabsTrigger>
           <TabsTrigger value="hero-matchup-details">Matchup Details</TabsTrigger>
         </TabsList>
 
@@ -313,6 +313,8 @@ export default function Heroes(
                 maxRankId={effectiveMaxRankId}
                 minDate={startDate || undefined}
                 maxDate={endDate || undefined}
+                prevMinDate={prevDates.prevStartDate}
+                prevMaxDate={prevDates.prevEndDate}
                 minMatches={minMatches}
                 sameLaneFilter={sameLaneFilter}
                 samePartyFilter={samePartyFilter}

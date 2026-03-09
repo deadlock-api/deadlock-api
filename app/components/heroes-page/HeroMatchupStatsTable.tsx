@@ -17,6 +17,8 @@ export default function HeroMatchupStatsTable({
   minMatches,
   minDate,
   maxDate,
+  prevMinDate,
+  prevMaxDate,
   sameLaneFilter,
   samePartyFilter,
   gameMode,
@@ -27,6 +29,8 @@ export default function HeroMatchupStatsTable({
   minMatches?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  prevMinDate?: Dayjs;
+  prevMaxDate?: Dayjs;
   sameLaneFilter?: boolean;
   samePartyFilter?: boolean;
   gameMode?: GameMode;
@@ -104,6 +108,83 @@ export default function HeroMatchupStatsTable({
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
+  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
+  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
+
+  const { data: prevHeroData } = useQuery({
+    queryKey: ["api-hero-stats", minRankId, maxRankId, prevMinTimestamp, prevMaxTimestamp, minMatches, gameMode],
+    queryFn: async () => {
+      const response = await api.analytics_api.heroStats({
+        minHeroMatches: minMatches,
+        minAverageBadge: minRankId,
+        maxAverageBadge: maxRankId,
+        minUnixTimestamp: prevMinTimestamp,
+        maxUnixTimestamp: prevMaxTimestamp,
+        gameMode: gameMode,
+      });
+      return response.data;
+    },
+    staleTime: 24 * 60 * 60 * 1000,
+    enabled: hasPreviousInterval,
+  });
+
+  const { data: prevSynergyData } = useQuery({
+    queryKey: [
+      "api-hero-synergy-stats",
+      minRankId,
+      maxRankId,
+      prevMinTimestamp,
+      prevMaxTimestamp,
+      sameLaneFilter,
+      samePartyFilter,
+      minMatches,
+      gameMode,
+    ],
+    queryFn: async () => {
+      const response = await api.analytics_api.heroSynergiesStats({
+        sameLaneFilter: sameLaneFilter,
+        samePartyFilter: samePartyFilter,
+        minMatches: minMatches,
+        minAverageBadge: minRankId,
+        maxAverageBadge: maxRankId,
+        minUnixTimestamp: prevMinTimestamp,
+        maxUnixTimestamp: prevMaxTimestamp,
+        gameMode: gameMode,
+      });
+      return response.data;
+    },
+    staleTime: 60 * 60 * 1000,
+    enabled: hasPreviousInterval,
+  });
+
+  const { data: prevCounterData } = useQuery({
+    queryKey: [
+      "api-hero-counter-stats",
+      minRankId,
+      maxRankId,
+      prevMinTimestamp,
+      prevMaxTimestamp,
+      sameLaneFilter,
+      minMatches,
+      gameMode,
+    ],
+    queryFn: async () => {
+      const response = await api.analytics_api.heroCountersStats({
+        sameLaneFilter: sameLaneFilter,
+        minMatches: minMatches,
+        minAverageBadge: minRankId,
+        maxAverageBadge: maxRankId,
+        minUnixTimestamp: prevMinTimestamp,
+        maxUnixTimestamp: prevMaxTimestamp,
+        gameMode: gameMode,
+      });
+      return response.data;
+    },
+    staleTime: 60 * 60 * 1000,
+    enabled: hasPreviousInterval,
+  });
+
   const isLoading = useMemo(
     () => isLoadingSynergy || isLoadingCounter || isLoadingHero,
     [isLoadingSynergy, isLoadingCounter, isLoadingHero],
@@ -117,6 +198,49 @@ export default function HeroMatchupStatsTable({
     }
     return map;
   }, [heroData]);
+
+  const prevHeroStatsMap = useMemo(() => {
+    const map: Record<number, AnalyticsHeroStats> = {};
+    for (const hero of prevHeroData || []) {
+      if (!hero?.matches || !hero?.wins) continue;
+      map[hero.hero_id] = hero;
+    }
+    return map;
+  }, [prevHeroData]);
+
+  // Map of (heroId -> partnerId -> rel_winrate) for previous period synergies
+  const prevSynergyRelWinrateMap = useMemo(() => {
+    const map: Record<number, Record<number, number>> = {};
+    for (const synergy of prevSynergyData || []) {
+      if (!synergy?.matches_played || !synergy?.wins) continue;
+      if (!prevHeroStatsMap[synergy.hero_id1]?.matches || !prevHeroStatsMap[synergy.hero_id2]?.matches) continue;
+      const relWinrate =
+        synergy.wins / synergy.matches_played -
+        (prevHeroStatsMap[synergy.hero_id1].wins / prevHeroStatsMap[synergy.hero_id1].matches +
+          prevHeroStatsMap[synergy.hero_id2].wins / prevHeroStatsMap[synergy.hero_id2].matches) /
+          2;
+      if (!map[synergy.hero_id1]) map[synergy.hero_id1] = {};
+      if (!map[synergy.hero_id2]) map[synergy.hero_id2] = {};
+      map[synergy.hero_id1][synergy.hero_id2] = relWinrate;
+      map[synergy.hero_id2][synergy.hero_id1] = relWinrate;
+    }
+    return map;
+  }, [prevSynergyData, prevHeroStatsMap]);
+
+  // Map of (heroId -> enemyHeroId -> rel_winrate) for previous period counters
+  const prevCounterRelWinrateMap = useMemo(() => {
+    const map: Record<number, Record<number, number>> = {};
+    for (const counter of prevCounterData || []) {
+      if (!counter?.matches_played || !counter?.wins) continue;
+      if (!prevHeroStatsMap[counter.hero_id]?.matches) continue;
+      const relWinrate =
+        counter.wins / counter.matches_played -
+        prevHeroStatsMap[counter.hero_id].wins / prevHeroStatsMap[counter.hero_id].matches;
+      if (!map[counter.hero_id]) map[counter.hero_id] = {};
+      map[counter.hero_id][counter.enemy_hero_id] = relWinrate;
+    }
+    return map;
+  }, [prevCounterData, prevHeroStatsMap]);
 
   const heroBestSynergies = useMemo(() => {
     function bestCombination(
@@ -391,8 +515,18 @@ export default function HeroMatchupStatsTable({
                     value={heroBestSynergies[heroId]?.rel_winrate}
                     color={"#fa4454"}
                     label={`${heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    delta={
+                      prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2] !== undefined
+                        ? heroBestSynergies[heroId]?.rel_winrate - prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2]
+                        : undefined
+                    }
                     tooltip={
                       <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
+                          <HeroName heroId={heroId} />
+                          <span className="text-muted-foreground">+</span>
+                          <HeroName heroId={heroBestSynergies[heroId]?.hero_id2} />
+                        </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Matches</span>
                           <span className="font-medium">
@@ -404,12 +538,27 @@ export default function HeroMatchupStatsTable({
                           <span className="font-medium">{heroBestSynergies[heroId]?.wins.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate</span>
+                          <span className="font-medium">
+                            {((heroBestSynergies[heroId]?.wins / heroBestSynergies[heroId]?.matches_played) * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate change</span>
                           <span className="font-medium">
                             {heroBestSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}
                             {(heroBestSynergies[heroId]?.rel_winrate * 100).toFixed(2)}%
                           </span>
                         </div>
+                        {prevSynergyRelWinrateMap[heroId]?.[heroBestSynergies[heroId]?.hero_id2] !== undefined && (
+                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                            <span className="text-muted-foreground">Previous</span>
+                            <span className="font-medium">
+                              {prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] > 0 ? "+" : ""}
+                              {(prevSynergyRelWinrateMap[heroId][heroBestSynergies[heroId]?.hero_id2] * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        )}
                       </div>
                     }
                   />
@@ -426,8 +575,18 @@ export default function HeroMatchupStatsTable({
                     value={heroWorstSynergies[heroId]?.rel_winrate}
                     color={"#fa4454"}
                     label={`${heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstSynergies[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    delta={
+                      prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2] !== undefined
+                        ? heroWorstSynergies[heroId]?.rel_winrate - prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2]
+                        : undefined
+                    }
                     tooltip={
                       <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
+                          <HeroName heroId={heroId} />
+                          <span className="text-muted-foreground">+</span>
+                          <HeroName heroId={heroWorstSynergies[heroId]?.hero_id2} />
+                        </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Matches</span>
                           <span className="font-medium">
@@ -439,12 +598,27 @@ export default function HeroMatchupStatsTable({
                           <span className="font-medium">{heroWorstSynergies[heroId]?.wins.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate</span>
+                          <span className="font-medium">
+                            {((heroWorstSynergies[heroId]?.wins / heroWorstSynergies[heroId]?.matches_played) * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate change</span>
                           <span className="font-medium">
                             {heroWorstSynergies[heroId]?.rel_winrate > 0 ? "+" : ""}
                             {(heroWorstSynergies[heroId]?.rel_winrate * 100).toFixed(2)}%
                           </span>
                         </div>
+                        {prevSynergyRelWinrateMap[heroId]?.[heroWorstSynergies[heroId]?.hero_id2] !== undefined && (
+                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                            <span className="text-muted-foreground">Previous</span>
+                            <span className="font-medium">
+                              {prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] > 0 ? "+" : ""}
+                              {(prevSynergyRelWinrateMap[heroId][heroWorstSynergies[heroId]?.hero_id2] * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        )}
                       </div>
                     }
                   />
@@ -460,9 +634,19 @@ export default function HeroMatchupStatsTable({
                     max={heroMaxBestAgainstWinrate}
                     value={heroBestAgainst[heroId]?.rel_winrate}
                     color={"#22d3ee"}
-                    label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${((Math.round(heroBestAgainst[heroId]?.rel_winrate * 100) / 100) * 100).toFixed(2)}% `}
+                    label={`${heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroBestAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    delta={
+                      prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id] !== undefined
+                        ? heroBestAgainst[heroId]?.rel_winrate - prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id]
+                        : undefined
+                    }
                     tooltip={
                       <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
+                          <HeroName heroId={heroId} />
+                          <span className="text-muted-foreground">vs</span>
+                          <HeroName heroId={heroBestAgainst[heroId]?.enemy_hero_id} />
+                        </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Matches</span>
                           <span className="font-medium">
@@ -474,12 +658,27 @@ export default function HeroMatchupStatsTable({
                           <span className="font-medium">{heroBestAgainst[heroId]?.wins.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate</span>
+                          <span className="font-medium">
+                            {((heroBestAgainst[heroId]?.wins / heroBestAgainst[heroId]?.matches_played) * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate change</span>
                           <span className="font-medium">
                             {heroBestAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}
                             {(heroBestAgainst[heroId]?.rel_winrate * 100).toFixed(2)}%
                           </span>
                         </div>
+                        {prevCounterRelWinrateMap[heroId]?.[heroBestAgainst[heroId]?.enemy_hero_id] !== undefined && (
+                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                            <span className="text-muted-foreground">Previous</span>
+                            <span className="font-medium">
+                              {prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] > 0 ? "+" : ""}
+                              {(prevCounterRelWinrateMap[heroId][heroBestAgainst[heroId]?.enemy_hero_id] * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        )}
                       </div>
                     }
                   />
@@ -496,8 +695,18 @@ export default function HeroMatchupStatsTable({
                     value={heroWorstAgainst[heroId]?.rel_winrate}
                     color={"#22d3ee"}
                     label={`${heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}${(Math.round(heroWorstAgainst[heroId]?.rel_winrate * 100)).toFixed(0)}% `}
+                    delta={
+                      prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id] !== undefined
+                        ? heroWorstAgainst[heroId]?.rel_winrate - prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id]
+                        : undefined
+                    }
                     tooltip={
                       <div className="flex flex-col gap-1 text-xs">
+                        <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
+                          <HeroName heroId={heroId} />
+                          <span className="text-muted-foreground">vs</span>
+                          <HeroName heroId={heroWorstAgainst[heroId]?.enemy_hero_id} />
+                        </div>
                         <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Matches</span>
                           <span className="font-medium">
@@ -509,12 +718,27 @@ export default function HeroMatchupStatsTable({
                           <span className="font-medium">{heroWorstAgainst[heroId]?.wins.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Win rate</span>
+                          <span className="font-medium">
+                            {((heroWorstAgainst[heroId]?.wins / heroWorstAgainst[heroId]?.matches_played) * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
                           <span className="text-muted-foreground">Win rate change</span>
                           <span className="font-medium">
                             {heroWorstAgainst[heroId]?.rel_winrate > 0 ? "+" : ""}
                             {(heroWorstAgainst[heroId]?.rel_winrate * 100).toFixed(2)}%
                           </span>
                         </div>
+                        {prevCounterRelWinrateMap[heroId]?.[heroWorstAgainst[heroId]?.enemy_hero_id] !== undefined && (
+                          <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                            <span className="text-muted-foreground">Previous</span>
+                            <span className="font-medium">
+                              {prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] > 0 ? "+" : ""}
+                              {(prevCounterRelWinrateMap[heroId][heroWorstAgainst[heroId]?.enemy_hero_id] * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        )}
                       </div>
                     }
                   />
