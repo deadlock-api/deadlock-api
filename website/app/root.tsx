@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { LinksFunction } from "react-router";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
 
@@ -35,23 +36,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/png" href="https://deadlock-api.com/favicon.png" />
 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="description" content="Deadlock API provides game data like images, stats, and more." />
-        <meta name="keywords" content="Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities" />
-        <meta name="Cache-Control" content="public, max-age=3600" />
+        <meta name="description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
+        <meta name="keywords" content="Deadlock, API, Game, Data, Images, Stats, Heroes, Items, Weapons, Abilities, Leaderboard, Analytics" />
         <meta name="robots" content="index, follow" />
 
-        <meta name="og:title" content="Deadlock API" />
-        <meta name="og:description" content="Deadlock API provides game data like images, stats, and more." />
-        <meta name="og:image" content="https://deadlock-api.com/favicon.webp" />
-        <meta name="og:url" content="https://deadlock-api.com" />
-        <meta name="og:type" content="website" />
+        <meta property="og:title" content="Deadlock API - Game Stats, Hero Analytics & Leaderboards" />
+        <meta property="og:description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
+        <meta property="og:image" content="https://deadlock-api.com/favicon.webp" />
+        <meta property="og:url" content="https://deadlock-api.com" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Deadlock API" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta property="twitter:domain" content="deadlock-api.pages.dev" />
-        <meta property="twitter:url" content="https://deadlock-api.pages.dev" />
-        <meta name="twitter:title" content="Deadlock API" />
-        <meta name="twitter:description" content="Deadlock API provides game data like images, stats, and more." />
+        <meta property="twitter:domain" content="deadlock-api.com" />
+        <meta property="twitter:url" content="https://deadlock-api.com" />
+        <meta name="twitter:title" content="Deadlock API - Game Stats, Hero Analytics & Leaderboards" />
+        <meta name="twitter:description" content="Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve." />
         <meta name="twitter:image" content="https://deadlock-api.com/favicon.webp" />
+
+        <link rel="dns-prefetch" href="https://api.deadlock-api.com" />
+        <link rel="dns-prefetch" href="https://assets.deadlock-api.com" />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Deadlock API",
+              url: "https://deadlock-api.com",
+              description: "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.",
+            }),
+          }}
+        />
 
         <Meta />
         <Links />
@@ -60,6 +77,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         className="overflow-x-hidden bg-fixed bg-cover bg-center bg-no-repeat bg-blend-difference"
         style={{ backgroundImage: "url('/background.svg')" }}
       >
+        <noscript>
+          <p style={{ padding: "2rem", textAlign: "center", color: "#fff" }}>
+            Deadlock API requires JavaScript to display hero stats, item analytics, and leaderboard data. Please enable JavaScript to continue.
+          </p>
+        </noscript>
         <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
         <div className="relative z-10">{children}</div>
         <ScrollRestoration />
@@ -67,6 +89,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </body>
     </html>
   );
+}
+
+function CanonicalLink() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const href = `https://deadlock-api.com${pathname}`;
+    let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
+    link.href = href;
+  }, [pathname]);
+  return null;
 }
 
 const queryClient = new QueryClient({
@@ -91,6 +128,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <CanonicalLink />
       <PatronAuthProvider>
         <NuqsAdapter>
           <TooltipProvider>

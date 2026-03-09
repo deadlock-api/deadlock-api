@@ -11,10 +11,10 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Abilities - Deadlock API" },
+    { title: "Ability Stats & Upgrade Paths | Deadlock API" },
     {
       name: "description",
-      content: "Ability upgrade paths and win rates for Heroes in Deadlock",
+      content: "Ability upgrade paths and win rates for every Deadlock hero. Analyze optimal skill orders by rank.",
     },
   ];
 };

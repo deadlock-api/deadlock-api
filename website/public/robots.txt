@@ -1,2 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /patron
+Disallow: /auth/
+Disallow: /streamkit/widgets/
+
+Sitemap: https://deadlock-api.com/sitemap.xml

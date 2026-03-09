@@ -20,7 +20,10 @@ import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { ElectricBorder } from "~/components/ElectricBorder";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Deadlock API" }, { name: "description", content: "Match Data, Player Data, and more" }];
+  return [
+    { title: "Deadlock API - Game Stats, Hero Analytics & Leaderboards" },
+    { name: "description", content: "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve. Open source and open data." },
+  ];
 };
 
 const valueProps = [

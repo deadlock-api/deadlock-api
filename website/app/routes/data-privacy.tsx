@@ -19,10 +19,10 @@ import { cleanupCallbackUrl, parseSteamCallback, redirectToSteamAuth } from "~/l
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Data Privacy - Deadlock API" },
+    { title: "Data Privacy & GDPR | Deadlock API" },
     {
       name: "description",
-      content: "Manage your data privacy settings for Deadlock API",
+      content: "Manage your data privacy settings. Request data deletion or re-enable tracking via Steam authentication.",
     },
   ];
 };

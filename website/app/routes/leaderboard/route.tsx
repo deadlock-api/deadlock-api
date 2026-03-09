@@ -9,7 +9,10 @@ import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
 
 export function meta() {
-  return [{ title: "Leaderboard | Deadlock API" }, { name: "description", content: "Deadlock ranked leaderboard" }];
+  return [
+    { title: "Ranked Leaderboard | Deadlock API" },
+    { name: "description", content: "View the top ranked Deadlock players by region with hero filters and search." },
+  ];
 }
 
 function getDefaultRegion(): LeaderboardRegionEnum {

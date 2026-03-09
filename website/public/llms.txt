@@ -1,0 +1,20 @@
+# Deadlock API
+
+## About
+Deadlock API provides game statistics, hero analytics, item data, and leaderboards for the game Deadlock by Valve. It is a free, open-source community project.
+
+## Key pages
+- /heroes - Hero win rates, pick rates, matchups, and performance analytics
+- /items - Item statistics, build combos, purchase timing analysis
+- /abilities - Ability upgrade paths and win rates per hero
+- /leaderboard - Ranked player leaderboard by region
+- /badge-distribution - Rank distribution data over time
+- /game-stats - Aggregate match statistics and trends
+- /heatmap - Kill/death heatmap visualization on the game map
+- /player-scoreboard - Top player performances ranked by stats
+- /streamkit - Stream toolkit with chat commands and OBS widgets
+- /chat - AI chat assistant for game data questions
+
+## API
+- Game data API: https://api.deadlock-api.com (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
+- Assets API: https://assets.deadlock-api.com (OpenAPI spec: https://assets.deadlock-api.com/openapi.json)

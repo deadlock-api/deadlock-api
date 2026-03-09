@@ -13,10 +13,10 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Items - Deadlock API" },
+    { title: "Item Stats & Build Analytics | Deadlock API" },
     {
       name: "description",
-      content: "Detailed analytics about Items in Deadlock",
+      content: "Item win rates, purchase timing, confidence intervals, and combo analytics for Deadlock.",
     },
   ];
 };

@@ -16,10 +16,10 @@ import { ALL_STAT_KEYS } from "./stat-definitions";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Game Stats - Deadlock API" },
+    { title: "Game Stats & Match Trends | Deadlock API" },
     {
       name: "description",
-      content: "Aggregate match statistics and trends for Deadlock",
+      content: "Aggregate match statistics, trends over time, and stats by rank for Deadlock.",
     },
   ];
 };

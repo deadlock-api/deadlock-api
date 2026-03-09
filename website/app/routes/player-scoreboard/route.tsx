@@ -13,10 +13,10 @@ import { ALL_SORT_BY_VALUES } from "./sort-options";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Player Scoreboard - Deadlock API" },
+    { title: "Player Scoreboard | Deadlock API" },
     {
       name: "description",
-      content: "Top player performances ranked by various stats in Deadlock",
+      content: "Top Deadlock player performances ranked by kills, damage, healing, and other in-game stats.",
     },
   ];
 };
