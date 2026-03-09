@@ -3,7 +3,9 @@
  * Handles API calls for patron Steam account management
  */
 
-import { API_ORIGIN } from "~/lib/constants";
+import { isAxiosError } from "axios";
+import type { PlayerCard as GeneratedPlayerCard, PlayerCardSlot as GeneratedPlayerCardSlot } from "deadlock_api_client";
+import { api } from "~/lib/api";
 import { ApiError, fetchApi } from "~/lib/http";
 
 // ============================================================================
@@ -45,31 +47,8 @@ export interface SteamAccountsResponse {
   summary: SteamAccountsListSummary;
 }
 
-export interface AddSteamAccountRequest {
-  steam_id3: number;
-}
-
-export interface ReplaceSteamAccountRequest {
-  steam_id3: number;
-}
-
-export interface DeleteSteamAccountResponse {
-  message: string;
-}
-
-export interface PlayerCardSlot {
-  slot_id: number | null;
-  hero: { id: number | null; kills: number | null; wins: number | null } | null;
-  stat: { stat_id: number | null; stat_score: number | null } | null;
-}
-
-export interface PlayerCard {
-  account_id: number;
-  ranked_badge_level: number | null;
-  ranked_rank: number | null;
-  ranked_subrank: number | null;
-  slots: PlayerCardSlot[];
-}
+export type PlayerCardSlot = GeneratedPlayerCardSlot;
+export type PlayerCard = GeneratedPlayerCard;
 
 export class BotNotFriendError extends ApiError {
   invites: string[];
@@ -115,17 +94,16 @@ export async function listSteamAccounts(): Promise<SteamAccountsResponse> {
 export async function addSteamAccount(steamId3: number): Promise<SteamAccount> {
   return fetchApi<SteamAccount>("/v1/patron/steam-accounts", {
     method: "POST",
-    body: { steam_id3: steamId3 } satisfies AddSteamAccountRequest,
+    body: { steam_id3: steamId3 },
   });
 }
 
 /**
  * Delete a Steam account (soft delete with 24-hour cooldown)
  * @param accountId - The UUID of the account to delete
- * @returns Success message
  */
-export async function deleteSteamAccount(accountId: string): Promise<DeleteSteamAccountResponse> {
-  return fetchApi<DeleteSteamAccountResponse>(`/v1/patron/steam-accounts/${accountId}`, {
+export async function deleteSteamAccount(accountId: string): Promise<void> {
+  await fetchApi(`/v1/patron/steam-accounts/${accountId}`, {
     method: "DELETE",
   });
 }
@@ -139,7 +117,7 @@ export async function deleteSteamAccount(accountId: string): Promise<DeleteSteam
 export async function replaceSteamAccount(accountId: string, steamId3: number): Promise<SteamAccount> {
   return fetchApi<SteamAccount>(`/v1/patron/steam-accounts/${accountId}`, {
     method: "PUT",
-    body: { steam_id3: steamId3 } satisfies ReplaceSteamAccountRequest,
+    body: { steam_id3: steamId3 },
   });
 }
 
@@ -218,26 +196,37 @@ export function parseSteamIdInput(input: string): { steamId3: number; format: "i
 
 /**
  * Fetches the Steam profile card for a given account.
- * Public endpoint — no auth required.
+ * Uses the generated PlayersApi client. Public endpoint — no auth required.
  * Throws BotNotFriendError if the account hasn't friended a bot yet.
  */
 export async function getPlayerCard(steamId3: number): Promise<PlayerCard> {
-  // No credentials — this is a public endpoint, no auth required
-  const response = await fetch(`${API_ORIGIN}/v1/players/${steamId3}/card`);
-
-  if (response.status === 400) {
-    const data = await response.json().catch(() => ({}));
-    const errorPayload = data.error ?? data;
-    if (Array.isArray(errorPayload.invites)) {
-      throw new BotNotFriendError(errorPayload.invites, errorPayload.message ?? "Not a bot friend");
+  try {
+    const response = await api.players_api.card({ accountId: steamId3 });
+    const card = response.data[0];
+    if (!card) throw new ApiError(404, "Player card not found");
+    return card;
+  } catch (error: unknown) {
+    if (isAxiosError(error) && error.response) {
+      const { status, data } = error.response;
+      if (status === 400 && typeof data === "object" && data !== null) {
+        const payload = data.error ?? data;
+        if (typeof payload === "object" && payload !== null && Array.isArray(payload.invites)) {
+          throw new BotNotFriendError(payload.invites, payload.message ?? "Not a bot friend");
+        }
+      }
+      const message =
+        typeof data === "object" && data !== null
+          ? (data.message ?? data.error ?? data.detail ?? `HTTP ${status}`)
+          : `HTTP ${status}`;
+      throw new ApiError(status, String(message));
     }
-    throw new ApiError(400, errorPayload.message ?? data.error ?? "Invalid request for player card");
+    throw error;
   }
+}
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, data.error ?? `Failed to fetch player card (HTTP ${response.status})`);
-  }
-
-  return response.json();
+/**
+ * Force-refetch the full match history for a player from Steam.
+ */
+export async function refetchMatchHistory(accountId: number) {
+  return api.players_api.matchHistory({ accountId, forceRefetch: true });
 }
