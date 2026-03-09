@@ -1,0 +1,19 @@
+import { useQuery } from "@tanstack/react-query";
+import type { HeroV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import { heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+
+export function useHeroById(heroId: number): { hero: HeroV2 | undefined; isLoading: boolean } {
+	const { data: hero, isLoading } = useQuery({
+		...heroesQueryOptions,
+		select: (heroes) => heroes.find((h) => h.id === heroId),
+	});
+	return { hero, isLoading };
+}
+
+export function useItemById(itemId: number): { item: UpgradeV2 | undefined; isLoading: boolean } {
+	const { data: item, isLoading } = useQuery({
+		...itemUpgradesQueryOptions,
+		select: (items) => items.find((i) => i.id === itemId),
+	});
+	return { item, isLoading };
+}
