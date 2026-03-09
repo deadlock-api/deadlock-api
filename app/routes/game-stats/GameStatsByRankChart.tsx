@@ -4,14 +4,14 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { assetsApi } from "~/lib/assets-api";
-import type { GameStatsParams } from "~/lib/game-stats-api";
+import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/game-stats-query";
 import { StatSelector } from "./StatSelector";
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
 
 interface GameStatsByRankChartProps {
-  params: GameStatsParams;
+  params: GameStatsQueryParams;
   stat: string;
   onStatChange: (stat: string) => void;
   isStreetBrawl?: boolean;

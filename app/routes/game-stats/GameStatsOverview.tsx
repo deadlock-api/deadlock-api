@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Activity, ArrowDown, ArrowUp, Coins, Flame, Swords, Wheat, type LucideIcon } from "lucide-react";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import type { GameStatsParams } from "~/lib/game-stats-api";
+import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/game-stats-query";
 import { formatStatValue, getFilteredCategories } from "./stat-definitions";
@@ -16,8 +16,8 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 interface GameStatsOverviewProps {
-  params: GameStatsParams;
-  prevParams: GameStatsParams | null;
+  params: GameStatsQueryParams;
+  prevParams: GameStatsQueryParams | null;
   onStatClick?: (statKey: string) => void;
   isStreetBrawl?: boolean;
 }

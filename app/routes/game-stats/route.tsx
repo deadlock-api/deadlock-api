@@ -5,7 +5,8 @@ import { Filter } from "~/components/Filter";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import type { GameStatsBucket, GameStatsParams } from "~/lib/game-stats-api";
+import type { GameStatsBucketEnum } from "deadlock_api_client";
+import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import GameStatsByRankChart from "./GameStatsByRankChart";
@@ -53,22 +54,22 @@ export default function GameStats() {
 
   const isStreetBrawl = gameMode === "street_brawl";
 
-  const baseParams: GameStatsParams = {
-    game_mode: gameMode,
-    min_unix_timestamp: startDate ? startDate.unix() : 0,
-    max_unix_timestamp: endDate ? endDate.unix() : undefined,
-    min_duration_s: minDurationS ?? undefined,
-    max_duration_s: maxDurationS ?? undefined,
-    min_average_badge: isStreetBrawl ? undefined : minRankId,
-    max_average_badge: isStreetBrawl ? undefined : maxRankId,
+  const baseParams: GameStatsQueryParams = {
+    gameMode: gameMode ?? undefined,
+    minUnixTimestamp: startDate ? startDate.unix() : 0,
+    maxUnixTimestamp: endDate ? endDate.unix() : undefined,
+    minDurationS: minDurationS ?? undefined,
+    maxDurationS: maxDurationS ?? undefined,
+    minAverageBadge: isStreetBrawl ? undefined : minRankId,
+    maxAverageBadge: isStreetBrawl ? undefined : maxRankId,
   };
 
-  const prevParams: GameStatsParams | null =
+  const prevParams: GameStatsQueryParams | null =
     prevDates.prevStartDate && prevDates.prevEndDate
       ? {
           ...baseParams,
-          min_unix_timestamp: prevDates.prevStartDate.unix(),
-          max_unix_timestamp: prevDates.prevEndDate.unix(),
+          minUnixTimestamp: prevDates.prevStartDate.unix(),
+          maxUnixTimestamp: prevDates.prevEndDate.unix(),
         }
       : null;
 
@@ -132,7 +133,7 @@ export default function GameStats() {
             params={baseParams}
             stat={stat}
             onStatChange={setStat}
-            timeBucket={timeBucket as GameStatsBucket}
+            timeBucket={timeBucket as GameStatsBucketEnum}
             onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
             isStreetBrawl={isStreetBrawl}
           />
