@@ -13,11 +13,13 @@ import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryC
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
+import { assetsApi } from "~/lib/assets-api";
 import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { queryKeys } from "~/queries/query-keys";
 import { Button } from "../ui/button";
 
 interface BulkMatchMetadata {
@@ -174,7 +176,7 @@ export default function ItemCombsExplore({
   const { data: abilityItems } = useQuery(abilitiesQueryOptions);
 
   const { data: ranksData } = useQuery({
-    queryKey: ["assets-ranks"],
+    queryKey: queryKeys.assets.ranks(),
     queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -226,8 +228,7 @@ export default function ItemCombsExplore({
 
   const topBuildsEnabled = !!hero && includeItems.size > 0;
   const { data: topBuildsData, isLoading: isLoadingTopBuilds } = useQuery({
-    queryKey: [
-      "top-builds",
+    queryKey: queryKeys.analytics.topBuilds(
       hero,
       Array.from(includeItems).sort(),
       Array.from(excludeItems).sort(),
@@ -236,7 +237,7 @@ export default function ItemCombsExplore({
       minDateTimestamp,
       maxDateTimestamp,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("include_info", "true");

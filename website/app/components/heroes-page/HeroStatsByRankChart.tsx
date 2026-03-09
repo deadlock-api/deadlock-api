@@ -16,8 +16,10 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { assetsApi } from "~/lib/assets-api";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { heroesQueryOptions } from "~/queries/asset-queries";
+import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 import type { ByRankStat } from "./HeroStatSelectors";
 
@@ -187,14 +189,13 @@ export default function HeroStatsByRankChart({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
-    queryKey: [
-      "api-hero-stats-by-rank",
+    queryKey: queryKeys.analytics.heroStatsByRank(
       minDateTimestamp,
       maxDateTimestamp,
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,
@@ -210,7 +211,7 @@ export default function HeroStatsByRankChart({
   });
 
   const { data: ranksData, isLoading: isLoadingRanks } = useQuery({
-    queryKey: ["ranks"],
+    queryKey: queryKeys.leaderboard.ranks(),
     queryFn: async () => {
       const response = await assetsApi.default_api.getRanksV2RanksGet();
       return response.data;

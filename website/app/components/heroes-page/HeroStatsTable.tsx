@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
 import HeroImage from "~/components/HeroImage";
-import { LoadingLogo } from "~/components/LoadingLogo";
 import HeroName from "~/components/HeroName";
+import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { queryKeys } from "~/queries/query-keys";
 
 export default function HeroStatsTable({
   columns,
@@ -45,8 +46,7 @@ export default function HeroStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery({
-    queryKey: [
-      "api-hero-stats",
+    queryKey: queryKeys.analytics.heroStats(
       minRankId,
       maxRankId,
       minDateTimestamp,
@@ -54,7 +54,7 @@ export default function HeroStatsTable({
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,
@@ -75,8 +75,7 @@ export default function HeroStatsTable({
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: prevHeroData } = useQuery({
-    queryKey: [
-      "api-hero-stats",
+    queryKey: queryKeys.analytics.heroStats(
       minRankId,
       maxRankId,
       prevMinTimestamp,
@@ -84,7 +83,7 @@ export default function HeroStatsTable({
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,

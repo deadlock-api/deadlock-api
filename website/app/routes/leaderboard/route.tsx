@@ -5,9 +5,10 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
+import { createPageMeta } from "~/lib/meta";
+import { queryKeys } from "~/queries/query-keys";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
-import { createPageMeta } from "~/lib/meta";
 
 export function meta() {
   return createPageMeta({
@@ -134,7 +135,7 @@ export default function Leaderboard() {
   const [ranks, leaderboardQuery] = useQueries({
     queries: [
       {
-        queryKey: ["ranks"],
+        queryKey: queryKeys.leaderboard.ranks(),
         queryFn: async () => {
           const response = await assetsApi.default_api.getRanksV2RanksGet();
           return response.data;
@@ -142,7 +143,7 @@ export default function Leaderboard() {
         staleTime: Number.MAX_SAFE_INTEGER,
       },
       {
-        queryKey: ["leaderboardData", region, heroId],
+        queryKey: queryKeys.leaderboard.data(region, heroId),
         queryFn: async () => {
           const response = heroId
             ? await api.leaderboard_api.leaderboardHero({ region, heroId })

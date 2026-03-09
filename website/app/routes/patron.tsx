@@ -44,7 +44,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
 import { assetsApi } from "~/lib/assets-api";
-import { parseSteamIdInput, type PlayerCard, steamId3ToSteamId64 } from "~/lib/patron-api";
+import { createPageMeta } from "~/lib/meta";
+import { type PlayerCard, parseSteamIdInput, steamId3ToSteamId64 } from "~/lib/patron-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import {
   useAddSteamAccount,
@@ -56,8 +57,7 @@ import {
   useReplaceSteamAccount,
   useSteamAccounts,
 } from "~/queries/patron-queries";
-
-import { createPageMeta } from "~/lib/meta";
+import { queryKeys } from "~/queries/query-keys";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -795,7 +795,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
   const cardQuery = usePlayerCard(steamId3, isActive);
 
   const ranksQuery = useQuery({
-    queryKey: ["assets-ranks"],
+    queryKey: queryKeys.assets.ranks(),
     queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
     staleTime: Number.POSITIVE_INFINITY,
   });

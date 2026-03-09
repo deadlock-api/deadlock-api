@@ -10,6 +10,7 @@ import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { queryKeys } from "~/queries/query-keys";
 import HeatmapCanvas from "./HeatmapCanvas";
 
 const Heatmap3D = lazy(() => import("./Heatmap3D"));
@@ -58,7 +59,7 @@ export default function Heatmap() {
   const [mapQuery, killDeathQuery] = useQueries({
     queries: [
       {
-        queryKey: ["map"],
+        queryKey: queryKeys.map(),
         queryFn: async () => {
           const response = await assetsApi.default_api.getMapV1MapGet();
           return response.data;
@@ -66,7 +67,7 @@ export default function Heatmap() {
         staleTime: Number.MAX_SAFE_INTEGER,
       },
       {
-        queryKey: ["killDeathStats", requestParams],
+        queryKey: queryKeys.analytics.killDeathStats(requestParams),
         queryFn: async () => {
           const response = await api.analytics_api.killDeathStats(requestParams);
           return response.data;

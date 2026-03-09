@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiBadgeDistributionRequest } from "deadlock_api_client/api";
-import { Suspense, lazy, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
@@ -9,6 +9,7 @@ import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { MAX_GAME_DURATION_S, MIN_GAME_DURATION_S } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
+import { queryKeys } from "~/queries/query-keys";
 
 const BadgeDistributionChart = lazy(() => import("./BadgeDistributionChart"));
 
@@ -49,7 +50,7 @@ export default function BadgeDistribution() {
   const [ranks, badgeDistributionQuery] = useQueries({
     queries: [
       {
-        queryKey: ["ranks"],
+        queryKey: queryKeys.leaderboard.ranks(),
         queryFn: async () => {
           const response = await assetsApi.default_api.getRanksV2RanksGet();
           return response.data;
@@ -57,7 +58,7 @@ export default function BadgeDistribution() {
         staleTime: Number.MAX_SAFE_INTEGER,
       },
       {
-        queryKey: ["badgeDistribution", filter],
+        queryKey: queryKeys.analytics.badgeDistribution(filter),
         queryFn: async () => {
           const response = await api.analytics_api.badgeDistribution(filter);
           return response.data;

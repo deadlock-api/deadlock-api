@@ -1,9 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { AbilityV2, UpgradeV2 } from "assets_deadlock_api_client/api";
 import { assetsApi } from "~/lib/assets-api";
+import { queryKeys } from "./query-keys";
 
 export const heroesQueryOptions = queryOptions({
-  queryKey: ["assets-heroes"],
+  queryKey: queryKeys.assets.heroes(),
   queryFn: async () => {
     const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
     return response.data;
@@ -12,7 +13,7 @@ export const heroesQueryOptions = queryOptions({
 });
 
 export const itemUpgradesQueryOptions = queryOptions({
-  queryKey: ["assets-items-upgrades"],
+  queryKey: queryKeys.assets.itemUpgrades(),
   queryFn: async () => {
     const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
     return response.data as UpgradeV2[];
@@ -21,7 +22,7 @@ export const itemUpgradesQueryOptions = queryOptions({
 });
 
 export const abilitiesQueryOptions = queryOptions({
-  queryKey: ["assets-items-abilities"],
+  queryKey: queryKeys.assets.abilities(),
   queryFn: async () => {
     const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
     return response.data as AbilityV2[];

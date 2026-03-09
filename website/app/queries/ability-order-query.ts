@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
 import { api } from "~/lib/api";
+import { queryKeys } from "./query-keys";
 
 export interface AbilityOrderQueryParams {
   heroId: number;
@@ -26,8 +27,7 @@ export function abilityOrderQueryOptions({
   excludeItemIds,
 }: AbilityOrderQueryParams) {
   return queryOptions({
-    queryKey: [
-      "api-ability-order-stats",
+    queryKey: queryKeys.analytics.abilityOrderStats(
       heroId,
       minRankId,
       maxRankId,
@@ -37,7 +37,7 @@ export function abilityOrderQueryOptions({
       gameMode,
       includeItemIds,
       excludeItemIds,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.abilityOrderStats({
         heroId,

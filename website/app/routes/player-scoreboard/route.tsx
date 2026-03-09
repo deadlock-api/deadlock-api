@@ -6,12 +6,12 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { api } from "~/lib/api";
+import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { queryKeys } from "~/queries/query-keys";
 import { ScoreboardTable } from "./ScoreboardTable";
 import { SortBySelector } from "./SortBySelector";
 import { ALL_SORT_BY_VALUES } from "./sort-options";
-
-import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -42,8 +42,7 @@ export default function PlayerScoreboard() {
   const MAX_ENTRIES = 1000;
 
   const scoreboardQuery = useQuery({
-    queryKey: [
-      "playerScoreboard",
+    queryKey: queryKeys.analytics.playerScoreboard(
       sortBy,
       sortDirection,
       gameMode,
@@ -53,7 +52,7 @@ export default function PlayerScoreboard() {
       maxRankId,
       startDate?.unix(),
       endDate?.unix(),
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.playerScoreboard({
         sortBy: sortBy as PlayerScoreboardSortByEnum,

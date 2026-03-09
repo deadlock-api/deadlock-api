@@ -1,16 +1,16 @@
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Suspense, lazy, useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
 import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
+import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import HeroSelector from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
-import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";

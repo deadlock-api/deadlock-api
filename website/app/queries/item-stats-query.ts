@@ -1,7 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { ItemStatsBucketEnum } from "deadlock_api_client/api";
-import { api } from "~/lib/api";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { api } from "~/lib/api";
+import { queryKeys } from "./query-keys";
 
 export interface ItemStatsQueryParams {
   minMatches?: number | null;
@@ -33,8 +34,7 @@ export function itemStatsQueryOptions({
   gameMode,
 }: ItemStatsQueryParams) {
   return queryOptions({
-    queryKey: [
-      "api-item-stats",
+    queryKey: queryKeys.analytics.itemStats(
       minMatches,
       hero,
       minRankId,
@@ -47,7 +47,7 @@ export function itemStatsQueryOptions({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,

@@ -14,6 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { API_ORIGIN } from "~/lib/constants";
 import { steamId64ToSteamId3 } from "~/lib/patron-api";
 import { extractSteamId, generateSteamAuthUrl, validateSteamResponse } from "~/lib/steam-auth";
+import { queryKeys } from "~/queries/query-keys";
 
 const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
 
@@ -87,7 +88,7 @@ export default function StreamKit() {
     isLoading: steamAccountLoading,
     error: steamAccountError,
   } = useQuery<string>({
-    queryKey: ["steamName", region, steamId],
+    queryKey: queryKeys.steam.name(region, steamId),
     queryFn: () => fetchSteamName(region, steamId),
   });
 

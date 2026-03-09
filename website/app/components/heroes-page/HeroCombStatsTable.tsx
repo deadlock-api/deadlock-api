@@ -10,6 +10,7 @@ import { Slider } from "~/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { queryKeys } from "~/queries/query-keys";
 
 export default function HeroCombStatsTable({
   columns,
@@ -54,8 +55,7 @@ export default function HeroCombStatsTable({
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: heroData, isLoading } = useQuery({
-    queryKey: [
-      "api-hero-comb-stats",
+    queryKey: queryKeys.analytics.heroCombStats(
       minRankId,
       maxRankId,
       minDateTimestamp,
@@ -63,7 +63,7 @@ export default function HeroCombStatsTable({
       combSizeFilter,
       minHeroMatches,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.heroCombStats({
         combSize: combSizeFilter,
@@ -80,8 +80,7 @@ export default function HeroCombStatsTable({
   });
 
   const { data: prevHeroData } = useQuery({
-    queryKey: [
-      "api-hero-comb-stats",
+    queryKey: queryKeys.analytics.heroCombStats(
       minRankId,
       maxRankId,
       prevMinTimestamp,
@@ -89,7 +88,7 @@ export default function HeroCombStatsTable({
       combSizeFilter,
       minHeroMatches,
       gameMode,
-    ],
+    ),
     queryFn: async () => {
       const response = await api.analytics_api.heroCombStats({
         combSize: combSizeFilter,

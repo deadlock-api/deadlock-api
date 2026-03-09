@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
+import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 const EXPERIENCE_BUCKETS = [
@@ -48,8 +49,7 @@ export default function HeroStatsByExperienceTable({
 
   const bucketQueries = useQueries({
     queries: EXPERIENCE_BUCKETS.map((bucket) => ({
-      queryKey: [
-        "api-hero-stats-by-experience",
+      queryKey: queryKeys.analytics.heroStatsByExperience(
         bucket.min,
         bucket.max,
         minRankId,
@@ -58,7 +58,7 @@ export default function HeroStatsByExperienceTable({
         maxDateTimestamp,
         minHeroMatches,
         gameMode,
-      ],
+      ),
       queryFn: async () => {
         const response = await api.analytics_api.heroStats({
           minHeroMatches,

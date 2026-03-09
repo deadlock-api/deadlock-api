@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { API_ORIGIN } from "~/lib/constants";
 import { useDebouncedState } from "~/lib/utils";
+import { queryKeys } from "~/queries/query-keys";
 import type { CommandBuilderProps, Variable } from "~/types/streamkit/command";
 import { ChatBotInstructions } from "./ChatBotInstructions";
 import { CommandPreview } from "./CommandPreview";
@@ -18,7 +19,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const { data, error } = useQuery<Variable[]>({
-    queryKey: ["available-variables"],
+    queryKey: queryKeys.streamkit.availableVariables(),
     queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -72,7 +73,7 @@ export default function CommandBuilder({ region, accountId }: CommandBuilderProp
     error: previewRequestError,
     isLoading: previewLoading,
   } = useQuery<string>({
-    queryKey: ["preview", debouncedGeneratedUrl],
+    queryKey: queryKeys.streamkit.preview(debouncedGeneratedUrl),
     queryFn: async () => {
       if (!debouncedGeneratedUrl) return "";
       const res = await fetch(debouncedGeneratedUrl);

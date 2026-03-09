@@ -5,8 +5,10 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { Dayjs } from "~/dayjs";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
+import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions } from "~/queries/asset-queries";
+import { queryKeys } from "~/queries/query-keys";
 import AbilityOrderNode from "./AbilityOrderNode";
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
@@ -57,7 +59,7 @@ export default function AbilityOrderTree({
   );
 
   const { data: heroData } = useQuery({
-    queryKey: ["assets-hero", heroId],
+    queryKey: queryKeys.assets.hero(heroId),
     queryFn: async () => {
       const response = await assetsApi.heroes_api.getHeroV2HeroesIdGet({
         id: heroId,
@@ -216,7 +218,7 @@ export default function AbilityOrderTree({
       onClickCapture={onClickCapture}
     >
       {gameMode === "street_brawl" && (
-        <p className="text-sm text-muted-foreground mb-2">
+        <p className="text-sm text-muted-foreground mb-2 text-balance">
           In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
           matter, paths that only differ in that order are shown as one.
         </p>

@@ -15,6 +15,7 @@ import { Slider } from "~/components/ui/slider";
 import { DEFAULT_LABELS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
+import { queryKeys } from "~/queries/query-keys";
 import type { Variable } from "~/types/streamkit/command";
 import type { Color, Region, Theme } from "~/types/streamkit/widget";
 
@@ -58,7 +59,7 @@ export default function WidgetBuilder({ region, accountId }: WidgetBuilderProps)
   const matchHistoryShowsTodayId = useId();
   const previewBgImageId = useId();
   const { data, error } = useQuery<Variable[]>({
-    queryKey: ["available-variables"],
+    queryKey: queryKeys.streamkit.availableVariables(),
     queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
     staleTime: Number.POSITIVE_INFINITY,
   });
