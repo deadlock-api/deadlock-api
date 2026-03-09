@@ -71,11 +71,10 @@ export interface PlayerCard {
   slots: PlayerCardSlot[];
 }
 
-export class BotNotFriendError extends Error {
+export class BotNotFriendError extends ApiError {
   invites: string[];
   constructor(invites: string[], message: string) {
-    super(message);
-    Object.setPrototypeOf(this, BotNotFriendError.prototype);
+    super(400, message);
     this.name = "BotNotFriendError";
     this.invites = invites;
   }
@@ -232,12 +231,12 @@ export async function getPlayerCard(steamId3: number): Promise<PlayerCard> {
     if (Array.isArray(errorPayload.invites)) {
       throw new BotNotFriendError(errorPayload.invites, errorPayload.message ?? "Not a bot friend");
     }
-    throw new Error(errorPayload.message ?? data.error ?? `HTTP 400`);
+    throw new ApiError(400, errorPayload.message ?? data.error ?? "Invalid request for player card");
   }
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.error ?? `HTTP ${response.status}: ${response.statusText}`);
+    throw new ApiError(response.status, data.error ?? `Failed to fetch player card (HTTP ${response.status})`);
   }
 
   return response.json();

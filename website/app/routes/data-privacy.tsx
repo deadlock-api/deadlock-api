@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import {
   AlertDialog,
@@ -36,7 +36,7 @@ export default function DataPrivacy() {
   } | null>(null);
 
   // Handle Steam authentication callback
-  const handleSteamCallback = async () => {
+  const handleSteamCallback = useCallback(async () => {
     if (typeof window === "undefined") return;
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -48,34 +48,27 @@ export default function DataPrivacy() {
     setMessage(null);
 
     try {
-      const response = await sendDataPrivacyRequest(callbackData.action, {
+      await sendDataPrivacyRequest(callbackData.action, {
         steam_id: callbackData.steamId,
         open_id_params: callbackData.openIdParams,
       });
 
-      if (response.success) {
-        const actionText = callbackData.action === "deletion" ? "Data deletion request" : "Tracking re-enablement";
-        setMessage({
-          type: "success",
-          text: response.message || `${actionText} submitted successfully. You will receive confirmation via Steam.`,
-        });
-      } else {
-        setMessage({
-          type: "error",
-          text: "Failed to process your request. Please try again.",
-        });
-      }
+      const actionText = callbackData.action === "deletion" ? "Data deletion request" : "Tracking re-enablement";
+      setMessage({
+        type: "success",
+        text: `${actionText} submitted successfully. You will receive confirmation via Steam.`,
+      });
     } catch (error) {
       console.error("Error processing Steam callback:", error);
       setMessage({
         type: "error",
-        text: "An unexpected error occurred while processing your request. Please try again or contact support if the issue persists.",
+        text: error instanceof Error ? error.message : "Failed to process your request. Please try again.",
       });
     } finally {
       setIsLoading(false);
       cleanupCallbackUrl();
     }
-  };
+  }, []);
 
   // Check for Steam callback on component mount
   useEffect(() => {
