@@ -162,12 +162,12 @@ export default function Heroes(
           onValueChange={(value) => setTab(value as typeof tab)}
 
           options={[
-            { value: "stats", label: "Overall" },
+            { value: "stats", label: "Overall Stats" },
             { value: "stats-over-time", label: "Over Time" },
             { value: "stats-by-duration", label: "By Duration" },
             { value: "stats-by-rank", label: "By Rank" },
             { value: "stats-by-experience", label: "By Experience" },
-            { value: "hero-combs", label: "Combs" },
+            { value: "hero-combs", label: "Combos" },
             { value: "matchups", label: "Matchups" },
             { value: "hero-matchup-details", label: "Matchup Details" },
           ]}

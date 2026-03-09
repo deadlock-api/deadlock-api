@@ -1,5 +1,5 @@
 import type { VariantProps } from "class-variance-authority";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { TabsList, TabsTrigger, tabsListVariants } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
@@ -14,6 +14,7 @@ interface ResponsiveTabsListProps extends VariantProps<typeof tabsListVariants> 
   value?: string;
   onValueChange?: (value: string) => void;
   className?: string;
+  ariaLabel?: string;
 }
 
 export function ResponsiveTabsList({
@@ -22,16 +23,19 @@ export function ResponsiveTabsList({
   onValueChange,
   variant = "line",
   className,
+  ariaLabel,
 }: ResponsiveTabsListProps) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = tabsRef.current;
     if (!el) return;
 
     const check = () => setOverflows(el.scrollWidth > el.clientWidth);
     check();
+
+    document.fonts?.ready.then(check);
 
     const ro = new ResizeObserver(check);
     ro.observe(el);
@@ -42,7 +46,7 @@ export function ResponsiveTabsList({
     <>
       {overflows && (
         <Select value={value} onValueChange={onValueChange}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-label={ariaLabel ?? "Select tab"}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -58,9 +62,10 @@ export function ResponsiveTabsList({
       <TabsList
         ref={tabsRef}
         variant={variant}
+        inert={overflows || undefined}
         className={cn(
-          "w-full overflow-x-hidden scrollbar-none",
-          overflows && "invisible !h-0 !p-0 !m-0 !min-h-0 !border-0 overflow-hidden",
+          "w-full overflow-x-auto scrollbar-none",
+          overflows && "hidden",
           className,
         )}
       >

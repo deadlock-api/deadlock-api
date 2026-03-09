@@ -102,7 +102,7 @@ export default function Items(
           options={[
             { value: "stats", label: "Overall Stats" },
             { value: "item-purchase-analysis", label: "Purchase Analysis" },
-            { value: "item-combs", label: "Combination Stats" },
+            { value: "item-combs", label: "Combos" },
           ]}
         />
         <TabsContent value="stats">
