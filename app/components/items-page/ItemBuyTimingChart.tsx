@@ -107,7 +107,7 @@ interface ItemBuyTimingChartProps {
   rowTotalMatches?: number;
 }
 
-export default function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
+export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches }: ItemBuyTimingChartProps) {
   const [showFineGrainedIntervals, setShowFineGrainedIntervals] = useState(false);
   const [useWilsonInterval, setUseWilsonInterval] = useState(true);
   const [bucketType, setBucketType] = useState<keyof typeof BUCKET_CONFIG>("net_worth_by_1000");

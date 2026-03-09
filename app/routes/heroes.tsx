@@ -3,12 +3,12 @@ import { lazy, Suspense, useId, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { Filter } from "~/components/Filter";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
-import HeroStatsTable from "~/components/heroes-page/HeroStatsTable";
+import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import HeroSelector from "~/components/selectors/HeroSelector";
+import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
@@ -17,13 +17,27 @@ import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { HERO_STATS } from "~/types/api_hero_stats";
 
-const HeroStatsOverTimeChart = lazy(() => import("~/components/heroes-page/HeroStatsOverTimeChart"));
-const HeroStatsByDurationChart = lazy(() => import("~/components/heroes-page/HeroStatsByDurationChart"));
-const HeroStatsByRankChart = lazy(() => import("~/components/heroes-page/HeroStatsByRankChart"));
-const HeroStatsByExperienceTable = lazy(() => import("~/components/heroes-page/HeroStatsByExperienceTable"));
-const HeroMatchupStatsTable = lazy(() => import("~/components/heroes-page/HeroMatchupStatsTable"));
-const HeroCombStatsTable = lazy(() => import("~/components/heroes-page/HeroCombStatsTable"));
-const HeroMatchupDetailsStatsTable = lazy(() => import("~/components/heroes-page/HeroMatchupDetailsStatsTable"));
+const HeroStatsOverTimeChart = lazy(() =>
+	import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({ default: m.HeroStatsOverTimeChart })),
+);
+const HeroStatsByDurationChart = lazy(() =>
+	import("~/components/heroes-page/HeroStatsByDurationChart").then((m) => ({ default: m.HeroStatsByDurationChart })),
+);
+const HeroStatsByRankChart = lazy(() =>
+	import("~/components/heroes-page/HeroStatsByRankChart").then((m) => ({ default: m.HeroStatsByRankChart })),
+);
+const HeroStatsByExperienceTable = lazy(() =>
+	import("~/components/heroes-page/HeroStatsByExperienceTable").then((m) => ({ default: m.HeroStatsByExperienceTable })),
+);
+const HeroMatchupStatsTable = lazy(() =>
+	import("~/components/heroes-page/HeroMatchupStatsTable").then((m) => ({ default: m.HeroMatchupStatsTable })),
+);
+const HeroCombStatsTable = lazy(() =>
+	import("~/components/heroes-page/HeroCombStatsTable").then((m) => ({ default: m.HeroCombStatsTable })),
+);
+const HeroMatchupDetailsStatsTable = lazy(() =>
+	import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({ default: m.HeroMatchupDetailsStatsTable })),
+);
 
 export const meta: MetaFunction = () => {
   return createPageMeta({

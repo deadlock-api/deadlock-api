@@ -4,7 +4,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions } from "~/queries/asset-queries";
 
-export default function AbilityImage({ abilityId, className }: { abilityId: number; className?: string }) {
+export function AbilityImage({ abilityId, className }: { abilityId: number; className?: string }) {
   const { data, isLoading } = useQuery(abilitiesQueryOptions);
 
   const ability = useMemo(() => data?.find((item) => item.id === abilityId), [data, abilityId]);

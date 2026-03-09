@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useId, useMemo, useState } from "react";
-import HeroImage from "~/components/HeroImage";
-import HeroName from "~/components/HeroName";
+import { HeroImage } from "~/components/HeroImage";
+import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
@@ -13,7 +13,7 @@ import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
 
-export default function HeroCombStatsTable({
+export function HeroCombStatsTable({
   columns,
   limit,
   hideHeader,

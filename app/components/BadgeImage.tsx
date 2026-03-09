@@ -12,7 +12,7 @@ export interface BadgeImageProps {
   imageType?: "small" | "large";
 }
 
-export default function BadgeImage({
+export function BadgeImage({
   badge,
   ranks,
   imageType = "small",

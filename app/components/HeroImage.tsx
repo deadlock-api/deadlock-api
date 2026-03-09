@@ -4,7 +4,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
-export default function HeroImage({ heroId, className }: { heroId: number; className?: string }) {
+export function HeroImage({ heroId, className }: { heroId: number; className?: string }) {
   const { data, isLoading } = useQuery(heroesQueryOptions);
 
   const hero = useMemo(() => data?.find((hero) => hero.id === heroId), [data, heroId]);

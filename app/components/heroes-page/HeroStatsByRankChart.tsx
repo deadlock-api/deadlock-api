@@ -177,7 +177,7 @@ function addToAggregatedTier(agg: AggregatedTier, entry: AnalyticsHeroStats): vo
   agg.total_denies += entry.total_denies;
 }
 
-export default function HeroStatsByRankChart({
+export function HeroStatsByRankChart({
   minHeroMatches,
   minHeroMatchesTotal,
   minDate,

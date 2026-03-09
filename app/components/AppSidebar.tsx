@@ -310,7 +310,7 @@ export function MobileMenuButton() {
   );
 }
 
-export default function AppSidebar() {
+export function AppSidebar() {
   return (
     <aside className="glass hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-30 border-r border-sidebar-border">
       <SidebarContent />

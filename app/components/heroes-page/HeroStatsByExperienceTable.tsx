@@ -1,8 +1,8 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo, useState } from "react";
-import HeroImage from "~/components/HeroImage";
-import HeroName from "~/components/HeroName";
+import { HeroImage } from "~/components/HeroImage";
+import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -36,7 +36,7 @@ interface HeroStatsByExperienceTableProps {
   gameMode?: GameMode;
 }
 
-export default function HeroStatsByExperienceTable({
+export function HeroStatsByExperienceTable({
   heroStat,
   minRankId,
   maxRankId,

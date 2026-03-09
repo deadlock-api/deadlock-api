@@ -3,14 +3,14 @@ import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
-import ItemImage from "~/components/ItemImage";
-import ItemName from "~/components/ItemName";
-import ItemTier from "~/components/ItemTier";
-import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
+import { ItemImage } from "~/components/ItemImage";
+import { ItemName } from "~/components/ItemName";
+import { ItemTier } from "~/components/ItemTier";
+import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
-import ItemTierSelector from "~/components/selectors/ItemTierSelector";
+import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
@@ -566,7 +566,7 @@ export function ItemStatsTableDisplay({
   );
 }
 
-export default function ItemStatsTable({
+export function ItemStatsTable({
   columns,
   limit,
   hideHeader,

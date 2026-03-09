@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import ItemImage from "~/components/ItemImage";
+import { ItemImage } from "~/components/ItemImage";
 import { type TriState, type TriStateColumnLayout, TriStateSelector } from "~/components/selectors/TriStateSelector";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 

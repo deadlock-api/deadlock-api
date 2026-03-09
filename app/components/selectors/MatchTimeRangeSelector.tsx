@@ -37,7 +37,7 @@ function formatTime(seconds: number) {
   return `${Math.floor(seconds / 60)}m`;
 }
 
-export default function MatchTimeRangeSelector({
+export function MatchTimeRangeSelector({
   minTime,
   maxTime,
   onTimeChange,

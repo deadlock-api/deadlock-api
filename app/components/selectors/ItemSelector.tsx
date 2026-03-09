@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useId, useMemo } from "react";
-import ItemImage from "~/components/ItemImage";
-import ItemName from "~/components/ItemName";
+import { ItemImage } from "~/components/ItemImage";
+import { ItemName } from "~/components/ItemName";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
@@ -26,7 +26,7 @@ function useItems() {
   return { sortedItems, isLoading };
 }
 
-export default function ItemSelector({
+export function ItemSelector({
   onItemSelected,
   selectedItem,
   allowSelectNull,

@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
 import { useMemo } from "react";
-import HeroImage from "~/components/HeroImage";
-import HeroName from "~/components/HeroName";
+import { HeroImage } from "~/components/HeroImage";
+import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
@@ -12,7 +12,7 @@ import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
 
-export default function HeroMatchupStatsTable({
+export function HeroMatchupStatsTable({
   hideHeader,
   minRankId,
   maxRankId,

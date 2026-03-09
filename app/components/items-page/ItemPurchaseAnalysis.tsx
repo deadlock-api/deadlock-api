@@ -1,13 +1,13 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
-import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
+import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
 import type { Dayjs } from "~/dayjs";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
 
-export default function ItemPurchaseAnalysis({
+export function ItemPurchaseAnalysis({
   minRankId,
   maxRankId,
   minDate,

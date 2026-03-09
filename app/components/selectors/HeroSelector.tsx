@@ -3,8 +3,8 @@ import type { HeroV2 } from "assets_deadlock_api_client";
 import { SearchIcon } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { FilterPill } from "~/components/FilterPill";
-import HeroImage from "~/components/HeroImage";
-import HeroName from "~/components/HeroName";
+import { HeroImage } from "~/components/HeroImage";
+import { HeroName } from "~/components/HeroName";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
@@ -23,7 +23,7 @@ function useHeroes() {
   return { sortedHeroes, isLoading };
 }
 
-export default function HeroSelector({
+export function HeroSelector({
   onHeroSelected,
   selectedHero,
   allowSelectNull,
