@@ -52,16 +52,22 @@ export default function IngestCache() {
         setDialogTitle("Success!");
         setDialogDescription(`${salts.length} salts uploaded successfully!`);
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        const detail = errorData.message ?? errorData.error ?? `HTTP ${response.status}`;
         setDialogType("error");
         setDialogTitle("Upload Failed");
-        setDialogDescription("Failed to upload salts. Please try again.");
+        setDialogDescription(`Failed to upload salts: ${detail}`);
       }
     } catch (error) {
       setIsLoading(false);
       setDialogType("error");
       setDialogTitle("Error");
-      setDialogDescription("An error occurred while processing the directory.");
-      console.error(error);
+      setDialogDescription(
+        error instanceof Error
+          ? `Failed to scan or upload: ${error.message}`
+          : "Failed to scan directory or upload salts. Please try again.",
+      );
+      console.error("Scan/upload failed:", error);
     }
     setDialogOpen(true);
   };
@@ -78,8 +84,12 @@ export default function IngestCache() {
         setIsLoading(false);
         setDialogType("error");
         setDialogTitle("Error");
-        setDialogDescription("An error occurred while opening the directory picker.");
-        console.error(error);
+        setDialogDescription(
+          error instanceof Error
+            ? `Failed to open directory picker: ${error.message}`
+            : "Failed to open directory picker. Please try again.",
+        );
+        console.error("Directory picker failed:", error);
         setDialogOpen(true);
       }
     } else {
@@ -141,8 +151,12 @@ export default function IngestCache() {
         setIsLoading(false);
         setDialogType("error");
         setDialogTitle("Error");
-        setDialogDescription("Could not process the dropped item. Is it a directory?");
-        console.error(error);
+        setDialogDescription(
+          error instanceof Error
+            ? `Failed to process dropped item: ${error.message}`
+            : "Failed to process the dropped item. Please ensure you're dropping a directory.",
+        );
+        console.error("Drop handling failed:", error);
         setDialogOpen(true);
       }
     }
