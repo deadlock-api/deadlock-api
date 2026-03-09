@@ -2,7 +2,7 @@ import { Activity, Coins, Flame, Swords, Wheat, type LucideIcon } from "lucide-r
 import type React from "react";
 import { useMemo } from "react";
 import { cn } from "~/lib/utils";
-import { GAME_STAT_CATEGORIES } from "./stat-definitions";
+import { getFilteredCategories } from "./stat-definitions";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "Match Flow": Activity,
@@ -12,15 +12,16 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Economy: Coins,
 };
 
-export function StatSelector({ value, onChange, children }: { value: string; onChange: (val: string) => void; children?: React.ReactNode }) {
+export function StatSelector({ value, onChange, children, isStreetBrawl = false }: { value: string; onChange: (val: string) => void; children?: React.ReactNode; isStreetBrawl?: boolean }) {
+  const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
   const activeCategory = useMemo(() => {
-    return GAME_STAT_CATEGORIES.find((c) => c.stats.some((s) => s.key === value)) ?? GAME_STAT_CATEGORIES[0];
-  }, [value]);
+    return categories.find((c) => c.stats.some((s) => s.key === value)) ?? categories[0];
+  }, [value, categories]);
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex flex-wrap justify-center gap-1.5">
-        {GAME_STAT_CATEGORIES.map((category) => {
+        {categories.map((category) => {
           const Icon = CATEGORY_ICONS[category.label];
           const isActive = category.label === activeCategory.label;
           return (

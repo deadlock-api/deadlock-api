@@ -21,6 +21,7 @@ interface GameStatsOverTimeChartProps {
   onStatChange: (stat: string) => void;
   timeBucket: GameStatsBucket;
   onTimeBucketChange: (bucket: GameStatsBucket) => void;
+  isStreetBrawl?: boolean;
 }
 
 export default function GameStatsOverTimeChart({
@@ -29,6 +30,7 @@ export default function GameStatsOverTimeChart({
   onStatChange,
   timeBucket,
   onTimeBucketChange,
+  isStreetBrawl = false,
 }: GameStatsOverTimeChartProps) {
   const { data, isPending } = useQuery(
     gameStatsQueryOptions({ ...params, bucket: timeBucket }),
@@ -48,7 +50,7 @@ export default function GameStatsOverTimeChart({
 
   return (
     <div className="flex flex-col gap-4">
-      <StatSelector value={stat} onChange={onStatChange}>
+      <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl}>
         <div className="flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-0.5">
           {TIME_BUCKETS.map((b) => (
             <button

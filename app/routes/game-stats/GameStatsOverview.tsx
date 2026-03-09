@@ -14,7 +14,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameStatsParams } from "~/lib/game-stats-api";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/game-stats-query";
-import { GAME_STAT_CATEGORIES, formatStatValue } from "./stat-definitions";
+import { formatStatValue, getFilteredCategories } from "./stat-definitions";
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "Match Flow": Activity,
@@ -28,9 +28,10 @@ interface GameStatsOverviewProps {
   params: GameStatsParams;
   prevParams: GameStatsParams | null;
   onStatClick?: (statKey: string) => void;
+  isStreetBrawl?: boolean;
 }
 
-export default function GameStatsOverview({ params, prevParams, onStatClick }: GameStatsOverviewProps) {
+export default function GameStatsOverview({ params, prevParams, onStatClick, isStreetBrawl = false }: GameStatsOverviewProps) {
   const { data: currentData, isPending } = useQuery(
     gameStatsQueryOptions({ ...params, bucket: "no_bucket" }),
   );
@@ -56,7 +57,7 @@ export default function GameStatsOverview({ params, prevParams, onStatClick }: G
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {GAME_STAT_CATEGORIES.map((category, catIdx) => {
+      {getFilteredCategories(isStreetBrawl).map((category, catIdx) => {
         const Icon = CATEGORY_ICONS[category.label];
         const isWide = category.stats.length > 6;
 
