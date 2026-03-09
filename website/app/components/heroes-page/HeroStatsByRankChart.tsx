@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -16,11 +16,11 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
+import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 import type { ByRankStat } from "./HeroStatSelectors";
@@ -221,18 +221,9 @@ export function HeroStatsByRankChart({
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);
+  const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
 
   const badgeMap = useMemo(() => (ranksData ? extractBadgeMap(ranksData) : new Map()), [ranksData]);
-
-  const heroIdMap = useMemo(() => {
-    const map: Record<number, { name: string; color: string }> = {};
-    for (const hero of assetsHeroes || []) {
-      const uiColor = hero.colors?.ui;
-      map[hero.id] = { name: hero.name, color: uiColor ? `rgb(${uiColor.join(",")})` : "#ffffff" };
-    }
-    return map;
-  }, [assetsHeroes]);
 
   const heroDataByHero = useMemo(() => {
     if (!heroData) return {};
@@ -271,43 +262,27 @@ export function HeroStatsByRankChart({
     return grouped;
   }, [heroData, badgeMap, gameMode, heroIdMap, xStat, yStat]);
 
-  const allHeroIds = useMemo(
+  const heroIdsWithData = useMemo(
     () =>
       Object.keys(heroDataByHero)
         .map(Number)
-        .filter((id) => heroDataByHero[id]?.length)
-        .sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? "")),
-    [heroDataByHero, heroIdMap],
+        .filter((id) => heroDataByHero[id]?.length),
+    [heroDataByHero],
   );
 
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
-
-  const handleLegendClick = useCallback(
-    (entry: { value?: string }) => {
-      const heroId = allHeroIds.find((id) => (heroIdMap[id]?.name ?? `Hero ${id}`) === entry.value);
-      if (heroId === undefined) return;
-      setVisibleHeroSet((prev) => {
-        const next = new Set(prev);
-        if (next.has(heroId)) {
-          next.delete(heroId);
-        } else {
-          next.add(heroId);
-        }
-        return next;
-      });
-    },
-    [allHeroIds, heroIdMap],
+  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(
+    heroIdMap,
+    heroIdsWithData,
+    "circle",
   );
 
-  if (isLoadingHeroStats || isLoadingRanks || isLoadingAssetsHeroes) {
+  if (isLoadingHeroStats || isLoadingRanks || isLoadingHeroes) {
     return (
       <div className="flex items-center justify-center w-full h-full py-16">
         <LoadingLogo />
       </div>
     );
   }
-
-  const visibleHeroIds = allHeroIds.filter((id) => visibleHeroSet.has(id));
 
   return (
     <ResponsiveContainer width="100%" height={700} className="p-4 bg-muted">
@@ -337,11 +312,7 @@ export function HeroStatsByRankChart({
           align="center"
           verticalAlign="bottom"
           onClick={handleLegendClick}
-          payload={allHeroIds.map((heroId) => ({
-            value: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
-            type: "line",
-            color: visibleHeroSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
-          }))}
+          payload={legendPayload}
           wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
         />
         {visibleHeroIds.map((heroId) => (
