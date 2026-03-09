@@ -3,7 +3,8 @@ import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
-import type { GameStatsBucket, GameStatsParams } from "~/lib/game-stats-api";
+import type { GameStatsBucketEnum } from "deadlock_api_client";
+import type { GameStatsQueryParams } from "~/queries/game-stats-query";
 import { cn } from "~/lib/utils";
 import { gameStatsQueryOptions } from "~/queries/game-stats-query";
 import { StatSelector } from "./StatSelector";
@@ -16,11 +17,11 @@ const TIME_BUCKETS = [
 ] as const;
 
 interface GameStatsOverTimeChartProps {
-  params: GameStatsParams;
+  params: GameStatsQueryParams;
   stat: string;
   onStatChange: (stat: string) => void;
-  timeBucket: GameStatsBucket;
-  onTimeBucketChange: (bucket: GameStatsBucket) => void;
+  timeBucket: GameStatsBucketEnum;
+  onTimeBucketChange: (bucket: GameStatsBucketEnum) => void;
   isStreetBrawl?: boolean;
 }
 
@@ -54,7 +55,7 @@ export default function GameStatsOverTimeChart({
             <button
               key={b.value}
               type="button"
-              onClick={() => onTimeBucketChange(b.value as GameStatsBucket)}
+              onClick={() => onTimeBucketChange(b.value as GameStatsBucketEnum)}
               className={cn(
                 "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
                 timeBucket === b.value

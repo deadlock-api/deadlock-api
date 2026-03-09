@@ -1,4 +1,4 @@
-import type { AnalyticsGameStats } from "~/lib/game-stats-api";
+import type { AnalyticsGameStats } from "deadlock_api_client";
 
 export type StatFormat = "integer" | "duration" | "percent" | "decimal1" | "decimal2";
 
@@ -22,6 +22,7 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "abandon_rate", label: "Abandon Rate", format: "percent" },
       { key: "mid_boss_kill_rate", label: "Mid Boss Kill Rate", format: "percent" },
       { key: "avg_first_mid_boss_time_s", label: "Avg First Mid Boss", format: "duration" },
+      { key: "avg_objectives_destroyed_time_s", label: "Avg Objectives Destroyed", format: "duration" },
     ],
   },
   {
@@ -41,7 +42,18 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "avg_player_damage", label: "Avg Player Damage", format: "integer" },
       { key: "avg_player_damage_taken", label: "Avg Damage Taken", format: "integer" },
       { key: "avg_boss_damage", label: "Avg Objective Damage", format: "integer" },
+      { key: "avg_creep_damage", label: "Avg Creep Damage", format: "integer" },
+      { key: "avg_neutral_damage", label: "Avg Neutral Damage", format: "integer" },
+    ],
+  },
+  {
+    label: "Healing & Mitigation",
+    stats: [
       { key: "avg_player_healing", label: "Avg Healing", format: "integer" },
+      { key: "avg_self_healing", label: "Avg Self Healing", format: "integer" },
+      { key: "avg_damage_mitigated", label: "Avg Damage Mitigated", format: "integer" },
+      { key: "avg_damage_absorbed", label: "Avg Damage Absorbed", format: "integer" },
+      { key: "avg_heal_prevented", label: "Avg Heal Prevented", format: "integer" },
     ],
   },
   {
@@ -49,20 +61,32 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     stats: [
       { key: "avg_last_hits", label: "Avg Last Hits", format: "decimal1" },
       { key: "avg_denies", label: "Avg Denies", format: "decimal1" },
+      { key: "avg_creep_kills", label: "Avg Creep Kills", format: "decimal1" },
+      { key: "avg_neutral_kills", label: "Avg Neutral Kills", format: "decimal1" },
+      { key: "avg_possible_creeps", label: "Avg Possible Creeps", format: "decimal1" },
       { key: "avg_ending_level", label: "Avg Ending Level", format: "decimal1" },
+    ],
+  },
+  {
+    label: "Character Stats",
+    stats: [
+      { key: "avg_max_health", label: "Avg Max Health", format: "integer" },
+      { key: "avg_weapon_power", label: "Avg Weapon Power", format: "integer" },
+      { key: "avg_tech_power", label: "Avg Tech Power", format: "integer" },
     ],
   },
   {
     label: "Economy",
     stats: [
-      { key: "avg_net_worth", label: "Avg Net Worth", format: "integer" },
-      { key: "avg_gold_player", label: "Avg Gold (Players)", format: "integer" },
-      { key: "avg_gold_lane_creep", label: "Avg Gold (Lane Creep)", format: "integer" },
-      { key: "avg_gold_neutral_creep", label: "Avg Gold (Neutral Creep)", format: "integer" },
-      { key: "avg_gold_boss", label: "Avg Gold (Objectives)", format: "integer" },
-      { key: "avg_gold_treasure", label: "Avg Gold (Treasure)", format: "integer" },
-      { key: "avg_gold_denied", label: "Avg Gold (Denied)", format: "integer" },
-      { key: "avg_gold_death_loss", label: "Avg Gold (Death Loss)", format: "integer" },
+      { key: "avg_net_worth", label: "Avg Souls", format: "integer" },
+      { key: "avg_gold_player", label: "Avg Souls (Players)", format: "integer" },
+      { key: "avg_gold_lane_creep", label: "Avg Souls (Lane Creep)", format: "integer" },
+      { key: "avg_gold_neutral_creep", label: "Avg Souls (Neutral Creep)", format: "integer" },
+      { key: "avg_gold_boss", label: "Avg Souls (Objectives)", format: "integer" },
+      { key: "avg_gold_boss_orb", label: "Avg Souls (Boss Orb)", format: "integer" },
+      { key: "avg_gold_treasure", label: "Avg Souls (Urn)", format: "integer" },
+      { key: "avg_gold_denied", label: "Avg Souls (Denied)", format: "integer" },
+      { key: "avg_gold_death_loss", label: "Avg Souls (Death Loss)", format: "integer" },
     ],
   },
 ];
