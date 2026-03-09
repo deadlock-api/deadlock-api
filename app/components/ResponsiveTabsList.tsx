@@ -25,11 +25,11 @@ export function ResponsiveTabsList({
   className,
   ariaLabel,
 }: ResponsiveTabsListProps) {
-  const tabsRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
 
   useLayoutEffect(() => {
-    const el = tabsRef.current;
+    const el = measureRef.current;
     if (!el) return;
 
     const check = () => setOverflows(el.scrollWidth > el.clientWidth);
@@ -43,8 +43,8 @@ export function ResponsiveTabsList({
   }, []);
 
   return (
-    <>
-      {overflows && (
+    <div className="relative">
+      {overflows ? (
         <Select value={value} onValueChange={onValueChange}>
           <SelectTrigger className="w-full" aria-label={ariaLabel ?? "Select tab"}>
             <SelectValue />
@@ -57,20 +57,32 @@ export function ResponsiveTabsList({
             ))}
           </SelectContent>
         </Select>
+      ) : (
+        <TabsList variant={variant} className={cn("w-full overflow-x-auto scrollbar-none", className)}>
+          {options.map((opt) => (
+            <TabsTrigger key={opt.value} value={opt.value}>
+              {opt.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
       )}
 
+      {/* Hidden measurement clone — always in the DOM at the container's full
+          width so ResizeObserver can reliably detect overflow without causing
+          a show/hide flicker loop. */}
       <TabsList
-        ref={tabsRef}
+        ref={measureRef}
         variant={variant}
-        inert={overflows || undefined}
-        className={cn("w-full overflow-x-auto scrollbar-none", overflows && "hidden", className)}
+        aria-hidden
+        inert
+        className={cn("w-full overflow-x-auto scrollbar-none absolute top-0 left-0 invisible pointer-events-none", className)}
       >
         {options.map((opt) => (
-          <TabsTrigger key={opt.value} value={opt.value}>
+          <TabsTrigger key={opt.value} value={opt.value} tabIndex={-1}>
             {opt.label}
           </TabsTrigger>
         ))}
       </TabsList>
-    </>
+    </div>
   );
 }
