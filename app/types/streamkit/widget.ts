@@ -31,10 +31,8 @@ export type BoxWidgetProps = {
   opacity?: number;
 };
 
-type RGB = `rgb(${number}, ${number}, ${number})`;
-type RGBA = `rgba(${number}, ${number}, ${number}, ${number})`;
-type HEX = `#${string}`;
-export type Color = RGB | RGBA | HEX;
+import type { Color } from "~/types/general";
+
 export type RawWidgetProps = {
   region: Region;
   accountId: string;

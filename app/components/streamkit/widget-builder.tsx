@@ -17,8 +17,9 @@ import { DEFAULT_LABELS, DEFAULT_VARIABLES } from "~/constants/streamkit/widget"
 import { API_ORIGIN } from "~/lib/constants";
 import { snakeToPretty } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
+import type { Color } from "~/types/general";
 import type { Variable } from "~/types/streamkit/command";
-import type { Color, Region, Theme } from "~/types/streamkit/widget";
+import type { Region, Theme } from "~/types/streamkit/widget";
 
 const widgetTypes: string[] = ["box", "raw"];
 
