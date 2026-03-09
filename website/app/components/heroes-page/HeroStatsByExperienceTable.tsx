@@ -1,10 +1,13 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
+import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 import HeroImage from "~/components/HeroImage";
 import HeroName from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { assetsApi } from "~/lib/assets-api";
@@ -91,13 +94,14 @@ export default function HeroStatsByExperienceTable({
     return map;
   }, [assetsHeroes]);
 
-  const isLoading = bucketQueries.some((q) => q.isLoading) || isLoadingAssetsHeroes;
-  const allLoaded = bucketQueries.every((q) => q.data != null);
+  const anyLoaded = bucketQueries.some((q) => q.data != null);
+  const allLoading = !anyLoaded || isLoadingAssetsHeroes;
+  const bucketLoading = bucketQueries.map((q) => q.data == null);
 
   const isPercentStat = heroStat === "winrate";
 
   const heroRows = useMemo(() => {
-    if (!allLoaded) return [];
+    if (!anyLoaded) return [];
 
     const heroIds = new Set<number>();
     for (const q of bucketQueries) {
@@ -109,26 +113,34 @@ export default function HeroStatsByExperienceTable({
     const rows: {
       heroId: number;
       bucketValues: (number | null)[];
+      bucketEntries: (AnalyticsHeroStats | null)[];
       delta: number | null;
     }[] = [];
 
     for (const heroId of heroIds) {
-      const bucketValues = EXPERIENCE_BUCKETS.map((_, i) => {
+      const bucketEntries = EXPERIENCE_BUCKETS.map((_, i) => {
         const entry = bucketQueries[i].data?.find((e) => e.hero_id === heroId);
         if (!entry || entry.matches < MIN_MATCHES_PER_BUCKET) return null;
+        return entry;
+      });
+
+      const bucketValues = bucketEntries.map((entry) => {
+        if (!entry) return null;
         const raw = hero_stats_transform(entry, heroStat);
         return raw > 100 ? Math.round(raw) : Math.round(raw * 100) / 100;
       });
 
-      const firstVal = bucketValues.find((v) => v !== null) ?? null;
-      const lastVal = [...bucketValues].reverse().find((v) => v !== null) ?? null;
-      const delta = firstVal !== null && lastVal !== null ? lastVal - firstVal : null;
+      const loadedValues = bucketValues.filter((v, i) => !bucketLoading[i] && v !== null) as number[];
+      const firstVal = loadedValues[0] ?? null;
+      const lastVal = loadedValues[loadedValues.length - 1] ?? null;
+      const allBucketsLoaded = bucketLoading.every((l) => !l);
+      const delta = allBucketsLoaded && firstVal !== null && lastVal !== null ? lastVal - firstVal : null;
 
-      rows.push({ heroId, bucketValues, delta });
+      rows.push({ heroId, bucketValues, bucketEntries, delta });
     }
 
     return rows;
-  }, [allLoaded, bucketQueries, heroStat]);
+  }, [anyLoaded, bucketQueries, heroStat, bucketLoading]);
 
   const [sortKey, setSortKey] = useState<SortKey>("delta");
   const [sortAsc, setSortAsc] = useState(false);
@@ -200,7 +212,9 @@ export default function HeroStatsByExperienceTable({
     return sortAsc ? " \u25B2" : " \u25BC";
   };
 
-  if (isLoading) {
+  const allBucketsLoaded = bucketLoading.every((l) => !l);
+
+  if (allLoading) {
     return (
       <div className="flex items-center justify-center w-full h-full py-16">
         <LoadingLogo />
@@ -245,13 +259,116 @@ export default function HeroStatsByExperienceTable({
             </TableCell>
             {row.bucketValues.map((val, i) => (
               <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
-                {formatValue(val)}
+                {bucketLoading[i] ? (
+                  <Skeleton className="h-4 w-12 mx-auto" />
+                ) : (
+                  <BucketTooltip entry={row.bucketEntries[i]} heroStat={heroStat} bucketLabel={EXPERIENCE_BUCKETS[i].label}>
+                    {formatValue(val)}
+                  </BucketTooltip>
+                )}
               </TableCell>
             ))}
-            <TableCell className="text-center tabular-nums">{formatDelta(row.delta)}</TableCell>
+            <TableCell className="text-center tabular-nums">
+              {!allBucketsLoaded ? (
+                <Skeleton className="h-4 w-12 mx-auto" />
+              ) : (
+                <DeltaTooltip firstEntry={row.bucketEntries.find((e) => e !== null) ?? null} lastEntry={[...row.bucketEntries].reverse().find((e) => e !== null) ?? null} heroStat={heroStat}>
+                  {formatDelta(row.delta)}
+                </DeltaTooltip>
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+function BucketTooltip({
+  entry,
+  heroStat,
+  bucketLabel,
+  children,
+}: {
+  entry: AnalyticsHeroStats | null;
+  heroStat: (typeof HERO_STATS)[number];
+  bucketLabel: string;
+  children: React.ReactNode;
+}) {
+  if (!entry) return <>{children}</>;
+
+  const winrate = ((entry.wins / entry.matches) * 100).toFixed(2);
+  const kills = (entry.total_kills / entry.matches).toFixed(1);
+  const deaths = (entry.total_deaths / entry.matches).toFixed(1);
+  const assists = (entry.total_assists / entry.matches).toFixed(1);
+  const netWorth = Math.round(entry.total_net_worth / entry.matches).toLocaleString();
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-default">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent className="bg-popover text-popover-foreground border border-border shadow-md p-3">
+        <div className="flex flex-col gap-1 text-xs">
+          <div className="font-medium text-foreground mb-1">{bucketLabel}</div>
+          <TooltipRow label="Matches" value={entry.matches.toLocaleString()} />
+          <TooltipRow label="Win rate" value={`${winrate}%`} highlight={heroStat === "winrate"} />
+          <TooltipRow label="Players" value={entry.players.toLocaleString()} />
+          <div className="border-t border-border my-1" />
+          <TooltipRow label="Kills/match" value={kills} highlight={heroStat === "kills_per_match"} />
+          <TooltipRow label="Deaths/match" value={deaths} highlight={heroStat === "deaths_per_match"} />
+          <TooltipRow label="Assists/match" value={assists} highlight={heroStat === "assists_per_match"} />
+          <TooltipRow label="Net worth/match" value={netWorth} highlight={heroStat === "net_worth_per_match"} />
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function DeltaTooltip({
+  firstEntry,
+  lastEntry,
+  heroStat,
+  children,
+}: {
+  firstEntry: AnalyticsHeroStats | null;
+  lastEntry: AnalyticsHeroStats | null;
+  heroStat: (typeof HERO_STATS)[number];
+  children: React.ReactNode;
+}) {
+  if (!firstEntry || !lastEntry || firstEntry === lastEntry) return <>{children}</>;
+
+  const firstVal = hero_stats_transform(firstEntry, heroStat);
+  const lastVal = hero_stats_transform(lastEntry, heroStat);
+  const isPercent = heroStat === "winrate";
+
+  const fmt = (v: number) => {
+    if (isPercent) return `${v.toFixed(2)}%`;
+    return v > 100 ? Math.round(v).toLocaleString() : v.toFixed(1);
+  };
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-default">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent className="bg-popover text-popover-foreground border border-border shadow-md p-3">
+        <div className="flex flex-col gap-1 text-xs">
+          <TooltipRow label="Beginner" value={fmt(firstVal)} />
+          <TooltipRow label="Veteran" value={fmt(lastVal)} />
+          <div className="border-t border-border my-1" />
+          <TooltipRow label="Difference" value={fmt(lastVal - firstVal)} />
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function TooltipRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={highlight ? "font-bold text-foreground" : "font-medium"}>{value}</span>
+    </div>
   );
 }
