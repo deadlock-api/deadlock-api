@@ -102,13 +102,17 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 const MID_BOSS_STATS = new Set(["mid_boss_kill_rate", "avg_first_mid_boss_time_s"]);
+const STREET_BRAWL_HIDDEN_CATEGORIES = new Set(["Economy"]);
 
 export function getFilteredCategories(isStreetBrawl: boolean): StatCategory[] {
   if (!isStreetBrawl) return GAME_STAT_CATEGORIES;
-  return GAME_STAT_CATEGORIES.map((c) => ({
-    ...c,
-    stats: c.stats.filter((s) => !MID_BOSS_STATS.has(s.key)),
-  })).filter((c) => c.stats.length > 0);
+  return GAME_STAT_CATEGORIES
+    .filter((c) => !STREET_BRAWL_HIDDEN_CATEGORIES.has(c.label))
+    .map((c) => ({
+      ...c,
+      stats: c.stats.filter((s) => !MID_BOSS_STATS.has(s.key)),
+    }))
+    .filter((c) => c.stats.length > 0);
 }
 
 export const ALL_STAT_KEYS = GAME_STAT_CATEGORIES.flatMap((c) => c.stats.map((s) => s.key));
