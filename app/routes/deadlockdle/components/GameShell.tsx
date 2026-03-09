@@ -27,7 +27,7 @@ export function GameShell({
 			initial={{ opacity: 0, y: 12 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.25, ease: "easeOut" }}
-			className="max-w-2xl mx-auto px-4 py-8"
+			className="max-w-5xl mx-auto px-4 py-8"
 		>
 			<div className="mb-6">
 				<Link
@@ -38,7 +38,7 @@ export function GameShell({
 					Back to Hub
 				</Link>
 
-				<h1 className="text-2xl font-bold tracking-tight uppercase">{title}</h1>
+				<h1 className="text-2xl font-game tracking-tight uppercase bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text text-transparent">{title}</h1>
 				{subtitle && (
 					<p className="text-sm text-muted-foreground/60 mt-1 font-mono">{subtitle}</p>
 				)}

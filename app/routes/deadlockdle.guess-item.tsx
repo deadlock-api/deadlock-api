@@ -5,6 +5,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
 import { GameShell } from "./deadlockdle/components/GameShell";
+import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
 import { HintReveal } from "./deadlockdle/components/HintReveal";
 import { ResultModal } from "./deadlockdle/components/ResultModal";
@@ -66,6 +67,7 @@ export default function GuessItem() {
   const { gameState, streakState, isFinished, submitGuess, today } = useDailyGame("guess-item", MAX_ATTEMPTS);
 
   const [shakeKey, setShakeKey] = useState(0);
+  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
 
   const shopableItems = useMemo(() => (items ? filterShopableItems(items) : []), [items]);
 
@@ -106,6 +108,8 @@ export default function GuessItem() {
     if (!dailyItem || isFinished) return;
     const correct = name.toLowerCase() === dailyItem.name.toLowerCase();
     submitGuess(name, correct);
+    setFeedbackType(correct ? "correct" : "wrong");
+    setTimeout(() => setFeedbackType(null), 900);
     if (!correct) {
       setShakeKey((k) => k + 1);
     }
@@ -129,6 +133,8 @@ export default function GuessItem() {
       usedAttempts={gameState.guesses.length}
       status={gameState.status}
     >
+      <GuessFeedback type={feedbackType} />
+
       {/* Item image with progressive blur */}
       <motion.div
         key={shakeKey}

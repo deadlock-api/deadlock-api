@@ -336,13 +336,15 @@ export default function ItemStatsQuiz() {
                       const isWrongSelection = result && isSelected && !result.tier;
 
                       return (
-                        <button
+                        <motion.button
                           key={tier}
                           type="button"
+                          whileTap={!state.submitted ? { scale: 0.93, transition: { duration: 0 } } : undefined}
+                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
                           onClick={() => setAnswer(item.id, "tier", tier)}
                           disabled={state.submitted}
                           className={cn(
-                            "flex-1 py-2 text-sm font-mono font-bold border transition-all",
+                            "flex-1 py-2 text-sm font-mono font-bold border transition-colors",
                             "disabled:cursor-default",
                             result
                               ? isCorrect
@@ -356,7 +358,7 @@ export default function ItemStatsQuiz() {
                           )}
                         >
                           {tier}
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -376,13 +378,15 @@ export default function ItemStatsQuiz() {
                       const colors = getSlotColor(slot);
 
                       return (
-                        <button
+                        <motion.button
                           key={slot}
                           type="button"
+                          whileTap={!state.submitted ? { scale: 0.93, transition: { duration: 0 } } : undefined}
+                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
                           onClick={() => setAnswer(item.id, "slot", slot)}
                           disabled={state.submitted}
                           className={cn(
-                            "flex-1 py-2 text-[11px] font-mono font-semibold border transition-all",
+                            "flex-1 py-2 text-[11px] font-mono font-semibold border transition-colors",
                             "disabled:cursor-default",
                             result
                               ? isCorrect
@@ -396,7 +400,7 @@ export default function ItemStatsQuiz() {
                           )}
                         >
                           {formatSlotLabel(slot)}
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -420,19 +424,21 @@ export default function ItemStatsQuiz() {
           transition={{ delay: ITEMS_COUNT * 0.08 + 0.2 }}
           className="flex justify-center"
         >
-          <button
+          <motion.button
             type="button"
+            whileTap={allFieldsFilled ? { scale: 0.95, transition: { duration: 0 } } : undefined}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
             onClick={handleSubmit}
             disabled={!allFieldsFilled}
             className={cn(
-              "px-8 py-3 font-mono font-bold uppercase tracking-wider text-sm border transition-all",
+              "px-8 py-3 font-mono font-bold uppercase tracking-wider text-sm border transition-colors",
               allFieldsFilled
                 ? "border-primary/60 bg-primary/15 text-primary hover:bg-primary/25 hover:shadow-[0_0_12px_rgba(250,68,84,0.2)]"
                 : "border-muted-foreground/20 bg-black/30 text-muted-foreground/30 cursor-not-allowed",
             )}
           >
             Submit All
-          </button>
+          </motion.button>
         </motion.div>
       )}
 

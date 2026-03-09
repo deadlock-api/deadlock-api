@@ -206,6 +206,7 @@
   --font-sans: "Inter Variable", sans-serif;
   --font-mono: JetBrains Mono, monospace;
   --font-serif: Source Serif 4, serif;
+  --font-game: "New Rocker", system-ui;
   --radius: 0.75rem;
   --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
   --tracking-tight: calc(var(--tracking-normal) - 0.025em);

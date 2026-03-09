@@ -53,9 +53,10 @@ export function GameCard({ mode, title, description, icon: Icon, path }: GameCar
 		<Link to={path} className="block group">
 			<motion.div
 				whileHover={{ y: -2 }}
-				transition={{ duration: 0.15 }}
+				whileTap={{ scale: 0.97, transition: { duration: 0 } }}
+				transition={{ type: "spring", stiffness: 400, damping: 17 }}
 				className={cn(
-					"relative border bg-[#0d1117]/60 backdrop-blur-sm p-5 transition-all duration-200",
+					"relative border bg-[#0d1117]/60 backdrop-blur-sm p-5 transition-colors duration-200",
 					STATUS_STYLES[status],
 				)}
 			>
@@ -75,7 +76,7 @@ export function GameCard({ mode, title, description, icon: Icon, path }: GameCar
 						<Icon className="w-5 h-5 text-muted-foreground/60 group-hover:text-primary transition-colors" />
 					</div>
 					<div className="flex-1 min-w-0">
-						<h3 className="font-bold text-sm uppercase tracking-wide">{title}</h3>
+						<h3 className="font-game text-sm uppercase tracking-wide">{title}</h3>
 						<p className="text-xs text-muted-foreground/50 mt-1 leading-relaxed">{description}</p>
 					</div>
 				</div>

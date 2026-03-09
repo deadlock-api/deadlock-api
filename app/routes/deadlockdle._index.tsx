@@ -68,16 +68,20 @@ export default function DeadlockdleHub() {
 			initial={{ opacity: 0, y: 12 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.25, ease: "easeOut" }}
-			className="max-w-3xl mx-auto px-4 py-8"
+			className="max-w-5xl mx-auto px-4 py-8"
 		>
-			<div className="text-center mb-8">
-				<h1 className="text-3xl font-bold tracking-tight uppercase">Deadlockdle</h1>
-				<p className="text-sm font-mono text-muted-foreground/50 mt-2 tracking-wider">
-					DAY #{dayNum} — DAILY DEADLOCK CHALLENGES
-				</p>
+			<div className="flex justify-center mb-8">
+				<div className="relative inline-block">
+					<h1 className="text-6xl lg:text-7xl font-game tracking-tight uppercase bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text text-transparent">
+						Deadlockdle
+					</h1>
+					<span className="absolute -top-3 -right-10 text-lg font-game tracking-tight bg-gradient-to-b from-primary to-primary/40 bg-clip-text text-transparent">
+						Day {dayNum}
+					</span>
+				</div>
 			</div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 				{GAMES.map((game, i) => (
 					<motion.div
 						key={game.mode}

@@ -6,6 +6,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { useHeroes, useItems, useNpcUnits } from "./deadlockdle/lib/queries";
 import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "./deadlockdle/lib/seed";
@@ -77,6 +78,7 @@ export default function Trivia() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isRevealed, setIsRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
 
   const isLoading = heroesLoading || itemsLoading || npcsLoading;
 
@@ -104,6 +106,8 @@ export default function Trivia() {
       const isCorrect = optionIndex === currentQ.correctIndex;
       setSelectedAnswer(optionIndex);
       setIsRevealed(true);
+      setFeedbackType(isCorrect ? "correct" : "wrong");
+      setTimeout(() => setFeedbackType(null), 900);
 
       const newAnswers = [...state.answers];
       newAnswers[state.currentQuestion] = optionIndex;
@@ -169,6 +173,8 @@ export default function Trivia() {
       status={state.completed ? "won" : "playing"}
       hideAttempts
     >
+      <GuessFeedback type={feedbackType} />
+
       <AnimatePresence mode="wait">
         {!state.completed && currentQ ? (
           <motion.div
@@ -204,13 +210,15 @@ export default function Trivia() {
                 const isWrongSelection = isRevealed && isSelectedOption && !isCorrectOption;
 
                 return (
-                  <button
+                  <motion.button
                     key={`${state.currentQuestion}-opt-${option}`}
                     type="button"
+                    whileTap={!isRevealed ? { scale: 0.97, transition: { duration: 0 } } : undefined}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     onClick={() => handleAnswer(i)}
                     disabled={isRevealed}
                     className={cn(
-                      "w-full px-4 py-3 text-sm font-mono font-medium border transition-all text-left",
+                      "w-full px-4 py-3 text-sm font-mono font-medium border transition-colors text-left",
                       "disabled:cursor-default",
                       isRevealed
                         ? isCorrectOption
@@ -222,7 +230,7 @@ export default function Trivia() {
                     )}
                   >
                     {option}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>

@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
-import { Pause, Play, Volume2 } from "lucide-react";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
 import { GameShell } from "./deadlockdle/components/GameShell";
+import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
 import { HintReveal } from "./deadlockdle/components/HintReveal";
 import { ResultModal } from "./deadlockdle/components/ResultModal";
@@ -136,12 +137,6 @@ function extractPlayableSounds(soundsData: Record<string, unknown>, validCodenam
 /**
  * Build a mapping from internal codenames (as used in the sounds API)
  * to { id, name } objects using the hero assets data.
- *
- * Hero class_name is e.g. "hero_chrono" -> codename "chrono".
- * The sounds API also uses some alternate codenames:
- *   - "krill" for Mo & Krill (class_name "hero_krill")
- *   - "ghost" for Lady Geist (class_name "hero_ghost")
- *   etc.
  */
 function buildCodenameMap(
   heroes: { id: number; name: string; class_name: string }[],
@@ -151,10 +146,6 @@ function buildCodenameMap(
     const codename = hero.class_name.replace(/^hero_/, "");
     map.set(codename, { id: hero.id, name: hero.name });
   }
-  // The sounds API sometimes uses variant codenames that differ from class_name.
-  // "atlas" -> Abrams in class_name, but sounds uses "abrams" directly.
-  // We add reverse lookups from sound-key names where they differ.
-  // These are populated by the hero's own name lowered if their codename != name.
   for (const hero of heroes) {
     const nameLower = hero.name.toLowerCase().replace(/\s+/g, "");
     if (!map.has(nameLower)) {
@@ -173,6 +164,14 @@ function useAudioPlayer(url: string | null) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem("deadlockdle:sound-volume");
+      return saved ? Number.parseFloat(saved) : 0.7;
+    } catch {
+      return 0.7;
+    }
+  });
   const animRef = useRef<number>(0);
   const prevUrlRef = useRef(url);
 
@@ -187,6 +186,21 @@ function useAudioPlayer(url: string | null) {
       audioRef.current.currentTime = 0;
     }
   }
+
+  // Sync volume to audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  const changeVolume = useCallback((newVolume: number) => {
+    const clamped = Math.max(0, Math.min(1, newVolume));
+    setVolume(clamped);
+    try {
+      localStorage.setItem("deadlockdle:sound-volume", String(clamped));
+    } catch { /* ignore */ }
+  }, []);
 
   const updateProgress = useCallback(() => {
     const audio = audioRef.current;
@@ -203,6 +217,7 @@ function useAudioPlayer(url: string | null) {
     if (!audio) return;
 
     if (audio.paused) {
+      audio.volume = volume;
       audio.play();
       setIsPlaying(true);
       animRef.current = requestAnimationFrame(updateProgress);
@@ -211,7 +226,7 @@ function useAudioPlayer(url: string | null) {
       setIsPlaying(false);
       cancelAnimationFrame(animRef.current);
     }
-  }, [updateProgress]);
+  }, [updateProgress, volume]);
 
   const handleEnded = useCallback(() => {
     setIsPlaying(false);
@@ -222,8 +237,9 @@ function useAudioPlayer(url: string | null) {
   const handleLoadedMetadata = useCallback(() => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      audioRef.current.volume = volume;
     }
-  }, []);
+  }, [volume]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -237,6 +253,8 @@ function useAudioPlayer(url: string | null) {
     isPlaying,
     progress,
     duration,
+    volume,
+    changeVolume,
     togglePlayPause,
     handleEnded,
     handleLoadedMetadata,
@@ -253,6 +271,7 @@ export default function GuessSound() {
   const { gameState, streakState, isFinished, submitGuess, today } = useDailyGame("guess-sound", MAX_ATTEMPTS);
 
   const [shakeKey, setShakeKey] = useState(0);
+  const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
 
   const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
 
@@ -292,7 +311,7 @@ export default function GuessSound() {
     return codenameMap.get(dailySound.heroCodename) ?? null;
   }, [dailySound, codenameMap]);
 
-  const { audioRef, isPlaying, progress, duration, togglePlayPause, handleEnded, handleLoadedMetadata } =
+  const { audioRef, isPlaying, progress, duration, volume, changeVolume, togglePlayPause, handleEnded, handleLoadedMetadata } =
     useAudioPlayer(dailySound?.url ?? null);
 
   // Hints for progressive reveal
@@ -328,6 +347,8 @@ export default function GuessSound() {
     if (!answerHero || isFinished) return;
     const correct = name.toLowerCase() === answerHero.name.toLowerCase();
     submitGuess(name, correct);
+    setFeedbackType(correct ? "correct" : "wrong");
+    setTimeout(() => setFeedbackType(null), 900);
     if (!correct) {
       setShakeKey((k) => k + 1);
     }
@@ -344,6 +365,7 @@ export default function GuessSound() {
   }
 
   const formattedDuration = duration > 0 ? `${duration.toFixed(1)}s` : "--";
+  const isMuted = volume === 0;
 
   return (
     <GameShell
@@ -353,6 +375,8 @@ export default function GuessSound() {
       usedAttempts={gameState.guesses.length}
       status={gameState.status}
     >
+      <GuessFeedback type={feedbackType} />
+
       {/* Audio player */}
       <motion.div
         key={shakeKey}
@@ -371,11 +395,13 @@ export default function GuessSound() {
         />
 
         {/* Play/Pause button */}
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.93, transition: { duration: 0 } }}
+          transition={{ type: "spring", stiffness: 400, damping: 17 }}
           onClick={togglePlayPause}
           className={cn(
-            "relative w-24 h-24 rounded-full border-2 transition-all duration-300",
+            "relative w-24 h-24 rounded-full border-2 transition-colors duration-300",
             "flex items-center justify-center",
             "bg-primary/10 border-primary/40 hover:bg-primary/20 hover:border-primary/60",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
@@ -391,7 +417,7 @@ export default function GuessSound() {
             />
           )}
           {isPlaying ? <Pause className="w-8 h-8 text-primary" /> : <Play className="w-8 h-8 text-primary ml-1" />}
-        </button>
+        </motion.button>
 
         {/* Progress bar + duration */}
         <div className="w-full max-w-xs space-y-1.5">
@@ -409,6 +435,36 @@ export default function GuessSound() {
             </span>
             <span>{formattedDuration}</span>
           </div>
+        </div>
+
+        {/* Volume slider */}
+        <div className="flex items-center gap-2 w-full max-w-xs">
+          <button
+            type="button"
+            onClick={() => changeVolume(isMuted ? 0.7 : 0)}
+            className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5"
+            aria-label={isMuted ? "Unmute" : "Mute"}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={volume}
+            onChange={(e) => changeVolume(Number.parseFloat(e.target.value))}
+            className="flex-1 h-1.5 appearance-none bg-muted-foreground/10 rounded-full cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0
+              [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(250,68,84,0.4)]
+              [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full
+              [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+            aria-label="Volume"
+          />
+          <span className="text-[10px] font-mono text-muted-foreground/40 w-7 text-right">
+            {Math.round(volume * 100)}
+          </span>
         </div>
 
         {/* Revealed answer */}

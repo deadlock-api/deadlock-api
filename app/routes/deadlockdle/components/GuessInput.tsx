@@ -1,4 +1,5 @@
 import Fuse from "fuse.js";
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 
@@ -81,9 +82,11 @@ export function GuessInput({
 			{showDropdown && (
 				<div className="absolute z-50 mt-1 w-full border border-muted-foreground/20 bg-[#0d1117]/95 backdrop-blur-sm shadow-lg">
 					{results.map((item, i) => (
-						<button
+						<motion.button
 							key={item.id}
 							type="button"
+							whileTap={{ scale: 0.97, transition: { duration: 0 } }}
+							transition={{ type: "spring", stiffness: 400, damping: 17 }}
 							onMouseDown={(e) => e.preventDefault()}
 							onClick={() => handleSubmit(item)}
 							className={cn(
@@ -94,7 +97,7 @@ export function GuessInput({
 							)}
 						>
 							{item.name}
-						</button>
+						</motion.button>
 					))}
 				</div>
 			)}

@@ -11,6 +11,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
+      '@fontsource/new-rocker':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@iconify-json/material-symbols':
         specifier: ^1.2.62
         version: 1.2.62
@@ -544,6 +547,9 @@ packages:
 
   '@fontsource-variable/inter@5.2.8':
     resolution: {integrity: sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ==}
+
+  '@fontsource/new-rocker@5.2.7':
+    resolution: {integrity: sha512-Yx3Lo3MLQPprPjaxIAXIBw8BVRwkiKSzf9HKGYBsWSLxOfDWUVknMY6jXllQEbmLKEo+ifS6+PwbSoRe5blITw==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -4298,6 +4304,8 @@ snapshots:
   '@floating-ui/utils@0.2.11': {}
 
   '@fontsource-variable/inter@5.2.8': {}
+
+  '@fontsource/new-rocker@5.2.7': {}
 
   '@humanfs/core@0.19.1': {}
 

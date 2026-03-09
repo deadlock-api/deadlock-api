@@ -38,7 +38,7 @@ export function ResultModal({
 				>
 					<div className="text-center mb-5">
 						<p
-							className={`text-lg font-bold uppercase tracking-wider ${
+							className={`text-lg font-game uppercase tracking-wider ${
 								status === "won" ? "text-green-400" : "text-primary"
 							}`}
 						>
