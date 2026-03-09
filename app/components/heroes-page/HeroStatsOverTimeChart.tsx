@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroStatsBucketEnum } from "deadlock_api_client/api";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
+import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { api } from "~/lib/api";
-import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
@@ -73,15 +73,8 @@ export function HeroStatsOverTimeChart({
     return map;
   }, [heroStat, heroData]);
 
-  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);
-
-  const heroIdMap = useMemo(() => {
-    const map: Record<number, { name: string; color: string }> = {};
-    for (const hero of assetsHeroes || []) {
-      map[hero.id] = { name: hero.name, color: `rgb(${hero.colors.ui.join(",")})` };
-    }
-    return map;
-  }, [assetsHeroes]);
+  const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
+  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(heroIdMap);
 
   const sortedStats = useMemo(() => {
     const out: number[] = [];
@@ -94,8 +87,8 @@ export function HeroStatsOverTimeChart({
     return out;
   }, [heroStatMap]);
 
-  const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)], [sortedStats]);
-  const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)], [sortedStats]);
+  const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)] ?? 0, [sortedStats]);
+  const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)] ?? 100, [sortedStats]);
 
   const minDataDate = useMemo(
     () => Math.min(...Object.keys(heroStatMap).map((d) => Number.parseInt(d, 10))),
@@ -125,42 +118,13 @@ export function HeroStatsOverTimeChart({
     return data;
   }, [heroStatMap]);
 
-  const allHeroIds = useMemo(
-    () =>
-      Object.keys(heroIdMap)
-        .map(Number)
-        .sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? "")),
-    [heroIdMap],
-  );
-
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
-
-  const handleLegendClick = useCallback(
-    (entry: { value?: string }) => {
-      const heroId = allHeroIds.find((id) => (heroIdMap[id]?.name ?? `Hero ${id}`) === entry.value);
-      if (heroId === undefined) return;
-      setVisibleHeroSet((prev) => {
-        const next = new Set(prev);
-        if (next.has(heroId)) {
-          next.delete(heroId);
-        } else {
-          next.add(heroId);
-        }
-        return next;
-      });
-    },
-    [allHeroIds, heroIdMap],
-  );
-
-  if (isLoadingHeroStats || isLoadingAssetsHeroes) {
+  if (isLoadingHeroStats || isLoadingHeroes) {
     return (
       <div className="flex items-center justify-center w-full h-full py-16">
         <LoadingLogo />
       </div>
     );
   }
-
-  const visibleHeroIds = allHeroIds.filter((id) => visibleHeroSet.has(id));
 
   return (
     <ResponsiveContainer width="100%" height={800} className="p-4 bg-muted">
@@ -202,11 +166,7 @@ export function HeroStatsOverTimeChart({
           align="center"
           verticalAlign="bottom"
           onClick={handleLegendClick}
-          payload={allHeroIds.map((heroId) => ({
-            value: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
-            type: "line",
-            color: visibleHeroSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
-          }))}
+          payload={legendPayload}
           wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
         />
         {visibleHeroIds.map((heroId) => (
