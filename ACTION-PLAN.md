@@ -7,21 +7,7 @@
 
 ## HIGH — Fix Within 1 Week
 
-### 1. Create proper OG images (1200x630px)
-
-**Problem**: OG image is the 512x512 favicon. Social shares (Discord, Twitter/X, Facebook) display a tiny, poorly cropped image. `twitter:card` is set to `summary_large_image` which expects a 2:1 aspect ratio.
-
-**Fix**: Design OG images at 1200x630px. At minimum:
-- `/public/og/default.png` — generic site card
-- `/public/og/heroes.png` — hero analytics card
-- `/public/og/items.png` — item analytics card
-- `/public/og/leaderboard.png` — leaderboard card
-
-**Status**: Code infrastructure done (per-route OG image mapping in `meta.ts`, `/public/og/` directory created). **Still need to design and place the actual image files.**
-
----
-
-### 2. Evaluate enabling SSR for public routes
+### 1. Evaluate enabling SSR for public routes
 
 **Problem**: `ssr: false` means all content is client-rendered. Google can render JS (with delays), but Bing, DuckDuckGo, and AI crawlers often cannot. The `<noscript>` fallback only shows a message — no actual content.
 
@@ -37,7 +23,7 @@
 
 ## MEDIUM — Fix Within 1 Month
 
-### 3. Add editorial/FAQ content
+### 2. Add editorial/FAQ content
 
 **Problem**: No prose content for search engines. All pages are data/UI. The site misses long-tail queries like "best Deadlock heroes", "Deadlock tier list", "how to check Deadlock rank".
 
@@ -50,5 +36,5 @@
 
 ## LOW — Backlog
 
-### 6. Consider `hreflang` tags
+### 3. Consider `hreflang` tags
 Only needed if multi-language support is planned.
