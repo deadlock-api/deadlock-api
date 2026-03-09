@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AbilityV2, HeroV2, RankV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import type { AbilityV2, HeroV2, RankV2 } from "assets_deadlock_api_client/api";
 import { formatDistanceToNow } from "date-fns";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
@@ -10,14 +10,14 @@ import ItemBuyTimingChart from "~/components/items-page/ItemBuyTimingChart";
 import { getDisplayItemStats, ItemStatsTableDisplay } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
+import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
-import { assetsApi } from "~/lib/assets-api";
 import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
-import { itemStatsQueryOptions, type ItemStatsQueryParams } from "~/queries/item-stats-query";
-import type { GameMode } from "~/components/selectors/GameModeSelector";
+import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { Button } from "../ui/button";
 
 interface BulkMatchMetadata {
@@ -167,32 +167,11 @@ export default function ItemCombsExplore({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
-    queryKey: ["assets-items-upgrades"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
-      return response.data as UpgradeV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
-  const { data: heroesData } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: heroesData } = useQuery(heroesQueryOptions);
 
-  const { data: abilityItems } = useQuery({
-    queryKey: ["assets-items-abilities"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
-      return response.data as AbilityV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: abilityItems } = useQuery(abilitiesQueryOptions);
 
   const { data: ranksData } = useQuery({
     queryKey: ["assets-ranks"],

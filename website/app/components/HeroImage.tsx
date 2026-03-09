@@ -1,18 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Skeleton } from "~/components/ui/skeleton";
-import { assetsApi } from "~/lib/assets-api";
 import { cn } from "~/lib/utils";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 
 export default function HeroImage({ heroId, className }: { heroId: number; className?: string }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data, isLoading } = useQuery(heroesQueryOptions);
 
   const hero = useMemo(() => data?.find((hero) => hero.id === heroId), [data, heroId]);
 

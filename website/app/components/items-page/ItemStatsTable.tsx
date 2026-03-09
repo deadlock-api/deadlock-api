@@ -17,7 +17,7 @@ import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
+import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
 
 // Parsers for sort field and direction using nuqs string literal parser
@@ -610,14 +610,7 @@ export default function ItemStatsTable({
   const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
-  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery({
-    queryKey: ["assets-items-upgrades"],
-    queryFn: async () => {
-      const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
-      return response.data as UpgradeV2[];
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery({
     queryKey: [

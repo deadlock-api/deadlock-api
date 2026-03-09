@@ -5,7 +5,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
+import { heroesQueryOptions } from "~/queries/asset-queries";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 const DURATION_BUCKETS = [
@@ -20,7 +20,6 @@ const DURATION_BUCKETS = [
   { label: "50+m", minS: 3000, maxS: 7000 },
 ] as const;
 
-const BEBOP_HERO_ID = 15;
 const MIN_MATCHES_PER_BUCKET = 10;
 
 interface HeroStatsByDurationChartProps {
@@ -80,14 +79,7 @@ export default function HeroStatsByDurationChart({
     })),
   });
 
-  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery({
-    queryKey: ["assets-heroes"],
-    queryFn: async () => {
-      const response = await assetsApi.heroes_api.getHeroesV2HeroesGet({ onlyActive: true });
-      return response.data;
-    },
-    staleTime: Number.POSITIVE_INFINITY,
-  });
+  const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);
 
   const heroIdMap = useMemo(() => {
     const map: Record<number, { name: string; color: string }> = {};
@@ -140,7 +132,7 @@ export default function HeroStatsByDurationChart({
     [heroIdMap],
   );
 
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([BEBOP_HERO_ID]));
+  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
 
   const handleLegendClick = useCallback(
     (entry: { value?: string }) => {
