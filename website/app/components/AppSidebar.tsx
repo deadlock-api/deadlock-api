@@ -1,4 +1,22 @@
-import { ExternalLink, Menu, Zap } from "lucide-react";
+import {
+  BarChart3,
+  Database,
+  ExternalLink,
+  Home,
+  ListOrdered,
+  Map,
+  Medal,
+  Menu,
+  MessageSquare,
+  Radio,
+  Shield,
+  ShoppingBag,
+  Swords,
+  Trophy,
+  Users,
+  Zap,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
@@ -7,25 +25,55 @@ import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 
-const navLinks: readonly { to: string; label: string; special?: boolean }[] = [
-  { to: "/", label: "Home" },
-  { to: "/patron", label: "Prioritized Fetching", special: true },
-  { to: "/heroes", label: "Heroes" },
-  { to: "/items", label: "Items" },
-  { to: "/ability-order", label: "Ability Order" },
-  { to: "/leaderboard", label: "Leaderboard" },
-  { to: "/player-scoreboard", label: "Player Scoreboard" },
-  { to: "/badge-distribution", label: "Rank Distribution" },
-  { to: "/game-stats", label: "Game Stats" },
-  { to: "/heatmap", label: "Kill Heatmap" },
-  { to: "/chat", label: "AI Chat" },
-  { to: "/streamkit", label: "Stream Kit" },
+interface NavLink {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  special?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  links: NavLink[];
+}
+
+const topLinks: NavLink[] = [
+  { to: "/patron", label: "Prioritized Fetching", icon: Zap, special: true },
+  { to: "/", label: "Home", icon: Home },
 ];
 
-const bottomNavLinks = [
-  { to: "/ingest-cache", label: "Data Ingest" },
-  { to: "/data-privacy", label: "Data Privacy" },
-] as const;
+const navGroups: NavGroup[] = [
+  {
+    label: "Analytics",
+    links: [
+      { to: "/heroes", label: "Heroes", icon: Swords },
+      { to: "/items", label: "Items", icon: ShoppingBag },
+      { to: "/ability-order", label: "Ability Order", icon: ListOrdered },
+      { to: "/game-stats", label: "Game Stats", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Community",
+    links: [
+      { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
+      { to: "/player-scoreboard", label: "Player Scoreboard", icon: Users },
+      { to: "/badge-distribution", label: "Rank Distribution", icon: Medal },
+      { to: "/heatmap", label: "Kill Heatmap", icon: Map },
+    ],
+  },
+  {
+    label: "Tools",
+    links: [
+      { to: "/chat", label: "AI Chat", icon: MessageSquare },
+      { to: "/streamkit", label: "Stream Kit", icon: Radio },
+    ],
+  },
+];
+
+const bottomNavLinks: NavLink[] = [
+  { to: "/ingest-cache", label: "Data Ingest", icon: Database },
+  { to: "/data-privacy", label: "Data Privacy", icon: Shield },
+];
 
 const socialLinks = [
   {
@@ -94,13 +142,54 @@ function isActive(pathname: string, to: string) {
   return pathname.startsWith(to);
 }
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void }) {
   const { pathname } = useLocation();
+  const active = isActive(pathname, link.to);
+  const Icon = link.icon;
 
+  if (link.special) {
+    return (
+      <Link
+        to={link.to}
+        prefetch="intent"
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150",
+          "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25",
+          active && "bg-primary/25 border-primary/50",
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {link.label}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to={link.to}
+      prefetch="intent"
+      onClick={onNavigate}
+      className={cn(
+        "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 border-l-2",
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
+          : "border-transparent text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+      )}
+    >
+      <Icon
+        className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-sidebar-foreground/40")}
+      />
+      {link.label}
+    </Link>
+  );
+}
+
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full text-sidebar-foreground">
       {/* Logo */}
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="px-4 py-3 border-b border-sidebar-border">
         <Link to="/" prefetch="intent" onClick={onNavigate} className="flex items-center gap-3">
           <img
             src="https://deadlock-api.com/favicon.webp"
@@ -114,86 +203,70 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navLinks.map((link) =>
-          link.special ? (
-            <Link
-              key={link.to}
-              to={link.to}
-              prefetch="intent"
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-all duration-100",
-                "bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30",
-                isActive(pathname, link.to) && "bg-primary/30",
-              )}
-            >
-              <Zap className="h-4 w-4" />
-              {link.label}
-            </Link>
-          ) : (
-            <Link
-              key={link.to}
-              to={link.to}
-              prefetch="intent"
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium transition-colors duration-100 border-l-2",
-                isActive(pathname, link.to)
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
-                  : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-              )}
-            >
-              {link.label}
-            </Link>
-          ),
-        )}
+      <nav className="flex-1 overflow-y-auto px-3 pt-3 pb-1">
+        {/* Top links (ungrouped) */}
+        <div className="space-y-0.5">
+          {topLinks.map((link) => (
+            <NavItem key={link.to} link={link} onNavigate={onNavigate} />
+          ))}
+        </div>
+
+        {/* Grouped sections */}
+        {navGroups.map((group) => (
+          <div key={group.label} className="mt-4">
+            <p className="px-3 pb-1 text-xs font-semibold uppercase text-sidebar-foreground/40 tracking-wider">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.links.map((link) => (
+                <NavItem key={link.to} link={link} onNavigate={onNavigate} />
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Bottom nav links */}
-      <div className="p-3 border-t border-sidebar-border space-y-1">
+      <div className="px-3 py-2 border-t border-sidebar-border space-y-0.5">
         {bottomNavLinks.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            prefetch="intent"
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100 border-l-2",
-              isActive(pathname, link.to)
-                ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
-                : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-            )}
-          >
-            {link.label}
-          </Link>
+          <NavItem key={link.to} link={link} onNavigate={onNavigate} />
         ))}
       </div>
 
       {/* Service links */}
-      <div className="p-3 border-t border-sidebar-border space-y-1">
-        <p className="px-3 py-1 text-xs font-semibold uppercase text-sidebar-foreground/50 tracking-wider">Services</p>
-        {[
-          { href: ASSETS_ORIGIN, label: "Assets API" },
-          { href: API_ORIGIN, label: "Game Data API" },
-          { href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/", label: "Database Dumps" },
-          { href: "https://github.com/deadlock-api/deadlock-live-events", label: "Live Events API" },
-        ].map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between px-3 py-1.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors duration-100"
-          >
-            {link.label}
-            <ExternalLink className="h-3 w-3 opacity-50" />
-          </a>
-        ))}
+      <div className="px-3 py-2 border-t border-sidebar-border">
+        <p className="px-3 pb-1 text-xs font-semibold uppercase text-sidebar-foreground/40 tracking-wider">
+          Services
+        </p>
+        <div className="space-y-0.5">
+          {[
+            { href: ASSETS_ORIGIN, label: "Assets API" },
+            { href: API_ORIGIN, label: "Game Data API" },
+            {
+              href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
+              label: "Database Dumps",
+            },
+            {
+              href: "https://github.com/deadlock-api/deadlock-live-events",
+              label: "Live Events API",
+            },
+          ].map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-3 py-1 rounded-md text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors duration-150"
+            >
+              {link.label}
+              <ExternalLink className="h-3 w-3 opacity-40" />
+            </a>
+          ))}
+        </div>
       </div>
 
       {/* Social links */}
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="px-3 py-2 border-t border-sidebar-border">
         <div className="flex items-center justify-center gap-1">
           {socialLinks.map((link) => (
             <a
