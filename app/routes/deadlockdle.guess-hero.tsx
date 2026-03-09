@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
-import { cn } from "~/lib/utils";
+import { cn, snakeToPretty } from "~/lib/utils";
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
@@ -44,7 +44,10 @@ export default function GuessHero() {
   const [shakeKey, setShakeKey] = useState(0);
   const [feedbackType, setFeedbackType] = useState<"correct" | "wrong" | null>(null);
 
-  const playableHeroes = useMemo(() => (heroes ? filterPlayableHeroes(heroes) : []), [heroes]);
+  const playableHeroes = useMemo(
+    () => (heroes ? filterPlayableHeroes(heroes).filter((h) => h.hero_type) : []),
+    [heroes],
+  );
 
   const dailyHero = useMemo(() => {
     if (playableHeroes.length === 0) return null;
@@ -66,9 +69,9 @@ export default function GuessHero() {
     ][];
     const statEntry = startingStatEntries.find(([key]) => key === "max_health");
     const statHint = statEntry
-      ? `${statEntry[1].display_stat_name}: ${statEntry[1].value}`
+      ? `Base ${snakeToPretty(statEntry[0])}: ${statEntry[1].value}`
       : startingStatEntries.length > 0
-        ? `${startingStatEntries[0][1].display_stat_name}: ${startingStatEntries[0][1].value}`
+        ? `Base ${snakeToPretty(startingStatEntries[0][0])}: ${startingStatEntries[0][1].value}`
         : "No stats available";
 
     const lore = dailyHero.description?.lore;
