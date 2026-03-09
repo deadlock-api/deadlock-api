@@ -39,7 +39,7 @@ export function ProgressBarWithLabel({
 }) {
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
   const content = (
-    <div className={`flex flex-col gap-2 min-w-16${tooltip ? " cursor-default" : ""}`}>
+    <div className={`flex flex-col gap-2 w-full min-w-24${tooltip ? " cursor-default" : ""}`}>
       <ProgressBar value={value} min={min} max={max} color={color} />
       <div className="flex items-baseline gap-1.5">
         <span className="text-sm text-muted-foreground text-left">{label || `${percentage}%` || 0}</span>
