@@ -212,8 +212,8 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
       }> = [];
 
       for (const k of keys) {
-        // biome-ignore lint/style/noNonNullAssertion: <explanation>
-        const g = groups.get(k)!;
+        const g = groups.get(k);
+        if (!g) continue;
         const bucketStart = k;
         const bucketEnd = k + increment;
         const displayBucket = k + increment / 2; // Center the dot in the middle of the bucket range

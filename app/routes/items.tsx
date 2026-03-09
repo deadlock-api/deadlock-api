@@ -13,10 +13,10 @@ import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 const ItemPurchaseAnalysis = lazy(() =>
-	import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
+  import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
 );
 const ItemCombsExplore = lazy(() =>
-	import("~/components/items-page/ItemCombsExplore").then((m) => ({ default: m.ItemCombsExplore })),
+  import("~/components/items-page/ItemCombsExplore").then((m) => ({ default: m.ItemCombsExplore })),
 );
 
 export const meta: MetaFunction = () => {

@@ -81,7 +81,9 @@ function GameModeWithRank({
   return (
     <>
       <GameModeSelector value={gameMode} onChange={onGameModeChange} />
-      {gameMode !== "street_brawl" && <RankRangeSelector minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />}
+      {gameMode !== "street_brawl" && (
+        <RankRangeSelector minRank={minRank} maxRank={maxRank} onRankChange={onRankChange} />
+      )}
     </>
   );
 }

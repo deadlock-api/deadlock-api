@@ -24,8 +24,9 @@ export function ChatMessageList({
   const streamingLength = currentStreamingMessage?.length ?? 0;
   const toolCount = activeTools.length;
 
-  // Auto-scroll to newest message when messages, streaming content, or tools change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Dependencies intentionally trigger scroll on content changes
+  // Auto-scroll on content changes. Uses derived scalars (count/length/id) instead of
+  // object references to avoid scrolling on every render while still catching meaningful updates.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: derived scalars intentionally used instead of object deps
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messageCount, lastMessageId, streamingLength, toolCount]);

@@ -18,25 +18,29 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { HERO_STATS } from "~/types/api_hero_stats";
 
 const HeroStatsOverTimeChart = lazy(() =>
-	import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({ default: m.HeroStatsOverTimeChart })),
+  import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({ default: m.HeroStatsOverTimeChart })),
 );
 const HeroStatsByDurationChart = lazy(() =>
-	import("~/components/heroes-page/HeroStatsByDurationChart").then((m) => ({ default: m.HeroStatsByDurationChart })),
+  import("~/components/heroes-page/HeroStatsByDurationChart").then((m) => ({ default: m.HeroStatsByDurationChart })),
 );
 const HeroStatsByRankChart = lazy(() =>
-	import("~/components/heroes-page/HeroStatsByRankChart").then((m) => ({ default: m.HeroStatsByRankChart })),
+  import("~/components/heroes-page/HeroStatsByRankChart").then((m) => ({ default: m.HeroStatsByRankChart })),
 );
 const HeroStatsByExperienceTable = lazy(() =>
-	import("~/components/heroes-page/HeroStatsByExperienceTable").then((m) => ({ default: m.HeroStatsByExperienceTable })),
+  import("~/components/heroes-page/HeroStatsByExperienceTable").then((m) => ({
+    default: m.HeroStatsByExperienceTable,
+  })),
 );
 const HeroMatchupStatsTable = lazy(() =>
-	import("~/components/heroes-page/HeroMatchupStatsTable").then((m) => ({ default: m.HeroMatchupStatsTable })),
+  import("~/components/heroes-page/HeroMatchupStatsTable").then((m) => ({ default: m.HeroMatchupStatsTable })),
 );
 const HeroCombStatsTable = lazy(() =>
-	import("~/components/heroes-page/HeroCombStatsTable").then((m) => ({ default: m.HeroCombStatsTable })),
+  import("~/components/heroes-page/HeroCombStatsTable").then((m) => ({ default: m.HeroCombStatsTable })),
 );
 const HeroMatchupDetailsStatsTable = lazy(() =>
-	import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({ default: m.HeroMatchupDetailsStatsTable })),
+  import("~/components/heroes-page/HeroMatchupDetailsStatsTable").then((m) => ({
+    default: m.HeroMatchupDetailsStatsTable,
+  })),
 );
 
 export const meta: MetaFunction = () => {
