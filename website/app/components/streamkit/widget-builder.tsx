@@ -298,7 +298,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
             <h3 className="block text-sm font-medium text-foreground mb-2">Variables and Labels</h3>
             <div className="space-y-3">
               {variables.map((variable, index) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: variable list uses index as key
+                // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
                 <div key={index} className="flex gap-3">
                   <Select
                     value={variable}

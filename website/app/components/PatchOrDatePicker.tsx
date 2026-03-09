@@ -4,7 +4,7 @@ import { useEffect, useId } from "react";
 import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { day, type Dayjs } from "~/dayjs";
+import { type Dayjs, day } from "~/dayjs";
 import { DateRangePicker } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
@@ -79,7 +79,8 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
     return resolvedPatchStartDate.isSame(value.startDate, "day") && resolvedPatchEndDate.isSame(value.endDate, "day");
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Meant to only run on start
+  // Sync tab to initial URL state on mount only — deps intentionally omitted
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only initialization to match tab with current URL params
   useEffect(() => {
     if (matchingPatch) {
       if (tab !== "patch") {
