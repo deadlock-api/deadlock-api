@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
-import { useId, useMemo } from "react";
+import { useId } from "react";
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
 import { Button } from "~/components/ui/button";
@@ -18,11 +18,10 @@ function sortItems(a: UpgradeV2, b: UpgradeV2) {
 }
 
 function useItems() {
-  const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
-  const sortedItems = useMemo(
-    () => data?.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems) ?? [],
-    [data],
-  );
+  const { data: sortedItems = [], isLoading } = useQuery({
+    ...itemUpgradesQueryOptions,
+    select: (items) => items.filter((i) => !i.disabled && i.shopable && i.shop_image_webp).sort(sortItems),
+  });
   return { sortedItems, isLoading };
 }
 

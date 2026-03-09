@@ -12,13 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 function useHeroes() {
-  const { data, isLoading } = useQuery(heroesQueryOptions);
-
-  const sortedHeroes = useMemo(
-    () =>
-      data?.filter((h) => h.in_development !== true).sort((a: HeroV2, b: HeroV2) => a.name.localeCompare(b.name)) ?? [],
-    [data],
-  );
+  const { data: sortedHeroes = [], isLoading } = useQuery({
+    ...heroesQueryOptions,
+    select: (heroes) => heroes.filter((h) => h.in_development !== true).sort((a, b) => a.name.localeCompare(b.name)),
+  });
 
   return { sortedHeroes, isLoading };
 }
