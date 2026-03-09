@@ -96,9 +96,7 @@ function DataPrivacyActionCard({
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className={titleClassName}>{confirmDialog.title}</AlertDialogTitle>
-                <AlertDialogDescription className="space-y-3">
-                  {confirmDialog.description}
-                </AlertDialogDescription>
+                <AlertDialogDescription className="space-y-3">{confirmDialog.description}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
