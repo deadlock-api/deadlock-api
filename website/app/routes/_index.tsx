@@ -315,7 +315,7 @@ export default function Index() {
               rel="noreferrer"
               className="opacity-60 hover:opacity-100 transition-opacity"
             >
-              <img src={sponsor.logo} alt={`${sponsor.title} Logo`} className="max-w-[160px] max-h-14" />
+              <img src={sponsor.logo} alt={`${sponsor.title} Logo`} loading="lazy" className="max-w-[160px] max-h-14" />
             </a>
           ))}
         </div>
