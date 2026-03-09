@@ -9,8 +9,6 @@ import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
-const BEBOP_HERO_ID = 15;
-
 export default function HeroStatsOverTimeChart({
   heroStat,
   heroTimeInterval,
@@ -134,7 +132,7 @@ export default function HeroStatsOverTimeChart({
     [heroIdMap],
   );
 
-  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([BEBOP_HERO_ID]));
+  const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
 
   const handleLegendClick = useCallback(
     (entry: { value?: string }) => {
