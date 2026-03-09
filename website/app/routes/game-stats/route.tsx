@@ -46,7 +46,9 @@ export default function GameStats() {
   );
   const [timeBucket, setTimeBucket] = useQueryState(
     "time_bucket",
-    parseAsStringLiteral(["start_time_day", "start_time_week", "start_time_month"] as const).withDefault("start_time_day"),
+    parseAsStringLiteral(["start_time_day", "start_time_week", "start_time_month"] as const).withDefault(
+      "start_time_day",
+    ),
   );
 
   const isStreetBrawl = gameMode === "street_brawl";
@@ -106,8 +108,8 @@ export default function GameStats() {
         />
       </Filter.Root>
 
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <TabsList className="w-full">
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="tabs-nav w-full">
+        <TabsList variant="line" className="w-full overflow-x-auto scrollbar-none">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="over-time">Over Time</TabsTrigger>
           <TabsTrigger value="by-rank">By Rank</TabsTrigger>
@@ -137,12 +139,7 @@ export default function GameStats() {
         </TabsContent>
 
         <TabsContent value="by-rank">
-          <GameStatsByRankChart
-            params={baseParams}
-            stat={stat}
-            onStatChange={setStat}
-            isStreetBrawl={isStreetBrawl}
-          />
+          <GameStatsByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
         </TabsContent>
       </Tabs>
     </div>
