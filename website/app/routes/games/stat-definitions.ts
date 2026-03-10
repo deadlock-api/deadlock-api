@@ -23,7 +23,11 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
       { key: "abandon_rate", label: "Abandon Rate", format: "percent" },
       { key: "mid_boss_kill_rate", label: "Mid Boss Kill Rate", format: "percent" },
       { key: "avg_first_mid_boss_time_s", label: "Avg First Mid Boss", format: "duration" },
-      { key: "avg_objectives_destroyed_time_s", label: "Avg Objectives Destroyed", format: "duration" },
+      {
+        key: "avg_objectives_destroyed_time_s",
+        label: "Avg Objectives Destroyed",
+        format: "duration",
+      },
     ],
   },
   {

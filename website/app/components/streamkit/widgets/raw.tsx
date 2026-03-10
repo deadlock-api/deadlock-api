@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type FC, useEffect, useState } from "react";
+import { type FC } from "react";
 
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
@@ -16,9 +16,6 @@ export const RawWidget: FC<RawWidgetProps> = ({
   fontColor = "#ffffff",
   refreshInterval = UPDATE_INTERVAL_MS,
 }) => {
-  const [stat, setStat] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const fetchStats = async (r: Region, id: string, v: string, args: Record<string, string>) => {
     const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
     url.searchParams.append("region", r);
@@ -28,8 +25,16 @@ export const RawWidget: FC<RawWidgetProps> = ({
     for (const [key, value] of Object.entries(args)) {
       if (value) url.searchParams.append(key, value);
     }
-    const res = await fetch(url);
-    return await res.json();
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch stats: ${res.status} ${res.statusText}`);
+      }
+      return await res.json();
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+      throw error;
+    }
   };
 
   const {
@@ -44,20 +49,11 @@ export const RawWidget: FC<RawWidgetProps> = ({
     refetchIntervalInBackground: true,
   });
 
-  useEffect(() => {
-    setLoading(statsLoading);
-    if (data) {
-      setStat(data[variable]);
-    }
-    if (statsError) {
-      setStat(null);
-      console.error(`Failed to fetch stats: ${statsError}`);
-    }
-  }, [data, variable, statsLoading, statsError]);
+  const stat = statsError ? null : (data?.[variable] ?? null);
 
   return (
     <div>
-      {loading ? (
+      {statsLoading ? (
         <div className="flex items-center justify-center py-4">
           <div className="relative h-8 w-8">
             <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />

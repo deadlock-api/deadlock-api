@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { API_ORIGIN } from "~/lib/constants";
@@ -17,22 +17,27 @@ import { VariablesList } from "./VariablesList";
 export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   const [template, debouncedTemplate, setTemplate] = useDebouncedState("", 500);
   const [extraArgs, setExtraArgs] = useState<{ [key: string]: string }>({});
-  const [variables, setVariables] = useState<Variable[]>([]);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const { data, error } = useQuery<Variable[]>({
     queryKey: queryKeys.streamkit.availableVariables(),
-    queryFn: () => fetch(`${API_ORIGIN}/v1/commands/variables/available`).then((res) => res.json()),
+    queryFn: async () => {
+      try {
+        const res = await fetch(`${API_ORIGIN}/v1/commands/variables/available`);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch variables: ${res.status} ${res.statusText}`);
+        }
+        return await res.json();
+      } catch (error) {
+        console.error("Failed to fetch variables:", error);
+        throw error;
+      }
+    },
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  useEffect(() => {
-    if (data) setVariables(data.filter((v) => !v.name.endsWith("_img")));
-    if (error) {
-      setVariables([]);
-      console.error(error);
-    }
+  const variables = useMemo(() => {
+    if (error) return [];
+    return data?.filter((v) => !v.name.endsWith("_img")) ?? [];
   }, [data, error]);
 
   const generateUrl = (steamId: string, r: string, tpl: string) => {
@@ -78,26 +83,26 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   } = useQuery<string>({
     queryKey: queryKeys.streamkit.preview(debouncedGeneratedUrl),
     queryFn: async () => {
-      if (!debouncedGeneratedUrl) return "";
-      const res = await fetch(debouncedGeneratedUrl);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch preview: ${res.statusText}`);
+      try {
+        if (!debouncedGeneratedUrl) return "";
+        const res = await fetch(debouncedGeneratedUrl);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch preview: ${res.status} ${res.statusText}`);
+        }
+        return await res.text();
+      } catch (error) {
+        console.error("Failed to fetch preview:", error);
+        throw error;
       }
-      return await res.text();
     },
     staleTime: 60 * 1000,
   });
 
-  useEffect(() => {
-    if (previewData) {
-      setPreview(previewData);
-      setPreviewError(null);
-    } else if (previewRequestError) {
-      console.error(`Failed to fetch preview: ${previewRequestError}`);
-      setPreviewError("Failed to load preview. Please check the generated URL.");
-      setPreview(null);
-    }
-  }, [previewData, previewRequestError]);
+  const previewError = previewData
+    ? null
+    : previewRequestError
+      ? "Failed to load preview. Please check the generated URL."
+      : null;
 
   const handleExtraArgChange = (arg: string, value: string) => {
     setExtraArgs({ ...extraArgs, [arg]: value });
@@ -109,7 +114,7 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
       <VariablesList variables={variables} onVariableClick={insertVariable} />
       <ExtraArguments extraArgs={extraArgs} usedArgs={usedExtraArgs()} onExtraArgChange={handleExtraArgChange} />
       <UrlDisplay generatedUrl={generatedUrl} />
-      <CommandPreview preview={preview} previewError={previewError} loading={previewLoading} />
+      <CommandPreview preview={previewData || null} previewError={previewError} loading={previewLoading} />
       <ChatBotInstructions generatedUrl={generatedUrl} />
     </div>
   );

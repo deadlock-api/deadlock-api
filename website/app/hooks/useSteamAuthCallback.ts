@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-
 import { extractSteamId, validateSteamResponse } from "~/lib/steam-auth";
 
 interface SteamAuthCallbackResult {
@@ -13,30 +11,27 @@ interface SteamAuthCallbackResult {
  * Each consumer is responsible for cleanup and further processing (e.g. converting to ID3, sending API requests).
  */
 export function useSteamAuthCallback(): SteamAuthCallbackResult {
-  const [result, setResult] = useState<SteamAuthCallbackResult>({
-    steamId64: null,
-    openIdParams: {},
+  const searchParams = new URLSearchParams(window.location.search);
+  if (!validateSteamResponse(searchParams)) {
+    return { steamId64: null, openIdParams: {} };
+  }
+
+  const claimedId = searchParams.get("openid.claimed_id");
+  if (!claimedId) {
+    return { steamId64: null, openIdParams: {} };
+  }
+
+  const steamId64 = extractSteamId(claimedId);
+  if (!steamId64) {
+    return { steamId64: null, openIdParams: {} };
+  }
+
+  const openIdParams: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    if (key.startsWith("openid.")) {
+      openIdParams[key] = value;
+    }
   });
 
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (!validateSteamResponse(searchParams)) return;
-
-    const claimedId = searchParams.get("openid.claimed_id");
-    if (!claimedId) return;
-
-    const steamId64 = extractSteamId(claimedId);
-    if (!steamId64) return;
-
-    const openIdParams: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      if (key.startsWith("openid.")) {
-        openIdParams[key] = value;
-      }
-    });
-
-    setResult({ steamId64, openIdParams });
-  }, []);
-
-  return result;
+  return { steamId64, openIdParams };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Rate limit state tracked from backend response headers
@@ -33,6 +33,7 @@ const initialState: RateLimitState = {
 
 export function useRateLimit(): UseRateLimitReturn {
   const [state, setState] = useState<RateLimitState>(initialState);
+  const [currentTimeSeconds, setCurrentTimeSeconds] = useState<number | null>(null);
 
   const parseHeaders = useCallback((headers: Headers): Partial<RateLimitState> => {
     const result: Partial<RateLimitState> = {};
@@ -68,6 +69,7 @@ export function useRateLimit(): UseRateLimitReturn {
     (headers: Headers) => {
       const parsed = parseHeaders(headers);
       if (Object.keys(parsed).length > 0) {
+        setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
         setState((prev) => ({
           ...prev,
           ...parsed,
@@ -76,6 +78,16 @@ export function useRateLimit(): UseRateLimitReturn {
     },
     [parseHeaders],
   );
+
+  useEffect(() => {
+    if (state.resetTime === null) return;
+
+    const interval = window.setInterval(() => {
+      setCurrentTimeSeconds(Math.floor(Date.now() / 1000));
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [state.resetTime]);
 
   const decrementRemaining = useCallback(() => {
     setState((prev) => {
@@ -92,10 +104,9 @@ export function useRateLimit(): UseRateLimitReturn {
   const isRateLimited = state.remaining !== null && state.remaining <= 0;
 
   const timeUntilReset = (() => {
-    if (state.resetTime === null) return null;
+    if (state.resetTime === null || currentTimeSeconds === null) return null;
 
-    const now = Math.floor(Date.now() / 1000);
-    const secondsRemaining = state.resetTime - now;
+    const secondsRemaining = state.resetTime - currentTimeSeconds;
 
     if (secondsRemaining <= 0) return null;
 

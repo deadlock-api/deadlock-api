@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { MetaFunction } from "react-router";
 import { useParams, useSearchParams } from "react-router";
 
@@ -18,7 +18,7 @@ export const meta: MetaFunction = () => {
 
 export default function Widget() {
   const { region, accountId, widgetType } = useParams();
-  const [version, setVersion] = useState<number | null>(null);
+  const initialVersionRef = useRef<number | null>(null);
   const [searchParams] = useSearchParams();
 
   const { data: fetchedVersion, error: versionError } = useQuery<number>({
@@ -34,9 +34,12 @@ export default function Widget() {
 
   useEffect(() => {
     if (!fetchedVersion || versionError) return;
-    if (version === null) setVersion(fetchedVersion);
-    else if (fetchedVersion > version) window.location.reload();
-  }, [fetchedVersion, version, versionError]);
+    if (initialVersionRef.current === null) {
+      initialVersionRef.current = fetchedVersion;
+      return;
+    }
+    if (fetchedVersion > initialVersionRef.current) window.location.reload();
+  }, [fetchedVersion, versionError]);
 
   useEffect(() => {
     document.body.style.zoom = "3";

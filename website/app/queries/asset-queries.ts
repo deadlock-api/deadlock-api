@@ -18,7 +18,9 @@ export const heroesQueryOptions = queryOptions({
 export const itemUpgradesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.itemUpgrades(),
   queryFn: async () => {
-    const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "upgrade" });
+    const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
+      type: "upgrade",
+    });
     return response.data as UpgradeV2[];
   },
   staleTime: CACHE_DURATIONS.FOREVER,
@@ -27,7 +29,9 @@ export const itemUpgradesQueryOptions = queryOptions({
 export const abilitiesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.abilities(),
   queryFn: async () => {
-    const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({ type: "ability" });
+    const response = await assetsApi.items_api.getItemsByTypeV2ItemsByTypeTypeGet({
+      type: "ability",
+    });
     return response.data as AbilityV2[];
   },
   staleTime: CACHE_DURATIONS.FOREVER,

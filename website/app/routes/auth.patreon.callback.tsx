@@ -1,12 +1,11 @@
 import { AlertCircle, CheckCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { MetaFunction } from "react-router";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Spinner } from "~/components/ui/spinner";
 import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
@@ -20,41 +19,25 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-type CallbackState = "loading" | "success" | "error";
-
 export default function PatreonCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [state, setState] = useState<CallbackState>("loading");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const errorMessage = searchParams.get("error")
+    ? searchParams.get("error_description") || "Authorization was denied or failed"
+    : null;
 
   useEffect(() => {
-    // Get redirect path from session storage (stored before OAuth flow)
+    if (errorMessage) return;
+
     const storedRedirectPath = sessionStorage.getItem("patron_redirect_path") || "/patron";
-
-    // Check for error param from OAuth flow or API redirect
-    const error = searchParams.get("error");
-    if (error) {
-      const errorDescription = searchParams.get("error_description") || "Authorization was denied or failed";
-      setState("error");
-      setErrorMessage(errorDescription);
-      return;
-    }
-
-    // The API has already handled the OAuth callback and set the session cookie.
-    // We just need to show success and redirect to the patron page.
-    setState("success");
-
-    // Clear stored redirect path
     sessionStorage.removeItem("patron_redirect_path");
 
-    // Redirect after brief success message
     const timeout = setTimeout(() => {
       navigate(storedRedirectPath, { replace: true });
     }, 1500);
 
     return () => clearTimeout(timeout);
-  }, [searchParams, navigate]);
+  }, [errorMessage, navigate]);
 
   const handleGoBack = () => {
     const redirectPath = sessionStorage.getItem("patron_redirect_path") || "/patron";
@@ -69,14 +52,7 @@ export default function PatreonCallbackPage() {
           <CardTitle>Patreon Authentication</CardTitle>
         </CardHeader>
         <CardContent>
-          {state === "loading" && (
-            <div className="flex flex-col items-center gap-4 py-8">
-              <Spinner className="size-8" />
-              <p className="text-muted-foreground">Completing authentication...</p>
-            </div>
-          )}
-
-          {state === "success" && (
+          {!errorMessage && (
             <Alert>
               <CheckCircle className="size-4" />
               <AlertTitle>Success!</AlertTitle>
@@ -84,7 +60,7 @@ export default function PatreonCallbackPage() {
             </Alert>
           )}
 
-          {state === "error" && (
+          {errorMessage && (
             <div className="space-y-4">
               <Alert variant="destructive">
                 <AlertCircle className="size-4" />

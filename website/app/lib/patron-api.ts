@@ -189,7 +189,9 @@ export function parseSteamIdInput(input: string): { steamId3: number; format: "i
   // SteamID3 is a 32-bit unsigned integer (0 to 4,294,967,295)
   const id3 = Number(value);
   if (id3 < 0 || id3 > 4294967295) {
-    return { error: "Invalid Steam ID. Must be a valid SteamID64 (17 digits) or SteamID3 (0-4,294,967,295)" };
+    return {
+      error: "Invalid Steam ID. Must be a valid SteamID64 (17 digits) or SteamID3 (0-4,294,967,295)",
+    };
   }
 
   return { steamId3: id3, format: "id3" };

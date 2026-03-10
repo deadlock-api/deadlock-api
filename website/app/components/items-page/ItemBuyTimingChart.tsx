@@ -19,9 +19,22 @@ const chartConfig = {
 };
 
 type BucketType = Exclude<ItemStatsQueryParams["bucket"], undefined>;
+type ChartData = never[] | Record<string, ChartPoint[]>;
 
 const MIN_AVG_THRESHOLD = 0.1; // 5 %
 const BUCKET_INCREMENTS = [1000, 2000, 3000, 5000, 7000, 10000] as const;
+
+interface ChartPoint {
+  bucket: number;
+  displayBucket: number;
+  bucketStart: number;
+  bucketEnd: number;
+  winrate: number | null;
+  trueWinrate: number | null;
+  wilsonLowerBound: number | null;
+  matches: number;
+  ema: number | null;
+}
 
 function wilsonLowerBound(wins: number, total: number) {
   if (total === 0) return 0;
@@ -102,6 +115,105 @@ const BUCKET_CONFIG = {
   },
 } as const satisfies Partial<Record<BucketType, unknown>>;
 
+function buildChartData({
+  data,
+  itemIds,
+  bucketType,
+  useWilsonInterval,
+  minAvgThreshold,
+  rowTotalMatches,
+}: {
+  data?: Array<{ item_id: number; bucket: number | null; matches: number; wins: number }>;
+  itemIds: number[];
+  bucketType: keyof typeof BUCKET_CONFIG;
+  useWilsonInterval: boolean;
+  minAvgThreshold: number;
+  rowTotalMatches?: number;
+}): ChartData {
+  const result: Record<string, ChartPoint[]> = {};
+
+  for (const itemId of itemIds) {
+    const itemData = data?.filter((d) => d.item_id === itemId) ?? [];
+    if (itemData.length === 0) return [];
+
+    const bucketIncrements =
+      bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
+
+    let increment = rowTotalMatches ? bucketIncrements[bucketIncrements.length - 1] : bucketIncrements[0];
+    if (rowTotalMatches) {
+      for (const inc of bucketIncrements) {
+        const avgMatches = computeAverageMatchCount(itemData, inc);
+        const avgPercent = rowTotalMatches ? avgMatches / rowTotalMatches : 0;
+        if (avgPercent >= minAvgThreshold) {
+          increment = inc;
+          console.log(
+            `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
+          );
+          break;
+        }
+        console.log(
+          `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
+        );
+      }
+    }
+
+    const groups = new Map<number, { matches: number; wins: number }>();
+    for (const point of itemData) {
+      const key = Math.floor((point.bucket as number) / increment) * increment;
+      const group = groups.get(key) || { matches: 0, wins: 0 };
+      group.matches += point.matches;
+      group.wins += point.wins;
+      groups.set(key, group);
+    }
+
+    const keys = Array.from(groups.keys()).sort((a, b) => a - b);
+    const points: ChartPoint[] = [];
+
+    for (const key of keys) {
+      const group = groups.get(key);
+      if (!group) continue;
+
+      const bucketStart = key;
+      const bucketEnd = key + increment;
+      const displayBucket = key + increment / 2;
+
+      if (!group.matches) {
+        points.push({
+          bucket: key,
+          displayBucket,
+          bucketStart,
+          bucketEnd,
+          winrate: null,
+          trueWinrate: null,
+          wilsonLowerBound: null,
+          matches: 0,
+          ema: null,
+        });
+        continue;
+      }
+
+      const trueWR = (group.wins / group.matches) * 100;
+      const wilson = wilsonLowerBound(group.wins, group.matches) * 100;
+      points.push({
+        bucket: key,
+        displayBucket,
+        bucketStart,
+        bucketEnd,
+        winrate: useWilsonInterval ? wilson : trueWR,
+        trueWinrate: trueWR,
+        wilsonLowerBound: wilson,
+        matches: group.matches,
+        ema: null,
+      });
+    }
+
+    const sma = calculateSMA(points, increment);
+    result[String(itemId)] = points.map((point, index) => ({ ...point, ema: sma[index] }));
+  }
+
+  return result;
+}
+
 interface ItemBuyTimingChartProps {
   itemIds: number[];
   baseQueryOptions: Omit<ItemStatsQueryParams, "bucket">;
@@ -135,124 +247,18 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
 
   const { data, isLoading } = useQuery(itemStatsQueryOptions(queryOptions));
 
-  const chartData:
-    | never[]
-    | Record<
-        string,
-        {
-          bucket: number;
-          displayBucket: number;
-          bucketStart: number;
-          bucketEnd: number;
-          winrate: number | null;
-          trueWinrate: number | null;
-          wilsonLowerBound: number | null;
-          matches: number;
-          ema: number | null;
-        }[]
-      > = useMemo(() => {
-    const res: Record<
-      string,
-      {
-        bucket: number;
-        displayBucket: number;
-        bucketStart: number;
-        bucketEnd: number;
-        winrate: number | null;
-        trueWinrate: number | null;
-        wilsonLowerBound: number | null;
-        matches: number;
-        ema: number | null;
-      }[]
-    > = {};
-    for (const itemId of itemIds) {
-      const itemData = data?.filter((d) => d.item_id === itemId) || [];
-      if (itemData.length === 0) return [];
-
-      const bucketIncrements =
-        bucketType === "net_worth_by_1000" ? BUCKET_INCREMENTS : BUCKET_INCREMENTS.map((inc) => inc / 1000);
-
-      let increment = rowTotalMatches ? bucketIncrements[bucketIncrements.length - 1] : bucketIncrements[0];
-      if (rowTotalMatches) {
-        for (const inc of bucketIncrements) {
-          const avgMatches = computeAverageMatchCount(itemData, inc);
-          const avgPercent = rowTotalMatches ? avgMatches / rowTotalMatches : 0;
-          if (avgPercent >= minAvgThreshold) {
-            increment = inc;
-            console.log(
-              `increment: ${inc}, because ${avgPercent} >= ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-            );
-            break;
-          }
-          console.log(
-            `NOT increment: ${inc}, because ${avgPercent} < ${minAvgThreshold} (value is ${avgMatches} / ${rowTotalMatches})`,
-          );
-        }
-      }
-
-      const groups = new Map<number, { matches: number; wins: number }>();
-      for (const p of itemData) {
-        const key = Math.floor((p.bucket as number) / increment) * increment;
-        const g = groups.get(key) || { matches: 0, wins: 0 };
-        g.matches += p.matches;
-        g.wins += p.wins;
-        groups.set(key, g);
-      }
-
-      const keys = Array.from(groups.keys()).sort((a, b) => a - b);
-      const pts: Array<{
-        bucket: number;
-        displayBucket: number;
-        bucketStart: number;
-        bucketEnd: number;
-        winrate: number | null;
-        trueWinrate: number | null;
-        wilsonLowerBound: number | null;
-        matches: number;
-        ema: number | null;
-      }> = [];
-
-      for (const k of keys) {
-        const g = groups.get(k);
-        if (!g) continue;
-        const bucketStart = k;
-        const bucketEnd = k + increment;
-        const displayBucket = k + increment / 2; // Center the dot in the middle of the bucket range
-
-        if (!g.matches) {
-          pts.push({
-            bucket: k,
-            displayBucket,
-            bucketStart,
-            bucketEnd,
-            winrate: null,
-            trueWinrate: null,
-            wilsonLowerBound: null,
-            matches: 0,
-            ema: null,
-          });
-          continue;
-        }
-        const trueWR = (g.wins / g.matches) * 100;
-        const wilson = wilsonLowerBound(g.wins, g.matches) * 100;
-        pts.push({
-          bucket: k,
-          displayBucket,
-          bucketStart,
-          bucketEnd,
-          winrate: useWilsonInterval ? wilson : trueWR,
-          trueWinrate: trueWR,
-          wilsonLowerBound: wilson,
-          matches: g.matches,
-          ema: null,
-        });
-      }
-
-      const sma = calculateSMA(pts, increment);
-      res[String(itemId)] = pts.map((p, i) => ({ ...p, ema: sma[i] }));
-    }
-    return res;
-  }, [data, itemIds, useWilsonInterval, minAvgThreshold, rowTotalMatches, bucketType]);
+  const chartData: ChartData = useMemo(
+    () =>
+      buildChartData({
+        data,
+        itemIds,
+        bucketType,
+        useWilsonInterval,
+        minAvgThreshold,
+        rowTotalMatches,
+      }),
+    [data, itemIds, bucketType, useWilsonInterval, minAvgThreshold, rowTotalMatches],
+  );
 
   const config = BUCKET_CONFIG[bucketType];
 

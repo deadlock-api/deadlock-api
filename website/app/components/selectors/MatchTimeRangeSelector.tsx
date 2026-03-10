@@ -1,5 +1,5 @@
 import { ClockIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Button } from "~/components/ui/button";
@@ -50,11 +50,10 @@ export function MatchTimeRangeSelector({
   step = DEFAULT_STEP,
   presets = DEFAULT_PRESETS,
 }: MatchTimeRangeSelectorProps) {
-  const [localValue, setLocalValue] = useState([minTime ?? 0, maxTime ?? max]);
-
-  useEffect(() => {
-    setLocalValue([minTime ?? 0, maxTime ?? max]);
-  }, [minTime, maxTime, max]);
+  const committedValue: [number, number] = [minTime ?? 0, maxTime ?? max];
+  const committedKey = `${committedValue[0]}:${committedValue[1]}`;
+  const [draftRange, setDraftRangeState] = useState<{ originKey: string; value: [number, number] } | null>(null);
+  const localValue = draftRange !== null && draftRange.originKey === committedKey ? draftRange.value : committedValue;
 
   const getLabel = () => {
     const isStartZero = (minTime ?? 0) === 0;
@@ -67,14 +66,12 @@ export function MatchTimeRangeSelector({
   };
 
   const handleValueCommit = (newValue: number[]) => {
-    const [start, end] = newValue;
+    const [start, end] = [newValue[0] ?? 0, newValue[1] ?? max];
+    setDraftRangeState({
+      originKey: committedKey,
+      value: [start, end],
+    });
     onTimeChange(start === 0 ? undefined : start, end === max ? undefined : end);
-  };
-
-  const setPreset = (start: number, end: number) => {
-    const newValue = [start, end];
-    setLocalValue(newValue);
-    handleValueCommit(newValue);
   };
 
   const isActive = minTime != null || maxTime != null;
@@ -100,7 +97,12 @@ export function MatchTimeRangeSelector({
             max={max}
             step={step}
             minStepsBetweenThumbs={1}
-            onValueChange={setLocalValue}
+            onValueChange={(newValue) =>
+              setDraftRangeState({
+                originKey: committedKey,
+                value: [newValue[0] ?? 0, newValue[1] ?? max],
+              })
+            }
             onValueCommit={handleValueCommit}
             className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
           />
@@ -117,7 +119,7 @@ export function MatchTimeRangeSelector({
                 key={preset.label}
                 variant="outline"
                 size="sm"
-                onClick={() => setPreset(preset.start, preset.end)}
+                onClick={() => handleValueCommit([preset.start, preset.end])}
                 className="h-8 px-2 text-xs"
               >
                 {preset.label}

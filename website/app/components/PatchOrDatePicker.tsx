@@ -1,6 +1,6 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useEffect, useId, useRef } from "react";
+import { useId, useState } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -66,12 +66,23 @@ const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
   return endDate === "NOW" ? day().endOf("day") : endDate;
 };
 
-export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
-  const [tab, setTab] = useQueryState(
-    "pd-picker-tab",
-    parseAsStringLiteral(["patch", "custom"] as const).withDefault(defaultTab),
-  );
+function inferTabFromValue({
+  matchingPatch,
+  startDate,
+  endDate,
+  defaultTab,
+}: {
+  matchingPatch?: PatchInfo;
+  startDate?: Dayjs;
+  endDate?: Dayjs;
+  defaultTab: "patch" | "custom";
+}): "patch" | "custom" {
+  if (matchingPatch) return "patch";
+  if (startDate || endDate) return "custom";
+  return defaultTab;
+}
 
+export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
   const patchSelectId = useId();
 
   const matchingPatch = patchDates.find((patch) => {
@@ -81,25 +92,22 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
     return resolvedPatchStartDate.isSame(value.startDate, "day") && resolvedPatchEndDate.isSame(value.endDate, "day");
   });
 
-  // Sync tab to initial URL state on mount only
-  const hasSynced = useRef(false);
-  useEffect(() => {
-    if (hasSynced.current) return;
-    hasSynced.current = true;
-    if (matchingPatch) {
-      if (tab !== "patch") {
-        setTab("patch");
-      }
-    } else if (value.startDate || value.endDate) {
-      if (tab !== "custom") {
-        setTab("custom");
-      }
-    } else {
-      if (tab !== defaultTab) {
-        setTab(defaultTab);
-      }
-    }
-  }, [matchingPatch, tab, setTab, value.startDate, value.endDate, defaultTab]);
+  const [queryTab, setQueryTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(["patch", "custom"] as const));
+  const [tab, setTab] = useState<"patch" | "custom">(
+    () =>
+      queryTab ??
+      inferTabFromValue({
+        matchingPatch,
+        startDate: value.startDate,
+        endDate: value.endDate,
+        defaultTab,
+      }),
+  );
+
+  const handleTabChange = (nextTab: "patch" | "custom") => {
+    setTab(nextTab);
+    setQueryTab(nextTab);
+  };
 
   const handlePatchSelect = (patchId: string) => {
     const selectedPatch = patchDates.find((p) => p.id === patchId);
@@ -140,7 +148,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       className="w-auto min-w-[340px] p-3"
     >
       <div className="flex flex-col gap-3">
-        <Tabs defaultValue={defaultTab} value={tab} onValueChange={(v) => setTab(v as "patch" | "custom")}>
+        <Tabs value={tab} onValueChange={(value) => handleTabChange(value as "patch" | "custom")}>
           <TabsList className="flex w-full">
             <TabsTrigger value="patch" className="flex flex-1 items-center gap-1 text-xs">
               <ClockIcon className="h-3 w-3" />
