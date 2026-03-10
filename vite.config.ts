@@ -17,6 +17,7 @@ export default defineConfig({
       babelConfig: {
         presets: ["@babel/preset-typescript"],
         plugins: [["babel-plugin-react-compiler", ReactCompilerConfig]],
+        sourceMaps: true,
       },
     }),
     tsconfigPaths(),
