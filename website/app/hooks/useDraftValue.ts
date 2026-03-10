@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 const is = Object.is;
 
@@ -42,10 +42,10 @@ function fastObjectShallowCompare<T extends Record<string, any> | null>(a: T, b:
  */
 export function useDraftValue<T>(sourceValue: T) {
   const [draft, setDraft] = useState(sourceValue);
-  const prevSource = useRef(sourceValue);
+  const [prevSource, setPrevSource] = useState(sourceValue);
 
-  if (!fastObjectShallowCompare(prevSource.current as any, sourceValue as any)) {
-    prevSource.current = sourceValue;
+  if (!fastObjectShallowCompare(prevSource as any, sourceValue as any)) {
+    setPrevSource(sourceValue);
     setDraft(sourceValue);
   }
 

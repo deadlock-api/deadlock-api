@@ -208,7 +208,10 @@ function buildChartData({
     }
 
     const sma = calculateSMA(points, increment);
-    result[String(itemId)] = points.map((point, index) => ({ ...point, ema: sma[index] }));
+    result[String(itemId)] = points.map((point, index) => {
+      point.ema = sma[index];
+      return point;
+    });
   }
 
   return result;

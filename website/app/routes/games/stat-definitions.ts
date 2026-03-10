@@ -111,10 +111,10 @@ const STREET_BRAWL_HIDDEN_CATEGORIES = new Set(["Economy"]);
 export function getFilteredCategories(isStreetBrawl: boolean): StatCategory[] {
   if (!isStreetBrawl) return GAME_STAT_CATEGORIES;
   return GAME_STAT_CATEGORIES.filter((c) => !STREET_BRAWL_HIDDEN_CATEGORIES.has(c.label))
-    .map((c) => ({
-      ...c,
-      stats: c.stats.filter((s) => !MID_BOSS_STATS.has(s.key)),
-    }))
+    .map((c) => {
+      const stats = c.stats.filter((s) => !MID_BOSS_STATS.has(s.key));
+      return { label: c.label, stats };
+    })
     .filter((c) => c.stats.length > 0);
 }
 

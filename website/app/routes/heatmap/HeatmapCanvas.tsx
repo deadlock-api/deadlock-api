@@ -55,11 +55,12 @@ export default function HeatmapCanvas({
         img.src = src;
       });
 
-    Promise.all([
-      loadImage(mapData.images.background),
-      loadImage(mapData.images.mid),
-      loadImage(mapData.images.frame),
-    ]).then(([bg, mid, frame]) => {
+    const loadAll = async () => {
+      const [bg, mid, frame] = await Promise.all([
+        loadImage(mapData.images.background),
+        loadImage(mapData.images.mid),
+        loadImage(mapData.images.frame),
+      ]);
       const size = Math.max(bg.naturalWidth, mid.naturalWidth, frame.naturalWidth);
       const canvas = document.createElement("canvas");
       canvas.width = size;
@@ -71,7 +72,8 @@ export default function HeatmapCanvas({
       ctx.drawImage(frame, 0, 0, size, size);
       compositeRef.current = canvas;
       setMapImagesLoaded(true);
-    });
+    };
+    void loadAll();
   }, [mapData.images.background, mapData.images.mid, mapData.images.frame]);
 
   const renderHeatmap = useCallback(() => {
