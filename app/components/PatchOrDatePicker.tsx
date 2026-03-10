@@ -1,6 +1,6 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useId, useState } from "react";
+import { useId } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -93,21 +93,14 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
   });
 
   const [queryTab, setQueryTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(["patch", "custom"] as const));
-  const [tab, setTab] = useState<"patch" | "custom">(
-    () =>
-      queryTab ??
-      inferTabFromValue({
-        matchingPatch,
-        startDate: value.startDate,
-        endDate: value.endDate,
-        defaultTab,
-      }),
-  );
-
-  const handleTabChange = (nextTab: "patch" | "custom") => {
-    setTab(nextTab);
-    setQueryTab(nextTab);
-  };
+  const tab =
+    queryTab ??
+    inferTabFromValue({
+      matchingPatch,
+      startDate: value.startDate,
+      endDate: value.endDate,
+      defaultTab,
+    });
 
   const handlePatchSelect = (patchId: string) => {
     const selectedPatch = patchDates.find((p) => p.id === patchId);
@@ -148,7 +141,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       className="w-auto min-w-[340px] p-3"
     >
       <div className="flex flex-col gap-3">
-        <Tabs value={tab} onValueChange={(value) => handleTabChange(value as "patch" | "custom")}>
+        <Tabs value={tab} onValueChange={(value) => setQueryTab(value as "patch" | "custom")}>
           <TabsList className="flex w-full">
             <TabsTrigger value="patch" className="flex flex-1 items-center gap-1 text-xs">
               <ClockIcon className="h-3 w-3" />

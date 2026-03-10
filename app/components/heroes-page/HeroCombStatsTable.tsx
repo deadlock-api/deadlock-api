@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo } from "react";
+
+import { useDraftValue } from "~/hooks/useDraftValue";
 
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
@@ -45,14 +47,9 @@ export function HeroCombStatsTable({
   const combsToShowId = useId();
 
   const [combSizeFilter, setCombSizeFilter] = useQueryState("comb_size", parseAsInteger.withDefault(2));
-  const [combSizeDraft, setCombSizeDraft] = useState<{ originValue: number; value: number } | null>(null);
+  const [combSizeDraft, setCombSizeDraft] = useDraftValue(combSizeFilter);
   const [combsToShow, setCombsToShow] = useQueryState("combs_to_show", parseAsInteger.withDefault(limit ?? 50));
-  const [combsToShowDraft, setCombsToShowDraft] = useState<{ originValue: number; value: number } | null>(null);
-
-  const combSizeLocal =
-    combSizeDraft !== null && combSizeDraft.originValue === combSizeFilter ? combSizeDraft.value : combSizeFilter;
-  const combsToShowLocal =
-    combsToShowDraft !== null && combsToShowDraft.originValue === combsToShow ? combsToShowDraft.value : combsToShow;
+  const [combsToShowDraft, setCombsToShowDraft] = useDraftValue(combsToShow);
 
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
@@ -158,19 +155,16 @@ export function HeroCombStatsTable({
               id={combSizeId}
               min={2}
               max={6}
-              value={[combSizeLocal]}
-              onValueCommit={([val]) => {
-                if (val === undefined) return;
-                setCombSizeDraft({ originValue: combSizeFilter, value: val });
-                setCombSizeFilter(val);
-              }}
+              value={[combSizeDraft]}
               onValueChange={([val]) => {
-                if (val === undefined) return;
-                setCombSizeDraft({ originValue: combSizeFilter, value: val });
+                if (val !== undefined) setCombSizeDraft(val);
+              }}
+              onValueCommit={([val]) => {
+                if (val !== undefined) setCombSizeFilter(val);
               }}
               className="w-full"
             />
-            <span className="ml-2">{combSizeLocal}</span>
+            <span className="ml-2">{combSizeDraft}</span>
           </div>
         </div>
 
@@ -184,19 +178,16 @@ export function HeroCombStatsTable({
               min={0}
               step={100}
               max={Math.min(500, numCombs)}
-              value={[combsToShowLocal]}
-              onValueCommit={([val]) => {
-                if (val === undefined) return;
-                setCombsToShowDraft({ originValue: combsToShow, value: val });
-                setCombsToShow(val);
-              }}
+              value={[combsToShowDraft]}
               onValueChange={([val]) => {
-                if (val === undefined) return;
-                setCombsToShowDraft({ originValue: combsToShow, value: val });
+                if (val !== undefined) setCombsToShowDraft(val);
+              }}
+              onValueCommit={([val]) => {
+                if (val !== undefined) setCombsToShow(val);
               }}
               className="w-full"
             />
-            <span className="ml-2">{combsToShowLocal}</span>
+            <span className="ml-2">{combsToShowDraft}</span>
           </div>
         </div>
       </div>

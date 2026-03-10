@@ -1,9 +1,9 @@
 import { ClockIcon } from "lucide-react";
-import { useState } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Button } from "~/components/ui/button";
 import { Slider } from "~/components/ui/slider";
+import { useDraftValue } from "~/hooks/useDraftValue";
 
 export interface MatchTimeRangeSelectorProps {
   minTime?: number;
@@ -51,9 +51,7 @@ export function MatchTimeRangeSelector({
   presets = DEFAULT_PRESETS,
 }: MatchTimeRangeSelectorProps) {
   const committedValue: [number, number] = [minTime ?? 0, maxTime ?? max];
-  const committedKey = `${committedValue[0]}:${committedValue[1]}`;
-  const [draftRange, setDraftRangeState] = useState<{ originKey: string; value: [number, number] } | null>(null);
-  const localValue = draftRange !== null && draftRange.originKey === committedKey ? draftRange.value : committedValue;
+  const [draftValue, setDraftValue] = useDraftValue(committedValue);
 
   const getLabel = () => {
     const isStartZero = (minTime ?? 0) === 0;
@@ -67,10 +65,6 @@ export function MatchTimeRangeSelector({
 
   const handleValueCommit = (newValue: number[]) => {
     const [start, end] = [newValue[0] ?? 0, newValue[1] ?? max];
-    setDraftRangeState({
-      originKey: committedKey,
-      value: [start, end],
-    });
     onTimeChange(start === 0 ? undefined : start, end === max ? undefined : end);
   };
 
@@ -92,24 +86,19 @@ export function MatchTimeRangeSelector({
         <div className="pt-6 pb-2">
           <Slider
             defaultValue={[0, max]}
-            value={localValue}
+            value={draftValue}
             min={0}
             max={max}
             step={step}
             minStepsBetweenThumbs={1}
-            onValueChange={(newValue) =>
-              setDraftRangeState({
-                originKey: committedKey,
-                value: [newValue[0] ?? 0, newValue[1] ?? max],
-              })
-            }
+            onValueChange={(newValue) => setDraftValue([newValue[0] ?? 0, newValue[1] ?? max])}
             onValueCommit={handleValueCommit}
             className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
           />
         </div>
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>{formatTime(localValue[0])}</span>
-          <span>{localValue[1] === max ? maxLabel : formatTime(localValue[1])}</span>
+          <span>{formatTime(draftValue[0])}</span>
+          <span>{draftValue[1] === max ? maxLabel : formatTime(draftValue[1])}</span>
         </div>
 
         {presets && presets.length > 0 && (
