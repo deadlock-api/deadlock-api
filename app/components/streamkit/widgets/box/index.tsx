@@ -60,10 +60,11 @@ export const BoxWidget = ({
   }, [showHeader, matchHistoryShowsToday]);
 
   const displayLabels = useMemo(() => {
+    let resolvedLabels = labels;
     for (const [key, value] of Object.entries(extraArgs)) {
-      labels = labels?.map((label) => label.replaceAll(`{${key}}`, value));
+      resolvedLabels = resolvedLabels?.map((label) => label.replaceAll(`{${key}}`, value));
     }
-    return labels || variables.map((v) => v);
+    return resolvedLabels || variables.map((v) => v);
   }, [labels, variables, extraArgs]);
 
   const { stats, loading } = useStats({

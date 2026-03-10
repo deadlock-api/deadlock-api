@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 import { ShieldIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
@@ -41,7 +41,10 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
     staleTime: CACHE_DURATIONS.FOREVER,
   });
 
-  const sortedRanks = useMemo(() => ranksData?.sort((a: RankV2, b: RankV2) => a.tier - b.tier) ?? [], [ranksData]);
+  const sortedRanks = useMemo(
+    () => [...(ranksData ?? [])].sort((a: RankV2, b: RankV2) => a.tier - b.tier),
+    [ranksData],
+  );
 
   const options: RankOption[] = useMemo(() => {
     const opts: RankOption[] = [];
@@ -70,13 +73,16 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
   const minIndex = rankIdToIndex.get(minRank) ?? 0;
   const maxIndex = rankIdToIndex.get(maxRank) ?? options.length - 1;
 
-  const [localValue, setLocalValue] = useState([minIndex, maxIndex]);
-
-  useEffect(() => {
-    setLocalValue([minIndex, maxIndex]);
-  }, [minIndex, maxIndex]);
+  const committedValue: [number, number] = [minIndex, maxIndex];
+  const committedKey = `${minIndex}:${maxIndex}`;
+  const [draftRange, setDraftRangeState] = useState<{ originKey: string; value: [number, number] } | null>(null);
+  const localValue = draftRange !== null && draftRange.originKey === committedKey ? draftRange.value : committedValue;
 
   const handleValueCommit = (newValue: number[]) => {
+    setDraftRangeState({
+      originKey: committedKey,
+      value: [newValue[0] ?? minIndex, newValue[1] ?? maxIndex],
+    });
     const [startIdx, endIdx] = newValue;
     if (options[startIdx] && options[endIdx]) {
       onRankChange(options[startIdx].rankId, options[endIdx].rankId);
@@ -154,7 +160,12 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
             max={options.length - 1}
             step={1}
             minStepsBetweenThumbs={0}
-            onValueChange={setLocalValue}
+            onValueChange={(newValue) =>
+              setDraftRangeState({
+                originKey: committedKey,
+                value: [newValue[0] ?? minIndex, newValue[1] ?? maxIndex],
+              })
+            }
             onValueCommit={handleValueCommit}
             className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
           />

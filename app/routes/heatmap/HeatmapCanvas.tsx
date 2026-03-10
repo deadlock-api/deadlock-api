@@ -36,11 +36,15 @@ export default function HeatmapCanvas({
   const [mapImagesLoaded, setMapImagesLoaded] = useState(false);
   const compositeRef = useRef<HTMLCanvasElement | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const [legendMax, setLegendMax] = useState(0);
 
   const radius = mapData.radius ?? 10752;
 
   const rawGrids = useMemo(() => (data.length > 0 ? buildHeatGrids(data, radius) : null), [data, radius]);
+  const heatGrid = useMemo(
+    () => (data.length > 0 ? buildHeatGrid(data, viewMode, radius, sensitivity) : null),
+    [data, viewMode, radius, sensitivity],
+  );
+  const legendMax = heatGrid?.maxValue ?? 0;
 
   useEffect(() => {
     const loadImage = (src: string): Promise<HTMLImageElement> =>
@@ -122,10 +126,9 @@ export default function HeatmapCanvas({
     if (!heatCtx) return;
     heatCtx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    if (data.length === 0) return;
+    if (!heatGrid) return;
 
-    const { grid, maxValue } = buildHeatGrid(data, viewMode, radius, sensitivity);
-    setLegendMax(maxValue);
+    const { grid } = heatGrid;
 
     const imageData = heatCtx.createImageData(canvasWidth, canvasHeight);
     const pixels = imageData.data;
@@ -150,7 +153,7 @@ export default function HeatmapCanvas({
     }
 
     heatCtx.putImageData(imageData, 0, 0);
-  }, [data, radius, viewMode, sensitivity]);
+  }, [heatGrid]);
 
   useEffect(() => {
     if (!mapImagesLoaded) return;

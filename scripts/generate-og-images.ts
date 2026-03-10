@@ -159,7 +159,9 @@ async function loadFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }>
   const fetchFont = async (weight: number): Promise<ArrayBuffer> => {
     // Use a user-agent that triggers TTF response from Google Fonts
     const cssRes = await fetch(`https://fonts.googleapis.com/css2?family=Inter:wght@${weight}&display=swap`, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)",
+      },
     });
     const css = await cssRes.text();
     const fontUrl = css.match(/src:\s*url\(([^)]+)\)\s*format/)?.[1];

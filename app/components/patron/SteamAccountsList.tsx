@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 import axios from "axios";
 import { AlertCircle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -65,13 +65,6 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
     queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
     staleTime: CACHE_DURATIONS.FOREVER,
   });
-
-  // Close dialog automatically once card loads successfully after a refetch
-  useEffect(() => {
-    if (cardQuery.isSuccess && dialogOpen) {
-      setDialogOpen(false);
-    }
-  }, [cardQuery.isSuccess, dialogOpen]);
 
   if (!isActive) {
     return <span className="text-muted-foreground">—</span>;

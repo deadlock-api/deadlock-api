@@ -40,7 +40,7 @@ export function ChatMessageList({
         id: "streaming-message",
         role: "assistant",
         content: currentStreamingMessage || "",
-        timestamp: Date.now(),
+        timestamp: messages[messages.length - 1]?.timestamp ?? 0,
         isStreaming: true,
         tools: activeTools.length > 0 ? activeTools : undefined,
       }

@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "sortImports": {},
+  "sortTailwindcss": {},
+  "ignorePatterns": [
+    // Shadcn
+    "app/components/ui/**/*",
+    ".claude/skills/**/*",
+    ".agents/skills/**/*",
+  ],
+}

@@ -11,7 +11,10 @@ export function useHeroById(heroId: number): { hero: HeroV2 | undefined; isLoadi
   return { hero, isLoading };
 }
 
-export function useAbilityById(abilityId: number): { ability: AbilityV2 | undefined; isLoading: boolean } {
+export function useAbilityById(abilityId: number): {
+  ability: AbilityV2 | undefined;
+  isLoading: boolean;
+} {
   const { data: ability, isLoading } = useQuery({
     ...abilitiesQueryOptions,
     select: (abilities) => abilities.find((a) => a.id === abilityId),

@@ -78,7 +78,11 @@ export function useIngestUpload() {
       if (response.ok) {
         dispatch({
           type: "SHOW_DIALOG",
-          dialog: { title: "Success!", description: `${salts.length} salts uploaded successfully!`, type: "success" },
+          dialog: {
+            title: "Success!",
+            description: `${salts.length} salts uploaded successfully!`,
+            type: "success",
+          },
         });
       } else {
         const errorData = await response.json().catch(() => ({}));
