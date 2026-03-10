@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 import { ShieldIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
@@ -10,6 +10,7 @@ import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
 
+import { useDraftValue } from "~/hooks/useDraftValue";
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 
 function getRankId(tier: number, subrank: number): number {
@@ -74,23 +75,17 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
   const maxIndex = rankIdToIndex.get(maxRank) ?? options.length - 1;
 
   const committedValue: [number, number] = [minIndex, maxIndex];
-  const committedKey = `${minIndex}:${maxIndex}`;
-  const [draftRange, setDraftRangeState] = useState<{ originKey: string; value: [number, number] } | null>(null);
-  const localValue = draftRange !== null && draftRange.originKey === committedKey ? draftRange.value : committedValue;
+  const [draftValue, setDraftValue] = useDraftValue(committedValue);
 
   const handleValueCommit = (newValue: number[]) => {
-    setDraftRangeState({
-      originKey: committedKey,
-      value: [newValue[0] ?? minIndex, newValue[1] ?? maxIndex],
-    });
     const [startIdx, endIdx] = newValue;
     if (options[startIdx] && options[endIdx]) {
       onRankChange(options[startIdx].rankId, options[endIdx].rankId);
     }
   };
 
-  const localMinOption = options[localValue[0]];
-  const localMaxOption = options[localValue[1]];
+  const localMinOption = options[draftValue[0]];
+  const localMaxOption = options[draftValue[1]];
 
   const committedMinOption = options[minIndex];
   const committedMaxOption = options[maxIndex];
@@ -155,17 +150,12 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
         </div>
         <div className="pt-2 pb-2">
           <Slider
-            value={localValue}
+            value={draftValue}
             min={0}
             max={options.length - 1}
             step={1}
             minStepsBetweenThumbs={0}
-            onValueChange={(newValue) =>
-              setDraftRangeState({
-                originKey: committedKey,
-                value: [newValue[0] ?? minIndex, newValue[1] ?? maxIndex],
-              })
-            }
+            onValueChange={(newValue) => setDraftValue([newValue[0] ?? minIndex, newValue[1] ?? maxIndex])}
             onValueCommit={handleValueCommit}
             className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
           />
