@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactElement, useId, useReducer } from "react";
 import { useSearchParams } from "react-router";
+
 import { CopyButton } from "~/components/copy-button";
 import { BoxWidget } from "~/components/streamkit/widgets/box";
 import { ExtraArguments } from "~/components/streamkit/widgets/ExtraArguments";
@@ -241,7 +242,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
 
       {config.widgetType === "raw" && (
         <>
-          <div className="grid grid-cols-2 items-center w-full gap-4">
+          <div className="grid w-full grid-cols-2 items-center gap-4">
             <div>
               <Label>Variable</Label>
               <Select value={config.variable} onValueChange={(v) => updateConfig({ variable: v })}>
@@ -263,11 +264,11 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                 type="color"
                 value={config.fontColor}
                 onChange={(e) => updateConfig({ fontColor: e.target.value as Color })}
-                className="mt-1 block w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 shadow-xs"
+                className="mt-1 block h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 shadow-xs"
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 items-center w-full gap-4">
+          <div className="grid w-full grid-cols-2 items-center gap-4">
             <div>
               <Label>Prefix</Label>
               <Input
@@ -349,7 +350,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
           </div>
 
           <div>
-            <h3 className="block text-sm font-medium text-foreground mb-2">Variables and Labels</h3>
+            <h3 className="mb-2 block text-sm font-medium text-foreground">Variables and Labels</h3>
             <div className="space-y-3">
               {config.variables.map((variable, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
@@ -402,7 +403,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
               onValueChange={([v]) => updateConfig({ opacity: v })}
               className="w-full"
             />
-            <span className="text-sm text-muted-foreground min-w-[3ch]">{config.opacity}%</span>
+            <span className="min-w-[3ch] text-sm text-muted-foreground">{config.opacity}%</span>
           </div>
         </div>
       )}
@@ -411,7 +412,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
         <h3 className="text-sm font-medium text-foreground">Preview</h3>
         {widgetPreview && (
           <div
-            className="p-4 rounded-lg flex items-center justify-center bg-cover"
+            className="flex items-center justify-center rounded-lg bg-cover p-4"
             style={
               config.previewBackgroundImage
                 ? {
@@ -443,7 +444,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
                 disabled={config.previewBackgroundImage}
                 value={config.previewBackgroundColor}
                 onChange={(e) => updateConfig({ previewBackgroundColor: e.target.value as PreviewBackgroundColor })}
-                className="rounded-md border border-input w-8 h-8 p-0"
+                className="h-8 w-8 rounded-md border border-input p-0"
               />
             </div>
           )}
@@ -451,13 +452,13 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
       </div>
 
       <div className="space-y-2">
-        <h3 className="block text-sm font-medium text-foreground mb-2">Generated URL</h3>
+        <h3 className="mb-2 block text-sm font-medium text-foreground">Generated URL</h3>
         {widgetUrl ? (
           <div className="relative mt-1">
-            <div className="break-all rounded-md border border-border bg-muted p-3 pr-24 text-sm text-muted-foreground">
+            <div className="rounded-md border border-border bg-muted p-3 pr-24 text-sm break-all text-muted-foreground">
               {widgetUrl}
             </div>
-            <CopyButton size="sm" text={widgetUrl} className="absolute right-2 top-1/2 -translate-y-1/2" />
+            <CopyButton size="sm" text={widgetUrl} className="absolute top-1/2 right-2 -translate-y-1/2" />
           </div>
         ) : (
           <div className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
@@ -467,7 +468,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
         <Alert>
           <AlertTitle>OBS Setup Instructions</AlertTitle>
           <AlertDescription>
-            <ol className="list-decimal list-inside space-y-1 mt-1">
+            <ol className="mt-1 list-inside list-decimal space-y-1">
               <li>Add a new browser source in OBS.</li>
               <li>Paste the generated URL into the URL field.</li>
               <li>Adjust the width and height to your liking.</li>

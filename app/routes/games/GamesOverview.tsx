@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp } from "lucide-react";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
-import type { GameStatsQueryParams } from "~/queries/games-query";
 import { cn } from "~/lib/utils";
+import type { GameStatsQueryParams } from "~/queries/games-query";
 import { gameStatsQueryOptions } from "~/queries/games-query";
+
 import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
 
 interface GamesOverviewProps {
@@ -32,14 +34,14 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
   const current = currentData?.[0];
   if (!current) {
     return (
-      <div className="text-center text-sm text-muted-foreground py-8">No data available for the selected filters.</div>
+      <div className="py-8 text-center text-sm text-muted-foreground">No data available for the selected filters.</div>
     );
   }
 
   const prev = prevData?.[0];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {getFilteredCategories(isStreetBrawl).map((category, catIdx) => {
         const Icon = CATEGORY_ICONS[category.label];
         const isWide = category.stats.length > 6;
@@ -51,13 +53,13 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: catIdx * 0.06 }}
             className={cn(
-              "rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-hidden",
+              "overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]",
               isWide && "lg:col-span-2",
             )}
           >
-            <div className="px-4 py-2.5 border-b border-white/[0.06] flex items-center gap-2 bg-white/[0.015]">
+            <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.015] px-4 py-2.5">
               {Icon && <Icon className="size-4 text-primary/80" />}
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category.label}</h3>
+              <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{category.label}</h3>
             </div>
 
             <div className={cn(isWide && "sm:grid sm:grid-cols-2")}>
@@ -88,12 +90,12 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                       {delta != null && (
                         <span
                           className={cn(
-                            "inline-flex items-center gap-0.5 text-xs tabular-nums px-1.5 py-0.5 rounded-md min-w-[52px] justify-center",
+                            "inline-flex min-w-[52px] items-center justify-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs tabular-nums",
                             delta > 0
-                              ? "text-green-400 bg-green-400/10"
+                              ? "bg-green-400/10 text-green-400"
                               : delta < 0
-                                ? "text-red-400 bg-red-400/10"
-                                : "text-muted-foreground bg-white/[0.04]",
+                                ? "bg-red-400/10 text-red-400"
+                                : "bg-white/[0.04] text-muted-foreground",
                           )}
                         >
                           {delta > 0 ? (

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
@@ -9,8 +10,9 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import type { GameStatsQueryParams } from "~/queries/games-query";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { queryKeys } from "~/queries/query-keys";
-import { StatSelector } from "./StatSelector";
+
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
+import { StatSelector } from "./StatSelector";
 
 interface GamesByRankChartProps {
   params: GameStatsQueryParams;
@@ -172,9 +174,9 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
           <LoadingLogo />
         </div>
       ) : chartData.length === 0 ? (
-        <div className="text-center text-sm text-muted-foreground py-8">No data available.</div>
+        <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
       ) : (
-        <ResponsiveContainer width="100%" height={650} className="p-2 bg-muted rounded-xl">
+        <ResponsiveContainer width="100%" height={650} className="rounded-xl bg-muted p-2">
           <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 40, left: 40 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
             <XAxis
@@ -211,7 +213,7 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
                 const info = badgeMap.get(entry.badge);
                 const imageUrl = info?.small_webp ?? info?.small;
                 return (
-                  <div className="rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md flex items-center gap-2">
+                  <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
                     {imageUrl && <img src={imageUrl} alt={entry.label} className="size-5" />}
                     <div>
                       <div className="font-medium">{entry.label}</div>

@@ -1,6 +1,7 @@
 import { ChevronDown, HelpCircle, Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
@@ -12,24 +13,24 @@ function SteamIdFormatHelper() {
   return (
     <Collapsible>
       <CollapsibleTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground p-0 h-auto">
-          <HelpCircle className="h-4 w-4 mr-1" />
+        <Button variant="ghost" size="sm" className="h-auto p-0 text-muted-foreground hover:text-foreground">
+          <HelpCircle className="mr-1 h-4 w-4" />
           <span className="text-sm">What's a Steam ID?</span>
-          <ChevronDown className="h-4 w-4 ml-1 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+          <ChevronDown className="ml-1 h-4 w-4 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-3">
-        <div className="rounded-md border bg-muted/50 p-4 space-y-3 text-sm">
+        <div className="space-y-3 rounded-md border bg-muted/50 p-4 text-sm">
           <div>
-            <p className="font-medium mb-1">Steam ID Formats</p>
+            <p className="mb-1 font-medium">Steam ID Formats</p>
             <p className="text-muted-foreground">You can enter your Steam ID in either format:</p>
           </div>
 
           <div className="space-y-2">
             <div className="flex flex-col gap-1">
               <span className="font-medium">SteamID64 (17 digits)</span>
-              <code className="bg-muted rounded px-2 py-1 font-mono text-xs">76561198012345678</code>
-              <span className="text-muted-foreground text-xs">
+              <code className="rounded bg-muted px-2 py-1 font-mono text-xs">76561198012345678</code>
+              <span className="text-xs text-muted-foreground">
                 Found in your Steam profile URL: steamcommunity.com/profiles/
                 <span className="font-semibold">76561198012345678</span>
               </span>
@@ -37,14 +38,14 @@ function SteamIdFormatHelper() {
 
             <div className="flex flex-col gap-1">
               <span className="font-medium">SteamID3 (shorter number)</span>
-              <code className="bg-muted rounded px-2 py-1 font-mono text-xs">52079950</code>
-              <span className="text-muted-foreground text-xs">
+              <code className="rounded bg-muted px-2 py-1 font-mono text-xs">52079950</code>
+              <span className="text-xs text-muted-foreground">
                 The account ID portion, also known as &quot;Friend ID&quot;
               </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t">
+          <div className="border-t pt-2">
             <p className="text-muted-foreground">
               <span className="font-medium text-foreground">How to find your Steam ID: </span>
               Open Steam → View your profile → The URL contains your SteamID64, or right-click and copy your profile
@@ -54,7 +55,7 @@ function SteamIdFormatHelper() {
               href="https://steamcommunity.com/my/profile"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-1 mt-1"
+              className="mt-1 inline-flex items-center gap-1 text-primary hover:underline"
             >
               Open your Steam profile
               <span className="text-xs">↗</span>

@@ -1,6 +1,7 @@
 import type { RankV2 } from "assets_deadlock_api_client";
 import type { Leaderboard } from "deadlock_api_client";
 import { useMemo } from "react";
+
 import { BadgeImage } from "~/components/BadgeImage";
 import { extractBadgeMap } from "~/lib/leaderboard";
 
@@ -39,7 +40,7 @@ export function LeaderboardSummary({ ranks, leaderboard, onBadgeClick }: Leaderb
             type="button"
             onClick={() => onBadgeClick?.(rank)}
             aria-label={`Jump to rank #${rank} (${badgeInfo.name})`}
-            className="flex flex-col items-center justify-center px-2 py-1 rounded-md bg-slate-800 cursor-pointer hover:bg-slate-700 transition-colors"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-md bg-slate-800 px-2 py-1 transition-colors hover:bg-slate-700"
           >
             <BadgeImage badge={badge} ranks={ranks} imageType="small" className="size-8" />
             <div className="text-lg font-semibold">#{rank}</div>

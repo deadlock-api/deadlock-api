@@ -1,5 +1,6 @@
-import type { Plugin } from "vite";
 import { join } from "node:path";
+
+import type { Plugin } from "vite";
 
 export function ogImages(): Plugin {
   let isBuild = false;

@@ -1,5 +1,6 @@
 import { useMatchHistory } from "~/hooks/streamkit/useMatchHistory";
 import { cn } from "~/lib/utils";
+
 import type { MatchHistoryProps } from "./MatchHistory.types";
 import { MatchItem } from "./MatchItem";
 
@@ -17,7 +18,7 @@ export const MatchHistory = ({ theme, numMatches = 10, accountId, opacity = 100 
     <div
       style={{ "--bg-opacity": opacity / 100 } as React.CSSProperties}
       className={cn(
-        "flex gap-0.5 justify-start items-center h-9 rounded-t-xl pt-1 border border-b-0 border-white/[0.03]",
+        "flex h-9 items-center justify-start gap-0.5 rounded-t-xl border border-b-0 border-white/[0.03] pt-1",
         theme === "light"
           ? "[background:rgba(255,255,255,var(--bg-opacity))]"
           : theme === "glass"

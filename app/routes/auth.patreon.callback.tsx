@@ -2,11 +2,11 @@ import { AlertCircle, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MetaFunction } from "react-router";
 import { useNavigate, useSearchParams } from "react-router";
+
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Spinner } from "~/components/ui/spinner";
-
 import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
@@ -63,8 +63,8 @@ export default function PatreonCallbackPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-4">
-      <Card className="max-w-md w-full">
+    <div className="flex min-h-[60vh] items-center justify-center p-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle>Patreon Authentication</CardTitle>
         </CardHeader>

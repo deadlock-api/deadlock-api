@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+
 import { CopyButton } from "~/components/copy-button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -16,7 +17,7 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
 
   return (
     <Collapsible className="rounded-md border border-border">
-      <CollapsibleTrigger className="flex w-full items-center justify-between p-3 text-sm font-medium hover:bg-muted/50 transition-colors">
+      <CollapsibleTrigger className="flex w-full items-center justify-between p-3 text-sm font-medium transition-colors hover:bg-muted/50">
         How to use?
         <ChevronDown className="size-4 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-180" />
       </CollapsibleTrigger>
@@ -35,8 +36,8 @@ export function ChatBotInstructions({ generatedUrl }: ChatBotInstructionsProps) 
             </TabsList>
             {chatBots.map(({ name, command }) => (
               <TabsContent key={name} value={name}>
-                <div className="flex items-center justify-between rounded-md bg-card border border-border p-3">
-                  <code className="text-primary text-sm whitespace-pre-wrap break-all">{command}</code>
+                <div className="flex items-center justify-between rounded-md border border-border bg-card p-3">
+                  <code className="text-sm break-all whitespace-pre-wrap text-primary">{command}</code>
                   <CopyButton size="sm" text={command} className="ml-4 shrink-0" />
                 </div>
               </TabsContent>

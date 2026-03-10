@@ -1,5 +1,6 @@
 import { ClockIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+
 import { FilterPill } from "~/components/FilterPill";
 import { Button } from "~/components/ui/button";
 import { Slider } from "~/components/ui/slider";
@@ -88,7 +89,7 @@ export function MatchTimeRangeSelector({
     >
       <div className="grid gap-4">
         <div className="space-y-2">
-          <h4 className="font-medium leading-none">{title}</h4>
+          <h4 className="leading-none font-medium">{title}</h4>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
         <div className="pt-6 pb-2">
@@ -117,7 +118,7 @@ export function MatchTimeRangeSelector({
                 variant="outline"
                 size="sm"
                 onClick={() => setPreset(preset.start, preset.end)}
-                className="text-xs px-2 h-8"
+                className="h-8 px-2 text-xs"
               >
                 {preset.label}
               </Button>

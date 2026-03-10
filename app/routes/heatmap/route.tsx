@@ -2,6 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client/api";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
+
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -12,6 +13,7 @@ import { assetsApi } from "~/lib/assets-api";
 import { PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { queryKeys } from "~/queries/query-keys";
+
 import HeatmapCanvas from "./HeatmapCanvas";
 
 const Heatmap3D = lazy(() => import("./Heatmap3D"));
@@ -91,10 +93,10 @@ export default function Heatmap() {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100dvh-2rem)]">
-      <div className="text-center shrink-0">
+    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-4">
+      <div className="shrink-0 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Kill/Death Heatmap</h1>
-        <p className="text-sm text-muted-foreground mt-1">Visualize kill and death hotspots across the map</p>
+        <p className="mt-1 text-sm text-muted-foreground">Visualize kill and death hotspots across the map</p>
       </div>
 
       <Filter.Root>
@@ -123,7 +125,7 @@ export default function Heatmap() {
         />
       </Filter.Root>
 
-      <div className="flex-1 min-h-0 flex justify-center items-center max-h-[62.5vh]">
+      <div className="flex max-h-[62.5vh] min-h-0 flex-1 items-center justify-center">
         {isPending ? (
           <LoadingLogo />
         ) : isError ? (
@@ -162,7 +164,7 @@ function ViewModeToggle({ value, onChange }: { value: ViewMode; onChange: (mode:
           key={mode}
           type="button"
           onClick={() => onChange(mode)}
-          className={`px-3 py-1 text-sm rounded-full transition-all cursor-pointer ${
+          className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
             value === mode
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -181,7 +183,7 @@ function DimensionToggle({ value, onChange }: { value: boolean; onChange: (is3D:
       <button
         type="button"
         onClick={() => onChange(false)}
-        className={`px-3 py-1 text-sm rounded-full transition-all cursor-pointer ${
+        className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
           !value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
         }`}
       >
@@ -190,7 +192,7 @@ function DimensionToggle({ value, onChange }: { value: boolean; onChange: (is3D:
       <button
         type="button"
         onClick={() => onChange(true)}
-        className={`px-3 py-1 text-sm rounded-full transition-all cursor-pointer ${
+        className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
           value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
         }`}
       >

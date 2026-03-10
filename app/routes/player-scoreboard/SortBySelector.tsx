@@ -1,7 +1,9 @@
 import { CheckIcon } from "lucide-react";
 import { useMemo } from "react";
+
 import { FilterPill } from "~/components/FilterPill";
 import { cn } from "~/lib/utils";
+
 import { buildSortByValue, parseSortByValue, SORT_CATEGORIES, type SortVariant } from "./sort-options";
 
 interface SortBySelectorProps {
@@ -40,14 +42,14 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
   return (
     <FilterPill label="Sort" value={displayValue} active={false} className="w-52 p-2">
       {hasVariants && (
-        <div className="flex rounded-md border border-input overflow-hidden mb-2">
+        <div className="mb-2 flex overflow-hidden rounded-md border border-input">
           {VARIANT_LABELS.map((v) => (
             <button
               key={v.value}
               type="button"
               onClick={() => handleVariantChange(v.value)}
               className={cn(
-                "flex-1 px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                "flex-1 cursor-pointer px-2 py-1.5 text-xs font-medium transition-colors",
                 variant === v.value
                   ? "bg-primary text-primary-foreground"
                   : "bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -58,13 +60,13 @@ export function SortBySelector({ value, onChange }: SortBySelectorProps) {
           ))}
         </div>
       )}
-      <div className="max-h-[300px] overflow-y-auto flex flex-col">
+      <div className="flex max-h-[300px] flex-col overflow-y-auto">
         {SORT_CATEGORIES.map((cat) => (
           <button
             key={cat.key}
             type="button"
             className={cn(
-              "flex items-center justify-between gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent cursor-pointer text-left",
+              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
               key === cat.key && "font-medium",
             )}
             onClick={() => handleCategoryChange(cat.key)}

@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "jsx-a11y"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "off",
+    "perf": "warn",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-autofocus": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn",
+    "react-hooks/exhaustive-deps": "warn"
+  },
+  "ignorePatterns": ["node_modules", "build", ".react-router", "app/components/ui"]
+}

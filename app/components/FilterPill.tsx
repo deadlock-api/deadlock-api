@@ -1,4 +1,5 @@
 import { ChevronDownIcon } from "lucide-react";
+
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 
@@ -19,10 +20,10 @@ export function FilterPill({ label, value, active, icon, children, className, al
         <button
           type="button"
           className={cn(
-            "inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-all",
+            "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-sm transition-all",
             active
-              ? "bg-primary/15 border-primary/40 text-foreground shadow-[0_0_8px_rgba(250,68,84,0.15)]"
-              : "bg-secondary border-white/[0.08] text-muted-foreground hover:bg-accent hover:text-foreground hover:border-white/[0.14]",
+              ? "border-primary/40 bg-primary/15 text-foreground shadow-[0_0_8px_rgba(250,68,84,0.15)]"
+              : "border-white/[0.08] bg-secondary text-muted-foreground hover:border-white/[0.14] hover:bg-accent hover:text-foreground",
           )}
         >
           {icon}

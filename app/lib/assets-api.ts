@@ -1,5 +1,6 @@
 import { DefaultApi, HeroesApi, ItemsApi } from "assets_deadlock_api_client";
 import axios from "axios";
+
 import { ASSETS_ORIGIN } from "~/lib/constants";
 
 export interface ApiConfig {

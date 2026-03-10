@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import type { Color } from "~/types/general";
 
@@ -8,7 +9,7 @@ export function ProgressBar({ value, min, max, color }: { value?: number; min?: 
   value = Math.min(value, max || 1);
 
   return (
-    <div className="w-full h-2.5 bg-muted">
+    <div className="h-2.5 w-full bg-muted">
       <div
         className="h-2.5 transition-all duration-300 ease-in-out"
         style={{
@@ -39,10 +40,10 @@ export function ProgressBarWithLabel({
 }) {
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
   const content = (
-    <div className={`flex flex-col gap-2 w-full min-w-24${tooltip ? " cursor-default" : ""}`}>
+    <div className={`flex w-full flex-col gap-2 min-w-24${tooltip ? " cursor-default" : ""}`}>
       <ProgressBar value={value} min={min} max={max} color={color} />
       <div className="flex items-baseline gap-1.5">
-        <span className="text-sm text-muted-foreground text-left">{label || `${percentage}%` || 0}</span>
+        <span className="text-left text-sm text-muted-foreground">{label || `${percentage}%` || 0}</span>
         {delta !== undefined && delta !== 0 && (
           <span className={`text-xs font-medium ${delta > 0 ? "text-green-500" : "text-red-500"}`}>
             {delta > 0 ? "+" : ""}
@@ -58,7 +59,7 @@ export function ProgressBarWithLabel({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <TooltipContent className="bg-popover text-popover-foreground border border-border shadow-md p-3 [&>svg]:fill-popover [&>svg]:bg-popover">
+      <TooltipContent className="border border-border bg-popover p-3 text-popover-foreground shadow-md [&>svg]:bg-popover [&>svg]:fill-popover">
         {tooltip}
       </TooltipContent>
     </Tooltip>

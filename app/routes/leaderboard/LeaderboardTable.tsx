@@ -2,11 +2,13 @@ import type { RankV2 } from "assets_deadlock_api_client";
 import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
+
 import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { extractBadgeMap, type SubtierInfo } from "~/lib/leaderboard";
 import { hexToRgba } from "~/lib/utils";
+
 import { LeaderboardControls } from "./LeaderboardControls";
 
 export interface LeaderboardTableHandle {
@@ -154,13 +156,13 @@ function LeaderboardTableRow({
           )}
         </TableCell>
       )}
-      <TableCell className="truncate max-w-[200px]">{entry.account_name}</TableCell>
+      <TableCell className="max-w-[200px] truncate">{entry.account_name}</TableCell>
       {shouldShowTopHeroesColumn && (
         <TableCell>
           <div className="flex justify-end space-x-3">
             {entry.top_hero_ids?.map((heroId) => (
               <button key={heroId} type="button" onClick={() => onHeroClick(heroId)} className="cursor-pointer">
-                <HeroImage heroId={heroId} className="h-8 w-8 rounded-full object-cover border border-border" />
+                <HeroImage heroId={heroId} className="h-8 w-8 rounded-full border border-border object-cover" />
               </button>
             ))}
           </div>

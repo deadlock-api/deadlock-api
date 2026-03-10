@@ -1,4 +1,5 @@
 import type { MetaFunction } from "react-router";
+
 import { AuthenticatedDashboard, PatronPageSkeleton } from "~/components/patron/AuthenticatedDashboard";
 import { UnauthenticatedState } from "~/components/patron/UnauthenticatedState";
 import { usePatronAuth } from "~/hooks/usePatronAuth";

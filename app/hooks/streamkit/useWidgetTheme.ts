@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+
 import { THEME_STYLES } from "~/constants/streamkit/widget";
 import { cn } from "~/lib/utils";
 import type { Theme } from "~/types/streamkit/widget";
@@ -68,7 +69,7 @@ export const useWidgetTheme = (theme: Theme, opacity = 100) => {
     };
 
     const getBrandingLinkClasses = () => {
-      return cn("group flex flex-nowrap gap-1.5 rounded-full transition-all items-center");
+      return cn("group flex flex-nowrap items-center gap-1.5 rounded-full transition-all");
     };
 
     const getUserNameClasses = () => {

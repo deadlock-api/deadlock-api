@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, FolderOpen, Upload } from "lucide-react";
 import type { MetaFunction } from "react-router";
+
 import { DirectoryGuide } from "~/components/ingest-cache/DirectoryGuide";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { PatronCTA } from "~/components/PatronCTA";
@@ -26,17 +27,17 @@ export default function IngestCache() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Steam Cache Ingestion</h1>
-        <p className="text-sm text-muted-foreground mt-1">Help improve Deadlock API by sharing your match data</p>
+        <p className="mt-1 text-sm text-muted-foreground">Help improve Deadlock API by sharing your match data</p>
       </div>
 
       <div>
         <PatronCTA />
       </div>
 
-      <Card className="shadow-lg pt-0">
-        <CardHeader className="bg-linear-to-r from-primary/10 to-transparent py-4 border-b border-border rounded-t-2xl">
+      <Card className="pt-0 shadow-lg">
+        <CardHeader className="rounded-t-2xl border-b border-border bg-linear-to-r from-primary/10 to-transparent py-4">
           <CardTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
+            <Upload className="h-5 w-5" />
             Upload Match Data
           </CardTitle>
           <CardDescription>
@@ -59,8 +60,8 @@ export default function IngestCache() {
             disabled={state.isLoading}
             aria-busy={state.isLoading}
             className={cn(
-              "w-full h-32 text-lg relative overflow-hidden group border-primary border-2 border-dashed transition-colors",
-              state.isDragging && "bg-primary/10 border-primary",
+              "group relative h-32 w-full overflow-hidden border-2 border-dashed border-primary text-lg transition-colors",
+              state.isDragging && "border-primary bg-primary/10",
             )}
             variant="secondary"
           >
@@ -69,17 +70,17 @@ export default function IngestCache() {
                 <LoadingLogo />
                 <div className="text-center">
                   <p className="font-semibold">Scanning directory...</p>
-                  <p className="text-sm font-normal mt-1">{state.saltsFound} salts found</p>
+                  <p className="mt-1 text-sm font-normal">{state.saltsFound} salts found</p>
                 </div>
               </div>
             ) : state.isDragging ? (
-              <div className="flex flex-col items-center gap-3 pointer-events-none">
+              <div className="pointer-events-none flex flex-col items-center gap-3">
                 <Upload className="size-8" />
                 <span>Drop directory here</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
-                <FolderOpen className="size-8 group-hover:scale-110 transition-transform" />
+                <FolderOpen className="size-8 transition-transform group-hover:scale-110" />
                 <span>Select Directory or Drop Here</span>
               </div>
             )}
@@ -100,9 +101,9 @@ export default function IngestCache() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {state.dialog.type === "success" ? (
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-destructive" />
+                <AlertCircle className="h-5 w-5 text-destructive" />
               )}
               {state.dialog.title}
             </DialogTitle>

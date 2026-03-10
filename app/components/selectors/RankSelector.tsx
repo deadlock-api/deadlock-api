@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
+
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";
 
@@ -77,8 +79,8 @@ export function RankSelector({
   const currentSelectedDetails = selectOptions.find((opt) => opt.value === selectedRank);
 
   return (
-    <div className="flex flex-col gap-1.5 shrink-0">
-      <div className="flex justify-center md:justify-start items-center h-8">
+    <div className="flex shrink-0 flex-col gap-1.5">
+      <div className="flex h-8 items-center justify-center md:justify-start">
         <span className="text-sm font-semibold text-foreground">{label || "Rank"}</span>
       </div>
       {isLoading ? (
@@ -88,28 +90,28 @@ export function RankSelector({
           <SelectTrigger className="focus-visible:ring-0">
             <SelectValue placeholder={"Select Rank..."}>
               {currentSelectedDetails ? (
-                <div className="flex items-center gap-2 w-fit flex-nowrap">
+                <div className="flex w-fit flex-nowrap items-center gap-2">
                   <ImgWithSkeleton
                     src={
                       getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp") ??
                       ""
                     }
                     alt={currentSelectedDetails.label}
-                    className="size-6 object-contain shrink-0 mb-1"
+                    className="mb-1 size-6 shrink-0 object-contain"
                   />
                   <span className="truncate">{currentSelectedDetails.label}</span>
                 </div>
               ) : null}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
+          <SelectContent className="flex max-h-[70vh] w-fit flex-row flex-nowrap items-center gap-2 overflow-y-scroll">
             {selectOptions.map((optionData) => (
               <SelectItem key={optionData.value} value={String(optionData.value)}>
-                <div className="flex items-center gap-2 flex-nowrap">
+                <div className="flex flex-nowrap items-center gap-2">
                   <ImgWithSkeleton
                     src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp") ?? ""}
                     alt={optionData.label}
-                    className="size-6 object-contain shrink-0 mr-2 mb-1"
+                    className="mr-2 mb-1 size-6 shrink-0 object-contain"
                   />
                   <span className="truncate">{optionData.label}</span>
                 </div>

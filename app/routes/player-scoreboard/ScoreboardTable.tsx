@@ -2,11 +2,13 @@ import { useQueries } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useMemo, useState } from "react";
+
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
+
 import { ScoreboardControls } from "./ScoreboardControls";
 import { formatStatValue, getSortByLabel } from "./sort-options";
 
@@ -155,7 +157,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
                         {profile?.avatar && (
                           <img src={profile.avatar} alt="" className="h-6 w-6 rounded-full" loading="lazy" />
                         )}
-                        <span className="truncate max-w-[200px]">
+                        <span className="max-w-[200px] truncate">
                           {profile?.personaname ?? (accountId != null ? `Player ${accountId}` : `#${entry.rank}`)}
                         </span>
                       </>
@@ -170,7 +172,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
           })}
           {paginatedEntries.length === 0 && (
             <TableRow>
-              <TableCell colSpan={sortBy === "matches" ? 3 : 4} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={sortBy === "matches" ? 3 : 4} className="py-8 text-center text-muted-foreground">
                 No results found
               </TableCell>
             </TableRow>

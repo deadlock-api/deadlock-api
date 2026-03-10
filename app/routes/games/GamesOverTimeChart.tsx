@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
+import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
-import type { GameStatsBucketEnum } from "deadlock_api_client";
-import type { GameStatsQueryParams } from "~/queries/games-query";
 import { cn } from "~/lib/utils";
+import type { GameStatsQueryParams } from "~/queries/games-query";
 import { gameStatsQueryOptions } from "~/queries/games-query";
-import { StatSelector } from "./StatSelector";
+
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
+import { StatSelector } from "./StatSelector";
 
 const TIME_BUCKETS = [
   { value: "start_time_day", label: "Daily" },
@@ -57,10 +59,10 @@ export default function GamesOverTimeChart({
               type="button"
               onClick={() => onTimeBucketChange(b.value as GameStatsBucketEnum)}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                "cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                 timeBucket === b.value
                   ? "bg-white/[0.1] text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/[0.05]",
+                  : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
               )}
             >
               {b.label}
@@ -74,9 +76,9 @@ export default function GamesOverTimeChart({
           <LoadingLogo />
         </div>
       ) : chartData.length === 0 ? (
-        <div className="text-center text-sm text-muted-foreground py-8">No data available.</div>
+        <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
       ) : (
-        <ResponsiveContainer width="100%" height={500} className="p-4 bg-muted rounded-xl">
+        <ResponsiveContainer width="100%" height={500} className="rounded-xl bg-muted p-4">
           <LineChart data={chartData} margin={{ top: 20, right: 30, bottom: 60, left: 40 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
             <XAxis

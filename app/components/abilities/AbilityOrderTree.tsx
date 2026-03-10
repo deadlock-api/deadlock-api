@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AbilityOrderStatsGameModeEnum } from "deadlock_api_client";
 import { motion } from "framer-motion";
 import { useCallback, useMemo, useRef, useState } from "react";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
@@ -10,6 +11,7 @@ import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
+
 import AbilityOrderNode from "./AbilityOrderNode";
 
 const HERO_ABILITY_SLOTS = ["signature1", "signature2", "signature3", "signature4"] as const;
@@ -190,7 +192,7 @@ export default function AbilityOrderTree({
 
   if (isLoadingOrder) {
     return (
-      <div className="flex items-center justify-center w-full py-24">
+      <div className="flex w-full items-center justify-center py-24">
         <LoadingLogo />
       </div>
     );
@@ -198,7 +200,7 @@ export default function AbilityOrderTree({
 
   if (!trie || trie.children.size === 0) {
     return (
-      <p className="text-center text-muted-foreground py-8">
+      <p className="py-8 text-center text-muted-foreground">
         No ability order data available for this hero with the selected filters.
       </p>
     );
@@ -211,7 +213,7 @@ export default function AbilityOrderTree({
   return (
     <div
       ref={scrollRef}
-      className="overflow-x-auto pb-4 text-center cursor-grab"
+      className="cursor-grab overflow-x-auto pb-4 text-center"
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
@@ -219,13 +221,13 @@ export default function AbilityOrderTree({
       onClickCapture={onClickCapture}
     >
       {gameMode === "street_brawl" && (
-        <p className="text-sm text-muted-foreground mb-2 text-balance">
+        <p className="mb-2 text-sm text-balance text-muted-foreground">
           In Street Brawl, you unlock multiple abilities at once per round. Since the order within each round doesn't
           matter, paths that only differ in that order are shown as one.
         </p>
       )}
       <motion.div
-        className="inline-flex items-start gap-0.5 min-w-max p-4"
+        className="inline-flex min-w-max items-start gap-0.5 p-4"
         initial="hidden"
         animate="show"
         variants={{

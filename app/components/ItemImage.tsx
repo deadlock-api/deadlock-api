@@ -10,7 +10,7 @@ export function ItemImage({ itemId, className }: { itemId: number; className?: s
   }
 
   if (!item || !item.shop_image_webp) {
-    return <div className={cn("size-8 aspect-square bg-muted rounded", className)} />;
+    return <div className={cn("aspect-square size-8 rounded bg-muted", className)} />;
   }
 
   return (
@@ -22,7 +22,7 @@ export function ItemImage({ itemId, className }: { itemId: number; className?: s
         src={item?.shop_image_small ?? ""}
         alt={item?.name ?? "Unknown Item"}
         title={item?.name ?? "Unknown Item"}
-        className={cn("size-8 aspect-square", className)}
+        className={cn("aspect-square size-8", className)}
       />
     </picture>
   );

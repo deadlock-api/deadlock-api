@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { ChartContainer, ChartTooltip } from "~/components/ui/chart";
@@ -279,7 +280,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
           <CardDescription>
             Win rate by {bucketType === "game_time_min" ? "purchase time" : "net worth at purchase"}
           </CardDescription>
-          <div className="flex flex-col space-y-3 mt-3">
+          <div className="mt-3 flex flex-col space-y-3">
             <div className="flex flex-col space-y-2">
               <Label className="text-sm font-medium">View by:</Label>
               <ToggleGroup
@@ -303,13 +304,13 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
             </div>
             <div className="flex items-center space-x-2">
               <Switch id="wilson-interval" checked={useWilsonInterval} onCheckedChange={setUseWilsonInterval} />
-              <Label htmlFor="wilson-interval" className="text-sm flex items-center gap-1">
+              <Label htmlFor="wilson-interval" className="flex items-center gap-1 text-sm">
                 Use conservative win-rate estimate based on volume
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="icon-[material-symbols--info] h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-xs bg-background text-foreground p-4 text-center text-pretty space-y-2">
+                  <TooltipContent className="max-w-xs space-y-2 bg-background p-4 text-center text-pretty text-foreground">
                     <p>
                       Less matches played for a datapoint means we're less confident in the win rate, so we reduce it a
                       bit to compensate.
@@ -334,11 +335,11 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex items-center justify-center h-120">
+            <div className="flex h-120 items-center justify-center">
               <LoadingLogo />
             </div>
           ) : !hasValidData ? (
-            <div className="flex items-center justify-center h-120">
+            <div className="flex h-120 items-center justify-center">
               <p className="text-muted-foreground">No data available</p>
             </div>
           ) : (
@@ -368,7 +369,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                         return (
                           <div
                             key={`${data.name} ${d.bucketStart}-${d.bucketEnd}`}
-                            className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl"
+                            className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl"
                           >
                             <div className="text-sm">{data.name}</div>
                             <div className="font-medium">

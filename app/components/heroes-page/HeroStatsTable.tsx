@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
+
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -139,7 +140,7 @@ export function HeroStatsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
@@ -174,7 +175,7 @@ export function HeroStatsTable({
       <TableBody>
         {limitedData?.map((row, index) => (
           <TableRow key={row.hero_id}>
-            {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
+            {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
             <TableCell>
               <div className="flex items-center gap-2">
                 <HeroImage heroId={row.hero_id} />
@@ -188,7 +189,7 @@ export function HeroStatsTable({
                   max={maxWinrate}
                   value={row.wins / row.matches}
                   color={"#fa4454"}
-                  label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                  label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
                   delta={
                     prevStatsMap?.get(row.hero_id) !== undefined
                       ? row.wins / row.matches - prevStatsMap.get(row.hero_id)!.winrate
@@ -209,7 +210,7 @@ export function HeroStatsTable({
                         <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
                       </div>
                       {prevStatsMap?.get(row.hero_id) !== undefined && (
-                        <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                           <span className="text-muted-foreground">Previous</span>
                           <span className="font-medium">
                             {(prevStatsMap.get(row.hero_id)!.winrate * 100).toFixed(2)}%
@@ -230,8 +231,8 @@ export function HeroStatsTable({
                   color={"#22d3ee"}
                   label={
                     minHeroMatchesTotal || minHeroMatches
-                      ? `${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}% `
-                      : `${(Math.round(pickrateMultiplier * (row.matches / sumMatches) * 100)).toFixed(0)}% `
+                      ? `${Math.round((row.matches / maxMatches) * 100).toFixed(0)}% `
+                      : `${Math.round(pickrateMultiplier * (row.matches / sumMatches) * 100).toFixed(0)}% `
                   }
                   delta={
                     prevStatsMap?.get(row.hero_id) !== undefined
@@ -257,7 +258,7 @@ export function HeroStatsTable({
                         </span>
                       </div>
                       {prevStatsMap?.get(row.hero_id) !== undefined && (
-                        <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                           <span className="text-muted-foreground">Previous</span>
                           <span className="font-medium">
                             {(

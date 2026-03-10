@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -107,14 +108,14 @@ export function HeroStatsByDurationChart({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={800} className="p-4 bg-muted">
+    <ResponsiveContainer width="100%" height={800} className="bg-muted p-4">
       <LineChart data={formattedData} margin={{ top: 20, bottom: 60 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
         <XAxis

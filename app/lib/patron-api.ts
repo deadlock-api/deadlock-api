@@ -5,6 +5,7 @@
 
 import { isAxiosError } from "axios";
 import type { PlayerCard as GeneratedPlayerCard, PlayerCardSlot as GeneratedPlayerCardSlot } from "deadlock_api_client";
+
 import { api } from "~/lib/api";
 import { ApiError, fetchApi } from "~/lib/http";
 

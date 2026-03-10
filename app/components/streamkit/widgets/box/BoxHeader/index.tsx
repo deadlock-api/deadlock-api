@@ -8,7 +8,7 @@ export const BoxHeader = ({ userName, showMatchHistory, themeClasses }: BoxHeade
       <div className="flex items-center justify-between">
         <span className={themeClasses.userNameClasses}>{userName}</span>
         <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
           <span className="text-[11px] font-medium text-green-500/90">LIVE</span>
         </div>
       </div>

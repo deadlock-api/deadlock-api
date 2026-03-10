@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
+
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -76,10 +77,10 @@ export default function BadgeDistribution() {
   const { isPending, isError, error } = combineQueryStates(badgeDistributionQuery, ranks);
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100dvh-2rem)]">
-      <div className="text-center shrink-0">
+    <div className="flex h-[calc(100dvh-2rem)] flex-col gap-4">
+      <div className="shrink-0 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
-        <p className="text-sm text-muted-foreground mt-1">Player rank distribution across all badges</p>
+        <p className="mt-1 text-sm text-muted-foreground">Player rank distribution across all badges</p>
       </div>
       <Filter.Root>
         <Filter.MatchDuration
@@ -89,7 +90,7 @@ export default function BadgeDistribution() {
         />
         <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={handleDateChange} />
       </Filter.Root>
-      <div className="flex-1 min-h-0 flex justify-center items-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         {isPending ? (
           <div className="flex items-center justify-center">
             <LoadingLogo />

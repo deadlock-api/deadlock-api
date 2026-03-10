@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { cn } from "~/lib/utils";
 
 interface LoadingLogoProps {
@@ -38,25 +39,25 @@ export function LoadingLogo({ className, delay = 150 }: LoadingLogoProps) {
 
   return (
     <div className="flex justify-center py-12">
-    <svg viewBox="0 0 729 790" className={cn("text-primary w-24 h-24", className)} xmlns="http://www.w3.org/2000/svg">
-      {PATHS.map((path, i) => (
-        <path
-          key={i}
-          d={path.d}
-          transform={path.transform}
-          fill="currentColor"
-          stroke="currentColor"
-          strokeWidth={4}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          className="logo-trace"
-          style={{
-            strokeDasharray: 15000,
-            animationDelay: path.delay,
-          }}
-        />
-      ))}
-    </svg>
+      <svg viewBox="0 0 729 790" className={cn("h-24 w-24 text-primary", className)} xmlns="http://www.w3.org/2000/svg">
+        {PATHS.map((path, i) => (
+          <path
+            key={i}
+            d={path.d}
+            transform={path.transform}
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth={4}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            className="logo-trace"
+            style={{
+              strokeDasharray: 15000,
+              animationDelay: path.delay,
+            }}
+          />
+        ))}
+      </svg>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+
 import { ItemImage } from "~/components/ItemImage";
 import { type TriState, type TriStateColumnLayout, TriStateSelector } from "~/components/selectors/TriStateSelector";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -38,7 +39,7 @@ export function ItemSelectorTriState({
       .map((item) => ({
         id: item.id,
         label: item.name,
-        icon: <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />,
+        icon: <ItemImage itemId={item.id} className="size-5 shrink-0 object-contain" />,
         group: `${item.item_tier}-${item.item_slot_type}`,
       }));
   }, [data]);

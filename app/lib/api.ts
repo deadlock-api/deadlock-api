@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from "axios";
 import { AnalyticsApi, LeaderboardApi, PlayersApi, SteamApi } from "deadlock_api_client";
+
 import { API_ORIGIN } from "~/lib/constants";
 
 export interface ApiConfig {

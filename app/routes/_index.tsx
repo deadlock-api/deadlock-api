@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -12,12 +13,12 @@ import {
   Tv,
   Zap,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
+
+import { ElectricBorder } from "~/components/ElectricBorder";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
-import { ElectricBorder } from "~/components/ElectricBorder";
 import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
@@ -141,8 +142,8 @@ export default function Index() {
   return (
     <div className="space-y-16">
       {/* Hero */}
-      <section className="relative text-center pt-4 pb-2">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-primary/8 rounded-full blur-[100px] pointer-events-none" />
+      <section className="relative pt-4 pb-2 text-center">
+        <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -150,7 +151,7 @@ export default function Index() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="relative"
         >
-          <h1 className="text-5xl font-bold tracking-tight lg:text-6xl mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent">
+          <h1 className="mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent lg:text-6xl">
             Deadlock API
           </h1>
         </motion.div>
@@ -159,7 +160,7 @@ export default function Index() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.4 }}
-          className="flex flex-wrap justify-center gap-3 mb-6"
+          className="mb-6 flex flex-wrap justify-center gap-3"
         >
           {valueProps.map((prop) => (
             <a
@@ -168,7 +169,7 @@ export default function Index() {
               target="_blank"
               rel="noopener noreferrer"
               title={prop.title}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-muted/50 text-sm font-medium text-foreground/80 hover:border-primary/40 hover:text-primary transition-colors"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
             >
               <prop.icon className="size-3.5" />
               {prop.label}
@@ -180,7 +181,7 @@ export default function Index() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.4 }}
-          className="mx-auto max-w-2xl text-base text-muted-foreground leading-relaxed"
+          className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground"
         >
           A comprehensive set of endpoints to access Deadlock game data — match history, player statistics, hero
           analytics, and more. Whether you're a developer integrating game data or a player analyzing performance, the
@@ -195,11 +196,11 @@ export default function Index() {
         transition={{ delay: 0.35, duration: 0.5 }}
       >
         <ElectricBorder color="#fa4454" speed={0.5} chaos={0.1} borderRadius={12}>
-          <div className="rounded-xl bg-card/80 backdrop-blur-sm px-6 py-7 sm:px-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div className="space-y-4 min-w-0">
+          <div className="rounded-xl bg-card/80 px-6 py-7 backdrop-blur-sm sm:px-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 border border-primary/20 shrink-0">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10">
                     <Zap className="electric-bolt size-5 text-primary" />
                   </div>
                   <div>
@@ -207,7 +208,7 @@ export default function Index() {
                     <p className="text-sm text-muted-foreground">Starting at just $3/month</p>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground max-w-xl">
+                <p className="max-w-xl text-sm text-muted-foreground">
                   We fetch match data for millions of players. With prioritized fetching, your Steam accounts jump to
                   the front of the queue — your matches and stats are updated more frequently so you always have the
                   latest data for analysis.
@@ -215,16 +216,16 @@ export default function Index() {
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                   {patronFeatures.map((feature) => (
                     <div key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="size-1.5 rounded-full bg-primary shrink-0" />
+                      <span className="size-1.5 shrink-0 rounded-full bg-primary" />
                       {feature}
                     </div>
                   ))}
                 </div>
               </div>
               <Link to="/patron" prefetch="intent" className="shrink-0">
-                <Button className="bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] hover:from-[#e83d4c] hover:to-[#f05a68] text-white font-semibold px-8 h-11 w-full lg:w-auto">
+                <Button className="h-11 w-full bg-gradient-to-r from-[#fa4454] to-[#ff6b7a] px-8 font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68] lg:w-auto">
                   Enable Prioritized Fetching
-                  <ArrowRight className="size-4 ml-2" />
+                  <ArrowRight className="ml-2 size-4" />
                 </Button>
               </Link>
             </div>
@@ -234,9 +235,9 @@ export default function Index() {
 
       {/* Services */}
       <section>
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <h2 className="text-2xl font-semibold tracking-tight">Developer Services</h2>
-          <p className="text-sm text-muted-foreground mt-1">APIs, tools, and data for the Deadlock community</p>
+          <p className="mt-1 text-sm text-muted-foreground">APIs, tools, and data for the Deadlock community</p>
         </div>
 
         <motion.div
@@ -244,31 +245,31 @@ export default function Index() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {services.map((service) => {
             const Icon = service.icon;
             const card = (
               <motion.div
                 variants={fadeUp}
-                className="group relative flex flex-col h-full rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30"
+                className="group relative flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30"
               >
-                <div className="flex items-start gap-4 mb-3">
-                  <div className="flex items-center justify-center size-10 rounded-lg bg-muted border border-border shrink-0 group-hover:border-primary/20 group-hover:bg-primary/5 transition-colors">
-                    <Icon className="size-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="mb-3 flex items-start gap-4">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
+                    <Icon className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-foreground flex items-center gap-1.5">
+                    <h3 className="flex items-center gap-1.5 font-semibold text-foreground">
                       {service.title}
                       {service.external && (
-                        <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ExternalLink className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                       )}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{service.description}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
                   </div>
                 </div>
                 <div className="mt-auto pt-3">
-                  <span className="text-sm font-medium text-primary/80 group-hover:text-primary transition-colors flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-primary/80 transition-colors group-hover:text-primary">
                     {service.cta}
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>
@@ -295,8 +296,8 @@ export default function Index() {
 
       {/* Sponsors */}
       <section className="text-center">
-        <h2 className="text-lg font-semibold tracking-tight mb-1">Our Sponsors</h2>
-        <p className="text-sm text-muted-foreground mb-6">
+        <h2 className="mb-1 text-lg font-semibold tracking-tight">Our Sponsors</h2>
+        <p className="mb-6 text-sm text-muted-foreground">
           Grateful to our sponsors for their support.{" "}
           <a
             href="https://www.patreon.com/c/manuelhexe"
@@ -308,7 +309,7 @@ export default function Index() {
             Become a sponsor
           </a>
         </p>
-        <div className="flex justify-center items-center gap-10 flex-wrap">
+        <div className="flex flex-wrap items-center justify-center gap-10">
           {sponsors.map((sponsor) => (
             <a
               key={sponsor.href}
@@ -316,9 +317,9 @@ export default function Index() {
               title={sponsor.title}
               target="_blank"
               rel="noreferrer"
-              className="opacity-60 hover:opacity-100 transition-opacity"
+              className="opacity-60 transition-opacity hover:opacity-100"
             >
-              <img src={sponsor.logo} alt={`${sponsor.title} Logo`} loading="lazy" className="max-w-[160px] max-h-14" />
+              <img src={sponsor.logo} alt={`${sponsor.title} Logo`} loading="lazy" className="max-h-14 max-w-[160px]" />
             </a>
           ))}
         </div>

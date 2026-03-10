@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
+
 import type { Message, ToolExecution } from "~/types/chat";
+
 import { ChatMessage } from "./ChatMessage";
 
 interface ChatMessageListProps {

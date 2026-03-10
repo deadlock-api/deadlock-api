@@ -4,6 +4,7 @@ import axios from "axios";
 import { AlertCircle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
 import {
   AddBotDialog,
   DeleteAccountDialog,
@@ -89,7 +90,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Add bot
@@ -164,7 +165,7 @@ function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isA
       type="button"
       onClick={handleRefetch}
       disabled={refetchMutation.isPending}
-      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+      className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
     >
       <RefreshCw className={`h-3.5 w-3.5 ${refetchMutation.isPending ? "animate-spin" : ""}`} />
       Refetch Match History
@@ -245,7 +246,7 @@ export function SteamAccountsList() {
         {accounts.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <p>No Steam accounts added yet.</p>
-            <p className="text-sm mt-1">Add a Steam account above to get prioritized data fetching.</p>
+            <p className="mt-1 text-sm">Add a Steam account above to get prioritized data fetching.</p>
           </div>
         ) : (
           <Table>
@@ -291,23 +292,23 @@ export function SteamAccountsList() {
                     <TableCell>
                       {isActive ? (
                         <Badge className="bg-green-600 hover:bg-green-600">
-                          <CheckCircle className="h-3 w-3 mr-1" />
+                          <CheckCircle className="mr-1 h-3 w-3" />
                           Active
                         </Badge>
                       ) : account.is_in_cooldown && cooldownRemaining ? (
                         <div className="flex flex-col gap-1">
                           <Badge variant="destructive">
-                            <XCircle className="h-3 w-3 mr-1" />
+                            <XCircle className="mr-1 h-3 w-3" />
                             Removed
                           </Badge>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             Available in {cooldownRemaining}
                           </span>
                         </div>
                       ) : (
                         <Badge variant="destructive">
-                          <XCircle className="h-3 w-3 mr-1" />
+                          <XCircle className="mr-1 h-3 w-3" />
                           Removed
                         </Badge>
                       )}

@@ -9,10 +9,10 @@ export function SensitivitySlider({
 }) {
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5 ${className ?? ""}`}
+      className={`flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur-sm ${className ?? ""}`}
     >
       <span
-        className="text-[10px] text-muted-foreground whitespace-nowrap cursor-help"
+        className="cursor-help text-[10px] whitespace-nowrap text-muted-foreground"
         title="Controls how much the brightest spots dominate the map. Lower values spread the colors more evenly, making smaller hotspots easier to see."
       >
         Sensitivity
@@ -24,9 +24,9 @@ export function SensitivitySlider({
         step={1}
         value={Math.round(value * 1000)}
         onChange={(e) => onChange(Number(e.target.value) / 1000)}
-        className="w-20 h-1 accent-primary cursor-pointer"
+        className="h-1 w-20 cursor-pointer accent-primary"
       />
-      <span className="text-[10px] text-muted-foreground tabular-nums w-12">{(value * 100).toFixed(1)}%</span>
+      <span className="w-12 text-[10px] text-muted-foreground tabular-nums">{(value * 100).toFixed(1)}%</span>
     </div>
   );
 }

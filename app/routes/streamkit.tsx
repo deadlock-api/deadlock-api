@@ -4,6 +4,7 @@ import { parseAsString, useQueryState } from "nuqs";
 import { useEffect } from "react";
 import type { MetaFunction } from "react-router";
 import { useNavigate } from "react-router";
+
 import { CommandBuilder } from "~/components/streamkit/command/CommandBuilder";
 import { WidgetBuilder } from "~/components/streamkit/widget-builder";
 import { Alert, AlertDescription } from "~/components/ui/alert";
@@ -91,9 +92,9 @@ export default function StreamKit() {
   return (
     <div className="space-y-6">
       {/* Hero Section — matches patron/index hero pattern */}
-      <section className="relative text-center space-y-4 py-6">
-        <div className="absolute inset-0 -top-12 flex items-center justify-center pointer-events-none" aria-hidden>
-          <div className="w-80 h-80 rounded-full bg-primary/8 blur-3xl" />
+      <section className="relative space-y-4 py-6 text-center">
+        <div className="pointer-events-none absolute inset-0 -top-12 flex items-center justify-center" aria-hidden>
+          <div className="h-80 w-80 rounded-full bg-primary/8 blur-3xl" />
         </div>
         <div className="relative space-y-3">
           <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">Stream Kit</h1>
@@ -132,12 +133,12 @@ export default function StreamKit() {
           <div className="hidden items-center md:flex">
             <div className="relative flex h-full flex-col items-center justify-center">
               <div className="h-full w-px bg-border" />
-              <span className="absolute bg-card px-2 text-xs font-medium uppercase text-muted-foreground">or</span>
+              <span className="absolute bg-card px-2 text-xs font-medium text-muted-foreground uppercase">or</span>
             </div>
           </div>
           <div className="flex items-center gap-2 md:hidden">
             <div className="h-px flex-1 bg-border" />
-            <span className="text-xs font-medium uppercase text-muted-foreground">or</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase">or</span>
             <div className="h-px flex-1 bg-border" />
           </div>
 
@@ -165,7 +166,7 @@ export default function StreamKit() {
         </div>
 
         {/* Region selector — inside account card */}
-        <div className="mt-5 border-t border-border pt-5 space-y-2">
+        <div className="mt-5 space-y-2 border-t border-border pt-5">
           <Label>Region</Label>
           <ToggleGroup
             type="single"
@@ -216,13 +217,13 @@ export default function StreamKit() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Command Builder */}
           <section className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-start gap-4 mb-5">
-              <div className="flex items-center justify-center size-10 rounded-lg bg-muted border border-border shrink-0">
+            <div className="mb-5 flex items-start gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
                 <Terminal className="size-5 text-muted-foreground" />
               </div>
               <div>
                 <h2 className="font-semibold text-foreground">Command Builder</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Create dynamic chatbot commands</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Create dynamic chatbot commands</p>
               </div>
             </div>
             <CommandBuilder region={region} accountId={parseSteamId(steamId)} />
@@ -230,13 +231,13 @@ export default function StreamKit() {
 
           {/* Widget Builder */}
           <section className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-start gap-4 mb-5">
-              <div className="flex items-center justify-center size-10 rounded-lg bg-muted border border-border shrink-0">
+            <div className="mb-5 flex items-start gap-4">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
                 <Layers className="size-5 text-muted-foreground" />
               </div>
               <div>
                 <h2 className="font-semibold text-foreground">Widget Builder</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Build OBS overlays for your stream</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Build OBS overlays for your stream</p>
               </div>
             </div>
             <WidgetBuilder region={region} accountId={parseSteamId(steamId)} />

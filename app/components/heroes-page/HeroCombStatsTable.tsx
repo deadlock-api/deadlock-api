@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useEffect, useId, useMemo, useState } from "react";
+
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -145,9 +146,9 @@ export function HeroCombStatsTable({
 
   return (
     <>
-      <div className="flex flex-wrap mx-auto gap-4">
+      <div className="mx-auto flex flex-wrap gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor={combSizeId} className="text-nowrap text-sm text-muted-foreground">
+          <label htmlFor={combSizeId} className="text-sm text-nowrap text-muted-foreground">
             Combination Size
           </label>
           <div className="flex items-center gap-2">
@@ -160,12 +161,12 @@ export function HeroCombStatsTable({
               onValueChange={([val]) => setCombSizeLocal(val)}
               className="w-full"
             />
-            <span className="ml-2 ">{combSizeLocal}</span>
+            <span className="ml-2">{combSizeLocal}</span>
           </div>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor={combsToShowId} className="text-nowrap text-sm text-muted-foreground">
+          <label htmlFor={combsToShowId} className="text-sm text-nowrap text-muted-foreground">
             Combinations to Show
           </label>
           <div className="flex items-center gap-2">
@@ -184,7 +185,7 @@ export function HeroCombStatsTable({
         </div>
       </div>
       {isLoading ? (
-        <div className="flex items-center justify-center w-full h-full py-16">
+        <div className="flex h-full w-full items-center justify-center py-16">
           <LoadingLogo />
         </div>
       ) : (
@@ -209,7 +210,7 @@ export function HeroCombStatsTable({
           <TableBody>
             {limitedData?.map((row, index) => (
               <TableRow key={row.hero_ids.join("-")}>
-                {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
+                {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {row.hero_ids.map((heroId, i) => (
@@ -230,7 +231,7 @@ export function HeroCombStatsTable({
                       max={maxWinrate}
                       value={row.wins / row.matches}
                       color={"#fa4454"}
-                      label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+                      label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
                       delta={(() => {
                         const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
                         const prev = prevStatsMap?.get(key);
@@ -254,7 +255,7 @@ export function HeroCombStatsTable({
                             const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
                             const prev = prevStatsMap?.get(key);
                             return prev !== undefined ? (
-                              <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                              <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                                 <span className="text-muted-foreground">Previous</span>
                                 <span className="font-medium">{(prev.winrate * 100).toFixed(2)}%</span>
                               </div>
@@ -272,7 +273,7 @@ export function HeroCombStatsTable({
                       max={maxMatches}
                       value={row.matches}
                       color={"#22d3ee"}
-                      label={`${(Math.round((row.matches / maxMatches) * 100)).toFixed(0)}%`}
+                      label={`${Math.round((row.matches / maxMatches) * 100).toFixed(0)}%`}
                       delta={(() => {
                         const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
                         const prev = prevStatsMap?.get(key);
@@ -294,7 +295,7 @@ export function HeroCombStatsTable({
                             const key = [...row.hero_ids].sort((a, b) => a - b).join("-");
                             const prev = prevStatsMap?.get(key);
                             return prev !== undefined ? (
-                              <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                              <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                                 <span className="text-muted-foreground">Previous</span>
                                 <span className="font-medium">{(prev.pickrate * 100).toFixed(4)}%</span>
                               </div>

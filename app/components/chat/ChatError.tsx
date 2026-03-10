@@ -1,4 +1,5 @@
 import { AlertCircle, Clock, RefreshCw, ShieldAlert, X } from "lucide-react";
+
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import type { ChatError as ChatErrorType } from "~/types/chat";
@@ -55,16 +56,16 @@ export function ChatError({ error, onDismiss, onRetry, onReVerify, resetTime }: 
       <AlertDescription className="flex flex-col gap-3">
         <span>{displayMessage}</span>
         {isRateLimitError && resetTime && <span className="text-sm font-medium">Try again in {resetTime}.</span>}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex flex-wrap gap-2">
           {isAuthError && onReVerify && (
             <Button variant="outline" size="sm" onClick={onReVerify} className="w-fit">
-              <ShieldAlert className="h-4 w-4 mr-2" />
+              <ShieldAlert className="mr-2 h-4 w-4" />
               Re-verify
             </Button>
           )}
           {error.isRetryable && onRetry && !isAuthError && (
             <Button variant="outline" size="sm" onClick={onRetry} className="w-fit">
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="mr-2 h-4 w-4" />
               Try Again
             </Button>
           )}

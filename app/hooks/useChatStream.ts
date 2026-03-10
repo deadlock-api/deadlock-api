@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SSE } from "sse.js";
 import type { SSE as SSEType, SSEvent } from "sse.js/types/sse";
+
+import { AI_ASSISTANT_API_URL, IS_DEV } from "~/lib/constants";
 import type {
   ChatDeltaEvent,
   ChatEndEvent,
@@ -14,7 +16,6 @@ import type {
   SSEEvent,
   ToolExecution,
 } from "~/types/chat";
-import { AI_ASSISTANT_API_URL, IS_DEV } from "~/lib/constants";
 
 interface UseChatStreamOptions {
   turnstileToken: string | null;

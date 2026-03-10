@@ -3,10 +3,11 @@ import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
+
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
-import { ItemTier } from "~/components/ItemTier";
 import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
+import { ItemTier } from "~/components/ItemTier";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
@@ -206,7 +207,7 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
 
   return (
     <div
-      className={`rounded-full px-3 py-1.5 items-center flex text-xs font-semibold border ${getConfidenceColor(tier)}`}
+      className={`flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold ${getConfidenceColor(tier)}`}
     >
       {getConfidenceLabel(tier)}
     </div>
@@ -251,17 +252,17 @@ function ItemStatsTableRow({
         onClick={() => customDropdownContent && setOpen(!open)}
       >
         {customDropdownContent && (
-          <TableCell className="font-semibold text-center w-4 h-4">
-            <span className="p-0 h-auto">
+          <TableCell className="h-4 w-4 text-center font-semibold">
+            <span className="h-auto p-0">
               {open ? (
-                <span className="icon-[material-symbols--expand-less] w-4 h-4 align-middle" />
+                <span className="icon-[material-symbols--expand-less] h-4 w-4 align-middle" />
               ) : (
-                <span className="icon-[material-symbols--expand-more] w-4 h-4 align-middle" />
+                <span className="icon-[material-symbols--expand-more] h-4 w-4 align-middle" />
               )}
             </span>
           </TableCell>
         )}
-        {!hideIndex && <TableCell className="font-semibold text-center">{index + 1}</TableCell>}
+        {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
         <TableCell>
           <div className="flex items-center gap-2">
             <ItemImage itemId={row.item_id} />
@@ -282,7 +283,7 @@ function ItemStatsTableRow({
               max={maxWinRate}
               value={row.wins / row.matches}
               color={"#fa4454"}
-              label={`${(Math.round((row.wins / row.matches) * 100)).toFixed(0)}% `}
+              label={`${Math.round((row.wins / row.matches) * 100).toFixed(0)}% `}
               delta={
                 prevStatsMap?.get(row.item_id) !== undefined
                   ? row.wins / row.matches - prevStatsMap.get(row.item_id)!.winrate
@@ -303,7 +304,7 @@ function ItemStatsTableRow({
                     <span className="font-medium">{((row.wins / row.matches) * 100).toFixed(2)}%</span>
                   </div>
                   {prevStatsMap?.get(row.item_id) !== undefined && (
-                    <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                    <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                       <span className="text-muted-foreground">Previous</span>
                       <span className="font-medium">{(prevStatsMap.get(row.item_id)!.winrate * 100).toFixed(2)}%</span>
                     </div>
@@ -320,7 +321,7 @@ function ItemStatsTableRow({
               max={maxUsage}
               value={row.matches}
               color={"#22d3ee"}
-              label={`${(Math.round((row.matches / maxUsage) * 100)).toFixed(0)}%`}
+              label={`${Math.round((row.matches / maxUsage) * 100).toFixed(0)}%`}
               delta={
                 prevStatsMap?.get(row.item_id) !== undefined
                   ? row.matches / maxUsage - prevStatsMap.get(row.item_id)!.normalizedPickrate
@@ -337,7 +338,7 @@ function ItemStatsTableRow({
                     <span className="font-medium">{((row.matches / maxUsage) * 100).toFixed(2)}%</span>
                   </div>
                   {prevStatsMap?.get(row.item_id) !== undefined && (
-                    <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+                    <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
                       <span className="text-muted-foreground">Previous</span>
                       <span className="font-medium">
                         {(prevStatsMap.get(row.item_id)!.normalizedPickrate * 100).toFixed(2)}%
@@ -362,7 +363,7 @@ function ItemStatsTableRow({
               <Button
                 variant="secondary"
                 disabled={includedItemIds.includes(row.item_id)}
-                className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6 disabled:bg-muted"
+                className="h-6 bg-green-700 px-1 text-lg hover:bg-green-500 disabled:bg-muted"
                 onClick={() => onItemInclude?.(row.item_id)}
               >
                 <span className="icon-[mdi--plus]" />
@@ -370,7 +371,7 @@ function ItemStatsTableRow({
               <Button
                 variant="destructive"
                 disabled={excludedItemIds.includes(row.item_id)}
-                className="bg-red-700 hover:bg-red-500 px-1 h-6 disabled:bg-muted"
+                className="h-6 bg-red-700 px-1 hover:bg-red-500 disabled:bg-muted"
                 onClick={() => onItemExclude?.(row.item_id)}
               >
                 <span className="icon-[mdi--minus] text-lg" />
@@ -381,8 +382,8 @@ function ItemStatsTableRow({
       </TableRow>
       {customDropdownContent && open && (
         <TableRow>
-          <TableCell colSpan={totalColumns} className="p-0 border-0">
-            <div className="p-4 bg-muted border-t border-border">
+          <TableCell colSpan={totalColumns} className="border-0 p-0">
+            <div className="border-t border-border bg-muted p-4">
               {customDropdownContent({
                 itemId: row.item_id,
                 rowWins: row.wins,
@@ -475,15 +476,15 @@ export function ItemStatsTableDisplay({
   const getSortArrow = (field: SortField) => {
     if (sort.field !== field) return null;
     return sort.direction === "asc" ? (
-      <span className="ml-1 mb-0.5 icon-[material-symbols--arrow-upward]" />
+      <span className="mb-0.5 ml-1 icon-[material-symbols--arrow-upward]" />
     ) : (
-      <span className="ml-1 mb-0.5 icon-[material-symbols--arrow-downward]" />
+      <span className="mb-0.5 ml-1 icon-[material-symbols--arrow-downward]" />
     );
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
@@ -491,12 +492,12 @@ export function ItemStatsTableDisplay({
 
   return (
     <div>
-      <div className="flex justify-center items-center gap-6 my-4">
+      <div className="my-4 flex items-center justify-center gap-6">
         {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
         {columns.includes("confidence") && (
           <div className="flex items-center gap-2">
             <Switch id={dimLowConfidenceId} checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
-            <Label htmlFor={dimLowConfidenceId} className="text-sm font-medium cursor-pointer">
+            <Label htmlFor={dimLowConfidenceId} className="cursor-pointer text-sm font-medium">
               Highlight overperforming items
             </Label>
           </div>
@@ -506,13 +507,13 @@ export function ItemStatsTableDisplay({
         {!hideHeader && (
           <TableHeader className="bg-muted">
             <TableRow>
-              {customDropdownContent && <TableHead className="text-center w-4" />}
+              {customDropdownContent && <TableHead className="w-4 text-center" />}
               {!hideIndex && <TableHead className="text-center">#</TableHead>}
               <TableHead>Item</TableHead>
               {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
               {columns.includes("winRate") && (
                 <TableHead
-                  className="text-center cursor-pointer hover:bg-accent transition-colors"
+                  className="cursor-pointer text-center transition-colors hover:bg-accent"
                   onClick={() => toggleSort("winRate")}
                 >
                   <div className="flex items-center">
@@ -523,7 +524,7 @@ export function ItemStatsTableDisplay({
               )}
               {columns.includes("matches") && (
                 <TableHead
-                  className="text-center cursor-pointer hover:bg-accent transition-colors"
+                  className="cursor-pointer text-center transition-colors hover:bg-accent"
                   onClick={() => toggleSort("matches")}
                 >
                   <div className="flex items-center">

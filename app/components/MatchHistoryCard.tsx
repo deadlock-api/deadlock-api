@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client/api";
 import { ChevronDown } from "lucide-react";
+
 import { BadgeImage } from "~/components/BadgeImage";
 import { HeroImage } from "~/components/HeroImage";
 import { ItemImage } from "~/components/ItemImage";
@@ -71,15 +72,15 @@ const ABILITY_SLOTS = [1, 2, 3, 4] as const;
 function FullBuildPhase({ label, items }: { label: string; items: FullBuildItem[] }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide">{label}</span>
+      <span className="text-[10px] font-medium tracking-wide text-muted-foreground/60 uppercase">{label}</span>
       <div className="flex flex-wrap gap-1.5">
         {items.length > 0 ? (
           items.map((item) => (
             <div key={`${item.itemId}-${item.gameTimeS}`} className="relative">
               <ItemImage itemId={item.itemId} className={cn("size-6 rounded-sm", item.sold && "opacity-50")} />
-              {item.sold && <div className="absolute inset-0 rounded-sm bg-red-500/40 pointer-events-none" />}
+              {item.sold && <div className="pointer-events-none absolute inset-0 rounded-sm bg-red-500/40" />}
               {item.imbuedAbilityNumber != null && (
-                <div className="pointer-events-none absolute right-0 bottom-0 z-10 flex size-3.5 items-center justify-center rounded-tl-sm rounded-br-sm bg-black/85 text-[9px] font-bold leading-none text-white">
+                <div className="pointer-events-none absolute right-0 bottom-0 z-10 flex size-3.5 items-center justify-center rounded-tl-sm rounded-br-sm bg-black/85 text-[9px] leading-none font-bold text-white">
                   {item.imbuedAbilityNumber}
                 </div>
               )}
@@ -174,7 +175,7 @@ export default function MatchHistoryCard({
   return (
     <div
       className={cn(
-        "flex w-full max-w-[880px] rounded-md overflow-hidden bg-card text-sm text-muted-foreground shadow-lg border-l-[6px]",
+        "flex w-full max-w-[880px] overflow-hidden rounded-md border-l-[6px] bg-card text-sm text-muted-foreground shadow-lg",
         borderColor,
       )}
     >
@@ -184,7 +185,7 @@ export default function MatchHistoryCard({
           {/* Match Info + Player Stats */}
           <div className="flex shrink-0 flex-col">
             <div className="flex items-center gap-2">
-              <div className={cn("font-bold leading-tight", accentColor)}>{isWin ? "Victory" : "Defeat"}</div>
+              <div className={cn("leading-tight font-bold", accentColor)}>{isWin ? "Victory" : "Defeat"}</div>
               {averageBadge != null && ranks && (
                 <BadgeImage badge={averageBadge} ranks={ranks} className="size-6 shrink-0" />
               )}
@@ -194,14 +195,14 @@ export default function MatchHistoryCard({
             <div className="text-xs text-muted-foreground/60">{matchId}</div>
             <div className="my-1.5 h-px w-full bg-border/50" />
             {steamProfile?.personaname && (
-              <div className="text-xs font-medium text-foreground truncate max-w-28 mb-1">
+              <div className="mb-1 max-w-28 truncate text-xs font-medium text-foreground">
                 {steamProfile.personaname}
               </div>
             )}
             <div className="flex items-start gap-2">
               <HeroImage heroId={heroId} className="mt-0.5 size-8 shrink-0 rounded-md border border-border/50" />
               <div className="flex flex-col">
-                <div className="mt-0.5 text-base font-bold leading-none tracking-wide text-foreground">
+                <div className="mt-0.5 text-base leading-none font-bold tracking-wide text-foreground">
                   {kills}
                   <span className="mx-0.5 text-sm font-medium text-muted-foreground/50">/</span>
                   {deaths}
@@ -223,7 +224,7 @@ export default function MatchHistoryCard({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="w-fit text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70"
+                    className="w-fit text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase"
                   >
                     AP:{" "}
                     <span className="text-foreground">
@@ -249,13 +250,13 @@ export default function MatchHistoryCard({
         <div className="flex flex-1 items-center gap-4 p-2 pl-3">
           {/* Match Info */}
           <div className="flex w-24 shrink-0 flex-col">
-            <div className={cn("font-bold leading-tight", accentColor)}>{gameMode}</div>
+            <div className={cn("leading-tight font-bold", accentColor)}>{gameMode}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">{timeAgo}</div>
             <div className="text-xs text-muted-foreground/60">{matchId}</div>
             <div className="my-2 h-px w-full bg-border/50" />
             <div className="flex items-center gap-2">
               <div>
-                <div className="font-bold leading-tight text-foreground">{isWin ? "Victory" : "Defeat"}</div>
+                <div className="leading-tight font-bold text-foreground">{isWin ? "Victory" : "Defeat"}</div>
                 <div className="text-xs text-muted-foreground">{formatDuration(durationSeconds)}</div>
               </div>
               {averageBadge != null && ranks && (
@@ -269,7 +270,7 @@ export default function MatchHistoryCard({
             <div className="flex items-start gap-3">
               <HeroImage heroId={heroId} className="mt-0.5 size-11 shrink-0 rounded-md border border-border/50" />
               <div className="flex flex-col">
-                <div className="mt-0.5 text-xl font-bold leading-none tracking-wide text-foreground">
+                <div className="mt-0.5 text-xl leading-none font-bold tracking-wide text-foreground">
                   {kills}
                   <span className="mx-0.5 text-base font-medium text-muted-foreground/50">/</span>
                   {deaths}

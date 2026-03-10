@@ -14,7 +14,7 @@ export function ExtraArguments({ extraArgs, usedArgs, onExtraArgChange }: ExtraA
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-foreground">Extra Arguments</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {usedArgs.map((arg) => (
           <div key={arg} className="flex items-center space-x-2">
             <Label className="text-muted-foreground">{snakeToPretty(arg)}</Label>
@@ -22,7 +22,7 @@ export function ExtraArguments({ extraArgs, usedArgs, onExtraArgChange }: ExtraA
               type="text"
               value={extraArgs[arg] || ""}
               onChange={(e) => onExtraArgChange(arg, e.target.value)}
-              className="w-24 h-8 rounded-lg"
+              className="h-8 w-24 rounded-lg"
             />
           </div>
         ))}

@@ -1,4 +1,5 @@
 import { parseAsStringLiteral } from "nuqs";
+
 import { StringSelector } from "./StringSelector";
 
 export const GAME_MODES = ["normal", "street_brawl"] as const;
