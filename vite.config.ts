@@ -13,6 +13,7 @@ export default defineConfig({
     ogImages(),
     reactRouter(),
     babel({
+      include: ["./app/**/*"],
       filter: /\.[jt]sx?$/,
       babelConfig: {
         presets: ["@babel/preset-typescript"],
