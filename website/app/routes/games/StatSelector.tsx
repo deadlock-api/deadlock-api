@@ -1,6 +1,8 @@
 import type React from "react";
 import { useMemo } from "react";
+
 import { cn } from "~/lib/utils";
+
 import { CATEGORY_ICONS, getFilteredCategories } from "./stat-definitions";
 
 export function StatSelector({
@@ -31,10 +33,10 @@ export function StatSelector({
               type="button"
               onClick={() => onChange(category.stats[0].key)}
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                 isActive
-                  ? "bg-primary/15 text-primary border border-primary/30"
-                  : "bg-white/[0.04] text-muted-foreground border border-white/[0.06] hover:bg-white/[0.08]",
+                  ? "border border-primary/30 bg-primary/15 text-primary"
+                  : "border border-white/[0.06] bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08]",
               )}
             >
               {Icon && <Icon className="size-3.5" />}
@@ -53,10 +55,10 @@ export function StatSelector({
               type="button"
               onClick={() => onChange(stat.key)}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer",
+                "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
-                  : "bg-white/[0.04] text-muted-foreground border border-white/[0.06] hover:bg-white/[0.08]",
+                  : "border border-white/[0.06] bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08]",
               )}
             >
               {stat.label}

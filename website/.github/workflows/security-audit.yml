@@ -3,14 +3,14 @@ name: Security Audit
 on:
   push:
     paths:
-      - '**/pnpm-lock.yaml'
-      - '**/package.json'
+      - "**/pnpm-lock.yaml"
+      - "**/package.json"
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
       level:
-        description: 'The level of vulnerability to report (low, moderate, high, critical)'
+        description: "The level of vulnerability to report (low, moderate, high, critical)"
         required: false
         default: high
         type: choice
@@ -39,8 +39,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Specify your project's Node.js version
-          cache: 'pnpm'
+          node-version: "20" # Specify your project's Node.js version
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
 import { useMemo } from "react";
+
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -114,7 +115,7 @@ function MatchupTooltip({
 }) {
   return (
     <div className="flex flex-col gap-1 text-xs">
-      <div className="flex items-center gap-1.5 font-medium pb-1 mb-0.5 border-b border-border">
+      <div className="mb-0.5 flex items-center gap-1.5 border-b border-border pb-1 font-medium">
         <HeroName heroId={heroId} />
         <span className="text-muted-foreground">{separator}</span>
         <HeroName heroId={partnerId} />
@@ -139,7 +140,7 @@ function MatchupTooltip({
         </span>
       </div>
       {prevRelWinrate !== undefined && (
-        <div className="flex justify-between gap-4 border-t border-border pt-1 mt-0.5">
+        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
           <span className="text-muted-foreground">Previous</span>
           <span className="font-medium">
             {prevRelWinrate > 0 ? "+" : ""}
@@ -456,7 +457,7 @@ export function HeroMatchupStatsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );

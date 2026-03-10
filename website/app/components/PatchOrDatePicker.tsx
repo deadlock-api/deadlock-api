@@ -1,10 +1,12 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useId } from "react";
+
 import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { type Dayjs, day } from "~/dayjs";
+
 import { DateRangePicker } from "./primitives/DateRangePicker";
 
 export interface PatchInfo {
@@ -138,11 +140,11 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       <div className="flex flex-col gap-3">
         <Tabs defaultValue={defaultTab} value={tab} onValueChange={(value) => setTab(value as "patch" | "custom")}>
           <TabsList className="flex w-full">
-            <TabsTrigger value="patch" className="text-xs flex-1 flex items-center gap-1">
+            <TabsTrigger value="patch" className="flex flex-1 items-center gap-1 text-xs">
               <ClockIcon className="h-3 w-3" />
               Patch
             </TabsTrigger>
-            <TabsTrigger value="custom" className="text-xs flex-1 flex items-center gap-1">
+            <TabsTrigger value="custom" className="flex flex-1 items-center gap-1 text-xs">
               <CalendarIcon className="h-3 w-3" />
               Custom
             </TabsTrigger>
@@ -151,7 +153,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
 
         {tab === "patch" ? (
           <Select value={matchingPatch?.id || ""} onValueChange={handlePatchSelect}>
-            <SelectTrigger id={patchSelectId} className="h-9 focus-visible:ring-0 w-full">
+            <SelectTrigger id={patchSelectId} className="h-9 w-full focus-visible:ring-0">
               <SelectValue placeholder="Select a patch..." />
             </SelectTrigger>
             <SelectContent>

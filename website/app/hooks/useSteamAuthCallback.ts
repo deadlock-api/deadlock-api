@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { extractSteamId, validateSteamResponse } from "~/lib/steam-auth";
 
 interface SteamAuthCallbackResult {

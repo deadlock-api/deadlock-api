@@ -3,9 +3,11 @@ import type { ComponentProps } from "react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { cn } from "~/lib/utils";
 import type { Message } from "~/types/chat";
+
 import { ToolIndicatorList } from "./ToolIndicator";
 
 interface ChatMessageProps {
@@ -30,7 +32,7 @@ export function ChatMessage({ message, isStreaming, streamingContent }: ChatMess
       </Avatar>
 
       {/* Message bubble */}
-      <div className={cn("flex flex-col gap-1 max-w-[90%]", isUser ? "items-end" : "items-start")}>
+      <div className={cn("flex max-w-[90%] flex-col gap-1", isUser ? "items-end" : "items-start")}>
         {/* Tools used for this message (shown above the bubble for assistant messages) */}
         {!isUser && message.tools && message.tools.length > 0 && (
           <div className="mb-1">
@@ -83,7 +85,7 @@ function MarkdownContent({ content }: MarkdownContentProps) {
         ),
         // Style code blocks
         pre: ({ children, ...props }: ComponentProps<"pre">) => (
-          <pre className="my-2 overflow-x-auto rounded-md bg-background/50 p-3 text-xs font-mono" {...props}>
+          <pre className="my-2 overflow-x-auto rounded-md bg-background/50 p-3 font-mono text-xs" {...props}>
             {children}
           </pre>
         ),
@@ -107,32 +109,32 @@ function MarkdownContent({ content }: MarkdownContentProps) {
         },
         // Style headings
         h1: ({ children, ...props }: ComponentProps<"h1">) => (
-          <h1 className="mb-2 mt-4 text-xl font-bold first:mt-0" {...props}>
+          <h1 className="mt-4 mb-2 text-xl font-bold first:mt-0" {...props}>
             {children}
           </h1>
         ),
         h2: ({ children, ...props }: ComponentProps<"h2">) => (
-          <h2 className="mb-2 mt-3 text-lg font-bold first:mt-0" {...props}>
+          <h2 className="mt-3 mb-2 text-lg font-bold first:mt-0" {...props}>
             {children}
           </h2>
         ),
         h3: ({ children, ...props }: ComponentProps<"h3">) => (
-          <h3 className="mb-1 mt-2 text-base font-bold first:mt-0" {...props}>
+          <h3 className="mt-2 mb-1 text-base font-bold first:mt-0" {...props}>
             {children}
           </h3>
         ),
         h4: ({ children, ...props }: ComponentProps<"h4">) => (
-          <h4 className="mb-1 mt-2 text-sm font-bold first:mt-0" {...props}>
+          <h4 className="mt-2 mb-1 text-sm font-bold first:mt-0" {...props}>
             {children}
           </h4>
         ),
         h5: ({ children, ...props }: ComponentProps<"h5">) => (
-          <h5 className="mb-1 mt-2 text-sm font-semibold first:mt-0" {...props}>
+          <h5 className="mt-2 mb-1 text-sm font-semibold first:mt-0" {...props}>
             {children}
           </h5>
         ),
         h6: ({ children, ...props }: ComponentProps<"h6">) => (
-          <h6 className="mb-1 mt-2 text-sm font-medium first:mt-0" {...props}>
+          <h6 className="mt-2 mb-1 text-sm font-medium first:mt-0" {...props}>
             {children}
           </h6>
         ),
@@ -160,7 +162,7 @@ function MarkdownContent({ content }: MarkdownContentProps) {
         ),
         // Style blockquotes
         blockquote: ({ children, ...props }: ComponentProps<"blockquote">) => (
-          <blockquote className="my-2 border-l-4 border-primary/50 pl-3 italic text-muted-foreground" {...props}>
+          <blockquote className="my-2 border-l-4 border-primary/50 pl-3 text-muted-foreground italic" {...props}>
             {children}
           </blockquote>
         ),
@@ -211,9 +213,9 @@ function MarkdownContent({ content }: MarkdownContentProps) {
 function TypingIndicator() {
   return (
     <div className="flex items-center gap-1 px-2 py-1">
-      <span className="size-1.5 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: "0ms" }} />
-      <span className="size-1.5 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: "150ms" }} />
-      <span className="size-1.5 rounded-full bg-muted-foreground animate-pulse" style={{ animationDelay: "300ms" }} />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: "0ms" }} />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: "150ms" }} />
+      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: "300ms" }} />
     </div>
   );
 }

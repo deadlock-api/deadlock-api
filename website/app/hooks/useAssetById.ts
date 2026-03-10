@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AbilityV2, HeroV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 export function useHeroById(heroId: number): { hero: HeroV2 | undefined; isLoading: boolean } {

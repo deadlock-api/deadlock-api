@@ -1,6 +1,7 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 
@@ -46,7 +47,7 @@ export default function AbilityOrder() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Ability Stats</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           Explore the most common ability upgrade paths and their win rates
         </p>
       </div>

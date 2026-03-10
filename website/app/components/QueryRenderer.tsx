@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 
 interface QueryRendererProps<T> {
@@ -11,7 +12,7 @@ interface QueryRendererProps<T> {
 export function QueryRenderer<T>({
   query,
   loadingFallback = <LoadingLogo />,
-  errorFallback = (error) => <div className="text-center text-sm text-destructive py-8">Error: {error.message}</div>,
+  errorFallback = (error) => <div className="py-8 text-center text-sm text-destructive">Error: {error.message}</div>,
   children,
 }: QueryRendererProps<T>) {
   if (query.isPending) return loadingFallback;

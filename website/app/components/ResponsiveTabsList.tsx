@@ -1,5 +1,6 @@
 import type { VariantProps } from "class-variance-authority";
 import { useLayoutEffect, useRef, useState } from "react";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { TabsList, TabsTrigger, tabsListVariants } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
@@ -58,7 +59,7 @@ export function ResponsiveTabsList({
           </SelectContent>
         </Select>
       ) : (
-        <TabsList variant={variant} className={cn("w-full overflow-x-auto scrollbar-none", className)}>
+        <TabsList variant={variant} className={cn("scrollbar-none w-full overflow-x-auto", className)}>
           {options.map((opt) => (
             <TabsTrigger key={opt.value} value={opt.value}>
               {opt.label}
@@ -75,7 +76,10 @@ export function ResponsiveTabsList({
         variant={variant}
         aria-hidden
         inert
-        className={cn("w-full overflow-x-auto scrollbar-none absolute top-0 left-0 invisible pointer-events-none", className)}
+        className={cn(
+          "scrollbar-none pointer-events-none invisible absolute top-0 left-0 w-full overflow-x-auto",
+          className,
+        )}
       >
         {options.map((opt) => (
           <TabsTrigger key={opt.value} value={opt.value} tabIndex={-1}>

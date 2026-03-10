@@ -1,4 +1,5 @@
 import React, { useCallback } from "react";
+
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -56,7 +57,7 @@ export function LeaderboardControls({
   );
 
   return (
-    <div className="flex flex-wrap items-center justify-between py-4 gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-4 py-4">
       <div className="flex items-center space-x-2">
         <Input placeholder="Search player..." value={searchQuery} onChange={handleSearchChange} className="h-8 w-40" />
       </div>
@@ -75,7 +76,7 @@ export function LeaderboardControls({
           </SelectContent>
         </Select>
       </div>
-      <span className="text-sm text-muted-foreground flex items-center space-x-1">
+      <span className="flex items-center space-x-1 text-sm text-muted-foreground">
         Page
         <span className="mx-2">
           <Input

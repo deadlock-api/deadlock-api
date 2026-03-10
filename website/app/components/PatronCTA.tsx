@@ -1,5 +1,6 @@
 import { Zap } from "lucide-react";
 import { Link } from "react-router";
+
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { usePatronAuth } from "~/hooks/usePatronAuth";
@@ -11,9 +12,9 @@ export function PatronCTA() {
 
   return (
     <Card className="border-primary/30 bg-linear-to-r from-primary/10 to-transparent">
-      <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4">
+      <CardContent className="flex flex-col items-center justify-between gap-4 py-4 sm:flex-row">
         <div className="flex items-center gap-3">
-          <Zap className="h-5 w-5 text-primary shrink-0" />
+          <Zap className="h-5 w-5 shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
             Get your complete match history from first to last game, with faster updates via prioritized fetching.
           </p>
@@ -21,7 +22,7 @@ export function PatronCTA() {
         <Link to="/patron" prefetch="intent" className="shrink-0">
           <Button
             size="sm"
-            className="bg-linear-to-r from-[#fa4454] to-[#ff6b7a] hover:from-[#e83d4c] hover:to-[#f05a68] text-white font-semibold"
+            className="bg-linear-to-r from-[#fa4454] to-[#ff6b7a] font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68]"
           >
             Learn More
           </Button>

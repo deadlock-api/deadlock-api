@@ -1,8 +1,9 @@
 import type { MapV1 } from "assets_deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { HeatmapLegend } from "./HeatmapLegend";
+
 import { buildHeatGrid, buildHeatGrids, COLOR_LUT, GRID_RES, sampleBilinear } from "./heatmap-grid";
+import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
 
 type ViewMode = "kills" | "deaths" | "kd";
@@ -201,7 +202,7 @@ export default function HeatmapCanvas({
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center">
+    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center">
       <canvas ref={mapCanvasRef} className="absolute rounded-lg" />
       <canvas
         ref={heatCanvasRef}
@@ -216,7 +217,7 @@ export default function HeatmapCanvas({
       )}
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-50 rounded-lg border border-white/10 bg-black/85 backdrop-blur-sm px-3 py-2 text-xs shadow-lg"
+          className="pointer-events-none absolute z-50 rounded-lg border border-white/10 bg-black/85 px-3 py-2 text-xs shadow-lg backdrop-blur-sm"
           style={{
             left: tooltip.x,
             top: tooltip.y,

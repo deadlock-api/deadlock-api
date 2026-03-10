@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
+
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
 import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
@@ -21,6 +22,7 @@ import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
+
 import { Button } from "../ui/button";
 
 interface BulkMatchMetadata {
@@ -368,7 +370,7 @@ export function ItemCombsExplore({
 
   if (isLoadingItemAssets) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
@@ -376,17 +378,17 @@ export function ItemCombsExplore({
 
   return (
     <div>
-      <div className="grid grid-cols-2 text-center mt-2 rounded bg-muted p-4 min-h-24">
+      <div className="mt-2 grid min-h-24 grid-cols-2 rounded bg-muted p-4 text-center">
         <div className="border-r">
-          <h2 className="text-center text-xl p-2">Included Items</h2>
-          <div className="flex flex-wrap items-center justify-center p-2 gap-2">
+          <h2 className="p-2 text-center text-xl">Included Items</h2>
+          <div className="flex flex-wrap items-center justify-center gap-2 p-2">
             {Array.from(includeItems)?.map((item) => (
               <Button
                 key={item}
                 variant="outline"
                 onClick={() => setIncludeItems(new Set([...includeItems].filter((i) => i !== item)))}
               >
-                <div className="flex items-center justify-start w-full gap-2">
+                <div className="flex w-full items-center justify-start gap-2">
                   <ItemImage itemId={item} className="size-6" />
                   <ItemName itemId={item} className="text-sm text-pretty" />
                 </div>
@@ -395,15 +397,15 @@ export function ItemCombsExplore({
           </div>
         </div>
         <div className="border-l">
-          <h2 className="text-center text-xl p-2">Excluded Items</h2>
-          <div className="flex flex-wrap items-center justify-center p-2 gap-2">
+          <h2 className="p-2 text-center text-xl">Excluded Items</h2>
+          <div className="flex flex-wrap items-center justify-center gap-2 p-2">
             {Array.from(excludeItems)?.map((item) => (
               <Button
                 key={item}
                 variant="outline"
                 onClick={() => setExcludeItems(new Set([...excludeItems].filter((i) => i !== item)))}
               >
-                <div className="flex items-center justify-start w-full gap-2">
+                <div className="flex w-full items-center justify-start gap-2">
                   <ItemImage itemId={item} className="size-6" />
                   <ItemName itemId={item} className="text-sm text-pretty" />
                 </div>
@@ -414,9 +416,9 @@ export function ItemCombsExplore({
       </div>
 
       <div className="mt-4 rounded bg-muted px-4 py-2">
-        <h2 className="text-center text-xl p-2">Select Items</h2>
+        <h2 className="p-2 text-center text-xl">Select Items</h2>
         <Tabs value={slot} onValueChange={(i) => setSlot(i as "weapon" | "vitality" | "spirit")} className="w-full">
-          <TabsList className="flex items-center justify-start flex-wrap h-auto w-full">
+          <TabsList className="flex h-auto w-full flex-wrap items-center justify-start">
             <TabsTrigger className="flex-1" value="weapon">
               Weapon
             </TabsTrigger>
@@ -430,8 +432,8 @@ export function ItemCombsExplore({
           <TabsContent value={slot}>
             {[1, 2, 3, 4].map((tier) => (
               <div key={tier}>
-                <h3 className="text-center text-lg p-2 mt-2">Tier {tier}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-2">
+                <h3 className="mt-2 p-2 text-center text-lg">Tier {tier}</h3>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {assetsItems
                     ?.filter(
                       (i) =>
@@ -442,15 +444,15 @@ export function ItemCombsExplore({
                         i.item_tier === tier,
                     )
                     .map((item) => (
-                      <div key={item.id} className="flex items-center justify-between w-full gap-2">
+                      <div key={item.id} className="flex w-full items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <ItemImage itemId={item.id} className="size-8 min-w-8 min-h-8" />
+                          <ItemImage itemId={item.id} className="size-8 min-h-8 min-w-8" />
                           <ItemName itemId={item.id} className="text-sm text-pretty" />
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="secondary"
-                            className="bg-green-700 hover:bg-green-500 text-lg px-1 h-6"
+                            className="h-6 bg-green-700 px-1 text-lg hover:bg-green-500"
                             onClick={() => {
                               setIncludeItems(new Set([...includeItems, item.id]));
                               if (excludeItems.has(item.id)) {
@@ -462,7 +464,7 @@ export function ItemCombsExplore({
                           </Button>
                           <Button
                             variant="destructive"
-                            className="bg-red-700 hover:bg-red-500 px-1 h-6"
+                            className="h-6 bg-red-700 px-1 hover:bg-red-500"
                             onClick={() => {
                               setExcludeItems(new Set([...excludeItems, item.id]));
                               if (includeItems.has(item.id)) {
@@ -484,8 +486,8 @@ export function ItemCombsExplore({
 
       <div className={cn("mt-4 gap-4", topBuildsEnabled ? "flex" : "")}>
         {/* Display the filtered data using ItemStatsTableDisplay */}
-        <div className="flex-1 min-w-0 rounded bg-muted p-4">
-          <h2 className="text-center text-xl p-2">Items Stats</h2>
+        <div className="min-w-0 flex-1 rounded bg-muted p-4">
+          <h2 className="p-2 text-center text-xl">Items Stats</h2>
           <ItemStatsTableDisplay
             data={displayData}
             isLoading={isLoadingItemStats || isLoadingItemAssets}
@@ -509,7 +511,7 @@ export function ItemCombsExplore({
 
         {topBuildsEnabled && (
           <div className="w-1/3 shrink-0 overflow-x-auto">
-            <h2 className="text-center text-lg mb-2">Top Builds</h2>
+            <h2 className="mb-2 text-center text-lg">Top Builds</h2>
             {isLoadingTopBuilds ? (
               <div className="flex items-center justify-center py-8">
                 <LoadingLogo />
@@ -521,7 +523,7 @@ export function ItemCombsExplore({
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-4">No matching builds found.</p>
+              <p className="py-4 text-center text-muted-foreground">No matching builds found.</p>
             )}
           </div>
         )}

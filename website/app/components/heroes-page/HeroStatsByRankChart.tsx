@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
@@ -23,6 +24,7 @@ import { getPickrateMultiplier } from "~/lib/constants";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { queryKeys } from "~/queries/query-keys";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
+
 import type { ByRankStat } from "./HeroStatSelectors";
 
 interface HeroStatsByRankChartProps {
@@ -96,12 +98,12 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const data = payload[0].payload;
   return (
-    <div className="rounded-lg border border-border/50 bg-background px-3 py-2.5 text-xs shadow-xl min-w-[10rem]">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="min-w-[10rem] rounded-lg border border-border/50 bg-background px-3 py-2.5 text-xs shadow-xl">
+      <div className="mb-2 flex items-center gap-2">
         <div className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ backgroundColor: data.heroColor }} />
-        <span className="font-semibold text-sm text-foreground">{data.heroName}</span>
+        <span className="text-sm font-semibold text-foreground">{data.heroName}</span>
       </div>
-      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/50">
+      <div className="mb-2 flex items-center gap-2 border-b border-border/50 pb-2">
         {data.badgeImageUrl && <img src={data.badgeImageUrl} alt={data.rankName} className="size-6 object-contain" />}
         <span className="font-medium text-foreground">{data.rankName}</span>
       </div>
@@ -282,14 +284,14 @@ export function HeroStatsByRankChart({
 
   if (isLoadingHeroStats || isLoadingRanks || isLoadingHeroes) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={700} className="p-4 bg-muted">
+    <ResponsiveContainer width="100%" height={700} className="bg-muted p-4">
       <ScatterChart margin={{ top: 20, right: 30, bottom: 60, left: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
         <XAxis

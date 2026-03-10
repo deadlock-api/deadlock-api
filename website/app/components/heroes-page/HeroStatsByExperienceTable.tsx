@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo, useState } from "react";
+
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -222,7 +223,7 @@ export function HeroStatsByExperienceTable({
 
   if (allLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
@@ -245,7 +246,7 @@ export function HeroStatsByExperienceTable({
           {EXPERIENCE_BUCKETS.map((bucket, i) => (
             <TableHead
               key={bucket.label}
-              className="text-center cursor-pointer select-none"
+              className="cursor-pointer text-center select-none"
               onClick={() => handleSort(`bucket-${i}`)}
               onKeyDown={handleKeyDown(`bucket-${i}`)}
               tabIndex={0}
@@ -258,7 +259,7 @@ export function HeroStatsByExperienceTable({
             </TableHead>
           ))}
           <TableHead
-            className="text-center cursor-pointer select-none"
+            className="cursor-pointer text-center select-none"
             onClick={() => handleSort("delta")}
             onKeyDown={handleKeyDown("delta")}
             tabIndex={0}
@@ -271,7 +272,7 @@ export function HeroStatsByExperienceTable({
       <TableBody>
         {sortedRows.map((row, index) => (
           <TableRow key={row.heroId}>
-            <TableCell className="font-semibold text-center">{index + 1}</TableCell>
+            <TableCell className="text-center font-semibold">{index + 1}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
                 <HeroImage heroId={row.heroId} />
@@ -281,7 +282,7 @@ export function HeroStatsByExperienceTable({
             {row.bucketValues.map((val, i) => (
               <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
                 {bucketLoading[i] ? (
-                  <Skeleton className="h-4 w-12 mx-auto" />
+                  <Skeleton className="mx-auto h-4 w-12" />
                 ) : (
                   <BucketTooltip
                     entry={row.bucketEntries[i]}
@@ -295,7 +296,7 @@ export function HeroStatsByExperienceTable({
             ))}
             <TableCell className="text-center tabular-nums">
               {!allBucketsLoaded ? (
-                <Skeleton className="h-4 w-12 mx-auto" />
+                <Skeleton className="mx-auto h-4 w-12" />
               ) : (
                 <DeltaTooltip
                   firstEntry={row.bucketEntries.find((e) => e !== null) ?? null}
@@ -337,13 +338,13 @@ function BucketTooltip({
       <TooltipTrigger asChild>
         <span className="cursor-default">{children}</span>
       </TooltipTrigger>
-      <TooltipContent className="bg-popover text-popover-foreground border border-border shadow-md p-3">
+      <TooltipContent className="border border-border bg-popover p-3 text-popover-foreground shadow-md">
         <div className="flex flex-col gap-1 text-xs">
-          <div className="font-medium text-foreground mb-1">{bucketLabel}</div>
+          <div className="mb-1 font-medium text-foreground">{bucketLabel}</div>
           <TooltipRow label="Matches" value={entry.matches.toLocaleString()} />
           <TooltipRow label="Win rate" value={`${winrate}%`} highlight={heroStat === "winrate"} />
           <TooltipRow label="Players" value={entry.players.toLocaleString()} />
-          <div className="border-t border-border my-1" />
+          <div className="my-1 border-t border-border" />
           <TooltipRow label="Kills/match" value={kills} highlight={heroStat === "kills_per_match"} />
           <TooltipRow label="Deaths/match" value={deaths} highlight={heroStat === "deaths_per_match"} />
           <TooltipRow label="Assists/match" value={assists} highlight={heroStat === "assists_per_match"} />
@@ -381,11 +382,11 @@ function DeltaTooltip({
       <TooltipTrigger asChild>
         <span className="cursor-default">{children}</span>
       </TooltipTrigger>
-      <TooltipContent className="bg-popover text-popover-foreground border border-border shadow-md p-3">
+      <TooltipContent className="border border-border bg-popover p-3 text-popover-foreground shadow-md">
         <div className="flex flex-col gap-1 text-xs">
           <TooltipRow label="Beginner" value={fmt(firstVal)} />
           <TooltipRow label="Veteran" value={fmt(lastVal)} />
-          <div className="border-t border-border my-1" />
+          <div className="my-1 border-t border-border" />
           <TooltipRow label="Difference" value={fmt(lastVal - firstVal)} />
         </div>
       </TooltipContent>

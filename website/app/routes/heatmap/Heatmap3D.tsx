@@ -4,6 +4,7 @@ import type { MapV1 } from "assets_deadlock_api_client";
 import type { KillDeathStats } from "deadlock_api_client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+
 import { buildHeatGrid, GRID_RES, interpolateColor, sampleBilinear } from "./heatmap-grid";
 import { HeatmapLegend } from "./HeatmapLegend";
 import { SensitivitySlider } from "./SensitivitySlider";
@@ -189,7 +190,7 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
   }, [data, viewMode, radius, sensitivity]);
 
   return (
-    <div className="relative w-full h-full rounded-lg overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden rounded-lg">
       <Canvas camera={{ position: [0, 3.5, 3.5], fov: 50, near: 0.1, far: 100 }} gl={{ antialias: true, alpha: true }}>
         <color attach="background" args={["#050810"]} />
         <ambientLight intensity={0.6} />
@@ -214,17 +215,17 @@ export default function Heatmap3D({ data, mapData, viewMode, sensitivity, onSens
       <HeatmapLegend viewMode={viewMode} maxValue={legendMax} />
 
       <div className="absolute bottom-3 left-3 flex flex-col gap-1.5">
-        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
-          <span className="text-[10px] text-muted-foreground whitespace-nowrap">Opacity</span>
+        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+          <span className="text-[10px] whitespace-nowrap text-muted-foreground">Opacity</span>
           <input
             type="range"
             min={10}
             max={100}
             value={Math.round(opacity * 100)}
             onChange={(e) => setOpacity(Number(e.target.value) / 100)}
-            className="w-20 h-1 accent-primary cursor-pointer"
+            className="h-1 w-20 cursor-pointer accent-primary"
           />
-          <span className="text-[10px] text-muted-foreground tabular-nums w-7">{Math.round(opacity * 100)}%</span>
+          <span className="w-7 text-[10px] text-muted-foreground tabular-nums">{Math.round(opacity * 100)}%</span>
         </div>
         <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} />
       </div>

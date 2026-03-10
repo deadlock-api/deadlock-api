@@ -1,5 +1,6 @@
 import { lazy, Suspense, useId } from "react";
 import type { MetaFunction } from "react-router";
+
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
@@ -60,8 +61,8 @@ export default function Heroes(
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Hero Stats</h1>
-        <p className="text-sm text-muted-foreground mt-1">Detailed analytics and matchup data for Deadlock heroes</p>
-        <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-1 text-sm text-muted-foreground">Detailed analytics and matchup data for Deadlock heroes</p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Explore win rates, pick rates, and matchup data for every Deadlock hero. Filter by rank, patch, and game mode
           to find the strongest heroes in the current meta or analyze how hero performance changes over time.
         </p>
@@ -109,7 +110,7 @@ export default function Heroes(
 
         <TabsContent value="stats-over-time">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
@@ -143,7 +144,7 @@ export default function Heroes(
 
         <TabsContent value="stats-by-duration">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
@@ -203,7 +204,7 @@ export default function Heroes(
 
         <TabsContent value="stats-by-experience">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
@@ -227,10 +228,10 @@ export default function Heroes(
         </TabsContent>
 
         <TabsContent value="matchups">
-          <div className="flex flex-col gap-4 mt-4">
-            <div className="flex flex-wrap justify-center items-center sm:flex-nowrap gap-8">
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:flex-nowrap">
               <div className="flex items-center gap-2">
-                <Label htmlFor={sameLaneFilterId1} className="text-sm font-semibold text-foreground text-nowrap">
+                <Label htmlFor={sameLaneFilterId1} className="text-sm font-semibold text-nowrap text-foreground">
                   Same Lane Filter
                 </Label>
                 <Checkbox
@@ -240,7 +241,7 @@ export default function Heroes(
                 />
               </div>
               <div className="flex items-center gap-2">
-                <Label htmlFor={samePartyFilterId1} className="text-sm font-semibold text-foreground text-nowrap">
+                <Label htmlFor={samePartyFilterId1} className="text-sm font-semibold text-nowrap text-foreground">
                   Same Party Filter
                 </Label>
                 <Checkbox
@@ -289,7 +290,7 @@ export default function Heroes(
 
         <TabsContent value="hero-matchup-details">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap justify-center items-center sm:flex-nowrap gap-8">
+            <div className="flex flex-wrap items-center justify-center gap-8 sm:flex-nowrap">
               <HeroSelector
                 selectedHero={filters.heroId}
                 onHeroSelected={(selectedHeroId) => {
@@ -297,9 +298,9 @@ export default function Heroes(
                   filters.setHeroId(selectedHeroId);
                 }}
               />
-              <div className="flex flex-col flex-wrap items-center sm:flex-nowrap gap-2">
+              <div className="flex flex-col flex-wrap items-center gap-2 sm:flex-nowrap">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor={sameLaneFilterId2} className="text-sm font-semibold text-foreground text-nowrap">
+                  <Label htmlFor={sameLaneFilterId2} className="text-sm font-semibold text-nowrap text-foreground">
                     Same Lane Filter
                   </Label>
                   <Checkbox
@@ -309,7 +310,7 @@ export default function Heroes(
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Label htmlFor={samePartyFilterId2} className="text-sm font-semibold text-foreground text-nowrap">
+                  <Label htmlFor={samePartyFilterId2} className="text-sm font-semibold text-nowrap text-foreground">
                     Same Party Filter
                   </Label>
                   <Checkbox

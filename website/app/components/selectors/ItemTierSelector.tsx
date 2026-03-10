@@ -18,14 +18,14 @@ export function ItemTierSelector({
   };
 
   return (
-    <div className="flex flex-wrap gap-2 items-center">
+    <div className="flex flex-wrap items-center gap-2">
       Tiers:
-      <div className="flex gap-2 item-center">
+      <div className="item-center flex gap-2">
         {TIERS.map((tier) => (
           <Button
             key={tier}
             type="button"
-            className={`px-4 py-2 rounded ${
+            className={`rounded px-4 py-2 ${
               selectedItemTiers?.includes(tier)
                 ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground"

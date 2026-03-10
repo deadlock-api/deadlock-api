@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";

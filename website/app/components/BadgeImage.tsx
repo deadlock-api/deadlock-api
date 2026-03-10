@@ -2,6 +2,7 @@ import type { RankV2 } from "assets_deadlock_api_client";
 import { CircleQuestionMark } from "lucide-react";
 import type React from "react";
 import { memo, useMemo, useState } from "react";
+
 import { Skeleton } from "~/components/ui/skeleton";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { cn } from "~/lib/utils";
@@ -29,7 +30,7 @@ export const BadgeImage = memo(function BadgeImage({
 
   if (isError || !badgeInfo) {
     return (
-      <div className={cn("flex items-center justify-center bg-muted rounded-md", className)}>
+      <div className={cn("flex items-center justify-center rounded-md bg-muted", className)}>
         <CircleQuestionMark className="size-1/2 text-muted-foreground" />
       </div>
     );

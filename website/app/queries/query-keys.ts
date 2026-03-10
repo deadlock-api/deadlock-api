@@ -4,7 +4,9 @@ import type {
   AnalyticsApiKillDeathStatsRequest,
   GameStatsBucketEnum,
 } from "deadlock_api_client";
+
 import type { GameMode } from "~/components/selectors/GameModeSelector";
+
 import { patronQueryKeys } from "./patron-queries";
 
 type Nullable<T> = T | null | undefined;

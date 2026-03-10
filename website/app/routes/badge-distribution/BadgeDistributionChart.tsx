@@ -2,6 +2,7 @@ import type { RankV2 } from "assets_deadlock_api_client";
 import type { BadgeDistribution } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, Label, Tooltip, XAxis, YAxis } from "recharts";
+
 import { ChartContainer } from "~/components/ui/chart";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { range } from "~/lib/utils";
@@ -159,7 +160,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
             const info = badgeMap.get(entry.badge);
             const imageUrl = info?.small_webp ?? info?.small;
             return (
-              <div className="rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
                 {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}
                 <div>
                   <div className="font-medium">

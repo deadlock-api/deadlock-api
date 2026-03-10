@@ -1,17 +1,19 @@
+import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import type { GameStatsQueryParams } from "~/queries/games-query";
+
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
 const GamesOverview = lazy(() => import("./GamesOverview"));
@@ -79,8 +81,8 @@ export default function Games() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Game Stats</h1>
-        <p className="text-sm text-muted-foreground mt-1">Aggregate match statistics and trends</p>
-        <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-1 text-sm text-muted-foreground">Aggregate match statistics and trends</p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Track Deadlock match trends including average kills, deaths, game duration, and more. View stats over time,
           compare across ranks, and spot meta shifts as patches roll out.
         </p>

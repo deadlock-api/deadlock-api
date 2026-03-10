@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
+
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
@@ -89,7 +90,7 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
               type="button"
               onClick={() => handleDateRangeSelect()}
               aria-label="Reset date range"
-              className="hover:text-red-500 font-bold text-lg align-middle icon-[mdi--close]"
+              className="icon-[mdi--close] align-middle text-lg font-bold hover:text-red-500"
             />
           </Button>
         </PopoverTrigger>

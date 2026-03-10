@@ -1,6 +1,7 @@
 import { ArrowLeft, Home } from "lucide-react";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
+
 import { Button } from "~/components/ui/button";
 
 export const meta: MetaFunction = () => {
@@ -16,11 +17,11 @@ const suggestions = [
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-6 text-center">
       <div className="space-y-2">
         <h1 className="text-7xl font-bold tracking-tight text-primary">404</h1>
         <h2 className="text-2xl font-semibold">Page Not Found</h2>
-        <p className="text-muted-foreground max-w-md">
+        <p className="max-w-md text-muted-foreground">
           The page you're looking for doesn't exist or may have been moved.
         </p>
       </div>
@@ -39,13 +40,13 @@ export default function NotFound() {
       </div>
 
       <div className="pt-4">
-        <p className="text-sm text-muted-foreground mb-3">Or try one of these:</p>
+        <p className="mb-3 text-sm text-muted-foreground">Or try one of these:</p>
         <div className="flex flex-wrap justify-center gap-2">
           {suggestions.map((s) => (
             <Link
               key={s.to}
               to={s.to}
-              className="text-sm px-3 py-1.5 rounded-md border border-border hover:border-primary/40 hover:text-primary transition-colors"
+              className="rounded-md border border-border px-3 py-1.5 text-sm transition-colors hover:border-primary/40 hover:text-primary"
             >
               {s.label}
             </Link>

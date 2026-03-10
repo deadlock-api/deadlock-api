@@ -14,22 +14,22 @@ export function NumberSelectorBare({
   max?: number;
 }) {
   return (
-    <div className="flex items-center border rounded-md px-2 py-1 bg-transparent min-w-0 h-9 w-full md:text-sm focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring">
+    <div className="flex h-9 w-full min-w-0 items-center rounded-md border bg-transparent px-2 py-1 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50 md:text-sm">
       <button
         type="button"
         aria-label="Decrease"
-        className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+        className="cursor-pointer px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
         onClick={() => onChange(Math.max(min ?? 0, value - step))}
       >
         -
       </button>
-      <span className="flex-1 text-center select-none text-muted-foreground" style={{ minWidth: 32 }}>
+      <span className="flex-1 text-center text-muted-foreground select-none" style={{ minWidth: 32 }}>
         {value}
       </span>
       <button
         type="button"
         aria-label="Increase"
-        className="px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+        className="cursor-pointer px-2 text-lg font-bold text-muted-foreground hover:text-foreground focus:outline-none"
         onClick={() => onChange(Math.min(max ?? Number.POSITIVE_INFINITY, value + step))}
       >
         +

@@ -1,5 +1,6 @@
 import { Send, Square } from "lucide-react";
 import { type ChangeEvent, type KeyboardEvent, useRef, useState } from "react";
+
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
@@ -64,8 +65,8 @@ export function ChatInput({
   return (
     <div className="border-t bg-background p-4 pb-0">
       <div className="mx-auto max-w-3xl">
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 relative">
+        <div className="flex items-end gap-2">
+          <div className="relative flex-1">
             <textarea
               ref={textareaRef}
               value={message}
@@ -76,9 +77,9 @@ export function ChatInput({
               rows={1}
               className={cn(
                 "w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm transition-colors",
-                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                "placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
                 "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-                "min-h-[42px] max-h-[200px]",
+                "max-h-[200px] min-h-[42px]",
                 isOverLimit && "border-destructive focus-visible:ring-destructive",
               )}
             />
@@ -105,7 +106,7 @@ export function ChatInput({
             </Button>
           )}
         </div>
-        <div className="flex justify-end mt-1">
+        <div className="mt-1 flex justify-end">
           <span className={cn("text-xs", isOverLimit ? "text-destructive" : "text-muted-foreground")}>
             {remainingChars} characters remaining
           </span>

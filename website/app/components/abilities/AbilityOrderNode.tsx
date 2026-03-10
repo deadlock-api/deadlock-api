@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useRef } from "react";
+
 import { AbilityImage } from "~/components/AbilityImage";
 import { AbilityName } from "~/components/AbilityName";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
@@ -131,7 +132,7 @@ export default function AbilityOrderNode({
             <div
               data-ability-card
               className={cn(
-                "border border-l-2 rounded-lg p-2 w-[160px] transition-all",
+                "w-[160px] rounded-lg border border-l-2 p-2 transition-all",
                 isFocusable && "cursor-pointer",
                 "bg-card/80 backdrop-blur-sm",
                 slotColor,
@@ -154,20 +155,20 @@ export default function AbilityOrderNode({
               role={isFocusable ? "button" : undefined}
             >
               {/* Header: icon + name + tier pill */}
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex items-center gap-2">
                 {node.abilityId != null ? (
                   <AbilityImage abilityId={node.abilityId} className="size-10 shrink-0 rounded-lg" />
                 ) : (
                   <div className="size-10 shrink-0 rounded-lg bg-muted" />
                 )}
-                <div className="flex flex-col min-w-0 gap-0.5">
+                <div className="flex min-w-0 flex-col gap-0.5">
                   {node.abilityId != null ? (
-                    <AbilityName abilityId={node.abilityId} className="text-xs font-semibold leading-tight" />
+                    <AbilityName abilityId={node.abilityId} className="text-xs leading-tight font-semibold" />
                   ) : (
-                    <span className="text-xs font-semibold leading-tight">Root</span>
+                    <span className="text-xs leading-tight font-semibold">Root</span>
                   )}
                   <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <span className="px-1.5 py-px rounded-full bg-muted text-[10px] font-medium">T{abilityLevel}</span>
+                    <span className="rounded-full bg-muted px-1.5 py-px text-[10px] font-medium">T{abilityLevel}</span>
                     <span>{cumulativePoints} pts</span>
                   </span>
                 </div>
@@ -177,8 +178,8 @@ export default function AbilityOrderNode({
               <div className="space-y-1">
                 {/* Win Rate */}
                 <div className="flex items-center gap-1.5 text-[10px]">
-                  <span className="text-muted-foreground font-medium w-[18px] shrink-0">WR</span>
-                  <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                  <span className="w-[18px] shrink-0 font-medium text-muted-foreground">WR</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full transition-all duration-300 ease-out"
                       style={{
@@ -189,7 +190,7 @@ export default function AbilityOrderNode({
                   </div>
                   <span
                     className={cn(
-                      "font-semibold tabular-nums w-[38px] text-right shrink-0",
+                      "w-[38px] shrink-0 text-right font-semibold tabular-nums",
                       winRate >= 0.5 ? "text-green-400" : "text-red-400",
                     )}
                   >
@@ -199,8 +200,8 @@ export default function AbilityOrderNode({
 
                 {/* Pick Rate */}
                 <div className="flex items-center gap-1.5 text-[10px]">
-                  <span className="text-muted-foreground font-medium w-[18px] shrink-0">PR</span>
-                  <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                  <span className="w-[18px] shrink-0 font-medium text-muted-foreground">PR</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full transition-all duration-300 ease-out"
                       style={{
@@ -209,7 +210,7 @@ export default function AbilityOrderNode({
                       }}
                     />
                   </div>
-                  <span className="font-semibold tabular-nums text-cyan-400 w-[38px] text-right shrink-0">
+                  <span className="w-[38px] shrink-0 text-right font-semibold text-cyan-400 tabular-nums">
                     {prPercent.toFixed(1)}%
                   </span>
                 </div>
@@ -218,7 +219,7 @@ export default function AbilityOrderNode({
           </TooltipTrigger>
           <TooltipContent
             side="right"
-            className="max-w-[220px] p-0 overflow-hidden bg-popover text-popover-foreground border border-border [&>svg]:fill-popover [&>svg]:bg-popover"
+            className="max-w-[220px] overflow-hidden border border-border bg-popover p-0 text-popover-foreground [&>svg]:bg-popover [&>svg]:fill-popover"
           >
             <div className="text-xs">
               {/* Header */}
@@ -226,7 +227,7 @@ export default function AbilityOrderNode({
                 T{abilityLevel} · {cumulativePoints} ability points spent
               </div>
               {/* Stats grid */}
-              <div className="px-3 py-2 space-y-1.5">
+              <div className="space-y-1.5 px-3 py-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Win Rate</span>
                   <span className={cn("font-medium", winRate >= 0.5 ? "text-green-400" : "text-red-400")}>
@@ -252,9 +253,9 @@ export default function AbilityOrderNode({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">W / L</span>
                   <span>
-                    <span className="text-green-400 font-medium">{node.wins.toLocaleString()}</span>
+                    <span className="font-medium text-green-400">{node.wins.toLocaleString()}</span>
                     {" / "}
-                    <span className="text-red-400 font-medium">{node.losses.toLocaleString()}</span>
+                    <span className="font-medium text-red-400">{node.losses.toLocaleString()}</span>
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -314,9 +315,9 @@ export default function AbilityOrderNode({
               const isFirst = i === 0;
               const isLast = i === displayedChildren.length - 1;
               return (
-                <motion.div key={child.abilityId} className="flex flex-col items-center flex-1" variants={fadeUp}>
+                <motion.div key={child.abilityId} className="flex flex-1 flex-col items-center" variants={fadeUp}>
                   {/* Horizontal connector segments + vertical drop */}
-                  <div className="flex self-stretch h-4">
+                  <div className="flex h-4 self-stretch">
                     <div className={cn("flex-1 border-muted-foreground/30", !isFirst && "border-t")} />
                     <div className="h-full border-l border-muted-foreground/30" />
                     <div className={cn("flex-1 border-muted-foreground/30", !isLast && "border-t")} />

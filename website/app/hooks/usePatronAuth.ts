@@ -1,4 +1,5 @@
 import { useContext } from "react";
+
 import { PatronAuthContext, type PatronAuthContextValue } from "~/contexts/PatronAuthContext";
 
 export function usePatronAuth(): PatronAuthContextValue {

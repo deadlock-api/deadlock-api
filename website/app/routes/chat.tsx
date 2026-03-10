@@ -1,6 +1,7 @@
 import { Bot, RotateCcw, Sparkles } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { ChatInput } from "~/components/chat/ChatInput";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
@@ -72,43 +73,43 @@ export default function ChatPage() {
   }, [clearError]);
 
   return (
-    <div className="flex flex-col h-[85vh] w-full">
+    <div className="flex h-[85vh] w-full flex-col">
       {/* Chat header with New Conversation button */}
       {isVerified && hasMessages && (
-        <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Bot className="size-4 text-primary" />
             <span className="text-sm font-medium">Deadlock AI</span>
           </div>
           <Button variant="outline" size="sm" onClick={handleNewConversation} disabled={conversation.isStreaming}>
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="mr-2 h-4 w-4" />
             New Conversation
           </Button>
         </div>
       )}
 
       {/* Chat container */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         {!isVerified ? (
           // Turnstile verification required
-          <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex flex-1 items-center justify-center p-4">
             <Suspense fallback={<LoadingLogo />}>
               <TurnstileVerification onVerified={handleTurnstileVerified} />
             </Suspense>
           </div>
         ) : !hasMessages ? (
           // Empty state - Welcome message
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="max-w-lg w-full space-y-6">
-              <div className="text-center space-y-3">
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div className="w-full max-w-lg space-y-6">
+              <div className="space-y-3 text-center">
                 <div className="flex items-center justify-center">
-                  <div className="flex items-center justify-center size-14 rounded-2xl bg-primary/10 border border-primary/20">
+                  <div className="flex size-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
                     <Sparkles className="size-7 text-primary" />
                   </div>
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight">Deadlock AI Assistant</h2>
-                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     Ask me anything about Deadlock — hero builds, item recommendations, game mechanics, match
                     statistics, and more.
                   </p>
@@ -131,7 +132,7 @@ export default function ChatPage() {
         {/* Error display - shown when there's an error */}
         {conversation.error && isVerified && (
           <div className="border-t px-4 py-3">
-            <div className="max-w-3xl mx-auto">
+            <div className="mx-auto max-w-3xl">
               <Suspense fallback={<LoadingLogo />}>
                 <ChatError
                   error={conversation.error}
@@ -155,8 +156,8 @@ export default function ChatPage() {
           />
         ) : (
           <div className="border-t p-4">
-            <div className="max-w-3xl mx-auto">
-              <p className="text-sm text-muted-foreground text-center">
+            <div className="mx-auto max-w-3xl">
+              <p className="text-center text-sm text-muted-foreground">
                 Complete Turnstile verification to start chatting
               </p>
             </div>

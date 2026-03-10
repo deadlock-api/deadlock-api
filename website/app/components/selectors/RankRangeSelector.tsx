@@ -2,12 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 import { ShieldIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+
 import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import { queryKeys } from "~/queries/query-keys";
+
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 
 function getRankId(tier: number, subrank: number): number {
@@ -108,7 +110,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
       <ImgWithSkeleton
         src={getRankImageUrl(committedMinOption.rank, committedMinOption.subrank, "small", "webp") ?? ""}
         alt={committedMinOption.label}
-        className="size-4 object-contain shrink-0"
+        className="size-4 shrink-0 object-contain"
       />
     ) : (
       <ShieldIcon className="size-3.5 shrink-0" />
@@ -129,7 +131,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
               <ImgWithSkeleton
                 src={getRankImageUrl(localMinOption.rank, localMinOption.subrank, "small", "webp") ?? ""}
                 alt={localMinOption.label}
-                className="size-6 object-contain shrink-0"
+                className="size-6 shrink-0 object-contain"
               />
             )}
             <span className="text-sm font-medium">{localMinOption?.label}</span>
@@ -140,7 +142,7 @@ export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: Ran
               <ImgWithSkeleton
                 src={getRankImageUrl(localMaxOption.rank, localMaxOption.subrank, "small", "webp") ?? ""}
                 alt={localMaxOption.label}
-                className="size-6 object-contain shrink-0"
+                className="size-6 shrink-0 object-contain"
               />
             )}
           </div>

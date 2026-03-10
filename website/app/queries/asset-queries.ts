@@ -1,7 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { AbilityV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";
+
 import { queryKeys } from "./query-keys";
 
 export const heroesQueryOptions = queryOptions({

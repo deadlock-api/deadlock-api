@@ -1,8 +1,10 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
+
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+
 import { queryKeys } from "./query-keys";
 
 export interface GameStatsQueryParams {

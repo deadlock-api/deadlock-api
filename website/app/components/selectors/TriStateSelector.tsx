@@ -1,5 +1,6 @@
 import { CircleMinus, CirclePlus, X } from "lucide-react";
 import type { ReactNode } from "react";
+
 import { FilterPill } from "~/components/FilterPill";
 
 export type TriState = "included" | "excluded";
@@ -31,13 +32,13 @@ function TriStateRow({
   onToggle: (id: number, target: TriState) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 px-2 py-1 hover:bg-accent rounded-sm">
+    <div className="flex items-center gap-2 rounded-sm px-2 py-1 hover:bg-accent">
       <button
         type="button"
         className={`shrink-0 rounded-sm p-0.5 transition-colors ${
           state === "included"
             ? "bg-green-500/20 text-green-400"
-            : "text-muted-foreground/40 hover:text-green-400 hover:bg-green-500/10"
+            : "text-muted-foreground/40 hover:bg-green-500/10 hover:text-green-400"
         }`}
         onClick={() => onToggle(option.id, "included")}
       >
@@ -48,7 +49,7 @@ function TriStateRow({
         className={`shrink-0 rounded-sm p-0.5 transition-colors ${
           state === "excluded"
             ? "bg-red-500/20 text-red-400"
-            : "text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10"
+            : "text-muted-foreground/40 hover:bg-red-500/10 hover:text-red-400"
         }`}
         onClick={() => onToggle(option.id, "excluded")}
       >
@@ -82,16 +83,16 @@ function TriStateColumnContent({
     <div className="p-2">
       {columnLayout.superGroups.map((sg) => (
         <div key={sg.key} className="mb-3 last:mb-0">
-          <div className="text-xs font-semibold uppercase tracking-wide px-1 py-1 text-muted-foreground">
+          <div className="px-1 py-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             {sg.label}
           </div>
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-x-3">
+          <div className="grid grid-cols-1 gap-x-3 xl:grid-cols-3">
             {columnLayout.columns.map((col) => {
               const groupKey = `${sg.key}-${col.key}`;
               const items = grouped.get(groupKey) || [];
               return (
                 <div key={col.key}>
-                  <div className="text-xs font-semibold uppercase tracking-wide px-2 py-1" style={{ color: col.color }}>
+                  <div className="px-2 py-1 text-xs font-semibold tracking-wide uppercase" style={{ color: col.color }}>
                     {col.label}
                   </div>
                   {items.map((option) => (
@@ -168,10 +169,10 @@ export function TriStateSelector({
       className={`max-h-[400px] overflow-y-auto p-0 ${columnLayout ? "w-fit xl:w-fit" : "w-[260px]"}`}
     >
       {hasSelections && (
-        <div className="sticky top-0 z-10 flex items-center justify-end px-2 py-1.5 border-b bg-popover">
+        <div className="sticky top-0 z-10 flex items-center justify-end border-b bg-popover px-2 py-1.5">
           <button
             type="button"
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer"
+            className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             onClick={() => onSelectionsChange(new Map())}
           >
             Clear all
@@ -202,7 +203,7 @@ export function TriStateSelector({
                     <div key={groupKey}>
                       {style && (
                         <div
-                          className="text-xs font-semibold uppercase tracking-wide px-2 py-1.5 mt-1 first:mt-0"
+                          className="mt-1 px-2 py-1.5 text-xs font-semibold tracking-wide uppercase first:mt-0"
                           style={{ color: style.color }}
                         >
                           {style.label}

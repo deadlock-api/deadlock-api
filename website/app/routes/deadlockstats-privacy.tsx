@@ -1,4 +1,5 @@
 import type { MetaFunction } from "react-router";
+
 import { createPageMeta } from "~/lib/meta";
 
 export const meta: MetaFunction = () => {
@@ -18,21 +19,21 @@ export default function PrivacyPolicy() {
   return (
     <div className="bg-background font-sans text-foreground antialiased">
       {/* Content container */}
-      <div className="container mx-auto max-w-4xl bg-card p-6 sm:p-10 my-8 rounded-lg border border-border">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground mb-4">Privacy Policy for DeadlockStats</h1>
+      <div className="container mx-auto my-8 max-w-4xl rounded-lg border border-border bg-card p-6 sm:p-10">
+        <h1 className="mb-4 text-3xl font-extrabold text-foreground sm:text-4xl">Privacy Policy for DeadlockStats</h1>
 
         <p className="mb-6 text-muted-foreground">
           <strong className="font-semibold text-foreground">Effective Date:</strong> {effectiveDate}
         </p>
 
         {/* Highlighted contact info block */}
-        <div className="mb-8 p-4 bg-background rounded-lg border border-border">
+        <div className="mb-8 rounded-lg border border-border bg-background p-4">
           <p className="text-lg font-bold text-foreground">Deadlock API</p>
-          <p className="text-foreground mt-1">
+          <p className="mt-1 text-foreground">
             <strong className="font-semibold">Contact:</strong> Manuel Raimann (
             <a
               href="mailto:info@deadlock-api.com"
-              className="text-blue-400 hover:text-blue-300 hover:underline transition-colors duration-200"
+              className="text-blue-400 transition-colors duration-200 hover:text-blue-300 hover:underline"
             >
               info@deadlock-api.com
             </a>
@@ -41,7 +42,7 @@ export default function PrivacyPolicy() {
         </div>
 
         <section>
-          <h2 className="text-2xl font-bold text-foreground mt-8 mb-3 pb-2 border-b border-border">Introduction</h2>
+          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">Introduction</h2>
           <p className="leading-relaxed">
             At Deadlock API, we are committed to protecting your privacy. This Privacy Policy explains how DeadlockStats
             ("the App") handles your personal information and data when you use our mobile application.
@@ -49,15 +50,15 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-foreground mt-8 mb-3 pb-2 border-b border-border">
+          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">
             Information We Collect
           </h2>
 
-          <h3 className="text-xl font-semibold text-foreground mt-6 mb-2">No Personal Data Collection</h3>
-          <p className="leading-relaxed mb-4">
+          <h3 className="mt-6 mb-2 text-xl font-semibold text-foreground">No Personal Data Collection</h3>
+          <p className="mb-4 leading-relaxed">
             DeadlockStats does not collect, store, or process any personal information from our users. We do not gather:
           </p>
-          <ul className="list-disc list-inside space-y-2 pl-4">
+          <ul className="list-inside list-disc space-y-2 pl-4">
             <li>Names or contact information</li>
             <li>Email addresses or phone numbers</li>
             <li>Device identifiers or advertising IDs</li>
@@ -66,12 +67,12 @@ export default function PrivacyPolicy() {
             <li>Any other personally identifiable information</li>
           </ul>
 
-          <h3 className="text-xl font-semibold text-foreground mt-6 mb-2">Steam Account Integration</h3>
-          <p className="leading-relaxed mb-4">
+          <h3 className="mt-6 mb-2 text-xl font-semibold text-foreground">Steam Account Integration</h3>
+          <p className="mb-4 leading-relaxed">
             The App provides the option to link your Steam account through OpenID authentication to display personalized
             game statistics for Deadlock. This process:
           </p>
-          <ul className="list-disc list-inside space-y-2 pl-4">
+          <ul className="list-inside list-disc space-y-2 pl-4">
             <li>Uses Steam's secure OpenID system for authentication</li>
             <li>Only stores authentication data locally on your device</li>
             <li>Does not transmit or store your Steam credentials on our servers</li>
@@ -80,11 +81,11 @@ export default function PrivacyPolicy() {
             </li>
           </ul>
 
-          <h3 className="text-xl font-semibold text-foreground mt-6 mb-2">Local Data Storage</h3>
-          <p className="leading-relaxed mb-4">
+          <h3 className="mt-6 mb-2 text-xl font-semibold text-foreground">Local Data Storage</h3>
+          <p className="mb-4 leading-relaxed">
             All data related to your use of the App is stored exclusively on your device, including:
           </p>
-          <ul className="list-disc list-inside space-y-2 pl-4">
+          <ul className="list-inside list-disc space-y-2 pl-4">
             <li>Steam authentication tokens</li>
             <li>Game statistics and preferences</li>
             <li>App settings and configurations</li>
@@ -92,11 +93,11 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-foreground mt-8 mb-3 pb-2 border-b border-border">
+          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">
             Your Rights and Choices
           </h2>
-          <p className="leading-relaxed mb-4">You have complete control over your data:</p>
-          <ul className="list-disc list-inside space-y-2 pl-4">
+          <p className="mb-4 leading-relaxed">You have complete control over your data:</p>
+          <ul className="list-inside list-disc space-y-2 pl-4">
             <li>
               <strong className="font-semibold text-foreground">Access:</strong> All data is stored locally and
               accessible only by you.
@@ -113,7 +114,7 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-foreground mt-8 mb-3 pb-2 border-b border-border">
+          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">
             AI Assistant Chatbot
           </h2>
           <p>
@@ -133,7 +134,7 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-foreground mt-8 mb-3 pb-2 border-b border-border">
+          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">
             Analytics with PostHog EU Cloud
           </h2>
           <p>
@@ -155,9 +156,9 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-foreground mt-8 mb-3 pb-2 border-b border-border">Legal Compliance</h2>
-          <p className="leading-relaxed mb-4">This Privacy Policy has been designed to comply with:</p>
-          <ul className="list-disc list-inside space-y-2 pl-4">
+          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">Legal Compliance</h2>
+          <p className="mb-4 leading-relaxed">This Privacy Policy has been designed to comply with:</p>
+          <ul className="list-inside list-disc space-y-2 pl-4">
             <li>European Union General Data Protection Regulation (GDPR)</li>
             <li>California Consumer Privacy Act (CCPA)</li>
             <li>Children's Online Privacy Protection Act (COPPA)</li>
@@ -165,7 +166,7 @@ export default function PrivacyPolicy() {
             <li>Apple App Store privacy requirements</li>
             <li>Other applicable privacy laws and regulations</li>
           </ul>
-          <p className="leading-relaxed mt-4">
+          <p className="mt-4 leading-relaxed">
             Since DeadlockStats does not collect personal information, many privacy regulations do not apply to our data
             practices. However, we maintain this comprehensive policy to ensure transparency and compliance with
             platform requirements.

@@ -1,19 +1,21 @@
-import type { LinksFunction } from "react-router";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
+import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "./tailwind.css";
 import "./dayjs.ts";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import type { LinksFunction } from "react-router";
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
+
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
+
 import "@fontsource-variable/inter";
-import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 
 export const links: LinksFunction = () => [
   {
@@ -87,7 +89,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body
-        className="overflow-x-hidden bg-fixed bg-cover bg-center bg-no-repeat bg-blend-difference"
+        className="overflow-x-hidden bg-cover bg-fixed bg-center bg-no-repeat bg-blend-difference"
         style={{ backgroundImage: "url('/background.svg')" }}
       >
         <noscript>
@@ -134,19 +136,19 @@ export default function App() {
               <AppSidebar />
               <main className="min-w-0 flex-1 md:ml-64">
                 <MobileMenuButton />
-                <div className="flex justify-center items-start relative min-h-full">
+                <div className="relative flex min-h-full items-start justify-center">
                   <img
                     src="/logo/hexe.svg"
                     alt=""
                     aria-hidden="true"
-                    className="pointer-events-none fixed bottom-0 right-0 w-[36rem] h-[36rem] opacity-[0.10] select-none"
+                    className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
                     style={{
                       transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
                       maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
                       WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
                     }}
                   />
-                  <div className="m-2 w-full xl:w-[92%] bg-background/60 backdrop-blur-md rounded-xl shadow-xl border border-white/10 p-4 sm:p-6 relative">
+                  <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
                     <Breadcrumbs />
                     <div key={pathname} className="page-fade-in">
                       <Outlet />
@@ -167,7 +169,7 @@ export default function App() {
 
 export function HydrateFallback() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background z-50" role="status" aria-live="polite">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background" role="status" aria-live="polite">
       <LoadingLogo />
       <span className="sr-only">Loading…</span>
     </div>

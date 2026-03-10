@@ -1,5 +1,6 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
+
 import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
@@ -60,7 +61,7 @@ export function ItemPurchaseAnalysis({
   return (
     <div>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap justify-center sm:flex-nowrap gap-2">
+        <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-muted-foreground">Items</span>
             <ItemSelectorMultiple onItemsSelected={(i) => setItemIds(new Set(i))} selectedItems={Array.from(itemIds)} />

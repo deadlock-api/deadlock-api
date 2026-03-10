@@ -6,11 +6,11 @@ export function AbilityImage({ abilityId, className }: { abilityId: number; clas
   const { ability, isLoading } = useAbilityById(abilityId);
 
   if (isLoading) {
-    return <Skeleton className={cn("size-8 aspect-square rounded-full", className)} />;
+    return <Skeleton className={cn("aspect-square size-8 rounded-full", className)} />;
   }
 
   if (!ability?.image_webp && !ability?.image) {
-    return <div className={cn("size-8 aspect-square bg-muted rounded-full", className)} />;
+    return <div className={cn("aspect-square size-8 rounded-full bg-muted", className)} />;
   }
 
   return (
@@ -22,7 +22,7 @@ export function AbilityImage({ abilityId, className }: { abilityId: number; clas
         src={ability?.image_webp ?? ability?.image ?? ""}
         alt={ability?.name ?? "Unknown Ability"}
         title={ability?.name ?? "Unknown Ability"}
-        className={cn("size-8 aspect-square object-cover dark:brightness-0 dark:invert", className)}
+        className={cn("aspect-square size-8 object-cover dark:brightness-0 dark:invert", className)}
       />
     </picture>
   );

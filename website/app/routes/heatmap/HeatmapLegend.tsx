@@ -5,7 +5,7 @@ interface HeatmapLegendProps {
 
 export function HeatmapLegend({ viewMode, maxValue }: HeatmapLegendProps) {
   return (
-    <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 backdrop-blur-sm px-3 py-1.5">
+    <div className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur-sm">
       <span className="text-[10px] text-muted-foreground">0</span>
       <div
         className="h-2.5 w-24 rounded-full"

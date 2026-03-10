@@ -1,4 +1,5 @@
 import { CheckCircle2, Loader2, Settings2, XCircle } from "lucide-react";
+
 import { Badge } from "~/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
@@ -28,8 +29,8 @@ export function ToolIndicator({ tool }: ToolIndicatorProps) {
 
     return entries.map(([key, value]) => (
       <div key={key} className="flex gap-2 text-xs">
-        <span className="text-muted-foreground font-medium">{key}:</span>
-        <span className="text-foreground font-mono break-all">
+        <span className="font-medium text-muted-foreground">{key}:</span>
+        <span className="font-mono break-all text-foreground">
           {typeof value === "object" ? JSON.stringify(value) : String(value)}
         </span>
       </div>
@@ -44,7 +45,7 @@ export function ToolIndicator({ tool }: ToolIndicatorProps) {
       <TooltipTrigger asChild>
         <div
           className={cn(
-            "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-muted/30 cursor-default",
+            "inline-flex cursor-default items-center gap-2 rounded-full border bg-muted/30 px-3 py-1.5",
             isRunning && "border-primary/50",
             isSuccess && "border-green-500/30",
             isFailed && "border-destructive/30",
@@ -52,30 +53,30 @@ export function ToolIndicator({ tool }: ToolIndicatorProps) {
         >
           {/* Status icon */}
           <div className="shrink-0">
-            {isRunning && <Loader2 className="size-3.5 text-primary animate-spin" />}
+            {isRunning && <Loader2 className="size-3.5 animate-spin text-primary" />}
             {isSuccess && <CheckCircle2 className="size-3.5 text-green-500" />}
             {isFailed && <XCircle className="size-3.5 text-destructive" />}
           </div>
 
           {/* Tool icon */}
-          <Settings2 className="size-3.5 text-muted-foreground shrink-0" />
+          <Settings2 className="size-3.5 shrink-0 text-muted-foreground" />
 
           {/* Tool name */}
           <span className="text-sm font-medium">{formatToolName(tool.tool_name)}</span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-sm bg-popover text-popover-foreground border shadow-md p-0">
-        <div className="p-3 space-y-2">
+      <TooltipContent side="bottom" className="max-w-sm border bg-popover p-0 text-popover-foreground shadow-md">
+        <div className="space-y-2 p-3">
           {/* Header with status */}
           <div className="flex items-center justify-between gap-4">
-            <span className="font-medium text-sm">{formatToolName(tool.tool_name)}</span>
+            <span className="text-sm font-medium">{formatToolName(tool.tool_name)}</span>
             <Badge
               variant={isRunning ? "secondary" : isSuccess ? "default" : "destructive"}
               className={cn(
-                "text-xs shrink-0",
-                isRunning && "bg-primary/10 text-primary border-primary/20",
-                isSuccess && "bg-green-500/10 text-green-600 border-green-500/20",
-                isFailed && "bg-destructive/10 text-destructive border-destructive/20",
+                "shrink-0 text-xs",
+                isRunning && "border-primary/20 bg-primary/10 text-primary",
+                isSuccess && "border-green-500/20 bg-green-500/10 text-green-600",
+                isFailed && "border-destructive/20 bg-destructive/10 text-destructive",
               )}
             >
               {isRunning ? "Running" : isSuccess ? "Success" : "Failed"}
@@ -85,15 +86,15 @@ export function ToolIndicator({ tool }: ToolIndicatorProps) {
           {/* Arguments section */}
           {hasArguments && (
             <div className="space-y-1">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Arguments</h4>
-              <div className="bg-background/50 rounded-md p-2 space-y-1">{formatArguments(tool.arguments)}</div>
+              <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Arguments</h4>
+              <div className="space-y-1 rounded-md bg-background/50 p-2">{formatArguments(tool.arguments)}</div>
             </div>
           )}
 
           {/* Result section (only shown when complete) */}
           {hasResult && (
             <div className="space-y-1">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Result</h4>
+              <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Result</h4>
               <div
                 className={cn(
                   "rounded-md p-2 text-xs",

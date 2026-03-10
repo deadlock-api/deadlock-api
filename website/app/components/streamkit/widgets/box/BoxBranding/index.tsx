@@ -13,7 +13,7 @@ export const BoxBranding = ({ themeClasses }: BoxBrandingProps) => {
       >
         <span className={themeClasses.brandingTextClasses.primary}>Powered by</span>
         <span className={themeClasses.brandingTextClasses.secondary}>deadlock-api.com</span>
-        <img src="/streamkit/icon-small.png" alt="Deadlock API Logo" className="w-5 h-5 align-middle ml-2" />
+        <img src="/streamkit/icon-small.png" alt="Deadlock API Logo" className="ml-2 h-5 w-5 align-middle" />
       </a>
     </div>
   );

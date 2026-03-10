@@ -1,5 +1,6 @@
 import { ExternalLink, Loader2, RefreshCw, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -139,7 +140,7 @@ export function ReplaceAccountDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction onClick={handleReplace} disabled={!isInputValid || isReplacing}>
-            {isReplacing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {isReplacing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Replace Account
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -234,7 +235,7 @@ export function AddBotDialog({
               {isChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               {isChecking ? "Checking…" : "Check connection"}
             </button>
-            <p className="text-xs text-center text-muted-foreground">
+            <p className="text-center text-xs text-muted-foreground">
               After accepting the request, it may take a few minutes before the bot can see your profile.
             </p>
           </div>

@@ -1,4 +1,5 @@
 import { CheckIcon } from "lucide-react";
+
 import { FilterPill } from "~/components/FilterPill";
 import { cn } from "~/lib/utils";
 
@@ -31,7 +32,7 @@ export function StringSelector({
           <button
             type="button"
             className={cn(
-              "flex items-center justify-between gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent cursor-pointer",
+              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
               !selected && "font-medium",
             )}
             onClick={() => onSelect("")}
@@ -45,7 +46,7 @@ export function StringSelector({
             key={item.value}
             type="button"
             className={cn(
-              "flex items-center justify-between gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent cursor-pointer text-left",
+              "flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent",
               selected === item.value && "font-medium",
             )}
             onClick={() => onSelect(item.value)}

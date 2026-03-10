@@ -1,14 +1,15 @@
 import { StatDisplay } from "~/components/streamkit/widgets/StatDisplay";
 import { cn } from "~/lib/utils";
+
 import type { BoxStatsProps } from "./BoxStats.types";
 
 export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-4">
-        <div className="relative w-8 h-8">
-          <div className="absolute inset-0 rounded-full border-2 border-blue-500/20 animate-ping" />
-          <div className="absolute inset-[2px] rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
+      <div className="flex items-center justify-center py-4">
+        <div className="relative h-8 w-8">
+          <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />
+          <div className="absolute inset-[2px] animate-spin rounded-full border-2 border-transparent border-t-blue-500" />
         </div>
       </div>
     );
@@ -19,7 +20,7 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
   }
 
   return (
-    <div className="flex flex-nowrap gap-1 p-1 items-stretch">
+    <div className="flex flex-nowrap items-stretch gap-1 p-1">
       {stats.map((stat, index) => (
         <>
           <StatDisplay key={`${stat.variable}-${index}-display`} stat={stat} theme={theme} />

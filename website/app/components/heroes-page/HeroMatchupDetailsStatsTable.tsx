@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats, HeroCounterStats, HeroSynergyStats } from "deadlock_api_client";
 import { useMemo } from "react";
+
 import { HeroImage } from "~/components/HeroImage";
 import { HeroName } from "~/components/HeroName";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -215,7 +216,7 @@ export function HeroMatchupDetailsStatsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full py-16">
+      <div className="flex h-full w-full items-center justify-center py-16">
         <LoadingLogo />
       </div>
     );
@@ -266,7 +267,7 @@ export function HeroMatchupDetailsStatsTable({
                   max={maxSynergyWinrate}
                   value={synergy.rel_winrate}
                   color={"#fa4454"}
-                  label={`${synergy?.rel_winrate > 0 ? "+" : ""}${(Math.round(synergy?.rel_winrate * 100)).toFixed(0)}% `}
+                  label={`${synergy?.rel_winrate > 0 ? "+" : ""}${Math.round(synergy?.rel_winrate * 100).toFixed(0)}% `}
                   tooltip={
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">
@@ -296,7 +297,7 @@ export function HeroMatchupDetailsStatsTable({
                   max={maxCounterWinrate}
                   value={counter.rel_winrate}
                   color={"#22d3ee"}
-                  label={`${counter?.rel_winrate > 0 ? "+" : ""}${(Math.round(counter?.rel_winrate * 100)).toFixed(0)}% `}
+                  label={`${counter?.rel_winrate > 0 ? "+" : ""}${Math.round(counter?.rel_winrate * 100).toFixed(0)}% `}
                   tooltip={
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">

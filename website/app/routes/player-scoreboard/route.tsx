@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
+
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
@@ -11,9 +12,10 @@ import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { queryKeys } from "~/queries/query-keys";
+
 import { ScoreboardTable } from "./ScoreboardTable";
-import { SortBySelector } from "./SortBySelector";
 import { ALL_SORT_BY_VALUES } from "./sort-options";
+import { SortBySelector } from "./SortBySelector";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -79,7 +81,7 @@ export default function PlayerScoreboard() {
       <section className="space-y-4">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">Player Scoreboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Top player performances ranked by various stats</p>
+          <p className="mt-1 text-sm text-muted-foreground">Top player performances ranked by various stats</p>
         </div>
 
         <Filter.Root>
@@ -110,7 +112,7 @@ export default function PlayerScoreboard() {
               </div>
             }
             errorFallback={(error) => (
-              <div className="text-center text-sm text-destructive py-8">
+              <div className="py-8 text-center text-sm text-destructive">
                 Failed to load scoreboard: {error.message}
               </div>
             )}

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import { useId } from "react";
+
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
 import { Button } from "~/components/ui/button";
@@ -51,8 +52,8 @@ export function ItemSelector({
   const currentItem = selectedItem ? sortedItems.find((opt: UpgradeV2) => opt.id === selectedItem) : undefined;
 
   return (
-    <div className="flex flex-col gap-1.5 max-w-[200px]">
-      <div className="flex justify-center md:justify-start items-center h-8">
+    <div className="flex max-w-[200px] flex-col gap-1.5">
+      <div className="flex h-8 items-center justify-center md:justify-start">
         <span className="text-sm font-semibold text-foreground">{label || "Item"}</span>
       </div>
       {isLoading ? (
@@ -63,13 +64,13 @@ export function ItemSelector({
             <SelectValue placeholder={"Select Item..."}>
               {currentItem ? (
                 <div className="flex items-center gap-2">
-                  <ItemImage itemId={currentItem.id} className="size-4 object-contain shrink-0" />
+                  <ItemImage itemId={currentItem.id} className="size-4 shrink-0 object-contain" />
                   <ItemName itemId={currentItem.id} />
                 </div>
               ) : null}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent className="flex items-center gap-2 w-fit max-h-[70vh] overflow-y-scroll flex-nowrap flex-row">
+          <SelectContent className="flex max-h-[70vh] w-fit flex-row flex-nowrap items-center gap-2 overflow-y-scroll">
             {allowSelectNull && (
               <SelectItem value="none">
                 <span className="truncate">None</span>
@@ -77,8 +78,8 @@ export function ItemSelector({
             )}
             {sortedItems.map((item: UpgradeV2) => (
               <SelectItem key={item.id} value={String(item.id)}>
-                <div className="flex items-center gap-2 flex-nowrap">
-                  <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
+                <div className="flex flex-nowrap items-center gap-2">
+                  <ItemImage itemId={item.id} className="size-5 shrink-0 object-contain" />
                   <ItemName itemId={item.id} />
                 </div>
               </SelectItem>
@@ -115,15 +116,15 @@ export function ItemSelectorMultiple({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-fit min-w-[150px] max-w-[250px] overflow-hidden max-h-20 min-h-9 h-min p-1 box-border"
+          className="box-border h-min max-h-20 min-h-9 w-fit max-w-[250px] min-w-[150px] overflow-hidden p-1"
         >
-          <div className="flex flex-wrap gap-2 items-center justify-start">
+          <div className="flex flex-wrap items-center justify-start gap-2">
             {selectedItems.length === 0 ? (
               <span className="truncate text-muted-foreground">{label || "Select Items..."}</span>
             ) : (
               selectedItems.slice(0, 5).map((itemId) => (
-                <span key={itemId} className="flex items-center justify-around gap-1 bg-muted rounded px-1 p-0.5">
-                  <ItemImage itemId={itemId} className="size-4 object-contain shrink-0" />
+                <span key={itemId} className="flex items-center justify-around gap-1 rounded bg-muted p-0.5 px-1">
+                  <ItemImage itemId={itemId} className="size-4 shrink-0 object-contain" />
                   <ItemName itemId={itemId} className="truncate text-xs" />
                 </span>
               ))
@@ -134,9 +135,9 @@ export function ItemSelectorMultiple({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[220px] max-h-[400px] overflow-y-auto p-2">
+      <PopoverContent className="max-h-[400px] w-[220px] overflow-y-auto p-2">
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 px-2 py-1 border-b mb-1">
+          <div className="mb-1 flex items-center gap-2 border-b px-2 py-1">
             <Checkbox
               checked={allSelected ? true : indeterminate ? "indeterminate" : false}
               onCheckedChange={(checked) => {
@@ -148,12 +149,12 @@ export function ItemSelectorMultiple({
               }}
               id={`${selectAllId}-select-all`}
             />
-            <label htmlFor={`${selectAllId}-select-all`} className="text-sm cursor-pointer select-none">
+            <label htmlFor={`${selectAllId}-select-all`} className="cursor-pointer text-sm select-none">
               Select all
             </label>
           </div>
           {sortedItems.map((item: UpgradeV2) => (
-            <div key={item.id} className="flex items-center gap-2 px-2 py-1 hover:bg-accent cursor-pointer">
+            <div key={item.id} className="flex cursor-pointer items-center gap-2 px-2 py-1 hover:bg-accent">
               <Checkbox
                 checked={selectedItems.includes(item.id)}
                 tabIndex={-1}
@@ -169,9 +170,9 @@ export function ItemSelectorMultiple({
               />
               <label
                 htmlFor={`item-checkbox-${item.id}`}
-                className="flex flex-nowrap items-center gap-2 w-full truncate text-sm cursor-pointer"
+                className="flex w-full cursor-pointer flex-nowrap items-center gap-2 truncate text-sm"
               >
-                <ItemImage itemId={item.id} className="size-5 object-contain shrink-0" />
+                <ItemImage itemId={item.id} className="size-5 shrink-0 object-contain" />
                 <ItemName itemId={item.id} className="truncate text-sm" />
               </label>
             </div>

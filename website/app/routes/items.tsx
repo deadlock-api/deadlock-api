@@ -1,12 +1,13 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { Filter } from "~/components/Filter";
 import { ItemStatsTable } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
-import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
+import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
@@ -59,8 +60,8 @@ export default function Items(
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Item Stats</h1>
-        <p className="text-sm text-muted-foreground mt-1">Win rates, purchase timing, and item combination analytics</p>
-        <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto leading-relaxed">
+        <p className="mt-1 text-sm text-muted-foreground">Win rates, purchase timing, and item combination analytics</p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
           combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder.
         </p>

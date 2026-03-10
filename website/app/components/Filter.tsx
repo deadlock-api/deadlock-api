@@ -1,5 +1,6 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
+
 import { NumberSelector } from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
@@ -15,7 +16,7 @@ function Root({ children, className }: { children: React.ReactNode; className?: 
   return (
     <div
       className={cn(
-        "relative flex flex-wrap items-center gap-2 justify-center mx-auto w-fit",
+        "relative mx-auto flex w-fit flex-wrap items-center justify-center gap-2",
         "rounded-2xl border border-white/[0.06] bg-white/[0.03] px-5 py-3.5",
         "shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.25)]",
         className,
@@ -193,7 +194,7 @@ function Team({ value, onChange }: { value: number; onChange: (team: number) => 
           key={team.value}
           type="button"
           onClick={() => onChange(team.value)}
-          className={`px-3 py-1 text-sm rounded-full transition-all cursor-pointer ${
+          className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
             value === team.value
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -211,7 +212,7 @@ function SortDirection({ value, onChange }: { value: "desc" | "asc"; onChange: (
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1.5 h-8 px-3 text-sm rounded-full border cursor-pointer transition-all bg-secondary border-white/[0.08] text-muted-foreground hover:bg-accent hover:text-foreground hover:border-white/[0.14]"
+      className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-white/[0.08] bg-secondary px-3 text-sm text-muted-foreground transition-all hover:border-white/[0.14] hover:bg-accent hover:text-foreground"
       onClick={() => onChange(isDesc ? "asc" : "desc")}
     >
       {isDesc ? <ArrowDownNarrowWide className="size-3.5" /> : <ArrowUpNarrowWide className="size-3.5" />}

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
 /**

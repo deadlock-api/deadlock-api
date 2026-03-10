@@ -94,6 +94,7 @@ app
 ## Exploring the deadlock-api OpenAPI Specs
 
 Two OpenAPI specs power this app:
+
 - **Game data API**: `https://api.deadlock-api.com/openapi.json`
 - **Assets API**: `https://assets.deadlock-api.com/openapi.json`
 
@@ -132,12 +133,12 @@ import { API_ORIGIN } from "./constants";
 export class Api {
   public analytics_api: AnalyticsApi;
   public leaderboard_api: LeaderboardApi;
-  public mmr_api: MMRApi;  // ← add field
+  public mmr_api: MMRApi; // ← add field
   public players_api: PlayersApi;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
     // ... existing axios_client setup ...
-    this.mmr_api = new MMRApi(undefined, API_ORIGIN, axios_client);  // ← instantiate
+    this.mmr_api = new MMRApi(undefined, API_ORIGIN, axios_client); // ← instantiate
   }
 }
 ```

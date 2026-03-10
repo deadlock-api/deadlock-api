@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +68,7 @@ function DataPrivacyActionCard({
     >
       {isLoading ? (
         <>
-          <Loader2 className="size-4 mr-2 animate-spin" />
+          <Loader2 className="mr-2 size-4 animate-spin" />
           Processing...
         </>
       ) : (
@@ -84,7 +85,7 @@ function DataPrivacyActionCard({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">{details}</p>
-        <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-4">
+        <ul className="ml-4 list-inside list-disc space-y-1 text-sm text-muted-foreground">
           {listItems.map((item) => (
             <li key={item}>{item}</li>
           ))}
@@ -179,7 +180,7 @@ export default function DataPrivacy() {
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">Data Privacy</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage your data privacy settings and control how your information is used
         </p>
       </div>
@@ -205,16 +206,16 @@ export default function DataPrivacy() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Game Statistics</h3>
+            <h3 className="mb-2 text-lg font-semibold">Game Statistics</h3>
             <p className="text-muted-foreground">
               We collect and store publicly available game statistics from Deadlock matches.
             </p>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-2">Steam Account Information</h3>
+            <h3 className="mb-2 text-lg font-semibold">Steam Account Information</h3>
             <p className="text-muted-foreground">We may store your:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground ml-4">
+            <ul className="mt-2 ml-4 list-inside list-disc space-y-1 text-muted-foreground">
               <li>Steam ID</li>
               <li>Public profile information (username, avatar)</li>
               <li>Match data</li>
@@ -222,7 +223,7 @@ export default function DataPrivacy() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-2">Data Usage</h3>
+            <h3 className="mb-2 text-lg font-semibold">Data Usage</h3>
             <p className="text-muted-foreground">
               Your data is used to provide comprehensive game analytics, improve our services, and contribute to the
               broader Deadlock community through aggregated statistics and insights.
@@ -232,15 +233,15 @@ export default function DataPrivacy() {
       </Card>
 
       {/* Privacy Actions */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
         <DataPrivacyActionCard
           title="Request Data Deletion"
           description="Remove all your personal data from our systems"
           details="This will permanently delete all data associated with your Steam account and block future API requests, including:"
           listItems={["Match history and statistics", "Profile information", "Ranking data", "Any stored preferences"]}
           notice={
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-md p-3">
-              <p className="text-sm text-yellow-400 font-medium">
+            <div className="rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
+              <p className="text-sm font-medium text-yellow-400">
                 ⚠️ Warning: This action is permanent and cannot be undone. Even if you re-enable tracking later, your
                 historical data may not be recovered.
               </p>
@@ -261,7 +262,7 @@ export default function DataPrivacy() {
                   Once you confirm data deletion, all your information will be permanently removed from our systems,
                   including:
                 </p>
-                <ul className="list-disc list-inside space-y-1 ml-4">
+                <ul className="ml-4 list-inside list-disc space-y-1">
                   <li>Match history and statistics</li>
                   <li>Profile information</li>
                   <li>Ranking data</li>
@@ -288,7 +289,7 @@ export default function DataPrivacy() {
             "Contribute to community analytics",
           ]}
           notice={
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3">
+            <div className="rounded-md border border-blue-500/20 bg-blue-500/10 p-3">
               <p className="text-sm text-blue-400">
                 <strong>Note:</strong> Re-enabling tracking will start fresh data collection. Any historical data from
                 before deletion may not be recovered.
@@ -309,7 +310,7 @@ export default function DataPrivacy() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold mb-2">Authentication Process</h3>
+            <h3 className="mb-2 text-lg font-semibold">Authentication Process</h3>
             <p className="text-muted-foreground">
               Both actions require Steam OpenID authentication to verify your account ownership. You will be redirected
               to Steam's secure login page and then back to this site.
@@ -317,7 +318,7 @@ export default function DataPrivacy() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-2">Processing Time</h3>
+            <h3 className="mb-2 text-lg font-semibold">Processing Time</h3>
             <p className="text-muted-foreground">
               Data deletion requests are typically processed within 24-48 hours. Re-enabling tracking takes effect
               immediately after verification.
@@ -325,7 +326,7 @@ export default function DataPrivacy() {
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold mb-2">Contact</h3>
+            <h3 className="mb-2 text-lg font-semibold">Contact</h3>
             <p className="text-muted-foreground">
               If you have questions about your data or need assistance, please contact us at{" "}
               <a href="mailto:info@deadlock-api.com" className="text-primary hover:underline">

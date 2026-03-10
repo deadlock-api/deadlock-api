@@ -14,7 +14,7 @@ export function ExtraArguments({ extraArgs, extraValues, onChange }: ExtraArgume
   extraArgs = [...new Set(extraArgs)];
 
   return (
-    <div className="ml-8 mt-2 space-y-2">
+    <div className="mt-2 ml-8 space-y-2">
       {extraArgs.map((arg) => (
         <div key={arg} className="flex items-center gap-2">
           <Label className="text-sm text-muted-foreground">{snakeToPretty(arg)}:</Label>
@@ -22,7 +22,7 @@ export function ExtraArguments({ extraArgs, extraValues, onChange }: ExtraArgume
             type="text"
             value={extraValues[arg] ?? ""}
             onChange={(e) => onChange(arg, e.target.value)}
-            className="w-36 h-8 text-sm"
+            className="h-8 w-36 text-sm"
             placeholder={`Enter ${snakeToPretty(arg)}`}
           />
         </div>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type FC, useEffect, useState } from "react";
+
 import { UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { API_ORIGIN } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
@@ -57,14 +58,14 @@ export const RawWidget: FC<RawWidgetProps> = ({
   return (
     <div>
       {loading ? (
-        <div className="flex justify-center items-center py-4">
-          <div className="relative w-8 h-8">
-            <div className="absolute inset-0 rounded-full border-2 border-blue-500/20 animate-ping" />
-            <div className="absolute inset-[2px] rounded-full border-2 border-transparent border-t-blue-500 animate-spin" />
+        <div className="flex items-center justify-center py-4">
+          <div className="relative h-8 w-8">
+            <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />
+            <div className="absolute inset-[2px] animate-spin rounded-full border-2 border-transparent border-t-blue-500" />
           </div>
         </div>
       ) : stat ? (
-        <div className="flex gap-2 w-fit items-center">
+        <div className="flex w-fit items-center gap-2">
           <div className="text-4xl font-bold" style={{ color: fontColor }}>
             {variable.endsWith("img") ? (
               <img src={stat} alt={variable} className="h-20 rounded-full" />

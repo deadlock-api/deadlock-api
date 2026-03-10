@@ -1,6 +1,7 @@
 import { AlertCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { type BoundTurnstileObject, Turnstile } from "react-turnstile";
+
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
@@ -54,9 +55,9 @@ export function TurnstileVerification({ onVerified }: TurnstileVerificationProps
   const siteKey = TURNSTILE_SITE_KEY;
 
   return (
-    <Card className="max-w-md mx-auto min-w-sm">
+    <Card className="mx-auto max-w-md min-w-sm">
       <CardHeader className="text-center">
-        <div className="flex justify-center mb-2">
+        <div className="mb-2 flex justify-center">
           <ShieldCheck className="h-8 w-8 text-primary" />
         </div>
         <CardTitle>Verify to Continue</CardTitle>
@@ -70,7 +71,7 @@ export function TurnstileVerification({ onVerified }: TurnstileVerificationProps
             <AlertDescription className="flex flex-col gap-3">
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={handleRetry} className="w-fit">
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Try Again
               </Button>
             </AlertDescription>

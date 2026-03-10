@@ -1,10 +1,12 @@
 import { useMemo } from "react";
+
 import { MatchHistory } from "~/components/streamkit/widgets/MatchHistory";
 import { DEFAULT_LABELS, DEFAULT_VARIABLES, UPDATE_INTERVAL_MS } from "~/constants/streamkit/widget";
 import { useStats } from "~/hooks/streamkit/useStats";
 import { useWidgetTheme } from "~/hooks/streamkit/useWidgetTheme";
 import { snakeToPretty } from "~/lib/utils";
 import type { BoxWidgetProps, Stat } from "~/types/streamkit/widget";
+
 import { BoxBranding } from "./BoxBranding";
 import { BoxHeader } from "./BoxHeader";
 import { BoxStats } from "./BoxStats";
@@ -91,7 +93,7 @@ export const BoxWidget = ({
     <div className="inline-block" style={themeStyles.cssVariables}>
       {showMatchHistory && (
         <div className="flex">
-          <div className="grow w-0 overflow-clip">
+          <div className="w-0 grow overflow-clip">
             <MatchHistory theme={theme} numMatches={numMatchesToShow} accountId={accountId} opacity={opacity} />
           </div>
         </div>
@@ -105,7 +107,7 @@ export const BoxWidget = ({
           />
         )}
 
-        <div className="p-2 w-fit space-y-1">
+        <div className="w-fit space-y-1 p-2">
           <BoxStats stats={statDisplays} theme={theme} loading={loading} />
 
           {showBranding && <BoxBranding themeClasses={themeStyles} />}
