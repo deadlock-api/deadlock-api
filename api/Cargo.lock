@@ -4193,7 +4193,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=bec6cd7d8b6bd2a10fc80d6df38637a37fd920e1#bec6cd7d8b6bd2a10fc80d6df38637a37fd920e1"
+source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=8dffcdb105e3765276d90a5229de21446bc11bd1#8dffcdb105e3765276d90a5229de21446bc11bd1"
 dependencies = [
  "heck",
  "prost",

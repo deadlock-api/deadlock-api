@@ -208,6 +208,7 @@ pub enum GameMode {
     #[default]
     Normal = 1,
     StreetBrawl = 4,
+    ExploreNYC = 5,
 }
 
 impl GameMode {
