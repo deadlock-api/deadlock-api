@@ -8,7 +8,7 @@ base64 = "0.22.1"
 reqwest = { version = "0.13.2", features = ["json"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "bec6cd7d8b6bd2a10fc80d6df38637a37fd920e1", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8dffcdb105e3765276d90a5229de21446bc11bd1", features = ["gc-client", "serde"] }
 prost = "0.14.3"
 metrics = "0.24.3"
 tracing = "0.1.44"
