@@ -23,18 +23,9 @@ export const meta: MetaFunction = () => {
 
 const MAX_ATTEMPTS = 6;
 
-/** Map guess count to CSS filter intensity: fully dark at 0, progressively lighter */
-function getSilhouetteFilter(hintsRevealed: number, isFinished: boolean): string {
+function getSilhouetteFilter(isFinished: boolean): string {
   if (isFinished) return "none";
-  const steps: string[] = [
-    "brightness(0) saturate(0)", // 0 guesses: full silhouette
-    "brightness(0.08) saturate(0)", // 1 guess
-    "brightness(0.15) saturate(0)", // 2 guesses
-    "brightness(0.25) saturate(0.1)", // 3 guesses
-    "brightness(0.4) saturate(0.2)", // 4 guesses
-    "brightness(0.7) saturate(0.5)", // 5 guesses: nearly full reveal
-  ];
-  return steps[Math.min(hintsRevealed, steps.length - 1)];
+  return "brightness(0) saturate(0)";
 }
 
 export default function GuessHero() {
@@ -75,23 +66,32 @@ export default function GuessHero() {
         : "No stats available";
 
     const lore = dailyHero.description?.lore;
-    const loreTruncated = lore ? (lore.length > 100 ? `${lore.slice(0, 100)}...` : lore) : "No lore available";
+    const loreRedacted = lore ? lore.replace(new RegExp(dailyHero.name, "gi"), "???") : null;
+    const loreTruncated = loreRedacted
+      ? loreRedacted.length > 100
+        ? `${loreRedacted.slice(0, 100)}...`
+        : loreRedacted
+      : "No lore available";
 
-    const weaponImgSrc = dailyHero.images?.weapon_image_webp ?? dailyHero.images?.weapon_image ?? null;
+    const redact = (text: string) => text.replace(new RegExp(dailyHero.name, "gi"), "???");
+
+    const playstyle = dailyHero.description?.playstyle;
+    const role = dailyHero.description?.role;
+    const secondStat = startingStatEntries.find(([key]) => key === "weapon_power" || key === "sprint_speed");
+    const lastHint = playstyle
+      ? { label: "PLAYSTYLE", value: redact(playstyle) }
+      : role
+        ? { label: "ROLE", value: redact(role) }
+        : secondStat
+          ? { label: "STAT 2", value: `Base ${snakeToPretty(secondStat[0])}: ${secondStat[1].value}` }
+          : { label: "COMPLEXITY", value: `Complexity: ${dailyHero.complexity}` };
 
     return [
       { label: "TYPE", value: heroType },
       { label: "STAT", value: statHint },
       { label: "LORE", value: loreTruncated },
-      {
-        label: "WEAPON",
-        value: weaponImgSrc ? (
-          <img src={weaponImgSrc} alt="Hero weapon" className="h-10 w-auto object-contain inline-block" />
-        ) : (
-          "No weapon image"
-        ),
-      },
-      { label: "REVEAL", value: "Silhouette filter greatly reduced" },
+      { label: "WEAPON", value: dailyHero.gun_tag ?? "Unknown" },
+      lastHint,
     ];
   }, [dailyHero]);
 
@@ -119,7 +119,7 @@ export default function GuessHero() {
     );
   }
 
-  const heroImgSrc = dailyHero.images?.minimap_image_webp ?? dailyHero.images?.minimap_image ?? "";
+  const heroCardSrc = dailyHero.images?.icon_hero_card_webp ?? dailyHero.images?.icon_hero_card ?? "";
 
   return (
     <GameShell
@@ -139,21 +139,15 @@ export default function GuessHero() {
         className="flex justify-center"
       >
         <div className="relative">
-          <picture>
-            {dailyHero.images?.minimap_image_webp && (
-              <source srcSet={dailyHero.images.minimap_image_webp} type="image/webp" />
-            )}
-            {dailyHero.images?.minimap_image && <source srcSet={dailyHero.images.minimap_image} type="image/png" />}
-            <img
-              src={heroImgSrc}
-              alt="Mystery hero"
-              className="w-[200px] h-[200px] object-contain transition-all duration-500"
-              style={{
-                filter: getSilhouetteFilter(gameState.hintsRevealed, isFinished),
-              }}
-              draggable={false}
-            />
-          </picture>
+          <img
+            src={heroCardSrc}
+            alt="Mystery hero"
+            className="w-[200px] h-[200px] object-contain transition-all duration-500"
+            style={{
+              filter: getSilhouetteFilter(isFinished),
+            }}
+            draggable={false}
+          />
           {isFinished && (
             <motion.p
               initial={{ opacity: 0, y: 6 }}
