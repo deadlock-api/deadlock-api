@@ -212,6 +212,7 @@ export default function AbilityOrderTree({
 
   return (
     <div
+      role="presentation"
       ref={scrollRef}
       className="cursor-grab overflow-x-auto pb-4 text-center"
       onMouseDown={onMouseDown}

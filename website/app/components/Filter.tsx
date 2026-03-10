@@ -104,8 +104,8 @@ function PatchOrDate({
     <PatchOrDatePicker
       patchDates={PATCHES}
       value={{ startDate, endDate }}
-      onValueChange={({ startDate, endDate, prevStartDate, prevEndDate }) =>
-        onDateChange(startDate, endDate, prevStartDate, prevEndDate)
+      onValueChange={({ startDate: s, endDate: e, prevStartDate, prevEndDate }) =>
+        onDateChange(s, e, prevStartDate, prevEndDate)
       }
       defaultTab={defaultTab}
     />

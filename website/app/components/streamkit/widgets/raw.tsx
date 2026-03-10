@@ -19,13 +19,13 @@ export const RawWidget: FC<RawWidgetProps> = ({
   const [stat, setStat] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async (region: Region, accountId: string, variable: string, extraArgs: Record<string, string>) => {
+  const fetchStats = async (r: Region, id: string, v: string, args: Record<string, string>) => {
     const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
-    url.searchParams.append("region", region);
-    url.searchParams.append("account_id", accountId);
-    url.searchParams.append("variables", [variable].join(","));
+    url.searchParams.append("region", r);
+    url.searchParams.append("account_id", id);
+    url.searchParams.append("variables", [v].join(","));
 
-    for (const [key, value] of Object.entries(extraArgs)) {
+    for (const [key, value] of Object.entries(args)) {
       if (value) url.searchParams.append(key, value);
     }
     const res = await fetch(url);

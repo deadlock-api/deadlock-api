@@ -1,6 +1,6 @@
 import { CalendarIcon, ClockIcon } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
@@ -81,9 +81,11 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
     return resolvedPatchStartDate.isSame(value.startDate, "day") && resolvedPatchEndDate.isSame(value.endDate, "day");
   });
 
-  // Sync tab to initial URL state on mount only — deps intentionally omitted
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only initialization to match tab with current URL params
+  // Sync tab to initial URL state on mount only
+  const hasSynced = useRef(false);
   useEffect(() => {
+    if (hasSynced.current) return;
+    hasSynced.current = true;
     if (matchingPatch) {
       if (tab !== "patch") {
         setTab("patch");
@@ -97,7 +99,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
         setTab(defaultTab);
       }
     }
-  }, []);
+  }, [matchingPatch, tab, setTab, value.startDate, value.endDate, defaultTab]);
 
   const handlePatchSelect = (patchId: string) => {
     const selectedPatch = patchDates.find((p) => p.id === patchId);
@@ -138,7 +140,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
       className="w-auto min-w-[340px] p-3"
     >
       <div className="flex flex-col gap-3">
-        <Tabs defaultValue={defaultTab} value={tab} onValueChange={(value) => setTab(value as "patch" | "custom")}>
+        <Tabs defaultValue={defaultTab} value={tab} onValueChange={(v) => setTab(v as "patch" | "custom")}>
           <TabsList className="flex w-full">
             <TabsTrigger value="patch" className="flex flex-1 items-center gap-1 text-xs">
               <ClockIcon className="h-3 w-3" />

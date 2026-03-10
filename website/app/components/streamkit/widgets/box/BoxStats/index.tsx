@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { StatDisplay } from "~/components/streamkit/widgets/StatDisplay";
 import { cn } from "~/lib/utils";
 
@@ -21,20 +23,21 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
 
   return (
     <div className="flex flex-nowrap items-stretch gap-1 p-1">
+      {/* eslint-disable react/no-array-index-key -- stats can have duplicate variables, no natural unique key */}
       {stats.map((stat, index) => (
-        <>
-          <StatDisplay key={`${stat.variable}-${index}-display`} stat={stat} theme={theme} />
+        <Fragment key={`${stat.variable}-${index}`}>
+          <StatDisplay stat={stat} theme={theme} />
           {index < stats.length - 1 && (
             <div
-              key={`${stat.variable}-${index}-divider`}
               className={cn(
                 "w-px flex-1 bg-gradient-to-b from-transparent to-transparent",
                 theme === "light" ? "via-black/50" : "via-white/50",
               )}
             />
           )}
-        </>
+        </Fragment>
       ))}
+      {/* eslint-enable react/no-array-index-key */}
     </div>
   );
 };

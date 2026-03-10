@@ -134,8 +134,8 @@ export async function scanDirHandle(
 
 export async function scanFileList(files: FileList, onSaltFound: () => void): Promise<Set<Salts>> {
   const salts: Set<Salts> = new Set();
-  for (let i = 0; i < files.length; i++) {
-    const salt = await processFileObject(files[i]);
+  const results = await Promise.all(Array.from(files).map((file) => processFileObject(file)));
+  for (const salt of results) {
     if (salt) {
       salts.add(salt);
       onSaltFound();
@@ -177,8 +177,8 @@ export async function scanEntry(entry: FileSystemEntry, onSaltFound: () => void)
   } else if (entry.isDirectory) {
     const reader = (entry as FileSystemDirectoryEntry).createReader();
     const entries = await readAllEntries(reader);
-    for (const childEntry of entries) {
-      const subSalts = await scanEntry(childEntry, onSaltFound);
+    const allSubSalts = await Promise.all(entries.map((childEntry) => scanEntry(childEntry, onSaltFound)));
+    for (const subSalts of allSubSalts) {
       for (const s of subSalts) {
         salts.add(s);
       }

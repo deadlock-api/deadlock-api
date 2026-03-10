@@ -179,6 +179,7 @@ export async function generateOGImages(outDir: string) {
   const fonts = await loadFonts();
 
   for (const page of PAGES) {
+    // eslint-disable-next-line no-await-in-loop -- sequential generation to avoid memory spikes
     const svg = await satori(createCard(page) as Parameters<typeof satori>[0], {
       width: WIDTH,
       height: HEIGHT,
