@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react", "typescript", "jsx-a11y"],
+  "jsPlugins": [
+    { "name": "react-compiler", "specifier": "eslint-plugin-react-compiler" }
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -15,7 +18,8 @@
     "jsx-a11y/click-events-have-key-events": "warn",
     "jsx-a11y/no-autofocus": "warn",
     "jsx-a11y/no-static-element-interactions": "warn",
-    "react-hooks/exhaustive-deps": "warn"
+    "react-hooks/exhaustive-deps": "warn",
+    "react-compiler/react-compiler": "error"
   },
   "ignorePatterns": ["node_modules", "build", ".react-router", "app/components/ui"]
 }

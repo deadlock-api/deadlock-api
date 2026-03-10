@@ -62,6 +62,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.183.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "oxfmt": "^0.37.0",
     "oxlint": "^1.52.0",
     "postcss": "^8.5.8",
