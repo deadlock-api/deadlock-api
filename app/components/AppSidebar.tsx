@@ -2,15 +2,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  ChevronDown,
+  Crosshair,
   Database,
+  Ear,
   ExternalLink,
   Gamepad2,
+  HelpCircle,
   Home,
   ListOrdered,
   Map,
   Medal,
   Menu,
   MessageSquare,
+  Puzzle,
   Radio,
   Shield,
   ShoppingBag,
@@ -34,6 +39,7 @@ interface NavLink {
   label: string;
   icon: LucideIcon;
   special?: boolean;
+  children?: NavLink[];
 }
 
 interface NavGroup {
@@ -74,7 +80,21 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Games",
-    links: [{ to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 }],
+    links: [
+      {
+        to: "/deadlockdle",
+        label: "Deadlockdle",
+        icon: Gamepad2,
+        children: [
+          { to: "/deadlockdle/guess-hero", label: "Guess the Hero", icon: Crosshair },
+          { to: "/deadlockdle/guess-item", label: "Guess the Item", icon: ShoppingBag },
+          { to: "/deadlockdle/guess-sound", label: "Guess the Sound", icon: Ear },
+          { to: "/deadlockdle/guess-ability", label: "Ability to Hero", icon: Swords },
+          { to: "/deadlockdle/item-stats", label: "Item Stats Quiz", icon: Puzzle },
+          { to: "/deadlockdle/trivia", label: "Trivia", icon: HelpCircle },
+        ],
+      },
+    ],
   },
 ];
 
@@ -196,6 +216,80 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
   );
 }
 
+function NavItemWithChildren({ link, onNavigate }: { link: NavLink; onNavigate?: () => void }) {
+  const { pathname } = useLocation();
+  const active = isActive(pathname, link.to);
+  const Icon = link.icon;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div>
+      <div className="flex items-stretch">
+        <Link
+          to={link.to}
+          prefetch="intent"
+          onClick={onNavigate}
+          className={cn(
+            "flex-1 flex items-center gap-2.5 px-3 py-1.5 rounded-l-md text-sm font-medium transition-colors duration-150 border-l-2",
+            active
+              ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
+              : "border-transparent text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+          )}
+        >
+          <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-sidebar-foreground/40")} />
+          {link.label}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            "flex items-center px-2 rounded-r-md transition-colors duration-150",
+            active
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/40 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground/60",
+          )}
+          aria-label={open ? "Collapse submenu" : "Expand submenu"}
+        >
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")}
+          />
+        </button>
+      </div>
+
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          open ? "max-h-96 opacity-100" : "max-h-0 opacity-0",
+        )}
+      >
+        <div className="ml-4 pl-3 border-l border-sidebar-border/50 mt-0.5 space-y-0.5">
+          {link.children?.map((child) => {
+            const childActive = isActive(pathname, child.to);
+            const ChildIcon = child.icon;
+            return (
+              <Link
+                key={child.to}
+                to={child.to}
+                prefetch="intent"
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150",
+                  childActive
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                )}
+              >
+                <ChildIcon className={cn("h-3.5 w-3.5 shrink-0", childActive ? "text-primary" : "text-sidebar-foreground/30")} />
+                {child.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col text-sidebar-foreground">
@@ -229,9 +323,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {group.label}
             </p>
             <div className="space-y-0.5">
-              {group.links.map((link) => (
-                <NavItem key={link.to} link={link} onNavigate={onNavigate} />
-              ))}
+              {group.links.map((link) =>
+                link.children ? (
+                  <NavItemWithChildren key={link.to} link={link} onNavigate={onNavigate} />
+                ) : (
+                  <NavItem key={link.to} link={link} onNavigate={onNavigate} />
+                ),
+              )}
             </div>
           </div>
         ))}
