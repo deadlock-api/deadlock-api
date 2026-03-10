@@ -64,7 +64,7 @@ function widgetConfigReducer(state: WidgetConfig, action: WidgetConfigAction): W
 }
 
 function buildWidgetUrl(region: string, accountId: string, config: WidgetConfig): string | null {
-  if (!accountId || !region) return null;
+  if (!accountId || !region || typeof window === "undefined") return null;
 
   const url = new URL(`${window.location.origin}/streamkit/widgets/${region}/${accountId}/${config.widgetType}`);
   for (const [arg, value] of Object.entries(config.extraArgs)) {

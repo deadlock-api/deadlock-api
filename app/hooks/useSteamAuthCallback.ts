@@ -11,6 +11,10 @@ interface SteamAuthCallbackResult {
  * Each consumer is responsible for cleanup and further processing (e.g. converting to ID3, sending API requests).
  */
 export function useSteamAuthCallback(): SteamAuthCallbackResult {
+  if (typeof window === "undefined") {
+    return { steamId64: null, openIdParams: {} };
+  }
+
   const searchParams = new URLSearchParams(window.location.search);
   if (!validateSteamResponse(searchParams)) {
     return { steamId64: null, openIdParams: {} };
