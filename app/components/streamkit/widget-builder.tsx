@@ -354,6 +354,7 @@ export function WidgetBuilder({ region, accountId }: WidgetBuilderProps) {
             <div className="space-y-3">
               {config.variables.map((variable, index) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: variables can be duplicated so there's no natural unique key; list is only appended/removed from end
+                // eslint-disable-next-line react/no-array-index-key -- variables can be duplicated
                 <div key={index} className="flex gap-3">
                   <Select value={variable} onValueChange={(value) => updateVariable(index, value)}>
                     <SelectTrigger className="w-1/2">

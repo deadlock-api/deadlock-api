@@ -169,8 +169,8 @@ export default function Leaderboard() {
   const tableRef = useRef<LeaderboardTableHandle>(null);
 
   const handleHeroClick = useCallback(
-    (heroId: number) => {
-      setHeroId(heroId);
+    (id: number) => {
+      setHeroId(id);
     },
     [setHeroId],
   );

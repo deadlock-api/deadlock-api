@@ -49,10 +49,10 @@ export default function StreamKit() {
     navigate(`/streamkit?${newParams.toString()}`, { replace: true });
   }, [steamId64, setSteamId, region, navigate]);
 
-  const parseSteamId = (steamId: string) => {
+  const parseSteamId = (input: string) => {
     try {
       let extractedSteamId = BigInt(
-        steamId
+        input
           .replace(/\[U:\d+:/g, "")
           .replace(/U:\d+:/g, "")
           .replace(/\[STEAM_0:\d+:/g, "")
@@ -63,16 +63,16 @@ export default function StreamKit() {
       return extractedSteamId.toString();
     } catch (err) {
       console.error("Failed to parse Steam ID:", err);
-      return steamId;
+      return input;
     }
   };
 
-  const fetchSteamName = async (region: string, steamId: string) => {
-    if (!steamId) return null;
-    if (!region) return null;
+  const fetchSteamName = async (r: string, id: string) => {
+    if (!id) return null;
+    if (!r) return null;
     const url = new URL(`${API_ORIGIN}/v1/commands/variables/resolve`);
-    url.searchParams.append("region", region);
-    url.searchParams.append("account_id", steamId);
+    url.searchParams.append("region", r);
+    url.searchParams.append("account_id", id);
     url.searchParams.append("variables", "steam_account_name");
     const res = await fetch(url);
     return (await res.json()).steam_account_name;

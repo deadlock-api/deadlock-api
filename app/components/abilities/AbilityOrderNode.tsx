@@ -129,7 +129,9 @@ export default function AbilityOrderNode({
         <Tooltip>
           <TooltipTrigger asChild>
             {/* biome-ignore lint/a11y/noStaticElementInteractions: role="button" is conditionally applied when isFocusable */}
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- role is conditionally applied */}
             <div
+              role={isFocusable ? "button" : undefined}
               data-ability-card
               className={cn(
                 "w-[160px] rounded-lg border border-l-2 p-2 transition-all",
@@ -152,7 +154,6 @@ export default function AbilityOrderNode({
                   : undefined
               }
               tabIndex={isFocusable ? 0 : undefined}
-              role={isFocusable ? "button" : undefined}
             >
               {/* Header: icon + name + tier pill */}
               <div className="mb-2 flex items-center gap-2">

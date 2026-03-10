@@ -35,16 +35,16 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
     }
   }, [data, error]);
 
-  const generateUrl = (steamId: string, region: string, template: string) => {
-    if (!steamId || !region) {
+  const generateUrl = (steamId: string, r: string, tpl: string) => {
+    if (!steamId || !r) {
       return "";
     }
     const baseUrl = `${API_ORIGIN}/v1/commands`;
     const url = new URL(`${baseUrl}/resolve`);
-    url.searchParams.set("region", region);
+    url.searchParams.set("region", r);
     url.searchParams.set("account_id", steamId);
-    if (template) {
-      url.searchParams.set("template", template);
+    if (tpl) {
+      url.searchParams.set("template", tpl);
     }
     for (const [key, value] of Object.entries(extraArgs)) {
       if (value) url.searchParams.set(key, value);
@@ -53,13 +53,13 @@ export function CommandBuilder({ region, accountId }: CommandBuilderProps) {
   };
 
   const usedExtraArgs = () => {
-    const extraArgs: Set<string> = new Set();
+    const argSet: Set<string> = new Set();
     for (const match of template.matchAll(/{([^}]+)}/g)) {
       for (const arg of variables.find((v) => v.name === match[1])?.extra_args || []) {
-        extraArgs.add(arg);
+        argSet.add(arg);
       }
     }
-    return Array.from(extraArgs);
+    return Array.from(argSet);
   };
 
   const generatedUrl = generateUrl(accountId, region, template);

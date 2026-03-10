@@ -71,9 +71,9 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
   }, [startDate, endDate]);
 
   function selectLastDays(days: number) {
-    const startDate = day().subtract(days, "day").startOf("day");
-    const endDate = day().startOf("day");
-    onDateRangeChange({ startDate, endDate });
+    const start = day().subtract(days, "day").startOf("day");
+    const end = day().startOf("day");
+    onDateRangeChange({ startDate: start, endDate: end });
   }
 
   return (
@@ -96,6 +96,7 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
         </PopoverTrigger>
         <PopoverContent className="w-auto min-w-[30rem] p-2" align="start">
           <Calendar
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- calendar needs immediate focus for keyboard nav
             autoFocus={true}
             mode="range"
             defaultMonth={startDate?.toDate()}

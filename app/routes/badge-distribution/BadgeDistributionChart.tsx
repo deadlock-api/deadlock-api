@@ -134,7 +134,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
         </g>
       );
     };
-  }, [tierCenters, tierData, badgeMap]);
+  }, [tierCenters, tierData]);
 
   return (
     <ChartContainer config={{ matches: { label: "Matches" } }} className="h-full w-full">

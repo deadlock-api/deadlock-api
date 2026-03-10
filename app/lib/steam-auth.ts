@@ -110,7 +110,7 @@ export function redirectToSteamAuth(action: "deletion" | "tracking"): void {
     window.location.href = generateSteamAuthUrl(action);
   } catch (error) {
     console.error(error);
-    throw new Error("Failed to generate Steam authentication URL");
+    throw new Error("Failed to generate Steam authentication URL", { cause: error });
   }
 }
 

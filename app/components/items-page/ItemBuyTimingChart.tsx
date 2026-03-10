@@ -257,8 +257,8 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
   const config = BUCKET_CONFIG[bucketType];
 
   const dataRange = useMemo<[number, number]>(() => {
-    const data = Object.values(chartData).flat();
-    const valid = data.filter((d) => d.winrate !== null);
+    const allPoints = Object.values(chartData).flat();
+    const valid = allPoints.filter((d) => d.winrate !== null);
     if (!valid.length) return [0, 1];
     const min = Math.min(...valid.map((d) => d.displayBucket));
     const max = Math.max(...valid.map((d) => d.displayBucket));
@@ -364,14 +364,14 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                 <ChartTooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
-                      return payload.map((data) => {
-                        const d = data.payload;
+                      return payload.map((entry) => {
+                        const d = entry.payload;
                         return (
                           <div
-                            key={`${data.name} ${d.bucketStart}-${d.bucketEnd}`}
+                            key={`${entry.name} ${d.bucketStart}-${d.bucketEnd}`}
                             className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl"
                           >
-                            <div className="text-sm">{data.name}</div>
+                            <div className="text-sm">{entry.name}</div>
                             <div className="font-medium">
                               {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
                             </div>

@@ -165,8 +165,8 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
 // Confidence tier is 1-5
 // 1 is the worst, 5 is the best, from "Very low" to "Very high"
 function ConfidenceTierBadge({ tier }: { tier: number }) {
-  const getConfidenceLabel = (tier: number) => {
-    switch (tier) {
+  const getConfidenceLabel = (t: number) => {
+    switch (t) {
       case 1:
         // Big warning, something more extreme than alert
         return <span className="icon-[mdi--alert-circle] h-4 w-4" />;
@@ -189,8 +189,8 @@ function ConfidenceTierBadge({ tier }: { tier: number }) {
     }
   };
 
-  const getConfidenceColor = (tier: number) => {
-    switch (tier) {
+  const getConfidenceColor = (t: number) => {
+    switch (t) {
       case 1:
         return "bg-red-500/30 border-red-500 text-red-400";
       case 2:
@@ -424,9 +424,9 @@ export function ItemStatsTableDisplay({
   );
 
   const sort: SortState = useMemo(() => ({ field: sortField, direction: sortDirection }), [sortField, sortDirection]);
-  const setSort = (sort: SortState) => {
-    setSortField(sort.field);
-    setSortDirection(sort.direction);
+  const setSort = (newSort: SortState) => {
+    setSortField(newSort.field);
+    setSortDirection(newSort.direction);
   };
 
   const [itemTiers, setItemTiers] = useQueryState(
