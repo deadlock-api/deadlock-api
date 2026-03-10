@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
-import axios from "axios";
+import { isAxiosError } from "axios";
 import { AlertCircle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -135,7 +135,7 @@ function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isA
         toast.success(`Fetched ${count} match${count !== 1 ? "es" : ""}`);
       },
       onError: (error) => {
-        if (axios.isAxiosError(error) && error.response?.status === 429) {
+        if (isAxiosError(error) && error.response?.status === 429) {
           const retryAfter = Number(error.response.headers["retry-after"]);
           if (retryAfter && retryAfter > 0) {
             const minutes = Math.ceil(retryAfter / 60);
@@ -143,7 +143,7 @@ function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isA
           } else {
             toast.error("Rate limited — please wait before trying again");
           }
-        } else if (axios.isAxiosError(error)) {
+        } else if (isAxiosError(error)) {
           const detail = error.response?.data?.detail ?? error.response?.data?.message;
           toast.error(detail ?? `Request failed (${error.response?.status ?? "network error"})`);
         } else {

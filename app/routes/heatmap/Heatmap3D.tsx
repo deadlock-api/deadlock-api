@@ -138,25 +138,29 @@ function MapPlane({ mapImages }: { mapImages: { background: string; frame: strin
     const loader = new THREE.TextureLoader();
     const load = (url: string) => new Promise<THREE.Texture>((res) => loader.load(url, res));
 
-    Promise.all([load(mapImages.background), load(mapImages.frame), load(mapImages.mid)]).then(
-      ([bgTex, frameTex, midTex]) => {
-        const bgImg = bgTex.image as HTMLImageElement;
-        const size = bgImg.width;
-        const canvas = document.createElement("canvas");
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(bgImg, 0, 0, size, size);
-        ctx.drawImage(midTex.image as HTMLImageElement, 0, 0, size, size);
-        ctx.globalCompositeOperation = "multiply";
-        ctx.drawImage(frameTex.image as HTMLImageElement, 0, 0, size, size);
+    const loadAll = async () => {
+      const [bgTex, frameTex, midTex] = await Promise.all([
+        load(mapImages.background),
+        load(mapImages.frame),
+        load(mapImages.mid),
+      ]);
+      const bgImg = bgTex.image as HTMLImageElement;
+      const size = bgImg.width;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bgImg, 0, 0, size, size);
+      ctx.drawImage(midTex.image as HTMLImageElement, 0, 0, size, size);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.drawImage(frameTex.image as HTMLImageElement, 0, 0, size, size);
 
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.needsUpdate = true;
-        setTexture(tex);
-      },
-    );
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      setTexture(tex);
+    };
+    void loadAll();
   }, [mapImages.background, mapImages.frame, mapImages.mid]);
 
   if (!texture) return null;
