@@ -10,10 +10,9 @@ function readConsent(): ConsentValue {
 }
 
 export function useAnalyticsConsent() {
-  const [consent, setConsent] = useState<ConsentValue>(null);
+  const [consent, setConsent] = useState<ConsentValue>(() => readConsent());
 
   useEffect(() => {
-    setConsent(readConsent());
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) setConsent(readConsent());
     };
