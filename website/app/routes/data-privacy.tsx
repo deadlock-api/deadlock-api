@@ -2,7 +2,6 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
 
-import { useAnalyticsConsent } from "~/hooks/useAnalyticsConsent";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +15,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { useAnalyticsConsent } from "~/hooks/useAnalyticsConsent";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
 import { createPageMeta } from "~/lib/meta";
