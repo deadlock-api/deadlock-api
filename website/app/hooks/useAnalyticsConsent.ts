@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import posthogClient from "posthog-js";
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "analytics-consent";
@@ -22,22 +22,22 @@ export function useAnalyticsConsent() {
 
   const accept = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, "granted");
-    posthog.opt_in_capturing();
-    posthog.set_config({ persistence: "localStorage+cookie" });
+    posthogClient.opt_in_capturing();
+    posthogClient.set_config({ persistence: "localStorage+cookie" });
     setConsent("granted");
   }, []);
 
   const decline = useCallback(() => {
     localStorage.setItem(STORAGE_KEY, "denied");
-    posthog.opt_out_capturing();
-    posthog.clear_opt_in_out_capturing();
+    posthogClient.opt_out_capturing();
+    posthogClient.clear_opt_in_out_capturing();
     setConsent("denied");
   }, []);
 
   const reset = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
-    posthog.opt_out_capturing();
-    posthog.clear_opt_in_out_capturing();
+    posthogClient.opt_out_capturing();
+    posthogClient.clear_opt_in_out_capturing();
     setConsent(null);
   }, []);
 

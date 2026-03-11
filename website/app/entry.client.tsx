@@ -5,7 +5,7 @@
  */
 
 import { PostHogProvider } from "@posthog/react";
-import posthog from "posthog-js";
+import posthogClient from "posthog-js";
 import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
@@ -13,7 +13,7 @@ import { HydratedRouter } from "react-router/dom";
 if (import.meta.env.PROD) {
   const consentGiven = localStorage.getItem("analytics-consent") === "granted";
 
-  posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
+  posthogClient.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
     api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
     defaults: "2026-01-30",
     __add_tracing_headers: [window.location.host, "localhost"],
@@ -22,14 +22,14 @@ if (import.meta.env.PROD) {
   });
 
   if (consentGiven) {
-    posthog.opt_in_capturing();
+    posthogClient.opt_in_capturing();
   }
 }
 
 startTransition(() => {
   hydrateRoot(
     document,
-    <PostHogProvider client={posthog}>
+    <PostHogProvider client={posthogClient}>
       <StrictMode>
         <HydratedRouter />
       </StrictMode>

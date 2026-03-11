@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import posthogClient from "posthog-js";
 import { createContext, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 import { API_ORIGIN } from "~/lib/constants";
@@ -100,7 +100,7 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
     if (typeof window !== "undefined") {
       sessionStorage.setItem("patron_redirect_path", window.location.pathname);
     }
-    posthog.capture("patron_login_initiated");
+    posthogClient.capture("patron_login_initiated");
     window.location.href = `${API_URL}/v1/auth/patreon`;
   }, []);
 
@@ -112,8 +112,8 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
         method: "POST",
         credentials: "include",
       });
-      posthog.capture("patron_logged_out");
-      posthog.reset();
+      posthogClient.capture("patron_logged_out");
+      posthogClient.reset();
     } catch (error) {
       console.error("Failed to logout:", error);
     } finally {
