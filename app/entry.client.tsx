@@ -4,15 +4,33 @@
  * For more information, see https://remix.run/file-conventions/entry.client
  */
 
+import { PostHogProvider } from "@posthog/react";
+import posthog from "posthog-js";
 import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
 
+const consentGiven = localStorage.getItem("analytics-consent") === "granted";
+
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  defaults: "2026-01-30",
+  __add_tracing_headers: [window.location.host, "localhost"],
+  opt_out_capturing_by_default: true,
+  persistence: consentGiven ? "localStorage+cookie" : "memory",
+});
+
+if (consentGiven) {
+  posthog.opt_in_capturing();
+}
+
 startTransition(() => {
   hydrateRoot(
     document,
-    <StrictMode>
-      <HydratedRouter />
-    </StrictMode>,
+    <PostHogProvider client={posthog}>
+      <StrictMode>
+        <HydratedRouter />
+      </StrictMode>
+    </PostHogProvider>,
   );
 });
