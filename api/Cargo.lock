@@ -800,7 +800,6 @@ dependencies = [
  "futures",
  "hex",
  "hmac",
- "http-body-util",
  "itertools",
  "jsonwebtoken",
  "md-5",
