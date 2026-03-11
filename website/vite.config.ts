@@ -24,7 +24,4 @@ export default defineConfig({
     tsconfigPaths(),
     tailwindcss(),
   ],
-  ssr: {
-    noExternal: ["posthog-js", "@posthog/react"],
-  },
 });
