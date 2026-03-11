@@ -1,3 +1,4 @@
+import { usePostHog } from "@posthog/react";
 import { Bot, RotateCcw, Sparkles } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import type { MetaFunction } from "react-router";
@@ -30,6 +31,7 @@ export default function ChatPage() {
   // In development, bypass Turnstile verification
   const [turnstileToken, setTurnstileToken] = useState<string | null>(IS_DEV ? "DEV_BYPASS" : null);
   const [lastMessage, setLastMessage] = useState<string | null>(null);
+  const posthog = usePostHog();
 
   const rateLimit = useRateLimit();
 
@@ -47,12 +49,14 @@ export default function ChatPage() {
 
   const handleSendMessage = (message: string) => {
     setLastMessage(message);
+    posthog?.capture("chat_message_sent", { message_length: message.length });
     sendMessage(message);
   };
 
   const handleNewConversation = () => {
     clearConversation();
     setLastMessage(null);
+    posthog?.capture("chat_conversation_cleared", { previous_message_count: conversation.messages.length });
   };
 
   const handleDismissError = useCallback(() => {

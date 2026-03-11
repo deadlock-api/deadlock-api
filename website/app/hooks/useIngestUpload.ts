@@ -1,3 +1,4 @@
+import posthog from "posthog-js";
 import { useReducer, useRef } from "react";
 
 import { API_ORIGIN } from "~/lib/constants";
@@ -84,10 +85,12 @@ export function useIngestUpload() {
             type: "success",
           },
         });
+        posthog.capture("cache_upload_completed", { salt_count: salts.length });
       } else {
         const errorData = await response.json().catch(() => ({}));
         const detail = errorData.message ?? errorData.error ?? `HTTP ${response.status}`;
         showError("Upload Failed", `Failed to upload salts: ${detail}`);
+        posthog.capture("cache_upload_failed", { reason: detail });
       }
     } catch (error) {
       showError(
@@ -96,6 +99,9 @@ export function useIngestUpload() {
           ? `Failed to scan or upload: ${error.message}`
           : "Failed to scan directory or upload salts. Please try again.",
       );
+      posthog.capture("cache_upload_failed", {
+        reason: error instanceof Error ? error.message : "unknown",
+      });
       console.error("Scan/upload failed:", error);
     } finally {
       dispatch({ type: "SCAN_DONE" });
@@ -107,6 +113,7 @@ export function useIngestUpload() {
     if ("showDirectoryPicker" in window) {
       try {
         const dirHandle = await window.showDirectoryPicker();
+        posthog.capture("cache_upload_initiated", { method: "directory_picker" });
         await runScanAndUpload(() => scanDirHandle(dirHandle, incrementSalts));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -119,6 +126,7 @@ export function useIngestUpload() {
         console.error("Directory picker failed:", error);
       }
     } else {
+      posthog.capture("cache_upload_initiated", { method: "file_input" });
       fileInputRef.current?.click();
     }
   };

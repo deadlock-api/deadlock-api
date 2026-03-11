@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
 
+import { useAnalyticsConsent } from "~/hooks/useAnalyticsConsent";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,6 +116,87 @@ function DataPrivacyActionCard({
   );
 }
 
+function AnalyticsPreferencesCard() {
+  const { consent, accept, decline, reset } = useAnalyticsConsent();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Cookie & Analytics Preferences</CardTitle>
+        <CardDescription>Manage your consent for analytics cookies</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <h3 className="mb-2 text-lg font-semibold">Why We Use Analytics</h3>
+          <p className="text-muted-foreground">
+            We use{" "}
+            <a
+              href="https://posthog.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              PostHog
+            </a>
+            , an open-source analytics platform, to understand how people use Deadlock API. This helps us identify which
+            features are most popular, discover bugs and usability issues, and prioritize improvements. PostHog is
+            self-hosted on EU servers (Frankfurt) to keep your data within the European Union.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-lg font-semibold">What Is Collected</h3>
+          <ul className="ml-4 list-inside list-disc space-y-1 text-muted-foreground">
+            <li>Page views and navigation patterns</li>
+            <li>Feature usage (e.g. which filters or tabs are used)</li>
+            <li>Performance metrics and errors</li>
+            <li>Basic device info (browser, screen size)</li>
+          </ul>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We do <strong>not</strong> track personal information, Steam accounts, or match data through analytics.
+          </p>
+        </div>
+
+        <div className="rounded-md border border-white/10 bg-white/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">
+                Analytics status:{" "}
+                {consent === "granted" ? (
+                  <span className="text-green-400">Enabled</span>
+                ) : consent === "denied" ? (
+                  <span className="text-red-400">Disabled</span>
+                ) : (
+                  <span className="text-muted-foreground">No choice made yet</span>
+                )}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              {consent === "granted" ? (
+                <Button variant="outline" onClick={reset}>
+                  Opt Out
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={accept}>Opt In</Button>
+                  {consent === null && (
+                    <Button variant="outline" onClick={decline}>
+                      Opt Out
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            You can change your preference at any time. Opting out clears all analytics cookies.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DataPrivacy() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -197,6 +279,9 @@ export default function DataPrivacy() {
           </CardContent>
         </Card>
       )}
+
+      {/* Cookie & Analytics Preferences */}
+      <AnalyticsPreferencesCard />
 
       {/* What We Collect Section */}
       <Card>

@@ -1,21 +1,24 @@
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { usePostHog } from "@posthog/react";
 
 import "./tailwind.css";
 import "./dayjs.ts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import type { LinksFunction } from "react-router";
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
+import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
 
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
+import { CookieConsentBanner } from "~/components/CookieConsentBanner";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 
 import "@fontsource-variable/inter";
-import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
+import type { Route } from "./+types/root";
 
 export const links: LinksFunction = () => [
   {
@@ -160,6 +163,7 @@ export default function App() {
 
             <ReactQueryDevtools initialIsOpen={false} />
             <Toaster />
+            <CookieConsentBanner />
           </TooltipProvider>
         </NuqsAdapter>
       </PatronAuthProvider>
@@ -172,6 +176,30 @@ export function HydrateFallback() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background" role="status" aria-live="polite">
       <LoadingLogo />
       <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
+
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const posthog = usePostHog();
+  posthog?.captureException(error);
+
+  let message = "Oops!";
+  let details = "An unexpected error occurred.";
+
+  if (isRouteErrorResponse(error)) {
+    message = error.status === 404 ? "404" : "Error";
+    details = error.status === 404 ? "The requested page could not be found." : error.statusText || details;
+  } else if (import.meta.env.DEV && error instanceof Error) {
+    details = error.message;
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="text-center">
+        <h1 className="mb-2 text-4xl font-bold">{message}</h1>
+        <p className="text-muted-foreground">{details}</p>
+      </div>
     </div>
   );
 }
