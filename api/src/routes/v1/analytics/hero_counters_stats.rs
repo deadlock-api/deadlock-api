@@ -10,17 +10,19 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{
+    MatchInfoFilters, default_min_matches_u64, filter_protected_accounts, round_timestamps,
+};
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, default_true_option,
     parse_steam_id_option,
 };
 
-#[allow(clippy::unnecessary_wraps)]
 fn default_min_matches() -> Option<u64> {
-    20.into()
+    default_min_matches_u64()
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -127,44 +129,17 @@ pub struct HeroCounterStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroCounterStatsQuery) -> String {
-    let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+    let info_filters = MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
     }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    let info_filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
+    .build();
     let mut player_filters = vec![];
     if query.same_lane_filter.unwrap_or(true) {
         player_filters.push("p1.assigned_lane = p2.assigned_lane".to_owned());
@@ -265,8 +240,7 @@ async fn get_hero_counter_stats(
     ch_client: &clickhouse::Client,
     mut query: HeroCounterStatsQuery,
 ) -> APIResult<Vec<HeroCounterStats>> {
-    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
-    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query = build_query(&query);
     debug!(?query);
     Ok(run_query(ch_client, &query).await?)
@@ -302,29 +276,8 @@ pub(super) async fn hero_counters_stats(
     Query(mut query): Query<HeroCounterStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if let Some(account_ids) = query.account_ids {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
-        let filtered_account_ids = account_ids
-            .into_iter()
-            .filter(|id| !protected_users.contains(id))
-            .collect::<Vec<_>>();
-        if filtered_account_ids.is_empty() {
-            return Err(APIError::protected_user());
-        }
-        query.account_ids = Some(filtered_account_ids);
-    }
     #[allow(deprecated)]
-    if let Some(account_id) = query.account_id
-        && state
-            .steam_client
-            .is_user_protected(&state.pg_client, account_id)
-            .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     get_hero_counter_stats(&state.ch_client_ro, query)
         .await
         .map(Json)

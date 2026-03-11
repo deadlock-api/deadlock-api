@@ -84,6 +84,20 @@ impl APIError {
     }
 }
 
+fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Response<Body> {
+    Response::builder()
+        .status(status)
+        .body(
+            serde_json::to_string(&json!({
+                "status": status.as_u16(),
+                "error": error,
+            }))
+            .unwrap_or_else(|_| "Internal server error".to_owned())
+            .into(),
+        )
+        .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
+}
+
 impl IntoResponse for APIError {
     fn into_response(self) -> Response<Body> {
         error!("API Error: {self}");
@@ -92,28 +106,8 @@ impl IntoResponse for APIError {
                 .status(status)
                 .body(Body::empty())
                 .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
-            Self::StatusMsg { status, message } => Response::builder()
-                .status(status)
-                .body(
-                    serde_json::to_string(&json!({
-                        "status": status.as_u16(),
-                        "error": message,
-                    }))
-                    .unwrap_or_else(|_| "Internal server error".to_owned())
-                    .into(),
-                )
-                .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
-            Self::StatusMsgJson { status, message } => Response::builder()
-                .status(status)
-                .body(
-                    serde_json::to_string(&json!({
-                        "status": status.as_u16(),
-                        "error": message,
-                    }))
-                    .unwrap_or_else(|_| "Internal server error".to_owned())
-                    .into(),
-                )
-                .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
+            Self::StatusMsg { status, message } => build_error_response(status, message),
+            Self::StatusMsgJson { status, message } => build_error_response(status, message),
             Self::RateLimitExceeded { status } => {
                 let mut res = Response::builder();
                 for (key, value) in status.response_headers() {
@@ -139,17 +133,10 @@ impl IntoResponse for APIError {
                     )
                     .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
             }
-            Self::InternalError { message } => Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(
-                    serde_json::to_string(&json!({
-                        "status": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-                        "error": format!("Internal server error: {message}"),
-                    }))
-                    .unwrap_or_else(|_| "Internal server error".to_owned())
-                    .into(),
-                )
-                .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
+            Self::InternalError { message } => build_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Internal server error: {message}"),
+            ),
             Self::SteamProxy(e) => match e {
                 SteamProxyError::Request(_) => Self::status_msg(
                     StatusCode::SERVICE_UNAVAILABLE,

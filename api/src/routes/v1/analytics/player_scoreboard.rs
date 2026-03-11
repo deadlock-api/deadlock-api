@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::default_min_matches_u32;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
@@ -20,11 +21,6 @@ use crate::utils::types::SortDirectionDesc;
 #[allow(clippy::unnecessary_wraps)]
 fn default_limit() -> Option<u32> {
     100.into()
-}
-
-#[allow(clippy::unnecessary_wraps)]
-fn default_min_matches() -> Option<u32> {
-    20.into()
 }
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
@@ -43,7 +39,7 @@ pub(crate) struct PlayerScoreboardQuery {
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     hero_id: Option<u32>,
     /// The minimum number of matches played for a player to be included in the scoreboard.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
     /// The maximum number of matches played for a hero combination to be included in the response.

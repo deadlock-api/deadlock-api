@@ -13,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::commands::variables::{Variable, VariableCategory};
+use crate::routes::v1::commands::variables::{ResolverContext, Variable, VariableCategory};
 use crate::routes::v1::leaderboard::types::LeaderboardRegion;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -95,8 +95,9 @@ Returns a map of str->int of widget versions.
 "
 )]
 pub(super) async fn widget_versions() -> APIResult<impl IntoResponse> {
-    let widget_versions_file = std::fs::File::open("widget_versions.json")?;
-    Ok(serde_json::from_reader(widget_versions_file).map(|r: HashMap<String, i32>| Json(r))?)
+    let data = tokio::fs::read("widget_versions.json").await?;
+    let versions: HashMap<String, i32> = serde_json::from_slice(&data)?;
+    Ok(Json(versions))
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams)]
@@ -164,33 +165,44 @@ pub(super) async fn command_resolve(
     if let Some(hero_name) = query.hero_name {
         extra_args.insert("hero_name".to_owned(), hero_name);
     }
-    let mut resolved_template = query.template.clone();
-    let results = futures::future::join_all(
-        Variable::VARIANTS
-            .iter()
-            .filter(|v| query.template.contains(&format!("{{{}}}", v.get_name())))
-            .map(|v| {
-                let template_str = format!("{{{}}}", v.get_name());
-                async {
-                    match v
-                        .resolve(
-                            &rate_limit_key,
-                            &state,
-                            query.account_id,
-                            query.region,
-                            &extra_args,
-                        )
-                        .await
-                    {
-                        Ok(resolved) => Ok((template_str, resolved)),
-                        Err(e) => {
-                            warn!("Failed to resolve variable: {}, {e}", v.get_name());
-                            Err(format!("Failed to resolve variable: {}", v.get_name()))
-                        }
-                    }
-                }
-            }),
+
+    let variables_needed: Vec<&Variable> = Variable::VARIANTS
+        .iter()
+        .filter(|v| query.template.contains(&format!("{{{}}}", v.get_name())))
+        .collect();
+
+    let context = ResolverContext::new(
+        &variables_needed,
+        &state.ch_client_ro,
+        &state.ch_client,
+        &state.steam_client,
+        query.account_id,
     )
+    .await;
+
+    let mut resolved_template = query.template.clone();
+    let results = futures::future::join_all(variables_needed.iter().map(|v| {
+        let template_str = format!("{{{}}}", v.get_name());
+        async {
+            match v
+                .resolve(
+                    &rate_limit_key,
+                    &state,
+                    query.account_id,
+                    query.region,
+                    &extra_args,
+                    &context,
+                )
+                .await
+            {
+                Ok(resolved) => Ok((template_str, resolved)),
+                Err(e) => {
+                    warn!("Failed to resolve variable: {}, {e}", v.get_name());
+                    Err(format!("Failed to resolve variable: {}", v.get_name()))
+                }
+            }
+        }
+    }))
     .await;
 
     for result in results {
@@ -267,29 +279,39 @@ pub(super) async fn variables_resolve(
         extra_args.insert("hero_name".to_owned(), hero_name);
     }
     let variables_to_resolve = query.variables.split(',').map(str::trim).collect_vec();
-    let results = futures::future::join_all(
-        Variable::VARIANTS
-            .iter()
-            .filter(|v| variables_to_resolve.contains(&v.get_name()))
-            .map(|v| async {
-                match v
-                    .resolve(
-                        &rate_limit_key,
-                        &state,
-                        query.account_id,
-                        query.region,
-                        &extra_args,
-                    )
-                    .await
-                {
-                    Ok(resolved) => Some((v.get_name().to_owned(), resolved)),
-                    Err(e) => {
-                        warn!("Failed to resolve variable: {}, {e}", v.get_name());
-                        None
-                    }
-                }
-            }),
+    let variables_needed: Vec<&Variable> = Variable::VARIANTS
+        .iter()
+        .filter(|v| variables_to_resolve.contains(&v.get_name()))
+        .collect();
+
+    let context = ResolverContext::new(
+        &variables_needed,
+        &state.ch_client_ro,
+        &state.ch_client,
+        &state.steam_client,
+        query.account_id,
     )
+    .await;
+
+    let results = futures::future::join_all(variables_needed.iter().map(|v| async {
+        match v
+            .resolve(
+                &rate_limit_key,
+                &state,
+                query.account_id,
+                query.region,
+                &extra_args,
+                &context,
+            )
+            .await
+        {
+            Ok(resolved) => Some((v.get_name().to_owned(), resolved)),
+            Err(e) => {
+                warn!("Failed to resolve variable: {}, {e}", v.get_name());
+                None
+            }
+        }
+    }))
     .await
     .into_iter()
     .flatten()

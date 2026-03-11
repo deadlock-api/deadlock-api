@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{MatchInfoFilters, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -100,44 +101,17 @@ pub struct PlayerPerformanceCurvePoint {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
-    let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+    let info_filters = MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
     }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    let info_filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
+    .build();
     let mut player_filters = vec![];
     if let Some(hero_ids) = query.hero_ids.as_ref() {
         player_filters.push(format!(
@@ -230,21 +204,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     )
 }
 
-#[derive(Debug, Clone, Row, Serialize, Deserialize)]
-struct PlayerPerformanceCurveRow {
-    game_time: u32,
-    net_worth_avg: f64,
-    net_worth_std: f64,
-    kills_avg: f64,
-    kills_std: f64,
-    deaths_avg: f64,
-    deaths_std: f64,
-    assists_avg: f64,
-    assists_std: f64,
-}
-
 #[cached(
-    ty = "TimedCache<String, Vec<PlayerPerformanceCurveRow>>",
+    ty = "TimedCache<String, Vec<PlayerPerformanceCurvePoint>>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
     result = true,
     convert = "{ query_str.to_string() }",
@@ -254,7 +215,7 @@ struct PlayerPerformanceCurveRow {
 async fn run_query(
     ch_client: &clickhouse::Client,
     query_str: &str,
-) -> clickhouse::error::Result<Vec<PlayerPerformanceCurveRow>> {
+) -> clickhouse::error::Result<Vec<PlayerPerformanceCurvePoint>> {
     ch_client.query(query_str).fetch_all().await
 }
 
@@ -262,25 +223,11 @@ async fn get_player_performance_curve(
     ch_client: &clickhouse::Client,
     mut query: PlayerPerformanceCurveQuery,
 ) -> APIResult<Vec<PlayerPerformanceCurvePoint>> {
-    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
-    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
     let rows = run_query(ch_client, &query_str).await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| PlayerPerformanceCurvePoint {
-            game_time: row.game_time,
-            net_worth_avg: row.net_worth_avg,
-            net_worth_std: row.net_worth_std,
-            kills_avg: row.kills_avg,
-            kills_std: row.kills_std,
-            deaths_avg: row.deaths_avg,
-            deaths_std: row.deaths_std,
-            assists_avg: row.assists_avg,
-            assists_std: row.assists_std,
-        })
-        .collect())
+    Ok(rows)
 }
 
 #[utoipa::path(
@@ -311,20 +258,7 @@ pub(crate) async fn player_performance_curve(
     Query(mut query): Query<PlayerPerformanceCurveQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if let Some(account_ids) = query.account_ids {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
-        let filtered_account_ids = account_ids
-            .into_iter()
-            .filter(|id| !protected_users.contains(id))
-            .collect::<Vec<_>>();
-        if filtered_account_ids.is_empty() {
-            return Err(APIError::protected_user());
-        }
-        query.account_ids = Some(filtered_account_ids);
-    }
+    filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_player_performance_curve(&state.ch_client_ro, query)
         .await
         .map(Json)

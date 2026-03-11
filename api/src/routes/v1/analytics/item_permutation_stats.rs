@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{MatchInfoFilters, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
@@ -89,44 +90,17 @@ struct ItemPermutationStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
-    let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+    let info_filters = MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
     }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    let info_filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
+    .build();
     let mut player_filters = vec![];
     let mut hero_ids = query.hero_ids.clone().unwrap_or_default();
     #[allow(deprecated)]
@@ -236,8 +210,7 @@ async fn get_item_permutation_stats(
     ch_client: &clickhouse::Client,
     mut query: ItemPermutationStatsQuery,
 ) -> APIResult<Vec<ItemPermutationStats>> {
-    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
-    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query = build_query(&query);
     debug!(?query);
     Ok(run_query(ch_client, &query).await?)
@@ -271,29 +244,8 @@ pub(super) async fn item_permutation_stats(
     Query(mut query): Query<ItemPermutationStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if let Some(account_ids) = query.account_ids {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
-        let filtered_account_ids = account_ids
-            .into_iter()
-            .filter(|id| !protected_users.contains(id))
-            .collect::<Vec<_>>();
-        if filtered_account_ids.is_empty() {
-            return Err(APIError::protected_user());
-        }
-        query.account_ids = Some(filtered_account_ids);
-    }
     #[allow(deprecated)]
-    if let Some(account_id) = query.account_id
-        && state
-            .steam_client
-            .is_user_protected(&state.pg_client, account_id)
-            .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     if query.comb_size.is_some() && query.item_ids.is_some() {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,

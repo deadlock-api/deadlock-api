@@ -18,7 +18,11 @@ use tracing::{debug, warn};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ClickhouseSalts;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
+
+const MAX_SALTS_PER_REQUEST: usize = 1000;
 
 pub(super) async fn insert_salts_to_clickhouse(
     ch_client: &clickhouse::Client,
@@ -111,6 +115,7 @@ async fn validate_salt(
     responses(
         (status = OK),
         (status = BAD_REQUEST, description = "Provided parameters are invalid or the salt check failed."),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Ingest failed")
     ),
     tags = ["Internal"],
@@ -135,10 +140,37 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
     "
 )]
 pub(super) async fn ingest_salts(
+    rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
     Json(match_salts): Json<Vec<ClickhouseSalts>>,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            &rate_limit_key,
+            "ingest_salts",
+            &[Quota::ip_limit(100, Duration::from_secs(1))],
+        )
+        .await?;
+
     debug!("Received salts: {match_salts:?}");
+
+    if match_salts.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "No salts provided",
+        ));
+    }
+
+    if match_salts.len() > MAX_SALTS_PER_REQUEST {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Too many salts provided (max {MAX_SALTS_PER_REQUEST}, got {})",
+                match_salts.len()
+            ),
+        ));
+    }
 
     let match_salts = futures::stream::iter(match_salts)
         .map(|salt| {
@@ -163,13 +195,6 @@ pub(super) async fn ingest_salts(
     if match_salts.is_empty() {
         debug!("No new salts to ingest");
         return Ok(Json(json!({ "status": "success" })));
-    }
-
-    if match_salts.is_empty() {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "No valid salts provided",
-        ));
     }
 
     if match_salts.len() > 1 {

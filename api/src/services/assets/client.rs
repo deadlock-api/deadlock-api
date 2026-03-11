@@ -1,6 +1,6 @@
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::services::assets::types::{AssetsHero, AssetsRanks};
 
@@ -60,7 +60,12 @@ impl AssetsClient {
     pub(crate) async fn validate_hero_id(&self, hero_id: u32) -> bool {
         match self.fetch_heroes().await {
             Ok(heroes) => heroes.iter().any(|h| h.id == hero_id),
-            Err(_) => false,
+            Err(e) => {
+                warn!(
+                    "Failed to fetch heroes from assets API: {e}, treating hero ID {hero_id} as invalid"
+                );
+                false
+            }
         }
     }
 }

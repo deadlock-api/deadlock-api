@@ -3,13 +3,10 @@ use std::borrow::ToOwned;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use axum::body::Body;
 use axum::extract::{MatchedPath, Request, State};
 use axum::http::header;
 use axum::middleware::Next;
-use axum::response::{IntoResponse, Response};
-use http_body_util::BodyExt;
-use url::Url;
+use axum::response::IntoResponse;
 use uuid::Uuid;
 
 use crate::context::AppState;
@@ -32,12 +29,11 @@ pub(crate) async fn track_requests(
 ) -> impl IntoResponse {
     let method = req.method().clone();
     let uri = req.uri().clone();
-    let query_params: HashMap<String, String> = Url::parse(&uri.to_string())
-        .ok()
-        .map(|url| {
-            url.query()
-                .unwrap_or_default()
-                .split('&')
+    let uri_string = uri.to_string();
+    let query_params: HashMap<String, String> = uri
+        .query()
+        .map(|q| {
+            q.split('&')
                 .filter_map(|pair| {
                     let mut parts = pair.splitn(2, '=');
                     let key = parts.next()?;
@@ -50,7 +46,6 @@ pub(crate) async fn track_requests(
                 .collect()
         })
         .unwrap_or_default();
-    let uri_string = uri.to_string();
     let user_agent = get_header(&req, "user-agent");
     let api_key = extract_api_key(&req).and_then(|s| s.to_str().ok().map(ToOwned::to_owned));
     let referer = get_header(&req, "referer");
@@ -86,15 +81,13 @@ pub(crate) async fn track_requests(
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse::<u64>().ok());
 
-    // Collect response body to get size, then reconstruct the response
-    let (parts, body) = response.into_parts();
-    let bytes = body
-        .collect()
-        .await
-        .map(http_body_util::Collected::to_bytes)
-        .unwrap_or_default();
-    let response_size = bytes.len() as u64;
-    let response = Response::from_parts(parts, Body::from(bytes));
+    // Use Content-Length header for response size instead of buffering the entire body
+    let response_size = response
+        .headers()
+        .get(header::CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(0);
 
     // Create metrics labels
     let labels = [

@@ -449,7 +449,7 @@ pub(super) async fn bulk_metadata(
             ],
         )
         .await?;
-    if query.limit > 10000 {
+    if query.limit == 0 || query.limit > 1000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "limit must be between 1 and 1000".to_owned(),

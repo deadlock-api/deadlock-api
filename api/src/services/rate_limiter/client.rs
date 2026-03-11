@@ -4,8 +4,8 @@ use axum::http::StatusCode;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use chrono::{DateTime, Utc};
+use redis::RedisResult;
 use redis::aio::MultiplexedConnection;
-use redis::{AsyncCommands, RedisResult};
 use sqlx::{Pool, Postgres};
 use tracing::warn;
 use uuid::Uuid;
@@ -49,11 +49,17 @@ impl RateLimitClient {
 
         if let Some(api_key) = rate_limit_key.api_key {
             // If API key is present, check if it is valid
-            if !is_api_key_valid(&self.pg_client, api_key).await {
-                return Err(APIError::status_msg(
-                    StatusCode::FORBIDDEN,
-                    "Invalid API key",
-                ));
+            match is_api_key_valid(&self.pg_client, api_key).await {
+                Ok(false) => {
+                    return Err(APIError::status_msg(
+                        StatusCode::FORBIDDEN,
+                        "Invalid API key",
+                    ));
+                }
+                Err(e) => {
+                    warn!("Failed to validate API key due to DB error: {e}, failing open");
+                }
+                Ok(true) => {}
             }
         } else if quotas.iter().any(|q| q.r#type.is_key())
             && !quotas.iter().any(|q| q.r#type.is_ip())
@@ -78,7 +84,7 @@ impl RateLimitClient {
             .api_key
             .map_or_else(|| rate_limit_key.ip.to_string(), |k| k.to_string());
         let prefixed_key = format!("{prefix}:{key}");
-        // If incrementing the key fails, we don't apply any limits
+        // If incrementing the per-user key fails, we don't apply any limits
         if let Err(e) = self.increment_key(&prefixed_key).await {
             warn!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
@@ -88,7 +94,13 @@ impl RateLimitClient {
         let quotas = match rate_limit_key.api_key {
             None => quotas.to_vec(),
             Some(api_key) => {
-                let custom_quotas = get_custom_quotas(&self.pg_client, api_key, key).await;
+                let custom_quotas = match get_custom_quotas(&self.pg_client, api_key, key).await {
+                    Ok(quotas) => quotas,
+                    Err(e) => {
+                        warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
+                        Vec::new()
+                    }
+                };
                 if custom_quotas.is_empty() {
                     let has_api_key_limits = quotas.iter().any(|q| q.r#type.is_key());
                     // Remove IP quotas if there are key quotas and api_key is present
@@ -106,15 +118,14 @@ impl RateLimitClient {
         // Check all quotas
         let mut all_statuses = Vec::new();
         for quota in quotas {
-            let prefixed_key = if quota.r#type.is_global() {
+            let quota_key = if quota.r#type.is_global() {
                 key
             } else {
-                &format!("{prefix}:{key}")
+                &prefixed_key
             };
-            let Ok((requests, oldest_request)) =
-                self.check_requests(prefixed_key, quota.period).await
+            let Ok((requests, oldest_request)) = self.check_requests(quota_key, quota.period).await
             else {
-                warn!("Failed to check rate limit key: {prefixed_key}, will not apply limits");
+                warn!("Failed to check rate limit key: {quota_key}, will not apply limits");
                 continue;
             };
             let status = Status {
@@ -126,7 +137,8 @@ impl RateLimitClient {
             all_statuses.push(status);
         }
 
-        // If incrementing the key fails, we don't apply any limits
+        // Increment the global key only after quota checks pass to prevent
+        // a single abusive user from exhausting the global rate limit for everyone
         if let Err(e) = self.increment_key(key).await {
             warn!("Failed to increment rate limit key: {e}, will not apply limits");
             return Ok(None);
@@ -143,34 +155,32 @@ impl RateLimitClient {
     ) -> RedisResult<(usize, DateTime<Utc>)> {
         let current_time = Utc::now();
         let period_start = current_time - period;
-        let timestamps: Vec<i64> = self
-            .redis_client
-            .clone()
-            .zrangebyscore(
-                key,
-                period_start.timestamp_micros(),
-                current_time.timestamp_micros(),
-            )
+        let start = period_start.timestamp_micros();
+        let end = current_time.timestamp_micros();
+        let (num_requests, oldest_timestamps): (usize, Vec<i64>) = redis::pipe()
+            .zcount(key, start, end)
+            .zrangebyscore_limit(key, start, end, 0, 1)
+            .query_async(&mut self.redis_client.clone())
             .await?;
-        let num_requests = timestamps.len();
         if num_requests == 0 {
             return Ok((0, current_time));
         }
-        let oldest_timestamp = timestamps
-            .into_iter()
-            .min()
+        let oldest_timestamp = oldest_timestamps
+            .first()
+            .copied()
             .and_then(DateTime::from_timestamp_micros)
             .unwrap_or_else(Utc::now);
+        // Subtract 1 to exclude the just-added entry from increment_key
         Ok((num_requests - 1, oldest_timestamp))
     }
 
     async fn increment_key(&self, key: &str) -> RedisResult<()> {
         let current_time = Utc::now().timestamp_micros();
         redis::pipe()
-            .zrembyscore(key, 0, current_time - MAX_TTL_MICROS) // Remove old entries for the key
-            .zadd(key, current_time, current_time) // Add current timestamp for the key
-            .expire(key, MAX_TTL_MICROS / 1000 / 1000) // Set expiration time for the key
-            .exec_async(&mut self.redis_client.clone()) // Execute the pipeline
+            .zrembyscore(key, 0, current_time - MAX_TTL_MICROS)
+            .zadd(key, current_time, current_time)
+            .expire(key, MAX_TTL_MICROS / 1000 / 1000)
+            .exec_async(&mut self.redis_client.clone())
             .await
     }
 }
@@ -181,18 +191,17 @@ impl RateLimitClient {
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
     convert = "{ api_key }",
     sync_writes = "by_key",
-    key = "Uuid"
+    key = "Uuid",
+    result = true
 )]
-async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> bool {
-    sqlx::query!(
+async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> Result<bool, sqlx::Error> {
+    let row = sqlx::query!(
         "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
         api_key
     )
     .fetch_one(pg_client)
-    .await
-    .ok()
-    .and_then(|row| row.count.map(|c| c > 0))
-    .unwrap_or(false)
+    .await?;
+    Ok(row.count.is_some_and(|c| c > 0))
 }
 
 #[cached(
@@ -200,27 +209,29 @@ async fn is_api_key_valid(pg_client: &Pool<Postgres>, api_key: Uuid) -> bool {
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
     convert = r#"{ format!("{api_key}-{path}") }"#,
     sync_writes = "by_key",
-    key = "String"
+    key = "String",
+    result = true
 )]
-async fn get_custom_quotas(pg_client: &Pool<Postgres>, api_key: Uuid, path: &str) -> Vec<Quota> {
-    sqlx::query!(
+async fn get_custom_quotas(
+    pg_client: &Pool<Postgres>,
+    api_key: Uuid,
+    path: &str,
+) -> Result<Vec<Quota>, sqlx::Error> {
+    let rows = sqlx::query!(
         "SELECT rate_limit, rate_period FROM api_key_limits WHERE key = $1 AND path = $2",
         api_key,
         path
     )
     .fetch_all(pg_client)
-    .await
-    .ok()
-    .map(|rows| {
-        rows.iter()
-            .map(|row| Quota {
-                #[allow(clippy::cast_sign_loss)]
-                limit: row.rate_limit as usize,
-                #[allow(clippy::cast_sign_loss)]
-                period: Duration::from_micros(row.rate_period.microseconds as u64),
-                r#type: QuotaType::Key,
-            })
-            .collect()
-    })
-    .unwrap_or_default()
+    .await?;
+    Ok(rows
+        .iter()
+        .map(|row| Quota {
+            #[allow(clippy::cast_sign_loss)]
+            limit: row.rate_limit as usize,
+            #[allow(clippy::cast_sign_loss)]
+            period: Duration::from_micros(row.rate_period.microseconds as u64),
+            r#type: QuotaType::Key,
+        })
+        .collect())
 }

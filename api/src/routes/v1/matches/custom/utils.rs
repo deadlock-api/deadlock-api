@@ -14,6 +14,23 @@ use crate::error::{APIError, APIResult};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::SteamProxyQuery;
 
+fn build_proxy_query<M: prost::Message>(
+    msg_type: EgcCitadelClientMessages,
+    msg: M,
+    username: String,
+) -> SteamProxyQuery<M> {
+    SteamProxyQuery {
+        msg_type,
+        msg,
+        in_all_groups: None,
+        in_any_groups: None,
+        cooldown_time: Duration::ZERO,
+        request_timeout: Duration::from_secs(2),
+        username: Some(username),
+        soft_cooldown_millis: None,
+    }
+}
+
 pub(super) async fn get_party_info(
     redis_client: &mut redis::aio::MultiplexedConnection,
     lobby_id: u64,
@@ -62,16 +79,11 @@ pub(super) async fn make_ready(
         hero_roster: None,
     };
     let response: CMsgClientToGcPartySetReadyStateResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartySetReadyState,
+        .call_steam_proxy(build_proxy_query(
+            EgcCitadelClientMessages::KEMsgClientToGcPartySetReadyState,
             msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(0),
-            request_timeout: Duration::from_secs(2),
-            username: username.clone().into(),
-            soft_cooldown_millis: None,
-        })
+            username.clone(),
+        ))
         .await?
         .msg;
 
@@ -97,16 +109,11 @@ pub(super) async fn leave_party(
         party_id: party_id.into(),
     };
     let response: CMsgClientToGcPartyLeaveResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
+        .call_steam_proxy(build_proxy_query(
+            EgcCitadelClientMessages::KEMsgClientToGcPartyLeave,
             msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(0),
-            request_timeout: Duration::from_secs(2),
-            username: username.clone().into(),
-            soft_cooldown_millis: None,
-        })
+            username.clone(),
+        ))
         .await?
         .msg;
 
@@ -132,16 +139,11 @@ pub(super) async fn start_match(
         party_id: party_id.into(),
     };
     let response: CMsgClientToGcPartyStartMatchResponse = steam_client
-        .call_steam_proxy(SteamProxyQuery {
-            msg_type: EgcCitadelClientMessages::KEMsgClientToGcPartyStartMatch,
+        .call_steam_proxy(build_proxy_query(
+            EgcCitadelClientMessages::KEMsgClientToGcPartyStartMatch,
             msg,
-            in_all_groups: None,
-            in_any_groups: None,
-            cooldown_time: Duration::from_secs(0),
-            request_timeout: Duration::from_secs(2),
-            username: username.clone().into(),
-            soft_cooldown_millis: None,
-        })
+            username.clone(),
+        ))
         .await?
         .msg;
 

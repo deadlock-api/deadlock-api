@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::collections::HashSet;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -354,7 +355,7 @@ pub(super) async fn match_history(
         };
 
     // Insert missing entries to ClickHouse
-    let ch_match_ids = ch_match_history.iter().map(|e| e.match_id).collect_vec();
+    let ch_match_ids: HashSet<u64> = ch_match_history.iter().map(|e| e.match_id).collect();
     let ch_missing_entries = steam_match_history
         .iter()
         .filter(|e| !ch_match_ids.contains(&e.match_id))

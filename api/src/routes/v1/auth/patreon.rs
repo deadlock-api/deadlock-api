@@ -7,6 +7,7 @@ use rand::RngExt;
 use serde::Deserialize;
 
 use crate::context::AppState;
+use crate::error::APIError;
 use crate::services::patreon::client::PatreonClient;
 use crate::services::patreon::jwt::create_session_token;
 use crate::services::patreon::repository::{PatronRepository, UpsertPatronParams};
@@ -51,16 +52,17 @@ pub(crate) async fn login(State(state): State<AppState>) -> impl IntoResponse {
         "patreon_oauth_state={oauth_state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600"
     );
 
+    // oauth_state is hex-encoded (only [0-9a-f]), so this cannot fail
+    let cookie_header = HeaderValue::from_str(&cookie_value)
+        .expect("hex-encoded oauth state is always a valid header value");
+
     let mut response = Response::builder()
         .status(StatusCode::FOUND)
         .header("Location", auth_url)
         .body(axum::body::Body::empty())
         .expect("Failed to build redirect response");
 
-    response.headers_mut().insert(
-        SET_COOKIE,
-        HeaderValue::from_str(&cookie_value).expect("Invalid cookie value"),
-    );
+    response.headers_mut().insert(SET_COOKIE, cookie_header);
 
     response
 }
@@ -102,10 +104,9 @@ pub(crate) async fn logout() -> impl IntoResponse {
         .body(axum::body::Body::empty())
         .expect("Failed to build response");
 
-    response.headers_mut().insert(
-        SET_COOKIE,
-        HeaderValue::from_str(clear_session_cookie).expect("Invalid cookie value"),
-    );
+    response
+        .headers_mut()
+        .insert(SET_COOKIE, HeaderValue::from_static(clear_session_cookie));
 
     response
 }
@@ -271,9 +272,14 @@ pub(crate) async fn callback(
         "patron_session={session_token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800"
     );
 
-    // Clear the OAuth state cookie
-    let clear_state_cookie =
-        "patreon_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0";
+    // Encode session cookie as header value - this can fail if the JWT contains invalid header chars
+    let session_cookie_header = match HeaderValue::from_str(&session_cookie) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Failed to encode session cookie as header value: {e}");
+            return APIError::internal("Failed to create session").into_response();
+        }
+    };
 
     let mut response = Response::builder()
         .status(StatusCode::FOUND)
@@ -281,13 +287,14 @@ pub(crate) async fn callback(
         .body(axum::body::Body::empty())
         .expect("Failed to build redirect response");
 
-    response.headers_mut().insert(
-        SET_COOKIE,
-        HeaderValue::from_str(&session_cookie).expect("Invalid session cookie value"),
-    );
+    response
+        .headers_mut()
+        .insert(SET_COOKIE, session_cookie_header);
     response.headers_mut().append(
         SET_COOKIE,
-        HeaderValue::from_str(clear_state_cookie).expect("Invalid clear cookie value"),
+        HeaderValue::from_static(
+            "patreon_oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0",
+        ),
     );
 
     response

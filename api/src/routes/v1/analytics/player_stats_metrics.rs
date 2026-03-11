@@ -13,8 +13,9 @@ use strum::{Display, VariantArray};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{MatchInfoFilters, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -83,6 +84,24 @@ pub(super) struct MetricValues {
     percentile90: f64,
     percentile95: f64,
     percentile99: f64,
+}
+
+impl MetricValues {
+    fn from_stats(avg: f64, std: f64, quantiles: &[f64]) -> Self {
+        Self {
+            avg,
+            std,
+            percentile1: quantiles[0],
+            percentile5: quantiles[1],
+            percentile10: quantiles[2],
+            percentile25: quantiles[3],
+            percentile50: quantiles[4],
+            percentile75: quantiles[5],
+            percentile90: quantiles[6],
+            percentile95: quantiles[7],
+            percentile99: quantiles[8],
+        }
+    }
 }
 
 #[derive(
@@ -156,344 +175,118 @@ impl Metric {
     #[allow(clippy::too_many_lines)]
     pub(super) fn extract_values(self, row: &AnalyticsPlayerStatsMetricsRow) -> MetricValues {
         match self {
-            Self::Healing => MetricValues {
-                avg: row.avg_healing,
-                std: row.std_healing,
-                percentile1: row.quantiles_healing[0],
-                percentile5: row.quantiles_healing[1],
-                percentile10: row.quantiles_healing[2],
-                percentile25: row.quantiles_healing[3],
-                percentile50: row.quantiles_healing[4],
-                percentile75: row.quantiles_healing[5],
-                percentile90: row.quantiles_healing[6],
-                percentile95: row.quantiles_healing[7],
-                percentile99: row.quantiles_healing[8],
-            },
-            Self::HealingPerMin => MetricValues {
-                avg: row.avg_healing_per_min,
-                std: row.std_healing_per_min,
-                percentile1: row.quantiles_healing_per_min[0],
-                percentile5: row.quantiles_healing_per_min[1],
-                percentile10: row.quantiles_healing_per_min[2],
-                percentile25: row.quantiles_healing_per_min[3],
-                percentile50: row.quantiles_healing_per_min[4],
-                percentile75: row.quantiles_healing_per_min[5],
-                percentile90: row.quantiles_healing_per_min[6],
-                percentile95: row.quantiles_healing_per_min[7],
-                percentile99: row.quantiles_healing_per_min[8],
-            },
-            Self::PlayerHealing => MetricValues {
-                avg: row.avg_player_healing,
-                std: row.std_player_healing,
-                percentile1: row.quantiles_player_healing[0],
-                percentile5: row.quantiles_player_healing[1],
-                percentile10: row.quantiles_player_healing[2],
-                percentile25: row.quantiles_player_healing[3],
-                percentile50: row.quantiles_player_healing[4],
-                percentile75: row.quantiles_player_healing[5],
-                percentile90: row.quantiles_player_healing[6],
-                percentile95: row.quantiles_player_healing[7],
-                percentile99: row.quantiles_player_healing[8],
-            },
-            Self::PlayerHealingPerMin => MetricValues {
-                avg: row.avg_player_healing_per_min,
-                std: row.std_player_healing_per_min,
-                percentile1: row.quantiles_player_healing_per_min[0],
-                percentile5: row.quantiles_player_healing_per_min[1],
-                percentile10: row.quantiles_player_healing_per_min[2],
-                percentile25: row.quantiles_player_healing_per_min[3],
-                percentile50: row.quantiles_player_healing_per_min[4],
-                percentile75: row.quantiles_player_healing_per_min[5],
-                percentile90: row.quantiles_player_healing_per_min[6],
-                percentile95: row.quantiles_player_healing_per_min[7],
-                percentile99: row.quantiles_player_healing_per_min[8],
-            },
-            Self::SelfHealing => MetricValues {
-                avg: row.avg_self_healing,
-                std: row.std_self_healing,
-                percentile1: row.quantiles_self_healing[0],
-                percentile5: row.quantiles_self_healing[1],
-                percentile10: row.quantiles_self_healing[2],
-                percentile25: row.quantiles_self_healing[3],
-                percentile50: row.quantiles_self_healing[4],
-                percentile75: row.quantiles_self_healing[5],
-                percentile90: row.quantiles_self_healing[6],
-                percentile95: row.quantiles_self_healing[7],
-                percentile99: row.quantiles_self_healing[8],
-            },
-            Self::SelfHealingPerMin => MetricValues {
-                avg: row.avg_self_healing_per_min,
-                std: row.std_self_healing_per_min,
-                percentile1: row.quantiles_self_healing_per_min[0],
-                percentile5: row.quantiles_self_healing_per_min[1],
-                percentile10: row.quantiles_self_healing_per_min[2],
-                percentile25: row.quantiles_self_healing_per_min[3],
-                percentile50: row.quantiles_self_healing_per_min[4],
-                percentile75: row.quantiles_self_healing_per_min[5],
-                percentile90: row.quantiles_self_healing_per_min[6],
-                percentile95: row.quantiles_self_healing_per_min[7],
-                percentile99: row.quantiles_self_healing_per_min[8],
-            },
-            Self::Kills => MetricValues {
-                avg: row.avg_kills,
-                std: row.std_kills,
-                percentile1: row.quantiles_kills[0],
-                percentile5: row.quantiles_kills[1],
-                percentile10: row.quantiles_kills[2],
-                percentile25: row.quantiles_kills[3],
-                percentile50: row.quantiles_kills[4],
-                percentile75: row.quantiles_kills[5],
-                percentile90: row.quantiles_kills[6],
-                percentile95: row.quantiles_kills[7],
-                percentile99: row.quantiles_kills[8],
-            },
-            Self::Deaths => MetricValues {
-                avg: row.avg_deaths,
-                std: row.std_deaths,
-                percentile1: row.quantiles_deaths[0],
-                percentile5: row.quantiles_deaths[1],
-                percentile10: row.quantiles_deaths[2],
-                percentile25: row.quantiles_deaths[3],
-                percentile50: row.quantiles_deaths[4],
-                percentile75: row.quantiles_deaths[5],
-                percentile90: row.quantiles_deaths[6],
-                percentile95: row.quantiles_deaths[7],
-                percentile99: row.quantiles_deaths[8],
-            },
-            Self::Assists => MetricValues {
-                avg: row.avg_assists,
-                std: row.std_assists,
-                percentile1: row.quantiles_assists[0],
-                percentile5: row.quantiles_assists[1],
-                percentile10: row.quantiles_assists[2],
-                percentile25: row.quantiles_assists[3],
-                percentile50: row.quantiles_assists[4],
-                percentile75: row.quantiles_assists[5],
-                percentile90: row.quantiles_assists[6],
-                percentile95: row.quantiles_assists[7],
-                percentile99: row.quantiles_assists[8],
-            },
-            Self::NetWorth => MetricValues {
-                avg: row.avg_net_worth,
-                std: row.std_net_worth,
-                percentile1: row.quantiles_net_worth[0],
-                percentile5: row.quantiles_net_worth[1],
-                percentile10: row.quantiles_net_worth[2],
-                percentile25: row.quantiles_net_worth[3],
-                percentile50: row.quantiles_net_worth[4],
-                percentile75: row.quantiles_net_worth[5],
-                percentile90: row.quantiles_net_worth[6],
-                percentile95: row.quantiles_net_worth[7],
-                percentile99: row.quantiles_net_worth[8],
-            },
-            Self::NetWorthPerMin => MetricValues {
-                avg: row.avg_net_worth_per_min,
-                std: row.std_net_worth_per_min,
-                percentile1: row.quantiles_net_worth_per_min[0],
-                percentile5: row.quantiles_net_worth_per_min[1],
-                percentile10: row.quantiles_net_worth_per_min[2],
-                percentile25: row.quantiles_net_worth_per_min[3],
-                percentile50: row.quantiles_net_worth_per_min[4],
-                percentile75: row.quantiles_net_worth_per_min[5],
-                percentile90: row.quantiles_net_worth_per_min[6],
-                percentile95: row.quantiles_net_worth_per_min[7],
-                percentile99: row.quantiles_net_worth_per_min[8],
-            },
-            Self::Denies => MetricValues {
-                avg: row.avg_denies,
-                std: row.std_denies,
-                percentile1: row.quantiles_denies[0],
-                percentile5: row.quantiles_denies[1],
-                percentile10: row.quantiles_denies[2],
-                percentile25: row.quantiles_denies[3],
-                percentile50: row.quantiles_denies[4],
-                percentile75: row.quantiles_denies[5],
-                percentile90: row.quantiles_denies[6],
-                percentile95: row.quantiles_denies[7],
-                percentile99: row.quantiles_denies[8],
-            },
-            Self::LastHits => MetricValues {
-                avg: row.avg_last_hits,
-                std: row.std_last_hits,
-                percentile1: row.quantiles_last_hits[0],
-                percentile5: row.quantiles_last_hits[1],
-                percentile10: row.quantiles_last_hits[2],
-                percentile25: row.quantiles_last_hits[3],
-                percentile50: row.quantiles_last_hits[4],
-                percentile75: row.quantiles_last_hits[5],
-                percentile90: row.quantiles_last_hits[6],
-                percentile95: row.quantiles_last_hits[7],
-                percentile99: row.quantiles_last_hits[8],
-            },
-            Self::CritShotRate => MetricValues {
-                avg: row.avg_crit_shot_rate,
-                std: row.std_crit_shot_rate,
-                percentile1: row.quantiles_crit_shot_rate[0],
-                percentile5: row.quantiles_crit_shot_rate[1],
-                percentile10: row.quantiles_crit_shot_rate[2],
-                percentile25: row.quantiles_crit_shot_rate[3],
-                percentile50: row.quantiles_crit_shot_rate[4],
-                percentile75: row.quantiles_crit_shot_rate[5],
-                percentile90: row.quantiles_crit_shot_rate[6],
-                percentile95: row.quantiles_crit_shot_rate[7],
-                percentile99: row.quantiles_crit_shot_rate[8],
-            },
-            Self::Accuracy => MetricValues {
-                avg: row.avg_accuracy,
-                std: row.std_accuracy,
-                percentile1: row.quantiles_accuracy[0],
-                percentile5: row.quantiles_accuracy[1],
-                percentile10: row.quantiles_accuracy[2],
-                percentile25: row.quantiles_accuracy[3],
-                percentile50: row.quantiles_accuracy[4],
-                percentile75: row.quantiles_accuracy[5],
-                percentile90: row.quantiles_accuracy[6],
-                percentile95: row.quantiles_accuracy[7],
-                percentile99: row.quantiles_accuracy[8],
-            },
-            Self::Kd => MetricValues {
-                avg: row.avg_kd,
-                std: row.std_kd,
-                percentile1: row.quantiles_kd[0],
-                percentile5: row.quantiles_kd[1],
-                percentile10: row.quantiles_kd[2],
-                percentile25: row.quantiles_kd[3],
-                percentile50: row.quantiles_kd[4],
-                percentile75: row.quantiles_kd[5],
-                percentile90: row.quantiles_kd[6],
-                percentile95: row.quantiles_kd[7],
-                percentile99: row.quantiles_kd[8],
-            },
-            Self::Kda => MetricValues {
-                avg: row.avg_kda,
-                std: row.std_kda,
-                percentile1: row.quantiles_kda[0],
-                percentile5: row.quantiles_kda[1],
-                percentile10: row.quantiles_kda[2],
-                percentile25: row.quantiles_kda[3],
-                percentile50: row.quantiles_kda[4],
-                percentile75: row.quantiles_kda[5],
-                percentile90: row.quantiles_kda[6],
-                percentile95: row.quantiles_kda[7],
-                percentile99: row.quantiles_kda[8],
-            },
-            Self::KillsPlusAssists => MetricValues {
-                avg: row.avg_kills_plus_assists,
-                std: row.std_kills_plus_assists,
-                percentile1: row.quantiles_kills_plus_assists[0],
-                percentile5: row.quantiles_kills_plus_assists[1],
-                percentile10: row.quantiles_kills_plus_assists[2],
-                percentile25: row.quantiles_kills_plus_assists[3],
-                percentile50: row.quantiles_kills_plus_assists[4],
-                percentile75: row.quantiles_kills_plus_assists[5],
-                percentile90: row.quantiles_kills_plus_assists[6],
-                percentile95: row.quantiles_kills_plus_assists[7],
-                percentile99: row.quantiles_kills_plus_assists[8],
-            },
-            Self::PlayerDamage => MetricValues {
-                avg: row.avg_player_damage,
-                std: row.std_player_damage,
-                percentile1: row.quantiles_player_damage[0],
-                percentile5: row.quantiles_player_damage[1],
-                percentile10: row.quantiles_player_damage[2],
-                percentile25: row.quantiles_player_damage[3],
-                percentile50: row.quantiles_player_damage[4],
-                percentile75: row.quantiles_player_damage[5],
-                percentile90: row.quantiles_player_damage[6],
-                percentile95: row.quantiles_player_damage[7],
-                percentile99: row.quantiles_player_damage[8],
-            },
-            Self::PlayerDamagePerHealth => MetricValues {
-                avg: row.avg_player_damage_per_health,
-                std: row.std_player_damage_per_health,
-                percentile1: row.quantiles_player_damage_per_health[0],
-                percentile5: row.quantiles_player_damage_per_health[1],
-                percentile10: row.quantiles_player_damage_per_health[2],
-                percentile25: row.quantiles_player_damage_per_health[3],
-                percentile50: row.quantiles_player_damage_per_health[4],
-                percentile75: row.quantiles_player_damage_per_health[5],
-                percentile90: row.quantiles_player_damage_per_health[6],
-                percentile95: row.quantiles_player_damage_per_health[7],
-                percentile99: row.quantiles_player_damage_per_health[8],
-            },
-            Self::PlayerDamagePerMin => MetricValues {
-                avg: row.avg_player_damage_per_min,
-                std: row.std_player_damage_per_min,
-                percentile1: row.quantiles_player_damage_per_min[0],
-                percentile5: row.quantiles_player_damage_per_min[1],
-                percentile10: row.quantiles_player_damage_per_min[2],
-                percentile25: row.quantiles_player_damage_per_min[3],
-                percentile50: row.quantiles_player_damage_per_min[4],
-                percentile75: row.quantiles_player_damage_per_min[5],
-                percentile90: row.quantiles_player_damage_per_min[6],
-                percentile95: row.quantiles_player_damage_per_min[7],
-                percentile99: row.quantiles_player_damage_per_min[8],
-            },
-            Self::PlayerDamageTakenPerMin => MetricValues {
-                avg: row.avg_player_damage_taken_per_min,
-                std: row.std_player_damage_taken_per_min,
-                percentile1: row.quantiles_player_damage_taken_per_min[0],
-                percentile5: row.quantiles_player_damage_taken_per_min[1],
-                percentile10: row.quantiles_player_damage_taken_per_min[2],
-                percentile25: row.quantiles_player_damage_taken_per_min[3],
-                percentile50: row.quantiles_player_damage_taken_per_min[4],
-                percentile75: row.quantiles_player_damage_taken_per_min[5],
-                percentile90: row.quantiles_player_damage_taken_per_min[6],
-                percentile95: row.quantiles_player_damage_taken_per_min[7],
-                percentile99: row.quantiles_player_damage_taken_per_min[8],
-            },
-            Self::NeutralDamage => MetricValues {
-                avg: row.avg_neutral_damage,
-                std: row.std_neutral_damage,
-                percentile1: row.quantiles_neutral_damage[0],
-                percentile5: row.quantiles_neutral_damage[1],
-                percentile10: row.quantiles_neutral_damage[2],
-                percentile25: row.quantiles_neutral_damage[3],
-                percentile50: row.quantiles_neutral_damage[4],
-                percentile75: row.quantiles_neutral_damage[5],
-                percentile90: row.quantiles_neutral_damage[6],
-                percentile95: row.quantiles_neutral_damage[7],
-                percentile99: row.quantiles_neutral_damage[8],
-            },
-            Self::NeutralDamagePerMin => MetricValues {
-                avg: row.avg_neutral_damage_per_min,
-                std: row.std_neutral_damage_per_min,
-                percentile1: row.quantiles_neutral_damage_per_min[0],
-                percentile5: row.quantiles_neutral_damage_per_min[1],
-                percentile10: row.quantiles_neutral_damage_per_min[2],
-                percentile25: row.quantiles_neutral_damage_per_min[3],
-                percentile50: row.quantiles_neutral_damage_per_min[4],
-                percentile75: row.quantiles_neutral_damage_per_min[5],
-                percentile90: row.quantiles_neutral_damage_per_min[6],
-                percentile95: row.quantiles_neutral_damage_per_min[7],
-                percentile99: row.quantiles_neutral_damage_per_min[8],
-            },
-            Self::BossDamage => MetricValues {
-                avg: row.avg_boss_damage,
-                std: row.std_boss_damage,
-                percentile1: row.quantiles_boss_damage[0],
-                percentile5: row.quantiles_boss_damage[1],
-                percentile10: row.quantiles_boss_damage[2],
-                percentile25: row.quantiles_boss_damage[3],
-                percentile50: row.quantiles_boss_damage[4],
-                percentile75: row.quantiles_boss_damage[5],
-                percentile90: row.quantiles_boss_damage[6],
-                percentile95: row.quantiles_boss_damage[7],
-                percentile99: row.quantiles_boss_damage[8],
-            },
-            Self::BossDamagePerMin => MetricValues {
-                avg: row.avg_boss_damage_per_min,
-                std: row.std_boss_damage_per_min,
-                percentile1: row.quantiles_boss_damage_per_min[0],
-                percentile5: row.quantiles_boss_damage_per_min[1],
-                percentile10: row.quantiles_boss_damage_per_min[2],
-                percentile25: row.quantiles_boss_damage_per_min[3],
-                percentile50: row.quantiles_boss_damage_per_min[4],
-                percentile75: row.quantiles_boss_damage_per_min[5],
-                percentile90: row.quantiles_boss_damage_per_min[6],
-                percentile95: row.quantiles_boss_damage_per_min[7],
-                percentile99: row.quantiles_boss_damage_per_min[8],
-            },
+            Self::Kills => {
+                MetricValues::from_stats(row.avg_kills, row.std_kills, &row.quantiles_kills)
+            }
+            Self::Deaths => {
+                MetricValues::from_stats(row.avg_deaths, row.std_deaths, &row.quantiles_deaths)
+            }
+            Self::Assists => {
+                MetricValues::from_stats(row.avg_assists, row.std_assists, &row.quantiles_assists)
+            }
+            Self::NetWorth => MetricValues::from_stats(
+                row.avg_net_worth,
+                row.std_net_worth,
+                &row.quantiles_net_worth,
+            ),
+            Self::NetWorthPerMin => MetricValues::from_stats(
+                row.avg_net_worth_per_min,
+                row.std_net_worth_per_min,
+                &row.quantiles_net_worth_per_min,
+            ),
+            Self::Denies => {
+                MetricValues::from_stats(row.avg_denies, row.std_denies, &row.quantiles_denies)
+            }
+            Self::LastHits => MetricValues::from_stats(
+                row.avg_last_hits,
+                row.std_last_hits,
+                &row.quantiles_last_hits,
+            ),
+            Self::CritShotRate => MetricValues::from_stats(
+                row.avg_crit_shot_rate,
+                row.std_crit_shot_rate,
+                &row.quantiles_crit_shot_rate,
+            ),
+            Self::Accuracy => MetricValues::from_stats(
+                row.avg_accuracy,
+                row.std_accuracy,
+                &row.quantiles_accuracy,
+            ),
+            Self::Kd => MetricValues::from_stats(row.avg_kd, row.std_kd, &row.quantiles_kd),
+            Self::Kda => MetricValues::from_stats(row.avg_kda, row.std_kda, &row.quantiles_kda),
+            Self::KillsPlusAssists => MetricValues::from_stats(
+                row.avg_kills_plus_assists,
+                row.std_kills_plus_assists,
+                &row.quantiles_kills_plus_assists,
+            ),
+            Self::PlayerDamage => MetricValues::from_stats(
+                row.avg_player_damage,
+                row.std_player_damage,
+                &row.quantiles_player_damage,
+            ),
+            Self::PlayerDamagePerHealth => MetricValues::from_stats(
+                row.avg_player_damage_per_health,
+                row.std_player_damage_per_health,
+                &row.quantiles_player_damage_per_health,
+            ),
+            Self::PlayerDamagePerMin => MetricValues::from_stats(
+                row.avg_player_damage_per_min,
+                row.std_player_damage_per_min,
+                &row.quantiles_player_damage_per_min,
+            ),
+            Self::PlayerDamageTakenPerMin => MetricValues::from_stats(
+                row.avg_player_damage_taken_per_min,
+                row.std_player_damage_taken_per_min,
+                &row.quantiles_player_damage_taken_per_min,
+            ),
+            Self::NeutralDamage => MetricValues::from_stats(
+                row.avg_neutral_damage,
+                row.std_neutral_damage,
+                &row.quantiles_neutral_damage,
+            ),
+            Self::NeutralDamagePerMin => MetricValues::from_stats(
+                row.avg_neutral_damage_per_min,
+                row.std_neutral_damage_per_min,
+                &row.quantiles_neutral_damage_per_min,
+            ),
+            Self::BossDamage => MetricValues::from_stats(
+                row.avg_boss_damage,
+                row.std_boss_damage,
+                &row.quantiles_boss_damage,
+            ),
+            Self::BossDamagePerMin => MetricValues::from_stats(
+                row.avg_boss_damage_per_min,
+                row.std_boss_damage_per_min,
+                &row.quantiles_boss_damage_per_min,
+            ),
+            Self::SelfHealing => MetricValues::from_stats(
+                row.avg_self_healing,
+                row.std_self_healing,
+                &row.quantiles_self_healing,
+            ),
+            Self::PlayerHealing => MetricValues::from_stats(
+                row.avg_player_healing,
+                row.std_player_healing,
+                &row.quantiles_player_healing,
+            ),
+            Self::Healing => {
+                MetricValues::from_stats(row.avg_healing, row.std_healing, &row.quantiles_healing)
+            }
+            Self::SelfHealingPerMin => MetricValues::from_stats(
+                row.avg_self_healing_per_min,
+                row.std_self_healing_per_min,
+                &row.quantiles_self_healing_per_min,
+            ),
+            Self::PlayerHealingPerMin => MetricValues::from_stats(
+                row.avg_player_healing_per_min,
+                row.std_player_healing_per_min,
+                &row.quantiles_player_healing_per_min,
+            ),
+            Self::HealingPerMin => MetricValues::from_stats(
+                row.avg_healing_per_min,
+                row.std_healing_per_min,
+                &row.quantiles_healing_per_min,
+            ),
         }
     }
 }
@@ -584,44 +377,17 @@ pub(super) struct AnalyticsPlayerStatsMetricsRow {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &PlayerStatsMetricsQuery) -> String {
-    let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+    let info_filters = MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
     }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    let info_filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
+    .build();
     let mut player_filters = vec![];
     if let Some(hero_ids) = query.hero_ids.as_ref() {
         player_filters.push(format!(
@@ -711,8 +477,7 @@ async fn get_player_stats_metrics(
     ch_client: &clickhouse::Client,
     mut query: PlayerStatsMetricsQuery,
 ) -> APIResult<AnalyticsPlayerStatsMetricsRow> {
-    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
-    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
@@ -748,20 +513,7 @@ pub(crate) async fn player_stats_metrics(
     Query(mut query): Query<PlayerStatsMetricsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if let Some(account_ids) = query.account_ids {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
-        let filtered_account_ids = account_ids
-            .into_iter()
-            .filter(|id| !protected_users.contains(id))
-            .collect::<Vec<_>>();
-        if filtered_account_ids.is_empty() {
-            return Err(APIError::protected_user());
-        }
-        query.account_ids = Some(filtered_account_ids);
-    }
+    filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_player_stats_metrics(&state.ch_client_ro, query)
         .await
         .map(|rows| {

@@ -12,33 +12,26 @@ pub(crate) struct RateLimitKey {
     pub(super) ip: Ipv4Addr, // We do not have to take care of IPv6, as we use Cloudflare Pseudo IPv4
 }
 
-impl RateLimitKey {
-    fn new(api_key: Option<Uuid>, ip: Ipv4Addr) -> Self {
-        Self { api_key, ip }
-    }
-}
-
 impl<S> FromRequestParts<S> for RateLimitKey
 where
     S: Send + Sync,
 {
     type Rejection = APIError;
 
-    async fn from_request_parts(
-        Parts { headers, .. }: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        let ip = headers
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let ip = parts
+            .headers
             .get("CF-Connecting-IP")
-            .or(headers.get("X-Real-IP"))
+            .or(parts.headers.get("X-Real-IP"))
             .and_then(|v| v.to_str().ok().and_then(|s| s.parse().ok()))
             .unwrap_or(Ipv4Addr::UNSPECIFIED);
-        let api_key = headers
+
+        let api_key = parts
+            .headers
             .get("X-API-Key")
             .and_then(|v| v.to_str().ok())
-            .map(String::from)
-            .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(&s)).ok());
-        Ok(RateLimitKey::new(api_key, ip))
+            .and_then(|s| Uuid::parse_str(s.strip_prefix("HEXE-").unwrap_or(s)).ok());
+        Ok(Self { api_key, ip })
     }
 }
 

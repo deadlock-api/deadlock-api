@@ -1,6 +1,7 @@
 pub mod ability_order_stats;
 pub mod badge_distribution;
 pub mod build_item_stats;
+mod common_filters;
 pub mod game_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;

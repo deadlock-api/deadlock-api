@@ -111,9 +111,120 @@ pub(super) enum Variable {
     WinsToday,
 }
 
+/// Pre-fetched data shared across variable resolution to avoid duplicate queries.
+/// Stores `Result` types so that fetch failures only affect variables that need that data,
+/// preserving per-variable error semantics.
+pub(super) struct ResolverContext {
+    all_matches: Result<Vec<PlayerMatchHistoryEntry>, String>,
+    todays_matches: Result<Vec<PlayerMatchHistoryEntry>, String>,
+}
+
+impl ResolverContext {
+    pub(super) async fn new(
+        variables: &[&Variable],
+        ch_client_ro: &clickhouse::Client,
+        ch_client: &clickhouse::Client,
+        steam_client: &SteamClient,
+        steam_id: u32,
+    ) -> Self {
+        let needs_all = variables.iter().any(|v| v.needs_all_matches());
+        let needs_today = variables.iter().any(|v| v.needs_todays_matches());
+
+        let (all_matches, todays_matches) = join(
+            async {
+                if needs_all {
+                    Variable::get_all_matches(ch_client_ro, steam_id)
+                        .await
+                        .map(core::iter::Iterator::collect)
+                        .map_err(|e| e.to_string())
+                } else {
+                    Ok(Vec::new())
+                }
+            },
+            async {
+                if needs_today {
+                    Variable::get_todays_matches(ch_client, steam_client, steam_id)
+                        .await
+                        .map_err(|e| e.to_string())
+                } else {
+                    Ok(Vec::new())
+                }
+            },
+        )
+        .await;
+
+        Self {
+            all_matches,
+            todays_matches,
+        }
+    }
+
+    fn all_matches(&self) -> Result<&[PlayerMatchHistoryEntry], VariableResolveError> {
+        self.all_matches
+            .as_deref()
+            .map_err(|_| VariableResolveError::NoData("match history"))
+    }
+
+    fn todays_matches(&self) -> Result<&[PlayerMatchHistoryEntry], VariableResolveError> {
+        self.todays_matches
+            .as_deref()
+            .map_err(|_| VariableResolveError::NoData("todays matches"))
+    }
+
+    fn hero_matches(
+        &self,
+        hero_id: u32,
+    ) -> Result<impl Iterator<Item = &PlayerMatchHistoryEntry>, VariableResolveError> {
+        Ok(self
+            .all_matches()?
+            .iter()
+            .filter(move |m| m.hero_id == hero_id))
+    }
+}
+
 impl Variable {
     pub(super) fn get_name(&self) -> &str {
         self.into()
+    }
+
+    fn needs_all_matches(self) -> bool {
+        matches!(
+            self,
+            Self::HighestDeathCount
+                | Self::HighestDenies
+                | Self::HighestKillCount
+                | Self::HighestLastHits
+                | Self::HighestNetWorth
+                | Self::HoursPlayed
+                | Self::TotalKd
+                | Self::TotalKills
+                | Self::TotalMatches
+                | Self::TotalWinrate
+                | Self::TotalWins
+                | Self::TotalLosses
+                | Self::TotalWinsLosses
+                | Self::MostPlayedHero
+                | Self::MostPlayedHeroCount
+                | Self::HeroHoursPlayed
+                | Self::HeroKd
+                | Self::HeroKills
+                | Self::HeroMatches
+                | Self::HeroLosses
+                | Self::HeroWinrate
+                | Self::HeroWins
+        )
+    }
+
+    fn needs_todays_matches(self) -> bool {
+        matches!(
+            self,
+            Self::HeroesPlayedToday
+                | Self::WinrateToday
+                | Self::WinsLossesToday
+                | Self::MatchesToday
+                | Self::WinsToday
+                | Self::LossesToday
+        )
     }
 
     pub(super) fn get_category(self) -> VariableCategory {
@@ -258,6 +369,7 @@ impl Variable {
         steam_id: u32,
         region: LeaderboardRegion,
         extra_args: &HashMap<String, String>,
+        context: &ResolverContext,
     ) -> Result<String, VariableResolveError> {
         match self {
             Self::Rank => {
@@ -335,13 +447,14 @@ impl Variable {
                 Ok(format!("{} {subrank}", rank.name))
             }
             Self::HeroesPlayedToday => {
-                let todays_matches =
-                    Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
-                        .await?;
-                let heroes_played = todays_matches.iter().fold(HashMap::new(), |mut acc, m| {
-                    *acc.entry(m.hero_id).or_insert(0) += 1;
-                    acc
-                });
+                let heroes_played =
+                    context
+                        .todays_matches()?
+                        .iter()
+                        .fold(HashMap::new(), |mut acc, m| {
+                            *acc.entry(m.hero_id).or_insert(0) += 1;
+                            acc
+                        });
                 let heroes = state.assets_client.fetch_heroes().await?;
                 let heroes = heroes
                     .into_iter()
@@ -383,111 +496,97 @@ impl Variable {
                 )
             }
             Self::SteamAccountName => get_steam_account_name(rate_limit_key, state, steam_id).await,
-            Self::HighestDeathCount => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                matches
-                    .map(|m| m.player_deaths)
-                    .max()
-                    .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::NoData("player deaths"))
-            }
-            Self::HighestDenies => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                matches
-                    .map(|m| m.denies)
-                    .max()
-                    .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::NoData("player denies"))
-            }
-            Self::HighestKillCount => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                matches
-                    .map(|m| m.player_kills)
-                    .max()
-                    .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::NoData("player kills"))
-            }
-            Self::HighestLastHits => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                matches
-                    .map(|m| m.last_hits)
-                    .max()
-                    .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::NoData("player last hits"))
-            }
-            Self::HighestNetWorth => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                matches
-                    .map(|m| m.net_worth)
-                    .max()
-                    .map(|m| m.to_string())
-                    .ok_or(VariableResolveError::NoData("player net worth"))
-            }
+            Self::HighestDeathCount => context
+                .all_matches()?
+                .iter()
+                .map(|m| m.player_deaths)
+                .max()
+                .map(|m| m.to_string())
+                .ok_or(VariableResolveError::NoData("player deaths")),
+            Self::HighestDenies => context
+                .all_matches()?
+                .iter()
+                .map(|m| m.denies)
+                .max()
+                .map(|m| m.to_string())
+                .ok_or(VariableResolveError::NoData("player denies")),
+            Self::HighestKillCount => context
+                .all_matches()?
+                .iter()
+                .map(|m| m.player_kills)
+                .max()
+                .map(|m| m.to_string())
+                .ok_or(VariableResolveError::NoData("player kills")),
+            Self::HighestLastHits => context
+                .all_matches()?
+                .iter()
+                .map(|m| m.last_hits)
+                .max()
+                .map(|m| m.to_string())
+                .ok_or(VariableResolveError::NoData("player last hits")),
+            Self::HighestNetWorth => context
+                .all_matches()?
+                .iter()
+                .map(|m| m.net_worth)
+                .max()
+                .map(|m| m.to_string())
+                .ok_or(VariableResolveError::NoData("player net worth")),
             Self::HoursPlayed => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let seconds_playtime: u32 = matches.map(|m| m.match_duration_s).sum();
+                let seconds_playtime: u32 = context
+                    .all_matches()?
+                    .iter()
+                    .map(|m| m.match_duration_s)
+                    .sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::WinrateToday => {
-                let matches =
-                    Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
-                        .await?;
-                let (wins, matches) = matches.iter().fold((0, 0), |(wins, matches), m| {
-                    if m.won() {
-                        (wins + 1, matches + 1)
-                    } else {
-                        (wins, matches + 1)
-                    }
-                });
+                let (wins, total) =
+                    context
+                        .todays_matches()?
+                        .iter()
+                        .fold((0, 0), |(wins, total), m| {
+                            if m.won() {
+                                (wins + 1, total + 1)
+                            } else {
+                                (wins, total + 1)
+                            }
+                        });
                 Ok(format!(
                     "{:.2}%",
-                    f64::from(wins) / f64::from(matches.max(1)) * 100.0
+                    f64::from(wins) / f64::from(total.max(1)) * 100.0
                 ))
             }
             Self::WinsLossesToday => {
-                let matches =
-                    Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
-                        .await?;
-                let (wins, losses) = matches.iter().fold((0, 0), |(wins, losses), m| {
-                    if m.won() {
-                        (wins + 1, losses)
-                    } else {
-                        (wins, losses + 1)
-                    }
-                });
+                let (wins, losses) =
+                    context
+                        .todays_matches()?
+                        .iter()
+                        .fold((0, 0), |(wins, losses), m| {
+                            if m.won() {
+                                (wins + 1, losses)
+                            } else {
+                                (wins, losses + 1)
+                            }
+                        });
                 Ok(format!("{wins}-{losses}"))
             }
-            Self::MatchesToday => {
-                Ok(
-                    Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
-                        .await?
-                        .len()
-                        .to_string(),
-                )
-            }
-            Self::WinsToday => {
-                Ok(
-                    Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
-                        .await?
-                        .iter()
-                        .filter(|m| m.won())
-                        .count()
-                        .to_string(),
-                )
-            }
-            Self::LossesToday => {
-                Ok(
-                    Self::get_todays_matches(&state.ch_client, &state.steam_client, steam_id)
-                        .await?
-                        .iter()
-                        .filter(|m| !m.won())
-                        .count()
-                        .to_string(),
-                )
-            }
+            Self::MatchesToday => Ok(context.todays_matches()?.len().to_string()),
+            Self::WinsToday => Ok(context
+                .todays_matches()?
+                .iter()
+                .filter(|m| m.won())
+                .count()
+                .to_string()),
+            Self::LossesToday => Ok(context
+                .todays_matches()?
+                .iter()
+                .filter(|m| !m.won())
+                .count()
+                .to_string()),
             Self::MostPlayedHero => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let most_played_hero = matches
+                let most_played_hero = context
+                    .all_matches()?
+                    .iter()
                     .fold(HashMap::new(), |mut acc, m| {
                         *acc.entry(m.hero_id).or_insert(0) += 1;
                         acc
@@ -505,8 +604,9 @@ impl Variable {
                     .ok_or(VariableResolveError::NoData("most played hero name"))
             }
             Self::MostPlayedHeroCount => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let most_played_hero_count = matches
+                let most_played_hero_count = context
+                    .all_matches()?
+                    .iter()
                     .fold(HashMap::new(), |mut acc, m| {
                         *acc.entry(m.hero_id).or_insert(0) += 1;
                         acc
@@ -516,57 +616,65 @@ impl Variable {
                 Ok(most_played_hero_count.unwrap_or(0).to_string())
             }
             Self::TotalKd => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let (kills, deaths) = matches.fold((0, 0), |(kills, deaths), m| {
-                    (kills + m.player_kills, deaths + m.player_deaths)
-                });
+                let (kills, deaths) = context
+                    .all_matches()?
+                    .iter()
+                    .fold((0, 0), |(kills, deaths), m| {
+                        (kills + m.player_kills, deaths + m.player_deaths)
+                    });
                 Ok(format!(
                     "{:.2}",
                     f64::from(kills) / f64::from(deaths.max(1))
                 ))
             }
-            Self::TotalKills => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches.map(|m| m.player_kills).sum::<u32>().to_string())
-            }
-            Self::TotalMatches => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches.count().to_string())
-            }
+            Self::TotalKills => Ok(context
+                .all_matches()?
+                .iter()
+                .map(|m| m.player_kills)
+                .sum::<u32>()
+                .to_string()),
+            Self::TotalMatches => Ok(context.all_matches()?.len().to_string()),
             Self::TotalWinrate => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let (wins, matches) = matches.fold((0, 0), |(wins, matches), m| {
-                    if m.won() {
-                        (wins + 1, matches + 1)
-                    } else {
-                        (wins, matches + 1)
-                    }
-                });
+                let (wins, total) =
+                    context
+                        .all_matches()?
+                        .iter()
+                        .fold((0, 0), |(wins, total), m| {
+                            if m.won() {
+                                (wins + 1, total + 1)
+                            } else {
+                                (wins, total + 1)
+                            }
+                        });
                 Ok(format!(
                     "{:.2}%",
-                    f64::from(wins) / f64::from(matches.max(1)) * 100.0
+                    f64::from(wins) / f64::from(total.max(1)) * 100.0
                 ))
             }
-            Self::TotalWins => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches
-                    .filter(PlayerMatchHistoryEntry::won)
-                    .count()
-                    .to_string())
-            }
-            Self::TotalLosses => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                Ok(matches.filter(|m| !m.won()).count().to_string())
-            }
+            Self::TotalWins => Ok(context
+                .all_matches()?
+                .iter()
+                .filter(|m| m.won())
+                .count()
+                .to_string()),
+            Self::TotalLosses => Ok(context
+                .all_matches()?
+                .iter()
+                .filter(|m| !m.won())
+                .count()
+                .to_string()),
             Self::TotalWinsLosses => {
-                let matches = Self::get_all_matches(&state.ch_client_ro, steam_id).await?;
-                let (wins, losses) = matches.fold((0, 0), |(wins, losses), m| {
-                    if m.won() {
-                        (wins + 1, losses)
-                    } else {
-                        (wins, losses + 1)
-                    }
-                });
+                let (wins, losses) =
+                    context
+                        .all_matches()?
+                        .iter()
+                        .fold((0, 0), |(wins, losses), m| {
+                            if m.won() {
+                                (wins + 1, losses)
+                            } else {
+                                (wins, losses + 1)
+                            }
+                        });
                 Ok(format!("{wins}-{losses}"))
             }
             Self::LatestPatchnotesTitle => state
@@ -584,89 +692,62 @@ impl Variable {
                 .map(|patch_notes| patch_notes.link.clone())
                 .ok_or(VariableResolveError::NoData("patch notes")),
             Self::HeroHoursPlayed => {
-                let hero_matches = Self::get_hero_matches(
-                    &state.ch_client_ro,
-                    &state.assets_client,
-                    steam_id,
-                    extra_args,
-                )
-                .await?;
-                let seconds_playtime: u32 = hero_matches.map(|m| m.match_duration_s).sum();
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                let seconds_playtime: u32 = context
+                    .hero_matches(hero_id)?
+                    .map(|m| m.match_duration_s)
+                    .sum();
                 Ok(format!("{}h", seconds_playtime / 3600))
             }
             Self::HeroKd => {
-                let hero_matches = Self::get_hero_matches(
-                    &state.ch_client_ro,
-                    &state.assets_client,
-                    steam_id,
-                    extra_args,
-                )
-                .await?;
-                let (kills, deaths) = hero_matches.fold((0, 0), |(kills, deaths), m| {
-                    (kills + m.player_kills, deaths + m.player_deaths)
-                });
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                let (kills, deaths) = context
+                    .hero_matches(hero_id)?
+                    .fold((0, 0), |(kills, deaths), m| {
+                        (kills + m.player_kills, deaths + m.player_deaths)
+                    });
                 Ok(format!(
                     "{:.2}",
                     f64::from(kills) / f64::from(deaths.max(1))
                 ))
             }
             Self::HeroKills => {
-                let hero_matches = Self::get_hero_matches(
-                    &state.ch_client_ro,
-                    &state.assets_client,
-                    steam_id,
-                    extra_args,
-                )
-                .await?;
-                Ok(hero_matches
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                Ok(context
+                    .hero_matches(hero_id)?
                     .map(|m| m.player_kills)
                     .sum::<u32>()
                     .to_string())
             }
-            Self::HeroMatches => Self::get_hero_matches(
-                &state.ch_client_ro,
-                &state.assets_client,
-                steam_id,
-                extra_args,
-            )
-            .await
-            .map(|m| m.count().to_string()),
+            Self::HeroMatches => {
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                Ok(context.hero_matches(hero_id)?.count().to_string())
+            }
             Self::HeroLosses => {
-                let hero_matches = Self::get_hero_matches(
-                    &state.ch_client_ro,
-                    &state.assets_client,
-                    steam_id,
-                    extra_args,
-                )
-                .await?;
-                Ok(hero_matches.filter(|m| !m.won()).count().to_string())
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                Ok(context
+                    .hero_matches(hero_id)?
+                    .filter(|m| !m.won())
+                    .count()
+                    .to_string())
             }
             Self::HeroWinrate => {
-                let hero_matches = Self::get_hero_matches(
-                    &state.ch_client_ro,
-                    &state.assets_client,
-                    steam_id,
-                    extra_args,
-                )
-                .await?;
-                let (wins, total) = hero_matches.fold((0, 0), |(wins, total), m| {
-                    (wins + i32::from(m.won()), total + 1)
-                });
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                let (wins, total) = context
+                    .hero_matches(hero_id)?
+                    .fold((0, 0), |(wins, total), m| {
+                        (wins + i32::from(m.won()), total + 1)
+                    });
                 Ok(format!(
                     "{:.2}%",
                     f64::from(wins) / f64::from(total.max(1)) * 100.0
                 ))
             }
             Self::HeroWins => {
-                let hero_matches = Self::get_hero_matches(
-                    &state.ch_client_ro,
-                    &state.assets_client,
-                    steam_id,
-                    extra_args,
-                )
-                .await?;
-                Ok(hero_matches
-                    .filter(PlayerMatchHistoryEntry::won)
+                let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;
+                Ok(context
+                    .hero_matches(hero_id)?
+                    .filter(|m| m.won())
                     .count()
                     .to_string())
             }
@@ -802,23 +883,17 @@ impl Variable {
             .unique_by(|e| e.match_id))
     }
 
-    async fn get_hero_matches(
-        ch_client: &clickhouse::Client,
+    async fn resolve_hero_id(
         assets_client: &AssetsClient,
-        steam_id: u32,
         extra_args: &HashMap<String, String>,
-    ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, VariableResolveError> {
+    ) -> Result<u32, VariableResolveError> {
         let hero_name = extra_args
             .get("hero_name")
             .ok_or(VariableResolveError::NoData("hero name"))?;
-
-        // Create a temporary AssetsClient
-        let hero_id = assets_client
+        assets_client
             .fetch_hero_id_from_name(hero_name)
             .await?
-            .ok_or(VariableResolveError::NoData("hero id"))?;
-        let matches = Self::get_all_matches(ch_client, steam_id).await?;
-        Ok(matches.filter(move |m| m.hero_id == hero_id))
+            .ok_or(VariableResolveError::NoData("hero id"))
     }
 
     async fn get_todays_matches(

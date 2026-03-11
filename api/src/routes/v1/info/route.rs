@@ -6,6 +6,7 @@ use axum::response::IntoResponse;
 use clickhouse::Row;
 use futures::future::join;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
@@ -99,15 +100,21 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
             .fetch_one::<u64>(),
     )
     .await;
-    let fetched_matches_per_day = fetched_matches_per_day.ok();
-    #[allow(deprecated)]
-    APIInfo {
-        fetched_matches_per_day,
-        table_sizes: table_sizes.ok().map(|v| {
+    let fetched_matches_per_day = fetched_matches_per_day
+        .inspect_err(|e| warn!("Failed to fetch matches per day from ClickHouse: {e}"))
+        .ok();
+    let table_sizes = table_sizes
+        .inspect_err(|e| warn!("Failed to fetch table sizes from ClickHouse: {e}"))
+        .ok()
+        .map(|v| {
             v.into_iter()
                 .map(|row| (row.table.clone(), row.into()))
                 .collect()
-        }),
+        });
+    #[allow(deprecated)]
+    APIInfo {
+        fetched_matches_per_day,
+        table_sizes,
         user_ingested_matches_last24h: fetched_matches_per_day,
     }
 }

@@ -148,6 +148,8 @@ jobs:
       ###############################
       ##         Test Code         ##
       ###############################
+      - name: Create .env.testing from example
+        run: cp .env.testing.example .env.testing
       - name: Test Docker image
         run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
 

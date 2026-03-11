@@ -226,6 +226,7 @@ The bot will leave the match 15 minutes after creation, regardless of match stat
 | Global | 1000req/h |
 "
 )]
+#[allow(clippy::too_many_lines)]
 pub(super) async fn create_custom(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
@@ -243,12 +244,23 @@ pub(super) async fn create_custom(
         )
         .await?;
 
-    let callback_url = payload.as_ref().ok().and_then(|p| p.0.callback_url.clone());
+    let payload = match payload {
+        Ok(Json(p)) => Some(p),
+        Err(JsonRejection::MissingJsonContentType(_)) => None,
+        Err(rejection) => {
+            return Err(APIError::status_msg(
+                rejection.status(),
+                format!("Invalid request body: {rejection}"),
+            ));
+        }
+    };
+
+    let callback_url = payload.as_ref().and_then(|p| p.callback_url.clone());
 
     let SteamProxyResponse {
         username,
         msg: created_party,
-    } = tryhard::retry_fn(|| create_party(&state, payload.as_ref().ok().map(|p| p.0.clone())))
+    } = tryhard::retry_fn(|| create_party(&state, payload.clone()))
         .retries(5)
         .linear_backoff(Duration::from_millis(100))
         .await?;
@@ -322,8 +334,7 @@ pub(super) async fn create_custom(
 
     if !payload
         .as_ref()
-        .ok()
-        .and_then(|p| p.0.disable_auto_ready)
+        .and_then(|p| p.disable_auto_ready)
         .unwrap_or_default()
     {
         utils::make_ready(&state.steam_client, username.clone(), party_id, true).await?;

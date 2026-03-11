@@ -2,15 +2,11 @@ use core::time::Duration;
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use rand::seq::SliceRandom;
-use redis::AsyncTypedCommands;
 use serde::Serialize;
-use serde_json::json;
 use tracing::warn;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
@@ -19,9 +15,7 @@ use valveprotos::deadlock::{
 };
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
-use crate::services::patreon;
-use crate::services::rate_limiter::Quota;
+use crate::error::APIResult;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
@@ -115,8 +109,8 @@ struct PlayerCardClickhouse {
     slots_stat_score: Vec<Option<u32>>,
 }
 
-impl From<PlayerCard> for PlayerCardClickhouse {
-    fn from(value: PlayerCard) -> Self {
+impl From<&PlayerCard> for PlayerCardClickhouse {
+    fn from(value: &PlayerCard) -> Self {
         Self {
             account_id: value.account_id,
             ranked_badge_level: value.ranked_badge_level,
@@ -195,7 +189,7 @@ pub(crate) async fn get_player_card(
             .await?;
     let proto_player_card: SteamProxyResponse<CMsgCitadelProfileCard> = raw_data.try_into()?;
     let player_card: PlayerCard = proto_player_card.msg.into();
-    let ch_player_card: PlayerCardClickhouse = player_card.clone().into();
+    let ch_player_card = PlayerCardClickhouse::from(&player_card);
     let Ok(mut inserter) = ch_client
         .insert::<PlayerCardClickhouse>("player_card")
         .await
@@ -253,82 +247,8 @@ pub(super) async fn card(
     rate_limit_key: RateLimitKey,
     State(mut state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
-        .await?
-    {
-        return Err(APIError::protected_user());
-    }
-
-    let is_prioritized =
-        patreon::is_account_prioritized(&state.pg_client, i64::from(account_id)).await?;
-    if !is_prioritized {
-        let has_patron_key = match rate_limit_key.api_key {
-            Some(api_key) => {
-                patreon::extractor::get_patron_id_for_api_key(&state.pg_client, api_key)
-                    .await
-                    .is_some()
-            }
-            None => false,
-        };
-        if !has_patron_key {
-            return Err(APIError::status_msg(
-                StatusCode::FORBIDDEN,
-                "This endpoint is only available to Patreon subscribers.",
-            ));
-        }
-    }
-
-    state
-        .rate_limit_client
-        .apply_limits(
-            &rate_limit_key,
-            "card",
-            &[
-                Quota::ip_limit(5, Duration::from_mins(1)),
-                Quota::key_limit(20, Duration::from_mins(1)),
-                Quota::key_limit(800, Duration::from_hours(1)),
-                Quota::global_limit(200, Duration::from_mins(1)),
-            ],
-        )
-        .await?;
-
-    let friend_id = i32::try_from(account_id).map_err(|_| {
-        APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid account ID".to_owned())
-    })?;
-    let bot_username = match sqlx::query!(
-        "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
-        friend_id
-    )
-    .fetch_one(&state.pg_client)
-    .await
-    {
-        Ok(r) => r.bot_id,
-        Err(sqlx::Error::RowNotFound) => {
-            let invite_keys = state.redis_client.keys("invite_link:*").await?;
-            let mut invites = vec![];
-            for invite_key in invite_keys {
-                if let Ok(Some(invite)) = state.redis_client.get(&invite_key).await {
-                    invites.push(invite);
-                }
-            }
-            // Shuffle so the invites get used more equally (hopefully)
-            invites.shuffle(&mut rand::rng());
-
-            // return at most 5 invites
-            invites.truncate(5);
-
-            return Err(APIError::StatusMsgJson {
-                status: StatusCode::BAD_REQUEST,
-                message: json!({
-                    "message": "Account ID is not a friend of any bot. Please add the bot as friend first using one of these invites.",
-                    "invites": invites,
-                }),
-            });
-        }
-        Err(e) => return Err(e.into()),
-    };
+    let bot_username =
+        super::resolve_bot_for_account(&mut state, &rate_limit_key, account_id, "card").await?;
 
     let player_card = get_player_card(
         &state.steam_client,

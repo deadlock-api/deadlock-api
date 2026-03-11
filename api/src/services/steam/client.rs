@@ -1,10 +1,10 @@
 use core::time::Duration;
+use std::collections::HashSet;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use cached::TimedCache;
 use cached::proc_macro::cached;
-use itertools::Itertools;
 use metrics::counter;
 use prost::Message;
 use rand::prelude::IndexedRandom;
@@ -168,7 +168,7 @@ impl SteamClient {
     pub(crate) async fn get_protected_users(
         &self,
         pg_client: &sqlx::Pool<sqlx::Postgres>,
-    ) -> sqlx::Result<Vec<u32>> {
+    ) -> sqlx::Result<HashSet<u32>> {
         get_protected_users_cached(pg_client).await
     }
 
@@ -287,7 +287,7 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<u32>>",
+    ty = "TimedCache<u8, HashSet<u32>>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ 0 }",
@@ -295,14 +295,14 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch
 )]
 pub(crate) async fn get_protected_users_cached(
     ph_client: &sqlx::Pool<sqlx::Postgres>,
-) -> sqlx::Result<Vec<u32>> {
+) -> sqlx::Result<HashSet<u32>> {
     let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
         .fetch_all(ph_client)
         .await?
         .into_iter()
         .map(|r| r.steam_id)
         .map(i32::cast_unsigned)
-        .collect_vec();
+        .collect();
     Ok(protected_users)
 }
 
@@ -363,7 +363,7 @@ async fn fetch_steam_account_name_cached(
         )
         .await
         .map_err(|e| SteamAccountNameError::RateLimitExceeded(e.to_string()))?;
-    let steamid64 = u64::from(steam_id) + 76561197960265728;
+    let steamid64 = crate::utils::parse::steamid3_to_steamid64(steam_id);
     let response = http_client
         .get(format!(
             "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={steam_api_key}&steamids={steamid64}",
