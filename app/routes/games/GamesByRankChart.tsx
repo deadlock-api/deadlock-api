@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 

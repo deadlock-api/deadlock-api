@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 
@@ -9,8 +10,6 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
-import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
-
 import { randomColorHex } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client/api";
 import type { ItemStats } from "deadlock_api_client";
+import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client/api";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
@@ -14,10 +15,8 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
-import { parseAsSetOf } from "~/lib/nuqs-parsers";
-import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client/api";
 import { api } from "~/lib/api";
-
+import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -181,31 +180,34 @@ export function ItemCombsExplore({
 
   const { data: ranksData } = useQuery(ranksQueryOptions);
 
-  const queryStatOptions: AnalyticsApiItemStatsRequest = useMemo(() => ({
-    minMatches,
-    heroId: hero,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
-    includeItemIds: includeItems ? Array.from(includeItems) : undefined,
-    excludeItemIds: excludeItems ? Array.from(excludeItems) : undefined,
-    minBoughtAtS,
-    maxBoughtAtS,
-    gameMode,
-  }), [
-    minMatches,
-    hero,
-    minRankId,
-    maxRankId,
-    minDateTimestamp,
-    maxDateTimestamp,
-    includeItems,
-    excludeItems,
-    minBoughtAtS,
-    maxBoughtAtS,
-    gameMode,
-  ]);
+  const queryStatOptions: AnalyticsApiItemStatsRequest = useMemo(
+    () => ({
+      minMatches,
+      heroId: hero,
+      minAverageBadge: minRankId ?? 0,
+      maxAverageBadge: maxRankId ?? 116,
+      minUnixTimestamp: minDateTimestamp,
+      maxUnixTimestamp: maxDateTimestamp,
+      includeItemIds: includeItems ? Array.from(includeItems) : undefined,
+      excludeItemIds: excludeItems ? Array.from(excludeItems) : undefined,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+    }),
+    [
+      minMatches,
+      hero,
+      minRankId,
+      maxRankId,
+      minDateTimestamp,
+      maxDateTimestamp,
+      includeItems,
+      excludeItems,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+    ],
+  );
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery(itemStatsQueryOptions(queryStatOptions));
 

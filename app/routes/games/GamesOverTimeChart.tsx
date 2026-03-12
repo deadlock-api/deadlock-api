@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { useMemo } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
-import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { formatStatValue, getStatDefinition } from "./stat-definitions";

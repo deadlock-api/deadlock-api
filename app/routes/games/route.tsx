@@ -1,4 +1,5 @@
 import type { GameStatsBucketEnum } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
@@ -14,7 +15,6 @@ import { PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 
 import { ALL_STAT_KEYS } from "./stat-definitions";
 

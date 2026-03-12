@@ -1,9 +1,15 @@
-import type {
-  AnalyticsApiBadgeDistributionRequest,
-  AnalyticsApiKillDeathStatsRequest,
-} from "deadlock_api_client";
-
-import {AnalyticsApiAbilityOrderStatsRequest, AnalyticsApiGameStatsRequest, AnalyticsApiHeroCombStatsRequest, AnalyticsApiHeroCountersStatsRequest, AnalyticsApiHeroStatsRequest, AnalyticsApiHeroSynergiesStatsRequest, AnalyticsApiItemStatsRequest, AnalyticsApiPlayerScoreboardRequest, MatchesApiBulkMetadataRequest} from "deadlock_api_client/api";
+import type { AnalyticsApiBadgeDistributionRequest, AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client";
+import {
+  AnalyticsApiAbilityOrderStatsRequest,
+  AnalyticsApiGameStatsRequest,
+  AnalyticsApiHeroCombStatsRequest,
+  AnalyticsApiHeroCountersStatsRequest,
+  AnalyticsApiHeroStatsRequest,
+  AnalyticsApiHeroSynergiesStatsRequest,
+  AnalyticsApiItemStatsRequest,
+  AnalyticsApiPlayerScoreboardRequest,
+  MatchesApiBulkMetadataRequest,
+} from "deadlock_api_client/api";
 
 export const queryKeys = {
   assets: {
@@ -40,7 +46,8 @@ export const queryKeys = {
   },
   streamkit: {
     version: (widgetType: string | undefined) => ["api-streamkit-version", widgetType] as const,
-    stats: (region: string, accountId: string, ...rest: unknown[]) => ["api-streamkit-stats", region, accountId, ...rest] as const,
+    stats: (region: string, accountId: string, ...rest: unknown[]) =>
+      ["api-streamkit-stats", region, accountId, ...rest] as const,
     matchHistory: (accountId: string) => ["api-match-history", accountId] as const,
     availableVariables: () => ["api-streamkit-available-variables"] as const,
     preview: (url: string) => ["api-streamkit-preview", url] as const,
