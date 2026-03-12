@@ -279,8 +279,8 @@ export function HeroStatsByExperienceTable({
                 <HeroName heroId={row.heroId} />
               </div>
             </TableCell>
-            {/* eslint-disable react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index */}
             {row.bucketValues.map((val, i) => (
+              // eslint-disable-next-line react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index
               <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
                 {bucketLoading[i] ? (
                   <Skeleton className="mx-auto h-4 w-12" />
@@ -295,7 +295,6 @@ export function HeroStatsByExperienceTable({
                 )}
               </TableCell>
             ))}
-            {/* eslint-enable react/no-array-index-key */}
             <TableCell className="text-center tabular-nums">
               {!allBucketsLoaded ? (
                 <Skeleton className="mx-auto h-4 w-12" />

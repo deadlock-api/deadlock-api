@@ -23,8 +23,8 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
 
   return (
     <div className="flex flex-nowrap items-stretch gap-1 p-1">
-      {/* eslint-disable react/no-array-index-key -- stats can have duplicate variables, no natural unique key */}
       {stats.map((stat, index) => (
+        // eslint-disable-next-line react/no-array-index-key -- stats can have duplicate variables, no natural unique key
         <Fragment key={`${stat.variable}-${index}`}>
           <StatDisplay stat={stat} theme={theme} />
           {index < stats.length - 1 && (
@@ -37,7 +37,6 @@ export const BoxStats = ({ stats, theme, loading }: BoxStatsProps) => {
           )}
         </Fragment>
       ))}
-      {/* eslint-enable react/no-array-index-key */}
     </div>
   );
 };

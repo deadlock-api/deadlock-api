@@ -14,7 +14,6 @@ function fastObjectShallowCompare<T extends Record<string, any> | null>(a: T, b:
   let aLength = 0;
   let bLength = 0;
 
-  /* eslint-disable guard-for-in */
   for (const key in a) {
     aLength += 1;
 
@@ -26,7 +25,6 @@ function fastObjectShallowCompare<T extends Record<string, any> | null>(a: T, b:
     }
   }
 
-  /* eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-unused-vars */
   for (const _ in b) {
     bLength += 1;
   }
