@@ -4,12 +4,10 @@ import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { assetsApi } from "~/lib/assets-api";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import type { GameStatsQueryParams } from "~/queries/games-query";
 import { gameStatsQueryOptions } from "~/queries/games-query";
-import { queryKeys } from "~/queries/query-keys";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
 import { StatSelector } from "./StatSelector";
@@ -33,14 +31,7 @@ interface ChartEntry {
 export default function GamesByRankChart({ params, stat, onStatChange, isStreetBrawl = false }: GamesByRankChartProps) {
   const { data, isPending } = useQuery(gameStatsQueryOptions({ ...params, bucket: "avg_badge" }));
 
-  const { data: ranksData } = useQuery({
-    queryKey: queryKeys.leaderboard.ranks(),
-    queryFn: async () => {
-      const response = await assetsApi.default_api.getRanksV2RanksGet();
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data: ranksData } = useQuery(ranksQueryOptions);
 
   const tierData = useMemo(() => {
     const map = new Map<number, RankV2>();
