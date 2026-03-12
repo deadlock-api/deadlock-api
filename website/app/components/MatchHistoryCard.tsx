@@ -233,14 +233,13 @@ export default function MatchHistoryCard({
                   >
                     AP:{" "}
                     <span className="text-foreground">
-                      {/* eslint-disable react/no-array-index-key -- ability order list, slots can repeat */}
                       {buildData.abilityBuildOrder.map((slot, i) => (
+                        // eslint-disable-next-line react/no-array-index-key -- slots can repeat
                         <span key={`${slot}-${i}`}>
                           {i > 0 && <span className="text-muted-foreground"> › </span>}
                           {slot}
                         </span>
                       ))}
-                      {/* eslint-enable react/no-array-index-key */}
                     </span>
                   </button>
                 </TooltipTrigger>
@@ -296,14 +295,14 @@ export default function MatchHistoryCard({
           {/* Items */}
           <div className="flex shrink-0 flex-col gap-1.5">
             <div className="grid grid-cols-6 gap-1">
-              {/* eslint-disable react/no-array-index-key -- items can be duplicated, position matters */}
               {topRow.map((itemId, i) => (
+                // eslint-disable-next-line react/no-array-index-key -- items can be duplicated
                 <ItemImage key={`top-${i}-${itemId}`} itemId={itemId} className="size-8 rounded-sm" />
               ))}
               {bottomRow.map((itemId, i) => (
+                // eslint-disable-next-line react/no-array-index-key -- items can be duplicated
                 <ItemImage key={`bot-${i}-${itemId}`} itemId={itemId} className="size-8 rounded-sm" />
               ))}
-              {/* eslint-enable react/no-array-index-key */}
             </div>
             {(placement || placementLabel) && (
               <div className="mt-0.5 flex gap-2">
@@ -324,10 +323,11 @@ export default function MatchHistoryCard({
           {/* Players List */}
           {teams && (
             <div className="ml-auto flex gap-8 pl-2">
-              {/* eslint-disable react/no-array-index-key -- teams are fixed 2-element arrays */}
               {teams.map((team, teamIdx) => (
+                // eslint-disable-next-line react/no-array-index-key -- teams are fixed 2-element arrays
                 <div key={teamIdx} className="flex flex-col gap-1.5">
                   {team.map((player, playerIdx) => (
+                    // eslint-disable-next-line react/no-array-index-key -- players have no unique id
                     <div key={playerIdx} className="flex items-center gap-2">
                       <HeroImage heroId={player.heroId} className="size-4 shrink-0 rounded-full" />
                       <div className="w-[72px] truncate text-xs text-muted-foreground">{player.name}</div>
@@ -335,7 +335,6 @@ export default function MatchHistoryCard({
                   ))}
                 </div>
               ))}
-              {/* eslint-enable react/no-array-index-key */}
             </div>
           )}
         </div>

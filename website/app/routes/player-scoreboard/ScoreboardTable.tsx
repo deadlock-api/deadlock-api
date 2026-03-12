@@ -92,11 +92,11 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {/* eslint-disable react/no-array-index-key -- accountId can be null, fallback to index */}
           {paginatedEntries.map((entry, i) => {
             const accountId = entry.account_id;
             const profile = accountId != null ? profiles[accountId] : undefined;
             return (
+              // eslint-disable-next-line react/no-array-index-key -- accountId can be null, fallback to index
               <TableRow key={`${accountId ?? i}-${entry.rank}`}>
                 <TableCell className="text-right">{entry.rank + 1}</TableCell>
                 <TableCell>
@@ -124,7 +124,6 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
               </TableRow>
             );
           })}
-          {/* eslint-enable react/no-array-index-key */}
           {paginatedEntries.length === 0 && (
             <TableRow>
               <TableCell colSpan={sortBy === "matches" ? 3 : 4} className="py-8 text-center text-muted-foreground">
