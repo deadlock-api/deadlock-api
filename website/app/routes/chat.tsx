@@ -1,6 +1,7 @@
 import { usePostHog } from "@posthog/react";
 import { Bot, RotateCcw, Sparkles } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
 import { ChatInput } from "~/components/chat/ChatInput";
@@ -97,9 +98,11 @@ export default function ChatPage() {
         {!isVerified ? (
           // Turnstile verification required
           <div className="flex flex-1 items-center justify-center p-4">
-            <Suspense fallback={<LoadingLogo />}>
-              <TurnstileVerification onVerified={handleTurnstileVerified} />
-            </Suspense>
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <TurnstileVerification onVerified={handleTurnstileVerified} />
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         ) : !hasMessages ? (
           // Empty state - Welcome message
@@ -123,29 +126,33 @@ export default function ChatPage() {
           </div>
         ) : (
           // Message list area
-          <Suspense fallback={<LoadingLogo />}>
-            <ChatMessageList
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ChatMessageList
               messages={conversation.messages}
               currentStreamingMessage={conversation.currentStreamingMessage}
               isStreaming={conversation.isStreaming}
               activeTools={conversation.activeTools}
             />
-          </Suspense>
+            </Suspense>
+          </ChunkErrorBoundary>
         )}
 
         {/* Error display - shown when there's an error */}
         {conversation.error && isVerified && (
           <div className="border-t px-4 py-3">
             <div className="mx-auto max-w-3xl">
-              <Suspense fallback={<LoadingLogo />}>
-                <ChatError
+              <ChunkErrorBoundary>
+                <Suspense fallback={<LoadingLogo />}>
+                  <ChatError
                   error={conversation.error}
                   onDismiss={handleDismissError}
                   onRetry={lastMessage ? handleRetry : undefined}
                   onReVerify={handleReVerify}
                   resetTime={rateLimit.timeUntilReset}
                 />
-              </Suspense>
+                </Suspense>
+              </ChunkErrorBoundary>
             </div>
           </div>
         )}

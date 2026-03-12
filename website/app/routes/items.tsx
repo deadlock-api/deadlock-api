@@ -1,5 +1,6 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
 import { Filter } from "~/components/Filter";
@@ -127,8 +128,9 @@ export default function Items(
           />
         </TabsContent>
         <TabsContent value="item-purchase-analysis">
-          <Suspense fallback={<LoadingLogo />}>
-            <ItemPurchaseAnalysis
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemPurchaseAnalysis
               minRankId={effectiveMinRankId}
               maxRankId={effectiveMaxRankId}
               minDate={startDate || undefined}
@@ -139,11 +141,13 @@ export default function Items(
               maxBoughtAtS={maxBoughtAtS ?? undefined}
               gameMode={gameMode}
             />
-          </Suspense>
+            </Suspense>
+          </ChunkErrorBoundary>
         </TabsContent>
         <TabsContent value="item-combs">
-          <Suspense fallback={<LoadingLogo />}>
-            <ItemCombsExplore
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <ItemCombsExplore
               sortBy="winrate"
               minRankId={effectiveMinRankId}
               maxRankId={effectiveMaxRankId}
@@ -155,7 +159,8 @@ export default function Items(
               maxBoughtAtS={maxBoughtAtS ?? undefined}
               gameMode={gameMode}
             />
-          </Suspense>
+            </Suspense>
+          </ChunkErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

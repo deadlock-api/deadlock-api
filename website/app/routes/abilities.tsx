@@ -1,5 +1,6 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense, useMemo, useState } from "react";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
 import { Filter } from "~/components/Filter";
@@ -74,8 +75,9 @@ export default function AbilityOrder() {
         <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
       </Filter.Root>
 
-      <Suspense fallback={<LoadingLogo />}>
-        <AbilityOrderTree
+      <ChunkErrorBoundary>
+        <Suspense fallback={<LoadingLogo />}>
+          <AbilityOrderTree
           heroId={heroId}
           minRankId={gameMode !== "street_brawl" ? minRankId : undefined}
           maxRankId={gameMode !== "street_brawl" ? maxRankId : undefined}
@@ -87,7 +89,8 @@ export default function AbilityOrder() {
           includeItemIds={includeItemIds}
           excludeItemIds={excludeItemIds}
         />
-      </Suspense>
+        </Suspense>
+      </ChunkErrorBoundary>
     </div>
   );
 }
