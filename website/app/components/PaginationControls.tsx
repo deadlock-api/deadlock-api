@@ -85,10 +85,20 @@ export function PaginationControls({
         of {Math.max(1, totalPages)}
       </span>
       <div className="flex items-center space-x-2">
-        <Button variant="outline" size="sm" onClick={() => onPageChange(Math.max(0, currentPage - 1))} disabled={currentPage === 0}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+          disabled={currentPage === 0}
+        >
           Previous
         </Button>
-        <Button variant="outline" size="sm" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage >= totalPages - 1}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages - 1}
+        >
           Next
         </Button>
       </div>

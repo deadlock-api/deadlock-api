@@ -491,7 +491,9 @@ export function ItemStatsTableDisplay({
       ) : (
         <div>
           <div className="my-4 flex items-center justify-center gap-6">
-            {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
+            {!hideItemTierFilter && (
+              <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />
+            )}
             {columns.includes("confidence") && (
               <div className="flex items-center gap-2">
                 <Switch id={dimLowConfidenceId} checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
@@ -513,7 +515,9 @@ export function ItemStatsTableDisplay({
                     <TableHead
                       className="cursor-pointer text-center transition-colors hover:bg-accent"
                       onClick={() => toggleSort("winRate")}
-                      aria-sort={sort.field === "winRate" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined}
+                      aria-sort={
+                        sort.field === "winRate" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
+                      }
                     >
                       <div className="flex items-center">
                         <span>Win Rate</span>
@@ -525,7 +529,9 @@ export function ItemStatsTableDisplay({
                     <TableHead
                       className="cursor-pointer text-center transition-colors hover:bg-accent"
                       onClick={() => toggleSort("matches")}
-                      aria-sort={sort.field === "matches" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined}
+                      aria-sort={
+                        sort.field === "matches" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined
+                      }
                     >
                       <div className="flex items-center">
                         <span>Pick Rate (Normalized)</span>

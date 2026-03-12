@@ -1,8 +1,8 @@
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense, useMemo, useState } from "react";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 
@@ -78,17 +78,17 @@ export default function AbilityOrder() {
       <ChunkErrorBoundary>
         <Suspense fallback={<LoadingLogo />}>
           <AbilityOrderTree
-          heroId={heroId}
-          minRankId={gameMode !== "street_brawl" ? minRankId : undefined}
-          maxRankId={gameMode !== "street_brawl" ? maxRankId : undefined}
-          minDate={startDate}
-          maxDate={endDate}
-          minMatches={minMatches}
-          gameMode={gameMode}
-          defaultDepth={2}
-          includeItemIds={includeItemIds}
-          excludeItemIds={excludeItemIds}
-        />
+            heroId={heroId}
+            minRankId={gameMode !== "street_brawl" ? minRankId : undefined}
+            maxRankId={gameMode !== "street_brawl" ? maxRankId : undefined}
+            minDate={startDate}
+            maxDate={endDate}
+            minMatches={minMatches}
+            gameMode={gameMode}
+            defaultDepth={2}
+            includeItemIds={includeItemIds}
+            excludeItemIds={excludeItemIds}
+          />
         </Suspense>
       </ChunkErrorBoundary>
     </div>

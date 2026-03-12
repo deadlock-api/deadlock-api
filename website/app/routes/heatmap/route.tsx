@@ -2,8 +2,8 @@ import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client/api";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -115,12 +115,12 @@ export default function Heatmap() {
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
                 <Heatmap3D
-                data={killDeathQuery.data}
-                mapData={mapQuery.data}
-                viewMode={viewMode}
-                sensitivity={sensitivity / 10000}
-                onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
-              />
+                  data={killDeathQuery.data}
+                  mapData={mapQuery.data}
+                  viewMode={viewMode}
+                  sensitivity={sensitivity / 10000}
+                  onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
+                />
               </Suspense>
             </ChunkErrorBoundary>
           ) : (

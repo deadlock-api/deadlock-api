@@ -5,19 +5,19 @@ import "./tailwind.css";
 import "./dayjs.ts";
 import { QueryClient, QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Component, Suspense, lazy } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import type { LinksFunction } from "react-router";
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
 
+import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
 import { CookieConsentBanner } from "~/components/CookieConsentBanner";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
-import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 
 const ReactQueryDevtools = lazy(() =>

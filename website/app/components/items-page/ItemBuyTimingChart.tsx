@@ -353,7 +353,10 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                 <p className="text-muted-foreground">No data available</p>
               </div>
             ) : (
-              <div role="img" aria-label={`Item win rate by ${bucketType === "game_time_min" ? "purchase time" : "net worth at purchase"} chart`}>
+              <div
+                role="img"
+                aria-label={`Item win rate by ${bucketType === "game_time_min" ? "purchase time" : "net worth at purchase"} chart`}
+              >
                 <ChartContainer config={chartConfig} className="h-120 w-full">
                   <LineChart width={undefined} height={undefined} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                     {itemIds.length > 1 && <Legend layout="vertical" align="right" verticalAlign="top" />}
@@ -384,7 +387,8 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                               >
                                 <div className="text-sm">{entry.name}</div>
                                 <div className="font-medium">
-                                  {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
+                                  {config.tooltipPrefix} {config.formatter(d.bucketStart)} -{" "}
+                                  {config.formatter(d.bucketEnd)}
                                 </div>
                                 <div className="grid gap-1.5">
                                   <div className="flex items-center gap-2">

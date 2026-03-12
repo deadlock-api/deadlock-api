@@ -49,13 +49,10 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
     [searchQuery, enrichedEntries, fuse],
   );
 
-  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
   const paginatedEntries = useMemo(
     () => filteredEntries.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage),
     [filteredEntries, currentPage, itemsPerPage],
   );
-  const hasNextPage = currentPage < totalPages - 1;
-
   const handleItemsPerPageChange = (perPage: number) => {
     setItemsPerPage(perPage);
     setCurrentPage(0);
@@ -74,7 +71,6 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
       onItemsPerPageChange={handleItemsPerPageChange}
       currentPage={currentPage}
       onPageChange={setCurrentPage}
-      hasNextPage={hasNextPage}
       totalEntries={filteredEntries.length}
     />
   );
