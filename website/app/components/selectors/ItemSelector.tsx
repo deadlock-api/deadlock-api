@@ -104,7 +104,7 @@ export function ItemSelectorMultiple({
   const selectAllId = useId();
 
   if (isLoading) {
-    return "";
+    return null;
   }
 
   const allSelected = selectedItems.length === sortedItems.length;
