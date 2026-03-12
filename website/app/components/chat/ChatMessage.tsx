@@ -1,8 +1,9 @@
-import { Bot, User } from "lucide-react";
+import { Bot, Coins, User } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { cn } from "~/lib/utils";
-import type { Message } from "~/types/chat";
+import type { Message, TokenUsage } from "~/types/chat";
 
 import { MarkdownContent } from "./MarkdownContent";
 import { ToolIndicatorList } from "./ToolIndicator";
@@ -53,8 +54,45 @@ export function ChatMessage({ message, isStreaming, streamingContent }: ChatMess
           )}
         </div>
         {isStreaming && displayContent && <TypingIndicator />}
+        {/* Token usage indicator */}
+        {!isUser && message.usage && <TokenUsageIndicator usage={message.usage} />}
       </div>
     </div>
+  );
+}
+
+function TokenUsageIndicator({ usage }: { usage: TokenUsage }) {
+  const totalTokens = usage.input_tokens + usage.output_tokens;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex cursor-default items-center gap-1 px-1 text-xs text-muted-foreground/60">
+          <Coins className="size-3" />
+          <span>{totalTokens.toLocaleString()} tokens</span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="border bg-popover text-popover-foreground shadow-md">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <span className="text-muted-foreground">Input</span>
+          <span className="font-mono">{usage.input_tokens.toLocaleString()}</span>
+          <span className="text-muted-foreground">Output</span>
+          <span className="font-mono">{usage.output_tokens.toLocaleString()}</span>
+          {usage.cache_read_tokens > 0 && (
+            <>
+              <span className="text-muted-foreground">Cache read</span>
+              <span className="font-mono">{usage.cache_read_tokens.toLocaleString()}</span>
+            </>
+          )}
+          {usage.cache_creation_tokens > 0 && (
+            <>
+              <span className="text-muted-foreground">Cache write</span>
+              <span className="font-mono">{usage.cache_creation_tokens.toLocaleString()}</span>
+            </>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

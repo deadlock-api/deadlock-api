@@ -12,6 +12,7 @@ export interface Message {
   timestamp: number;
   isStreaming?: boolean;
   tools?: ToolExecution[];
+  usage?: TokenUsage;
 }
 
 // Tool Execution Types
@@ -58,13 +59,30 @@ export interface ChatToolEndEvent {
   result_summary: string;
 }
 
+export interface ChatUsageEvent {
+  event: "usage";
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+}
+
 export type SSEEvent =
   | ChatStartEvent
   | ChatDeltaEvent
   | ChatEndEvent
   | ChatErrorEvent
   | ChatToolStartEvent
-  | ChatToolEndEvent;
+  | ChatToolEndEvent
+  | ChatUsageEvent;
+
+// Token usage data attached to completed messages
+export interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+}
 
 // Error Response Types
 export interface ErrorResponse {
