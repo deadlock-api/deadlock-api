@@ -136,6 +136,8 @@ pub struct AnalyticsGameStats {
     pub avg_objectives_destroyed_time_s: f64,
     pub mid_boss_kill_rate: f64,
     pub abandon_rate: f64,
+    pub team0_wins: u64,
+    pub team1_wins: u64,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -184,7 +186,7 @@ fn build_query(query: &GameStatsQuery) -> String {
     format!(
         "
     WITH t_matches AS (
-        SELECT match_id, duration_s
+        SELECT match_id, duration_s, winning_team
             {info_select}
             , arrayMin(arrayFilter(x -> x > 0, `mid_boss.destroyed_time_s`)) AS first_mid_boss_time_s
             , length(`mid_boss.destroyed_time_s`) > 0 AS has_mid_boss
@@ -235,7 +237,9 @@ fn build_query(query: &GameStatsQuery) -> String {
         if(isNaN(avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)), 0, avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)) AS avg_first_mid_boss_time_s,
         if(isNaN(avgIf(tm.avg_obj_destroyed_time_s, tm.has_objectives)), 0, avgIf(tm.avg_obj_destroyed_time_s, tm.has_objectives)) AS avg_objectives_destroyed_time_s,
         uniqIf(mp.match_id, tm.has_mid_boss) / greatest(1, uniq(mp.match_id)) AS mid_boss_kill_rate,
-        avg(abandon_match_time_s > 0) AS abandon_rate
+        avg(abandon_match_time_s > 0) AS abandon_rate,
+        uniqIf(mp.match_id, tm.winning_team = 'Team0') AS team0_wins,
+        uniqIf(mp.match_id, tm.winning_team = 'Team1') AS team1_wins
     FROM match_player mp
     INNER JOIN t_matches tm ON mp.match_id = tm.match_id
     WHERE mp.match_id IN (SELECT match_id FROM t_matches)
