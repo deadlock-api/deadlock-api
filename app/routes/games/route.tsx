@@ -1,9 +1,9 @@
 import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
@@ -134,14 +134,14 @@ export default function Games() {
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <GamesOverview
-              params={baseParams}
-              prevParams={prevParams}
-              isStreetBrawl={isStreetBrawl}
-              onStatClick={(key) => {
-                setStat(key);
-                setTab("over-time");
-              }}
-            />
+                params={baseParams}
+                prevParams={prevParams}
+                isStreetBrawl={isStreetBrawl}
+                onStatClick={(key) => {
+                  setStat(key);
+                  setTab("over-time");
+                }}
+              />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>
@@ -150,13 +150,13 @@ export default function Games() {
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <GamesOverTimeChart
-              params={baseParams}
-              stat={stat}
-              onStatChange={setStat}
-              timeBucket={timeBucket as GameStatsBucketEnum}
-              onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
-              isStreetBrawl={isStreetBrawl}
-            />
+                params={baseParams}
+                stat={stat}
+                onStatChange={setStat}
+                timeBucket={timeBucket as GameStatsBucketEnum}
+                onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
+                isStreetBrawl={isStreetBrawl}
+              />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>

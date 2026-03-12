@@ -1,8 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
@@ -82,7 +82,10 @@ export default function BadgeDistribution() {
         ) : badgeDistributionQuery.data ? (
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
-              <BadgeDistributionChart badgeDistributionData={badgeDistributionQuery.data} ranksData={ranks.data ?? []} />
+              <BadgeDistributionChart
+                badgeDistributionData={badgeDistributionQuery.data}
+                ranksData={ranks.data ?? []}
+              />
             </Suspense>
           </ChunkErrorBoundary>
         ) : null}

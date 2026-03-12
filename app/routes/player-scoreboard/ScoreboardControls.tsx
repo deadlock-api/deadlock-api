@@ -7,7 +7,6 @@ export interface ScoreboardControlsProps {
   onItemsPerPageChange: (items: number) => void;
   currentPage: number;
   onPageChange: (page: number) => void;
-  hasNextPage: boolean;
   totalEntries: number;
 }
 
@@ -18,7 +17,6 @@ export function ScoreboardControls({
   onItemsPerPageChange,
   currentPage,
   onPageChange,
-  hasNextPage,
   totalEntries,
 }: ScoreboardControlsProps) {
   const totalPages = Math.max(1, Math.ceil(totalEntries / itemsPerPage));

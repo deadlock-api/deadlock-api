@@ -1,8 +1,8 @@
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { ItemStatsTable } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -131,16 +131,16 @@ export default function Items(
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <ItemPurchaseAnalysis
-              minRankId={effectiveMinRankId}
-              maxRankId={effectiveMaxRankId}
-              minDate={startDate || undefined}
-              maxDate={endDate || undefined}
-              hero={hero}
-              minMatches={minMatches}
-              minBoughtAtS={minBoughtAtS ?? undefined}
-              maxBoughtAtS={maxBoughtAtS ?? undefined}
-              gameMode={gameMode}
-            />
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                hero={hero}
+                minMatches={minMatches}
+                minBoughtAtS={minBoughtAtS ?? undefined}
+                maxBoughtAtS={maxBoughtAtS ?? undefined}
+                gameMode={gameMode}
+              />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>
@@ -148,17 +148,17 @@ export default function Items(
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <ItemCombsExplore
-              sortBy="winrate"
-              minRankId={effectiveMinRankId}
-              maxRankId={effectiveMaxRankId}
-              minDate={startDate || undefined}
-              maxDate={endDate || undefined}
-              hero={hero}
-              minMatches={minMatches}
-              minBoughtAtS={minBoughtAtS ?? undefined}
-              maxBoughtAtS={maxBoughtAtS ?? undefined}
-              gameMode={gameMode}
-            />
+                sortBy="winrate"
+                minRankId={effectiveMinRankId}
+                maxRankId={effectiveMaxRankId}
+                minDate={startDate || undefined}
+                maxDate={endDate || undefined}
+                hero={hero}
+                minMatches={minMatches}
+                minBoughtAtS={minBoughtAtS ?? undefined}
+                maxBoughtAtS={maxBoughtAtS ?? undefined}
+                gameMode={gameMode}
+              />
             </Suspense>
           </ChunkErrorBoundary>
         </TabsContent>

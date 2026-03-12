@@ -1,10 +1,10 @@
 import { usePostHog } from "@posthog/react";
 import { Bot, RotateCcw, Sparkles } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
-import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
 import { ChatInput } from "~/components/chat/ChatInput";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { useChatStream } from "~/hooks/useChatStream";
@@ -129,11 +129,11 @@ export default function ChatPage() {
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <ChatMessageList
-              messages={conversation.messages}
-              currentStreamingMessage={conversation.currentStreamingMessage}
-              isStreaming={conversation.isStreaming}
-              activeTools={conversation.activeTools}
-            />
+                messages={conversation.messages}
+                currentStreamingMessage={conversation.currentStreamingMessage}
+                isStreaming={conversation.isStreaming}
+                activeTools={conversation.activeTools}
+              />
             </Suspense>
           </ChunkErrorBoundary>
         )}
@@ -145,12 +145,12 @@ export default function ChatPage() {
               <ChunkErrorBoundary>
                 <Suspense fallback={<LoadingLogo />}>
                   <ChatError
-                  error={conversation.error}
-                  onDismiss={handleDismissError}
-                  onRetry={lastMessage ? handleRetry : undefined}
-                  onReVerify={handleReVerify}
-                  resetTime={rateLimit.timeUntilReset}
-                />
+                    error={conversation.error}
+                    onDismiss={handleDismissError}
+                    onRetry={lastMessage ? handleRetry : undefined}
+                    onReVerify={handleReVerify}
+                    resetTime={rateLimit.timeUntilReset}
+                  />
                 </Suspense>
               </ChunkErrorBoundary>
             </div>

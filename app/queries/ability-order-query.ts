@@ -19,7 +19,17 @@ export interface AbilityOrderQueryParams {
 }
 
 export function abilityOrderQueryOptions(params: AbilityOrderQueryParams) {
-  const { heroId, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minMatches, gameMode, includeItemIds, excludeItemIds } = params;
+  const {
+    heroId,
+    minRankId,
+    maxRankId,
+    minDateTimestamp,
+    maxDateTimestamp,
+    minMatches,
+    gameMode,
+    includeItemIds,
+    excludeItemIds,
+  } = params;
   return queryOptions({
     queryKey: queryKeys.analytics.abilityOrderStats(params),
     queryFn: async () => {

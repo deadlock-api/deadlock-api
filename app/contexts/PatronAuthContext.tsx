@@ -27,7 +27,10 @@ interface PatronAuthProviderProps {
   children: ReactNode;
 }
 
-function deriveAuthState(data: PatronStatus | null | undefined, isQueryLoading: boolean): Omit<PatronAuthState, "isLoggingOut"> {
+function deriveAuthState(
+  data: PatronStatus | null | undefined,
+  isQueryLoading: boolean,
+): Omit<PatronAuthState, "isLoggingOut"> {
   if (isQueryLoading || !data) {
     return {
       isAuthenticated: false,
