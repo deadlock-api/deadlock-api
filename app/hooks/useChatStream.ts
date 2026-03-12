@@ -11,9 +11,11 @@ import type {
   ChatStartEvent,
   ChatToolEndEvent,
   ChatToolStartEvent,
+  ChatUsageEvent,
   ConversationState,
   Message,
   SSEEvent,
+  TokenUsage,
   ToolExecution,
 } from "~/types/chat";
 
@@ -64,6 +66,8 @@ export function useChatStream({
   const sseRef = useRef<SSEType | null>(null);
   // Track current assistant message ID for streaming updates
   const currentAssistantMessageIdRef = useRef<string | null>(null);
+  // Track token usage for the current response
+  const currentUsageRef = useRef<TokenUsage | null>(null);
 
   // Cleanup SSE connection on unmount
   useEffect(() => {
@@ -94,8 +98,20 @@ export function useChatStream({
     }));
   }, []);
 
+  // Handle SSE usage event
+  const handleUsage = useCallback((event: ChatUsageEvent) => {
+    currentUsageRef.current = {
+      input_tokens: event.input_tokens,
+      output_tokens: event.output_tokens,
+      cache_read_tokens: event.cache_read_tokens,
+      cache_creation_tokens: event.cache_creation_tokens,
+    };
+  }, []);
+
   // Handle SSE end event
   const handleEnd = useCallback((_event: ChatEndEvent) => {
+    const usage = currentUsageRef.current;
+
     setConversation((prev) => {
       // Create the completed assistant message from streaming content
       // Include the tools that were used during this response
@@ -106,6 +122,7 @@ export function useChatStream({
         timestamp: Date.now(),
         isStreaming: false,
         tools: prev.activeTools.length > 0 ? prev.activeTools : undefined,
+        usage: usage ?? undefined,
       };
 
       return {
@@ -118,6 +135,7 @@ export function useChatStream({
     });
 
     currentAssistantMessageIdRef.current = null;
+    currentUsageRef.current = null;
     setIsConnected(false);
   }, []);
 
@@ -182,6 +200,9 @@ export function useChatStream({
           case "delta":
             handleDelta(data);
             break;
+          case "usage":
+            handleUsage(data);
+            break;
           case "end":
             handleEnd(data);
             break;
@@ -199,7 +220,7 @@ export function useChatStream({
         console.error("Failed to parse SSE event:", error);
       }
     },
-    [handleStart, handleDelta, handleEnd, handleError, handleToolStart, handleToolEnd],
+    [handleStart, handleDelta, handleUsage, handleEnd, handleError, handleToolStart, handleToolEnd],
   );
 
   // Send a message to the chat API
