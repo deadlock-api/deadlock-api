@@ -10,7 +10,13 @@ import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { HydratedRouter } from "react-router/dom";
 
-if (import.meta.env.PROD) {
+if (import.meta.env.PROD && !import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN) {
+  console.warn(
+    "[Analytics] PostHog token missing — analytics disabled. Ensure VITE_PUBLIC_POSTHOG_TOKEN is set at build time.",
+  );
+}
+
+if (import.meta.env.PROD && import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN) {
   const consentGiven = localStorage.getItem("analytics-consent") === "granted";
 
   posthogClient.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
