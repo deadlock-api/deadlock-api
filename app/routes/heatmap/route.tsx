@@ -2,6 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client/api";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense } from "react";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -111,15 +112,17 @@ export default function Heatmap() {
           <div className="text-center text-sm text-destructive">Failed to load heatmap data: {error?.message}</div>
         ) : mapQuery.data && killDeathQuery.data ? (
           is3D ? (
-            <Suspense fallback={<LoadingLogo />}>
-              <Heatmap3D
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <Heatmap3D
                 data={killDeathQuery.data}
                 mapData={mapQuery.data}
                 viewMode={viewMode}
                 sensitivity={sensitivity / 10000}
                 onSensitivityChange={(v) => setOutlierSensitivity(Math.round(v * 10000))}
               />
-            </Suspense>
+              </Suspense>
+            </ChunkErrorBoundary>
           ) : (
             <HeatmapCanvas
               data={killDeathQuery.data}

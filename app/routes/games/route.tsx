@@ -1,6 +1,7 @@
 import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
 import { Filter } from "~/components/Filter";
@@ -130,8 +131,9 @@ export default function Games() {
         />
 
         <TabsContent value="overview">
-          <Suspense fallback={<LoadingLogo />}>
-            <GamesOverview
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <GamesOverview
               params={baseParams}
               prevParams={prevParams}
               isStreetBrawl={isStreetBrawl}
@@ -140,12 +142,14 @@ export default function Games() {
                 setTab("over-time");
               }}
             />
-          </Suspense>
+            </Suspense>
+          </ChunkErrorBoundary>
         </TabsContent>
 
         <TabsContent value="over-time">
-          <Suspense fallback={<LoadingLogo />}>
-            <GamesOverTimeChart
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <GamesOverTimeChart
               params={baseParams}
               stat={stat}
               onStatChange={setStat}
@@ -153,13 +157,16 @@ export default function Games() {
               onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
               isStreetBrawl={isStreetBrawl}
             />
-          </Suspense>
+            </Suspense>
+          </ChunkErrorBoundary>
         </TabsContent>
 
         <TabsContent value="by-rank">
-          <Suspense fallback={<LoadingLogo />}>
-            <GamesByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
-          </Suspense>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<LoadingLogo />}>
+              <GamesByRankChart params={baseParams} stat={stat} onStatChange={setStat} isStreetBrawl={isStreetBrawl} />
+            </Suspense>
+          </ChunkErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>
