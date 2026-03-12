@@ -9,8 +9,8 @@ export function CookieConsentBanner() {
   if (consent !== null) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 p-4">
-      <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 rounded-xl border border-white/10 bg-background/90 p-4 shadow-2xl backdrop-blur-md sm:flex-row sm:p-6">
+    <div className="fixed bottom-4 right-4 z-50">
+      <div className="flex max-w-sm flex-col items-start gap-3 rounded-lg border border-white/10 bg-background/90 p-4 shadow-2xl backdrop-blur-md">
         <p className="text-sm text-muted-foreground">
           We use analytics (PostHog, hosted in the EU) to improve this site. This requires cookies.{" "}
           <Link to="/data-privacy" className="text-primary underline underline-offset-4 hover:text-primary/80">
