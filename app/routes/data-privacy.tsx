@@ -318,7 +318,8 @@ export default function DataPrivacy() {
       </Card>
 
       {/* Privacy Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <fieldset className="grid gap-6 border-0 p-0 md:grid-cols-2">
+        <legend className="sr-only">Privacy actions</legend>
         <DataPrivacyActionCard
           title="Request Data Deletion"
           description="Remove all your personal data from our systems"
@@ -386,7 +387,7 @@ export default function DataPrivacy() {
           onAction={() => handleSteamAuth("tracking")}
           isLoading={isLoading}
         />
-      </div>
+      </fieldset>
 
       {/* Additional Information */}
       <Card>

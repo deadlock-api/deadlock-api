@@ -160,71 +160,75 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
     <div className="flex flex-col gap-4">
       <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl} />
 
-      {isPending ? (
-        <div className="flex items-center justify-center py-16">
-          <LoadingLogo />
-        </div>
-      ) : chartData.length === 0 ? (
-        <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
-      ) : (
-        <ResponsiveContainer width="100%" height={650} className="rounded-xl bg-muted p-2">
-          <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 40, left: 40 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-            <XAxis
-              dataKey="badge"
-              angle={-45}
-              textAnchor="end"
-              interval={0}
-              height={80}
-              tick={{ fontSize: 11 }}
-              stroke="#525252"
-              tickFormatter={(badge: number) => {
-                const entry = chartData.find((e) => e.badge === badge);
-                if (!entry || entry.isSpacer) return "";
-                return entry.label;
-              }}
-            />
-            <YAxis
-              domain={["dataMin", "auto"]}
-              tickFormatter={(v) => (statDef ? formatStatValue(v, statDef.format) : String(v))}
-              stroke="#525252"
-              label={{
-                value: statDef?.label ?? stat,
-                angle: -90,
-                position: "insideLeft",
-                offset: -25,
-              }}
-            />
-            <Tooltip
-              cursor={false}
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const entry = payload[0].payload as ChartEntry;
-                if (entry.isSpacer) return null;
-                const info = badgeMap.get(entry.badge);
-                const imageUrl = info?.small_webp ?? info?.small;
-                return (
-                  <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                    {imageUrl && <img src={imageUrl} alt={entry.label} className="size-5" />}
-                    <div>
-                      <div className="font-medium">{entry.label}</div>
-                      <div className="text-muted-foreground">
-                        {statDef?.label}: {statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
+      <div aria-live="polite" aria-busy={isPending}>
+        {isPending ? (
+          <div className="flex items-center justify-center py-16">
+            <LoadingLogo />
+          </div>
+        ) : chartData.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">No data available.</div>
+        ) : (
+          <div role="img" aria-label={`${statDef?.label ?? stat} by rank chart`}>
+            <ResponsiveContainer width="100%" height={650} className="rounded-xl bg-muted p-2">
+              <BarChart data={chartData} margin={{ top: 16, right: 20, bottom: 40, left: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
+                <XAxis
+                  dataKey="badge"
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  height={80}
+                  tick={{ fontSize: 11 }}
+                  stroke="#525252"
+                  tickFormatter={(badge: number) => {
+                    const entry = chartData.find((e) => e.badge === badge);
+                    if (!entry || entry.isSpacer) return "";
+                    return entry.label;
+                  }}
+                />
+                <YAxis
+                  domain={["dataMin", "auto"]}
+                  tickFormatter={(v) => (statDef ? formatStatValue(v, statDef.format) : String(v))}
+                  stroke="#525252"
+                  label={{
+                    value: statDef?.label ?? stat,
+                    angle: -90,
+                    position: "insideLeft",
+                    offset: -25,
+                  }}
+                />
+                <Tooltip
+                  cursor={false}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const entry = payload[0].payload as ChartEntry;
+                    if (entry.isSpacer) return null;
+                    const info = badgeMap.get(entry.badge);
+                    const imageUrl = info?.small_webp ?? info?.small;
+                    return (
+                      <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+                        {imageUrl && <img src={imageUrl} alt={entry.label} className="size-5" />}
+                        <div>
+                          <div className="font-medium">{entry.label}</div>
+                          <div className="text-muted-foreground">
+                            {statDef?.label}: {statDef ? formatStatValue(entry.value, statDef.format) : entry.value}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              }}
-            />
-            <Bar dataKey="value" radius={4}>
-              {chartData.map((entry) => (
-                <Cell key={entry.badge} fill={entry.isSpacer ? "transparent" : entry.color} />
-              ))}
-            </Bar>
-            <Customized component={RankIconsOverlay} />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
+                    );
+                  }}
+                />
+                <Bar dataKey="value" radius={4}>
+                  {chartData.map((entry) => (
+                    <Cell key={entry.badge} fill={entry.isSpacer ? "transparent" : entry.color} />
+                  ))}
+                </Bar>
+                <Customized component={RankIconsOverlay} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

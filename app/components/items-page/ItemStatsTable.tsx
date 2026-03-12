@@ -482,87 +482,89 @@ export function ItemStatsTableDisplay({
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center py-16">
-        <LoadingLogo />
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <div className="my-4 flex items-center justify-center gap-6">
-        {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
-        {columns.includes("confidence") && (
-          <div className="flex items-center gap-2">
-            <Switch id={dimLowConfidenceId} checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
-            <Label htmlFor={dimLowConfidenceId} className="cursor-pointer text-sm font-medium">
-              Highlight overperforming items
-            </Label>
+    <div aria-live="polite" aria-busy={isLoading}>
+      {isLoading ? (
+        <div className="flex h-full w-full items-center justify-center py-16">
+          <LoadingLogo />
+        </div>
+      ) : (
+        <div>
+          <div className="my-4 flex items-center justify-center gap-6">
+            {!hideItemTierFilter && <ItemTierSelector onItemTiersSelected={setItemTiers} selectedItemTiers={itemTiers} />}
+            {columns.includes("confidence") && (
+              <div className="flex items-center gap-2">
+                <Switch id={dimLowConfidenceId} checked={dimLowConfidence} onCheckedChange={setDimLowConfidence} />
+                <Label htmlFor={dimLowConfidenceId} className="cursor-pointer text-sm font-medium">
+                  Highlight overperforming items
+                </Label>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      <Table>
-        {!hideHeader && (
-          <TableHeader className="bg-muted">
-            <TableRow>
-              {customDropdownContent && <TableHead className="w-4 text-center" />}
-              {!hideIndex && <TableHead className="text-center">#</TableHead>}
-              <TableHead>Item</TableHead>
-              {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
-              {columns.includes("winRate") && (
-                <TableHead
-                  className="cursor-pointer text-center transition-colors hover:bg-accent"
-                  onClick={() => toggleSort("winRate")}
-                >
-                  <div className="flex items-center">
-                    <span>Win Rate</span>
-                    {getSortArrow("winRate")}
-                  </div>
-                </TableHead>
-              )}
-              {columns.includes("matches") && (
-                <TableHead
-                  className="cursor-pointer text-center transition-colors hover:bg-accent"
-                  onClick={() => toggleSort("matches")}
-                >
-                  <div className="flex items-center">
-                    <span>Pick Rate (Normalized)</span>
-                    {getSortArrow("matches")}
-                  </div>
-                </TableHead>
-              )}
-              {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
-              {(onItemInclude || onItemExclude) && <TableHead className="text-center">Include / Exclude</TableHead>}
-            </TableRow>
-          </TableHeader>
-        )}
-        <TableBody>
-          {processedData
-            .filter((row) => itemTiers.includes(row.itemTier))
-            .map((row, index) => (
-              <ItemStatsTableRow
-                key={row.item_id}
-                row={row}
-                index={index}
-                columns={columns}
-                hideIndex={hideIndex}
-                dimLowConfidence={dimLowConfidence}
-                minWinRate={minWinRate}
-                maxWinRate={maxWinRate}
-                minUsage={minUsage}
-                maxUsage={maxUsage}
-                includedItemIds={includedItemIds}
-                excludedItemIds={excludedItemIds}
-                prevStatsMap={prevStatsMap}
-                onItemInclude={onItemInclude}
-                onItemExclude={onItemExclude}
-                customDropdownContent={customDropdownContent}
-              />
-            ))}
-        </TableBody>
-      </Table>
+          <Table>
+            {!hideHeader && (
+              <TableHeader className="bg-muted">
+                <TableRow>
+                  {customDropdownContent && <TableHead className="w-4 text-center" />}
+                  {!hideIndex && <TableHead className="text-center">#</TableHead>}
+                  <TableHead>Item</TableHead>
+                  {columns.includes("itemsTier") && <TableHead>Tier</TableHead>}
+                  {columns.includes("winRate") && (
+                    <TableHead
+                      className="cursor-pointer text-center transition-colors hover:bg-accent"
+                      onClick={() => toggleSort("winRate")}
+                      aria-sort={sort.field === "winRate" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined}
+                    >
+                      <div className="flex items-center">
+                        <span>Win Rate</span>
+                        {getSortArrow("winRate")}
+                      </div>
+                    </TableHead>
+                  )}
+                  {columns.includes("matches") && (
+                    <TableHead
+                      className="cursor-pointer text-center transition-colors hover:bg-accent"
+                      onClick={() => toggleSort("matches")}
+                      aria-sort={sort.field === "matches" ? (sort.direction === "asc" ? "ascending" : "descending") : undefined}
+                    >
+                      <div className="flex items-center">
+                        <span>Pick Rate (Normalized)</span>
+                        {getSortArrow("matches")}
+                      </div>
+                    </TableHead>
+                  )}
+                  {columns.includes("confidence") && <TableHead className="text-center">Confidence</TableHead>}
+                  {(onItemInclude || onItemExclude) && <TableHead className="text-center">Include / Exclude</TableHead>}
+                </TableRow>
+              </TableHeader>
+            )}
+            <TableBody>
+              {processedData
+                .filter((row) => itemTiers.includes(row.itemTier))
+                .map((row, index) => (
+                  <ItemStatsTableRow
+                    key={row.item_id}
+                    row={row}
+                    index={index}
+                    columns={columns}
+                    hideIndex={hideIndex}
+                    dimLowConfidence={dimLowConfidence}
+                    minWinRate={minWinRate}
+                    maxWinRate={maxWinRate}
+                    minUsage={minUsage}
+                    maxUsage={maxUsage}
+                    includedItemIds={includedItemIds}
+                    excludedItemIds={excludedItemIds}
+                    prevStatsMap={prevStatsMap}
+                    onItemInclude={onItemInclude}
+                    onItemExclude={onItemExclude}
+                    customDropdownContent={customDropdownContent}
+                  />
+                ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }

@@ -137,55 +137,57 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
   }, [tierCenters, tierData]);
 
   return (
-    <ChartContainer config={{ matches: { label: "Matches" } }} className="h-full w-full">
-      <BarChart accessibilityLayer data={chartData}>
-        <CartesianGrid vertical={false} />
-        <Bar dataKey="matches" fill="var(--color-accent)" radius={4}>
-          {chartData.map((entry) => (
-            <Cell
-              key={`cell-${entry.badge}`}
-              fill={entry.isSpacer ? "transparent" : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")}
-            />
-          ))}
-        </Bar>
-        <Tooltip
-          cursor={false}
-          isAnimationActive={false}
-          content={({ active, payload }) => {
-            if (!active || !payload?.length) return null;
-            const entry = payload[0].payload as ChartEntry;
-            if (entry.isSpacer) return null;
-            const rankName = tierData.get(entry.tier)?.name ?? "";
-            const subtier = entry.badge % 10;
-            const info = badgeMap.get(entry.badge);
-            const imageUrl = info?.small_webp ?? info?.small;
-            return (
-              <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}
-                <div>
-                  <div className="font-medium">
-                    {rankName} {subtier}
+    <div role="img" aria-label="Rank badge distribution chart showing matches per rank">
+      <ChartContainer config={{ matches: { label: "Matches" } }} className="h-full w-full">
+        <BarChart accessibilityLayer data={chartData}>
+          <CartesianGrid vertical={false} />
+          <Bar dataKey="matches" fill="var(--color-accent)" radius={4}>
+            {chartData.map((entry) => (
+              <Cell
+                key={`cell-${entry.badge}`}
+                fill={entry.isSpacer ? "transparent" : (tierData.get(entry.tier)?.color ?? "var(--color-accent)")}
+              />
+            ))}
+          </Bar>
+          <Tooltip
+            cursor={false}
+            isAnimationActive={false}
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const entry = payload[0].payload as ChartEntry;
+              if (entry.isSpacer) return null;
+              const rankName = tierData.get(entry.tier)?.name ?? "";
+              const subtier = entry.badge % 10;
+              const info = badgeMap.get(entry.badge);
+              const imageUrl = info?.small_webp ?? info?.small;
+              return (
+                <div className="flex items-center gap-2 rounded-md bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
+                  {imageUrl && <img src={imageUrl} alt={`${rankName} ${subtier}`} className="size-5" />}
+                  <div>
+                    <div className="font-medium">
+                      {rankName} {subtier}
+                    </div>
+                    <div>{entry.matches.toLocaleString()} matches</div>
                   </div>
-                  <div>{entry.matches.toLocaleString()} matches</div>
                 </div>
-              </div>
-            );
-          }}
-        />
-        <XAxis
-          dataKey="badge"
-          tickLine={false}
-          minTickGap={0}
-          ticks={ticks}
-          textAnchor="middle"
-          tickFormatter={xAxisTickFormatter}
-          dx={7}
-        />
-        <YAxis dataKey="matches" tickCount={4} textAnchor="end">
-          <Label value="Matches" position="middle" textAnchor="middle" />
-        </YAxis>
-        <Customized component={RankIconsOverlay} />
-      </BarChart>
-    </ChartContainer>
+              );
+            }}
+          />
+          <XAxis
+            dataKey="badge"
+            tickLine={false}
+            minTickGap={0}
+            ticks={ticks}
+            textAnchor="middle"
+            tickFormatter={xAxisTickFormatter}
+            dx={7}
+          />
+          <YAxis dataKey="matches" tickCount={4} textAnchor="end">
+            <Label value="Matches" position="middle" textAnchor="middle" />
+          </YAxis>
+          <Customized component={RankIconsOverlay} />
+        </BarChart>
+      </ChartContainer>
+    </div>
   );
 }
