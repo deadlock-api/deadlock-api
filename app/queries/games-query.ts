@@ -20,16 +20,7 @@ export interface GameStatsQueryParams {
 
 export function gameStatsQueryOptions(params: GameStatsQueryParams) {
   return queryOptions({
-    queryKey: queryKeys.analytics.gameStats(
-      params.bucket,
-      params.gameMode,
-      params.minUnixTimestamp,
-      params.maxUnixTimestamp,
-      params.minDurationS,
-      params.maxDurationS,
-      params.minAverageBadge,
-      params.maxAverageBadge,
-    ),
+    queryKey: queryKeys.analytics.gameStats(params),
     queryFn: async () => {
       const response = await api.analytics_api.gameStats({
         bucket: params.bucket,

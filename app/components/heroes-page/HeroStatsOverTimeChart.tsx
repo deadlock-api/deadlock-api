@@ -37,7 +37,7 @@ export function HeroStatsOverTimeChart({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
-    queryKey: queryKeys.analytics.heroStatsOverTime(
+    queryKey: queryKeys.analytics.heroStatsOverTime({
       minRankId,
       maxRankId,
       minDateTimestamp,
@@ -46,7 +46,7 @@ export function HeroStatsOverTimeChart({
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,

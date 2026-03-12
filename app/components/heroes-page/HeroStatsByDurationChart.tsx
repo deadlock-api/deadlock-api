@@ -38,9 +38,9 @@ export function HeroStatsByDurationChart({
 
   const bucketQueries = useQueries({
     queries: DURATION_BUCKETS.map((bucket) => ({
-      queryKey: queryKeys.analytics.heroStatsByDuration(
-        bucket.minS,
-        bucket.maxS,
+      queryKey: queryKeys.analytics.heroStatsByDuration({
+        minDurationS: bucket.minS,
+        maxDurationS: bucket.maxS,
         minRankId,
         maxRankId,
         minDateTimestamp,
@@ -48,7 +48,7 @@ export function HeroStatsByDurationChart({
         minHeroMatches,
         minHeroMatchesTotal,
         gameMode,
-      ),
+      }),
       queryFn: async () => {
         const response = await api.analytics_api.heroStats({
           minHeroMatches,
