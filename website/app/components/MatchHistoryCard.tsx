@@ -52,6 +52,8 @@ export interface MatchHistoryCardProps {
   expandable?: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  /** Pre-fetched Steam profile. When provided the card skips its own profile query. */
+  steamProfile?: { personaname: string } | null;
 }
 
 function formatDuration(seconds: number): string {
@@ -147,6 +149,7 @@ export default function MatchHistoryCard({
   expandable = true,
   expanded,
   onToggleExpand,
+  steamProfile: steamProfileProp,
 }: MatchHistoryCardProps) {
   const isWin = result === "win";
   const borderColor = isWin ? "border-green-500" : "border-primary";
@@ -161,16 +164,18 @@ export default function MatchHistoryCard({
   const midItems = buildData?.items.filter((i) => i.gameTimeS >= EARLY_MAX_S && i.gameTimeS < MID_MAX_S) ?? [];
   const lateItems = buildData?.items.filter((i) => i.gameTimeS >= MID_MAX_S) ?? [];
 
-  const { data: steamProfile } = useQuery({
+  const { data: fetchedProfile } = useQuery({
     queryKey: queryKeys.steam.profile(accountId),
     queryFn: async () => {
       if (accountId == null) return null;
       const res = await api.steam_api.steam({ accountIds: [accountId] });
       return res.data[0] ?? null;
     },
-    enabled: accountId != null,
+    enabled: accountId != null && steamProfileProp === undefined,
     staleTime: CACHE_DURATIONS.FOREVER,
   });
+
+  const steamProfile = steamProfileProp !== undefined ? steamProfileProp : fetchedProfile;
 
   return (
     <div
