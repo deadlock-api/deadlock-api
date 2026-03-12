@@ -51,16 +51,16 @@ export function HeroStatsByExperienceTable({
 
   const bucketQueries = useQueries({
     queries: EXPERIENCE_BUCKETS.map((bucket) => ({
-      queryKey: queryKeys.analytics.heroStatsByExperience(
-        bucket.min,
-        bucket.max,
+      queryKey: queryKeys.analytics.heroStatsByExperience({
+        minExperience: bucket.min,
+        maxExperience: bucket.max,
         minRankId,
         maxRankId,
         minDateTimestamp,
         maxDateTimestamp,
         minHeroMatches,
         gameMode,
-      ),
+      }),
       queryFn: async () => {
         const response = await api.analytics_api.heroStats({
           minHeroMatches,

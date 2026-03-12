@@ -48,15 +48,14 @@ export function HeroMatchupDetailsStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHero } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(
+    queryKey: queryKeys.analytics.heroStats({
       minRankId,
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
       minHeroMatches,
-      undefined,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches ?? 0,
@@ -72,16 +71,16 @@ export function HeroMatchupDetailsStatsTable({
   });
 
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
-    queryKey: queryKeys.analytics.heroSynergyStats(
+    queryKey: queryKeys.analytics.heroSynergyStats({
       minRankId,
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
       sameLaneFilter,
       samePartyFilter,
-      minHeroMatches,
+      minMatches: minHeroMatches,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroSynergiesStats({
         sameLaneFilter: sameLaneFilter,
@@ -99,15 +98,15 @@ export function HeroMatchupDetailsStatsTable({
   });
 
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({
-    queryKey: queryKeys.analytics.heroCounterStats(
+    queryKey: queryKeys.analytics.heroCounterStats({
       minRankId,
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
       sameLaneFilter,
-      minHeroMatches,
+      minMatches: minHeroMatches,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroCountersStats({
         sameLaneFilter: sameLaneFilter,

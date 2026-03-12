@@ -49,7 +49,7 @@ export function HeroStatsTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(
+    queryKey: queryKeys.analytics.heroStats({
       minRankId,
       maxRankId,
       minDateTimestamp,
@@ -57,7 +57,7 @@ export function HeroStatsTable({
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,
@@ -78,15 +78,15 @@ export function HeroStatsTable({
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroStats(
+    queryKey: queryKeys.analytics.heroStats({
       minRankId,
       maxRankId,
-      prevMinTimestamp,
-      prevMaxTimestamp,
+      minDateTimestamp: prevMinTimestamp,
+      maxDateTimestamp: prevMaxTimestamp,
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,
