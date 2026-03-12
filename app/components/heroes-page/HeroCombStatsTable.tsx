@@ -58,15 +58,15 @@ export function HeroCombStatsTable({
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: heroData, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.heroCombStats(
+    queryKey: queryKeys.analytics.heroCombStats({
       minRankId,
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
-      combSizeFilter,
+      combSize: combSizeFilter,
       minHeroMatches,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroCombStats({
         combSize: combSizeFilter,
@@ -83,15 +83,15 @@ export function HeroCombStatsTable({
   });
 
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroCombStats(
+    queryKey: queryKeys.analytics.heroCombStats({
       minRankId,
       maxRankId,
-      prevMinTimestamp,
-      prevMaxTimestamp,
-      combSizeFilter,
+      minDateTimestamp: prevMinTimestamp,
+      maxDateTimestamp: prevMaxTimestamp,
+      combSize: combSizeFilter,
       minHeroMatches,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroCombStats({
         combSize: combSizeFilter,

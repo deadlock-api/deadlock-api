@@ -616,7 +616,7 @@ export function ItemStatsTable({
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
   const { data = [], isLoading: isLoadingItemStats } = useQuery({
-    queryKey: queryKeys.analytics.itemStats(
+    queryKey: queryKeys.analytics.itemStats({
       minMatches,
       hero,
       minRankId,
@@ -626,7 +626,7 @@ export function ItemStatsTable({
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,
@@ -645,17 +645,17 @@ export function ItemStatsTable({
   });
 
   const { data: prevData } = useQuery({
-    queryKey: queryKeys.analytics.itemStats(
+    queryKey: queryKeys.analytics.itemStats({
       minMatches,
       hero,
       minRankId,
       maxRankId,
-      prevMinTimestamp,
-      prevMaxTimestamp,
+      minDateTimestamp: prevMinTimestamp,
+      maxDateTimestamp: prevMaxTimestamp,
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,

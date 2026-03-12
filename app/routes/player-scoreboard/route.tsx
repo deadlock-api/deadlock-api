@@ -46,7 +46,7 @@ export default function PlayerScoreboard() {
   const MAX_ENTRIES = 1000;
 
   const scoreboardQuery = useQuery({
-    queryKey: queryKeys.analytics.playerScoreboard(
+    queryKey: queryKeys.analytics.playerScoreboard({
       sortBy,
       sortDirection,
       gameMode,
@@ -54,9 +54,9 @@ export default function PlayerScoreboard() {
       minMatches,
       minRankId,
       maxRankId,
-      startDate?.unix(),
-      endDate?.unix(),
-    ),
+      startDate: startDate?.unix(),
+      endDate: endDate?.unix(),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.playerScoreboard({
         sortBy: sortBy as PlayerScoreboardSortByEnum,
