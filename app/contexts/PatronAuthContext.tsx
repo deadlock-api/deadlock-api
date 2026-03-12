@@ -1,9 +1,10 @@
-import posthogClient from "posthog-js";
-import { createContext, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { usePostHog } from "@posthog/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { createContext, type ReactNode, useCallback, useMemo, useState } from "react";
 
 import { API_ORIGIN } from "~/lib/constants";
-
-const API_URL = API_ORIGIN;
+import type { PatronStatus } from "~/lib/patron-api";
+import { patronQueryKeys, usePatronStatus } from "~/queries/patron-queries";
 
 export interface PatronAuthState {
   isAuthenticated: boolean;
@@ -12,7 +13,6 @@ export interface PatronAuthState {
   totalSlots: number;
   isLoading: boolean;
   isLoggingOut: boolean;
-  isOAuthAvailable: boolean;
 }
 
 export interface PatronAuthContextValue extends PatronAuthState {
@@ -21,110 +21,72 @@ export interface PatronAuthContextValue extends PatronAuthState {
   refreshStatus: () => Promise<void>;
 }
 
-interface PatronStatusResponse {
-  tier_id: string | null;
-  pledge_amount_cents: number | null;
-  total_slots: number;
-  is_active: boolean;
-  last_verified_at: string;
-  steam_accounts_summary: {
-    active_count: number;
-    cooldown_count: number;
-    available_slots: number;
-  };
-}
-
-const initialState: PatronAuthState = {
-  isAuthenticated: false,
-  isActive: false,
-  pledgeAmountCents: null,
-  totalSlots: 0,
-  isLoading: true,
-  isLoggingOut: false,
-  isOAuthAvailable: true,
-};
-
 export const PatronAuthContext = createContext<PatronAuthContextValue | null>(null);
 
 interface PatronAuthProviderProps {
   children: ReactNode;
 }
 
+function deriveAuthState(data: PatronStatus | null | undefined, isQueryLoading: boolean): Omit<PatronAuthState, "isLoggingOut"> {
+  if (isQueryLoading || !data) {
+    return {
+      isAuthenticated: false,
+      isActive: false,
+      pledgeAmountCents: null,
+      totalSlots: 0,
+      isLoading: isQueryLoading,
+    };
+  }
+
+  return {
+    isAuthenticated: true,
+    isActive: data.is_active,
+    pledgeAmountCents: data.pledge_amount_cents,
+    totalSlots: data.total_slots,
+    isLoading: false,
+  };
+}
+
 export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
-  const [authState, setAuthState] = useState<PatronAuthState>(initialState);
+  const posthog = usePostHog();
+  const queryClient = useQueryClient();
+  const { data, isLoading: isQueryLoading } = usePatronStatus();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const clearAuth = useCallback(() => {
-    setAuthState({ ...initialState, isLoading: false, isLoggingOut: false });
-  }, []);
-
-  const refreshStatus = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_URL}/v1/patron/status`, {
-        credentials: "include",
-      });
-
-      if (response.status === 401) {
-        clearAuth();
-        return;
-      }
-
-      if (response.status === 503) {
-        setAuthState((prev) => ({ ...prev, isLoading: false, isOAuthAvailable: false }));
-        return;
-      }
-
-      if (!response.ok) {
-        setAuthState((prev) => ({ ...prev, isLoading: false }));
-        return;
-      }
-
-      const data: PatronStatusResponse = await response.json();
-
-      setAuthState((prev) => ({
-        isAuthenticated: true,
-        isActive: data.is_active,
-        pledgeAmountCents: data.pledge_amount_cents,
-        totalSlots: data.total_slots,
-        isLoading: false,
-        isLoggingOut: prev.isLoggingOut,
-        isOAuthAvailable: true,
-      }));
-    } catch (error) {
-      console.error("Failed to fetch patron status:", error);
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
-    }
-  }, [clearAuth]);
+  const authState = useMemo(
+    () => ({
+      ...deriveAuthState(data, isQueryLoading),
+      isLoggingOut,
+    }),
+    [data, isQueryLoading, isLoggingOut],
+  );
 
   const login = useCallback(() => {
-    // Store current path to redirect back after login
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("patron_redirect_path", window.location.pathname);
-    }
-    posthogClient.capture("patron_login_initiated");
-    window.location.href = `${API_URL}/v1/auth/patreon`;
-  }, []);
+    sessionStorage.setItem("patron_redirect_path", window.location.pathname);
+    posthog?.capture("patron_login_initiated");
+    window.location.href = `${API_ORIGIN}/v1/auth/patreon`;
+  }, [posthog]);
 
   const logout = useCallback(async () => {
-    setAuthState((prev) => ({ ...prev, isLoggingOut: true }));
-
+    setIsLoggingOut(true);
     try {
-      await fetch(`${API_URL}/v1/auth/patreon/logout`, {
+      await fetch(`${API_ORIGIN}/v1/auth/patreon/logout`, {
         method: "POST",
         credentials: "include",
       });
-      posthogClient.capture("patron_logged_out");
-      posthogClient.reset();
+      posthog?.capture("patron_logged_out");
+      posthog?.reset();
     } catch (error) {
       console.error("Failed to logout:", error);
     } finally {
-      clearAuth();
+      setIsLoggingOut(false);
+      queryClient.setQueryData(patronQueryKeys.status(), null);
     }
-  }, [clearAuth]);
+  }, [posthog, queryClient]);
 
-  // Check auth status on mount
-  useEffect(() => {
-    refreshStatus();
-  }, [refreshStatus]);
+  const refreshStatus = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
+  }, [queryClient]);
 
   const contextValue: PatronAuthContextValue = useMemo(
     () => ({
