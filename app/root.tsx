@@ -3,8 +3,10 @@ import { usePostHog } from "@posthog/react";
 
 import "./tailwind.css";
 import "./dayjs.ts";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Suspense, lazy } from "react";
+import { QueryClient, QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import { Component, Suspense, lazy } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import type { LinksFunction } from "react-router";
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
@@ -15,6 +17,7 @@ import { CookieConsentBanner } from "~/components/CookieConsentBanner";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 
 const ReactQueryDevtools = lazy(() =>
@@ -118,9 +121,49 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 3,
+      throwOnError: (error) => {
+        if (error instanceof AxiosError && error.response?.status) {
+          return error.response.status >= 500;
+        }
+        return false;
+      },
     },
   },
 });
+interface QueryErrorBoundaryProps {
+  onReset: () => void;
+  fallbackRender: (props: { resetErrorBoundary: () => void }) => ReactNode;
+  children: ReactNode;
+}
+
+interface QueryErrorBoundaryState {
+  hasError: boolean;
+}
+
+class QueryErrorBoundary extends Component<QueryErrorBoundaryProps, QueryErrorBoundaryState> {
+  state: QueryErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): QueryErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("QueryErrorBoundary caught:", error, info);
+  }
+
+  resetErrorBoundary = () => {
+    this.props.onReset();
+    this.setState({ hasError: false });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallbackRender({ resetErrorBoundary: this.resetErrorBoundary });
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const { pathname } = useLocation();
   const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
@@ -156,9 +199,20 @@ export default function App() {
                   />
                   <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
                     <Breadcrumbs />
-                    <div key={pathname} className="page-fade-in">
-                      <Outlet />
-                    </div>
+                    <QueryErrorResetBoundary>
+                      {({ reset }) => (
+                        <QueryErrorBoundary
+                          onReset={reset}
+                          fallbackRender={({ resetErrorBoundary }) => (
+                            <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
+                          )}
+                        >
+                          <div key={pathname} className="page-fade-in">
+                            <Outlet />
+                          </div>
+                        </QueryErrorBoundary>
+                      )}
+                    </QueryErrorResetBoundary>
                   </div>
                 </div>
               </main>
