@@ -1,7 +1,8 @@
-import axios, { type AxiosInstance } from "axios";
+import type { AxiosInstance } from "axios";
 import { AnalyticsApi, LeaderboardApi, PlayersApi, SteamApi } from "deadlock_api_client";
 
 import { API_ORIGIN } from "~/lib/constants";
+import { createApiClient } from "~/lib/create-api-client";
 
 export interface ApiConfig {
   timeout: number;
@@ -19,13 +20,7 @@ export class Api {
   public client: AxiosInstance;
 
   constructor(config: ApiConfig = DEFAULT_API_CONFIG) {
-    const axios_client = axios.create({
-      timeout: config.timeout,
-      headers: {
-        Accept: "application/json",
-        UserAgent: "DeadlockAPI/1.0.0",
-      },
-    });
+    const axios_client = createApiClient(config.timeout);
     this.client = axios_client;
     this.analytics_api = new AnalyticsApi(undefined, API_ORIGIN, axios_client);
     this.leaderboard_api = new LeaderboardApi(undefined, API_ORIGIN, axios_client);
