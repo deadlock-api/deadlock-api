@@ -4,7 +4,7 @@ import { usePostHog } from "@posthog/react";
 import "./tailwind.css";
 import "./dayjs.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Suspense, lazy } from "react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import type { LinksFunction } from "react-router";
 import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
@@ -16,6 +16,10 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
+
+const ReactQueryDevtools = lazy(() =>
+  import("@tanstack/react-query-devtools").then((m) => ({ default: m.ReactQueryDevtools })),
+);
 
 import "@fontsource-variable/inter";
 import type { Route } from "./+types/root";
@@ -114,7 +118,6 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 3,
-      retryDelay: 100,
     },
   },
 });
@@ -161,7 +164,11 @@ export default function App() {
               </main>
             </div>
 
-            <ReactQueryDevtools initialIsOpen={false} />
+            {import.meta.env.DEV && (
+              <Suspense fallback={null}>
+                <ReactQueryDevtools initialIsOpen={false} />
+              </Suspense>
+            )}
             <Toaster />
             <CookieConsentBanner />
           </TooltipProvider>

@@ -22,7 +22,7 @@ export function PatronCTA() {
         <Link to="/patron" prefetch="intent" className="shrink-0">
           <Button
             size="sm"
-            className="bg-linear-to-r from-[#fa4454] to-[#ff6b7a] font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68]"
+            className="bg-linear-to-r from-primary to-[#ff6b7a] font-semibold text-white hover:from-[#e83d4c] hover:to-[#f05a68]"
           >
             Learn More
           </Button>

@@ -17,6 +17,7 @@ import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { API_ORIGIN } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { steamId64ToSteamId3 } from "~/lib/patron-api";
+import { parseSteamIdToId3 } from "~/lib/steam";
 import { generateSteamAuthUrl } from "~/lib/steam-auth";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -52,24 +53,6 @@ export default function StreamKit() {
     navigate(`/streamkit?${newParams.toString()}`, { replace: true });
   }, [steamId64, setSteamId, region, navigate, posthog]);
 
-  const parseSteamId = (input: string) => {
-    try {
-      let extractedSteamId = BigInt(
-        input
-          .replace(/\[U:\d+:/g, "")
-          .replace(/U:\d+:/g, "")
-          .replace(/\[STEAM_0:\d+:/g, "")
-          .replace(/STEAM_0:\d+:/g, "")
-          .replace(/]/g, ""),
-      );
-      if (extractedSteamId > 76561197960265728n) extractedSteamId -= 76561197960265728n;
-      return extractedSteamId.toString();
-    } catch (err) {
-      console.error("Failed to parse Steam ID:", err);
-      return input;
-    }
-  };
-
   const fetchSteamName = async (r: string, id: string) => {
     if (!id) return null;
     if (!r) return null;
@@ -78,6 +61,7 @@ export default function StreamKit() {
     url.searchParams.append("account_id", id);
     url.searchParams.append("variables", "steam_account_name");
     const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch steam name: ${res.status}`);
     return (await res.json()).steam_account_name;
   };
 
@@ -154,7 +138,7 @@ export default function StreamKit() {
             <Button
               size="lg"
               variant="outline"
-              className="w-full border-[#2a2f3a] bg-[#171a21] font-semibold hover:bg-[#1f232b] sm:w-auto"
+              className="w-full border-steam-border bg-steam-bg font-semibold hover:bg-steam-bg-hover sm:w-auto"
               onClick={() => {
                 const returnPath = region ? `/streamkit?region=${encodeURIComponent(region)}` : "/streamkit";
                 window.location.href = generateSteamAuthUrl({ returnPath });
@@ -229,7 +213,7 @@ export default function StreamKit() {
                 <p className="mt-0.5 text-sm text-muted-foreground">Create dynamic chatbot commands</p>
               </div>
             </div>
-            <CommandBuilder region={region} accountId={parseSteamId(steamId)} />
+            <CommandBuilder region={region} accountId={parseSteamIdToId3(steamId)} />
           </section>
 
           {/* Widget Builder */}
@@ -243,7 +227,7 @@ export default function StreamKit() {
                 <p className="mt-0.5 text-sm text-muted-foreground">Build OBS overlays for your stream</p>
               </div>
             </div>
-            <WidgetBuilder region={region} accountId={parseSteamId(steamId)} />
+            <WidgetBuilder region={region} accountId={parseSteamIdToId3(steamId)} />
           </section>
         </div>
       )}

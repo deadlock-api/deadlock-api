@@ -8,11 +8,10 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
-import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
 import { PATCHES } from "~/lib/constants";
+import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { queryKeys } from "~/queries/query-keys";
+import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
 import HeatmapCanvas from "./HeatmapCanvas";
 
@@ -20,9 +19,6 @@ const Heatmap3D = lazy(() => import("./Heatmap3D"));
 
 const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
-
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { createPageMeta } from "~/lib/meta";
 
 export function meta() {
   return createPageMeta({
@@ -61,24 +57,7 @@ export default function Heatmap() {
   };
 
   const [mapQuery, killDeathQuery] = useQueries({
-    queries: [
-      {
-        queryKey: queryKeys.map(),
-        queryFn: async () => {
-          const response = await assetsApi.default_api.getMapV1MapGet();
-          return response.data;
-        },
-        staleTime: CACHE_DURATIONS.FOREVER,
-      },
-      {
-        queryKey: queryKeys.analytics.killDeathStats(requestParams),
-        queryFn: async () => {
-          const response = await api.analytics_api.killDeathStats(requestParams);
-          return response.data;
-        },
-        staleTime: CACHE_DURATIONS.ONE_DAY,
-      },
-    ],
+    queries: [mapQueryOptions, killDeathStatsQueryOptions(requestParams)],
   });
 
   const { isPending, isError, error } = combineQueryStates(mapQuery, killDeathQuery);

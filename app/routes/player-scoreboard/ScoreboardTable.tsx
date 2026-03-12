@@ -1,30 +1,13 @@
-import { useQueries } from "@tanstack/react-query";
 import type { PlayerEntry } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useMemo, useState } from "react";
 
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { api } from "~/lib/api";
-import { queryKeys } from "~/queries/query-keys";
+import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 
 import { ScoreboardControls } from "./ScoreboardControls";
 import { formatStatValue, getSortByLabel } from "./sort-options";
-
-interface SteamProfileMap {
-  [accountId: number]: { personaname: string; avatar: string; profileurl: string };
-}
-
-const STEAM_BATCH_SIZE = 500;
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-}
 
 export interface ScoreboardTableProps {
   entries: PlayerEntry[];
@@ -41,37 +24,7 @@ export function ScoreboardTable({ entries, sortBy }: ScoreboardTableProps) {
     [entries],
   );
 
-  const batches = useMemo(() => chunk(steamAccountIds, STEAM_BATCH_SIZE), [steamAccountIds]);
-
-  const steamProfileQueries = useQueries({
-    queries: batches.map((batch) => ({
-      queryKey: queryKeys.steam.profiles(batch),
-      queryFn: async () => {
-        const response = await api.steam_api.steam({ accountIds: batch });
-        const map: SteamProfileMap = {};
-        for (const profile of response.data) {
-          map[profile.account_id] = {
-            personaname: profile.personaname,
-            avatar: profile.avatar,
-            profileurl: profile.profileurl,
-          };
-        }
-        return map;
-      },
-      enabled: batch.length > 0,
-      staleTime: CACHE_DURATIONS.ONE_DAY,
-    })),
-  });
-
-  const isLoadingProfiles = steamProfileQueries.some((q) => q.isLoading);
-
-  const profiles = useMemo(() => {
-    const merged: SteamProfileMap = {};
-    for (const query of steamProfileQueries) {
-      if (query.data) Object.assign(merged, query.data);
-    }
-    return merged;
-  }, [steamProfileQueries]);
+  const { profiles, isLoading: isLoadingProfiles } = useSteamProfiles(steamAccountIds);
 
   const enrichedEntries = useMemo(
     () =>

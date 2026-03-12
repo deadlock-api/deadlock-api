@@ -23,7 +23,11 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
     Map<number, string>
   >({
     queryKey: queryKeys.streamkit.heroes(),
-    queryFn: () => fetch(`${ASSETS_ORIGIN}/v2/heroes`).then((res) => res.json()),
+    queryFn: async () => {
+      const res = await fetch(`${ASSETS_ORIGIN}/v2/heroes`);
+      if (!res.ok) throw new Error(`Failed to fetch heroes: ${res.status}`);
+      return res.json();
+    },
     staleTime: CACHE_DURATIONS.FOREVER,
     select: (heroesData) =>
       Array.isArray(heroesData)
@@ -37,8 +41,10 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
       const res = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history`);
       if (res.status === 429) {
         const fallback = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history?only_stored_history=true`);
+        if (!fallback.ok) throw new Error(`Failed to fetch match history fallback: ${fallback.status}`);
         return await fallback.json();
       }
+      if (!res.ok) throw new Error(`Failed to fetch match history: ${res.status}`);
       return await res.json();
     },
     staleTime: UPDATE_INTERVAL_MS - 10000,
