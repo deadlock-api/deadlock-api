@@ -1,4 +1,5 @@
-import { lazy, Suspense, useId } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { lazy, Suspense, useCallback, useId, useMemo } from "react";
 import type { MetaFunction } from "react-router";
 
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
@@ -7,11 +8,14 @@ import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
+import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
+import { queryKeys } from "~/queries/query-keys";
 
 const HeroStatsOverTimeChart = lazy(() =>
   import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({ default: m.HeroStatsOverTimeChart })),
@@ -56,6 +60,174 @@ export default function Heroes(
   const samePartyFilterId1 = useId();
   const sameLaneFilterId2 = useId();
   const samePartyFilterId2 = useId();
+  const queryClient = useQueryClient();
+
+  const minDateTimestamp = useMemo(() => filters.startDate?.unix() ?? 0, [filters.startDate]);
+  const maxDateTimestamp = useMemo(() => filters.endDate?.unix(), [filters.endDate]);
+
+  const handleTabHover = useCallback(
+    (tab: string) => {
+      const staleTime = CACHE_DURATIONS.ONE_DAY;
+
+      switch (tab) {
+        case "stats-over-time":
+          import("~/components/heroes-page/HeroStatsOverTimeChart");
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.analytics.heroStatsOverTime(
+              filters.effectiveMinRankId,
+              filters.effectiveMaxRankId,
+              minDateTimestamp,
+              maxDateTimestamp,
+              filters.heroTimeInterval,
+              filters.minHeroMatches,
+              filters.minHeroMatchesTotal,
+              filters.gameMode,
+            ),
+            queryFn: () =>
+              api.analytics_api
+                .heroStats({
+                  minHeroMatches: filters.minHeroMatches,
+                  minHeroMatchesTotal: filters.minHeroMatchesTotal,
+                  minAverageBadge: filters.effectiveMinRankId ?? 0,
+                  maxAverageBadge: filters.effectiveMaxRankId ?? 116,
+                  minUnixTimestamp: minDateTimestamp,
+                  maxUnixTimestamp: maxDateTimestamp,
+                  bucket: filters.heroTimeInterval,
+                  gameMode: filters.gameMode,
+                })
+                .then((r) => r.data),
+            staleTime,
+          });
+          break;
+        case "stats-by-duration":
+          import("~/components/heroes-page/HeroStatsByDurationChart");
+          break;
+        case "stats-by-rank":
+          import("~/components/heroes-page/HeroStatsByRankChart");
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.analytics.heroStatsByRank(
+              minDateTimestamp,
+              maxDateTimestamp,
+              filters.minHeroMatches,
+              filters.minHeroMatchesTotal,
+              "normal",
+            ),
+            queryFn: () =>
+              api.analytics_api
+                .heroStats({
+                  minHeroMatches: filters.minHeroMatches,
+                  minHeroMatchesTotal: filters.minHeroMatchesTotal,
+                  minUnixTimestamp: minDateTimestamp,
+                  maxUnixTimestamp: maxDateTimestamp,
+                  bucket: "avg_badge",
+                  gameMode: "normal",
+                })
+                .then((r) => r.data),
+            staleTime,
+          });
+          break;
+        case "stats-by-experience":
+          import("~/components/heroes-page/HeroStatsByExperienceTable");
+          break;
+        case "matchups":
+          import("~/components/heroes-page/HeroMatchupStatsTable");
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.analytics.heroSynergyStats(
+              filters.effectiveMinRankId,
+              filters.effectiveMaxRankId,
+              minDateTimestamp,
+              maxDateTimestamp,
+              filters.sameLaneFilter,
+              filters.samePartyFilter,
+              filters.minMatches,
+              filters.gameMode,
+            ),
+            queryFn: () =>
+              api.analytics_api
+                .heroSynergiesStats({
+                  sameLaneFilter: filters.sameLaneFilter,
+                  samePartyFilter: filters.samePartyFilter,
+                  minMatches: filters.minMatches ?? 0,
+                  minAverageBadge: filters.effectiveMinRankId ?? 0,
+                  maxAverageBadge: filters.effectiveMaxRankId ?? 116,
+                  minUnixTimestamp: minDateTimestamp,
+                  maxUnixTimestamp: maxDateTimestamp,
+                  gameMode: filters.gameMode,
+                })
+                .then((r) => r.data),
+            staleTime,
+          });
+          break;
+        case "hero-combs":
+          import("~/components/heroes-page/HeroCombStatsTable");
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.analytics.heroCombStats(
+              filters.effectiveMinRankId,
+              filters.effectiveMaxRankId,
+              minDateTimestamp,
+              maxDateTimestamp,
+              2,
+              filters.minMatches,
+              filters.gameMode,
+            ),
+            queryFn: () =>
+              api.analytics_api
+                .heroCombStats({
+                  combSize: 2,
+                  minMatches: filters.minMatches ?? 0,
+                  minAverageBadge: filters.effectiveMinRankId ?? 0,
+                  maxAverageBadge: filters.effectiveMaxRankId ?? 116,
+                  minUnixTimestamp: minDateTimestamp,
+                  maxUnixTimestamp: maxDateTimestamp,
+                  gameMode: filters.gameMode,
+                })
+                .then((r) => r.data),
+            staleTime,
+          });
+          break;
+        case "hero-matchup-details":
+          import("~/components/heroes-page/HeroMatchupDetailsStatsTable");
+          queryClient.prefetchQuery({
+            queryKey: queryKeys.analytics.heroStats(
+              filters.effectiveMinRankId,
+              filters.effectiveMaxRankId,
+              minDateTimestamp,
+              maxDateTimestamp,
+              filters.minMatches,
+              undefined,
+              filters.gameMode,
+            ),
+            queryFn: () =>
+              api.analytics_api
+                .heroStats({
+                  minHeroMatches: filters.minMatches ?? 0,
+                  minAverageBadge: filters.effectiveMinRankId ?? 0,
+                  maxAverageBadge: filters.effectiveMaxRankId ?? 116,
+                  minUnixTimestamp: minDateTimestamp,
+                  maxUnixTimestamp: maxDateTimestamp,
+                  gameMode: filters.gameMode,
+                })
+                .then((r) => r.data),
+            staleTime,
+          });
+          break;
+      }
+    },
+    [
+      queryClient,
+      minDateTimestamp,
+      maxDateTimestamp,
+      filters.effectiveMinRankId,
+      filters.effectiveMaxRankId,
+      filters.heroTimeInterval,
+      filters.minHeroMatches,
+      filters.minHeroMatchesTotal,
+      filters.minMatches,
+      filters.sameLaneFilter,
+      filters.samePartyFilter,
+      filters.gameMode,
+    ],
+  );
 
   return (
     <div className="space-y-6">
@@ -78,6 +250,7 @@ export default function Heroes(
         <ResponsiveTabsList
           value={filters.tab ?? undefined}
           onValueChange={(value) => filters.setTab(value as HeroTab)}
+          onTabHover={handleTabHover}
           options={[
             { value: "stats", label: "Overall Stats" },
             { value: "stats-over-time", label: "Over Time" },

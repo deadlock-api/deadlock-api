@@ -1,6 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 
 import { Filter } from "~/components/Filter";
@@ -13,7 +14,7 @@ import { PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import type { GameStatsQueryParams } from "~/queries/games-query";
+import { type GameStatsQueryParams, gameStatsQueryOptions } from "~/queries/games-query";
 
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
@@ -59,15 +60,18 @@ export default function Games() {
 
   const isStreetBrawl = isStreetBrawlMode(gameMode);
 
-  const baseParams: GameStatsQueryParams = {
-    gameMode: gameMode ?? undefined,
-    minUnixTimestamp: startDate ? startDate.unix() : 0,
-    maxUnixTimestamp: endDate ? endDate.unix() : undefined,
-    minDurationS: minDurationS ?? undefined,
-    maxDurationS: maxDurationS ?? undefined,
-    minAverageBadge: isStreetBrawl ? undefined : minRankId,
-    maxAverageBadge: isStreetBrawl ? undefined : maxRankId,
-  };
+  const baseParams: GameStatsQueryParams = useMemo(
+    () => ({
+      gameMode: gameMode ?? undefined,
+      minUnixTimestamp: startDate ? startDate.unix() : 0,
+      maxUnixTimestamp: endDate ? endDate.unix() : undefined,
+      minDurationS: minDurationS ?? undefined,
+      maxDurationS: maxDurationS ?? undefined,
+      minAverageBadge: isStreetBrawl ? undefined : minRankId,
+      maxAverageBadge: isStreetBrawl ? undefined : maxRankId,
+    }),
+    [gameMode, startDate, endDate, minDurationS, maxDurationS, isStreetBrawl, minRankId, maxRankId],
+  );
 
   const prevParams: GameStatsQueryParams | null =
     prevDates.prevStartDate && prevDates.prevEndDate
@@ -77,6 +81,28 @@ export default function Games() {
           maxUnixTimestamp: prevDates.prevEndDate.unix(),
         }
       : null;
+
+  const queryClient = useQueryClient();
+
+  const handleTabHover = useCallback(
+    (tab: string) => {
+      switch (tab) {
+        case "overview":
+          import("./GamesOverview");
+          queryClient.prefetchQuery(gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" }));
+          break;
+        case "over-time":
+          import("./GamesOverTimeChart");
+          queryClient.prefetchQuery(gameStatsQueryOptions({ ...baseParams, bucket: timeBucket as GameStatsBucketEnum }));
+          break;
+        case "by-rank":
+          import("./GamesByRankChart");
+          queryClient.prefetchQuery(gameStatsQueryOptions({ ...baseParams, bucket: "avg_badge" }));
+          break;
+      }
+    },
+    [queryClient, baseParams, timeBucket],
+  );
 
   return (
     <div className="space-y-6">
@@ -122,6 +148,7 @@ export default function Games() {
         <ResponsiveTabsList
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
+          onTabHover={handleTabHover}
           options={[
             { value: "overview", label: "Overview" },
             { value: "over-time", label: "Over Time" },

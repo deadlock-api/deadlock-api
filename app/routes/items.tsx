@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
 
 import { Filter } from "~/components/Filter";
@@ -13,6 +14,7 @@ import { PATCHES } from "~/lib/constants";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const ItemPurchaseAnalysis = lazy(() =>
   import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
@@ -53,6 +55,42 @@ export default function Items(
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault(initialTab || "stats"),
+  );
+
+  const queryClient = useQueryClient();
+  const minDateTimestamp = useMemo(() => startDate?.unix() ?? 0, [startDate]);
+  const maxDateTimestamp = useMemo(() => endDate?.unix(), [endDate]);
+
+  const baseItemStatsOptions = useMemo(
+    () =>
+      itemStatsQueryOptions({
+        minMatches,
+        hero,
+        minRankId: effectiveMinRankId,
+        maxRankId: effectiveMaxRankId,
+        minDateTimestamp,
+        maxDateTimestamp,
+        minBoughtAtS: minBoughtAtS ?? undefined,
+        maxBoughtAtS: maxBoughtAtS ?? undefined,
+        gameMode: gameMode ?? undefined,
+      }),
+    [minMatches, hero, effectiveMinRankId, effectiveMaxRankId, minDateTimestamp, maxDateTimestamp, minBoughtAtS, maxBoughtAtS, gameMode],
+  );
+
+  const handleTabHover = useCallback(
+    (tab: string) => {
+      switch (tab) {
+        case "item-purchase-analysis":
+          import("~/components/items-page/ItemPurchaseAnalysis");
+          queryClient.prefetchQuery(baseItemStatsOptions);
+          break;
+        case "item-combs":
+          import("~/components/items-page/ItemCombsExplore");
+          queryClient.prefetchQuery(baseItemStatsOptions);
+          break;
+      }
+    },
+    [queryClient, baseItemStatsOptions],
   );
 
   return (
@@ -103,6 +141,7 @@ export default function Items(
         <ResponsiveTabsList
           value={tab ?? undefined}
           onValueChange={(value) => setTab(value as typeof tab)}
+          onTabHover={handleTabHover}
           options={[
             { value: "stats", label: "Overall Stats" },
             { value: "item-purchase-analysis", label: "Purchase Analysis" },

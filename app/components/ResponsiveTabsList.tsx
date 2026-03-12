@@ -14,6 +14,7 @@ interface ResponsiveTabsListProps extends VariantProps<typeof tabsListVariants> 
   options: TabOption[];
   value?: string;
   onValueChange?: (value: string) => void;
+  onTabHover?: (value: string) => void;
   className?: string;
   ariaLabel?: string;
 }
@@ -22,6 +23,7 @@ export function ResponsiveTabsList({
   options,
   value,
   onValueChange,
+  onTabHover,
   variant = "line",
   className,
   ariaLabel,
@@ -61,7 +63,7 @@ export function ResponsiveTabsList({
       ) : (
         <TabsList variant={variant} className={cn("scrollbar-none w-full overflow-x-auto", className)}>
           {options.map((opt) => (
-            <TabsTrigger key={opt.value} value={opt.value}>
+            <TabsTrigger key={opt.value} value={opt.value} onMouseEnter={onTabHover ? () => onTabHover(opt.value) : undefined}>
               {opt.label}
             </TabsTrigger>
           ))}
