@@ -37,7 +37,7 @@ export function itemStatsQueryOptions({
   gameMode,
 }: ItemStatsQueryParams) {
   return queryOptions({
-    queryKey: queryKeys.analytics.itemStats(
+    queryKey: queryKeys.analytics.itemStats({
       minMatches,
       hero,
       minRankId,
@@ -45,12 +45,12 @@ export function itemStatsQueryOptions({
       minDateTimestamp,
       maxDateTimestamp,
       bucket,
-      includeItems ? Array.from(includeItems) : "",
-      excludeItems ? Array.from(excludeItems) : "",
+      includeItems: includeItems ? Array.from(includeItems) : "",
+      excludeItems: excludeItems ? Array.from(excludeItems) : "",
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.itemStats({
         heroId: hero,

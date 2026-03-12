@@ -12,12 +12,14 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
 import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { Button } from "../ui/button";
@@ -224,16 +226,16 @@ export function ItemCombsExplore({
 
   const topBuildsEnabled = !!hero && includeItems.size > 0;
   const { data: topBuildsData, isLoading: isLoadingTopBuilds } = useQuery({
-    queryKey: queryKeys.analytics.topBuilds(
+    queryKey: queryKeys.analytics.topBuilds({
       hero,
-      Array.from(includeItems).sort(),
-      Array.from(excludeItems).sort(),
+      includeItems: Array.from(includeItems).sort(),
+      excludeItems: Array.from(excludeItems).sort(),
       minRankId,
       maxRankId,
       minDateTimestamp,
       maxDateTimestamp,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("include_info", "true");

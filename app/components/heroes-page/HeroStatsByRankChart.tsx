@@ -193,13 +193,13 @@ export function HeroStatsByRankChart({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
-    queryKey: queryKeys.analytics.heroStatsByRank(
+    queryKey: queryKeys.analytics.heroStatsByRank({
       minDateTimestamp,
       maxDateTimestamp,
       minHeroMatches,
       minHeroMatchesTotal,
       gameMode,
-    ),
+    }),
     queryFn: async () => {
       const response = await api.analytics_api.heroStats({
         minHeroMatches: minHeroMatches,
