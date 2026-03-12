@@ -275,56 +275,60 @@ export function HeroStatsByRankChart({
     "circle",
   );
 
-  if (isLoadingHeroStats || isLoadingRanks || isLoadingHeroes) {
-    return (
-      <div className="flex h-full w-full items-center justify-center py-16">
-        <LoadingLogo />
-      </div>
-    );
-  }
+  const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes;
 
   return (
-    <ResponsiveContainer width="100%" height={700} className="bg-muted p-4">
-      <ScatterChart margin={{ top: 20, right: 30, bottom: 60, left: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-        <XAxis
-          type="number"
-          dataKey="xValue"
-          name={formatStatLabel(xStat)}
-          domain={["auto", "auto"]}
-          label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
-          stroke="#525252"
-          tickFormatter={tickFormatter(xStat)}
-        />
-        <YAxis
-          type="number"
-          dataKey="yValue"
-          name={formatStatLabel(yStat)}
-          label={{ value: formatStatLabel(yStat), angle: -90, position: "insideLeft", offset: -10 }}
-          stroke="#525252"
-          domain={["auto", "auto"]}
-          tickFormatter={tickFormatter(yStat)}
-        />
-        <Tooltip content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
-        <Legend
-          layout="horizontal"
-          align="center"
-          verticalAlign="bottom"
-          onClick={handleLegendClick}
-          payload={legendPayload}
-          wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
-        />
-        {visibleHeroIds.map((heroId) => (
-          <Scatter
-            key={heroId}
-            name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
-            data={heroDataByHero[heroId]}
-            fill={heroIdMap[heroId]?.color ?? "#ffffff"}
-            line={{ stroke: heroIdMap[heroId]?.color ?? "#ffffff", strokeWidth: 2 }}
-            shape={<BadgePoint badgeMap={badgeMap} />}
-          />
-        ))}
-      </ScatterChart>
-    </ResponsiveContainer>
+    <div aria-live="polite" aria-busy={isLoading}>
+      {isLoading ? (
+        <div className="flex h-full w-full items-center justify-center py-16">
+          <LoadingLogo />
+        </div>
+      ) : (
+        <div role="img" aria-label={`Hero ${formatStatLabel(xStat)} vs ${formatStatLabel(yStat)} by rank chart`}>
+          <ResponsiveContainer width="100%" height={700} className="bg-muted p-4">
+            <ScatterChart margin={{ top: 20, right: 30, bottom: 60, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+              <XAxis
+                type="number"
+                dataKey="xValue"
+                name={formatStatLabel(xStat)}
+                domain={["auto", "auto"]}
+                label={{ value: formatStatLabel(xStat), position: "insideBottom", offset: -10 }}
+                stroke="#525252"
+                tickFormatter={tickFormatter(xStat)}
+              />
+              <YAxis
+                type="number"
+                dataKey="yValue"
+                name={formatStatLabel(yStat)}
+                label={{ value: formatStatLabel(yStat), angle: -90, position: "insideLeft", offset: -10 }}
+                stroke="#525252"
+                domain={["auto", "auto"]}
+                tickFormatter={tickFormatter(yStat)}
+              />
+              <Tooltip content={<CustomTooltip xStat={xStat} yStat={yStat} />} />
+              <Legend
+                layout="horizontal"
+                align="center"
+                verticalAlign="bottom"
+                onClick={handleLegendClick}
+                payload={legendPayload}
+                wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
+              />
+              {visibleHeroIds.map((heroId) => (
+                <Scatter
+                  key={heroId}
+                  name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                  data={heroDataByHero[heroId]}
+                  fill={heroIdMap[heroId]?.color ?? "#ffffff"}
+                  line={{ stroke: heroIdMap[heroId]?.color ?? "#ffffff", strokeWidth: 2 }}
+                  shape={<BadgePoint badgeMap={badgeMap} />}
+                />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
   );
 }

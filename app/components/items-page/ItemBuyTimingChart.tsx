@@ -343,104 +343,99 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex h-120 items-center justify-center">
-              <LoadingLogo />
-            </div>
-          ) : !hasValidData ? (
-            <div className="flex h-120 items-center justify-center">
-              <p className="text-muted-foreground">No data available</p>
-            </div>
-          ) : (
-            <ChartContainer config={chartConfig} className="h-120 w-full">
-              <LineChart width={undefined} height={undefined} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                {itemIds.length > 1 && <Legend layout="vertical" align="right" verticalAlign="top" />}
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="displayBucket"
-                  domain={dataRange}
-                  type="number"
-                  tickCount={config.tickCount}
-                  tickFormatter={config.formatter}
-                  label={{ value: config.label, position: "insideBottom", offset: -5 }}
-                />
-                <YAxis
-                  domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
-                  label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
-                  tickFormatter={(v) => `${v?.toFixed(0)}%`}
-                  tickCount={10}
-                />
-                <ChartTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return payload.map((entry) => {
-                        const d = entry.payload;
-                        return (
-                          <div
-                            key={`${entry.name} ${d.bucketStart}-${d.bucketEnd}`}
-                            className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl"
-                          >
-                            <div className="text-sm">{entry.name}</div>
-                            <div className="font-medium">
-                              {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
-                            </div>
-                            <div className="grid gap-1.5">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                                <span className="text-muted-foreground">
-                                  {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
-                                </span>
-                                <span className="font-mono font-medium">
-                                  {d.winrate === null ? "-" : d.winrate?.toFixed(1)}%
-                                </span>
-                              </div>
-                              {useWilsonInterval && (
-                                <div className="flex items-center gap-2">
-                                  <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                                  <span className="text-muted-foreground">True Win Rate:</span>
-                                  <span className="font-mono font-medium">
-                                    {d.trueWinrate === null ? "-" : d.trueWinrate?.toFixed(1)}%
-                                  </span>
+          <div aria-live="polite" aria-busy={isLoading}>
+            {isLoading ? (
+              <div className="flex h-120 items-center justify-center">
+                <LoadingLogo />
+              </div>
+            ) : !hasValidData ? (
+              <div className="flex h-120 items-center justify-center">
+                <p className="text-muted-foreground">No data available</p>
+              </div>
+            ) : (
+              <div role="img" aria-label={`Item win rate by ${bucketType === "game_time_min" ? "purchase time" : "net worth at purchase"} chart`}>
+                <ChartContainer config={chartConfig} className="h-120 w-full">
+                  <LineChart width={undefined} height={undefined} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    {itemIds.length > 1 && <Legend layout="vertical" align="right" verticalAlign="top" />}
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="displayBucket"
+                      domain={dataRange}
+                      type="number"
+                      tickCount={config.tickCount}
+                      tickFormatter={config.formatter}
+                      label={{ value: config.label, position: "insideBottom", offset: -5 }}
+                    />
+                    <YAxis
+                      domain={[(min: number) => Math.max(0, min - 10), (max: number) => Math.min(100, max + 10)]}
+                      label={{ value: "Win Rate (%)", angle: -90, position: "insideLeft" }}
+                      tickFormatter={(v) => `${v?.toFixed(0)}%`}
+                      tickCount={10}
+                    />
+                    <ChartTooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return payload.map((entry) => {
+                            const d = entry.payload;
+                            return (
+                              <div
+                                key={`${entry.name} ${d.bucketStart}-${d.bucketEnd}`}
+                                className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl"
+                              >
+                                <div className="text-sm">{entry.name}</div>
+                                <div className="font-medium">
+                                  {config.tooltipPrefix} {config.formatter(d.bucketStart)} - {config.formatter(d.bucketEnd)}
                                 </div>
-                              )}
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                                <span className="text-muted-foreground">Matches:</span>
-                                <span className="font-mono font-medium">{d.matches}</span>
+                                <div className="grid gap-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                                    <span className="text-muted-foreground">
+                                      {useWilsonInterval ? "Conservative Estimate:" : "True Win Rate:"}
+                                    </span>
+                                    <span className="font-mono font-medium">
+                                      {d.winrate === null ? "-" : d.winrate?.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                  {useWilsonInterval && (
+                                    <div className="flex items-center gap-2">
+                                      <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                                      <span className="text-muted-foreground">True Win Rate:</span>
+                                      <span className="font-mono font-medium">
+                                        {d.trueWinrate === null ? "-" : d.trueWinrate?.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                                    <span className="text-muted-foreground">Matches:</span>
+                                    <span className="font-mono font-medium">{d.matches}</span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        );
-                      });
-                    }
-                    return null;
-                  }}
-                />
-                {(itemIds || []).map((itemId) => (
-                  <Line
-                    key={itemId}
-                    dataKey="winrate"
-                    data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
-                    type="monotone"
-                    stroke={randomColorHex(itemId)}
-                    dot={{ r: 4, className: "fill-primary" }}
-                    activeDot={{ r: 6 }}
-                    strokeWidth={2}
-                    name={itemNameMap?.[itemId]}
-                  />
-                ))}
-                {/*<Line*/}
-                {/*  type="monotone"*/}
-                {/*  dataKey="winrate"*/}
-                {/*  stroke="var(--chart-1)"*/}
-                {/*  strokeWidth={1}*/}
-                {/*  dot={{ r: 3, fill: "var(--chart-1)" }}*/}
-                {/*  connectNulls={false}*/}
-                {/*  isAnimationActive={false}*/}
-                {/*/>*/}
-              </LineChart>
-            </ChartContainer>
-          )}
+                            );
+                          });
+                        }
+                        return null;
+                      }}
+                    />
+                    {(itemIds || []).map((itemId) => (
+                      <Line
+                        key={itemId}
+                        dataKey="winrate"
+                        data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
+                        type="monotone"
+                        stroke={randomColorHex(itemId)}
+                        dot={{ r: 4, className: "fill-primary" }}
+                        activeDot={{ r: 6 }}
+                        strokeWidth={2}
+                        name={itemNameMap?.[itemId]}
+                      />
+                    ))}
+                  </LineChart>
+                </ChartContainer>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </TooltipProvider>
