@@ -9,7 +9,7 @@ export function CookieConsentBanner() {
   if (consent !== null) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed right-4 bottom-4 z-50">
       <div className="flex max-w-sm flex-col items-start gap-3 rounded-lg border border-white/10 bg-background/90 p-4 shadow-2xl backdrop-blur-md">
         <p className="text-sm text-muted-foreground">
           We use analytics (PostHog, hosted in the EU) to improve this site. This requires cookies.{" "}
