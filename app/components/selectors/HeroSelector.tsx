@@ -114,7 +114,7 @@ export function HeroSelectorMultiple({
   const selectAllId = useId();
 
   if (isLoading) {
-    return "";
+    return null;
   }
 
   const allSelected = selectedHeroes.length === sortedHeroes.length;
