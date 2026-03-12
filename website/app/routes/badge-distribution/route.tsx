@@ -5,14 +5,12 @@ import { lazy, Suspense } from "react";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { day } from "~/dayjs";
-import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { queryKeys } from "~/queries/query-keys";
+import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 const BadgeDistributionChart = lazy(() => import("./BadgeDistributionChart"));
 
@@ -54,24 +52,7 @@ export default function BadgeDistribution() {
   };
 
   const [ranks, badgeDistributionQuery] = useQueries({
-    queries: [
-      {
-        queryKey: queryKeys.leaderboard.ranks(),
-        queryFn: async () => {
-          const response = await assetsApi.default_api.getRanksV2RanksGet();
-          return response.data;
-        },
-        staleTime: CACHE_DURATIONS.FOREVER,
-      },
-      {
-        queryKey: queryKeys.analytics.badgeDistribution(filter),
-        queryFn: async () => {
-          const response = await api.analytics_api.badgeDistribution(filter);
-          return response.data;
-        },
-        staleTime: CACHE_DURATIONS.ONE_DAY,
-      },
-    ],
+    queries: [ranksQueryOptions, badgeDistributionQueryOptions(filter)],
   });
 
   const { isPending, isError, error } = combineQueryStates(badgeDistributionQuery, ranks);

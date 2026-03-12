@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AbilityV2, HeroV2, RankV2 } from "assets_deadlock_api_client/api";
-import { formatDistanceToNow } from "date-fns";
+import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client/api";
 import type { ItemStats } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -13,15 +12,13 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import MatchHistoryCard, { type FullBuildItem } from "~/components/MatchHistoryCard";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import type { Dayjs } from "~/dayjs";
-import { assetsApi } from "~/lib/assets-api";
+import { day, type Dayjs } from "~/dayjs";
 import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
-import { queryKeys } from "~/queries/query-keys";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { Button } from "../ui/button";
 
@@ -128,7 +125,7 @@ function getAbilityBuildData(
 }
 
 function timeAgo(dateStr: string): string {
-  return formatDistanceToNow(new Date(`${dateStr}Z`), { addSuffix: true });
+  return day(`${dateStr}Z`).fromNow();
 }
 
 export function ItemCombsExplore({
@@ -178,11 +175,7 @@ export function ItemCombsExplore({
 
   const { data: abilityItems } = useQuery(abilitiesQueryOptions);
 
-  const { data: ranksData } = useQuery({
-    queryKey: queryKeys.assets.ranks(),
-    queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data: ranksData } = useQuery(ranksQueryOptions);
 
   const queryStatOptions = useMemo(() => {
     return {

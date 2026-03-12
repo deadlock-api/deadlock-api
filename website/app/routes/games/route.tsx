@@ -10,6 +10,7 @@ import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
+import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import type { GameStatsQueryParams } from "~/queries/games-query";
@@ -56,7 +57,7 @@ export default function Games() {
     ),
   );
 
-  const isStreetBrawl = gameMode === "street_brawl";
+  const isStreetBrawl = isStreetBrawlMode(gameMode);
 
   const baseParams: GameStatsQueryParams = {
     gameMode: gameMode ?? undefined,

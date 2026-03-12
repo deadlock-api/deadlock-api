@@ -10,6 +10,7 @@ import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { PATCHES } from "~/lib/constants";
+import { getEffectiveRankRange } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
@@ -47,9 +48,7 @@ export default function Items(
   const [prevDates, setPrevDates] = useState(() =>
     computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES),
   );
-  const isStreetBrawl = gameMode === "street_brawl";
-  const effectiveMinRankId = isStreetBrawl ? undefined : minRankId;
-  const effectiveMaxRankId = isStreetBrawl ? undefined : maxRankId;
+  const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(gameMode, minRankId, maxRankId);
 
   const [tab, setTab] = useQueryState(
     "tab",

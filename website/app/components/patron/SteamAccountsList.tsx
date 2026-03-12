@@ -1,6 +1,5 @@
 import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets_deadlock_api_client";
 import { isAxiosError } from "axios";
 import { AlertCircle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
 import { useState } from "react";
@@ -18,8 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { assetsApi } from "~/lib/assets-api";
 import { formatCooldownRemaining, formatDate, formatRelativeTime } from "~/lib/format";
 import { type PlayerCard, steamId3ToSteamId64 } from "~/lib/patron-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
@@ -31,7 +28,7 @@ import {
   useReplaceSteamAccount,
   useSteamAccounts,
 } from "~/queries/patron-queries";
-import { queryKeys } from "~/queries/query-keys";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 function SteamAccountsListSkeleton() {
   return (
@@ -61,11 +58,7 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
 
   const cardQuery = usePlayerCard(steamId3, isActive);
 
-  const ranksQuery = useQuery({
-    queryKey: queryKeys.assets.ranks(),
-    queryFn: async () => (await assetsApi.default_api.getRanksV2RanksGet()).data as RankV2[],
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const ranksQuery = useQuery(ranksQueryOptions);
 
   if (!isActive) {
     return <span className="text-muted-foreground">—</span>;

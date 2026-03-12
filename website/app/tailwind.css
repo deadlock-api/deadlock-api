@@ -200,6 +200,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-steam-bg: var(--steam-bg);
+  --color-steam-bg-hover: var(--steam-bg-hover);
+  --color-steam-border: var(--steam-border);
   --font-sans: "Inter Variable", sans-serif;
   --font-mono: JetBrains Mono, monospace;
   --font-serif: Source Serif 4, serif;
@@ -281,6 +284,11 @@
   --sidebar-accent-foreground: #e6edf3;
   --sidebar-border: #21262d;
   --sidebar-ring: #fa4454;
+
+  /* Steam */
+  --steam-bg: #171a21;
+  --steam-bg-hover: #1f232b;
+  --steam-border: #2a2f3a;
 
   /* Typography */
   --font-sans: "Inter Variable", sans-serif;

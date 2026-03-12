@@ -1,4 +1,3 @@
-import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import type { DateRange } from "react-day-picker";
@@ -58,13 +57,13 @@ export function DateRangePicker({ startDate, endDate, onDateRangeChange, classNa
     if (startDate && endDate) {
       return (
         <>
-          {format(startDate.toDate(), "MMM dd, yyyy")} - {format(endDate.toDate(), "MMM dd, yyyy")}
+          {startDate.format("MMM DD, YYYY")} - {endDate.format("MMM DD, YYYY")}
         </>
       );
     }
 
     if (startDate) {
-      return format(startDate.toDate(), "MMM dd, yyyy");
+      return startDate.format("MMM DD, YYYY");
     }
 
     return <span>Select date range</span>;
