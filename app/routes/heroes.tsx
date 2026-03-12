@@ -1,4 +1,5 @@
 import { lazy, Suspense, useId } from "react";
+import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import type { MetaFunction } from "react-router";
 
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
@@ -126,8 +127,9 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <Suspense fallback={<LoadingLogo />}>
-              <HeroStatsOverTimeChart
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsOverTimeChart
                 heroStat={filters.heroStat}
                 heroTimeInterval={filters.heroTimeInterval}
                 minRankId={filters.effectiveMinRankId}
@@ -138,7 +140,8 @@ export default function Heroes(
                 maxDate={filters.endDate}
                 gameMode={filters.gameMode}
               />
-            </Suspense>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </TabsContent>
 
@@ -153,8 +156,9 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <Suspense fallback={<LoadingLogo />}>
-              <HeroStatsByDurationChart
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsByDurationChart
                 heroStat={filters.heroStat}
                 minRankId={filters.effectiveMinRankId}
                 maxRankId={filters.effectiveMaxRankId}
@@ -164,7 +168,8 @@ export default function Heroes(
                 maxDate={filters.endDate}
                 gameMode={filters.gameMode}
               />
-            </Suspense>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </TabsContent>
 
@@ -188,8 +193,9 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <Suspense fallback={<LoadingLogo />}>
-              <HeroStatsByRankChart
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsByRankChart
                 minHeroMatches={filters.minHeroMatches}
                 minHeroMatchesTotal={filters.minHeroMatchesTotal}
                 minDate={filters.startDate}
@@ -198,7 +204,8 @@ export default function Heroes(
                 xStat={filters.byRankX}
                 yStat={filters.byRankY}
               />
-            </Suspense>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </TabsContent>
 
@@ -213,8 +220,9 @@ export default function Heroes(
                 />
               </div>
             </div>
-            <Suspense fallback={<LoadingLogo />}>
-              <HeroStatsByExperienceTable
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroStatsByExperienceTable
                 heroStat={filters.heroStat}
                 minRankId={filters.effectiveMinRankId}
                 maxRankId={filters.effectiveMaxRankId}
@@ -223,7 +231,8 @@ export default function Heroes(
                 maxDate={filters.endDate}
                 gameMode={filters.gameMode}
               />
-            </Suspense>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </TabsContent>
 
@@ -252,8 +261,9 @@ export default function Heroes(
               </div>
             </div>
             <div className="flex flex-col gap-4">
-              <Suspense fallback={<LoadingLogo />}>
-                <HeroMatchupStatsTable
+              <ChunkErrorBoundary>
+                <Suspense fallback={<LoadingLogo />}>
+                  <HeroMatchupStatsTable
                   minRankId={filters.effectiveMinRankId}
                   maxRankId={filters.effectiveMaxRankId}
                   minDate={filters.startDate || undefined}
@@ -265,15 +275,17 @@ export default function Heroes(
                   samePartyFilter={filters.samePartyFilter}
                   gameMode={filters.gameMode}
                 />
-              </Suspense>
+                </Suspense>
+              </ChunkErrorBoundary>
             </div>
           </div>
         </TabsContent>
 
         <TabsContent value="hero-combs">
           <div className="flex flex-col gap-4">
-            <Suspense fallback={<LoadingLogo />}>
-              <HeroCombStatsTable
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <HeroCombStatsTable
                 columns={["winRate", "pickRate", "totalMatches"]}
                 minRankId={filters.effectiveMinRankId}
                 maxRankId={filters.effectiveMaxRankId}
@@ -284,7 +296,8 @@ export default function Heroes(
                 minMatches={filters.minMatches}
                 gameMode={filters.gameMode}
               />
-            </Suspense>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </TabsContent>
 
@@ -321,8 +334,9 @@ export default function Heroes(
                 </div>
               </div>
             </div>
-            <Suspense fallback={<LoadingLogo />}>
-              <div className="grid grid-cols-2 gap-4">
+            <ChunkErrorBoundary>
+              <Suspense fallback={<LoadingLogo />}>
+                <div className="grid grid-cols-2 gap-4">
                 <HeroMatchupDetailsStatsTable
                   heroId={filters.heroId}
                   stat={0}
@@ -355,8 +369,9 @@ export default function Heroes(
                   minHeroMatches={filters.minMatches}
                   gameMode={filters.gameMode}
                 />
-              </div>
-            </Suspense>
+                </div>
+              </Suspense>
+            </ChunkErrorBoundary>
           </div>
         </TabsContent>
       </Tabs>
