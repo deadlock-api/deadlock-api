@@ -106,64 +106,66 @@ export function HeroStatsByDurationChart({
   const minStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.2)] ?? 0, [sortedStats]);
   const maxStat = useMemo(() => sortedStats[Math.floor(sortedStats.length * 0.8)] ?? 100, [sortedStats]);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full w-full items-center justify-center py-16">
-        <LoadingLogo />
-      </div>
-    );
-  }
-
   return (
-    <ResponsiveContainer width="100%" height={800} className="bg-muted p-4">
-      <LineChart data={formattedData} margin={{ top: 20, bottom: 60 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
-        <XAxis
-          dataKey="label"
-          label={{ value: "Match Duration", position: "insideBottom", offset: -10 }}
-          stroke="#525252"
-        />
-        <YAxis
-          domain={[minStat * 0.9, maxStat * 1.1]}
-          label={{
-            value: heroStat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-            angle: -90,
-            position: "insideLeft",
-          }}
-          tickFormatter={(value) =>
-            heroStat === "winrate" ? `${Number(value).toFixed(1)}%` : Math.round(value).toLocaleString()
-          }
-          minTickGap={2}
-          tickCount={10}
-          stroke="#525252"
-        />
-        <Tooltip
-          contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
-          itemStyle={{ color: "#e5e5e5" }}
-          formatter={(value: number) => (heroStat === "winrate" ? `${value.toFixed(2)}%` : value.toLocaleString())}
-        />
-        <Legend
-          layout="horizontal"
-          align="center"
-          verticalAlign="bottom"
-          onClick={handleLegendClick}
-          payload={legendPayload}
-          wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
-        />
-        {visibleHeroIds.map((heroId) => (
-          <Line
-            key={heroId}
-            type="monotone"
-            dataKey={heroId}
-            stroke={heroIdMap[heroId]?.color || "#ffffff"}
-            dot={{ r: 4, className: "fill-primary" }}
-            activeDot={{ r: 6 }}
-            strokeWidth={2}
-            name={heroIdMap[heroId]?.name}
-            connectNulls
-          />
-        ))}
-      </LineChart>
-    </ResponsiveContainer>
+    <div aria-live="polite" aria-busy={isLoading}>
+      {isLoading ? (
+        <div className="flex h-full w-full items-center justify-center py-16">
+          <LoadingLogo />
+        </div>
+      ) : (
+        <div role="img" aria-label={`Hero ${heroStat.replace(/_/g, " ")} by match duration chart`}>
+          <ResponsiveContainer width="100%" height={800} className="bg-muted p-4">
+            <LineChart data={formattedData} margin={{ top: 20, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" />
+              <XAxis
+                dataKey="label"
+                label={{ value: "Match Duration", position: "insideBottom", offset: -10 }}
+                stroke="#525252"
+              />
+              <YAxis
+                domain={[minStat * 0.9, maxStat * 1.1]}
+                label={{
+                  value: heroStat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                  angle: -90,
+                  position: "insideLeft",
+                }}
+                tickFormatter={(value) =>
+                  heroStat === "winrate" ? `${Number(value).toFixed(1)}%` : Math.round(value).toLocaleString()
+                }
+                minTickGap={2}
+                tickCount={10}
+                stroke="#525252"
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
+                itemStyle={{ color: "#e5e5e5" }}
+                formatter={(value: number) => (heroStat === "winrate" ? `${value.toFixed(2)}%` : value.toLocaleString())}
+              />
+              <Legend
+                layout="horizontal"
+                align="center"
+                verticalAlign="bottom"
+                onClick={handleLegendClick}
+                payload={legendPayload}
+                wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
+              />
+              {visibleHeroIds.map((heroId) => (
+                <Line
+                  key={heroId}
+                  type="monotone"
+                  dataKey={heroId}
+                  stroke={heroIdMap[heroId]?.color || "#ffffff"}
+                  dot={{ r: 4, className: "fill-primary" }}
+                  activeDot={{ r: 6 }}
+                  strokeWidth={2}
+                  name={heroIdMap[heroId]?.name}
+                  connectNulls
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
   );
 }
