@@ -57,51 +57,37 @@ export function HeroCombStatsTable({
   const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
+  const combStatsQuery = {
+    combSize: combSizeFilter,
+    minMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode: gameMode,
+  };
   const { data: heroData, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.heroCombStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      combSize: combSizeFilter,
-      minHeroMatches,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroCombStats(combStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroCombStats({
-        combSize: combSizeFilter,
-        minMatches: minHeroMatches ?? 0,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroCombStats(combStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
+  const prevCombStatsQuery = {
+    combSize: combSizeFilter,
+    minMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: prevMinTimestamp,
+    maxUnixTimestamp: prevMaxTimestamp,
+    gameMode: gameMode,
+  };
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroCombStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp: prevMinTimestamp,
-      maxDateTimestamp: prevMaxTimestamp,
-      combSize: combSizeFilter,
-      minHeroMatches,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroCombStats(prevCombStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroCombStats({
-        combSize: combSizeFilter,
-        minMatches: minHeroMatches ?? 0,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: prevMinTimestamp,
-        maxUnixTimestamp: prevMaxTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroCombStats(prevCombStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,

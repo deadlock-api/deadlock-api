@@ -10,6 +10,8 @@ import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import { ItemTier } from "~/components/ItemTier";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
+
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
@@ -20,7 +22,6 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import type { ItemStatsQueryParams } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 
 // Parsers for sort field and direction using nuqs string literal parser
@@ -623,59 +624,43 @@ export function ItemStatsTable({
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
+  const itemStatsQuery: AnalyticsApiItemStatsRequest = {
+    minMatches,
+    heroId: hero,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    minBoughtAtS,
+    maxBoughtAtS,
+    gameMode,
+  };
+
   const { data = [], isLoading: isLoadingItemStats } = useQuery({
-    queryKey: queryKeys.analytics.itemStats({
-      minMatches,
-      hero,
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      minBoughtAtS,
-      maxBoughtAtS,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.itemStats(itemStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.itemStats({
-        heroId: hero,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        minMatches: minMatches,
-        minBoughtAtS: minBoughtAtS,
-        maxBoughtAtS: maxBoughtAtS,
-        gameMode,
-      });
+      const response = await api.analytics_api.itemStats(itemStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
+  const prevItemStatsQuery: AnalyticsApiItemStatsRequest = {
+    minMatches,
+    heroId: hero,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: prevMinTimestamp,
+    maxUnixTimestamp: prevMaxTimestamp,
+    minBoughtAtS,
+    maxBoughtAtS,
+    gameMode,
+  };
+
   const { data: prevData } = useQuery({
-    queryKey: queryKeys.analytics.itemStats({
-      minMatches,
-      hero,
-      minRankId,
-      maxRankId,
-      minDateTimestamp: prevMinTimestamp,
-      maxDateTimestamp: prevMaxTimestamp,
-      minBoughtAtS,
-      maxBoughtAtS,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.itemStats(prevItemStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.itemStats({
-        heroId: hero,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: prevMinTimestamp,
-        maxUnixTimestamp: prevMaxTimestamp,
-        minMatches: minMatches,
-        minBoughtAtS: minBoughtAtS,
-        maxBoughtAtS: maxBoughtAtS,
-        gameMode,
-      });
+      const response = await api.analytics_api.itemStats(prevItemStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
@@ -715,18 +700,15 @@ export function ItemStatsTable({
   const limitedData = useMemo(() => (limit ? filteredData?.slice(0, limit) : filteredData), [filteredData, limit]);
   const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
 
-  const queryStatOptions = useMemo(() => {
-    return {
-      minMatches,
-      hero,
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      bucket: undefined,
-      gameMode,
-    } satisfies ItemStatsQueryParams;
-  }, [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, gameMode]);
+  const queryStatOptions: Omit<AnalyticsApiItemStatsRequest, "bucket"> = useMemo(() => ({
+    minMatches,
+    heroId: hero,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode,
+  }), [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, gameMode]);
 
   return (
     <ItemStatsTableDisplay

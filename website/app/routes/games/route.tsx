@@ -14,7 +14,7 @@ import { PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import type { GameStatsQueryParams } from "~/queries/games-query";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
@@ -60,7 +60,7 @@ export default function Games() {
 
   const isStreetBrawl = isStreetBrawlMode(gameMode);
 
-  const baseParams: GameStatsQueryParams = {
+  const baseParams: AnalyticsApiGameStatsRequest = {
     gameMode: gameMode ?? undefined,
     minUnixTimestamp: startDate ? startDate.unix() : 0,
     maxUnixTimestamp: endDate ? endDate.unix() : undefined,
@@ -70,7 +70,7 @@ export default function Games() {
     maxAverageBadge: isStreetBrawl ? undefined : maxRankId,
   };
 
-  const prevParams: GameStatsQueryParams | null =
+  const prevParams: AnalyticsApiGameStatsRequest | null =
     prevDates.prevStartDate && prevDates.prevEndDate
       ? {
           ...baseParams,

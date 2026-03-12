@@ -16,17 +16,7 @@ import {
   refetchMatchHistory,
   replaceSteamAccount,
 } from "~/lib/patron-api";
-
-// ============================================================================
-// Query Keys
-// ============================================================================
-
-export const patronQueryKeys = {
-  all: ["patron"] as const,
-  status: () => [...patronQueryKeys.all, "status"] as const,
-  steamAccounts: () => [...patronQueryKeys.all, "steam-accounts"] as const,
-  playerCard: (steamId3: number) => [...patronQueryKeys.all, "player-card", steamId3] as const,
-};
+import { queryKeys } from "./query-keys";
 
 // ============================================================================
 // Query Options Factories
@@ -34,7 +24,7 @@ export const patronQueryKeys = {
 
 export function patronStatusQueryOptions() {
   return queryOptions({
-    queryKey: patronQueryKeys.status(),
+    queryKey: queryKeys.patron.status(),
     queryFn: getPatronStatus,
     refetchOnWindowFocus: true,
   });
@@ -42,7 +32,7 @@ export function patronStatusQueryOptions() {
 
 export function steamAccountsQueryOptions() {
   return queryOptions({
-    queryKey: patronQueryKeys.steamAccounts(),
+    queryKey: queryKeys.patron.steamAccounts(),
     queryFn: listSteamAccounts,
     refetchOnWindowFocus: true,
   });
@@ -50,7 +40,7 @@ export function steamAccountsQueryOptions() {
 
 export function playerCardQueryOptions(steamId3: number) {
   return queryOptions({
-    queryKey: patronQueryKeys.playerCard(steamId3),
+    queryKey: queryKeys.patron.playerCard(steamId3),
     queryFn: () => getPlayerCard(steamId3),
     retry: false,
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
@@ -83,7 +73,7 @@ export function useAddSteamAccount() {
   return useMutation({
     mutationFn: addSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }
@@ -94,7 +84,7 @@ export function useDeleteSteamAccount() {
   return useMutation({
     mutationFn: deleteSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }
@@ -106,7 +96,7 @@ export function useReplaceSteamAccount() {
     mutationFn: ({ accountId, steamId3 }: { accountId: string; steamId3: number }) =>
       replaceSteamAccount(accountId, steamId3),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }
@@ -117,7 +107,7 @@ export function useReactivateSteamAccount() {
   return useMutation({
     mutationFn: reactivateSteamAccount,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patronQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.patron.all });
     },
   });
 }

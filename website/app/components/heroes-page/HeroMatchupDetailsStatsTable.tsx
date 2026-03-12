@@ -47,76 +47,55 @@ export function HeroMatchupDetailsStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const heroStatsQuery = {
+    minHeroMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode: gameMode,
+  };
   const { data: heroData, isLoading: isLoadingHero } = useQuery({
-    queryKey: queryKeys.analytics.heroStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      minHeroMatches,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroStats({
-        minHeroMatches: minHeroMatches ?? 0,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroStats(heroStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
+  const synergyStatsQuery = {
+    sameLaneFilter: sameLaneFilter,
+    samePartyFilter: samePartyFilter,
+    minMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode: gameMode,
+  };
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
-    queryKey: queryKeys.analytics.heroSynergyStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      sameLaneFilter,
-      samePartyFilter,
-      minMatches: minHeroMatches,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroSynergyStats(synergyStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroSynergiesStats({
-        sameLaneFilter: sameLaneFilter,
-        samePartyFilter: samePartyFilter,
-        minMatches: minHeroMatches ?? 0,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroSynergiesStats(synergyStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
+  const counterStatsQuery = {
+    sameLaneFilter: sameLaneFilter,
+    minMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode: gameMode,
+  };
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({
-    queryKey: queryKeys.analytics.heroCounterStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      sameLaneFilter,
-      minMatches: minHeroMatches,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroCounterStats(counterStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroCountersStats({
-        sameLaneFilter: sameLaneFilter,
-        minMatches: minHeroMatches ?? 0,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroCountersStats(counterStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,

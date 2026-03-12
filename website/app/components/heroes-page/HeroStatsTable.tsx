@@ -48,26 +48,19 @@ export function HeroStatsTable({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const heroStatsQuery = {
+    minHeroMatches: minHeroMatches,
+    minHeroMatchesTotal: minHeroMatchesTotal,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode: gameMode,
+  };
   const { data: heroData, isLoading } = useQuery({
-    queryKey: queryKeys.analytics.heroStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      minHeroMatches,
-      minHeroMatchesTotal,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroStats(heroStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroStats({
-        minHeroMatches: minHeroMatches,
-        minHeroMatchesTotal: minHeroMatchesTotal,
-        minAverageBadge: minRankId,
-        maxAverageBadge: maxRankId,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroStats(heroStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
@@ -77,26 +70,19 @@ export function HeroStatsTable({
   const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
+  const prevHeroStatsQuery = {
+    minHeroMatches: minHeroMatches,
+    minHeroMatchesTotal: minHeroMatchesTotal,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: prevMinTimestamp,
+    maxUnixTimestamp: prevMaxTimestamp,
+    gameMode: gameMode,
+  };
   const { data: prevHeroData } = useQuery({
-    queryKey: queryKeys.analytics.heroStats({
-      minRankId,
-      maxRankId,
-      minDateTimestamp: prevMinTimestamp,
-      maxDateTimestamp: prevMaxTimestamp,
-      minHeroMatches,
-      minHeroMatchesTotal,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroStats(prevHeroStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroStats({
-        minHeroMatches: minHeroMatches,
-        minHeroMatchesTotal: minHeroMatchesTotal,
-        minAverageBadge: minRankId,
-        maxAverageBadge: maxRankId,
-        minUnixTimestamp: prevMinTimestamp,
-        maxUnixTimestamp: prevMaxTimestamp,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroStats(prevHeroStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,

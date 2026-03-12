@@ -22,7 +22,7 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
     Error,
     Map<number, string>
   >({
-    queryKey: queryKeys.streamkit.heroes(),
+    queryKey: queryKeys.assets.heroes(),
     queryFn: async () => {
       const res = await fetch(`${ASSETS_ORIGIN}/v2/heroes`);
       if (!res.ok) throw new Error(`Failed to fetch heroes: ${res.status}`);

@@ -192,23 +192,18 @@ export function HeroStatsByRankChart({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const heroStatsByRankQuery = {
+    minHeroMatches: minHeroMatches,
+    minHeroMatchesTotal: minHeroMatchesTotal,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    bucket: "avg_badge" as const,
+    gameMode: gameMode,
+  };
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
-    queryKey: queryKeys.analytics.heroStatsByRank({
-      minDateTimestamp,
-      maxDateTimestamp,
-      minHeroMatches,
-      minHeroMatchesTotal,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroStatsByRank(heroStatsByRankQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroStats({
-        minHeroMatches: minHeroMatches,
-        minHeroMatchesTotal: minHeroMatchesTotal,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        bucket: "avg_badge",
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroStats(heroStatsByRankQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,

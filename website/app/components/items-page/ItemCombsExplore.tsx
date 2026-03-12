@@ -14,11 +14,13 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
-import { API_ORIGIN } from "~/lib/constants";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
+import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client/api";
+import { api } from "~/lib/api";
+
 import { cn } from "~/lib/utils";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { queryKeys } from "~/queries/query-keys";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -179,22 +181,19 @@ export function ItemCombsExplore({
 
   const { data: ranksData } = useQuery(ranksQueryOptions);
 
-  const queryStatOptions = useMemo(() => {
-    return {
-      minMatches,
-      hero,
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      includeItems,
-      excludeItems,
-      bucket: undefined,
-      minBoughtAtS,
-      maxBoughtAtS,
-      gameMode,
-    } satisfies ItemStatsQueryParams;
-  }, [
+  const queryStatOptions: AnalyticsApiItemStatsRequest = useMemo(() => ({
+    minMatches,
+    heroId: hero,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    includeItemIds: includeItems ? Array.from(includeItems) : undefined,
+    excludeItemIds: excludeItems ? Array.from(excludeItems) : undefined,
+    minBoughtAtS,
+    maxBoughtAtS,
+    gameMode,
+  }), [
     minMatches,
     hero,
     minRankId,
@@ -225,41 +224,29 @@ export function ItemCombsExplore({
   }, [assetsItems]);
 
   const topBuildsEnabled = !!hero && includeItems.size > 0;
+  const topBuildsQuery: MatchesApiBulkMetadataRequest = {
+    includeInfo: true,
+    includePlayerItems: true,
+    includePlayerKda: true,
+    includePlayerInfo: true,
+    heroIds: hero != null ? String(hero) : undefined,
+    itemFilterHeroId: hero,
+    includeItemIds: Array.from(includeItems).sort().join(","),
+    excludeItemIds: excludeItems.size > 0 ? Array.from(excludeItems).sort().join(",") : undefined,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    gameMode: gameMode as MatchesApiBulkMetadataRequest["gameMode"],
+    orderBy: "average_badge",
+    orderDirection: "desc",
+    limit: 10,
+  };
   const { data: topBuildsData, isLoading: isLoadingTopBuilds } = useQuery({
-    queryKey: queryKeys.analytics.topBuilds({
-      hero,
-      includeItems: Array.from(includeItems).sort(),
-      excludeItems: Array.from(excludeItems).sort(),
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.topBuilds(topBuildsQuery),
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set("include_info", "true");
-      params.set("include_player_items", "true");
-      params.set("include_player_kda", "true");
-      params.set("include_player_info", "true");
-      params.set("hero_ids", String(hero));
-      params.set("item_filter_hero_id", String(hero));
-      params.set("include_item_ids", Array.from(includeItems).join(","));
-      if (excludeItems.size > 0) {
-        params.set("exclude_item_ids", Array.from(excludeItems).join(","));
-      }
-      if (minRankId != null) params.set("min_average_badge", String(minRankId));
-      if (maxRankId != null) params.set("max_average_badge", String(maxRankId));
-      if (minDateTimestamp != null) params.set("min_unix_timestamp", String(minDateTimestamp));
-      if (maxDateTimestamp != null) params.set("max_unix_timestamp", String(maxDateTimestamp));
-      if (gameMode) params.set("game_mode", gameMode);
-      params.set("order_by", "average_badge");
-      params.set("order_direction", "desc");
-      params.set("limit", "10");
-
-      const res = await fetch(`${API_ORIGIN}/v1/matches/metadata?${params}`);
-      if (!res.ok) throw new Error(`Failed to fetch top builds: ${res.status}`);
-      return (await res.json()) as BulkMatchMetadata[];
+      const response = await api.matches_api.bulkMetadata(topBuildsQuery);
+      return response.data as unknown as BulkMatchMetadata[];
     },
     enabled: topBuildsEnabled,
     staleTime: CACHE_DURATIONS.FIVE_MINUTES,
