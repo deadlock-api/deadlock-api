@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import type { ItemStats } from "deadlock_api_client";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { type ReactNode, useId, useMemo, useState } from "react";
 
@@ -10,8 +11,6 @@ import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import { ItemTier } from "~/components/ItemTier";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
-import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
-
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemTierSelector } from "~/components/selectors/ItemTierSelector";
 import { Button } from "~/components/ui/button";
@@ -700,15 +699,18 @@ export function ItemStatsTable({
   const limitedData = useMemo(() => (limit ? filteredData?.slice(0, limit) : filteredData), [filteredData, limit]);
   const displayData = useMemo(() => getDisplayItemStats(limitedData, assetsItems || []), [limitedData, assetsItems]);
 
-  const queryStatOptions: Omit<AnalyticsApiItemStatsRequest, "bucket"> = useMemo(() => ({
-    minMatches,
-    heroId: hero,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
-    gameMode,
-  }), [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, gameMode]);
+  const queryStatOptions: Omit<AnalyticsApiItemStatsRequest, "bucket"> = useMemo(
+    () => ({
+      minMatches,
+      heroId: hero,
+      minAverageBadge: minRankId ?? 0,
+      maxAverageBadge: maxRankId ?? 116,
+      minUnixTimestamp: minDateTimestamp,
+      maxUnixTimestamp: maxDateTimestamp,
+      gameMode,
+    }),
+    [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, gameMode],
+  );
 
   return (
     <ItemStatsTableDisplay

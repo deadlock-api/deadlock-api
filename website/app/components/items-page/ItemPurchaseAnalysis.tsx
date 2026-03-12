@@ -1,3 +1,4 @@
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
@@ -6,7 +7,6 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
 import type { Dayjs } from "~/dayjs";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
-import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
 
 export function ItemPurchaseAnalysis({
   minRankId,
@@ -33,27 +33,20 @@ export function ItemPurchaseAnalysis({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
-  const queryStatOptions: Omit<AnalyticsApiItemStatsRequest, "bucket"> = useMemo(() => ({
-    minMatches,
-    heroId: hero,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
-    minBoughtAtS,
-    maxBoughtAtS,
-    gameMode,
-  }), [
-    minMatches,
-    hero,
-    minRankId,
-    maxRankId,
-    minDateTimestamp,
-    maxDateTimestamp,
-    minBoughtAtS,
-    maxBoughtAtS,
-    gameMode,
-  ]);
+  const queryStatOptions: Omit<AnalyticsApiItemStatsRequest, "bucket"> = useMemo(
+    () => ({
+      minMatches,
+      heroId: hero,
+      minAverageBadge: minRankId ?? 0,
+      maxAverageBadge: maxRankId ?? 116,
+      minUnixTimestamp: minDateTimestamp,
+      maxUnixTimestamp: maxDateTimestamp,
+      minBoughtAtS,
+      maxBoughtAtS,
+      gameMode,
+    }),
+    [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minBoughtAtS, maxBoughtAtS, gameMode],
+  );
 
   return (
     <div>
