@@ -5,11 +5,9 @@ import { useMemo } from "react";
 
 import { FilterPill } from "~/components/FilterPill";
 import { Slider } from "~/components/ui/slider";
-import { CACHE_DURATIONS } from "~/constants/cache";
 import { useDraftValue } from "~/hooks/useDraftValue";
-import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
-import { queryKeys } from "~/queries/query-keys";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 
@@ -33,14 +31,7 @@ interface RankRangeSelectorProps {
 }
 
 export function RankRangeSelector({ minRank, maxRank, onRankChange, label }: RankRangeSelectorProps) {
-  const { data: ranksData, isLoading } = useQuery({
-    queryKey: queryKeys.assets.ranks(),
-    queryFn: async () => {
-      const response = await assetsApi.default_api.getRanksV2RanksGet();
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data: ranksData, isLoading } = useQuery(ranksQueryOptions);
 
   const sortedRanks = useMemo(
     () => [...(ranksData ?? [])].sort((a: RankV2, b: RankV2) => a.tier - b.tier),

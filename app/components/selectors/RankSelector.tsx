@@ -2,10 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { RankV2 } from "assets_deadlock_api_client";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { CACHE_DURATIONS } from "~/constants/cache";
-import { assetsApi } from "~/lib/assets-api";
 import { getRankImageUrl } from "~/lib/rank-utils";
-import { queryKeys } from "~/queries/query-keys";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
 import { Skeleton } from "../ui/skeleton";
@@ -37,12 +35,7 @@ export function RankSelector({
   type RankOption = { value: number; label: string; rank: RankV2; subrank: number };
 
   const { data: selectOptions = [], isLoading } = useQuery({
-    queryKey: queryKeys.assets.ranks(),
-    queryFn: async () => {
-      const response = await assetsApi.default_api.getRanksV2RanksGet();
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.FOREVER,
+    ...ranksQueryOptions,
     select: (ranks): RankOption[] => {
       const sorted = [...ranks].sort((a, b) => a.tier - b.tier);
       const options: RankOption[] = [];

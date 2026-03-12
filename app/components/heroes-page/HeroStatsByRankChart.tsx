@@ -19,10 +19,10 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { api } from "~/lib/api";
-import { assetsApi } from "~/lib/assets-api";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { queryKeys } from "~/queries/query-keys";
+import { ranksQueryOptions } from "~/queries/ranks-query";
 import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
 
 import type { ByRankStat } from "./HeroStatSelectors";
@@ -214,14 +214,7 @@ export function HeroStatsByRankChart({
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
 
-  const { data: ranksData, isLoading: isLoadingRanks } = useQuery({
-    queryKey: queryKeys.leaderboard.ranks(),
-    queryFn: async () => {
-      const response = await assetsApi.default_api.getRanksV2RanksGet();
-      return response.data;
-    },
-    staleTime: CACHE_DURATIONS.FOREVER,
-  });
+  const { data: ranksData, isLoading: isLoadingRanks } = useQuery(ranksQueryOptions);
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
 

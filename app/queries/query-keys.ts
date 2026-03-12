@@ -184,7 +184,6 @@ export const queryKeys = {
   },
   leaderboard: {
     data: (region: string, heroId?: number | null) => ["leaderboardData", region, heroId] as const,
-    ranks: () => ["ranks"] as const,
   },
   steam: {
     profiles: (batch: number[]) => ["steamProfiles", batch] as const,
