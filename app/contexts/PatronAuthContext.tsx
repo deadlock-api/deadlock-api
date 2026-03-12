@@ -4,7 +4,8 @@ import { createContext, type ReactNode, useCallback, useMemo, useState } from "r
 
 import { API_ORIGIN } from "~/lib/constants";
 import type { PatronStatus } from "~/lib/patron-api";
-import { patronQueryKeys, usePatronStatus } from "~/queries/patron-queries";
+import { usePatronStatus } from "~/queries/patron-queries";
+import { queryKeys } from "~/queries/query-keys";
 
 export interface PatronAuthState {
   isAuthenticated: boolean;
@@ -83,12 +84,12 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
       console.error("Failed to logout:", error);
     } finally {
       setIsLoggingOut(false);
-      queryClient.setQueryData(patronQueryKeys.status(), null);
+      queryClient.setQueryData(queryKeys.patron.status(), null);
     }
   }, [posthog, queryClient]);
 
   const refreshStatus = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: patronQueryKeys.status() });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.patron.status() });
   }, [queryClient]);
 
   const contextValue: PatronAuthContextValue = useMemo(

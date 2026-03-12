@@ -36,28 +36,20 @@ export function HeroStatsOverTimeChart({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const heroStatsOverTimeQuery = {
+    minHeroMatches: minHeroMatches,
+    minHeroMatchesTotal: minHeroMatchesTotal,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    bucket: heroTimeInterval,
+    gameMode: gameMode,
+  };
   const { data: heroData, isLoading: isLoadingHeroStats } = useQuery({
-    queryKey: queryKeys.analytics.heroStatsOverTime({
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      heroTimeInterval,
-      minHeroMatches,
-      minHeroMatchesTotal,
-      gameMode,
-    }),
+    queryKey: queryKeys.analytics.heroStatsOverTime(heroStatsOverTimeQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.heroStats({
-        minHeroMatches: minHeroMatches,
-        minHeroMatchesTotal: minHeroMatchesTotal,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
-        bucket: heroTimeInterval,
-        gameMode: gameMode,
-      });
+      const response = await api.analytics_api.heroStats(heroStatsOverTimeQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,

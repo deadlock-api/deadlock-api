@@ -45,32 +45,24 @@ export default function PlayerScoreboard() {
 
   const MAX_ENTRIES = 1000;
 
+  const playerScoreboardQuery = {
+    sortBy: sortBy as PlayerScoreboardSortByEnum,
+    sortDirection: sortDirection as "desc" | "asc",
+    gameMode,
+    heroId: heroId ?? undefined,
+    minMatches,
+    minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
+    maxAverageBadge: gameMode === "street_brawl" ? undefined : maxRankId,
+    minUnixTimestamp: startDate?.unix() ?? 0,
+    maxUnixTimestamp: endDate?.unix(),
+    start: 0,
+    limit: MAX_ENTRIES,
+  };
+
   const scoreboardQuery = useQuery({
-    queryKey: queryKeys.analytics.playerScoreboard({
-      sortBy,
-      sortDirection,
-      gameMode,
-      heroId,
-      minMatches,
-      minRankId,
-      maxRankId,
-      startDate: startDate?.unix(),
-      endDate: endDate?.unix(),
-    }),
+    queryKey: queryKeys.analytics.playerScoreboard(playerScoreboardQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.playerScoreboard({
-        sortBy: sortBy as PlayerScoreboardSortByEnum,
-        sortDirection: sortDirection as "desc" | "asc",
-        gameMode,
-        heroId: heroId ?? undefined,
-        minMatches,
-        minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
-        maxAverageBadge: gameMode === "street_brawl" ? undefined : maxRankId,
-        minUnixTimestamp: startDate?.unix() ?? 0,
-        maxUnixTimestamp: endDate?.unix(),
-        start: 0,
-        limit: MAX_ENTRIES,
-      });
+      const response = await api.analytics_api.playerScoreboard(playerScoreboardQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,

@@ -50,33 +50,27 @@ export function HeroStatsByExperienceTable({
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
   const bucketQueries = useQueries({
-    queries: EXPERIENCE_BUCKETS.map((bucket) => ({
-      queryKey: queryKeys.analytics.heroStatsByExperience({
-        minExperience: bucket.min,
-        maxExperience: bucket.max,
-        minRankId,
-        maxRankId,
-        minDateTimestamp,
-        maxDateTimestamp,
+    queries: EXPERIENCE_BUCKETS.map((bucket) => {
+      const heroStatsByExperienceQuery = {
         minHeroMatches,
+        minHeroMatchesTotal: bucket.min,
+        maxHeroMatchesTotal: bucket.max,
+        minAverageBadge: minRankId ?? 0,
+        maxAverageBadge: maxRankId ?? 116,
+        minUnixTimestamp: minDateTimestamp,
+        maxUnixTimestamp: maxDateTimestamp,
+        bucket: "no_bucket" as const,
         gameMode,
-      }),
-      queryFn: async () => {
-        const response = await api.analytics_api.heroStats({
-          minHeroMatches,
-          minHeroMatchesTotal: bucket.min,
-          maxHeroMatchesTotal: bucket.max,
-          minAverageBadge: minRankId ?? 0,
-          maxAverageBadge: maxRankId ?? 116,
-          minUnixTimestamp: minDateTimestamp,
-          maxUnixTimestamp: maxDateTimestamp,
-          bucket: "no_bucket",
-          gameMode,
-        });
-        return response.data;
-      },
-      staleTime: CACHE_DURATIONS.ONE_DAY,
-    })),
+      };
+      return {
+        queryKey: queryKeys.analytics.heroStatsByExperience(heroStatsByExperienceQuery),
+        queryFn: async () => {
+          const response = await api.analytics_api.heroStats(heroStatsByExperienceQuery);
+          return response.data;
+        },
+        staleTime: CACHE_DURATIONS.ONE_DAY,
+      };
+    }),
   });
 
   const { data: assetsHeroes, isLoading: isLoadingAssetsHeroes } = useQuery(heroesQueryOptions);

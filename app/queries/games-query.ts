@@ -1,37 +1,16 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { GameStatsBucketEnum } from "deadlock_api_client";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 
-import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 
 import { queryKeys } from "./query-keys";
 
-export interface GameStatsQueryParams {
-  bucket?: GameStatsBucketEnum;
-  gameMode?: GameMode;
-  minUnixTimestamp?: number;
-  maxUnixTimestamp?: number;
-  minDurationS?: number;
-  maxDurationS?: number;
-  minAverageBadge?: number;
-  maxAverageBadge?: number;
-}
-
-export function gameStatsQueryOptions(params: GameStatsQueryParams) {
+export function gameStatsQueryOptions(gameStatsQuery: AnalyticsApiGameStatsRequest) {
   return queryOptions({
-    queryKey: queryKeys.analytics.gameStats(params),
+    queryKey: queryKeys.analytics.gameStats(gameStatsQuery),
     queryFn: async () => {
-      const response = await api.analytics_api.gameStats({
-        bucket: params.bucket,
-        gameMode: params.gameMode,
-        minUnixTimestamp: params.minUnixTimestamp,
-        maxUnixTimestamp: params.maxUnixTimestamp,
-        minDurationS: params.minDurationS,
-        maxDurationS: params.maxDurationS,
-        minAverageBadge: params.minAverageBadge,
-        maxAverageBadge: params.maxAverageBadge,
-      });
+      const response = await api.analytics_api.gameStats(gameStatsQuery);
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,

@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Customized, ResponsiveContainer, To
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { extractBadgeMap } from "~/lib/leaderboard";
-import type { GameStatsQueryParams } from "~/queries/games-query";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -13,7 +13,7 @@ import { formatStatValue, getStatDefinition } from "./stat-definitions";
 import { StatSelector } from "./StatSelector";
 
 interface GamesByRankChartProps {
-  params: GameStatsQueryParams;
+  params: AnalyticsApiGameStatsRequest;
   stat: string;
   onStatChange: (stat: string) => void;
   isStreetBrawl?: boolean;

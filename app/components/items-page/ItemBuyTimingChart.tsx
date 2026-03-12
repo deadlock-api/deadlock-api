@@ -9,16 +9,18 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "~/components/ui/tooltip";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
+
 import { randomColorHex } from "~/lib/utils";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
-import { type ItemStatsQueryParams, itemStatsQueryOptions } from "~/queries/item-stats-query";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const chartConfig = {
   winrate: { label: "Win Rate", color: "hsl(var(--chart-1))" },
   ema: { label: "Moving Average", color: "hsl(var(--chart-3))" },
 };
 
-type BucketType = Exclude<ItemStatsQueryParams["bucket"], undefined>;
+type BucketType = Exclude<AnalyticsApiItemStatsRequest["bucket"], undefined>;
 type ChartData = never[] | Record<string, ChartPoint[]>;
 
 const MIN_AVG_THRESHOLD = 0.1; // 5 %
@@ -219,7 +221,7 @@ function buildChartData({
 
 interface ItemBuyTimingChartProps {
   itemIds: number[];
-  baseQueryOptions: Omit<ItemStatsQueryParams, "bucket">;
+  baseQueryOptions: Omit<AnalyticsApiItemStatsRequest, "bucket">;
   rowTotalMatches?: number;
 }
 

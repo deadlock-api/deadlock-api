@@ -6,7 +6,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { day } from "~/dayjs";
 import { cn } from "~/lib/utils";
-import type { GameStatsQueryParams } from "~/queries/games-query";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { formatStatValue, getStatDefinition } from "./stat-definitions";
@@ -19,7 +19,7 @@ const TIME_BUCKETS = [
 ] as const;
 
 interface GamesOverTimeChartProps {
-  params: GameStatsQueryParams;
+  params: AnalyticsApiGameStatsRequest;
   stat: string;
   onStatChange: (stat: string) => void;
   timeBucket: GameStatsBucketEnum;

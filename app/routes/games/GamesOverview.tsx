@@ -4,14 +4,14 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { cn } from "~/lib/utils";
-import type { GameStatsQueryParams } from "~/queries/games-query";
+import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
 import { CATEGORY_ICONS, formatStatValue, getFilteredCategories } from "./stat-definitions";
 
 interface GamesOverviewProps {
-  params: GameStatsQueryParams;
-  prevParams: GameStatsQueryParams | null;
+  params: AnalyticsApiGameStatsRequest;
+  prevParams: AnalyticsApiGameStatsRequest | null;
   onStatClick?: (statKey: string) => void;
   isStreetBrawl?: boolean;
 }

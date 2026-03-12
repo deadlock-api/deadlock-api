@@ -47,18 +47,20 @@ export default function AbilityOrderTree({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const abilityOrderStatsQuery = {
+    heroId,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+    minMatches: minMatches,
+    gameMode,
+    includeItemIds: includeItemIds?.length ? includeItemIds : undefined,
+    excludeItemIds: excludeItemIds?.length ? excludeItemIds : undefined,
+  };
+
   const { data: abilityOrderData, isLoading: isLoadingOrder } = useQuery(
-    abilityOrderQueryOptions({
-      heroId,
-      minRankId,
-      maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
-      minMatches,
-      gameMode,
-      includeItemIds,
-      excludeItemIds,
-    }),
+    abilityOrderQueryOptions(abilityOrderStatsQuery),
   );
 
   const { data: heroData } = useQuery({

@@ -1,160 +1,9 @@
 import type {
-  AbilityOrderStatsGameModeEnum,
   AnalyticsApiBadgeDistributionRequest,
   AnalyticsApiKillDeathStatsRequest,
-  GameStatsBucketEnum,
-  ItemStatsBucketEnum,
 } from "deadlock_api_client";
 
-import type { GameMode } from "~/components/selectors/GameModeSelector";
-
-import { patronQueryKeys } from "./patron-queries";
-
-type Nullable<T> = T | null | undefined;
-
-export interface HeroStatsKeyParams {
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  minHeroMatches?: Nullable<number>;
-  minHeroMatchesTotal?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroSynergyStatsKeyParams {
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  sameLaneFilter?: Nullable<boolean>;
-  samePartyFilter?: Nullable<boolean>;
-  minMatches?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroCounterStatsKeyParams {
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  sameLaneFilter?: Nullable<boolean>;
-  minMatches?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroCombStatsKeyParams {
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  combSize?: Nullable<number>;
-  minHeroMatches?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroStatsByRankKeyParams {
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  minHeroMatches?: Nullable<number>;
-  minHeroMatchesTotal?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroStatsOverTimeKeyParams {
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  heroTimeInterval?: Nullable<string>;
-  minHeroMatches?: Nullable<number>;
-  minHeroMatchesTotal?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroStatsByDurationKeyParams {
-  minDurationS: number;
-  maxDurationS: number;
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  minHeroMatches?: Nullable<number>;
-  minHeroMatchesTotal?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface HeroStatsByExperienceKeyParams {
-  minExperience: number;
-  maxExperience: number;
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  minHeroMatches?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface ItemStatsKeyParams {
-  minMatches?: Nullable<number>;
-  hero?: Nullable<number>;
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  bucket?: Nullable<ItemStatsBucketEnum>;
-  includeItems?: number[] | string;
-  excludeItems?: number[] | string;
-  minBoughtAtS?: Nullable<number>;
-  maxBoughtAtS?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
-
-export interface GameStatsKeyParams {
-  bucket?: Nullable<GameStatsBucketEnum>;
-  gameMode?: Nullable<GameMode>;
-  minUnixTimestamp?: Nullable<number>;
-  maxUnixTimestamp?: Nullable<number>;
-  minDurationS?: Nullable<number>;
-  maxDurationS?: Nullable<number>;
-  minAverageBadge?: Nullable<number>;
-  maxAverageBadge?: Nullable<number>;
-}
-
-export interface AbilityOrderStatsKeyParams {
-  heroId: number;
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  minMatches?: Nullable<number>;
-  gameMode?: Nullable<AbilityOrderStatsGameModeEnum>;
-  includeItemIds?: Nullable<number[]>;
-  excludeItemIds?: Nullable<number[]>;
-}
-
-export interface PlayerScoreboardKeyParams {
-  sortBy: string;
-  sortDirection: string;
-  gameMode?: Nullable<GameMode>;
-  heroId?: Nullable<number>;
-  minMatches?: Nullable<number>;
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  startDate?: Nullable<number>;
-  endDate?: Nullable<number>;
-}
-
-export interface TopBuildsKeyParams {
-  hero?: Nullable<number>;
-  includeItems: number[];
-  excludeItems: number[];
-  minRankId?: Nullable<number>;
-  maxRankId?: Nullable<number>;
-  minDateTimestamp?: Nullable<number>;
-  maxDateTimestamp?: Nullable<number>;
-  gameMode?: Nullable<GameMode>;
-}
+import {AnalyticsApiAbilityOrderStatsRequest, AnalyticsApiGameStatsRequest, AnalyticsApiHeroCombStatsRequest, AnalyticsApiHeroCountersStatsRequest, AnalyticsApiHeroStatsRequest, AnalyticsApiHeroSynergiesStatsRequest, AnalyticsApiItemStatsRequest, AnalyticsApiPlayerScoreboardRequest, MatchesApiBulkMetadataRequest} from "deadlock_api_client/api";
 
 export const queryKeys = {
   assets: {
@@ -165,39 +14,42 @@ export const queryKeys = {
     hero: (heroId: number) => ["assets-hero", heroId] as const,
   },
   analytics: {
-    heroStats: (params: HeroStatsKeyParams) => ["api-hero-stats", params] as const,
-    heroSynergyStats: (params: HeroSynergyStatsKeyParams) => ["api-hero-synergy-stats", params] as const,
-    heroCounterStats: (params: HeroCounterStatsKeyParams) => ["api-hero-counter-stats", params] as const,
-    heroCombStats: (params: HeroCombStatsKeyParams) => ["api-hero-comb-stats", params] as const,
-    heroStatsByRank: (params: HeroStatsByRankKeyParams) => ["api-hero-stats-by-rank", params] as const,
-    heroStatsOverTime: (params: HeroStatsOverTimeKeyParams) => ["api-hero-stats-over-time", params] as const,
-    heroStatsByDuration: (params: HeroStatsByDurationKeyParams) => ["api-hero-stats-by-duration", params] as const,
-    heroStatsByExperience: (params: HeroStatsByExperienceKeyParams) =>
-      ["api-hero-stats-by-experience", params] as const,
-    itemStats: (params: ItemStatsKeyParams) => ["api-item-stats", params] as const,
-    gameStats: (params: GameStatsKeyParams) => ["api-game-stats", params] as const,
-    abilityOrderStats: (params: AbilityOrderStatsKeyParams) => ["api-ability-order-stats", params] as const,
-    killDeathStats: (params: AnalyticsApiKillDeathStatsRequest) => ["killDeathStats", params] as const,
-    badgeDistribution: (filter: AnalyticsApiBadgeDistributionRequest) => ["badgeDistribution", filter] as const,
-    playerScoreboard: (params: PlayerScoreboardKeyParams) => ["playerScoreboard", params] as const,
-    topBuilds: (params: TopBuildsKeyParams) => ["top-builds", params] as const,
+    heroStats: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats", params] as const,
+    heroSynergyStats: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-stats", params] as const,
+    heroCounterStats: (params: AnalyticsApiHeroCountersStatsRequest) => ["api-hero-counter-stats", params] as const,
+    heroCombStats: (params: AnalyticsApiHeroCombStatsRequest) => ["api-hero-comb-stats", params] as const,
+    heroStatsByRank: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-rank", params] as const,
+    heroStatsOverTime: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-over-time", params] as const,
+    heroStatsByDuration: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-duration", params] as const,
+    heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
+    itemStats: (params: AnalyticsApiItemStatsRequest) => ["api-item-stats", params] as const,
+    gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
+    abilityOrderStats: (params: AnalyticsApiAbilityOrderStatsRequest) => ["api-ability-order-stats", params] as const,
+    killDeathStats: (params: AnalyticsApiKillDeathStatsRequest) => ["api-kill-death-stats", params] as const,
+    badgeDistribution: (filter: AnalyticsApiBadgeDistributionRequest) => ["api-badge-distribution", filter] as const,
+    playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,
+    topBuilds: (params: MatchesApiBulkMetadataRequest) => ["api-top-builds", params] as const,
   },
   leaderboard: {
-    data: (region: string, heroId?: number | null) => ["leaderboardData", region, heroId] as const,
+    data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,
   },
   steam: {
-    profiles: (batch: number[]) => ["steamProfiles", batch] as const,
+    profiles: (batch: number[]) => ["steam-profiles", batch] as const,
     profile: (accountId: number | undefined) => ["steam-profile", accountId] as const,
-    name: (region: string, steamId: string) => ["steamName", region, steamId] as const,
+    name: (region: string, steamId: string) => ["steam-name", region, steamId] as const,
   },
   streamkit: {
-    version: (widgetType: string | undefined) => ["version", widgetType] as const,
-    stats: (region: string, accountId: string, ...rest: unknown[]) => ["stats", region, accountId, ...rest] as const,
-    heroes: () => ["heroes"] as const,
-    matchHistory: (accountId: string) => ["match-history", accountId] as const,
-    availableVariables: () => ["available-variables"] as const,
-    preview: (url: string) => ["preview", url] as const,
+    version: (widgetType: string | undefined) => ["api-streamkit-version", widgetType] as const,
+    stats: (region: string, accountId: string, ...rest: unknown[]) => ["api-streamkit-stats", region, accountId, ...rest] as const,
+    matchHistory: (accountId: string) => ["api-match-history", accountId] as const,
+    availableVariables: () => ["api-streamkit-available-variables"] as const,
+    preview: (url: string) => ["api-streamkit-preview", url] as const,
   },
   map: () => ["map"] as const,
-  patron: patronQueryKeys,
+  patron: {
+    all: ["patron"] as const,
+    status: () => [...queryKeys.patron.all, "status"] as const,
+    steamAccounts: () => [...queryKeys.patron.all, "steam-accounts"] as const,
+    playerCard: (steamId3: number) => [...queryKeys.patron.all, "player-card", steamId3] as const,
+  },
 } as const;
