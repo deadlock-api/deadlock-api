@@ -1,4 +1,3 @@
-/* eslint-disable func-names */
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
