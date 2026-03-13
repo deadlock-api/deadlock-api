@@ -61,10 +61,14 @@ const SEGMENT_DEFS: {
 	{ key: "hero", prefix: "on" },
 	{ key: "team", prefix: "on team" },
 	{ key: "region", prefix: "in" },
+	{ key: "viewMode", prefix: "showing" },
+	{ key: "dimension", prefix: "in" },
+	{ key: "items", prefix: "with" },
 	{ key: "minMatches:", prefix: "requiring", dynamic: true },
+	{ key: "sortBy", prefix: "sorted by" },
+	{ key: "sortDir", prefix: "" },
 	{ key: "duration", prefix: "lasting" },
 	{ key: "timeRange", prefix: "purchased" },
-	{ key: "sortDir", prefix: "sorted" },
 ];
 
 function buildSentence(parts: Map<string, string>): React.ReactNode[] | null {
