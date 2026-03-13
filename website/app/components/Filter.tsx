@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react";
+import { useMemo } from "react";
 
 import {
 	FilterDescriptionProvider,
@@ -12,6 +14,7 @@ import {
 	useRankLabel,
 	useRegisterFilterPart,
 } from "~/components/FilterDescription";
+import { ItemImage } from "~/components/ItemImage";
 import { NumberSelector } from "~/components/NumberSelector";
 import { PatchOrDatePicker } from "~/components/PatchOrDatePicker";
 import {
@@ -22,9 +25,15 @@ import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { MatchTimeRangeSelector } from "~/components/selectors/MatchTimeRangeSelector";
 import { RankRangeSelector } from "~/components/selectors/RankRangeSelector";
 import { StringSelector } from "~/components/selectors/StringSelector";
+import {
+	type TriState,
+	type TriStateColumnLayout,
+	TriStateSelector,
+} from "~/components/selectors/TriStateSelector";
 import type { Dayjs } from "~/dayjs";
 import { MAX_GAME_DURATION_S, PATCHES } from "~/lib/constants";
 import { cn } from "~/lib/utils";
+import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
 function Root({
 	children,
@@ -337,6 +346,176 @@ function Team({
 	);
 }
 
+const VIEW_MODES = ["kills", "deaths", "kd"] as const;
+type ViewMode = (typeof VIEW_MODES)[number];
+
+const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+	kills: "Kills",
+	deaths: "Deaths",
+	kd: "K/D",
+};
+
+function HeatmapViewMode({
+	value,
+	onChange,
+}: {
+	value: string;
+	onChange: (mode: string) => void;
+}) {
+	useRegisterFilterPart(
+		"viewMode",
+		VIEW_MODE_LABELS[value as ViewMode] ?? value,
+	);
+
+	return (
+		<div className="inline-flex items-center rounded-full border border-white/[0.08] bg-secondary p-0.5">
+			{VIEW_MODES.map((mode) => (
+				<button
+					key={mode}
+					type="button"
+					onClick={() => onChange(mode)}
+					className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
+						value === mode
+							? "bg-primary text-primary-foreground shadow-sm"
+							: "text-muted-foreground hover:text-foreground"
+					}`}
+				>
+					{VIEW_MODE_LABELS[mode]}
+				</button>
+			))}
+		</div>
+	);
+}
+
+function DimensionToggle({
+	value,
+	onChange,
+}: {
+	value: boolean;
+	onChange: (is3D: boolean) => void;
+}) {
+	useRegisterFilterPart("dimension", value ? "3D" : "2D");
+
+	return (
+		<div className="inline-flex items-center rounded-full border border-white/[0.08] bg-secondary p-0.5">
+			<button
+				type="button"
+				onClick={() => onChange(false)}
+				className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
+					!value
+						? "bg-primary text-primary-foreground shadow-sm"
+						: "text-muted-foreground hover:text-foreground"
+				}`}
+			>
+				2D
+			</button>
+			<button
+				type="button"
+				onClick={() => onChange(true)}
+				className={`cursor-pointer rounded-full px-3 py-1 text-sm transition-all ${
+					value
+						? "bg-primary text-primary-foreground shadow-sm"
+						: "text-muted-foreground hover:text-foreground"
+				}`}
+			>
+				3D
+			</button>
+		</div>
+	);
+}
+
+const ITEM_COLUMN_LAYOUT: TriStateColumnLayout = {
+	superGroups: [1, 2, 3, 4].map((tier) => ({
+		key: String(tier),
+		label: `Tier ${tier}`,
+	})),
+	columns: [
+		{ key: "weapon", label: "Weapon", color: "rgb(229, 138, 0)" },
+		{ key: "vitality", label: "Vitality", color: "rgb(0, 255, 153)" },
+		{ key: "spirit", label: "Spirit", color: "rgb(0, 221, 255)" },
+	],
+};
+
+function formatItemSelections(
+	selections: Map<number, TriState>,
+): string | null {
+	if (selections.size === 0) return null;
+	const included = [...selections.values()].filter(
+		(v) => v === "included",
+	).length;
+	const excluded = [...selections.values()].filter(
+		(v) => v === "excluded",
+	).length;
+	const parts: string[] = [];
+	if (included > 0) parts.push(`${included} included`);
+	if (excluded > 0) parts.push(`${excluded} excluded`);
+	return `${parts.join(", ")} items`;
+}
+
+function ItemsTriState({
+	selections,
+	onSelectionsChange,
+	label,
+}: {
+	selections: Map<number, TriState>;
+	onSelectionsChange: (selections: Map<number, TriState>) => void;
+	label?: string;
+}) {
+	useRegisterFilterPart("items", formatItemSelections(selections));
+
+	const { data, isLoading } = useQuery(itemUpgradesQueryOptions);
+
+	const options = useMemo(() => {
+		if (!data) return [];
+		return data
+			.filter((i) => !i.disabled && i.shopable && i.shop_image_webp)
+			.sort((a, b) => {
+				if (a.item_tier !== b.item_tier) return a.item_tier - b.item_tier;
+				const slotOrder = ["weapon", "vitality", "spirit"];
+				const slotDiff =
+					slotOrder.indexOf(a.item_slot_type) -
+					slotOrder.indexOf(b.item_slot_type);
+				if (slotDiff !== 0) return slotDiff;
+				return a.name.localeCompare(b.name);
+			})
+			.map((item) => ({
+				id: item.id,
+				label: item.name,
+				icon: (
+					<ItemImage
+						itemId={item.id}
+						className="size-5 shrink-0 object-contain"
+					/>
+				),
+				group: `${item.item_tier}-${item.item_slot_type}`,
+			}));
+	}, [data]);
+
+	if (isLoading) return null;
+
+	return (
+		<TriStateSelector
+			options={options}
+			selections={selections}
+			onSelectionsChange={onSelectionsChange}
+			placeholder="Filter items..."
+			label={label || "Items"}
+			columnLayout={ITEM_COLUMN_LAYOUT}
+		/>
+	);
+}
+
+function SortBy({
+	children,
+	label,
+}: {
+	children: React.ReactNode;
+	label: string | null | undefined;
+}) {
+	useRegisterFilterPart("sortBy", label ?? null);
+	return <>{children}</>;
+}
+
 function SortDirection({
 	value,
 	onChange,
@@ -377,6 +556,10 @@ export const Filter = {
 	PatchOrDate,
 	TimeRange,
 	MatchDuration,
+	HeatmapViewMode,
+	DimensionToggle,
+	ItemsTriState,
+	SortBy,
 	SortDirection,
 	Team,
 };
