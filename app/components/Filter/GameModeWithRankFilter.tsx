@@ -1,8 +1,8 @@
-import { formatGameMode, formatRankRange, useRankLabel } from "./utils";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
 import { RankRangeSelector } from "~/components/selectors/RankRangeSelector";
 
 import { createFilter } from "./createFilter";
+import { formatGameMode, formatRankRange, useRankLabel } from "./utils";
 
 export const GameModeWithRankFilter = createFilter<{
   gameMode: GameMode;

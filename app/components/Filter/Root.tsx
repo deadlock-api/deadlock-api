@@ -1,5 +1,6 @@
-import { FilterDescriptionProvider } from "./FilterDescription";
 import { cn } from "~/lib/utils";
+
+import { FilterDescriptionProvider } from "./FilterDescription";
 
 export function Root({ children, className }: { children: React.ReactNode; className?: string }) {
   return (

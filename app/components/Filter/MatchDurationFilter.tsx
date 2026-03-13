@@ -1,8 +1,8 @@
-import { formatTimeRange } from "./utils";
 import { MatchTimeRangeSelector } from "~/components/selectors/MatchTimeRangeSelector";
 import { MAX_GAME_DURATION_S } from "~/lib/constants";
 
 import { createFilter } from "./createFilter";
+import { formatTimeRange } from "./utils";
 
 export const MatchDurationFilter = createFilter<{
   minTime?: number;

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -18,7 +19,6 @@ import {
   Zap,
 } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
-import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { Link, useLocation } from "react-router";
 
