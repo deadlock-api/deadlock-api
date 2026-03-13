@@ -35,6 +35,14 @@ async function createPostHogWrapper(): Promise<React.ComponentType<{ children: R
     posthogClient.opt_in_capturing();
   }
 
+  // Test if PostHog is reachable (ad blockers often block it). If not, disable it entirely.
+  const apiHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
+  if (apiHost) {
+    fetch(`${apiHost}/decide/?v=3`, { method: "POST", body: "{}" }).catch(() => {
+      posthogClient.opt_out_capturing();
+    });
+  }
+
   return ({ children }) => <PostHogProvider client={posthogClient}>{children}</PostHogProvider>;
 }
 
