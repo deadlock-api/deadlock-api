@@ -459,6 +459,12 @@ pub(super) async fn bulk_metadata(
     let query = build_query(query)?;
     let lines = fetch_lines(&state.ch_client_ro, &query)?;
     let parsed_result = parse_lines(lines).await?;
+    if parsed_result.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "No matches found".to_owned(),
+        ));
+    }
     Ok(Json(parsed_result))
 }
 
