@@ -40,7 +40,7 @@ export default function PlayerScoreboard() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const defaultDateRange = [day().subtract(30, "day"), day()] as const;
+  const defaultDateRange = [day().subtract(30, "day").startOf("day"), day().endOf("day")] as const;
   const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault([...defaultDateRange]));
   const startDate = dateRange[0] ?? defaultDateRange[0];
   const endDate = dateRange[1] ?? defaultDateRange[1];

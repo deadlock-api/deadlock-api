@@ -18,12 +18,14 @@ import {
   Zap,
 } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
+import { prefetchRouteQueries } from "~/lib/prefetch";
 import { cn } from "~/lib/utils";
 
 interface NavLink {
@@ -147,13 +149,18 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
   const { pathname } = useLocation();
   const active = isActive(pathname, link.to);
   const Icon = link.icon;
+  const queryClient = useQueryClient();
+
+  const handleMouseEnter = useCallback(() => {
+    prefetchRouteQueries(link.to, queryClient);
+  }, [link.to, queryClient]);
 
   if (link.special) {
     return (
       <Link
         to={link.to}
-        prefetch="intent"
         onClick={onNavigate}
+        onMouseEnter={handleMouseEnter}
         className={cn(
           "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150",
           "border border-primary/30 bg-primary/15 text-primary hover:bg-primary/25",
@@ -169,8 +176,8 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
   return (
     <Link
       to={link.to}
-      prefetch="intent"
       onClick={onNavigate}
+      onMouseEnter={handleMouseEnter}
       className={cn(
         "flex items-center gap-2.5 rounded-md border-l-2 px-3 py-1.5 text-sm font-medium transition-colors duration-150",
         active
@@ -189,7 +196,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col text-sidebar-foreground">
       {/* Logo */}
       <div className="border-b border-sidebar-border px-4 py-3">
-        <Link to="/" prefetch="intent" onClick={onNavigate} className="flex items-center gap-3">
+        <Link to="/" onClick={onNavigate} className="flex items-center gap-3">
           <img
             src="https://deadlock-api.com/favicon.webp"
             alt="Deadlock API Logo"
