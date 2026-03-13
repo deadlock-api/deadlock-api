@@ -53,8 +53,8 @@ export function formatRankRange(
   labelFn: (rankId: number | null | undefined) => string | null,
   opts?: { defaultMin?: number; defaultMax?: number },
 ): string | null {
-  const isDefaultMin = minRankId == null || minRankId === opts?.defaultMin;
-  const isDefaultMax = maxRankId == null || maxRankId === opts?.defaultMax;
+  const isDefaultMin = minRankId == null || minRankId === (opts?.defaultMin ?? 0);
+  const isDefaultMax = maxRankId == null || maxRankId === (opts?.defaultMax ?? 116);
   if (isDefaultMin && isDefaultMax) return null;
 
   const minLabel = labelFn(minRankId);
