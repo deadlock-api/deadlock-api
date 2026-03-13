@@ -5,7 +5,6 @@ export function createApiClient(timeout: number): AxiosInstance {
     timeout,
     headers: {
       Accept: "application/json",
-      "User-Agent": "DeadlockAPI/1.0.0",
     },
   });
 }
