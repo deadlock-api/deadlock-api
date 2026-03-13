@@ -57,9 +57,9 @@ static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> = LazyLock::new(|| {
 
 /// Maximum number of retry attempts for prioritized account fetches.
 /// Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, etc.
-/// Default: 5 retries.
+/// Default: 10 retries.
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_MAX_RETRIES").map_or(5, |x| {
+    std::env::var("PRIORITIZATION_MAX_RETRIES").map_or(10, |x| {
         x.parse()
             .expect("PRIORITIZATION_MAX_RETRIES must be a number")
     })
@@ -331,7 +331,7 @@ async fn fetch_account_match_history(
     };
     let job_cooldown = Duration::from_millis(*HISTORY_COOLDOWN_MILLIS);
     let soft_cooldown = if is_prioritized {
-        Some(job_cooldown / 2)
+        Some(job_cooldown)
     } else {
         None
     };
