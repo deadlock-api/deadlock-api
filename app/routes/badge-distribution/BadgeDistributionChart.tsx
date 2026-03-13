@@ -137,7 +137,7 @@ export default function BadgeDistributionChart({ badgeDistributionData, ranksDat
   }, [tierCenters, tierData]);
 
   return (
-    <div role="img" aria-label="Rank badge distribution chart showing matches per rank">
+    <div role="img" aria-label="Rank badge distribution chart showing matches per rank" className="h-full w-full">
       <ChartContainer config={{ matches: { label: "Matches" } }} className="h-full w-full">
         <BarChart accessibilityLayer data={chartData}>
           <CartesianGrid vertical={false} />
