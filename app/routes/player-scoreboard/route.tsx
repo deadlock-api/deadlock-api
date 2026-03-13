@@ -15,145 +15,108 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { queryKeys } from "~/queries/query-keys";
 
 import { ScoreboardTable } from "./ScoreboardTable";
-import { SortBySelector } from "./SortBySelector";
 import { ALL_SORT_BY_VALUES, getSortByLabel } from "./sort-options";
+import { SortBySelector } from "./SortBySelector";
 
 export const meta: MetaFunction = () => {
-	return createPageMeta({
-		title: "Player Scoreboard | Deadlock API",
-		description:
-			"View top player scores and performance metrics across the Deadlock community.",
-		path: "/player-scoreboard",
-	});
+  return createPageMeta({
+    title: "Player Scoreboard | Deadlock API",
+    description: "View top player scores and performance metrics across the Deadlock community.",
+    path: "/player-scoreboard",
+  });
 };
 
 export default function PlayerScoreboard() {
-	const [sortBy, setSortBy] = useQueryState(
-		"sort_by",
-		parseAsStringLiteral(
-			ALL_SORT_BY_VALUES as [string, ...string[]],
-		).withDefault("kills"),
-	);
-	const [sortDirection, setSortDirection] = useQueryState(
-		"sort_dir",
-		parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
-	);
-	const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-	const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
-	const [minMatches, setMinMatches] = useQueryState(
-		"min_matches",
-		parseAsInteger.withDefault(0),
-	);
-	const [minRankId, setMinRankId] = useQueryState(
-		"min_rank",
-		parseAsInteger.withDefault(0),
-	);
-	const [maxRankId, setMaxRankId] = useQueryState(
-		"max_rank",
-		parseAsInteger.withDefault(116),
-	);
-	const defaultDateRange = [day().subtract(30, "day"), day()] as const;
-	const [dateRange, setDateRange] = useQueryState(
-		"date_range",
-		parseAsDayjsRange.withDefault([...defaultDateRange]),
-	);
-	const startDate = dateRange[0] ?? defaultDateRange[0];
-	const endDate = dateRange[1] ?? defaultDateRange[1];
+  const [sortBy, setSortBy] = useQueryState(
+    "sort_by",
+    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("kills"),
+  );
+  const [sortDirection, setSortDirection] = useQueryState(
+    "sort_dir",
+    parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
+  );
+  const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
+  const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
+  const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
+  const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
+  const defaultDateRange = [day().subtract(30, "day"), day()] as const;
+  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault([...defaultDateRange]));
+  const startDate = dateRange[0] ?? defaultDateRange[0];
+  const endDate = dateRange[1] ?? defaultDateRange[1];
 
-	const MAX_ENTRIES = 1000;
+  const MAX_ENTRIES = 1000;
 
-	const playerScoreboardQuery = {
-		sortBy: sortBy as PlayerScoreboardSortByEnum,
-		sortDirection: sortDirection as "desc" | "asc",
-		gameMode,
-		heroId: heroId ?? undefined,
-		minMatches,
-		minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
-		maxAverageBadge: gameMode === "street_brawl" ? undefined : maxRankId,
-		minUnixTimestamp: startDate?.unix() ?? 0,
-		maxUnixTimestamp: endDate?.unix(),
-		start: 0,
-		limit: MAX_ENTRIES,
-	};
+  const playerScoreboardQuery = {
+    sortBy: sortBy as PlayerScoreboardSortByEnum,
+    sortDirection: sortDirection as "desc" | "asc",
+    gameMode,
+    heroId: heroId ?? undefined,
+    minMatches,
+    minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
+    maxAverageBadge: gameMode === "street_brawl" ? undefined : maxRankId,
+    minUnixTimestamp: startDate?.unix() ?? 0,
+    maxUnixTimestamp: endDate?.unix(),
+    start: 0,
+    limit: MAX_ENTRIES,
+  };
 
-	const scoreboardQuery = useQuery({
-		queryKey: queryKeys.analytics.playerScoreboard(playerScoreboardQuery),
-		queryFn: async () => {
-			const response = await api.analytics_api.playerScoreboard(
-				playerScoreboardQuery,
-			);
-			return response.data;
-		},
-		staleTime: CACHE_DURATIONS.ONE_HOUR,
-	});
+  const scoreboardQuery = useQuery({
+    queryKey: queryKeys.analytics.playerScoreboard(playerScoreboardQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.playerScoreboard(playerScoreboardQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+  });
 
-	return (
-		<div className="space-y-8">
-			<section className="space-y-4">
-				<div className="text-center">
-					<h1 className="text-3xl font-bold tracking-tight">
-						Player Scoreboard
-					</h1>
-					<p className="mt-1 text-sm text-muted-foreground">
-						Top player performances ranked by various stats
-					</p>
-				</div>
+  return (
+    <div className="space-y-8">
+      <section className="space-y-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Player Scoreboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Top player performances ranked by various stats</p>
+        </div>
 
-				<Filter.Root>
-					<Filter.SortBy label={getSortByLabel(sortBy)}>
-						<SortBySelector value={sortBy} onChange={setSortBy} />
-					</Filter.SortBy>
-					<Filter.SortDirection
-						value={sortDirection}
-						onChange={setSortDirection}
-					/>
-					<Filter.GameMode value={gameMode} onChange={setGameMode} />
-					<Filter.Hero
-						value={heroId}
-						onChange={setHeroId}
-						allowNull
-						label="Hero"
-					/>
-					<Filter.MinMatches
-						value={minMatches}
-						onChange={setMinMatches}
-						min={1}
-					/>
-					{gameMode !== "street_brawl" && (
-						<Filter.RankRange
-							minRank={minRankId}
-							maxRank={maxRankId}
-							onRankChange={(min, max) => {
-								setMinRankId(min);
-								setMaxRankId(max);
-							}}
-						/>
-					)}
-					<Filter.PatchOrDate
-						startDate={startDate}
-						endDate={endDate}
-						onDateChange={(s, e) => setDateRange([s, e])}
-					/>
-				</Filter.Root>
+        <Filter.Root>
+          <Filter.SortBy label={getSortByLabel(sortBy)}>
+            <SortBySelector value={sortBy} onChange={setSortBy} />
+          </Filter.SortBy>
+          <Filter.SortDirection value={sortDirection} onChange={setSortDirection} />
+          <Filter.GameMode value={gameMode} onChange={setGameMode} />
+          <Filter.Hero value={heroId} onChange={setHeroId} allowNull label="Hero" />
+          <Filter.MinMatches value={minMatches} onChange={setMinMatches} min={1} />
+          {gameMode !== "street_brawl" && (
+            <Filter.RankRange
+              minRank={minRankId}
+              maxRank={maxRankId}
+              onRankChange={(min, max) => {
+                setMinRankId(min);
+                setMaxRankId(max);
+              }}
+            />
+          )}
+          <Filter.PatchOrDate startDate={startDate} endDate={endDate} onDateChange={(s, e) => setDateRange([s, e])} />
+        </Filter.Root>
 
-				<div>
-					<QueryRenderer
-						query={scoreboardQuery}
-						loadingFallback={
-							<div className="flex items-center justify-center py-24">
-								<LoadingLogo />
-							</div>
-						}
-						errorFallback={(error) => (
-							<div className="py-8 text-center text-sm text-destructive">
-								Failed to load scoreboard: {error.message}
-							</div>
-						)}
-					>
-						{(data) => <ScoreboardTable entries={data} sortBy={sortBy} />}
-					</QueryRenderer>
-				</div>
-			</section>
-		</div>
-	);
+        <div>
+          <QueryRenderer
+            query={scoreboardQuery}
+            loadingFallback={
+              <div className="flex items-center justify-center py-24">
+                <LoadingLogo />
+              </div>
+            }
+            errorFallback={(error) => (
+              <div className="py-8 text-center text-sm text-destructive">
+                Failed to load scoreboard: {error.message}
+              </div>
+            )}
+          >
+            {(data) => <ScoreboardTable entries={data} sortBy={sortBy} />}
+          </QueryRenderer>
+        </div>
+      </section>
+    </div>
+  );
 }
