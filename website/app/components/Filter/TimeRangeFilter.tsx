@@ -1,7 +1,7 @@
-import { formatTimeRange } from "./utils";
 import { MatchTimeRangeSelector } from "~/components/selectors/MatchTimeRangeSelector";
 
 import { createFilter } from "./createFilter";
+import { formatTimeRange } from "./utils";
 
 export const TimeRangeFilter = createFilter<{
   minTime?: number;

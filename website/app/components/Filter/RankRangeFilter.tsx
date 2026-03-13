@@ -1,7 +1,7 @@
-import { formatRankRange, useRankLabel } from "./utils";
 import { RankRangeSelector } from "~/components/selectors/RankRangeSelector";
 
 import { createFilter } from "./createFilter";
+import { formatRankRange, useRankLabel } from "./utils";
 
 export const RankRangeFilter = createFilter<{
   minRank: number;

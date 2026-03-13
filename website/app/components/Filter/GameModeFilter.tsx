@@ -1,7 +1,7 @@
-import { formatGameMode } from "./utils";
 import { type GameMode, GameModeSelector } from "~/components/selectors/GameModeSelector";
 
 import { createFilter } from "./createFilter";
+import { formatGameMode } from "./utils";
 
 export const GameModeFilter = createFilter<{
   value: GameMode;

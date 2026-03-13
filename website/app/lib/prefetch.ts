@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { day } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 import { getDefaultRegion } from "~/lib/region";
+import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -11,7 +12,6 @@ import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
-import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 type PrefetchFn = (queryClient: QueryClient) => void;
