@@ -8,6 +8,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
+import { day } from "~/dayjs";
 import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -28,7 +29,7 @@ export const meta: MetaFunction = () => {
 export default function PlayerScoreboard() {
   const [sortBy, setSortBy] = useQueryState(
     "sort_by",
-    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("matches"),
+    parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("kills"),
   );
   const [sortDirection, setSortDirection] = useQueryState(
     "sort_dir",
@@ -39,9 +40,10 @@ export default function PlayerScoreboard() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange);
-  const startDate = dateRange?.[0];
-  const endDate = dateRange?.[1];
+  const defaultDateRange = [day().subtract(30, "day"), day()] as const;
+  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault([...defaultDateRange]));
+  const startDate = dateRange[0] ?? defaultDateRange[0];
+  const endDate = dateRange[1] ?? defaultDateRange[1];
 
   const MAX_ENTRIES = 1000;
 
