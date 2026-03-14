@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
 
@@ -13,24 +13,22 @@ interface GuessInputProps {
 
 export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YOUR GUESS..." }: GuessInputProps) {
   const [value, setValue] = useState("");
-  const [results, setResults] = useState<typeof options>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fuse = useMemo(() => new Fuse(options, { keys: ["name"], threshold: 0.3 }), [options]);
 
-  useEffect(() => {
-    if (value.length > 0) {
-      const hits = fuse.search(value, { limit: 6 }).map((r) => r.item);
-      setResults(hits);
-      setShowDropdown(hits.length > 0);
-      setSelectedIndex(0);
-    } else {
-      setResults([]);
-      setShowDropdown(false);
-    }
-  }, [value, fuse]);
+  const results = useMemo(
+    () => (value.length > 0 ? fuse.search(value, { limit: 6 }).map((r) => r.item) : []),
+    [value, fuse],
+  );
+
+  function handleValueChange(newValue: string) {
+    setValue(newValue);
+    setSelectedIndex(0);
+    setShowDropdown(newValue.length > 0);
+  }
 
   function handleSubmit(item: (typeof options)[0]) {
     onSubmit(item.id, item.name);
@@ -61,7 +59,7 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
           ref={inputRef}
           type="text"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => handleValueChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setShowDropdown(true)}
           onBlur={() => setTimeout(() => setShowDropdown(false), 150)}

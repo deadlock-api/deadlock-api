@@ -175,18 +175,14 @@ function useAudioPlayer(url: string | null) {
     }
   });
   const animRef = useRef<number>(0);
-  const prevUrlRef = useRef(url);
+  const [prevUrl, setPrevUrl] = useState(url);
 
-  // Reset state when URL changes
-  if (prevUrlRef.current !== url) {
-    prevUrlRef.current = url;
+  // Reset state when URL changes (React-recommended pattern for adjusting state during render)
+  if (prevUrl !== url) {
+    setPrevUrl(url);
     setIsPlaying(false);
     setProgress(0);
     setDuration(0);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
   }
 
   // Sync volume to audio element
@@ -206,7 +202,7 @@ function useAudioPlayer(url: string | null) {
     }
   }, []);
 
-  const updateProgress = useCallback(() => {
+  function updateProgress() {
     const audio = audioRef.current;
     if (audio?.duration) {
       setProgress(audio.currentTime / audio.duration);
@@ -214,7 +210,7 @@ function useAudioPlayer(url: string | null) {
     if (audioRef.current && !audioRef.current.paused) {
       animRef.current = requestAnimationFrame(updateProgress);
     }
-  }, []);
+  }
 
   const togglePlayPause = useCallback(() => {
     const audio = audioRef.current;
@@ -230,7 +226,7 @@ function useAudioPlayer(url: string | null) {
       setIsPlaying(false);
       cancelAnimationFrame(animRef.current);
     }
-  }, [updateProgress, volume]);
+  }, [volume]);
 
   const handleEnded = useCallback(() => {
     setIsPlaying(false);
@@ -398,14 +394,16 @@ export default function GuessSound() {
         className="flex flex-col items-center gap-4"
       >
         {/* Hidden audio element */}
-        {/* biome-ignore lint/a11y/useMediaCaption: Game sound effect, no captions needed */}
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption -- Game sound effect used as puzzle content */}
         <audio
           ref={audioRef}
           src={dailySound.url}
           preload="auto"
           onEnded={handleEnded}
           onLoadedMetadata={handleLoadedMetadata}
-        />
+        >
+          <track kind="captions" />
+        </audio>
 
         {/* Play/Pause button */}
         <motion.button
@@ -505,11 +503,11 @@ export default function GuessSound() {
         <div className="space-y-1.5">
           <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
           <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess, i) => {
+            {gameState.guesses.map((guess) => {
               const isCorrect = guess.toLowerCase() === answerHero.name.toLowerCase();
               return (
                 <span
-                  key={`${guess}-${i}`}
+                  key={guess}
                   className={cn(
                     "border px-2.5 py-1 font-mono text-xs",
                     isCorrect

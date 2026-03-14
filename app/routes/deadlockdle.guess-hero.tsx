@@ -180,11 +180,11 @@ export default function GuessHero() {
         <div className="space-y-1.5">
           <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
           <div className="flex flex-wrap gap-2">
-            {gameState.guesses.map((guess, i) => {
+            {gameState.guesses.map((guess) => {
               const isCorrect = guess.toLowerCase() === dailyHero.name.toLowerCase();
               return (
                 <span
-                  key={`${guess}-${i}`}
+                  key={guess}
                   className={cn(
                     "border px-2.5 py-1 font-mono text-xs",
                     isCorrect
