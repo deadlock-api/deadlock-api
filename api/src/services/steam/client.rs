@@ -306,6 +306,17 @@ pub(crate) async fn get_protected_users_cached(
     Ok(protected_users)
 }
 
+#[derive(serde::Deserialize)]
+struct SteamClientVersionResponse {
+    result: SteamClientVersionResult,
+}
+
+#[derive(serde::Deserialize)]
+struct SteamClientVersionResult {
+    success: bool,
+    active_version: Option<u32>,
+}
+
 #[cached(
     ty = "TimedCache<u8, u32>",
     create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
@@ -314,6 +325,38 @@ pub(crate) async fn get_protected_users_cached(
     sync_writes = "default"
 )]
 async fn get_current_client_version(http_client: &reqwest::Client) -> APIResult<u32> {
+    // Try the official Steam API first
+    if let Ok(version) = get_client_version_from_steam_api(http_client).await {
+        return Ok(version);
+    }
+
+    // Fall back to GitHub repo
+    debug!("Steam API failed, falling back to GitHub for client version");
+    get_client_version_from_github(http_client).await
+}
+
+async fn get_client_version_from_steam_api(http_client: &reqwest::Client) -> APIResult<u32> {
+    let response: SteamClientVersionResponse = http_client
+        .get("https://api.steampowered.com/IGCVersion_1422450/GetClientVersion/v1/")
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await
+        .and_then(Response::error_for_status)
+        .map_err(|e| APIError::internal(format!("Failed to fetch client version from Steam API: {e}")))?
+        .json()
+        .await
+        .map_err(|e| APIError::internal(format!("Failed to parse Steam API response: {e}")))?;
+
+    if !response.result.success {
+        return Err(APIError::internal("Steam API returned success=false".to_owned()));
+    }
+
+    response.result.active_version.ok_or_else(|| {
+        APIError::internal("Steam API response missing active_version".to_owned())
+    })
+}
+
+async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIResult<u32> {
     let steam_info = http_client
         .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
         .send()
