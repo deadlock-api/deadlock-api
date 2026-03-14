@@ -1,6 +1,6 @@
+import { parseAsBoolean, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 import type { MetaFunction } from "react-router";
-import { parseAsBoolean, useQueryState } from "nuqs";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
