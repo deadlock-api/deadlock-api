@@ -183,14 +183,14 @@ export function HeroStatsGroupedByType({
 				const prevTotalWins = prevHeroesInGroup.reduce((acc, row) => acc + row.wins, 0);
 				if (prevTotalMatches > 0) {
 					prevWinrate = prevTotalWins / prevTotalMatches;
-					prevPickrate = pickrateMultiplier * (prevTotalMatches / prevSumMatches);
+					prevPickrate = prevTotalMatches / prevSumMatches;
 				}
 			}
 
 			return {
 				type,
 				winrate: totalMatches > 0 ? totalWins / totalMatches : 0,
-				pickrate: sumMatches > 0 ? pickrateMultiplier * (totalMatches / sumMatches) : 0,
+				pickrate: sumMatches > 0 ? totalMatches / sumMatches : 0,
 				totalMatches,
 				totalWins,
 				prevWinrate,
