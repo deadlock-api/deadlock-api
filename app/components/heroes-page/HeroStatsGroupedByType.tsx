@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
+import { Crosshair, Swords, Sparkles, type LucideIcon, Skull } from "lucide-react";
 import { useMemo } from "react";
 
 import { HeroImage } from "~/components/HeroImage";
@@ -15,11 +16,11 @@ import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
-const HERO_TYPE_CONFIG = {
-	assassin: { label: "Assassin", color: "#a855f7" },
-	brawler: { label: "Brawler", color: "#ef4444" },
-	marksman: { label: "Marksman", color: "#22c55e" },
-	mystic: { label: "Mystic", color: "#3b82f6" },
+const HERO_TYPE_CONFIG: Record<string, { label: string; color: string; icon: LucideIcon }> = {
+	assassin: { label: "Assassin", color: "#a855f7", icon: Skull },
+	brawler: { label: "Brawler", color: "#ef4444", icon: Swords },
+	marksman: { label: "Marksman", color: "#22c55e", icon: Crosshair },
+	mystic: { label: "Mystic", color: "#3b82f6", icon: Sparkles },
 } as const;
 
 type HeroType = keyof typeof HERO_TYPE_CONFIG;
@@ -224,7 +225,7 @@ export function HeroStatsGroupedByType({
 					<div key={group.type} className="overflow-hidden rounded-lg border border-border">
 						<div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-muted/50 px-4 py-3">
 							<div className="flex items-center gap-2">
-								<div className="size-3 rounded-full" style={{ backgroundColor: config.color }} />
+								<config.icon className="size-5" style={{ color: config.color }} />
 								<h3 className="text-lg font-semibold">{config.label}</h3>
 								<span className="text-sm text-muted-foreground">({heroesInGroup.length} heroes)</span>
 							</div>
