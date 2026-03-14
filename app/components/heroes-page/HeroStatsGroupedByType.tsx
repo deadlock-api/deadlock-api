@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
-import { getPickrateMultiplier } from "~/lib/constants";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -108,8 +107,6 @@ export function HeroStatsGroupedByType({
 
 	const { data: heroes, isLoading: isLoadingHeroes } = useQuery(heroesQueryOptions);
 
-	const pickrateMultiplier = getPickrateMultiplier(gameMode);
-
 	const heroTypeMap = useMemo(() => {
 		if (!heroes) return new Map<number, HeroType>();
 		const map = new Map<number, HeroType>();
@@ -124,17 +121,15 @@ export function HeroStatsGroupedByType({
 	const prevStatsMap = useMemo(() => {
 		if (!prevHeroData) return undefined;
 		const prevSumMatches = prevHeroData.reduce((acc, row) => acc + row.matches, 0);
-		const prevMaxMatches = Math.max(...prevHeroData.map((item) => item.matches));
-		const map = new Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>();
+		const map = new Map<number, { winrate: number; pickrate: number }>();
 		for (const row of prevHeroData) {
 			map.set(row.hero_id, {
 				winrate: row.wins / row.matches,
-				pickrate: pickrateMultiplier * (row.matches / prevSumMatches),
-				normalizedPickrate: row.matches / prevMaxMatches,
+				pickrate: row.matches / prevSumMatches,
 			});
 		}
 		return map;
-	}, [prevHeroData, pickrateMultiplier]);
+	}, [prevHeroData]);
 
 	const { groupedData, groupStats, minWinrate, maxWinrate, minMatches, maxMatches, sumMatches } = useMemo(() => {
 		if (!heroData || !heroes) {
@@ -207,7 +202,7 @@ export function HeroStatsGroupedByType({
 			maxMatches: maxMatchesVal,
 			sumMatches,
 		};
-	}, [heroData, heroes, heroTypeMap, sortBy, prevHeroData, pickrateMultiplier]);
+	}, [heroData, heroes, heroTypeMap, sortBy, prevHeroData]);
 
 	if (isLoadingStats || isLoadingHeroes) {
 		return (
@@ -248,7 +243,7 @@ export function HeroStatsGroupedByType({
 								)}
 								{columns.includes("pickRate") && (
 									<div className="flex items-center gap-1.5">
-										<span className="text-muted-foreground">Pick Rate:</span>
+										<span className="text-muted-foreground">Pick Share:</span>
 										<span className="font-semibold">{(group.pickrate * 100).toFixed(1)}%</span>
 										{pickrateDelta !== undefined && pickrateDelta !== 0 && (
 											<span className={cn("text-xs font-medium", pickrateDelta > 0 ? "text-green-500" : "text-red-500")}>
@@ -272,19 +267,7 @@ export function HeroStatsGroupedByType({
 									<TableHead className="text-center">#</TableHead>
 									<TableHead>Hero</TableHead>
 									{columns.includes("winRate") && <TableHead className="text-center">Win Rate</TableHead>}
-									{columns.includes("pickRate") && (
-										<TableHead className="text-center">
-											{minHeroMatchesTotal || minHeroMatches ? (
-												<>
-													Pick Rate
-													<br />
-													(Normalized)
-												</>
-											) : (
-												"Pick Rate"
-											)}
-										</TableHead>
-									)}
+									{columns.includes("pickRate") && <TableHead className="text-center">Pick Share</TableHead>}
 									{columns.includes("KDA") && <TableHead className="text-center">Kills/Deaths/Assists</TableHead>}
 									{columns.includes("totalMatches") && <TableHead className="text-center">Total Matches</TableHead>}
 								</TableRow>
@@ -346,16 +329,10 @@ export function HeroStatsGroupedByType({
 													max={maxMatches}
 													value={row.matches}
 													color={"#22d3ee"}
-													label={
-														minHeroMatchesTotal || minHeroMatches
-															? `${Math.round((row.matches / maxMatches) * 100).toFixed(0)}% `
-															: `${Math.round(pickrateMultiplier * (row.matches / sumMatches) * 100).toFixed(0)}% `
-													}
+													label={`${((row.matches / sumMatches) * 100).toFixed(1)}% `}
 													delta={
 														prevStatsMap?.get(row.hero_id) !== undefined
-															? minHeroMatchesTotal || minHeroMatches
-																? row.matches / maxMatches - prevStatsMap.get(row.hero_id)!.normalizedPickrate
-																: pickrateMultiplier * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
+															? row.matches / sumMatches - prevStatsMap.get(row.hero_id)!.pickrate
 															: undefined
 													}
 													tooltip={
@@ -365,25 +342,16 @@ export function HeroStatsGroupedByType({
 																<span className="font-medium">{row.matches.toLocaleString()}</span>
 															</div>
 															<div className="flex justify-between gap-4">
-																<span className="text-muted-foreground">Pick rate</span>
+																<span className="text-muted-foreground">Pick share</span>
 																<span className="font-medium">
-																	{(minHeroMatchesTotal || minHeroMatches
-																		? (row.matches / maxMatches) * 100
-																		: pickrateMultiplier * (row.matches / sumMatches) * 100
-																	).toFixed(2)}
-																	%
+																	{((row.matches / sumMatches) * 100).toFixed(2)}%
 																</span>
 															</div>
 															{prevStatsMap?.get(row.hero_id) !== undefined && (
 																<div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
 																	<span className="text-muted-foreground">Previous</span>
 																	<span className="font-medium">
-																		{(
-																			(minHeroMatchesTotal || minHeroMatches
-																				? prevStatsMap.get(row.hero_id)!.normalizedPickrate
-																				: prevStatsMap.get(row.hero_id)!.pickrate) * 100
-																		).toFixed(2)}
-																		%
+																		{(prevStatsMap.get(row.hero_id)!.pickrate * 100).toFixed(2)}%
 																	</span>
 																</div>
 															)}
