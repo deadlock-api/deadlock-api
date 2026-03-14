@@ -1,6 +1,8 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
+
 import { Button } from "~/components/ui/button";
+
 import { getDayNumber } from "../lib/seed";
 import type { GameMode, GameStatus } from "../lib/types";
 
@@ -51,15 +53,15 @@ export function ShareButton({ mode, date, guesses, maxAttempts, status }: ShareB
     <Button
       onClick={handleCopy}
       variant="outline"
-      className="font-mono uppercase tracking-wider text-xs border-primary/40 hover:bg-primary/10 hover:border-primary/60"
+      className="border-primary/40 font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
     >
       {copied ? (
         <>
-          <Check className="w-3.5 h-3.5 mr-1.5" /> Copied
+          <Check className="mr-1.5 h-3.5 w-3.5" /> Copied
         </>
       ) : (
         <>
-          <Copy className="w-3.5 h-3.5 mr-1.5" /> Share Result
+          <Copy className="mr-1.5 h-3.5 w-3.5" /> Share Result
         </>
       )}
     </Button>

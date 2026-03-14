@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { Link } from "react-router";
+
 import { cn } from "~/lib/utils";
-import type { GameMode } from "../lib/types";
+
 import { getTodayDate } from "../lib/seed";
+import type { GameMode } from "../lib/types";
 
 interface GameCardProps {
   mode: GameMode;
@@ -50,20 +52,20 @@ export function GameCard({ mode, title, description, icon: Icon, path }: GameCar
   const status = getDailyStatus(mode);
 
   return (
-    <Link to={path} className="block group">
+    <Link to={path} className="group block">
       <motion.div
         whileHover={{ y: -2 }}
         whileTap={{ scale: 0.97, transition: { duration: 0 } }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
         className={cn(
-          "relative border bg-[#0d1117]/60 backdrop-blur-sm p-5 transition-colors duration-200",
+          "relative border bg-[#0d1117]/60 p-5 backdrop-blur-sm transition-colors duration-200",
           STATUS_STYLES[status],
         )}
       >
         {STATUS_LABELS[status] && (
           <span
             className={cn(
-              "absolute top-3 right-3 text-[9px] font-mono font-bold uppercase tracking-widest",
+              "absolute top-3 right-3 font-mono text-[9px] font-bold tracking-widest uppercase",
               STATUS_COLORS[status],
             )}
           >
@@ -72,12 +74,12 @@ export function GameCard({ mode, title, description, icon: Icon, path }: GameCar
         )}
 
         <div className="flex items-start gap-4">
-          <div className="p-2.5 border border-muted-foreground/15 bg-black/30 group-hover:border-primary/30 transition-colors">
-            <Icon className="w-5 h-5 text-muted-foreground/60 group-hover:text-primary transition-colors" />
+          <div className="border border-muted-foreground/15 bg-black/30 p-2.5 transition-colors group-hover:border-primary/30">
+            <Icon className="h-5 w-5 text-muted-foreground/60 transition-colors group-hover:text-primary" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-game text-sm uppercase tracking-wide">{title}</h3>
-            <p className="text-xs text-muted-foreground/50 mt-1 leading-relaxed">{description}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-game text-sm tracking-wide uppercase">{title}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground/50">{description}</p>
           </div>
         </div>
       </motion.div>

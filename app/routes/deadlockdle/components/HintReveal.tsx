@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+
 import { cn } from "~/lib/utils";
 
 interface Hint {
@@ -26,7 +27,7 @@ export function HintReveal({ hints, revealedCount, className }: HintRevealProps)
             transition={{ duration: 0.25, delay: i === revealedCount - 1 ? 0.1 : 0 }}
             className="flex items-baseline gap-2 text-sm"
           >
-            <span className="font-mono text-[10px] uppercase tracking-wider text-primary/60 shrink-0">
+            <span className="shrink-0 font-mono text-[10px] tracking-wider text-primary/60 uppercase">
               [{hint.label}]
             </span>
             <span className="text-foreground/80">{hint.value}</span>

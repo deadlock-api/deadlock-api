@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroV2, UpgradeV2 } from "assets_deadlock_api_client/api";
 import axios from "axios";
+
 import { assetsApi } from "~/lib/assets-api";
 import { ASSETS_ORIGIN } from "~/lib/constants";
 

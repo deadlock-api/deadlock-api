@@ -38,7 +38,7 @@ export function GuessFeedback({ type }: GuessFeedbackProps) {
             className="absolute inset-0 flex items-center justify-center"
           >
             <span
-              className={`text-3xl font-game uppercase tracking-wider ${
+              className={`font-game text-3xl tracking-wider uppercase ${
                 type === "correct" ? "text-green-400" : "text-primary"
               }`}
               style={{

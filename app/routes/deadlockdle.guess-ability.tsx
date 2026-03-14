@@ -2,9 +2,11 @@ import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client/api";
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
@@ -115,7 +117,7 @@ export default function GuessAbility() {
     const colorHint = uiColor ? (
       <span className="inline-flex items-center gap-2">
         <span
-          className="inline-block w-5 h-5 border border-muted-foreground/30"
+          className="inline-block h-5 w-5 border border-muted-foreground/30"
           style={{
             backgroundColor: `rgb(${uiColor[0]}, ${uiColor[1]}, ${uiColor[2]})`,
           }}
@@ -154,8 +156,8 @@ export default function GuessAbility() {
 
   if (isLoading || !dailyEntry) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <LoadingLogo className="w-16 h-16 animate-pulse" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <LoadingLogo className="h-16 w-16 animate-pulse" />
       </div>
     );
   }
@@ -187,14 +189,14 @@ export default function GuessAbility() {
             <img
               src={abilityImgSrc}
               alt="Mystery ability"
-              className="w-[160px] h-[160px] object-contain"
+              className="h-[160px] w-[160px] object-contain"
               draggable={false}
             />
           </picture>
           {isFinished && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-center mt-2">
-              <p className="text-sm font-mono font-semibold text-foreground">{hero.name}</p>
-              <p className="text-xs font-mono text-muted-foreground/50">{ability.name}</p>
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-center">
+              <p className="font-mono text-sm font-semibold text-foreground">{hero.name}</p>
+              <p className="font-mono text-xs text-muted-foreground/50">{ability.name}</p>
             </motion.div>
           )}
         </div>
@@ -216,7 +218,7 @@ export default function GuessAbility() {
       {/* Previous guesses */}
       {gameState.guesses.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">Previous Guesses</p>
+          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
           <div className="flex flex-wrap gap-2">
             {gameState.guesses.map((guess, i) => {
               const isCorrect = guess.toLowerCase() === hero.name.toLowerCase();
@@ -224,7 +226,7 @@ export default function GuessAbility() {
                 <span
                   key={`${guess}-${i}`}
                   className={cn(
-                    "px-2.5 py-1 text-xs font-mono border",
+                    "border px-2.5 py-1 font-mono text-xs",
                     isCorrect
                       ? "border-green-500/40 bg-green-500/10 text-green-400"
                       : "border-primary/20 bg-primary/5 text-primary/70",

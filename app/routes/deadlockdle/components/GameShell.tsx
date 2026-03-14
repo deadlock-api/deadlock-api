@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
+
 import { AttemptsIndicator } from "./AttemptsIndicator";
 
 interface GameShellProps {
@@ -27,21 +28,21 @@ export function GameShell({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="max-w-5xl mx-auto px-4 py-8"
+      className="mx-auto max-w-5xl px-4 py-8"
     >
       <div className="mb-6">
         <Link
           to="/deadlockdle"
-          className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-muted-foreground/50 hover:text-primary transition-colors mb-4"
+          className="mb-4 inline-flex items-center gap-1.5 font-mono text-xs tracking-wider text-muted-foreground/50 uppercase transition-colors hover:text-primary"
         >
-          <ArrowLeft className="w-3 h-3" />
+          <ArrowLeft className="h-3 w-3" />
           Back to Hub
         </Link>
 
-        <h1 className="text-2xl font-game tracking-tight uppercase bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text text-transparent">
+        <h1 className="bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text font-game text-2xl tracking-tight text-transparent uppercase">
           {title}
         </h1>
-        {subtitle && <p className="text-sm text-muted-foreground/60 mt-1 font-mono">{subtitle}</p>}
+        {subtitle && <p className="mt-1 font-mono text-sm text-muted-foreground/60">{subtitle}</p>}
 
         {!hideAttempts && (
           <div className="mt-3">

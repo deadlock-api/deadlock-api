@@ -1,6 +1,7 @@
-import Fuse from "fuse.js";
 import { motion } from "framer-motion";
+import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import { cn } from "~/lib/utils";
 
 interface GuessInputProps {
@@ -54,8 +55,8 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
 
   return (
     <div className="relative w-full max-w-md">
-      <div className="flex items-center border border-muted-foreground/30 bg-black/40 backdrop-blur-sm focus-within:border-primary/60 focus-within:shadow-[0_0_8px_rgba(250,68,84,0.15)] transition-all">
-        <span className="pl-3 text-primary/60 font-mono text-sm select-none">{">"}</span>
+      <div className="flex items-center border border-muted-foreground/30 bg-black/40 backdrop-blur-sm transition-all focus-within:border-primary/60 focus-within:shadow-[0_0_8px_rgba(250,68,84,0.15)]">
+        <span className="pl-3 font-mono text-sm text-primary/60 select-none">{">"}</span>
         <input
           ref={inputRef}
           type="text"
@@ -66,13 +67,13 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
           onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
           disabled={disabled}
           placeholder={placeholder}
-          className="w-full bg-transparent px-2 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground/30 outline-none disabled:opacity-30"
+          className="w-full bg-transparent px-2 py-2.5 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground/30 disabled:opacity-30"
           autoComplete="off"
         />
       </div>
 
       {showDropdown && (
-        <div className="absolute z-50 mt-1 w-full border border-muted-foreground/20 bg-[#0d1117]/95 backdrop-blur-sm shadow-lg">
+        <div className="absolute z-50 mt-1 w-full border border-muted-foreground/20 bg-[#0d1117]/95 shadow-lg backdrop-blur-sm">
           {results.map((item, i) => (
             <motion.button
               key={item.id}
@@ -82,7 +83,7 @@ export function GuessInput({ options, onSubmit, disabled, placeholder = "TYPE YO
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSubmit(item)}
               className={cn(
-                "w-full text-left px-3 py-2 text-sm font-mono transition-colors",
+                "w-full px-3 py-2 text-left font-mono text-sm transition-colors",
                 i === selectedIndex ? "bg-primary/15 text-primary" : "text-foreground/70 hover:bg-primary/10",
               )}
             >

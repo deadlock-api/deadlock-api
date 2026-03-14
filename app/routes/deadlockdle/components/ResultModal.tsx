@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useCountdown } from "../lib/use-countdown";
+
 import type { GameMode, GameStatus, StreakState } from "../lib/types";
+import { useCountdown } from "../lib/use-countdown";
 import { ShareButton } from "./ShareButton";
 
 interface ResultModalProps {
@@ -25,22 +26,22 @@ export function ResultModal({ open, status, answer, mode, date, guesses, maxAtte
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="mt-8 border border-muted-foreground/20 bg-[#0d1117]/80 backdrop-blur-sm p-6"
+          className="mt-8 border border-muted-foreground/20 bg-[#0d1117]/80 p-6 backdrop-blur-sm"
         >
-          <div className="text-center mb-5">
+          <div className="mb-5 text-center">
             <p
-              className={`text-lg font-game uppercase tracking-wider ${
+              className={`font-game text-lg tracking-wider uppercase ${
                 status === "won" ? "text-green-400" : "text-primary"
               }`}
             >
               {status === "won" ? "TARGET ELIMINATED" : "MISSION FAILED"}
             </p>
-            <p className="text-sm text-muted-foreground/60 font-mono mt-1">
-              The answer was <span className="text-foreground font-semibold">{answer}</span>
+            <p className="mt-1 font-mono text-sm text-muted-foreground/60">
+              The answer was <span className="font-semibold text-foreground">{answer}</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="mb-5 grid grid-cols-4 gap-3">
             {[
               { label: "Played", value: streakState.gamesPlayed },
               {
@@ -52,15 +53,15 @@ export function ResultModal({ open, status, answer, mode, date, guesses, maxAtte
               { label: "Best", value: streakState.maxStreak },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
-                <p className="text-xl font-bold font-mono">{stat.value}</p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50">{stat.label}</p>
+                <p className="font-mono text-xl font-bold">{stat.value}</p>
+                <p className="text-[10px] tracking-wider text-muted-foreground/50 uppercase">{stat.label}</p>
               </div>
             ))}
           </div>
 
-          <div className="text-center mb-5 py-3 border-t border-b border-muted-foreground/10">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1">Next Puzzle</p>
-            <p className="text-lg font-mono font-bold tracking-widest">{countdown}</p>
+          <div className="mb-5 border-t border-b border-muted-foreground/10 py-3 text-center">
+            <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Puzzle</p>
+            <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
           </div>
 
           <div className="flex justify-center">

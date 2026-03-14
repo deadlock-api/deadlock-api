@@ -1,7 +1,9 @@
-import { Crosshair, Ear, HelpCircle, Puzzle, ShoppingBag, Swords } from "lucide-react";
 import { motion } from "framer-motion";
+import { Crosshair, Ear, HelpCircle, Puzzle, ShoppingBag, Swords } from "lucide-react";
 import type { MetaFunction } from "react-router";
+
 import { createPageMeta } from "~/lib/meta";
+
 import { GameCard } from "./deadlockdle/components/GameCard";
 import { getDayNumber, getTodayDate } from "./deadlockdle/lib/seed";
 
@@ -67,20 +69,20 @@ export default function DeadlockdleHub() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="max-w-5xl mx-auto px-4 py-8"
+      className="mx-auto max-w-5xl px-4 py-8"
     >
-      <div className="flex justify-center mb-8">
+      <div className="mb-8 flex justify-center">
         <div className="relative inline-block">
-          <h1 className="text-6xl lg:text-7xl font-game tracking-tight uppercase bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text text-transparent">
+          <h1 className="bg-gradient-to-b from-foreground to-foreground/50 bg-clip-text font-game text-6xl tracking-tight text-transparent uppercase lg:text-7xl">
             Deadlockdle
           </h1>
-          <span className="absolute -top-3 -right-10 text-lg font-game tracking-tight bg-gradient-to-b from-primary to-primary/40 bg-clip-text text-transparent">
+          <span className="absolute -top-3 -right-10 bg-gradient-to-b from-primary to-primary/40 bg-clip-text font-game text-lg tracking-tight text-transparent">
             Day {dayNum}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {GAMES.map((game, i) => (
           <motion.div
             key={game.mode}

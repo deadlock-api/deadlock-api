@@ -2,10 +2,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { filterShopableItems, useItems } from "./deadlockdle/lib/queries";
 import { getDayNumber, getModeSeed, getTodayDate, seededRandom, seededShuffle } from "./deadlockdle/lib/seed";
@@ -194,8 +196,8 @@ export default function ItemStatsQuiz() {
 
   if (isLoading || dailyItems.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <LoadingLogo className="w-16 h-16 animate-pulse" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <LoadingLogo className="h-16 w-16 animate-pulse" />
       </div>
     );
   }
@@ -216,11 +218,11 @@ export default function ItemStatsQuiz() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            className="text-center py-4 border border-muted-foreground/20 bg-[#0d1117]/80 backdrop-blur-sm"
+            className="border border-muted-foreground/20 bg-[#0d1117]/80 py-4 text-center backdrop-blur-sm"
           >
             <p
               className={cn(
-                "text-3xl font-bold font-mono tracking-wider",
+                "font-mono text-3xl font-bold tracking-wider",
                 state.score >= TOTAL_FIELDS * 0.8
                   ? "text-green-400"
                   : state.score >= TOTAL_FIELDS * 0.5
@@ -230,7 +232,7 @@ export default function ItemStatsQuiz() {
             >
               {state.score}/{state.totalFields}
             </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mt-1">Correct Answers</p>
+            <p className="mt-1 text-[10px] tracking-wider text-muted-foreground/50 uppercase">Correct Answers</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -252,32 +254,30 @@ export default function ItemStatsQuiz() {
                 delay: index * 0.08,
                 ease: "easeOut",
               }}
-              className="border border-muted-foreground/20 bg-[#0d1117]/60 backdrop-blur-sm p-4"
+              className="border border-muted-foreground/20 bg-[#0d1117]/60 p-4 backdrop-blur-sm"
             >
               {/* Item header: image + name */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="shrink-0 w-16 h-16 flex items-center justify-center bg-black/30 border border-muted-foreground/10">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center border border-muted-foreground/10 bg-black/30">
                   <picture>
                     {item.shop_image_webp && <source srcSet={item.shop_image_webp} type="image/webp" />}
                     {item.shop_image && <source srcSet={item.shop_image} type="image/png" />}
-                    <img src={imgSrc} alt={item.name} className="w-12 h-12 object-contain" draggable={false} />
+                    <img src={imgSrc} alt={item.name} className="h-12 w-12 object-contain" draggable={false} />
                   </picture>
                 </div>
                 <div>
-                  <p className="font-bold text-sm tracking-tight">{item.name}</p>
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">
+                  <p className="text-sm font-bold tracking-tight">{item.name}</p>
+                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">
                     Item {index + 1} of {ITEMS_COUNT}
                   </p>
                 </div>
               </div>
 
               {/* Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {/* Active/Passive selector */}
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">
-                    Activation
-                  </p>
+                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">Activation</p>
                   <div className="flex gap-1">
                     {([true, false] as const).map((isActive) => {
                       const label = isActive ? "Active" : "Passive";
@@ -294,7 +294,7 @@ export default function ItemStatsQuiz() {
                           onClick={() => setAnswer(item.id, "active", isActive)}
                           disabled={state.submitted}
                           className={cn(
-                            "flex-1 py-2 text-[11px] font-mono font-semibold border transition-colors",
+                            "flex-1 border py-2 font-mono text-[11px] font-semibold transition-colors",
                             "disabled:cursor-default",
                             result
                               ? isCorrect
@@ -313,7 +313,7 @@ export default function ItemStatsQuiz() {
                     })}
                   </div>
                   {result && !result.active && (
-                    <p className="text-[10px] font-mono text-red-400/80">
+                    <p className="font-mono text-[10px] text-red-400/80">
                       Correct: {item.is_active_item ? "Active" : "Passive"}
                     </p>
                   )}
@@ -321,7 +321,7 @@ export default function ItemStatsQuiz() {
 
                 {/* Tier selector */}
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">Tier</p>
+                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">Tier</p>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4].map((tier) => {
                       const isSelected = answer.tier === tier;
@@ -337,7 +337,7 @@ export default function ItemStatsQuiz() {
                           onClick={() => setAnswer(item.id, "tier", tier)}
                           disabled={state.submitted}
                           className={cn(
-                            "flex-1 py-2 text-sm font-mono font-bold border transition-colors",
+                            "flex-1 border py-2 font-mono text-sm font-bold transition-colors",
                             "disabled:cursor-default",
                             result
                               ? isCorrect
@@ -356,13 +356,13 @@ export default function ItemStatsQuiz() {
                     })}
                   </div>
                   {result && !result.tier && (
-                    <p className="text-[10px] font-mono text-red-400/80">Correct: T{item.item_tier}</p>
+                    <p className="font-mono text-[10px] text-red-400/80">Correct: T{item.item_tier}</p>
                   )}
                 </div>
 
                 {/* Slot type selector */}
                 <div className="space-y-1.5">
-                  <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50">Slot</p>
+                  <p className="font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">Slot</p>
                   <div className="flex gap-1">
                     {SLOT_TYPES.map((slot) => {
                       const isSelected = answer.slot === slot;
@@ -379,7 +379,7 @@ export default function ItemStatsQuiz() {
                           onClick={() => setAnswer(item.id, "slot", slot)}
                           disabled={state.submitted}
                           className={cn(
-                            "flex-1 py-2 text-[11px] font-mono font-semibold border transition-colors",
+                            "flex-1 border py-2 font-mono text-[11px] font-semibold transition-colors",
                             "disabled:cursor-default",
                             result
                               ? isCorrect
@@ -398,7 +398,7 @@ export default function ItemStatsQuiz() {
                     })}
                   </div>
                   {result && !result.slot && (
-                    <p className="text-[10px] font-mono text-red-400/80">
+                    <p className="font-mono text-[10px] text-red-400/80">
                       Correct: {formatSlotLabel(item.item_slot_type)}
                     </p>
                   )}
@@ -424,10 +424,10 @@ export default function ItemStatsQuiz() {
             onClick={handleSubmit}
             disabled={!allFieldsFilled}
             className={cn(
-              "px-8 py-3 font-mono font-bold uppercase tracking-wider text-sm border transition-colors",
+              "border px-8 py-3 font-mono text-sm font-bold tracking-wider uppercase transition-colors",
               allFieldsFilled
                 ? "border-primary/60 bg-primary/15 text-primary hover:bg-primary/25 hover:shadow-[0_0_12px_rgba(250,68,84,0.2)]"
-                : "border-muted-foreground/20 bg-black/30 text-muted-foreground/30 cursor-not-allowed",
+                : "cursor-not-allowed border-muted-foreground/20 bg-black/30 text-muted-foreground/30",
             )}
           >
             Submit All
@@ -444,9 +444,9 @@ export default function ItemStatsQuiz() {
             transition={{ delay: 0.3 }}
             className="space-y-4"
           >
-            <div className="text-center py-4 border border-muted-foreground/10">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1">Next Quiz</p>
-              <p className="text-lg font-mono font-bold tracking-widest">{countdown}</p>
+            <div className="border border-muted-foreground/10 py-4 text-center">
+              <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Quiz</p>
+              <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
             </div>
             <div className="flex justify-center">
               <Button
@@ -457,15 +457,15 @@ export default function ItemStatsQuiz() {
                   setTimeout(() => setCopied(false), 2000);
                 }}
                 variant="outline"
-                className="font-mono uppercase tracking-wider text-xs border-primary/40 hover:bg-primary/10 hover:border-primary/60"
+                className="border-primary/40 font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 mr-1.5" /> Copied
+                    <Check className="mr-1.5 h-3.5 w-3.5" /> Copied
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Share Result
+                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Share Result
                   </>
                 )}
               </Button>

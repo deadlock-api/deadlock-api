@@ -1,7 +1,9 @@
 import { useCallback, useState } from "react";
+
 import { day } from "~/dayjs";
-import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
+
 import { getTodayDate } from "./seed";
+import type { DailyGameState, GameMode, GameStatus, StreakState } from "./types";
 
 function getStorageKey(mode: GameMode, kind: "game" | "streak"): string {
   return `deadlockdle:${mode}:${kind}`;

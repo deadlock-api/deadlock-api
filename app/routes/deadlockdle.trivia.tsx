@@ -2,12 +2,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
-import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
+
 import { GameShell } from "./deadlockdle/components/GameShell";
+import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { useHeroes, useItems, useNpcUnits } from "./deadlockdle/lib/queries";
 import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "./deadlockdle/lib/seed";
 import { generateDailyQuestions, type TriviaQuestion } from "./deadlockdle/lib/trivia-questions";
@@ -156,8 +158,8 @@ export default function Trivia() {
 
   if (isLoading || questions.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <LoadingLogo className="w-16 h-16 animate-pulse" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <LoadingLogo className="h-16 w-16 animate-pulse" />
       </div>
     );
   }
@@ -187,23 +189,23 @@ export default function Trivia() {
           >
             {/* Question counter */}
             <div className="text-center">
-              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground/40">
+              <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground/40 uppercase">
                 Question {state.currentQuestion + 1}/{QUESTION_COUNT}
               </p>
             </div>
 
             {/* Category badge */}
             <div className="flex justify-center">
-              <span className="px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-wider border border-muted-foreground/20 bg-muted-foreground/5 text-muted-foreground/50">
+              <span className="border border-muted-foreground/20 bg-muted-foreground/5 px-2.5 py-0.5 font-mono text-[10px] tracking-wider text-muted-foreground/50 uppercase">
                 {currentQ.category}
               </span>
             </div>
 
             {/* Question text */}
-            <p className="text-center text-lg font-semibold tracking-tight px-2">{currentQ.question}</p>
+            <p className="px-2 text-center text-lg font-semibold tracking-tight">{currentQ.question}</p>
 
             {/* Option buttons */}
-            <div className="space-y-2.5 max-w-md mx-auto">
+            <div className="mx-auto max-w-md space-y-2.5">
               {currentQ.options.map((option, i) => {
                 const isCorrectOption = i === currentQ.correctIndex;
                 const isSelectedOption = i === selectedAnswer;
@@ -218,7 +220,7 @@ export default function Trivia() {
                     onClick={() => handleAnswer(i)}
                     disabled={isRevealed}
                     className={cn(
-                      "w-full px-4 py-3 text-sm font-mono font-medium border transition-colors text-left",
+                      "w-full border px-4 py-3 text-left font-mono text-sm font-medium transition-colors",
                       "disabled:cursor-default",
                       isRevealed
                         ? isCorrectOption
@@ -246,9 +248,9 @@ export default function Trivia() {
                   <div
                     key={q.question}
                     className={cn(
-                      "w-2 h-2 rounded-full transition-all",
+                      "h-2 w-2 rounded-full transition-all",
                       isCurrent
-                        ? "bg-primary scale-125"
+                        ? "scale-125 bg-primary"
                         : answered
                           ? correct
                             ? "bg-green-500"
@@ -269,11 +271,11 @@ export default function Trivia() {
             className="space-y-6"
           >
             {/* Score display */}
-            <div className="text-center py-6 border border-muted-foreground/20 bg-[#0d1117]/80 backdrop-blur-sm">
-              <p className={cn("text-4xl font-bold font-mono tracking-wider", scoreColor)}>
+            <div className="border border-muted-foreground/20 bg-[#0d1117]/80 py-6 text-center backdrop-blur-sm">
+              <p className={cn("font-mono text-4xl font-bold tracking-wider", scoreColor)}>
                 {state.score}/{QUESTION_COUNT}
               </p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mt-2">
+              <p className="mt-2 text-[10px] tracking-wider text-muted-foreground/50 uppercase">
                 {state.score >= 8 ? "Excellent" : state.score >= 5 ? "Not Bad" : "Keep Studying"}
               </p>
             </div>
@@ -287,14 +289,14 @@ export default function Trivia() {
                   <div
                     key={q.question}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 text-xs font-mono border",
+                      "flex items-center gap-2 border px-3 py-2 font-mono text-xs",
                       correct
                         ? "border-green-500/20 bg-green-500/5 text-green-400/80"
                         : "border-red-500/20 bg-red-500/5 text-red-400/80",
                     )}
                   >
-                    <span className="shrink-0 w-4 text-center">{correct ? "\u2713" : "\u2717"}</span>
-                    <span className="truncate flex-1">{q.question}</span>
+                    <span className="w-4 shrink-0 text-center">{correct ? "\u2713" : "\u2717"}</span>
+                    <span className="flex-1 truncate">{q.question}</span>
                     {!correct && <span className="shrink-0 text-muted-foreground/50">{q.options[q.correctIndex]}</span>}
                   </div>
                 );
@@ -302,9 +304,9 @@ export default function Trivia() {
             </div>
 
             {/* Countdown */}
-            <div className="text-center py-4 border border-muted-foreground/10">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 mb-1">Next Trivia</p>
-              <p className="text-lg font-mono font-bold tracking-widest">{countdown}</p>
+            <div className="border border-muted-foreground/10 py-4 text-center">
+              <p className="mb-1 text-[10px] tracking-wider text-muted-foreground/40 uppercase">Next Trivia</p>
+              <p className="font-mono text-lg font-bold tracking-widest">{countdown}</p>
             </div>
 
             {/* Share button */}
@@ -312,15 +314,15 @@ export default function Trivia() {
               <Button
                 onClick={handleCopy}
                 variant="outline"
-                className="font-mono uppercase tracking-wider text-xs border-primary/40 hover:bg-primary/10 hover:border-primary/60"
+                className="border-primary/40 font-mono text-xs tracking-wider uppercase hover:border-primary/60 hover:bg-primary/10"
               >
                 {copied ? (
                   <>
-                    <Check className="w-3.5 h-3.5 mr-1.5" /> Copied
+                    <Check className="mr-1.5 h-3.5 w-3.5" /> Copied
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5 mr-1.5" /> Share Result
+                    <Copy className="mr-1.5 h-3.5 w-3.5" /> Share Result
                   </>
                 )}
               </Button>

@@ -230,9 +230,9 @@ function NavItemWithChildren({ link, onNavigate }: { link: NavLink; onNavigate?:
           prefetch="intent"
           onClick={onNavigate}
           className={cn(
-            "flex-1 flex items-center gap-2.5 px-3 py-1.5 rounded-l-md text-sm font-medium transition-colors duration-150 border-l-2",
+            "flex flex-1 items-center gap-2.5 rounded-l-md border-l-2 px-3 py-1.5 text-sm font-medium transition-colors duration-150",
             active
-              ? "bg-sidebar-accent text-sidebar-accent-foreground border-primary"
+              ? "border-primary bg-sidebar-accent text-sidebar-accent-foreground"
               : "border-transparent text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
           )}
         >
@@ -243,16 +243,14 @@ function NavItemWithChildren({ link, onNavigate }: { link: NavLink; onNavigate?:
           type="button"
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            "flex items-center px-2 rounded-r-md transition-colors duration-150",
+            "flex items-center rounded-r-md px-2 transition-colors duration-150",
             active
               ? "bg-sidebar-accent text-sidebar-accent-foreground"
               : "text-sidebar-foreground/40 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground/60",
           )}
           aria-label={open ? "Collapse submenu" : "Expand submenu"}
         >
-          <ChevronDown
-            className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")}
-          />
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", open && "rotate-180")} />
         </button>
       </div>
 
@@ -262,7 +260,7 @@ function NavItemWithChildren({ link, onNavigate }: { link: NavLink; onNavigate?:
           open ? "max-h-96 opacity-100" : "max-h-0 opacity-0",
         )}
       >
-        <div className="ml-4 pl-3 border-l border-sidebar-border/50 mt-0.5 space-y-0.5">
+        <div className="mt-0.5 ml-4 space-y-0.5 border-l border-sidebar-border/50 pl-3">
           {link.children?.map((child) => {
             const childActive = isActive(pathname, child.to);
             const ChildIcon = child.icon;
@@ -273,13 +271,15 @@ function NavItemWithChildren({ link, onNavigate }: { link: NavLink; onNavigate?:
                 prefetch="intent"
                 onClick={onNavigate}
                 className={cn(
-                  "flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150",
+                  "flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150",
                   childActive
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
                 )}
               >
-                <ChildIcon className={cn("h-3.5 w-3.5 shrink-0", childActive ? "text-primary" : "text-sidebar-foreground/30")} />
+                <ChildIcon
+                  className={cn("h-3.5 w-3.5 shrink-0", childActive ? "text-primary" : "text-sidebar-foreground/30")}
+                />
                 {child.label}
               </Link>
             );

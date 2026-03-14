@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
@@ -116,8 +118,8 @@ export default function GuessItem() {
 
   if (isLoading || !dailyItem) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <LoadingLogo className="w-16 h-16 animate-pulse" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <LoadingLogo className="h-16 w-16 animate-pulse" />
       </div>
     );
   }
@@ -148,7 +150,7 @@ export default function GuessItem() {
             <img
               src={itemImgSrc}
               alt="Mystery item"
-              className="w-[160px] h-[160px] object-contain transition-all duration-500"
+              className="h-[160px] w-[160px] object-contain transition-all duration-500"
               style={{
                 filter: getBlurFilter(gameState.hintsRevealed, isFinished),
               }}
@@ -159,7 +161,7 @@ export default function GuessItem() {
             <motion.p
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center mt-2 text-sm font-mono font-semibold text-foreground"
+              className="mt-2 text-center font-mono text-sm font-semibold text-foreground"
             >
               {dailyItem.name}
             </motion.p>
@@ -183,7 +185,7 @@ export default function GuessItem() {
       {/* Previous guesses */}
       {gameState.guesses.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">Previous Guesses</p>
+          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
           <div className="flex flex-wrap gap-2">
             {gameState.guesses.map((guess, i) => {
               const isCorrect = guess.toLowerCase() === dailyItem.name.toLowerCase();
@@ -191,7 +193,7 @@ export default function GuessItem() {
                 <span
                   key={`${guess}-${i}`}
                   className={cn(
-                    "px-2.5 py-1 text-xs font-mono border",
+                    "border px-2.5 py-1 font-mono text-xs",
                     isCorrect
                       ? "border-green-500/40 bg-green-500/10 text-green-400"
                       : "border-primary/20 bg-primary/5 text-primary/70",

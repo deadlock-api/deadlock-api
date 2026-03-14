@@ -2,9 +2,11 @@ import { motion } from "framer-motion";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MetaFunction } from "react-router";
+
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
@@ -369,8 +371,8 @@ export default function GuessSound() {
 
   if (isLoading || !dailySound || !answerHero) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <LoadingLogo className="w-16 h-16 animate-pulse" />
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <LoadingLogo className="h-16 w-16 animate-pulse" />
       </div>
     );
   }
@@ -412,11 +414,11 @@ export default function GuessSound() {
           transition={{ type: "spring", stiffness: 400, damping: 17 }}
           onClick={togglePlayPause}
           className={cn(
-            "relative w-24 h-24 rounded-full border-2 transition-colors duration-300",
+            "relative h-24 w-24 rounded-full border-2 transition-colors duration-300",
             "flex items-center justify-center",
-            "bg-primary/10 border-primary/40 hover:bg-primary/20 hover:border-primary/60",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-            isPlaying && "shadow-[0_0_24px_rgba(250,68,84,0.3)] border-primary/70",
+            "border-primary/40 bg-primary/10 hover:border-primary/60 hover:bg-primary/20",
+            "focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
+            isPlaying && "border-primary/70 shadow-[0_0_24px_rgba(250,68,84,0.3)]",
           )}
         >
           {/* Animated glow ring when playing */}
@@ -427,21 +429,21 @@ export default function GuessSound() {
               transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
             />
           )}
-          {isPlaying ? <Pause className="w-8 h-8 text-primary" /> : <Play className="w-8 h-8 text-primary ml-1" />}
+          {isPlaying ? <Pause className="h-8 w-8 text-primary" /> : <Play className="ml-1 h-8 w-8 text-primary" />}
         </motion.button>
 
         {/* Progress bar + duration */}
         <div className="w-full max-w-xs space-y-1.5">
-          <div className="w-full h-1.5 bg-muted-foreground/10 rounded-full overflow-hidden">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted-foreground/10">
             <motion.div
-              className="h-full bg-primary/60 rounded-full"
+              className="h-full rounded-full bg-primary/60"
               style={{ width: `${progress * 100}%` }}
               transition={{ duration: 0.05 }}
             />
           </div>
-          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground/40">
+          <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground/40">
             <span className="flex items-center gap-1">
-              <Volume2 className="w-3 h-3" />
+              <Volume2 className="h-3 w-3" />
               SOUND
             </span>
             <span>{formattedDuration}</span>
@@ -449,14 +451,14 @@ export default function GuessSound() {
         </div>
 
         {/* Volume slider */}
-        <div className="flex items-center gap-2 w-full max-w-xs">
+        <div className="flex w-full max-w-xs items-center gap-2">
           <button
             type="button"
             onClick={() => changeVolume(isMuted ? 0.7 : 0)}
-            className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5"
+            className="p-0.5 text-muted-foreground/50 transition-colors hover:text-foreground"
             aria-label={isMuted ? "Unmute" : "Mute"}
           >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
           <input
             type="range"
@@ -465,15 +467,10 @@ export default function GuessSound() {
             step={0.01}
             value={volume}
             onChange={(e) => changeVolume(Number.parseFloat(e.target.value))}
-            className="flex-1 h-1.5 appearance-none bg-muted-foreground/10 rounded-full cursor-pointer
-              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-              [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0
-              [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(250,68,84,0.4)]
-              [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full
-              [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0"
+            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted-foreground/10 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-[0_0_6px_rgba(250,68,84,0.4)]"
             aria-label="Volume"
           />
-          <span className="text-[10px] font-mono text-muted-foreground/40 w-7 text-right">
+          <span className="w-7 text-right font-mono text-[10px] text-muted-foreground/40">
             {Math.round(volume * 100)}
           </span>
         </div>
@@ -483,7 +480,7 @@ export default function GuessSound() {
           <motion.p
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center text-sm font-mono font-semibold text-foreground"
+            className="text-center font-mono text-sm font-semibold text-foreground"
           >
             {answerHero.name}
           </motion.p>
@@ -506,7 +503,7 @@ export default function GuessSound() {
       {/* Previous guesses */}
       {gameState.guesses.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/40">Previous Guesses</p>
+          <p className="font-mono text-[10px] tracking-wider text-muted-foreground/40 uppercase">Previous Guesses</p>
           <div className="flex flex-wrap gap-2">
             {gameState.guesses.map((guess, i) => {
               const isCorrect = guess.toLowerCase() === answerHero.name.toLowerCase();
@@ -514,7 +511,7 @@ export default function GuessSound() {
                 <span
                   key={`${guess}-${i}`}
                   className={cn(
-                    "px-2.5 py-1 text-xs font-mono border",
+                    "border px-2.5 py-1 font-mono text-xs",
                     isCorrect
                       ? "border-green-500/40 bg-green-500/10 text-green-400"
                       : "border-primary/20 bg-primary/5 text-primary/70",
