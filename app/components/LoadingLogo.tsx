@@ -39,7 +39,6 @@ export function LoadingLogo({ className, delay = 150 }: LoadingLogoProps) {
 
   return (
     <div className="flex justify-center py-12">
-<<<<<<< HEAD
       <svg viewBox="0 0 729 790" className={cn("h-24 w-24 text-primary", className)} xmlns="http://www.w3.org/2000/svg">
         {PATHS.map((path) => (
           <path
