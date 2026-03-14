@@ -1,9 +1,11 @@
+import { parseAsBoolean, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 import type { MetaFunction } from "react-router";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
+import { HeroStatsGroupedByType } from "~/components/heroes-page/HeroStatsGroupedByType";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
@@ -63,6 +65,8 @@ export default function Heroes(
   },
 ) {
   const filters = useHeroFilters(initialTab);
+  const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
+  const groupByTypeId = useId();
   const sameLaneFilterId1 = useId();
   const samePartyFilterId1 = useId();
   const sameLaneFilterId2 = useId();
@@ -103,19 +107,45 @@ export default function Heroes(
 
         <TabsContent value="stats">
           <div className="flex flex-col gap-4">
-            <HeroStatsTable
-              columns={["winRate", "pickRate", "KDA", "totalMatches"]}
-              sortBy="winrate"
-              minRankId={filters.effectiveMinRankId}
-              maxRankId={filters.effectiveMaxRankId}
-              minHeroMatches={filters.minHeroMatches}
-              minHeroMatchesTotal={filters.minHeroMatchesTotal}
-              minDate={filters.startDate || undefined}
-              maxDate={filters.endDate || undefined}
-              prevMinDate={filters.prevDates.prevStartDate}
-              prevMaxDate={filters.prevDates.prevEndDate}
-              gameMode={filters.gameMode}
-            />
+            <div className="flex items-center justify-end gap-2">
+              <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
+                Group by Type
+              </Label>
+              <Checkbox
+                id={groupByTypeId}
+                checked={groupByType}
+                onCheckedChange={(checked) => setGroupByType(checked === true)}
+              />
+            </div>
+            {groupByType ? (
+              <HeroStatsGroupedByType
+                columns={["winRate", "pickRate", "KDA", "totalMatches"]}
+                sortBy="winrate"
+                minRankId={filters.effectiveMinRankId}
+                maxRankId={filters.effectiveMaxRankId}
+                minHeroMatches={filters.minHeroMatches}
+                minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                minDate={filters.startDate || undefined}
+                maxDate={filters.endDate || undefined}
+                prevMinDate={filters.prevDates.prevStartDate}
+                prevMaxDate={filters.prevDates.prevEndDate}
+                gameMode={filters.gameMode}
+              />
+            ) : (
+              <HeroStatsTable
+                columns={["winRate", "pickRate", "KDA", "totalMatches"]}
+                sortBy="winrate"
+                minRankId={filters.effectiveMinRankId}
+                maxRankId={filters.effectiveMaxRankId}
+                minHeroMatches={filters.minHeroMatches}
+                minHeroMatchesTotal={filters.minHeroMatchesTotal}
+                minDate={filters.startDate || undefined}
+                maxDate={filters.endDate || undefined}
+                prevMinDate={filters.prevDates.prevStartDate}
+                prevMaxDate={filters.prevDates.prevEndDate}
+                gameMode={filters.gameMode}
+              />
+            )}
           </div>
         </TabsContent>
 
