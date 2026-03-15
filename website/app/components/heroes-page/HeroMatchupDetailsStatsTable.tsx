@@ -28,7 +28,6 @@ export function HeroMatchupDetailsStatsTable({
   maxDate,
   onHeroSelected,
   sameLaneFilter,
-  samePartyFilter,
   minHeroMatches,
   gameMode,
 }: {
@@ -40,7 +39,6 @@ export function HeroMatchupDetailsStatsTable({
   maxDate?: Dayjs;
   onHeroSelected?: (heroId: number) => void;
   sameLaneFilter?: boolean;
-  samePartyFilter?: boolean;
   minHeroMatches?: number;
   gameMode?: GameMode;
 }) {
@@ -66,7 +64,6 @@ export function HeroMatchupDetailsStatsTable({
 
   const synergyStatsQuery = {
     sameLaneFilter: sameLaneFilter,
-    samePartyFilter: samePartyFilter,
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,

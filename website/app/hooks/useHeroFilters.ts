@@ -40,7 +40,6 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(91));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
-  const [samePartyFilter, setSamePartyFilter] = useQueryState("same_party", parseAsBoolean.withDefault(false));
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
     parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
@@ -79,8 +78,6 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
     setMaxRankId,
     sameLaneFilter,
     setSameLaneFilter,
-    samePartyFilter,
-    setSamePartyFilter,
     startDate,
     endDate,
     setDateRange,

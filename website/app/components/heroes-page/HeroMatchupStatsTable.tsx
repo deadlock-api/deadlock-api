@@ -217,7 +217,6 @@ export function HeroMatchupStatsTable({
   prevMinDate,
   prevMaxDate,
   sameLaneFilter,
-  samePartyFilter,
   gameMode,
 }: {
   hideHeader?: boolean;
@@ -229,7 +228,6 @@ export function HeroMatchupStatsTable({
   prevMinDate?: Dayjs;
   prevMaxDate?: Dayjs;
   sameLaneFilter?: boolean;
-  samePartyFilter?: boolean;
   gameMode?: GameMode;
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
@@ -254,7 +252,6 @@ export function HeroMatchupStatsTable({
 
   const synergyStatsQuery = {
     sameLaneFilter: sameLaneFilter,
-    samePartyFilter: samePartyFilter,
     minMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
@@ -313,7 +310,6 @@ export function HeroMatchupStatsTable({
 
   const prevSynergyStatsQuery = {
     sameLaneFilter: sameLaneFilter,
-    samePartyFilter: samePartyFilter,
     minMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,

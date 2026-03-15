@@ -69,9 +69,7 @@ export default function Heroes(
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();
   const sameLaneFilterId1 = useId();
-  const samePartyFilterId1 = useId();
   const sameLaneFilterId2 = useId();
-  const samePartyFilterId2 = useId();
 
   return (
     <div className="space-y-6">
@@ -290,16 +288,6 @@ export default function Heroes(
                   onCheckedChange={(i) => filters.setSameLaneFilter(i === true)}
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor={samePartyFilterId1} className="text-sm font-semibold text-nowrap text-foreground">
-                  Same Party Filter
-                </Label>
-                <Checkbox
-                  id={samePartyFilterId1}
-                  checked={filters.samePartyFilter}
-                  onCheckedChange={(i) => filters.setSamePartyFilter(i === true)}
-                />
-              </div>
             </div>
             <div className="flex flex-col gap-4">
               <ChunkErrorBoundary>
@@ -313,7 +301,6 @@ export default function Heroes(
                     prevMaxDate={filters.prevDates.prevEndDate}
                     minMatches={filters.minMatches}
                     sameLaneFilter={filters.sameLaneFilter}
-                    samePartyFilter={filters.samePartyFilter}
                     gameMode={filters.gameMode}
                   />
                 </Suspense>
@@ -363,16 +350,6 @@ export default function Heroes(
                     onCheckedChange={(i) => filters.setSameLaneFilter(i === true)}
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={samePartyFilterId2} className="text-sm font-semibold text-nowrap text-foreground">
-                    Same Party Filter
-                  </Label>
-                  <Checkbox
-                    id={samePartyFilterId2}
-                    checked={filters.samePartyFilter}
-                    onCheckedChange={(i) => filters.setSamePartyFilter(i === true)}
-                  />
-                </div>
               </div>
             </div>
             <ChunkErrorBoundary>
@@ -390,7 +367,6 @@ export default function Heroes(
                       filters.setHeroId(selectedHeroId);
                     }}
                     sameLaneFilter={filters.sameLaneFilter}
-                    samePartyFilter={filters.samePartyFilter}
                     minHeroMatches={filters.minMatches}
                     gameMode={filters.gameMode}
                   />
@@ -406,7 +382,6 @@ export default function Heroes(
                       filters.setHeroId(selectedHeroId);
                     }}
                     sameLaneFilter={filters.sameLaneFilter}
-                    samePartyFilter={filters.samePartyFilter}
                     minHeroMatches={filters.minMatches}
                     gameMode={filters.gameMode}
                   />
