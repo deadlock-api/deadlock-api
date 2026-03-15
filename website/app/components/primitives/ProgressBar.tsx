@@ -28,6 +28,7 @@ export function ProgressBarWithLabel({
   color,
   label,
   delta,
+  deltaFormat = "percent",
   tooltip,
 }: {
   value?: number;
@@ -36,9 +37,14 @@ export function ProgressBarWithLabel({
   color?: Color;
   label?: string;
   delta?: number;
+  deltaFormat?: "percent" | "raw";
   tooltip?: ReactNode;
 }) {
   const percentage = Math.round((((value || 0) - (min || 0)) / ((max || 1) - (min || 0))) * 100);
+  const formatDelta = (d: number) => {
+    if (deltaFormat === "raw") return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
+    return `${d > 0 ? "+" : ""}${(d * 100).toFixed(1)}%`;
+  };
   const content = (
     <div className={`flex w-full flex-col gap-2 min-w-24${tooltip ? " cursor-default" : ""}`}>
       <ProgressBar value={value} min={min} max={max} color={color} />
@@ -46,8 +52,7 @@ export function ProgressBarWithLabel({
         <span className="text-left text-sm text-muted-foreground">{label || `${percentage}%` || 0}</span>
         {delta !== undefined && delta !== 0 && (
           <span className={`text-xs font-medium ${delta > 0 ? "text-green-500" : "text-red-500"}`}>
-            {delta > 0 ? "+" : ""}
-            {(delta * 100).toFixed(1)}%
+            {formatDelta(delta)}
           </span>
         )}
       </div>

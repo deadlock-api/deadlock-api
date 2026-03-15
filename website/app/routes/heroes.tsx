@@ -5,7 +5,6 @@ import type { MetaFunction } from "react-router";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
-import { HeroStatsGroupedByType } from "~/components/heroes-page/HeroStatsGroupedByType";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
@@ -113,35 +112,19 @@ export default function Heroes(
               </Label>
               <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
             </div>
-            {groupByType ? (
-              <HeroStatsGroupedByType
-                columns={["winRate", "pickRate", "KDA", "totalMatches"]}
-                sortBy="winrate"
-                minRankId={filters.effectiveMinRankId}
-                maxRankId={filters.effectiveMaxRankId}
-                minHeroMatches={filters.minHeroMatches}
-                minHeroMatchesTotal={filters.minHeroMatchesTotal}
-                minDate={filters.startDate || undefined}
-                maxDate={filters.endDate || undefined}
-                prevMinDate={filters.prevDates.prevStartDate}
-                prevMaxDate={filters.prevDates.prevEndDate}
-                gameMode={filters.gameMode}
-              />
-            ) : (
-              <HeroStatsTable
-                columns={["winRate", "pickRate", "KDA", "totalMatches"]}
-                sortBy="winrate"
-                minRankId={filters.effectiveMinRankId}
-                maxRankId={filters.effectiveMaxRankId}
-                minHeroMatches={filters.minHeroMatches}
-                minHeroMatchesTotal={filters.minHeroMatchesTotal}
-                minDate={filters.startDate || undefined}
-                maxDate={filters.endDate || undefined}
-                prevMinDate={filters.prevDates.prevStartDate}
-                prevMaxDate={filters.prevDates.prevEndDate}
-                gameMode={filters.gameMode}
-              />
-            )}
+            <HeroStatsTable
+              columns={["winRate", "pickRate", "zScore", "residual", "details"]}
+              groupByType={groupByType}
+              minRankId={filters.effectiveMinRankId}
+              maxRankId={filters.effectiveMaxRankId}
+              minHeroMatches={filters.minHeroMatches}
+              minHeroMatchesTotal={filters.minHeroMatchesTotal}
+              minDate={filters.startDate || undefined}
+              maxDate={filters.endDate || undefined}
+              prevMinDate={filters.prevDates.prevStartDate}
+              prevMaxDate={filters.prevDates.prevEndDate}
+              gameMode={filters.gameMode}
+            />
           </div>
         </TabsContent>
 
