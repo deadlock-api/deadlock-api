@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS match_player
     last_hits UInt32,
     denies UInt32,
     ability_points UInt32,
-    party UInt32,
     assigned_lane UInt32,
     player_level UInt32,
     abandon_match_time_s UInt32,

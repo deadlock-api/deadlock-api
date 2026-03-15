@@ -10,7 +10,7 @@ tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0.102"
 itertools = "0.14.0"
 serde_json = "1.0.149"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "8dffcdb105e3765276d90a5229de21446bc11bd1", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "9625c0784beca10634442ef11ede5f022ab186da", features = ["gc-client", "serde"] }
 time = "0.3.47"
 metrics = "0.24.3"
 tracing = "0.1.44"

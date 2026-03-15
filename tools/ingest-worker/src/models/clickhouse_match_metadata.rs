@@ -169,7 +169,6 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub last_hits: u32,
     pub denies: u32,
     pub ability_points: u32,
-    pub party: u32,
     pub assigned_lane: u32,
     pub player_level: u32,
     pub abandon_match_time_s: u32,
@@ -460,7 +459,6 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             last_hits: value.last_hits(),
             denies: value.denies(),
             ability_points: value.ability_points(),
-            party: value.party(),
             assigned_lane: value.assigned_lane(),
             player_level: value.level(),
             ability_stats: value
