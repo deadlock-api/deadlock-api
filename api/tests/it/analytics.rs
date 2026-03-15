@@ -793,7 +793,6 @@ async fn test_hero_stats(
 #[tokio::test]
 async fn test_hero_synergies_stats(
     #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
-    #[values(None, Some(true), Some(false))] same_party_filter: Option<bool>,
     #[case] min_unix_timestamp: Option<i64>,
     #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
@@ -811,9 +810,6 @@ async fn test_hero_synergies_stats(
     let mut queries = vec![];
     if let Some(same_lane_filter) = same_lane_filter {
         queries.push(("same_lane_filter", same_lane_filter.to_string()));
-    }
-    if let Some(same_party_filter) = same_party_filter {
-        queries.push(("same_party_filter", same_party_filter.to_string()));
     }
     if let Some(min_unix_timestamp) = min_unix_timestamp {
         queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));

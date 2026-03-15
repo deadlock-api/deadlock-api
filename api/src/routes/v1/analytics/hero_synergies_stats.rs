@@ -61,10 +61,6 @@ pub(super) struct HeroSynergyStatsQuery {
     #[serde(default = "default_true_option")]
     #[param(default = true)]
     same_lane_filter: Option<bool>,
-    /// When `true`, only considers matchups where both `hero_id` and `hero_id2` were on the same party. When `false`, considers all matchups regardless of party affiliation.
-    #[serde(default = "default_true_option")]
-    #[param(default = true)]
-    same_party_filter: Option<bool>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
@@ -143,9 +139,6 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     let mut player_filters = vec![];
     if query.same_lane_filter.unwrap_or(true) {
         player_filters.push("p1.assigned_lane = p2.assigned_lane".to_owned());
-    }
-    if query.same_party_filter.unwrap_or(true) {
-        player_filters.push("p1.party = p2.party AND p1.party > 0".to_owned());
     }
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
@@ -414,30 +407,6 @@ mod test {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
         assert!(!sql.contains("p1.assigned_lane = p2.assigned_lane"));
-    }
-
-    #[test]
-    fn test_build_query_same_party_filter() {
-        let mut query = HeroSynergyStatsQuery {
-            same_party_filter: Some(true),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("p1.party = p2.party AND p1.party > 0"));
-
-        query.same_party_filter = Some(false);
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(!sql.contains("p1.party = p2.party"));
     }
 
     #[test]

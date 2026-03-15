@@ -447,7 +447,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             SELECT mp.*, duration_m
             FROM match_player mp
                 INNER JOIN t_matches USING (match_id)
-            WHERE TRUE {player_filters}
+            WHERE mp.match_id = t_matches.match_id {player_filters}
             ORDER BY match_id DESC
             LIMIT {match_limit}
             SETTINGS asterisk_include_materialized_columns = 1

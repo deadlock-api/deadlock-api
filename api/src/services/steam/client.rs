@@ -342,18 +342,25 @@ async fn get_client_version_from_steam_api(http_client: &reqwest::Client) -> API
         .send()
         .await
         .and_then(Response::error_for_status)
-        .map_err(|e| APIError::internal(format!("Failed to fetch client version from Steam API: {e}")))?
+        .map_err(|e| {
+            APIError::internal(format!(
+                "Failed to fetch client version from Steam API: {e}"
+            ))
+        })?
         .json()
         .await
         .map_err(|e| APIError::internal(format!("Failed to parse Steam API response: {e}")))?;
 
     if !response.result.success {
-        return Err(APIError::internal("Steam API returned success=false".to_owned()));
+        return Err(APIError::internal(
+            "Steam API returned success=false".to_owned(),
+        ));
     }
 
-    response.result.active_version.ok_or_else(|| {
-        APIError::internal("Steam API response missing active_version".to_owned())
-    })
+    response
+        .result
+        .active_version
+        .ok_or_else(|| APIError::internal("Steam API response missing active_version".to_owned()))
 }
 
 async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIResult<u32> {

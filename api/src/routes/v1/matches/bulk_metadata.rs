@@ -201,7 +201,6 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
                 "last_hits",
                 "denies",
                 "ability_points",
-                "party",
                 "assigned_lane",
                 "player_level",
                 "abandon_match_time_s",

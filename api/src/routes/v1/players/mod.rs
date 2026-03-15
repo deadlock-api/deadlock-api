@@ -5,7 +5,6 @@ pub mod hero_stats;
 pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
-pub mod party_stats;
 pub mod steam;
 
 use core::time::Duration;
@@ -140,7 +139,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(account_stats::account_stats))
         .routes(routes!(mate_stats::mate_stats))
         .routes(routes!(enemy_stats::enemy_stats))
-        .routes(routes!(party_stats::party_stats))
         .routes(routes!(hero_stats::player_hero_stats))
         .merge(mmr::router())
         .merge(steam::router())

@@ -339,8 +339,9 @@ SELECT
     avgIf(sold_time, sold_time > 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
     avgIf((sold_time / duration_s) * 100, sold_time > 0) AS avg_sell_time_relative
-FROM exploded_players
+FROM exploded_players ep
 INNER JOIN t_matches USING (match_id)
+WHERE exploded_players.match_id = t_matches.match_id
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
