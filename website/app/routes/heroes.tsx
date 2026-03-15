@@ -12,6 +12,7 @@ import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
+import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { createPageMeta } from "~/lib/meta";
@@ -111,10 +112,10 @@ export default function Heroes(
               <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
                 Group by Type
               </Label>
-              <Checkbox
+              <Switch
                 id={groupByTypeId}
                 checked={groupByType}
-                onCheckedChange={(checked) => setGroupByType(checked === true)}
+                onCheckedChange={(checked) => setGroupByType(checked)}
               />
             </div>
             {groupByType ? (
