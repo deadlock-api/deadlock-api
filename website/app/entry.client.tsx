@@ -23,19 +23,17 @@ async function createPostHogWrapper(): Promise<React.ComponentType<{ children: R
   ]);
 
   posthogClient.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
-    api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+    api_host: "https://e.deadlock-api.com",
+    ui_host: "https://eu.posthog.com",
     defaults: "2026-01-30",
     __add_tracing_headers: [window.location.host, "localhost"],
     cookieless_mode: "always",
   });
 
   // Test if PostHog is reachable (ad blockers often block it). If not, disable it entirely.
-  const apiHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
-  if (apiHost) {
-    fetch(`${apiHost}/decide/?v=3`, { method: "POST", body: "{}" }).catch(() => {
-      posthogClient.opt_out_capturing();
-    });
-  }
+  fetch("https://e.deadlock-api.com/decide/?v=3", { method: "POST", body: "{}" }).catch(() => {
+    posthogClient.opt_out_capturing();
+  });
 
   return ({ children }) => <PostHogProvider client={posthogClient}>{children}</PostHogProvider>;
 }
