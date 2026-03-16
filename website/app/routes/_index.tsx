@@ -9,8 +9,16 @@ import {
   HardDrive,
   Heart,
   ImageIcon,
+  ListOrdered,
+  Map,
+  Medal,
+  MessageCircle,
   Radio,
+  ShoppingBag,
+  Swords,
+  Trophy,
   Tv,
+  Users,
   Zap,
 } from "lucide-react";
 import type { MetaFunction } from "react-router";
@@ -20,6 +28,7 @@ import { ElectricBorder } from "~/components/ElectricBorder";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
+import { cn } from "~/lib/utils";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -92,21 +101,76 @@ const services = [
     external: true,
     cta: "Access Database Dumps",
   },
+];
+
+const analyticsLinks = [
   {
-    title: "Stream Kit",
-    description: "Enhance your livestreams with real-time game data overlays and widgets.",
-    href: "/streamkit",
-    icon: Tv,
-    external: false,
-    cta: "Explore Stream Kit",
+    title: "Hero Analytics",
+    description: "Win rates, matchups, synergies, and performance trends across patches for every hero.",
+    href: "/heroes",
+    icon: Swords,
+  },
+  {
+    title: "Item Analytics",
+    description: "Item win rates with confidence intervals, purchase timing analysis, and item combos.",
+    href: "/items",
+    icon: ShoppingBag,
+  },
+  {
+    title: "Game Analytics",
+    description: "Match duration, game mode stats, and overall gameplay trends over time.",
+    href: "/games",
+    icon: BarChart3,
+  },
+  {
+    title: "Ability Analytics",
+    description: "Ability upgrade paths, skill build popularity, and win rate by leveling order.",
+    href: "/abilities",
+    icon: ListOrdered,
+  },
+  {
+    title: "Leaderboard",
+    description: "Top ranked players across all regions with hero filters and rank search.",
+    href: "/leaderboard",
+    icon: Trophy,
+  },
+  {
+    title: "Player Scoreboard",
+    description: "Compare player performance across matches with detailed stat breakdowns.",
+    href: "/player-scoreboard",
+    icon: Users,
+  },
+  {
+    title: "Rank Distribution",
+    description: "See how the player base is distributed across ranks over time.",
+    href: "/badge-distribution",
+    icon: Medal,
+  },
+  {
+    title: "Kill Heatmap",
+    description: "Visualize where kills happen on the map to understand positioning and hotspots.",
+    href: "/heatmap",
+    icon: Map,
   },
   {
     title: "AI Chat",
     description: "Ask questions about Deadlock heroes, items, abilities, and strategies powered by AI.",
     href: "/chat",
     icon: Bot,
-    external: false,
-    cta: "Try AI Chat",
+  },
+  {
+    title: "Stream Kit",
+    description: "Enhance your livestreams with real-time game data overlays and widgets.",
+    href: "/streamkit",
+    icon: Tv,
+  },
+  {
+    title: "Missing a Feature?",
+    description: "Have an idea or want to request something new? Let us know on Discord!",
+    href: "https://discord.gg/pqWQfTPQJu",
+    icon: MessageCircle,
+    external: true,
+    highlight: true,
   },
 ];
 
@@ -233,6 +297,86 @@ export default function Index() {
         </ElectricBorder>
       </motion.section>
 
+      {/* Analytics Links */}
+      <section>
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">Explore the Data</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Dive into analytics, leaderboards, and visualizations powered by millions of tracked matches
+          </p>
+        </div>
+
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.1 }}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {analyticsLinks.map((item) => {
+            const Icon = item.icon;
+            const isHighlight = "highlight" in item && item.highlight;
+            const isExternal = "external" in item && item.external;
+            const card = (
+              <motion.div
+                variants={fadeUp}
+                className={cn(
+                  "group flex h-full flex-col rounded-xl border p-4 transition-colors",
+                  isHighlight
+                    ? "border-dashed border-primary/40 bg-primary/5 hover:border-primary/60 hover:bg-primary/10"
+                    : "border-border bg-card hover:border-primary/30 hover:bg-muted/30",
+                )}
+              >
+                <div className="mb-2 flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                      isHighlight
+                        ? "border-primary/20 bg-primary/10 group-hover:bg-primary/15"
+                        : "border-border bg-muted group-hover:border-primary/20 group-hover:bg-primary/5",
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "size-4 transition-colors",
+                        isHighlight ? "text-primary" : "text-muted-foreground group-hover:text-primary",
+                      )}
+                    />
+                  </div>
+                  <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    {item.title}
+                    {isExternal && (
+                      <ExternalLink className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </h3>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">{item.description}</p>
+                <div className="mt-auto pt-2">
+                  <span className="flex items-center gap-1 text-xs font-medium text-primary/80 transition-colors group-hover:text-primary">
+                    {isExternal ? "Join" : "View"}
+                    <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
+              </motion.div>
+            );
+
+            if (isExternal) {
+              return (
+                <a key={item.title} href={item.href} target="_blank" rel="noopener noreferrer">
+                  {card}
+                </a>
+              );
+            }
+
+            return (
+              <Link key={item.title} to={item.href} prefetch="intent">
+                {card}
+              </Link>
+            );
+          })}
+        </motion.div>
+      </section>
+
       {/* Services */}
       <section>
         <div className="mb-8 text-center">
@@ -245,7 +389,7 @@ export default function Index() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, amount: 0.1 }}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           {services.map((service) => {
             const Icon = service.icon;
