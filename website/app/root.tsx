@@ -14,7 +14,6 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, 
 import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
-import { CookieConsentBanner } from "~/components/CookieConsentBanner";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
@@ -319,7 +318,6 @@ export default function App() {
               </Suspense>
             )}
             <Toaster />
-            <CookieConsentBanner />
           </TooltipProvider>
         </NuqsAdapter>
       </PatronAuthProvider>

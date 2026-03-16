@@ -4,6 +4,7 @@ import { HydratedRouter } from "react-router/dom";
 
 /**
  * Dynamically initialize PostHog only in production with a valid token.
+ * Uses cookieless tracking so no consent banner is needed.
  * Returns a wrapper component that provides the PostHog context, or a passthrough.
  */
 async function createPostHogWrapper(): Promise<React.ComponentType<{ children: ReactNode }>> {
@@ -21,19 +22,12 @@ async function createPostHogWrapper(): Promise<React.ComponentType<{ children: R
     import("@posthog/react"),
   ]);
 
-  const consentGiven = localStorage.getItem("analytics-consent") === "granted";
-
   posthogClient.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
     api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
     defaults: "2026-01-30",
     __add_tracing_headers: [window.location.host, "localhost"],
-    opt_out_capturing_by_default: true,
-    persistence: consentGiven ? "localStorage+cookie" : "memory",
+    cookieless_mode: "always",
   });
-
-  if (consentGiven) {
-    posthogClient.opt_in_capturing();
-  }
 
   // Test if PostHog is reachable (ad blockers often block it). If not, disable it entirely.
   const apiHost = import.meta.env.VITE_PUBLIC_POSTHOG_HOST;
