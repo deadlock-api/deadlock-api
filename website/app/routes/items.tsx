@@ -63,7 +63,8 @@ export default function Items(
         <p className="mt-1 text-sm text-muted-foreground">Win rates, purchase timing, and item combination analytics</p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Analyze item win rates with statistical confidence intervals, optimal purchase timing, and the best item
-          combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder.
+          combinations for Deadlock. Filter by hero, rank, and patch to build smarter and climb the ladder. Statistics
+          use Wilson score intervals for reliable estimates even on less popular items.
         </p>
       </div>
       <Filter.Root>

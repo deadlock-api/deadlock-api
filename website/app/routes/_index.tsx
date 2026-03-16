@@ -325,6 +325,47 @@ export default function Index() {
         </div>
       </section>
 
+      {/* About Deadlock */}
+      <section>
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">What is Deadlock?</h2>
+        </div>
+        <div className="mx-auto max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
+            third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities, and
+            compete in objective-based matches. The game features a deep item system, competitive ranked play, and a
+            rapidly evolving meta shaped by frequent balance patches.
+          </p>
+          <p>
+            Deadlock API tracks match data for millions of players, providing the community with detailed hero win
+            rates, item statistics with confidence intervals, ability upgrade path analysis, and competitive
+            leaderboards across all regions. All data is updated in real time and can be filtered by rank, patch, game mode,
+            and date range.
+          </p>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section>
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-semibold tracking-tight">How Our Data Works</h2>
+        </div>
+        <div className="mx-auto max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
+          <p>
+            Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked match is
+            processed to extract hero performance, item purchases, ability upgrade paths, and player rankings.
+            Statistics like win rates and pick rates are computed with statistical confidence intervals to ensure
+            reliability.
+          </p>
+          <p>
+            The platform is fully open source and provides free access to all data, including daily database dumps for
+            researchers and developers. A $3/month patron tier offers prioritized data fetching for personal Steam
+            accounts, ensuring your matches and stats are always up to date.
+          </p>
+        </div>
+      </section>
+
       {/* Disclaimer */}
       <section className="border-t border-border pt-6">
         <p className="text-center text-xs text-muted-foreground">

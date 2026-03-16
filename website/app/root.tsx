@@ -70,28 +70,78 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([
-              {
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                name: "Deadlock API",
-                url: "https://deadlock-api.com",
-                description: "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.",
-                potentialAction: {
-                  "@type": "SearchAction",
-                  target: "https://deadlock-api.com/leaderboard?search={search_term_string}",
-                  "query-input": "required name=search_term_string",
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "@id": "https://deadlock-api.com/#website",
+                  name: "Deadlock API",
+                  url: "https://deadlock-api.com",
+                  description: "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.",
+                  publisher: { "@id": "https://deadlock-api.com/#organization" },
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: {
+                      "@type": "EntryPoint",
+                      urlTemplate: "https://deadlock-api.com/leaderboard?search={search_term_string}",
+                    },
+                    "query-input": "required name=search_term_string",
+                  },
                 },
-              },
-              {
-                "@context": "https://schema.org",
-                "@type": "Organization",
-                name: "Deadlock API",
-                url: "https://deadlock-api.com",
-                logo: "https://deadlock-api.com/favicon.png",
-                sameAs: ["https://github.com/deadlock-api/", "https://discord.gg/deadlock-api"],
-              },
-            ]),
+                {
+                  "@type": "Organization",
+                  "@id": "https://deadlock-api.com/#organization",
+                  name: "Deadlock API",
+                  url: "https://deadlock-api.com",
+                  logo: {
+                    "@type": "ImageObject",
+                    url: "https://deadlock-api.com/favicon.png",
+                    width: 512,
+                    height: 512,
+                  },
+                  sameAs: ["https://github.com/deadlock-api/", "https://discord.gg/deadlock-api"],
+                  description:
+                    "Open source game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.",
+                },
+                {
+                  "@type": "WebApplication",
+                  "@id": "https://deadlock-api.com/#webapp",
+                  name: "Deadlock API",
+                  url: "https://deadlock-api.com",
+                  description:
+                    "Open source game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.",
+                  applicationCategory: "GameApplication",
+                  operatingSystem: "Any",
+                  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+                  isAccessibleForFree: true,
+                  creator: { "@id": "https://deadlock-api.com/#organization" },
+                },
+                {
+                  "@type": "VideoGame",
+                  "@id": "https://deadlock-api.com/#game",
+                  name: "Deadlock",
+                  description:
+                    "Deadlock is a team-based multiplayer shooter and MOBA hybrid game developed and published by Valve.",
+                  url: "https://store.steampowered.com/app/1422450/Deadlock/",
+                  gamePlatform: "PC",
+                  applicationCategory: "Game",
+                  operatingSystem: "Windows",
+                  genre: ["MOBA", "Third-Person Shooter"],
+                  author: {
+                    "@type": "Organization",
+                    name: "Valve",
+                    url: "https://www.valvesoftware.com",
+                  },
+                  publisher: {
+                    "@type": "Organization",
+                    name: "Valve",
+                    url: "https://www.valvesoftware.com",
+                  },
+                  image: "https://deadlock-api.com/og/default.png",
+                },
+              ],
+            }),
           }}
         />
 
@@ -103,10 +153,55 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ backgroundImage: "url('/background.svg')" }}
       >
         <noscript>
-          <p style={{ padding: "2rem", textAlign: "center", color: "#fff" }}>
-            Deadlock API requires JavaScript to display hero stats, item analytics, and leaderboard data. Please enable
-            JavaScript to continue.
-          </p>
+          <div style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto", color: "#fff" }}>
+            <h1 style={{ textAlign: "center", marginBottom: "1rem" }}>Deadlock API</h1>
+            <p style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+              Deadlock API provides game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.
+              JavaScript is required for interactive features like filtering and live data.
+            </p>
+            <ul style={{ lineHeight: "1.8" }}>
+              <li>
+                <a href="/heroes" style={{ color: "#fa4454" }}>
+                  Hero Stats
+                </a>{" "}
+                - Win rates, pick rates, matchups, and performance analytics for all Deadlock heroes
+              </li>
+              <li>
+                <a href="/items" style={{ color: "#fa4454" }}>
+                  Item Stats
+                </a>{" "}
+                - Item win rates, purchase timing, confidence intervals, and combo analytics
+              </li>
+              <li>
+                <a href="/abilities" style={{ color: "#fa4454" }}>
+                  Ability Stats
+                </a>{" "}
+                - Ability upgrade paths and win rates per hero
+              </li>
+              <li>
+                <a href="/leaderboard" style={{ color: "#fa4454" }}>
+                  Leaderboard
+                </a>{" "}
+                - Ranked player standings across all regions
+              </li>
+              <li>
+                <a href="/data-privacy" style={{ color: "#fa4454" }}>
+                  Data Privacy
+                </a>{" "}
+                - Manage your data privacy settings and GDPR requests
+              </li>
+            </ul>
+            <p style={{ textAlign: "center", marginTop: "1.5rem", fontSize: "0.875rem", opacity: 0.7 }}>
+              APIs:{" "}
+              <a href="https://api.deadlock-api.com" style={{ color: "#fa4454" }}>
+                Game Data API
+              </a>{" "}
+              |{" "}
+              <a href="https://assets.deadlock-api.com" style={{ color: "#fa4454" }}>
+                Assets API
+              </a>
+            </p>
+          </div>
         </noscript>
         <div className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-br from-black/35 to-transparent" />
         <div className="relative z-10">{children}</div>

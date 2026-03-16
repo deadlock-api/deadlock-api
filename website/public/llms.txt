@@ -1,21 +1,35 @@
 # Deadlock API
-> Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve.
+> Open source game statistics, analytics, and API for Valve's Deadlock
 
 ## About
-Deadlock API is a free, open-source community project providing comprehensive game data and analytics for Deadlock by Valve.
+Deadlock API is a free, open-source community project providing comprehensive game data and analytics for Deadlock, a team-based multiplayer shooter and MOBA hybrid developed by Valve. The platform tracks match data for millions of players and provides hero analytics, item statistics, ability upgrade paths, ranked leaderboards, and more.
 
-## Pages
-- /heroes — Hero win rates, pick rates, matchups, and performance analytics
-- /items — Item statistics, build combos, purchase timing analysis
-- /abilities — Ability upgrade paths and win rates per hero
-- /leaderboard — Ranked player leaderboard by region with hero filters and search
-- /badge-distribution — Player rank distribution data over time
-- /game-stats — Aggregate match statistics and trends by rank
-- /heatmap — Kill/death heatmap visualization on the game map
-- /player-scoreboard — Top player performances ranked by various stats
-- /streamkit — Stream toolkit with chat commands and OBS widgets
-- /chat — AI chat assistant for Deadlock game data questions
+## Key Pages
+- /heroes - Hero win rates, pick rates, matchups, and performance analytics for all Deadlock heroes
+- /items - Item statistics with confidence intervals, purchase timing analysis, and item combo data
+- /abilities - Ability upgrade paths and win rates per hero, filterable by rank and patch
+- /leaderboard - Ranked player leaderboard by region with hero filters and player search
+- /badge-distribution - Player rank distribution data over time
+- /game-stats - Aggregate match statistics and trends by rank
+- /heatmap - Kill/death heatmap visualization on the game map
+- /player-scoreboard - Top player performances ranked by various stats
+- /streamkit - Stream toolkit with chatbot commands and OBS overlay widgets
+- /chat - AI chat assistant for Deadlock game data questions
+- /data-privacy - Data privacy settings and GDPR data deletion requests
 
-## API Documentation
-- Game data API: https://api.deadlock-api.com (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
+## APIs
+- Game Data API: https://api.deadlock-api.com (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
 - Assets API: https://assets.deadlock-api.com (OpenAPI spec: https://assets.deadlock-api.com/openapi.json)
+- Live Events API: Server-Sent Events for real-time match data (https://github.com/deadlock-api/deadlock-live-events)
+
+## Data
+- Match data tracked and updated in real time for millions of players
+- Open data with database dump downloads available at https://files.deadlock-api.com/Default/buckets/db-snapshot/public/
+- Statistics include win rates, pick rates, matchup data, confidence intervals, and purchase timing
+- Data filterable by rank, patch, game mode, and date range
+- Free to use, open source (https://github.com/deadlock-api/)
+
+## Contact
+- GitHub: https://github.com/deadlock-api/
+- Discord: https://discord.gg/deadlock-api
+- Email: info@deadlock-api.com

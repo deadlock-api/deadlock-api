@@ -58,6 +58,7 @@ export default function Leaderboard() {
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Browse the top-ranked Deadlock players by region. Filter by hero to see who dominates with specific
             characters, search for any player, and jump to any rank to see where you stand on the competitive ladder.
+            Rankings are based on matchmaking rating earned through ranked play.
           </p>
         </div>
         <Filter.Root>

@@ -50,6 +50,10 @@ export default function AbilityOrder() {
         <p className="mt-1 text-sm text-muted-foreground">
           Explore the most common ability upgrade paths and their win rates
         </p>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Analyze the most popular and highest win rate ability upgrade paths for every Deadlock hero. See which skill
+          orders are favored at different rank brackets, and how item choices affect optimal ability leveling.
+        </p>
       </div>
 
       <Filter.Root>

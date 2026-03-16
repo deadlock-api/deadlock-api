@@ -78,7 +78,8 @@ export default function Heroes(
         <p className="mt-1 text-sm text-muted-foreground">Detailed analytics and matchup data for Deadlock heroes</p>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Explore win rates, pick rates, and matchup data for every Deadlock hero. Filter by rank, patch, and game mode
-          to find the strongest heroes in the current meta or analyze how hero performance changes over time.
+          to find the strongest heroes in the current meta or analyze how hero performance changes over time. Statistics
+          are calculated from tracked ranked matches and updated in real time.
         </p>
       </div>
 
@@ -110,11 +111,7 @@ export default function Heroes(
               <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
                 Group by Type
               </Label>
-              <Switch
-                id={groupByTypeId}
-                checked={groupByType}
-                onCheckedChange={(checked) => setGroupByType(checked)}
-              />
+              <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
             </div>
             {groupByType ? (
               <HeroStatsGroupedByType
