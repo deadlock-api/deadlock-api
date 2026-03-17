@@ -83,31 +83,51 @@ const PAGES: OGPage[] = [
   },
 ];
 
-/** Read blog post frontmatter and generate OG page entries */
+/** Read blog post frontmatter from markdown files and JSX post registry in blog.ts */
 function loadBlogPages(): OGPage[] {
-  const blogDir = join(process.cwd(), "content", "blog");
-  let files: string[];
-  try {
-    files = readdirSync(blogDir).filter((f) => f.endsWith(".md"));
-  } catch {
-    return [];
-  }
-
   const pages: OGPage[] = [];
-  for (const file of files) {
-    const raw = readFileSync(join(blogDir, file), "utf-8");
-    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    if (!match) continue;
 
-    const yaml = match[1];
-    const title = yaml.match(/^title:\s*"?([^"\n]+)"?/m)?.[1]?.trim() ?? file.replace(".md", "");
-    const slug = file.replace(".md", "");
-    pages.push({
-      filename: `blog-${slug}.png`,
-      title,
-      subtitle: "Deadlock API Blog",
-    });
+  // Scan markdown blog posts
+  const blogDir = join(process.cwd(), "content", "blog");
+  try {
+    const files = readdirSync(blogDir).filter((f) => f.endsWith(".md"));
+    for (const file of files) {
+      const raw = readFileSync(join(blogDir, file), "utf-8");
+      const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      if (!match) continue;
+
+      const yaml = match[1];
+      const title = yaml.match(/^title:\s*"?([^"\n]+)"?/m)?.[1]?.trim() ?? file.replace(".md", "");
+      const slug = file.replace(".md", "");
+      pages.push({ filename: `blog-${slug}.png`, title, subtitle: "Deadlock API Blog" });
+    }
+  } catch {
+    // No markdown blog directory
   }
+
+  // Scan JSX blog posts from app/lib/blog.ts
+  try {
+    const blogTs = readFileSync(join(process.cwd(), "app", "lib", "blog.ts"), "utf-8");
+    const slugRegex = /slug:\s*"([^"]+)"/g;
+    const titleRegex = /title:\s*"([^"]+)"/g;
+
+    // Extract all slug/title pairs from jsxPosts array
+    const jsxSection = blogTs.split("const jsxPosts")[1];
+    if (jsxSection) {
+      const slugs = [...jsxSection.matchAll(slugRegex)].map((m) => m[1]);
+      const titles = [...jsxSection.matchAll(titleRegex)].map((m) => m[1]);
+      for (let i = 0; i < slugs.length; i++) {
+        pages.push({
+          filename: `blog-${slugs[i]}.png`,
+          title: titles[i] ?? slugs[i],
+          subtitle: "Deadlock API Blog",
+        });
+      }
+    }
+  } catch {
+    // blog.ts not found
+  }
+
   return pages;
 }
 
