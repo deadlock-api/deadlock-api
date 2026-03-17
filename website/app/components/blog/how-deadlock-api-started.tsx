@@ -221,10 +221,18 @@ export default function HowDeadlockApiStarted() {
         >
           Deadlock Match Overlay
         </a>{" "}
-        Twitch extension that shows the current match's heroes and builds right on stream. Also on top of this API,
-        people have built tournament organizer websites, stream bots, university and school projects and every few weeks
-        someone posts a machine learning project on Reddit where they trained a model on our match data to predict
-        outcomes or figure out the meta, which is always fun to see.
+        Twitch extension that shows the current match's heroes and builds right on stream.{" "}
+        <a href="https://ocelock.gg" target="_blank" rel="noopener noreferrer">
+          OCElock
+        </a>{" "}
+        is a competitive Deadlock league for the Oceania region, using the API for match validation and results.{" "}
+        <a href="https://www.overwolf.com/app/kofimbadam-deadlock_companion" target="_blank" rel="noopener noreferrer">
+          Deadlock Companion
+        </a>{" "}
+        is an Overwolf desktop app for match tracking and profile analytics. Also on top of this API, people have built
+        tournament organizer websites, stream bots, university and school projects and every few weeks someone posts a
+        machine learning project on Reddit where they trained a model on our match data to predict outcomes or figure
+        out the meta, which is always fun to see.
       </p>
       <p>
         We don't require registration or track who uses the API, so most of these I only find out about when someone
