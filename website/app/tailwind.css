@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+@plugin "@tailwindcss/typography";
 @import "highlight.js/styles/github-dark.min.css";
 
 @keyframes page-fade-in {

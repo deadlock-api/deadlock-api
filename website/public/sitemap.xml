@@ -12,4 +12,7 @@
   <url><loc>https://deadlock-api.com/streamkit</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://deadlock-api.com/chat</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://deadlock-api.com/data-privacy</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://deadlock-api.com/ingest-cache</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://deadlock-api.com/blog</loc><lastmod>2026-03-16</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://deadlock-api.com/blog/community-ingest</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>

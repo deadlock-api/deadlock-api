@@ -1,7 +1,11 @@
 import type { Config } from "@react-router/dev/config";
+
+import { getAllSlugs } from "./app/lib/blog";
+
 export default {
   ssr: false,
   async prerender() {
+    const blogSlugs = getAllSlugs();
     return [
       "/",
       "/heroes",
@@ -16,6 +20,8 @@ export default {
       "/games",
       "/heatmap",
       "/player-scoreboard",
+      "/blog",
+      ...blogSlugs.map((slug) => `/blog/${slug}`),
     ];
   },
 } satisfies Config;

@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { Resvg } from "@resvg/resvg-js";
@@ -41,7 +41,75 @@ const PAGES: OGPage[] = [
     title: "Ranked Leaderboard",
     subtitle: "Top players by region, hero filters & player search",
   },
+  {
+    filename: "badge-distribution.png",
+    title: "Rank Distribution",
+    subtitle: "Player rank distribution data over time",
+  },
+  {
+    filename: "games.png",
+    title: "Live Games",
+    subtitle: "Active matches and recent game results",
+  },
+  {
+    filename: "heatmap.png",
+    title: "Kill & Death Heatmap",
+    subtitle: "Visualize where fights happen on the map",
+  },
+  {
+    filename: "player-scoreboard.png",
+    title: "Player Scoreboard",
+    subtitle: "Top player performances ranked by various stats",
+  },
+  {
+    filename: "streamkit.png",
+    title: "Stream Toolkit",
+    subtitle: "Chatbot commands & OBS overlay widgets for streamers",
+  },
+  {
+    filename: "chat.png",
+    title: "AI Chat Assistant",
+    subtitle: "Ask questions about Deadlock game data",
+  },
+  {
+    filename: "ingest-cache.png",
+    title: "Community Match Ingest",
+    subtitle: "Scan your Steam cache to contribute match data",
+  },
+  {
+    filename: "blog.png",
+    title: "Blog",
+    subtitle: "Engineering posts, data analyses & project updates",
+  },
 ];
+
+/** Read blog post frontmatter and generate OG page entries */
+function loadBlogPages(): OGPage[] {
+  const blogDir = join(process.cwd(), "content", "blog");
+  let files: string[];
+  try {
+    files = readdirSync(blogDir).filter((f) => f.endsWith(".md"));
+  } catch {
+    return [];
+  }
+
+  const pages: OGPage[] = [];
+  for (const file of files) {
+    const raw = readFileSync(join(blogDir, file), "utf-8");
+    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!match) continue;
+
+    const yaml = match[1];
+    const title = yaml.match(/^title:\s*"?([^"\n]+)"?/m)?.[1]?.trim() ?? file.replace(".md", "");
+    const slug = file.replace(".md", "");
+    pages.push({
+      filename: `blog-${slug}.png`,
+      title,
+      subtitle: "Deadlock API Blog",
+    });
+  }
+  return pages;
+}
 
 function createCard(page: OGPage) {
   return {
@@ -179,8 +247,9 @@ export async function generateOGImages(outDir: string) {
   mkdirSync(ogDir, { recursive: true });
 
   const fonts = await loadFonts();
+  const allPages = [...PAGES, ...loadBlogPages()];
 
-  for (const page of PAGES) {
+  for (const page of allPages) {
     // eslint-disable-next-line no-await-in-loop -- sequential generation to avoid memory spikes
     const svg = await satori(createCard(page) as Parameters<typeof satori>[0], {
       width: WIDTH,
@@ -210,5 +279,5 @@ export async function generateOGImages(outDir: string) {
     writeFileSync(join(ogDir, page.filename), pngBuffer);
   }
 
-  return PAGES.map((p) => p.filename);
+  return allPages.map((p) => p.filename);
 }

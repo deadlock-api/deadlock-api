@@ -16,6 +16,9 @@ Deadlock API is a free, open-source community project providing comprehensive ga
 - /streamkit - Stream toolkit with chatbot commands and OBS overlay widgets
 - /chat - AI chat assistant for Deadlock game data questions
 - /data-privacy - Data privacy settings and GDPR data deletion requests
+- /ingest-cache - Community match data ingestion tool: scan your Steam cache to contribute match salts
+- /blog - Development blog with engineering posts, data analyses, and project updates
+- /blog/community-ingest - How community-contributed match salts grew monthly ingestion from 105k to 1.4 million matches
 
 ## APIs
 - Game Data API: https://api.deadlock-api.com (OpenAPI spec: https://api.deadlock-api.com/openapi.json)

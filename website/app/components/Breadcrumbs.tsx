@@ -15,6 +15,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "ingest-cache": "Data Ingest",
   "data-privacy": "Data Privacy",
   patron: "Prioritized Fetching",
+  blog: "Blog",
 };
 
 interface BreadcrumbItem {

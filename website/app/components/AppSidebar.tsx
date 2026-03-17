@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  BookOpen,
   Database,
   ExternalLink,
   Home,
@@ -69,6 +70,7 @@ const navGroups: NavGroup[] = [
     links: [
       { to: "/chat", label: "AI Chat", icon: MessageSquare },
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
+      { to: "/blog", label: "Blog", icon: BookOpen },
     ],
   },
 ];
