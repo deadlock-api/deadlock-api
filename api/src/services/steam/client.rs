@@ -319,7 +319,7 @@ struct SteamClientVersionResult {
 
 #[cached(
     ty = "TimedCache<u8, u32>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
