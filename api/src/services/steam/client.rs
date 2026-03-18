@@ -314,7 +314,7 @@ struct SteamClientVersionResponse {
 #[derive(serde::Deserialize)]
 struct SteamClientVersionResult {
     success: bool,
-    active_version: Option<u32>,
+    min_allowed_version: Option<u32>,
 }
 
 #[cached(
@@ -357,10 +357,9 @@ async fn get_client_version_from_steam_api(http_client: &reqwest::Client) -> API
         ));
     }
 
-    response
-        .result
-        .active_version
-        .ok_or_else(|| APIError::internal("Steam API response missing active_version".to_owned()))
+    response.result.min_allowed_version.ok_or_else(|| {
+        APIError::internal("Steam API response missing min_allowed_version".to_owned())
+    })
 }
 
 async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIResult<u32> {
