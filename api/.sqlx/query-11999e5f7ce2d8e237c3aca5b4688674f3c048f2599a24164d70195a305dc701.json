@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM prioritized_steam_accounts\n            WHERE deleted_at IS NOT NULL\n              AND deleted_at <= NOW() - INTERVAL '1 day'\n            RETURNING steam_id3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "11999e5f7ce2d8e237c3aca5b4688674f3c048f2599a24164d70195a305dc701"
+}

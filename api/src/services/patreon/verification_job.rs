@@ -154,9 +154,19 @@ impl PatreonVerificationJob {
             }
         }
 
+        // Hard-delete all accounts that have been soft-deleted for over 24 hours
+        match self
+            .steam_accounts_repository
+            .hard_delete_expired_accounts()
+            .await
+        {
+            Ok(count) if count > 0 => info!("Hard-deleted {count} expired soft-deleted accounts"),
+            Err(e) => error!("Failed to hard-delete expired accounts: {e}"),
+            _ => {}
+        }
+
         info!(
-            "Hourly verification complete: {} tokens refreshed, {} memberships synced, {} failed, {} skipped, {} queued for retry",
-            refreshed_count, membership_synced_count, failed_count, skipped_count, api_error_count
+            "Hourly verification complete: {refreshed_count} tokens refreshed, {membership_synced_count} memberships synced, {failed_count} failed, {skipped_count} skipped, {api_error_count} queued for retry",
         );
     }
 
