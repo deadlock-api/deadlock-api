@@ -34,12 +34,22 @@ const ReactQueryDevtools = lazy(() =>
 );
 
 import "@fontsource-variable/inter";
+import "@fontsource/new-rocker";
+import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
+
 import type { Route } from "./+types/root";
 
 export const links: LinksFunction = () => [
   {
     rel: "preload",
     href: interWoff2,
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  },
+  {
+    rel: "preload",
+    href: newRockerWoff2,
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",

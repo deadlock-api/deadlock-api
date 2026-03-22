@@ -49,6 +49,7 @@ const OG_IMAGES: Record<string, string> = {
   "/data-privacy": "/og/default.png",
   "/ingest-cache": "/og/ingest-cache.png",
   "/blog": "/og/blog.png",
+  "/deadlockdle": "/og/default.png",
 };
 
 /** OG image for a blog post by slug */

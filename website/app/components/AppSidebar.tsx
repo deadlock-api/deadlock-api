@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookOpen,
   Database,
+  Gamepad2,
   HardDrive,
   Home,
   ImageIcon,
@@ -73,6 +74,10 @@ const navGroups: NavGroup[] = [
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
       { to: "/blog", label: "Blog", icon: BookOpen },
     ],
+  },
+  {
+    label: "Games",
+    links: [{ to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 }],
   },
 ];
 

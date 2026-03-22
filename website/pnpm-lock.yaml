@@ -11,6 +11,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
+      '@fontsource/new-rocker':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@iconify-json/material-symbols':
         specifier: ^1.2.63
         version: 1.2.63
@@ -68,6 +71,9 @@ importers:
       fuse.js:
         specifier: ^7.1.0
         version: 7.1.0
+      gsap:
+        specifier: ^3.14.2
+        version: 3.14.2
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
@@ -547,6 +553,9 @@ packages:
 
   '@fontsource-variable/inter@5.2.8':
     resolution: {integrity: sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ==}
+
+  '@fontsource/new-rocker@5.2.7':
+    resolution: {integrity: sha512-Yx3Lo3MLQPprPjaxIAXIBw8BVRwkiKSzf9HKGYBsWSLxOfDWUVknMY6jXllQEbmLKEo+ifS6+PwbSoRe5blITw==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -2798,6 +2807,9 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
+  gsap@3.14.2:
+    resolution: {integrity: sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==}
+
   has-symbols@1.1.0:
     resolution: {integrity: sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==}
     engines: {node: '>= 0.4'}
@@ -4318,6 +4330,8 @@ snapshots:
   '@floating-ui/utils@0.2.11': {}
 
   '@fontsource-variable/inter@5.2.8': {}
+
+  '@fontsource/new-rocker@5.2.7': {}
 
   '@humanfs/core@0.19.1': {}
 
@@ -6400,6 +6414,8 @@ snapshots:
   gopd@1.2.0: {}
 
   graceful-fs@4.2.11: {}
+
+  gsap@3.14.2: {}
 
   has-symbols@1.1.0: {}
 
