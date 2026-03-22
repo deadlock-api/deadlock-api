@@ -43,9 +43,7 @@ export function getPickrateMultiplier(gameMode?: "normal" | "street_brawl"): num
 
 /** Duration buckets for hero stats by game length */
 export const DURATION_BUCKETS = [
-  { label: "< 15m", minS: 0, maxS: 900 },
-  { label: "15-20m", minS: 900, maxS: 1200 },
-  { label: "20-25m", minS: 1200, maxS: 1500 },
+  { label: "< 25m", minS: 0, maxS: 1500 },
   { label: "25-30m", minS: 1500, maxS: 1800 },
   { label: "30-35m", minS: 1800, maxS: 2100 },
   { label: "35-40m", minS: 2100, maxS: 2400 },
