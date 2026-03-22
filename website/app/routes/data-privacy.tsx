@@ -15,6 +15,7 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { useAnalyticsConsent } from "~/hooks/useAnalyticsConsent";
 import { useSteamAuthCallback } from "~/hooks/useSteamAuthCallback";
 import { sendDataPrivacyRequest } from "~/lib/data-privacy-api";
 import { createPageMeta } from "~/lib/meta";
@@ -115,16 +116,18 @@ function DataPrivacyActionCard({
   );
 }
 
-function AnalyticsInfoCard() {
+function AnalyticsPreferencesCard() {
+  const { consent, accept, decline, reset } = useAnalyticsConsent();
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Analytics</CardTitle>
-        <CardDescription>How we collect anonymous usage data</CardDescription>
+        <CardTitle>Cookie & Analytics Preferences</CardTitle>
+        <CardDescription>Manage your consent for analytics cookies</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <h3 className="mb-2 text-lg font-semibold">Cookieless Analytics</h3>
+          <h3 className="mb-2 text-lg font-semibold">Why We Use Analytics</h3>
           <p className="text-muted-foreground">
             We use{" "}
             <a
@@ -135,9 +138,9 @@ function AnalyticsInfoCard() {
             >
               PostHog
             </a>
-            , an open-source analytics platform, to understand how people use Deadlock API. Our analytics are fully
-            cookieless and do not store any data on your device. PostHog is self-hosted on EU servers (Frankfurt) to
-            keep your data within the European Union.
+            , an open-source analytics platform, to understand how people use Deadlock API. This helps us identify which
+            features are most popular, discover bugs and usability issues, and prioritize improvements. PostHog is
+            self-hosted on EU servers (Frankfurt) to keep your data within the European Union.
           </p>
         </div>
 
@@ -150,8 +153,43 @@ function AnalyticsInfoCard() {
             <li>Basic device info (browser, screen size)</li>
           </ul>
           <p className="mt-2 text-sm text-muted-foreground">
-            We do <strong>not</strong> track personal information, Steam accounts, or match data through analytics. No
-            cookies or persistent identifiers are used.
+            We do <strong>not</strong> track personal information, Steam accounts, or match data through analytics.
+          </p>
+        </div>
+
+        <div className="rounded-md border border-white/10 bg-white/5 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">
+                Analytics status:{" "}
+                {consent === "granted" ? (
+                  <span className="text-green-400">Enabled</span>
+                ) : consent === "denied" ? (
+                  <span className="text-red-400">Disabled</span>
+                ) : (
+                  <span className="text-muted-foreground">No choice made yet</span>
+                )}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              {consent === "granted" ? (
+                <Button variant="outline" onClick={reset}>
+                  Opt Out
+                </Button>
+              ) : (
+                <>
+                  <Button onClick={accept}>Opt In</Button>
+                  {consent === null && (
+                    <Button variant="outline" onClick={decline}>
+                      Opt Out
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            You can change your preference at any time. Opting out clears all analytics cookies.
           </p>
         </div>
       </CardContent>
@@ -242,8 +280,8 @@ export default function DataPrivacy() {
         </Card>
       )}
 
-      {/* Analytics Information */}
-      <AnalyticsInfoCard />
+      {/* Cookie & Analytics Preferences */}
+      <AnalyticsPreferencesCard />
 
       {/* What We Collect Section */}
       <Card>

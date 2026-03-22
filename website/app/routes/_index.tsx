@@ -484,8 +484,8 @@ export default function Index() {
           <p>
             Deadlock API tracks match data for millions of players, providing the community with detailed hero win
             rates, item statistics with confidence intervals, ability upgrade path analysis, and competitive
-            leaderboards across all regions. All data is updated in real time and can be filtered by rank, patch, game
-            mode, and date range.
+            leaderboards across all regions. All data is updated in real time and can be filtered by rank, patch, game mode,
+            and date range.
           </p>
         </div>
       </section>
