@@ -9,7 +9,16 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { Component, Suspense, lazy } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import type { LinksFunction } from "react-router";
-import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
+import {
+  Navigate,
+  isRouteErrorResponse,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLocation,
+} from "react-router";
 
 import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
@@ -260,7 +269,12 @@ class QueryErrorBoundary extends Component<QueryErrorBoundaryProps, QueryErrorBo
 }
 
 export default function App() {
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
+
+  if (pathname !== "/" && pathname.endsWith("/")) {
+    return <Navigate to={pathname.slice(0, -1) + search + hash} replace />;
+  }
+
   const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
 
   if (isWidgetEmbed) {

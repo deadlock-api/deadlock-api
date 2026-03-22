@@ -514,7 +514,7 @@ export default function Index() {
       <section className="border-t border-border pt-6">
         <p className="text-center text-xs text-muted-foreground">
           <a
-            href="https://deadlock-api.com/"
+            href="https://deadlock-api.com"
             title="Deadlock API"
             className="font-medium text-primary underline underline-offset-4"
           >
