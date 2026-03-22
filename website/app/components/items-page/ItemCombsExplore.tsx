@@ -262,7 +262,8 @@ export function ItemCombsExplore({
     return topBuildsData.flatMap((match) => {
       const player = match.players.find((p) => p.hero_id === hero);
       if (!player) return [];
-      const shopItems = player.items.filter((i) => i.upgrade_id === 1);
+      const abilityIds = heroAbilityMetadata?.abilityIdToSlot;
+      const shopItems = player.items.filter((i) => i.upgrade_id === 1 && !abilityIds?.has(i.item_id));
       const boughtItemIds = new Set(shopItems.map((i) => i.item_id));
       const abilityBuildData = getAbilityBuildData(
         player.items,
