@@ -4,8 +4,9 @@ import {
   BarChart3,
   BookOpen,
   Database,
-  ExternalLink,
+  HardDrive,
   Home,
+  ImageIcon,
   ListOrdered,
   Map,
   Medal,
@@ -234,40 +235,60 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      {/* Bottom nav links */}
-      <div className="space-y-0.5 border-t border-sidebar-border px-3 py-2">
-        {bottomNavLinks.map((link) => (
-          <NavItem key={link.to} link={link} onNavigate={onNavigate} />
-        ))}
-      </div>
-
       {/* Service links */}
       <div className="border-t border-sidebar-border px-3 py-2">
-        <p className="px-3 pb-1 text-xs font-semibold tracking-wider text-sidebar-foreground/40 uppercase">Services</p>
-        <div className="space-y-0.5">
+        <p className="px-3 pb-1.5 text-xs font-semibold tracking-wider text-sidebar-foreground/40 uppercase">
+          Services
+        </p>
+        <div className="grid grid-cols-2 gap-1">
           {[
-            { href: ASSETS_ORIGIN, label: "Assets API" },
-            { href: API_ORIGIN, label: "Game Data API" },
+            { href: ASSETS_ORIGIN, label: "Assets API", icon: ImageIcon },
+            { href: API_ORIGIN, label: "Game Data", icon: BarChart3 },
             {
               href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
-              label: "Database Dumps",
+              label: "DB Dumps",
+              icon: HardDrive,
             },
             {
               href: "https://github.com/deadlock-api/deadlock-live-events",
-              label: "Live Events API",
+              label: "Live Events",
+              icon: Radio,
             },
-          ].map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between rounded-md px-3 py-1 text-sm text-sidebar-foreground/60 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-            >
-              {link.label}
-              <ExternalLink className="h-3 w-3 opacity-40" />
-            </a>
-          ))}
+          ].map((link) => {
+            const Icon = link.icon;
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border/50 px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50 transition-colors duration-150 hover:border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              >
+                <Icon className="h-3 w-3 shrink-0 opacity-60" />
+                {link.label}
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom nav links */}
+      <div className="border-t border-sidebar-border px-3 py-2">
+        <div className="grid grid-cols-2 gap-1">
+          {bottomNavLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={onNavigate}
+                className="flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border/50 px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50 transition-colors duration-150 hover:border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              >
+                <Icon className="h-3 w-3 shrink-0 opacity-60" />
+                {link.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
