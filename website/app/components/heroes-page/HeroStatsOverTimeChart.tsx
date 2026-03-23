@@ -399,7 +399,7 @@ export function HeroStatsOverTimeChart({
           aria-label={`Hero ${heroStat.replace(/_/g, " ")} over time chart`}
           className="relative"
         >
-          <ResponsiveContainer width="100%" height={bumpChart ? 1200 : 800} className="bg-muted p-4">
+          <ResponsiveContainer width="100%" height={bumpChart ? 960 : 640} className="bg-muted p-4">
             <LineChart
               data={formattedData}
               margin={{ top: 20, right: bumpChart ? 120 : 20, bottom: 60 }}
