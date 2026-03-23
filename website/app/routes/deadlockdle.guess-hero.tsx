@@ -54,7 +54,7 @@ function WarpFilters() {
     <svg width="0" height="0" className="absolute" aria-hidden="true">
       <defs>
         {WARP_STEPS.map((step, i) => (
-          <filter key={i} id={`dldle-warp-${i}`} x="-20%" y="-20%" width="140%" height="140%">
+          <filter key={step.scale} id={`dldle-warp-${i}`} x="-20%" y="-20%" width="140%" height="140%">
             <feTurbulence type="turbulence" baseFrequency={step.freq} numOctaves={3} seed={42} result="turb" />
             <feDisplacementMap
               in="SourceGraphic"

@@ -15,10 +15,10 @@ const BORDER_WIDTH = 3;
 
 /** Corner initial rest positions (pixel offsets from center) */
 const REST_POSITIONS = [
-  { x: -CORNER_SIZE * 1.5, y: -CORNER_SIZE * 1.5 }, // TL
-  { x: CORNER_SIZE * 0.5, y: -CORNER_SIZE * 1.5 }, // TR
-  { x: CORNER_SIZE * 0.5, y: CORNER_SIZE * 0.5 }, // BR
-  { x: -CORNER_SIZE * 1.5, y: CORNER_SIZE * 0.5 }, // BL
+  { key: "tl", x: -CORNER_SIZE * 1.5, y: -CORNER_SIZE * 1.5 },
+  { key: "tr", x: CORNER_SIZE * 0.5, y: -CORNER_SIZE * 1.5 },
+  { key: "br", x: CORNER_SIZE * 0.5, y: CORNER_SIZE * 0.5 },
+  { key: "bl", x: -CORNER_SIZE * 1.5, y: CORNER_SIZE * 0.5 },
 ];
 
 const CORNER_BORDERS: React.CSSProperties[] = [
@@ -242,6 +242,9 @@ export function TargetCursor({
 
     window.addEventListener("mouseover", enterHandler, { passive: true });
 
+    const currentStrength = strengthRef.current;
+    const currentTargetCornerPositions = targetCornerPositionsRef;
+
     return () => {
       if (tickerFnRef.current) gsap.ticker.remove(tickerFnRef.current);
       window.removeEventListener("mousemove", moveHandler);
@@ -253,8 +256,8 @@ export function TargetCursor({
       spinTlRef.current?.kill();
       document.body.style.cursor = originalCursor;
       styleEl?.remove();
-      targetCornerPositionsRef.current = null;
-      strengthRef.current.current = 0;
+      currentTargetCornerPositions.current = null;
+      currentStrength.current = 0;
     };
   }, [targetSelector, spinDuration, moveCursor, hideDefaultCursor, isMobile, hoverDuration, parallaxOn]);
 
@@ -304,7 +307,7 @@ export function TargetCursor({
       />
       {REST_POSITIONS.map((pos, i) => (
         <div
-          key={i}
+          key={pos.key}
           ref={(el) => {
             cornerRefs.current[i] = el;
           }}
