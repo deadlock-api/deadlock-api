@@ -498,7 +498,7 @@ export default function Index() {
         <div className="mx-auto max-w-3xl space-y-4 text-sm leading-relaxed text-muted-foreground">
           <p>
             Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked match is
-            processed to extract hero performance, item purchases, ability upgrade paths, and player rankings.
+            processed to extract hero performance, item purchases, ability upgrade paths, and average match rankings.
             Statistics like win rates and pick rates are computed with statistical confidence intervals to ensure
             reliability.
           </p>

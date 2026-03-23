@@ -9,7 +9,7 @@ Deadlock API is a free, open-source community project providing comprehensive ga
 - /items - Item statistics with confidence intervals, purchase timing analysis, and item combo data
 - /abilities - Ability upgrade paths and win rates per hero, filterable by rank and patch
 - /leaderboard - Ranked player leaderboard by region with hero filters and player search
-- /badge-distribution - Player rank distribution data over time
+- /badge-distribution - Average Match rank distribution data over time
 - /game-stats - Aggregate match statistics and trends by rank
 - /heatmap - Kill/death heatmap visualization on the game map
 - /player-scoreboard - Top player performances ranked by various stats

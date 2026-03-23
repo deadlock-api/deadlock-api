@@ -18,7 +18,7 @@ const BadgeDistributionChart = lazy(() => import("./BadgeDistributionChart"));
 export function meta() {
   return createPageMeta({
     title: "Rank Distribution | Deadlock API",
-    description: "See the distribution of player ranks and badges across the Deadlock competitive ladder.",
+    description: "See the distribution of average match ranks across the Deadlock competitive ladder.",
     path: "/badge-distribution",
   });
 }
@@ -62,7 +62,7 @@ export default function BadgeDistribution() {
     <div className="flex h-[calc(100dvh-2rem)] flex-col gap-4">
       <div className="shrink-0 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Match Rank Distribution</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Player rank distribution across all badges</p>
+        <p className="mt-1 text-sm text-muted-foreground">Average match rank distribution across all badges</p>
       </div>
       <Filter.Root>
         <Filter.MatchDuration

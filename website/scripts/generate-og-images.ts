@@ -44,7 +44,7 @@ const PAGES: OGPage[] = [
   {
     filename: "badge-distribution.png",
     title: "Rank Distribution",
-    subtitle: "Player rank distribution data over time",
+    subtitle: "Average Match rank distribution data over time",
   },
   {
     filename: "games.png",
