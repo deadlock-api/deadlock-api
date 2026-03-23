@@ -19,8 +19,7 @@ use crate::demo_parser::error::DemoParseError;
 use crate::demo_parser::visitor::SendingVisitor;
 use crate::error::{APIError, APIResult};
 use crate::state::AppState;
-use crate::utils;
-use crate::utils::comma_separated_deserialize_option;
+use crate::utils::{self, comma_separated_deserialize_option};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct DemoEventsQuery {
@@ -109,6 +108,21 @@ async fn demo_event_stream(
     })
 }
 
+fn events_response(
+    stream: impl Stream<Item = Result<Event, DemoParseError>> + Send + 'static,
+) -> impl IntoResponse {
+    let headers = HeaderMap::from_iter([
+        (
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/event-stream"),
+        ),
+        (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
+        (header::CONNECTION, HeaderValue::from_static("keep-alive")),
+    ]);
+
+    (headers, Sse::new(stream).keep_alive(KeepAlive::default()))
+}
+
 pub(super) async fn events(
     Path(match_id): Path<u64>,
     Query(body): Query<DemoEventsQuery>,
@@ -126,14 +140,7 @@ pub(super) async fn events(
     .fixed_backoff(Duration::from_millis(200))
     .await?;
 
-    // Wait for the demo to be available
-    tryhard::retry_fn(|| async {
-        utils::live_demo_exists(&state.http_client, &response.broadcast_url).await
-    })
-    .retries(60)
-    .fixed_backoff(Duration::from_millis(500))
-    .await
-    .map_err(|e| APIError::internal(format!("Failed to spectate match: {e}")))?;
+    utils::wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
 
     info!("Demo available for match {match_id}");
     let stream = demo_event_stream(response.broadcast_url, body)
@@ -141,14 +148,27 @@ pub(super) async fn events(
         .map_err(|e| APIError::internal(e.to_string()))?
         .inspect_err(|e| error!("Error in demo event stream: {e}"));
 
-    let headers = HeaderMap::from_iter([
-        (
-            header::CONTENT_TYPE,
-            HeaderValue::from_static("text/event-stream"),
-        ),
-        (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
-        (header::CONNECTION, HeaderValue::from_static("keep-alive")),
-    ]);
+    Ok(events_response(stream))
+}
 
-    Ok((headers, Sse::new(stream).keep_alive(KeepAlive::default())))
+#[derive(Deserialize)]
+pub(super) struct BroadcastEventsQuery {
+    broadcast_url: String,
+    #[serde(flatten)]
+    query: DemoEventsQuery,
+}
+
+pub(super) async fn events_by_broadcast_url(
+    Query(query): Query<BroadcastEventsQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    info!("Connecting to broadcast URL: {}", query.broadcast_url);
+    utils::wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
+
+    let stream = demo_event_stream(query.broadcast_url, query.query)
+        .await
+        .map_err(|e| APIError::internal(e.to_string()))?
+        .inspect_err(|e| error!("Error in demo event stream: {e}"));
+
+    Ok(events_response(stream))
 }

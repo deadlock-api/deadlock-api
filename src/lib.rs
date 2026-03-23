@@ -39,6 +39,8 @@ pub fn router() -> Result<NormalizePath<Router>, StartupError> {
             get(events::events),
         )
         .route("/v1/matches/{match_id}/live/demo", get(demo::demo))
+        .route("/v1/live/demo/events", get(events::events_by_broadcast_url))
+        .route("/v1/live/demo", get(demo::demo_by_broadcast_url))
         .layer(CorsLayer::permissive())
         .with_state(state);
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))

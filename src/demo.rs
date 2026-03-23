@@ -2,16 +2,17 @@ use core::time::Duration;
 
 use async_stream::try_stream;
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
 use bytes::Bytes;
 use futures::Stream;
 use haste::broadcast::{BroadcastHttp, BroadcastHttpClientError};
+use serde::Deserialize;
 use tracing::info;
 
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::state::AppState;
-use crate::utils::{live_demo_exists, spectate_match};
+use crate::utils::{spectate_match, wait_for_live_demo};
 
 fn demo_stream(
     broadcast_url: impl Into<String>,
@@ -45,14 +46,22 @@ pub(super) async fn demo(
     .fixed_backoff(Duration::from_millis(200))
     .await?;
 
-    // Wait for the demo to be available
-    tryhard::retry_fn(|| async {
-        live_demo_exists(&state.http_client, &response.broadcast_url).await
-    })
-    .retries(60)
-    .fixed_backoff(Duration::from_millis(500))
-    .await
-    .map_err(|e| APIError::internal(format!("Failed to spectate match: {e}")))?;
+    wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
 
     Ok(Body::from_stream(demo_stream(response.broadcast_url)))
+}
+
+#[derive(Deserialize)]
+pub(super) struct BroadcastDemoQuery {
+    broadcast_url: String,
+}
+
+pub(super) async fn demo_by_broadcast_url(
+    Query(query): Query<BroadcastDemoQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    info!("Connecting to broadcast URL: {}", query.broadcast_url);
+    wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
+
+    Ok(Body::from_stream(demo_stream(query.broadcast_url)))
 }

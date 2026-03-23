@@ -1,8 +1,11 @@
 use core::num::TryFromIntError;
 use core::str::FromStr;
+use core::time::Duration;
 
 use reqwest::Response;
 use serde::{Deserialize, Deserializer};
+
+use crate::error::APIError;
 
 // Query Parameter Parsing
 #[derive(Debug, Deserialize)]
@@ -110,4 +113,15 @@ pub(crate) async fn live_demo_exists(
         .await
         .and_then(Response::error_for_status)
         .map(drop)
+}
+
+pub(crate) async fn wait_for_live_demo(
+    http_client: &reqwest::Client,
+    broadcast_url: &str,
+) -> Result<(), APIError> {
+    tryhard::retry_fn(|| live_demo_exists(http_client, broadcast_url))
+        .retries(60)
+        .fixed_backoff(Duration::from_millis(500))
+        .await
+        .map_err(|e| APIError::internal(format!("Demo not available: {e}")))
 }
