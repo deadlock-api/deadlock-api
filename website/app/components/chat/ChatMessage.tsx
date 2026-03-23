@@ -98,10 +98,10 @@ function TokenUsageIndicator({ usage }: { usage: TokenUsage }) {
 
 function TypingIndicator() {
   return (
-    <div className="flex items-center gap-1 px-2 py-1">
-      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: "0ms" }} />
-      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: "150ms" }} />
-      <span className="size-1.5 animate-pulse rounded-full bg-muted-foreground" style={{ animationDelay: "300ms" }} />
+    <div className="flex items-center gap-1.5 px-1 py-1">
+      <span className="size-2 animate-[typing-bounce_1.4s_ease-in-out_infinite] rounded-full bg-muted-foreground/70" />
+      <span className="size-2 animate-[typing-bounce_1.4s_ease-in-out_0.2s_infinite] rounded-full bg-muted-foreground/70" />
+      <span className="size-2 animate-[typing-bounce_1.4s_ease-in-out_0.4s_infinite] rounded-full bg-muted-foreground/70" />
     </div>
   );
 }
