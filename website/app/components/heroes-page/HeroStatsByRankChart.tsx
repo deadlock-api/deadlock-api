@@ -264,11 +264,10 @@ export function HeroStatsByRankChart({
     [heroDataByHero],
   );
 
-  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(
-    heroIdMap,
-    heroIdsWithData,
-    "circle",
-  );
+  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(heroIdMap, {
+    heroIdFilter: heroIdsWithData,
+    legendType: "circle",
+  });
 
   const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes;
 

@@ -1,4 +1,4 @@
-import { parseAsBoolean, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsStringLiteral, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 import type { MetaFunction } from "react-router";
 
@@ -14,6 +14,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { createPageMeta } from "~/lib/meta";
 
@@ -67,6 +68,10 @@ export default function Heroes(
 ) {
   const filters = useHeroFilters(initialTab);
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
+  const [chartType, setChartType] = useQueryState(
+    "chart_type",
+    parseAsStringLiteral(["bump", "line"] as const).withDefault("bump"),
+  );
   const groupByTypeId = useId();
   const sameLaneFilterId1 = useId();
   const sameLaneFilterId2 = useId();
@@ -147,7 +152,7 @@ export default function Heroes(
 
         <TabsContent value="stats-over-time">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
+            <div className="flex flex-wrap items-end justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
@@ -162,6 +167,21 @@ export default function Heroes(
                   onChange={(val) => filters.setHeroTimeInterval(val as typeof filters.heroTimeInterval)}
                 />
               </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm text-muted-foreground">Chart Type</span>
+                <ToggleGroup
+                  type="single"
+                  variant="outline"
+                  size="sm"
+                  value={chartType}
+                  onValueChange={(val) => {
+                    if (val) setChartType(val as "line" | "bump");
+                  }}
+                >
+                  <ToggleGroupItem value="bump">Bump</ToggleGroupItem>
+                  <ToggleGroupItem value="line">Line</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </div>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
@@ -175,6 +195,7 @@ export default function Heroes(
                   minDate={filters.startDate}
                   maxDate={filters.endDate}
                   gameMode={filters.gameMode}
+                  bumpChart={chartType === "bump"}
                 />
               </Suspense>
             </ChunkErrorBoundary>

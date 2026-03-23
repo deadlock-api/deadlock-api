@@ -29,9 +29,13 @@ export function useHeroColorMap() {
  */
 export function useChartHeroVisibility(
   heroIdMap: Record<number, { name: string; color: string }>,
-  heroIdFilter?: number[],
-  legendType: "line" | "circle" | "square" = "line",
+  options: {
+    heroIdFilter?: number[];
+    legendType?: "line" | "circle" | "square";
+    showAllByDefault?: boolean;
+  } = {},
 ) {
+  const { heroIdFilter, legendType = "line", showAllByDefault = false } = options;
   const allHeroIds = useMemo(() => {
     const ids = heroIdFilter ?? Object.keys(heroIdMap).map(Number);
     return ids.sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? ""));
@@ -56,16 +60,22 @@ export function useChartHeroVisibility(
     [allHeroIds, heroIdMap],
   );
 
-  const visibleHeroIds = useMemo(() => allHeroIds.filter((id) => visibleHeroSet.has(id)), [allHeroIds, visibleHeroSet]);
+  const allHeroIdSet = useMemo(() => new Set(allHeroIds), [allHeroIds]);
+  const effectiveVisibleSet = showAllByDefault ? allHeroIdSet : visibleHeroSet;
+
+  const visibleHeroIds = useMemo(
+    () => allHeroIds.filter((id) => effectiveVisibleSet.has(id)),
+    [allHeroIds, effectiveVisibleSet],
+  );
 
   const legendPayload = useMemo(
     () =>
       allHeroIds.map((heroId) => ({
         value: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
         type: legendType,
-        color: visibleHeroSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
+        color: effectiveVisibleSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
       })),
-    [allHeroIds, heroIdMap, legendType, visibleHeroSet],
+    [allHeroIds, heroIdMap, legendType, effectiveVisibleSet],
   );
 
   return { visibleHeroIds, handleLegendClick, legendPayload };
