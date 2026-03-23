@@ -258,6 +258,12 @@ export function HeroStatsOverTimeChart({
   const [hoveredHeroId, setHoveredHeroId] = useState<number | null>(null);
   const labelHoveredRef = useRef(false);
   const throttleRef = useRef<number>(0);
+  const plotAreaRef = useRef<{ top: number; height: number } | null>(null);
+
+  // Invalidate cached plot area bounds when chart layout changes
+  useEffect(() => {
+    plotAreaRef.current = null;
+  }, [formattedData, visibleHeroIds, bumpChart]);
 
   // biome-ignore lint/suspicious/noExplicitAny: Recharts CategoricalChartState type is too restrictive
   const handleChartMouseMove = useCallback(
@@ -276,8 +282,20 @@ export function HeroStatsOverTimeChart({
       const entries = state.activePayload.filter((p: any) => p.dataKey !== "date");
       if (!entries.length) return;
 
-      const top = state.offset?.top ?? 20;
-      const areaHeight = state.offset?.height ?? (bumpChart ? 1100 : 720);
+      // Read actual plot area bounds from the SVG clipPath rect (Recharts' offset
+      // is not included in the onMouseMove callback state).
+      if (!plotAreaRef.current) {
+        const clipRect = chartContainerRef.current?.querySelector("defs clipPath rect");
+        if (clipRect) {
+          plotAreaRef.current = {
+            top: Number(clipRect.getAttribute("y")),
+            height: Number(clipRect.getAttribute("height")),
+          };
+        }
+      }
+
+      const top = plotAreaRef.current?.top ?? 20;
+      const areaHeight = plotAreaRef.current?.height ?? (bumpChart ? 880 : 560);
       const mouseY = state.chartY - top;
 
       const yMin = bumpChart ? 1 : minStat * 0.9;
@@ -397,9 +415,9 @@ export function HeroStatsOverTimeChart({
           ref={chartContainerRef}
           role="img"
           aria-label={`Hero ${heroStat.replace(/_/g, " ")} over time chart`}
-          className="relative"
+          className="relative bg-muted p-4"
         >
-          <ResponsiveContainer width="100%" height={bumpChart ? 960 : 640} className="bg-muted p-4">
+          <ResponsiveContainer width="100%" height={bumpChart ? 960 : 640}>
             <LineChart
               data={formattedData}
               margin={{ top: 20, right: bumpChart ? 120 : 20, bottom: 60 }}
