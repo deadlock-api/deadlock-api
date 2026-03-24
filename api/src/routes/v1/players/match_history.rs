@@ -255,7 +255,7 @@ pub(crate) async fn fetch_steam_match_history(
     responses(
         (status = OK, body = [PlayerMatchHistoryEntry]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = TOO_MANY_REQUESTS, body = [PlayerMatchHistoryEntry], description = "Rate limit exceeded. Returns stored match history from ClickHouse as a fallback. When `force_refetch=true`, returns an error instead."),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching player match history failed")
     ),
     tags = ["Players"],
