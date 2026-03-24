@@ -284,7 +284,7 @@ pub(super) async fn match_history(
     Query(query): Query<MatchHistoryQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
-) -> APIResult<(HeaderMap, Json<PlayerMatchHistory>)> {
+) -> APIResult<(StatusCode, HeaderMap, Json<PlayerMatchHistory>)> {
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)
@@ -307,7 +307,7 @@ pub(super) async fn match_history(
     if query.only_stored_history {
         let mut headers = HeaderMap::new();
         headers.insert("Called-Steam", "false".parse().unwrap());
-        return Ok((headers, Json(ch_match_history)));
+        return Ok((StatusCode::OK, headers, Json(ch_match_history)));
     }
 
     // Apply rate limits based on the query parameters
@@ -340,7 +340,17 @@ pub(super) async fn match_history(
     };
     if let Err(e) = res {
         warn!("Reached rate limits: {e:?}");
-        return Err(e);
+        if query.force_refetch {
+            return Err(e);
+        }
+        // Fallback to stored history with 429 status for normal requests
+        let mut headers = HeaderMap::new();
+        headers.insert("Called-Steam", "false".parse().unwrap());
+        return Ok((
+            StatusCode::TOO_MANY_REQUESTS,
+            headers,
+            Json(ch_match_history),
+        ));
     }
 
     // Fetch player match history from Steam and ClickHouse
@@ -375,5 +385,5 @@ pub(super) async fn match_history(
         .collect_vec();
     let mut headers = HeaderMap::new();
     headers.insert("Called-Steam", "true".parse().unwrap());
-    Ok((headers, Json(combined_match_history)))
+    Ok((StatusCode::OK, headers, Json(combined_match_history)))
 }
