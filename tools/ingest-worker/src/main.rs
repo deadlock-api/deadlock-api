@@ -310,6 +310,10 @@ async fn fetch_and_parse_match(
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))
                     .unwrap(),
+                match_info
+                    .match_paths
+                    .as_ref()
+                    .and_then(|path| path.paths.iter().find(|pp| pp.player_slot == p.player_slot)),
                 p,
             )
                 .into()
@@ -329,24 +333,17 @@ async fn fetch_and_parse_match(
 }
 
 /// Try to find a match file in processed/ first, then failed/, across all known extensions.
-/// Fires all lookups concurrently for lower latency.
 async fn find_match_object(
     store: &impl ObjectStore,
     match_id: &str,
 ) -> anyhow::Result<(Path, GetResult)> {
-    let mut paths = Vec::with_capacity(6);
     for folder in &["processed/metadata", "failed/metadata"] {
         for ext in MATCH_EXTENSIONS {
-            paths.push(Path::from(format!("{folder}/{match_id}{ext}")));
-        }
-    }
-
-    let results = futures::future::join_all(paths.iter().map(|p| store.get(p))).await;
-
-    for (path, result) in paths.into_iter().zip(results) {
-        if let Ok(result) = result {
-            debug!("Found match {match_id} at {path}");
-            return Ok((path, result));
+            let path = Path::from(format!("{folder}/{match_id}{ext}"));
+            if let Ok(result) = store.get(&path).await {
+                debug!("Found match {match_id} at {path}");
+                return Ok((path, result));
+            }
         }
     }
     bail!("Match {match_id} not found in processed or failed folders")
@@ -498,6 +495,10 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))
                     .unwrap(),
+                match_info
+                    .match_paths
+                    .as_ref()
+                    .and_then(|path| path.paths.iter().find(|pp| pp.player_slot == p.player_slot)),
                 p,
             )
                 .into()

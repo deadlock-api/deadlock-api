@@ -1,6 +1,7 @@
 use clickhouse::Row;
 use serde::Serialize;
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players, PowerUpBuff};
+use valveprotos::deadlock::c_msg_match_player_paths_data::Path;
 
 use crate::models::enums::{BotDifficulty, GameMode, MatchMode, MatchOutcome, Objective, Team};
 
@@ -320,11 +321,20 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub accolades_accolade_stat_value: Vec<i32>,
     #[serde(rename = "accolades.accolade_threshold_achieved")]
     pub accolades_accolade_threshold_achieved: Vec<i32>,
+    pub x_min: Option<f32>,
+    pub y_min: Option<f32>,
+    pub x_max: Option<f32>,
+    pub y_max: Option<f32>,
+    pub x_pos: Vec<u32>,
+    pub y_pos: Vec<u32>,
+    pub health: Vec<u32>,
+    pub combat_type: Vec<i32>,
+    pub move_type: Vec<i32>,
 }
 
 #[allow(clippy::too_many_lines)]
-impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
-    fn from((match_id, won, value): (u64, bool, Players)) -> Self {
+impl From<(u64, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
+    fn from((match_id, won, match_path, value): (u64, bool, Option<&Path>, Players)) -> Self {
         Self {
             match_id,
             account_id: value.account_id(),
@@ -480,6 +490,15 @@ impl From<(u64, bool, Players)> for ClickhouseMatchPlayer {
             accolades_accolade_id: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_id).collect(),
             accolades_accolade_stat_value: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_stat_value).collect(),
             accolades_accolade_threshold_achieved: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_threshold_achieved).collect(),
+            x_min: match_path.as_ref().and_then(|p| p.x_min),
+            y_min: match_path.as_ref().and_then(|p| p.y_min),
+            x_max: match_path.as_ref().and_then(|p| p.x_max),
+            y_max: match_path.as_ref().and_then(|p| p.y_max),
+            x_pos: match_path.as_ref().map(|p| p.x_pos.clone()).unwrap_or_default(),
+            y_pos: match_path.as_ref().map(|p| p.y_pos.clone()).unwrap_or_default(),
+            health: match_path.as_ref().map(|p| p.health.clone()).unwrap_or_default(),
+            combat_type: match_path.as_ref().map(|p| p.combat_type.clone()).unwrap_or_default(),
+            move_type: match_path.as_ref().map(|p| p.move_type.clone()).unwrap_or_default(),
         }
     }
 }
