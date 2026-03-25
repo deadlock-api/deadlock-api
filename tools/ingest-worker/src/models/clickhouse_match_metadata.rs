@@ -5,7 +5,7 @@ use valveprotos::deadlock::c_msg_match_player_paths_data::Path;
 
 use crate::models::enums::{BotDifficulty, GameMode, MatchMode, MatchOutcome, Objective, Team};
 
-#[derive(Row, Debug, Serialize)]
+#[derive(Row, Debug, Clone, Serialize)]
 pub(crate) struct ClickhouseMatchInfo {
     pub match_id: u64,
     pub start_time: u32,
@@ -155,7 +155,7 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
     }
 }
 
-#[derive(Row, Debug, Serialize)]
+#[derive(Row, Debug, Clone, Serialize)]
 pub(crate) struct ClickhouseMatchPlayer {
     pub match_id: u64,
     pub account_id: u32,

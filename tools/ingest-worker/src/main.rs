@@ -26,7 +26,8 @@ use object_store::{GetResult, ObjectStore, ObjectStoreExt};
 use prost::Message;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-use tracing::{debug, error, info, instrument};
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
@@ -169,23 +170,34 @@ async fn reingest_from_file(
     let failure_count = AtomicUsize::new(0);
 
     let (tx, rx) = mpsc::channel::<ParsedMatch>(parallelism * 2);
+    let cancel = CancellationToken::new();
 
     // Spawn the batch inserter task
     let ch_client_owned = ch_client.clone();
-    let insert_handle =
-        tokio::spawn(async move { batch_inserter(ch_client_owned, rx, batch_size).await });
+    let inserter_cancel = cancel.clone();
+    let insert_handle = tokio::spawn(async move {
+        batch_inserter(ch_client_owned, rx, batch_size, inserter_cancel).await
+    });
 
     // Fetch, decompress, parse concurrently — send results to inserter
     futures::stream::iter(match_ids)
         .map(|match_id| {
             let tx = tx.clone();
+            let cancel = cancel.clone();
             let success_count = &success_count;
             let failure_count = &failure_count;
             async move {
+                if cancel.is_cancelled() {
+                    return;
+                }
                 match fetch_and_parse_match(store, &match_id).await {
                     Ok(parsed) => {
                         if tx.send(parsed).await.is_err() {
-                            error!("Insert channel closed prematurely");
+                            // The inserter has exited — stop producing.
+                            // The actual error will be reported from insert_handle.
+                            warn!(
+                                "Insert channel closed, inserter likely failed — stopping producers"
+                            );
                             return;
                         }
                         let done = success_count.fetch_add(1, Ordering::Relaxed) + 1;
@@ -210,7 +222,7 @@ async fn reingest_from_file(
     // Wait for inserter to complete
     match insert_handle.await {
         Ok(Ok(inserted)) => info!("Inserter finished: {inserted} matches inserted"),
-        Ok(Err(e)) => error!("Inserter error: {e}"),
+        Ok(Err(e)) => error!("Inserter failed: {e:#}"),
         Err(e) => error!("Inserter task panicked: {e}"),
     }
 
@@ -221,62 +233,115 @@ async fn reingest_from_file(
     Ok(())
 }
 
+/// Open fresh insert handles for all three tables.
+async fn open_inserters(
+    client: &clickhouse::Client,
+) -> anyhow::Result<(
+    clickhouse::insert::Insert<ClickhouseMatchInfo>,
+    clickhouse::insert::Insert<ClickhouseMatchPlayer>,
+    clickhouse::insert::Insert<PlayerMatchHistoryEntry>,
+)> {
+    Ok((
+        client.insert::<ClickhouseMatchInfo>("match_info").await?,
+        client
+            .insert::<ClickhouseMatchPlayer>("match_player")
+            .await?,
+        client
+            .insert::<PlayerMatchHistoryEntry>("player_match_history")
+            .await?,
+    ))
+}
+
+/// Write all batch data into fresh inserters and flush them.
+async fn write_and_flush_batch(
+    client: &clickhouse::Client,
+    batch: &[ParsedMatch],
+) -> anyhow::Result<()> {
+    let (mut mi, mut mp, mut hi) = open_inserters(client).await?;
+
+    for parsed in batch {
+        mi.write(&parsed.match_info).await?;
+        for player in &parsed.players {
+            mp.write(player).await?;
+        }
+        for entry in &parsed.history {
+            hi.write(entry).await?;
+        }
+    }
+
+    mi.end().await?;
+    mp.end().await?;
+    hi.end().await?;
+    Ok(())
+}
+
 /// Batch-inserts parsed matches from the channel into ``ClickHouse``.
+///
+/// On unrecoverable failure the cancellation token is triggered so producers
+/// stop fetching new matches.
 async fn batch_inserter(
     client: clickhouse::Client,
     mut rx: mpsc::Receiver<ParsedMatch>,
     batch_size: usize,
+    cancel: CancellationToken,
 ) -> anyhow::Result<usize> {
     let mut total_inserted: usize = 0;
-    let mut batch_count: usize = 0;
-
-    let mut match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
-    let mut match_player_insert = client
-        .insert::<ClickhouseMatchPlayer>("match_player")
-        .await?;
-    let mut history_insert = client
-        .insert::<PlayerMatchHistoryEntry>("player_match_history")
-        .await?;
+    let mut batch: Vec<ParsedMatch> = Vec::with_capacity(batch_size);
 
     while let Some(parsed) = rx.recv().await {
-        match_info_insert.write(&parsed.match_info).await?;
-        for player in &parsed.players {
-            match_player_insert.write(player).await?;
-        }
-        for entry in &parsed.history {
-            history_insert.write(entry).await?;
-        }
+        batch.push(parsed);
 
-        batch_count += 1;
-        if batch_count >= batch_size {
-            match_info_insert.end().await?;
-            match_player_insert.end().await?;
-            history_insert.end().await?;
-
-            total_inserted += batch_count;
-            info!("Flushed batch of {batch_count} matches ({total_inserted} total)");
-
-            match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
-            match_player_insert = client
-                .insert::<ClickhouseMatchPlayer>("match_player")
-                .await?;
-            history_insert = client
-                .insert::<PlayerMatchHistoryEntry>("player_match_history")
-                .await?;
-            batch_count = 0;
+        if batch.len() >= batch_size {
+            match flush_batch(&client, &batch).await {
+                Ok(()) => {
+                    total_inserted += batch.len();
+                    info!(
+                        "Flushed batch of {} matches ({total_inserted} total)",
+                        batch.len()
+                    );
+                }
+                Err(e) => {
+                    error!("Batch flush failed permanently, cancelling: {e:#}");
+                    cancel.cancel();
+                    return Err(e);
+                }
+            }
+            batch.clear();
         }
     }
 
     // Flush remaining
-    if batch_count > 0 {
-        match_info_insert.end().await?;
-        match_player_insert.end().await?;
-        history_insert.end().await?;
-        total_inserted += batch_count;
-        info!("Flushed final batch of {batch_count} matches ({total_inserted} total)");
+    if !batch.is_empty() {
+        match flush_batch(&client, &batch).await {
+            Ok(()) => {
+                total_inserted += batch.len();
+                info!(
+                    "Flushed final batch of {} matches ({total_inserted} total)",
+                    batch.len()
+                );
+            }
+            Err(e) => {
+                error!("Final batch flush failed permanently: {e:#}");
+                return Err(e);
+            }
+        }
     }
 
     Ok(total_inserted)
+}
+
+/// Flush a batch with retries and exponential backoff using `tryhard`.
+async fn flush_batch(client: &clickhouse::Client, batch: &[ParsedMatch]) -> anyhow::Result<()> {
+    tryhard::retry_fn(|| write_and_flush_batch(client, batch))
+        .retries(5)
+        .exponential_backoff(Duration::from_millis(100))
+        .on_retry(|attempt, _, error: &anyhow::Error| {
+            let err = format!("{error:#}");
+            async move {
+                warn!("Batch flush attempt {attempt} failed: {err}");
+            }
+        })
+        .await
 }
 
 /// Fetch a match from S3, decompress, parse, and convert to ``ClickHouse`` types.
@@ -484,11 +549,11 @@ fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
 
 async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> anyhow::Result<()> {
     let ch_match_metadata: ClickhouseMatchInfo = match_info.clone().into();
-    let ch_players = match_info
+    let ch_players: Vec<ClickhouseMatchPlayer> = match_info
         .players
         .iter()
         .cloned()
-        .map::<ClickhouseMatchPlayer, _>(|p| {
+        .map(|p| {
             (
                 match_info.match_id.unwrap(),
                 match_info
@@ -502,29 +567,45 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
                 p,
             )
                 .into()
-        });
+        })
+        .collect();
 
-    let mut match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
-    let mut match_player_insert = client
-        .insert::<ClickhouseMatchPlayer>("match_player")
-        .await?;
-    match_info_insert.write(&ch_match_metadata).await?;
-    for player in ch_players {
-        match_player_insert.write(&player).await?;
-    }
-    match_info_insert.end().await?;
-    match_player_insert.end().await?;
+    let history_entries: Vec<PlayerMatchHistoryEntry> = match_info
+        .players
+        .iter()
+        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(match_info, p))
+        .collect();
 
-    let mut player_match_history_insert = client
-        .insert::<PlayerMatchHistoryEntry>("player_match_history")
-        .await?;
-    for p in &match_info.players {
-        if let Some(entry) = PlayerMatchHistoryEntry::from_info_and_player(match_info, p) {
-            player_match_history_insert.write(&entry).await?;
+    tryhard::retry_fn(|| async {
+        let mut match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
+        let mut match_player_insert = client
+            .insert::<ClickhouseMatchPlayer>("match_player")
+            .await?;
+        match_info_insert.write(&ch_match_metadata).await?;
+        for player in &ch_players {
+            match_player_insert.write(player).await?;
         }
-    }
-    player_match_history_insert.end().await?;
-    Ok(())
+        match_info_insert.end().await?;
+        match_player_insert.end().await?;
+
+        let mut history_insert = client
+            .insert::<PlayerMatchHistoryEntry>("player_match_history")
+            .await?;
+        for entry in &history_entries {
+            history_insert.write(entry).await?;
+        }
+        history_insert.end().await?;
+        Ok(())
+    })
+    .retries(5)
+    .exponential_backoff(Duration::from_millis(100))
+    .on_retry(|attempt, _, error: &anyhow::Error| {
+        let err = format!("{error:#}");
+        async move {
+            warn!("insert_match attempt {attempt} failed: {err}");
+        }
+    })
+    .await
 }
 
 async fn move_object(
