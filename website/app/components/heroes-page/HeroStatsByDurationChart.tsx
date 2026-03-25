@@ -132,8 +132,8 @@ export function HeroStatsByDurationChart({
               <Tooltip
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                 itemStyle={{ color: "#e5e5e5" }}
-                formatter={(value: number) =>
-                  heroStat === "winrate" ? `${value.toFixed(2)}%` : value.toLocaleString()
+                formatter={(value) =>
+                  heroStat === "winrate" ? `${(value as number).toFixed(2)}%` : (value as number).toLocaleString()
                 }
               />
               <Legend
@@ -141,6 +141,7 @@ export function HeroStatsByDurationChart({
                 align="center"
                 verticalAlign="bottom"
                 onClick={handleLegendClick}
+                // @ts-expect-error Recharts Legend accepts payload at runtime but types omit it
                 payload={legendPayload}
                 wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
               />

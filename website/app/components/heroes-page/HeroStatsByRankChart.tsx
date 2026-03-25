@@ -306,6 +306,7 @@ export function HeroStatsByRankChart({
                 align="center"
                 verticalAlign="bottom"
                 onClick={handleLegendClick}
+                // @ts-expect-error Recharts Legend accepts payload at runtime but types omit it
                 payload={legendPayload}
                 wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
               />
