@@ -12,8 +12,8 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_possible_truncation)]
 
-use core::time::Duration;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use core::time::Duration;
 
 use anyhow::bail;
 use async_compression::tokio::bufread::BzDecoder;
