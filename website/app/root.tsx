@@ -298,55 +298,55 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PatronAuthProvider>
-          <NuqsAdapter>
-            <TooltipProvider>
-              <div className="flex min-h-screen">
-                <AppSidebar />
-                <main className="min-w-0 flex-1 md:ml-64">
-                  <MobileMenuButton />
-                  <div className="relative flex min-h-full items-start justify-center">
-                    <img
-                      src="/logo/hexe.svg"
-                      alt=""
-                      aria-hidden="true"
-                      className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
-                      style={{
-                        transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
-                        maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                        WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                      }}
-                    />
-                    <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
-                      <Breadcrumbs />
-                      <QueryErrorResetBoundary>
-                        {({ reset }) => (
-                          <QueryErrorBoundary
-                            onReset={reset}
-                            fallbackRender={({ resetErrorBoundary }) => (
-                              <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
-                            )}
-                          >
-                            <div key={pathname}>
-                              <Outlet />
-                            </div>
-                          </QueryErrorBoundary>
-                        )}
-                      </QueryErrorResetBoundary>
-                    </div>
+        <NuqsAdapter>
+          <TooltipProvider>
+            <div className="flex min-h-screen">
+              <AppSidebar />
+              <main className="min-w-0 flex-1 md:ml-64">
+                <MobileMenuButton />
+                <div className="relative flex min-h-full items-start justify-center">
+                  <img
+                    src="/logo/hexe.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
+                    style={{
+                      transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
+                      maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                      WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                    }}
+                  />
+                  <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
+                    <Breadcrumbs />
+                    <QueryErrorResetBoundary>
+                      {({ reset }) => (
+                        <QueryErrorBoundary
+                          onReset={reset}
+                          fallbackRender={({ resetErrorBoundary }) => (
+                            <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
+                          )}
+                        >
+                          <div key={pathname}>
+                            <Outlet />
+                          </div>
+                        </QueryErrorBoundary>
+                      )}
+                    </QueryErrorResetBoundary>
                   </div>
-                </main>
-              </div>
+                </div>
+              </main>
+            </div>
 
-              {import.meta.env.DEV && (
-                <Suspense fallback={null}>
-                  <ReactQueryDevtools initialIsOpen={false} />
-                </Suspense>
-              )}
-              <Toaster />
-              <CookieConsentBanner />
-            </TooltipProvider>
-          </NuqsAdapter>
-        </PatronAuthProvider>
+            {import.meta.env.DEV && (
+              <Suspense fallback={null}>
+                <ReactQueryDevtools initialIsOpen={false} />
+              </Suspense>
+            )}
+            <Toaster />
+            <CookieConsentBanner />
+          </TooltipProvider>
+        </NuqsAdapter>
+      </PatronAuthProvider>
     </QueryClientProvider>
   );
 }

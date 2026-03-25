@@ -41,7 +41,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {getFilteredCategories(isStreetBrawl).map((category, catIdx) => {
+      {getFilteredCategories(isStreetBrawl).map((category) => {
         const Icon = CATEGORY_ICONS[category.label];
         const isWide = category.stats.length > 6;
 
@@ -98,9 +98,10 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
                 return (
                   <div key={stat.key}>
-                    <div
+                    <button
+                      type="button"
                       className={cn(
-                        "flex items-center justify-between px-4 py-2.5 transition-colors",
+                        "flex w-full items-center justify-between px-4 py-2.5 transition-colors",
                         "border-b border-white/[0.04]",
                         !isWide && isLast && !teamWinRow && "border-b-0",
                         isWide && statIdx >= category.stats.length - 2 && "sm:border-b-0",
@@ -135,7 +136,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                     {teamWinRow}
                   </div>
                 );
