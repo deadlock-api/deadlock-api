@@ -29,7 +29,11 @@ pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
         .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
         .with_endpoint(env::var("S3_ENDPOINT_URL")?)
         .with_allow_http(true)
-        .with_client_options(ClientOptions::default().with_timeout(Duration::from_secs(30)))
+        .with_client_options(
+            ClientOptions::default()
+                .with_timeout(Duration::from_secs(30))
+                .with_pool_max_idle_per_host(256),
+        )
         .build()?)
 }
 
