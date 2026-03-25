@@ -18,3 +18,4 @@ tracing = "0.1.44"
 tryhard = "0.5.2"
 common = { version = "0.1.0", path = "../common" }
 anyhow = "1.0.102"
+clap = { version = "4", features = ["derive"] }

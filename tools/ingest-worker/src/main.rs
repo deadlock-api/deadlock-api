@@ -13,9 +13,11 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use anyhow::bail;
 use async_compression::tokio::bufread::BzDecoder;
+use clap::Parser;
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use object_store::path::Path;
@@ -34,18 +36,45 @@ use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
 mod models;
 
+#[derive(Parser)]
+#[command(about = "Deadlock match metadata ingest worker")]
+struct Cli {
+    /// Path to a file containing match IDs (one per line) to re-ingest
+    /// from the processed/failed S3 folders.
+    #[arg(long)]
+    reingest_file: Option<String>,
+
+    /// Number of concurrent re-ingestion tasks (default: 50)
+    #[arg(long, default_value_t = 50)]
+    reingest_parallelism: usize,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     common::init_tracing();
     common::init_metrics()?;
 
+    let cli = Cli::parse();
+
     let ch_client = common::get_ch_client()?;
     let store = common::get_store()?;
+
+    if let Some(ref file_path) = cli.reingest_file {
+        return reingest_from_file(&store, &ch_client, file_path, cli.reingest_parallelism).await;
+    }
+
+    run_ingest_loop(&store, &ch_client).await
+}
+
+async fn run_ingest_loop(
+    store: &impl ObjectStore,
+    ch_client: &clickhouse::Client,
+) -> anyhow::Result<()> {
     let mut interval = tokio::time::interval(Duration::from_secs(10));
 
     loop {
         interval.tick().await;
-        let objs_to_ingest = match list_ingest_objects(&store).await {
+        let objs_to_ingest = match list_ingest_objects(store).await {
             Ok(value) => {
                 counter!("ingest_worker.list_ingest_objects.success").increment(1);
                 debug!("Listed {} objects", value.len());
@@ -70,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
             .map(|key| async {
                 match timeout(
                     Duration::from_secs(30),
-                    ingest_object(&store, &ch_client, key),
+                    ingest_object(store, ch_client, key),
                 )
                 .await
                 {
@@ -94,6 +123,102 @@ async fn main() -> anyhow::Result<()> {
             .await;
         info!("Ingested all objects");
     }
+}
+
+/// Known file extensions for match metadata files.
+const MATCH_EXTENSIONS: &[&str] = &[".meta", ".meta.bz2", ".meta_hltv.bz2"];
+
+async fn reingest_from_file(
+    store: &impl ObjectStore,
+    ch_client: &clickhouse::Client,
+    file_path: &str,
+    parallelism: usize,
+) -> anyhow::Result<()> {
+    let content = tokio::fs::read_to_string(file_path).await?;
+    let match_ids: Vec<String> = content
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(String::from)
+        .collect();
+
+    let total = match_ids.len();
+    info!("Re-ingesting {total} matches with parallelism {parallelism}");
+
+    let success_count = AtomicUsize::new(0);
+    let failure_count = AtomicUsize::new(0);
+
+    futures::stream::iter(match_ids)
+        .map(|match_id| {
+            let success_count = &success_count;
+            let failure_count = &failure_count;
+            async move {
+                match reingest_match(store, ch_client, &match_id).await {
+                    Ok(()) => {
+                        let done = success_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let failed = failure_count.load(Ordering::Relaxed);
+                        info!("[{done}/{total} ok, {failed} failed] Re-ingested match {match_id}");
+                    }
+                    Err(e) => {
+                        let failed = failure_count.fetch_add(1, Ordering::Relaxed) + 1;
+                        let done = success_count.load(Ordering::Relaxed);
+                        error!(
+                            "[{done}/{total} ok, {failed} failed] Failed to re-ingest match {match_id}: {e}"
+                        );
+                    }
+                }
+            }
+        })
+        .buffer_unordered(parallelism)
+        .collect::<Vec<_>>()
+        .await;
+
+    let ok = success_count.load(Ordering::Relaxed);
+    let fail = failure_count.load(Ordering::Relaxed);
+    info!("Re-ingestion complete: {ok} succeeded, {fail} failed out of {total}");
+
+    Ok(())
+}
+
+/// Find match data in processed/ or failed/ folders and re-ingest it into `ClickHouse`.
+async fn reingest_match(
+    store: &impl ObjectStore,
+    ch_client: &clickhouse::Client,
+    match_id: &str,
+) -> anyhow::Result<()> {
+    let (path, obj) = find_match_object(store, match_id).await?;
+
+    let data = obj.bytes().await?;
+    let data = if path
+        .extension()
+        .is_some_and(|f| f.eq_ignore_ascii_case("bz2"))
+    {
+        bzip_decompress(&data).await?
+    } else {
+        data.to_vec()
+    };
+
+    let match_info = parse_match_data(&data)?;
+    insert_match(ch_client, &match_info).await?;
+
+    Ok(())
+}
+
+/// Try to find a match file in processed/ first, then failed/, across all known extensions.
+async fn find_match_object(
+    store: &impl ObjectStore,
+    match_id: &str,
+) -> anyhow::Result<(Path, GetResult)> {
+    for folder in &["processed/metadata", "failed/metadata"] {
+        for ext in MATCH_EXTENSIONS {
+            let path = Path::from(format!("{folder}/{match_id}{ext}"));
+            if let Ok(result) = store.get(&path).await {
+                debug!("Found match {match_id} at {path}");
+                return Ok((path, result));
+            }
+        }
+    }
+    bail!("Match {match_id} not found in processed or failed folders")
 }
 
 #[instrument(skip(store, ch_client))]
@@ -277,6 +402,9 @@ async fn move_object(
     old_key: &Path,
     new_key: &Path,
 ) -> object_store::Result<()> {
+    if old_key == new_key {
+        return Ok(());
+    }
     match tryhard::retry_fn(|| store.rename(old_key, new_key))
         .retries(5)
         .exponential_backoff(Duration::from_millis(10))
