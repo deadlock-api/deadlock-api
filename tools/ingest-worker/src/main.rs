@@ -15,6 +15,7 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::time::Duration;
+use std::sync::Arc;
 
 use anyhow::bail;
 use bytes::Bytes;
@@ -46,13 +47,17 @@ struct Cli {
     #[arg(long)]
     reingest_file: Option<String>,
 
-    /// Number of concurrent re-ingestion tasks (default: 50)
+    /// Number of concurrent S3 fetch / parse tasks (default: 50)
     #[arg(long, default_value_t = 50)]
     reingest_parallelism: usize,
 
     /// Number of matches to batch per ``ClickHouse`` insert during re-ingestion (default: 500)
     #[arg(long, default_value_t = 500)]
     reingest_batch_size: usize,
+
+    /// Number of concurrent ``ClickHouse`` inserter tasks (default: 2)
+    #[arg(long, default_value_t = 2)]
+    reingest_inserters: usize,
 }
 
 /// Parsed match data ready for ``ClickHouse`` insertion.
@@ -79,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
             file_path,
             cli.reingest_parallelism,
             cli.reingest_batch_size,
+            cli.reingest_inserters,
         )
         .await;
     }
@@ -154,6 +160,7 @@ async fn reingest_from_file(
     file_path: &str,
     parallelism: usize,
     batch_size: usize,
+    num_inserters: usize,
 ) -> anyhow::Result<()> {
     let content = tokio::fs::read_to_string(file_path).await?;
     let match_ids: Vec<String> = content
@@ -164,22 +171,31 @@ async fn reingest_from_file(
         .collect();
 
     let total = match_ids.len();
-    info!("Re-ingesting {total} matches with parallelism {parallelism}, batch size {batch_size}");
+    info!(
+        "Re-ingesting {total} matches with parallelism {parallelism}, \
+         batch size {batch_size}, {num_inserters} inserter(s)"
+    );
 
     let success_count = AtomicUsize::new(0);
     let failure_count = AtomicUsize::new(0);
 
     let (tx, rx) = mpsc::channel::<ParsedMatch>(parallelism * 2);
+    let rx = Arc::new(tokio::sync::Mutex::new(rx));
     let cancel = CancellationToken::new();
 
-    // Spawn the batch inserter task
-    let ch_client_owned = ch_client.clone();
-    let inserter_cancel = cancel.clone();
-    let insert_handle = tokio::spawn(async move {
-        batch_inserter(ch_client_owned, rx, batch_size, inserter_cancel).await
-    });
+    // Spawn N concurrent inserter tasks
+    let mut insert_handles = Vec::with_capacity(num_inserters);
+    for i in 0..num_inserters {
+        let client = ch_client.clone();
+        let rx = Arc::clone(&rx);
+        let cancel = cancel.clone();
+        insert_handles.push(tokio::spawn(async move {
+            let result = batch_inserter(client, rx, batch_size, cancel).await;
+            (i, result)
+        }));
+    }
 
-    // Fetch, decompress, parse concurrently — send results to inserter
+    // Fetch, decompress, parse concurrently — send results to inserters
     futures::stream::iter(match_ids)
         .map(|match_id| {
             let tx = tx.clone();
@@ -193,10 +209,10 @@ async fn reingest_from_file(
                 match fetch_and_parse_match(store, &match_id).await {
                     Ok(parsed) => {
                         if tx.send(parsed).await.is_err() {
-                            // The inserter has exited — stop producing.
-                            // The actual error will be reported from insert_handle.
+                            // All inserters have exited — stop producing.
+                            // The actual error will be reported from insert_handles.
                             warn!(
-                                "Insert channel closed, inserter likely failed — stopping producers"
+                                "Insert channel closed, inserters likely failed — stopping producers"
                             );
                             return;
                         }
@@ -216,15 +232,22 @@ async fn reingest_from_file(
         .collect::<Vec<_>>()
         .await;
 
-    // Drop sender to signal inserter to flush and finish
+    // Drop sender to signal inserters to flush and finish
     drop(tx);
 
-    // Wait for inserter to complete
-    match insert_handle.await {
-        Ok(Ok(inserted)) => info!("Inserter finished: {inserted} matches inserted"),
-        Ok(Err(e)) => error!("Inserter failed: {e:#}"),
-        Err(e) => error!("Inserter task panicked: {e}"),
+    // Wait for all inserters to complete
+    let mut total_inserted = 0usize;
+    for handle in insert_handles {
+        match handle.await {
+            Ok((i, Ok(inserted))) => {
+                total_inserted += inserted;
+                info!("Inserter {i} finished: {inserted} matches inserted");
+            }
+            Ok((i, Err(e))) => error!("Inserter {i} failed: {e:#}"),
+            Err(e) => error!("Inserter task panicked: {e}"),
+        }
     }
+    info!("All inserters finished: {total_inserted} matches inserted total");
 
     let ok = success_count.load(Ordering::Relaxed);
     let fail = failure_count.load(Ordering::Relaxed);
@@ -277,26 +300,43 @@ async fn write_and_flush_batch(
 
 /// Batch-inserts parsed matches from the channel into ``ClickHouse``.
 ///
-/// On unrecoverable failure the cancellation token is triggered so producers
-/// stop fetching new matches.
+/// Multiple instances run concurrently, each competing to receive from the
+/// shared channel. On unrecoverable failure the cancellation token is triggered
+/// so producers stop fetching new matches.
 async fn batch_inserter(
     client: clickhouse::Client,
-    mut rx: mpsc::Receiver<ParsedMatch>,
+    rx: Arc<tokio::sync::Mutex<mpsc::Receiver<ParsedMatch>>>,
     batch_size: usize,
     cancel: CancellationToken,
 ) -> anyhow::Result<usize> {
     let mut total_inserted: usize = 0;
     let mut batch: Vec<ParsedMatch> = Vec::with_capacity(batch_size);
 
-    while let Some(parsed) = rx.recv().await {
-        batch.push(parsed);
+    loop {
+        // Hold the lock and drain as many items as available up to batch_size
+        {
+            let mut rx_guard = rx.lock().await;
+            let remaining = batch_size - batch.len();
+            // Block on at least one item (or channel close)
+            let Some(parsed) = rx_guard.recv().await else {
+                break;
+            };
+            batch.push(parsed);
+            // Then drain any already-buffered items without blocking
+            for _ in 1..remaining {
+                match rx_guard.try_recv() {
+                    Ok(parsed) => batch.push(parsed),
+                    Err(_) => break,
+                }
+            }
+        }
 
         if batch.len() >= batch_size {
             match flush_batch(&client, &batch).await {
                 Ok(()) => {
                     total_inserted += batch.len();
                     info!(
-                        "Flushed batch of {} matches ({total_inserted} total)",
+                        "Flushed batch of {} matches ({total_inserted} total on this inserter)",
                         batch.len()
                     );
                 }
@@ -316,7 +356,7 @@ async fn batch_inserter(
             Ok(()) => {
                 total_inserted += batch.len();
                 info!(
-                    "Flushed final batch of {} matches ({total_inserted} total)",
+                    "Flushed final batch of {} matches ({total_inserted} total on this inserter)",
                     batch.len()
                 );
             }
