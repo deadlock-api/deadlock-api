@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ArrowRight, Calendar, Tag } from "lucide-react";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
@@ -13,16 +12,6 @@ export const meta: MetaFunction = () => {
     description: "Updates, patch analyses, meta insights, and development news from the Deadlock API team.",
     path: "/blog",
   });
-};
-
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
 };
 
 function formatDate(dateStr: string) {
@@ -48,27 +37,15 @@ export default function BlogIndex() {
   return (
     <div className="space-y-8">
       <section className="text-center">
-        <motion.h1
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="mb-2 text-3xl font-bold tracking-tight"
-        >
-          Blog
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-          className="text-sm text-muted-foreground"
-        >
+        <h1 className="mb-2 text-3xl font-bold tracking-tight">Blog</h1>
+        <p className="text-sm text-muted-foreground">
           Updates, patch analyses, and insights from the Deadlock API team
-        </motion.p>
+        </p>
       </section>
 
-      <motion.div variants={stagger} initial="hidden" animate="show" className="mx-auto max-w-4xl space-y-4">
+      <div className="mx-auto max-w-4xl space-y-4">
         {posts.map((post) => (
-          <motion.div key={post.slug} variants={fadeUp}>
+          <div key={post.slug}>
             <Link
               to={`/blog/${post.slug}`}
               prefetch="intent"
@@ -110,9 +87,9 @@ export default function BlogIndex() {
                 </span>
               </div>
             </Link>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 }

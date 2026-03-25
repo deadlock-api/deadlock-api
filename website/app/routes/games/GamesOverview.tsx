@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
-import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp } from "lucide-react";
 
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -47,11 +46,8 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
         const isWide = category.stats.length > 6;
 
         return (
-          <motion.div
+          <div
             key={category.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: catIdx * 0.06 }}
             className={cn(
               "overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]",
               isWide && "lg:col-span-2",
@@ -102,10 +98,7 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
 
                 return (
                   <div key={stat.key}>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.2, delay: catIdx * 0.06 + statIdx * 0.02 }}
+                    <div
                       className={cn(
                         "flex items-center justify-between px-4 py-2.5 transition-colors",
                         "border-b border-white/[0.04]",
@@ -142,13 +135,13 @@ export default function GamesOverview({ params, prevParams, onStatClick, isStree
                           </span>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                     {teamWinRow}
                   </div>
                 );
               })}
             </div>
-          </motion.div>
+          </div>
         );
       })}
     </div>

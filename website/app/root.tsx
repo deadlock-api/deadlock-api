@@ -28,7 +28,6 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
-import { MobileMotionConfig } from "~/lib/motion";
 
 const ReactQueryDevtools = lazy(() =>
   import("@tanstack/react-query-devtools").then((m) => ({ default: m.ReactQueryDevtools })),
@@ -298,8 +297,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MobileMotionConfig>
-        <PatronAuthProvider>
+      <PatronAuthProvider>
           <NuqsAdapter>
             <TooltipProvider>
               <div className="flex min-h-screen">
@@ -328,7 +326,7 @@ export default function App() {
                               <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
                             )}
                           >
-                            <div key={pathname} className="page-fade-in">
+                            <div key={pathname}>
                               <Outlet />
                             </div>
                           </QueryErrorBoundary>
@@ -349,7 +347,6 @@ export default function App() {
             </TooltipProvider>
           </NuqsAdapter>
         </PatronAuthProvider>
-      </MobileMotionConfig>
     </QueryClientProvider>
   );
 }

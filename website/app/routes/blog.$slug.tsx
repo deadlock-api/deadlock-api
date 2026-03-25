@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
 import Markdown from "react-markdown";
 import type { MetaFunction } from "react-router";
@@ -104,7 +103,7 @@ export default function BlogPostPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <div>
         {/* JSON-LD structured data for SEO */}
         <script
           type="application/ld+json"
@@ -201,7 +200,7 @@ export default function BlogPostPage() {
             </div>
           </section>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -17,15 +17,6 @@
   }
 }
 
-@keyframes page-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-.page-fade-in {
-  animation: page-fade-in 0.15s ease-in-out;
-}
 
 @keyframes logo-trace {
   0% {

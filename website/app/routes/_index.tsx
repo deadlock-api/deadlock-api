@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -188,20 +187,6 @@ const sponsors = [
   { href: "https://blast.tv/", title: "Blast.TV", logo: "/logo/blast.svg" },
 ];
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: "easeOut" as const },
-  },
-};
-
 export default function Index() {
   return (
     <div className="space-y-16">
@@ -209,23 +194,13 @@ export default function Index() {
       <section className="relative pt-4 pb-2 text-center">
         <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative"
-        >
+        <div className="relative">
           <h1 className="mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent lg:text-6xl">
             Deadlock API
           </h1>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-          className="mb-6 flex flex-wrap justify-center gap-3"
-        >
+        <div className="mb-6 flex flex-wrap justify-center gap-3">
           {valueProps.map((prop) => (
             <a
               key={prop.label}
@@ -239,26 +214,17 @@ export default function Index() {
               {prop.label}
             </a>
           ))}
-        </motion.div>
+        </div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground"
-        >
+        <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground">
           A comprehensive set of endpoints to access Deadlock game data — match history, player statistics, hero
           analytics, and more. Whether you're a developer integrating game data or a player analyzing performance, the
           Deadlock API has you covered.
-        </motion.p>
+        </p>
       </section>
 
       {/* Patron CTA */}
-      <motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.5 }}
-      >
+      <section>
         <ElectricBorder color="#fa4454" speed={0.5} chaos={0.1} borderRadius={12}>
           <div className="rounded-xl bg-card/80 px-6 py-7 backdrop-blur-sm sm:px-8">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -295,7 +261,7 @@ export default function Index() {
             </div>
           </div>
         </ElectricBorder>
-      </motion.section>
+      </section>
 
       {/* Analytics Links */}
       <section>
@@ -306,20 +272,13 @@ export default function Index() {
           </p>
         </div>
 
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {analyticsLinks.map((item) => {
             const Icon = item.icon;
             const isHighlight = "highlight" in item && item.highlight;
             const isExternal = "external" in item && item.external;
             const card = (
-              <motion.div
-                variants={fadeUp}
+              <div
                 className={cn(
                   "group flex h-full flex-col rounded-xl border p-4 transition-colors",
                   isHighlight
@@ -357,7 +316,7 @@ export default function Index() {
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
-              </motion.div>
+              </div>
             );
 
             if (isExternal) {
@@ -374,7 +333,7 @@ export default function Index() {
               </Link>
             );
           })}
-        </motion.div>
+        </div>
       </section>
 
       {/* Services */}
@@ -384,20 +343,11 @@ export default function Index() {
           <p className="mt-1 text-sm text-muted-foreground">APIs, tools, and data for the Deadlock community</p>
         </div>
 
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.1 }}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service) => {
             const Icon = service.icon;
             const card = (
-              <motion.div
-                variants={fadeUp}
-                className="group relative flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30"
-              >
+              <div className="group relative flex h-full flex-col rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/30 hover:bg-muted/30">
                 <div className="mb-3 flex items-start gap-4">
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted transition-colors group-hover:border-primary/20 group-hover:bg-primary/5">
                     <Icon className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -418,7 +368,7 @@ export default function Index() {
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
-              </motion.div>
+              </div>
             );
 
             if (service.external) {
@@ -435,7 +385,7 @@ export default function Index() {
               </Link>
             );
           })}
-        </motion.div>
+        </div>
       </section>
 
       {/* Sponsors */}
