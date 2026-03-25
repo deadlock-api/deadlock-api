@@ -44,7 +44,7 @@ async fn get_recently_fetched_match_ids(
         average_badge_team0,
         average_badge_team1
     FROM match_info FINAL
-    WHERE created_at > now() - 600 AND match_mode IN ('Ranked', 'Unranked')
+    WHERE created_at > now() - 600 AND match_mode IN ('Ranked', 'Unranked') AND (match_id > 70426318 OR now() >= '2026-03-30 00:00:00')
     ORDER BY created_at DESC
     ";
     ch_client.query(query).fetch_all().await
