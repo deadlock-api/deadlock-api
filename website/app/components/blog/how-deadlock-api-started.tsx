@@ -21,7 +21,7 @@ function MatchesPerMonthChart() {
             }}
           />
           <Tooltip
-            formatter={(value) => [(value as number).toLocaleString(), "Matches"]}
+            formatter={(value: number) => [value.toLocaleString(), "Matches"]}
             contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
             itemStyle={{ color: "#e5e5e5" }}
           />
@@ -52,7 +52,7 @@ function CloudflareStatsChart() {
               }}
             />
             <Tooltip
-              formatter={(value) => [(value as number).toLocaleString(), "Requests"]}
+              formatter={(value: number) => [value.toLocaleString(), "Requests"]}
               contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
               itemStyle={{ color: "#e5e5e5" }}
             />
@@ -76,7 +76,7 @@ function CloudflareStatsChart() {
               }}
             />
             <Tooltip
-              formatter={(value) => [(value as number).toLocaleString(), "Unique visitors"]}
+              formatter={(value: number) => [value.toLocaleString(), "Unique visitors"]}
               contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
               itemStyle={{ color: "#e5e5e5" }}
             />

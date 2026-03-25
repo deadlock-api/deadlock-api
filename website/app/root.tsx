@@ -2,7 +2,7 @@ import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal
 import { usePostHog } from "@posthog/react";
 
 import "./tailwind.css";
-import "./dayjs";
+import "./dayjs.ts";
 import { QueryClient, QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";

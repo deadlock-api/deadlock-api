@@ -427,7 +427,7 @@ export function ItemBuyTimingChart({ itemIds, baseQueryOptions, rowTotalMatches 
                       <Line
                         key={itemId}
                         dataKey="winrate"
-                        data={(chartData as unknown as Record<string, { winrate: number | null }[]>)[itemId]}
+                        data={(chartData as unknown as Record<string, { winrate: number | null }>)[itemId]}
                         type="monotone"
                         stroke={randomColorHex(itemId)}
                         dot={{ r: 4, className: "fill-primary" }}

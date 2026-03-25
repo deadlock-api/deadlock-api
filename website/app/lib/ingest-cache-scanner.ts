@@ -114,6 +114,7 @@ export async function scanDirHandle(
   onSaltFound: () => void,
 ): Promise<Set<Salts>> {
   const salts: Set<Salts> = new Set();
+  // @ts-expect-error
   for await (const entry of dirHandle.values()) {
     if (entry.kind === "file") {
       const salt = await processFile(entry);

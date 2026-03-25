@@ -365,7 +365,7 @@ export function HeroStatsOverTimeChart({
   const isLoading = isLoadingHeroStats || isLoadingHeroes;
 
   const bumpTooltipContent = useCallback(
-    ({ label, payload }: { label?: string | number; payload?: readonly any[] }) => {
+    ({ label, payload }: { label?: string | number; payload?: any[] }) => {
       if (!payload?.length) return null;
       const items = [...payload].sort((a, b) => (a.value as number) - (b.value as number));
       const filtered =
@@ -458,7 +458,7 @@ export function HeroStatsOverTimeChart({
                 labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                 itemStyle={{ color: "#e5e5e5" }}
-                formatter={(value) => (bumpChart ? `#${value}` : value)}
+                formatter={(value: number) => (bumpChart ? `#${value}` : value)}
                 itemSorter={(item) => (bumpChart ? (item.value as number) : 0)}
                 {...(bumpChart && { content: bumpTooltipContent })}
               />
@@ -468,7 +468,6 @@ export function HeroStatsOverTimeChart({
                   align="center"
                   verticalAlign="bottom"
                   onClick={handleLegendClick}
-                  // @ts-expect-error Recharts Legend accepts payload at runtime but types omit it
                   payload={legendPayload}
                   wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
                 />
