@@ -325,11 +325,11 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub y_min: Option<f32>,
     pub x_max: Option<f32>,
     pub y_max: Option<f32>,
-    pub x_pos: Vec<u32>,
-    pub y_pos: Vec<u32>,
-    pub health: Vec<u32>,
-    pub combat_type: Vec<i32>,
-    pub move_type: Vec<i32>,
+    pub x_pos: Vec<u16>,
+    pub y_pos: Vec<u16>,
+    pub health: Vec<u8>,
+    pub combat_type: Vec<u8>,
+    pub move_type: Vec<u8>,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -494,11 +494,11 @@ impl From<(u64, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
             y_min: match_path.as_ref().and_then(|p| p.y_min),
             x_max: match_path.as_ref().and_then(|p| p.x_max),
             y_max: match_path.as_ref().and_then(|p| p.y_max),
-            x_pos: match_path.as_ref().map(|p| p.x_pos.clone()).unwrap_or_default(),
-            y_pos: match_path.as_ref().map(|p| p.y_pos.clone()).unwrap_or_default(),
-            health: match_path.as_ref().map(|p| p.health.clone()).unwrap_or_default(),
-            combat_type: match_path.as_ref().map(|p| p.combat_type.clone()).unwrap_or_default(),
-            move_type: match_path.as_ref().map(|p| p.move_type.clone()).unwrap_or_default(),
+            x_pos: match_path.as_ref().map(|p| p.x_pos.clone()).unwrap_or_default().into_iter().map(|v| v as u16).collect(),
+            y_pos: match_path.as_ref().map(|p| p.y_pos.clone()).unwrap_or_default().into_iter().map(|v| v as u16).collect(),
+            health: match_path.as_ref().map(|p| p.health.clone()).unwrap_or_default().into_iter().map(|v| v as u8).collect(),
+            combat_type: match_path.as_ref().map(|p| p.combat_type.clone()).unwrap_or_default().into_iter().map(|v| v as u8).collect(),
+            move_type: match_path.as_ref().map(|p| p.move_type.clone()).unwrap_or_default().into_iter().map(|v| v as u8).collect(),
         }
     }
 }
