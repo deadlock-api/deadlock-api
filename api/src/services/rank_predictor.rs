@@ -82,7 +82,7 @@ impl RankPredictor {
     /// Run inference on a 13-element feature vector.
     pub(crate) fn predict(
         &self,
-        features: [f32; 13],
+        features: [f64; 13],
     ) -> Result<RankPrediction, RankPredictorError> {
         let input = Array2::from_shape_fn((1, 13), |(_, j)| features[j]);
         let tensor = Tensor::from_array(input)?;

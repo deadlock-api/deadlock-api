@@ -17,11 +17,11 @@ use crate::utils::types::AccountIdQuery;
 const N_MATCHES: usize = 30;
 /// Fetch extra matches so hero-history covers matches outside the aggregation window.
 const FETCH_LIMIT: usize = N_MATCHES + 50;
-const RECENCY_ALPHA: f32 = 0.85;
+const RECENCY_ALPHA: f64 = 0.85;
 
-static W_NORM: LazyLock<[f32; N_MATCHES]> = LazyLock::new(|| {
-    let mut weights = [0.0f32; N_MATCHES];
-    let mut sum = 0.0f32;
+static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
+    let mut weights = [0.0f64; N_MATCHES];
+    let mut sum = 0.0f64;
     for (i, w) in weights.iter_mut().enumerate() {
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         {
@@ -43,8 +43,8 @@ struct CombinedMatchRow {
     match_duration_s: u32,
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
-    enemy_nw_avg: f32,
-    enemy_dmg_avg: f32,
+    enemy_nw_avg: f64,
+    enemy_dmg_avg: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -52,10 +52,10 @@ struct Match {
     hero_id: u32,
     player_kills: u32,
     duration_s: u32,
-    own_team_badge: f32,
-    enemy_team_badge: f32,
-    enemy_nw_avg: f32,
-    enemy_dmg_avg: f32,
+    own_team_badge: f64,
+    enemy_team_badge: f64,
+    enemy_nw_avg: f64,
+    enemy_dmg_avg: f64,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -100,8 +100,8 @@ async fn fetch_matches(
                 m.match_duration_s,
                 m.average_badge_team0,
                 m.average_badge_team1,
-                toFloat32(es.nw_avg)  AS enemy_nw_avg,
-                toFloat32(es.dmg_avg) AS enemy_dmg_avg
+                es.nw_avg  AS enemy_nw_avg,
+                es.dmg_avg AS enemy_dmg_avg
             FROM t_matches m
             LEFT JOIN (
                 SELECT
@@ -123,8 +123,8 @@ async fn fetch_matches(
     Ok(rows
         .into_iter()
         .map(|r| {
-            let b0 = r.average_badge_team0.unwrap_or(0) as f32;
-            let b1 = r.average_badge_team1.unwrap_or(0) as f32;
+            let b0 = f64::from(r.average_badge_team0.unwrap_or(0));
+            let b1 = f64::from(r.average_badge_team1.unwrap_or(0));
             let (own_badge, enemy_badge) = if r.player_team == 0 {
                 (b0, b1)
             } else {
@@ -144,9 +144,9 @@ async fn fetch_matches(
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn kills_per_min(m: &Match) -> f32 {
-    let dur = (m.duration_s as f32 / 60.0).max(1.0);
-    m.player_kills as f32 / dur
+fn kills_per_min(m: &Match) -> f64 {
+    let dur = (f64::from(m.duration_s) / 60.0).max(1.0);
+    f64::from(m.player_kills) / dur
 }
 
 #[allow(
@@ -154,32 +154,32 @@ fn kills_per_min(m: &Match) -> f32 {
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap
 )]
-fn aggregate_features(matches: &[Match]) -> Option<[f32; 13]> {
+fn aggregate_features(matches: &[Match]) -> Option<[f64; 13]> {
     if matches.len() < N_MATCHES {
         return None;
     }
 
     let window = &matches[..N_MATCHES];
-    let w_norm: &[f32; N_MATCHES] = &W_NORM;
+    let w_norm: &[f64; N_MATCHES] = &W_NORM;
 
     // Single pass over all matches: build hero averages and total kills/min.
-    let mut hero_sums: HashMap<u32, (f32, u32)> = HashMap::new();
-    let mut total_kills_pm = 0.0f32;
+    let mut hero_sums: HashMap<u32, (f64, u32)> = HashMap::new();
+    let mut total_kills_pm = 0.0f64;
     for m in matches {
         let e = hero_sums.entry(m.hero_id).or_insert((0.0, 0));
         e.0 += m.own_team_badge;
         e.1 += 1;
         total_kills_pm += kills_per_min(m);
     }
-    let hist_kills_pm = total_kills_pm / matches.len() as f32;
-    let hero_avg: HashMap<u32, f32> = hero_sums
+    let hist_kills_pm = total_kills_pm / matches.len() as f64;
+    let hero_avg: HashMap<u32, f64> = hero_sums
         .iter()
-        .map(|(&hero, &(sum, cnt))| (hero, sum / cnt as f32))
+        .map(|(&hero, &(sum, cnt))| (hero, sum / f64::from(cnt)))
         .collect();
-    let hist_hero_diversity = hero_avg.len() as f32;
-    let per_hero_max = hero_avg.values().copied().fold(f32::NEG_INFINITY, f32::max);
+    let hist_hero_diversity = hero_avg.len() as f64;
+    let per_hero_max = hero_avg.values().copied().fold(f64::NEG_INFINITY, f64::max);
 
-    let (own_b, enemy_b, hero_hist_badges): (Vec<f32>, Vec<f32>, Vec<f32>) = window
+    let (own_b, enemy_b, hero_hist_badges): (Vec<f64>, Vec<f64>, Vec<f64>) = window
         .iter()
         .map(|m| {
             let hist = *hero_avg.get(&m.hero_id).unwrap_or(&m.own_team_badge);
@@ -187,24 +187,24 @@ fn aggregate_features(matches: &[Match]) -> Option<[f32; 13]> {
         })
         .multiunzip();
 
-    let kills_pm: Vec<f32> = window.iter().map(kills_per_min).collect();
+    let kills_pm: Vec<f64> = window.iter().map(kills_per_min).collect();
 
-    let (enemy_nw_sum, enemy_dmg_sum) = window.iter().fold((0.0f32, 0.0f32), |(nw, dmg), m| {
+    let (enemy_nw_sum, enemy_dmg_sum) = window.iter().fold((0.0f64, 0.0f64), |(nw, dmg), m| {
         (nw + m.enemy_nw_avg, dmg + m.enemy_dmg_avg)
     });
-    let enemy_nw_avg_mean = enemy_nw_sum / N_MATCHES as f32;
-    let enemy_dmg_avg_mean = enemy_dmg_sum / N_MATCHES as f32;
+    let enemy_nw_avg_mean = enemy_nw_sum / N_MATCHES as f64;
+    let enemy_dmg_avg_mean = enemy_dmg_sum / N_MATCHES as f64;
 
-    let wmean = |vals: &[f32], ws: &[f32]| -> f32 { vals.iter().zip(ws).map(|(v, w)| v * w).sum() };
-    let wstd = |vals: &[f32], ws: &[f32]| -> f32 {
+    let wmean = |vals: &[f64], ws: &[f64]| -> f64 { vals.iter().zip(ws).map(|(v, w)| v * w).sum() };
+    let wstd = |vals: &[f64], ws: &[f64]| -> f64 {
         let mean = wmean(vals, ws);
         vals.iter()
             .zip(ws)
             .map(|(v, w)| w * (v - mean).powi(2))
-            .sum::<f32>()
+            .sum::<f64>()
             .sqrt()
     };
-    let r10mean = |vals: &[f32]| vals[..10].iter().sum::<f32>() / 10.0;
+    let r10mean = |vals: &[f64]| vals[..10].iter().sum::<f64>() / 10.0;
 
     Some([
         wmean(&own_b, w_norm),
