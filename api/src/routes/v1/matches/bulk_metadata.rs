@@ -306,9 +306,11 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             hero_ids.iter().map(ToString::to_string).join(",")
         ));
     }
+
     if let Some(item_filter_hero_id) = query.item_filter_hero_id {
         player_filters.push(format!("hero_id = {item_filter_hero_id}"));
     }
+    let mut advanced_player_filters = false;
     if let Some(include_item_ids) = &query.include_item_ids
         && !include_item_ids.is_empty()
     {
@@ -316,6 +318,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "hasAll(items.item_id, [{}])",
             include_item_ids.iter().map(u32::to_string).join(", ")
         ));
+        advanced_player_filters = true;
     }
     if let Some(exclude_item_ids) = &query.exclude_item_ids
         && !exclude_item_ids.is_empty()
@@ -324,14 +327,22 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "NOT hasAny(items.item_id, [{}])",
             exclude_item_ids.iter().map(u32::to_string).join(", ")
         ));
+        advanced_player_filters = true;
     }
 
     // Add player filter subquery if any player filters exist
     if !player_filters.is_empty() {
-        info_filters.push(format!(
-            "match_id IN (SELECT match_id FROM match_player WHERE {})",
-            player_filters.join(" AND ")
-        ));
+        if advanced_player_filters {
+            info_filters.push(format!(
+                "match_id IN (SELECT match_id FROM match_player WHERE {})",
+                player_filters.join(" AND ")
+            ));
+        } else {
+            info_filters.push(format!(
+                "match_id IN (SELECT match_id FROM player_match_history WHERE {})",
+                player_filters.join(" AND ")
+            ));
+        }
     }
 
     let info_filters = if info_filters.is_empty() {
@@ -413,8 +424,8 @@ This endpoints lets you fetch multiple match metadata at once. The response is a
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 4req/s |
-| Key | - |
+| IP | 10req/min |
+| Key | 5req/s |
 | Global | 10req/s |
     "
 )]
@@ -443,8 +454,9 @@ pub(super) async fn bulk_metadata(
             &rate_limit_key,
             "match_metadata_bulk",
             &[
-                Quota::ip_limit(5, Duration::from_secs(1)),
-                Quota::key_limit(20, Duration::from_secs(1)),
+                Quota::ip_limit(10, Duration::from_mins(1)),
+                Quota::key_limit(5, Duration::from_secs(1)),
+                Quota::global_limit(10, Duration::from_secs(1)),
             ],
         )
         .await?;
@@ -489,7 +501,7 @@ mod tests {
 
         // Should contain the player filter subquery
         assert!(normalized.contains(
-            "match_id IN (SELECT match_id FROM match_player WHERE account_id IN (12345,67890))"
+            "match_id IN (SELECT match_id FROM player_match_history WHERE account_id IN (12345,67890))"
         ));
         // Should still have the basic structure
         assert!(normalized.contains("t_matches AS (SELECT match_id FROM match_info"));
@@ -680,7 +692,7 @@ mod tests {
 
         // Should contain all filters
         assert!(normalized.contains(
-            "match_id IN (SELECT match_id FROM match_player WHERE account_id IN (12345))"
+            "match_id IN (SELECT match_id FROM player_match_history WHERE account_id IN (12345))"
         ));
         assert!(normalized.contains("start_time >= 1640995200"));
         assert!(normalized.contains("duration_s <= 3600"));
