@@ -28,8 +28,6 @@ pub(crate) enum RankPredictorError {
     Ort(#[from] ort::Error),
     #[error("ONNX builder error: {0}")]
     OrtLoad(String),
-    #[error("Feature array shape error: {0}")]
-    Shape(#[from] ndarray::ShapeError),
     #[error("Session mutex was poisoned")]
     MutexPoisoned,
     #[error("Model output tensor is empty")]
@@ -86,7 +84,7 @@ impl RankPredictor {
         &self,
         features: [f32; 13],
     ) -> Result<RankPrediction, RankPredictorError> {
-        let input = Array2::from_shape_vec((1, 13), features.to_vec())?;
+        let input = Array2::from_shape_fn((1, 13), |(_, j)| features[j]);
         let tensor = Tensor::from_array(input)?;
         let mut guard = self
             .session

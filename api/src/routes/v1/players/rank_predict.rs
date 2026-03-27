@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -14,9 +15,22 @@ use crate::services::rank_predictor::{RankPrediction, RankPredictorError};
 use crate::utils::types::AccountIdQuery;
 
 const N_MATCHES: usize = 30;
-/// Fetch more than `N_MATCHES` so hero-history covers matches outside the aggregation window.
+/// Fetch extra matches so hero-history covers matches outside the aggregation window.
 const FETCH_LIMIT: usize = N_MATCHES + 50;
 const RECENCY_ALPHA: f32 = 0.85;
+
+static W_NORM: LazyLock<[f32; N_MATCHES]> = LazyLock::new(|| {
+    let mut weights = [0.0f32; N_MATCHES];
+    let mut sum = 0.0f32;
+    for (i, w) in weights.iter_mut().enumerate() {
+        *w = RECENCY_ALPHA.powi(i as i32);
+        sum += *w;
+    }
+    for w in &mut weights {
+        *w /= sum;
+    }
+    weights
+});
 
 #[derive(Debug, Clone, Row, Deserialize)]
 struct CombinedMatchRow {
@@ -143,24 +157,24 @@ fn aggregate_features(matches: &[Match]) -> Option<[f32; 13]> {
     }
 
     let window = &matches[..N_MATCHES];
+    let w_norm: &[f32; N_MATCHES] = &W_NORM;
 
-    let weights: Vec<f32> = (0..N_MATCHES)
-        .map(|i| RECENCY_ALPHA.powi(i as i32))
+    // Single pass over all matches: build hero averages and total kills/min.
+    let mut hero_sums: HashMap<u32, (f32, u32)> = HashMap::new();
+    let mut total_kills_pm = 0.0f32;
+    for m in matches {
+        let e = hero_sums.entry(m.hero_id).or_insert((0.0, 0));
+        e.0 += m.own_team_badge;
+        e.1 += 1;
+        total_kills_pm += kills_per_min(m);
+    }
+    let hist_kills_pm = total_kills_pm / matches.len() as f32;
+    let hero_avg: HashMap<u32, f32> = hero_sums
+        .iter()
+        .map(|(&hero, &(sum, cnt))| (hero, sum / cnt as f32))
         .collect();
-    let w_sum: f32 = weights.iter().sum();
-    let w_norm: Vec<f32> = weights.iter().map(|w| w / w_sum).collect();
-
-    let hero_avg: HashMap<u32, f32> = {
-        let mut sums: HashMap<u32, (f32, u32)> = HashMap::new();
-        for m in matches {
-            let e = sums.entry(m.hero_id).or_insert((0.0, 0));
-            e.0 += m.own_team_badge;
-            e.1 += 1;
-        }
-        sums.into_iter()
-            .map(|(hero, (sum, cnt))| (hero, sum / cnt as f32))
-            .collect()
-    };
+    let hist_hero_diversity = hero_avg.len() as f32;
+    let per_hero_max = hero_avg.values().copied().fold(f32::NEG_INFINITY, f32::max);
 
     let (own_b, enemy_b, hero_hist_badges): (Vec<f32>, Vec<f32>, Vec<f32>) = window
         .iter()
@@ -170,53 +184,39 @@ fn aggregate_features(matches: &[Match]) -> Option<[f32; 13]> {
         })
         .multiunzip();
 
-    let per_hero_max = hero_avg.values().copied().fold(f32::NEG_INFINITY, f32::max);
+    let kills_pm: Vec<f32> = window.iter().map(kills_per_min).collect();
 
-    let all_kills_pm: Vec<f32> = matches.iter().map(kills_per_min).collect();
-    let hist_kills_pm = all_kills_pm.iter().sum::<f32>() / all_kills_pm.len() as f32;
-    let kills_pm = &all_kills_pm[..N_MATCHES];
+    let (enemy_nw_sum, enemy_dmg_sum) = window.iter().fold((0.0f32, 0.0f32), |(nw, dmg), m| {
+        (nw + m.enemy_nw_avg, dmg + m.enemy_dmg_avg)
+    });
+    let enemy_nw_avg_mean = enemy_nw_sum / N_MATCHES as f32;
+    let enemy_dmg_avg_mean = enemy_dmg_sum / N_MATCHES as f32;
 
-    let hist_hero_diversity = hero_avg.len() as f32;
-
-    let wmean =
-        |vals: &[f32], ws: &[f32]| -> f32 { vals.iter().zip(ws.iter()).map(|(v, w)| v * w).sum() };
+    let wmean = |vals: &[f32], ws: &[f32]| -> f32 { vals.iter().zip(ws).map(|(v, w)| v * w).sum() };
     let wstd = |vals: &[f32], ws: &[f32]| -> f32 {
         let mean = wmean(vals, ws);
         vals.iter()
-            .zip(ws.iter())
+            .zip(ws)
             .map(|(v, w)| w * (v - mean).powi(2))
             .sum::<f32>()
             .sqrt()
     };
     let r10mean = |vals: &[f32]| vals[..10].iter().sum::<f32>() / 10.0;
 
-    let (enemy_nw_avg_mean, enemy_dmg_avg_mean) = {
-        let (nw_sum, dmg_sum, count) = window
-            .iter()
-            .fold((0.0f32, 0.0f32, 0u32), |(nw, dmg, n), m| {
-                (nw + m.enemy_nw_avg, dmg + m.enemy_dmg_avg, n + 1)
-            });
-        if count > 0 {
-            (nw_sum / count as f32, dmg_sum / count as f32)
-        } else {
-            (0.0, 0.0)
-        }
-    };
-
     Some([
-        wmean(&own_b, &w_norm),
-        wmean(&enemy_b, &w_norm),
+        wmean(&own_b, w_norm),
+        wmean(&enemy_b, w_norm),
         r10mean(&own_b),
         r10mean(&enemy_b),
-        wstd(&own_b, &w_norm),
+        wstd(&own_b, w_norm),
         enemy_nw_avg_mean,
         enemy_dmg_avg_mean,
-        wmean(&hero_hist_badges, &w_norm),
+        wmean(&hero_hist_badges, w_norm),
         per_hero_max,
         hist_kills_pm,
         hist_hero_diversity,
-        wmean(kills_pm, &w_norm),
-        r10mean(kills_pm),
+        wmean(&kills_pm, w_norm),
+        r10mean(&kills_pm),
     ])
 }
 
