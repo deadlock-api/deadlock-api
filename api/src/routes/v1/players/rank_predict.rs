@@ -64,9 +64,10 @@ async fn fetch_matches(
                     pmh.player_kills,
                     pmh.match_duration_s,
                     mi.average_badge_team0,
-                    mi.average_badge_team1
+                    mi.average_badge_team1,
+                    if(pmh.player_team = 'Team0', 'Team1', 'Team0') AS enemy_team
                 FROM player_match_history pmh FINAL
-                JOIN match_info mi FINAL USING (match_id)
+                JOIN match_info mi USING (match_id)  -- no FINAL
                 WHERE pmh.account_id = ?
                   AND pmh.match_mode IN ('Ranked', 'Unranked')
                   AND pmh.game_mode = 'Normal'
@@ -74,16 +75,6 @@ async fn fetch_matches(
                   AND mi.average_badge_team1 > 0
                 ORDER BY pmh.start_time DESC
                 LIMIT ?
-            ),
-            t_enemy_stats AS (
-                SELECT
-                    match_id,
-                    team,
-                    avg(net_worth) AS nw_avg,
-                    avg(max_player_damage) AS dmg_avg
-                FROM match_player FINAL
-                WHERE match_id IN (SELECT match_id FROM t_matches)
-                GROUP BY match_id, team
             )
             SELECT
                 m.hero_id,
@@ -92,12 +83,20 @@ async fn fetch_matches(
                 m.match_duration_s,
                 m.average_badge_team0,
                 m.average_badge_team1,
-                toNullable(es.nw_avg) AS enemy_nw_avg,
-                toNullable(es.dmg_avg) AS enemy_dmg_avg
+                es.nw_avg  AS enemy_nw_avg,
+                es.dmg_avg AS enemy_dmg_avg
             FROM t_matches m
-            LEFT JOIN t_enemy_stats es
-                ON es.match_id = m.match_id
-                AND es.team = if(m.player_team = 'Team0', 'Team1', 'Team0')",
+            LEFT JOIN (
+                SELECT
+                    match_id,
+                    team,
+                    avg(net_worth)          AS nw_avg,
+                    avg(max_player_damage)  AS dmg_avg
+                FROM match_player
+                WHERE match_id IN (SELECT match_id FROM t_matches)
+                GROUP BY match_id, team
+            ) es ON es.match_id = m.match_id
+                AND es.team     = m.enemy_team",
         )
         .bind(account_id)
         .bind(FETCH_LIMIT as u64)
