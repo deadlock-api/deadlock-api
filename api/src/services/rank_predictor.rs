@@ -34,7 +34,9 @@ pub(crate) enum RankPredictorError {
     MutexPoisoned,
     #[error("Model output tensor is empty")]
     EmptyOutput,
-    #[error("Model file not found (tried model/ensemble.onnx, model/ensemble.onnx.zst, ensemble.onnx.zst)")]
+    #[error(
+        "Model file not found (tried model/ensemble.onnx, model/ensemble.onnx.zst, ensemble.onnx.zst)"
+    )]
     ModelNotFound,
 }
 
