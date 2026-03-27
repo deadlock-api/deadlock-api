@@ -15,8 +15,7 @@ use crate::services::rank_predictor::{RankPrediction, RankPredictorError, badge_
 use crate::utils::types::AccountIdQuery;
 
 const N_MATCHES: usize = 30;
-/// Fetch extra matches so hero-history covers matches outside the aggregation window.
-const FETCH_LIMIT: usize = N_MATCHES + 50;
+const FETCH_LIMIT: usize = N_MATCHES;
 const RECENCY_ALPHA: f64 = 0.85;
 
 static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
@@ -164,16 +163,16 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 13]> {
     let window = &matches[..N_MATCHES];
     let w_norm: &[f64; N_MATCHES] = &W_NORM;
 
-    // Single pass over all matches: build hero averages and total kills/min.
+    // Build hero averages and total kills/min from the window only (matching Python predict.py).
     let mut hero_sums: HashMap<u32, (f64, u32)> = HashMap::new();
     let mut total_kills_pm = 0.0f64;
-    for m in matches {
+    for m in window {
         let e = hero_sums.entry(m.hero_id).or_insert((0.0, 0));
         e.0 += m.own_team_badge;
         e.1 += 1;
         total_kills_pm += kills_per_min(m);
     }
-    let hist_kills_pm = total_kills_pm / matches.len() as f64;
+    let hist_kills_pm = total_kills_pm / N_MATCHES as f64;
     let hero_avg: HashMap<u32, f64> = hero_sums
         .iter()
         .map(|(&hero, &(sum, cnt))| (hero, sum / f64::from(cnt)))
