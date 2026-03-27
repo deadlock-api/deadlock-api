@@ -241,9 +241,8 @@ fn aggregate_features(matches: &[Match]) -> Option<[f32; 13]> {
     tags = ["Players"],
     summary = "Rank Predict",
     description = "
-Predicts a player's current rank badge from their last 30 ranked/unranked matches using a stacked
-ONNX ensemble (Ridge + XGBoost + LightGBM). Requires at least 30 eligible matches (Ranked or
-Unranked, Normal game mode) with valid badge data.
+Predicts a player's current rank badge from their last 30 ranked/unranked matches.
+Requires at least 30 eligible matches (Ranked or Unranked, Normal game mode) with valid badge data.
 
 > **This is an ML prediction and may be inaccurate.** The model has no access to the player's
 > actual hidden MMR — it infers rank from match context signals only.

@@ -34,9 +34,7 @@ pub(crate) enum RankPredictorError {
     MutexPoisoned,
     #[error("Model output tensor is empty")]
     EmptyOutput,
-    #[error(
-        "Model file not found (tried model/ensemble.onnx, model/ensemble.onnx.zst, ensemble.onnx.zst)"
-    )]
+    #[error("Model file not found (tried model/xgb.onnx, model/xgb.onnx.zst, xgb.onnx.zst)")]
     ModelNotFound,
 }
 
@@ -67,12 +65,12 @@ impl RankPredictor {
     }
 
     async fn read_model_bytes() -> Result<Vec<u8>, RankPredictorError> {
-        if let Ok(bytes) = tokio::fs::read("model/ensemble.onnx").await {
+        if let Ok(bytes) = tokio::fs::read("model/xgb.onnx").await {
             return Ok(bytes);
         }
-        let zst = match tokio::fs::read("model/ensemble.onnx.zst").await {
+        let zst = match tokio::fs::read("model/xgb.onnx.zst").await {
             Ok(b) => Ok(b),
-            Err(_) => tokio::fs::read("ensemble.onnx.zst").await,
+            Err(_) => tokio::fs::read("xgb.onnx.zst").await,
         };
         if let Ok(zst) = zst {
             let mut decoder = ZstdDecoder::new(zst.as_slice());
