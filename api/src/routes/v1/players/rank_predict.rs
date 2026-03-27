@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::rank_predictor::{RankPrediction, RankPredictorError};
+use crate::services::rank_predictor::{RankPrediction, RankPredictorError, badge_to_idx};
 use crate::utils::types::AccountIdQuery;
 
 const N_MATCHES: usize = 30;
@@ -123,19 +123,21 @@ async fn fetch_matches(
     Ok(rows
         .into_iter()
         .map(|r| {
-            let b0 = f64::from(r.average_badge_team0.unwrap_or(0));
-            let b1 = f64::from(r.average_badge_team1.unwrap_or(0));
-            let (own_badge, enemy_badge) = if r.player_team == 0 {
+            let b0 = r.average_badge_team0.unwrap_or(0).cast_signed();
+            let b1 = r.average_badge_team1.unwrap_or(0).cast_signed();
+            let (own_raw, enemy_raw) = if r.player_team == 0 {
                 (b0, b1)
             } else {
                 (b1, b0)
             };
+            // Convert raw badge values (11-116) to contiguous 1-based indices (1-66)
+            // to match the Python training pipeline.
             Match {
                 hero_id: r.hero_id,
                 player_kills: r.player_kills,
                 duration_s: r.match_duration_s,
-                own_team_badge: own_badge,
-                enemy_team_badge: enemy_badge,
+                own_team_badge: f64::from(badge_to_idx(own_raw)),
+                enemy_team_badge: f64::from(badge_to_idx(enemy_raw)),
                 enemy_nw_avg: r.enemy_nw_avg,
                 enemy_dmg_avg: r.enemy_dmg_avg,
             }

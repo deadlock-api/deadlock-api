@@ -11,13 +11,21 @@ use thiserror::Error;
 use tokio::io::AsyncReadExt;
 use utoipa::ToSchema;
 
-/// Convert a model output index (0..=65) to a badge ID.
+/// Convert a raw badge value (11–116) to a 1-based contiguous index (1–66).
 ///
-/// Tiers 1–11, 6 sub-ranks each (same mapping as the MMR module).
-/// Index 0 → badge 11, index 65 → badge 116. Out-of-range values are clamped.
+/// Formula: `(badge / 10 - 1) * 6 + badge % 10`
+/// e.g. badge 82 → (8-1)*6 + 2 = 44
+pub(crate) fn badge_to_idx(badge: i32) -> i32 {
+    (badge / 10 - 1) * 6 + badge % 10
+}
+
+/// Convert a model output index (1..=66) to a badge ID.
+///
+/// The Python model outputs 1-based indices. Tiers 1–11, 6 sub-ranks each.
+/// Index 1 → badge 11, index 66 → badge 116. Out-of-range values are clamped.
 pub(crate) fn idx_to_badge(idx: i32) -> i32 {
-    let idx = idx.clamp(0, 65);
-    (idx / 6 + 1) * 10 + idx % 6 + 1
+    let idx = idx.clamp(1, 66);
+    10 * ((idx - 1) / 6) + 11 + (idx - 1) % 6
 }
 
 #[derive(Debug, Error)]
@@ -103,36 +111,39 @@ impl RankPredictor {
 mod tests {
     use super::*;
 
-    fn badge_to_idx(badge: i32) -> Option<i32> {
-        let tier = badge / 10;
-        let sub = badge % 10;
-        if !(1..=11).contains(&tier) || !(1..=6).contains(&sub) {
-            return None;
-        }
-        Some((tier - 1) * 6 + (sub - 1))
-    }
-
     #[test]
     fn test_idx_to_badge_boundaries() {
-        assert_eq!(idx_to_badge(0), 11);
-        assert_eq!(idx_to_badge(5), 16);
-        assert_eq!(idx_to_badge(6), 21);
-        assert_eq!(idx_to_badge(65), 116);
-        // out-of-range values are clamped
-        assert_eq!(idx_to_badge(-1), 11);
+        assert_eq!(idx_to_badge(1), 11);
+        assert_eq!(idx_to_badge(6), 16);
+        assert_eq!(idx_to_badge(7), 21);
         assert_eq!(idx_to_badge(66), 116);
+        // out-of-range values are clamped
+        assert_eq!(idx_to_badge(0), 11);
+        assert_eq!(idx_to_badge(67), 116);
     }
 
     #[test]
-    fn test_idx_to_badge_oracle_2() {
-        assert_eq!(idx_to_badge(43), 82);
+    fn test_idx_to_badge_known_values() {
+        // Python: 10 * ((44-1)//6) + 11 + ((44-1)%6) = 10*7 + 11 + 1 = 82
+        assert_eq!(idx_to_badge(44), 82);
+        // Ascendant 3: 10 * ((57-1)//6) + 11 + ((57-1)%6) = 10*9 + 11 + 2 = 103
+        assert_eq!(idx_to_badge(57), 103);
+    }
+
+    #[test]
+    fn test_badge_to_idx() {
+        assert_eq!(badge_to_idx(11), 1);
+        assert_eq!(badge_to_idx(16), 6);
+        assert_eq!(badge_to_idx(21), 7);
+        assert_eq!(badge_to_idx(82), 44);
+        assert_eq!(badge_to_idx(116), 66);
     }
 
     #[test]
     fn test_roundtrip() {
-        for idx in 0..=65 {
+        for idx in 1..=66 {
             let badge = idx_to_badge(idx);
-            assert_eq!(badge_to_idx(badge), Some(idx));
+            assert_eq!(badge_to_idx(badge), idx);
         }
     }
 }
