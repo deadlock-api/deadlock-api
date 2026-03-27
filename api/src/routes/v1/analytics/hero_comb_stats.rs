@@ -71,6 +71,12 @@ pub(crate) struct HeroCombStatsQuery {
     /// Comma separated list of hero ids to exclude. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     exclude_hero_ids: Option<Vec<u32>>,
+    /// Comma separated list of enemy hero ids to include. See more: <https://assets.deadlock-api.com/v2/heroes>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    include_enemy_hero_ids: Option<Vec<u32>>,
+    /// Comma separated list of enemy hero ids to exclude. See more: <https://assets.deadlock-api.com/v2/heroes>
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    exclude_enemy_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches")]
     #[param(minimum = 1, default = 20)]
@@ -163,6 +169,24 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
             exclude_hero_ids.iter().map(ToString::to_string).join(", ")
         ));
     }
+    if let Some(include_enemy_hero_ids) = &query.include_enemy_hero_ids {
+        grouped_filters.push(format!(
+            "hasAll(enemy.hero_ids, [{}])",
+            include_enemy_hero_ids
+                .iter()
+                .map(ToString::to_string)
+                .join(", ")
+        ));
+    }
+    if let Some(exclude_enemy_hero_ids) = &query.exclude_enemy_hero_ids {
+        grouped_filters.push(format!(
+            "not hasAny(enemy.hero_ids, [{}])",
+            exclude_enemy_hero_ids
+                .iter()
+                .map(ToString::to_string)
+                .join(", ")
+        ));
+    }
     let grouped_filters = if grouped_filters.is_empty() {
         String::new()
     } else {
@@ -184,10 +208,24 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let has_enemy_filter =
+        query.include_enemy_hero_ids.is_some() || query.exclude_enemy_hero_ids.is_some();
+    let match_team_select = if has_enemy_filter {
+        "match_id, team,"
+    } else {
+        ""
+    };
+    let enemy_join = if has_enemy_filter {
+        "INNER JOIN hero_combinations AS enemy \
+         ON hc.match_id = enemy.match_id AND hc.team != enemy.team"
+    } else {
+        ""
+    };
     format!(
         "
 WITH hero_combinations AS (
     SELECT
+        {match_team_select}
         arraySort(groupUniqArray({team_size})(hero_id)) AS hero_ids,
         groupArray(account_id) AS account_ids,
         any(won) AS won
@@ -198,11 +236,12 @@ WITH hero_combinations AS (
     HAVING length(hero_ids) = {team_size}
 )
 SELECT
-    hero_ids,
-    sum(won) AS wins,
-    sum(not won) AS losses,
+    hc.hero_ids AS hero_ids,
+    sum(hc.won) AS wins,
+    sum(not hc.won) AS losses,
     wins + losses AS matches
-FROM hero_combinations
+FROM hero_combinations AS hc
+{enemy_join}
 WHERE true {grouped_filters}
 GROUP BY hero_ids
 {having_clause}
@@ -522,6 +561,50 @@ mod test {
         assert!(sql.contains(&format!(
             "not hasAny(hero_ids, [{}])",
             exclude_hero_ids.iter().map(ToString::to_string).join(", ")
+        )));
+    }
+
+    #[test]
+    fn test_build_query_include_enemy_hero_ids() {
+        let include_enemy_hero_ids = vec![1, 2, 3];
+        let comb_query = HeroCombStatsQuery {
+            include_enemy_hero_ids: include_enemy_hero_ids.clone().into(),
+            ..Default::default()
+        };
+        let sql = build_query(&comb_query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
+        assert!(sql.contains(&format!(
+            "hasAll(enemy.hero_ids, [{}])",
+            include_enemy_hero_ids
+                .iter()
+                .map(ToString::to_string)
+                .join(", ")
+        )));
+    }
+
+    #[test]
+    fn test_build_query_exclude_enemy_hero_ids() {
+        let exclude_enemy_hero_ids = vec![1, 2, 3];
+        let comb_query = HeroCombStatsQuery {
+            exclude_enemy_hero_ids: exclude_enemy_hero_ids.clone().into(),
+            ..Default::default()
+        };
+        let sql = build_query(&comb_query);
+        if let Err(e) =
+            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
+        {
+            panic!("Failed to parse SQL: {sql}: {e}");
+        }
+        assert!(sql.contains(&format!(
+            "not hasAny(enemy.hero_ids, [{}])",
+            exclude_enemy_hero_ids
+                .iter()
+                .map(ToString::to_string)
+                .join(", ")
         )));
     }
 }
