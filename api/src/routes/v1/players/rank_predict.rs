@@ -19,22 +19,15 @@ const FETCH_LIMIT: usize = N_MATCHES + 50;
 const RECENCY_ALPHA: f32 = 0.85;
 
 #[derive(Debug, Clone, Row, Deserialize)]
-struct RankMatchRow {
-    match_id: u64,
+struct CombinedMatchRow {
     hero_id: u32,
     player_team: i8,
     player_kills: u32,
     match_duration_s: u32,
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
-}
-
-#[derive(Debug, Clone, Row, Deserialize)]
-struct EnemyStatsRow {
-    match_id: u64,
-    team: i8,
-    nw_avg: f64,
-    dmg_avg: f64,
+    enemy_nw_avg: Option<f64>,
+    enemy_dmg_avg: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,42 +54,53 @@ async fn fetch_matches(
     ch: &clickhouse::Client,
     account_id: u32,
 ) -> clickhouse::error::Result<Vec<Match>> {
-    let rows: Vec<RankMatchRow> = ch
+    let rows: Vec<CombinedMatchRow> = ch
         .query(
-            "SELECT
-                pmh.match_id,
-                pmh.hero_id,
-                pmh.player_team,
-                pmh.player_kills,
-                pmh.match_duration_s,
-                mi.average_badge_team0,
-                mi.average_badge_team1
-            FROM player_match_history pmh FINAL
-            JOIN match_info mi FINAL USING (match_id)
-            WHERE pmh.account_id = ?
-              AND pmh.match_mode IN ('Ranked', 'Unranked')
-              AND pmh.game_mode = 'Normal'
-              AND mi.average_badge_team0 > 0
-              AND mi.average_badge_team1 > 0
-            ORDER BY pmh.start_time DESC
-            LIMIT ?",
+            "WITH t_matches AS (
+                SELECT
+                    pmh.match_id,
+                    pmh.hero_id,
+                    pmh.player_team,
+                    pmh.player_kills,
+                    pmh.match_duration_s,
+                    mi.average_badge_team0,
+                    mi.average_badge_team1
+                FROM player_match_history pmh FINAL
+                JOIN match_info mi FINAL USING (match_id)
+                WHERE pmh.account_id = ?
+                  AND pmh.match_mode IN ('Ranked', 'Unranked')
+                  AND pmh.game_mode = 'Normal'
+                  AND mi.average_badge_team0 > 0
+                  AND mi.average_badge_team1 > 0
+                ORDER BY pmh.start_time DESC
+                LIMIT ?
+            )
+            SELECT
+                m.hero_id,
+                m.player_team,
+                m.player_kills,
+                m.match_duration_s,
+                m.average_badge_team0,
+                m.average_badge_team1,
+                toNullable(es.nw_avg) AS enemy_nw_avg,
+                toNullable(es.dmg_avg) AS enemy_dmg_avg
+            FROM t_matches m
+            LEFT JOIN (
+                SELECT
+                    match_id,
+                    team,
+                    avg(net_worth) AS nw_avg,
+                    avg(max_player_damage) AS dmg_avg
+                FROM match_player FINAL
+                WHERE match_id IN (SELECT match_id FROM t_matches)
+                GROUP BY match_id, team
+            ) es ON es.match_id = m.match_id
+                AND es.team = if(m.player_team = 'Team0', 'Team1', 'Team0')",
         )
         .bind(account_id)
         .bind(FETCH_LIMIT as u64)
         .fetch_all()
         .await?;
-
-    if rows.is_empty() {
-        return Ok(vec![]);
-    }
-
-    let match_ids: Vec<u64> = rows.iter().map(|r| r.match_id).collect();
-    let enemy_stats = fetch_enemy_stats(ch, &match_ids).await?;
-
-    let enemy_map: HashMap<(u64, i8), (f64, f64)> = enemy_stats
-        .into_iter()
-        .map(|e| ((e.match_id, e.team), (e.nw_avg, e.dmg_avg)))
-        .collect();
 
     Ok(rows
         .into_iter()
@@ -108,38 +112,17 @@ async fn fetch_matches(
             } else {
                 (b1, b0)
             };
-            let enemy_team_idx: i8 = 1 - r.player_team.clamp(0, 1);
-            let enemy = enemy_map.get(&(r.match_id, enemy_team_idx)).copied();
             Match {
                 hero_id: r.hero_id,
                 player_kills: r.player_kills,
                 duration_s: r.match_duration_s,
                 own_team_badge: own_badge,
                 enemy_team_badge: enemy_badge,
-                enemy_nw_avg: enemy.map(|(nw, _)| nw as f32),
-                enemy_dmg_avg: enemy.map(|(_, dmg)| dmg as f32),
+                enemy_nw_avg: r.enemy_nw_avg.map(|v| v as f32),
+                enemy_dmg_avg: r.enemy_dmg_avg.map(|v| v as f32),
             }
         })
         .collect())
-}
-
-async fn fetch_enemy_stats(
-    ch: &clickhouse::Client,
-    match_ids: &[u64],
-) -> clickhouse::error::Result<Vec<EnemyStatsRow>> {
-    ch.query(
-        "SELECT
-            match_id,
-            team,
-            avg(net_worth) AS nw_avg,
-            avg(max_player_damage) AS dmg_avg
-        FROM match_player FINAL
-        WHERE match_id IN ?
-        GROUP BY match_id, team",
-    )
-    .bind(match_ids)
-    .fetch_all()
-    .await
 }
 
 #[allow(clippy::cast_precision_loss)]
