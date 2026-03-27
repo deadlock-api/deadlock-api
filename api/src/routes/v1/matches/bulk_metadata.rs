@@ -425,8 +425,8 @@ This endpoints lets you fetch multiple match metadata at once. The response is a
 | Type | Limit |
 | ---- | ----- |
 | IP | 10req/min |
-| Key | 5req/s |
-| Global | 10req/s |
+| Key | 10req/10s |
+| Global | 100req/min |
     "
 )]
 pub(super) async fn bulk_metadata(
@@ -455,8 +455,8 @@ pub(super) async fn bulk_metadata(
             "match_metadata_bulk",
             &[
                 Quota::ip_limit(10, Duration::from_mins(1)),
-                Quota::key_limit(5, Duration::from_secs(1)),
-                Quota::global_limit(10, Duration::from_secs(1)),
+                Quota::key_limit(10, Duration::from_secs(10)),
+                Quota::global_limit(100, Duration::from_mins(1)),
             ],
         )
         .await?;
