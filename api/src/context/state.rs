@@ -14,6 +14,7 @@ use tracing::{debug, warn};
 
 use crate::context::config::Config;
 use crate::services::assets::client::AssetsClient;
+use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
@@ -56,6 +57,7 @@ pub(crate) struct AppState {
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
+    pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
 }
 
 impl AppState {
@@ -263,6 +265,19 @@ impl AppState {
         debug!("Creating Request Logger");
         let request_logger = Arc::new(RequestLogger::new(ch_client.clone()));
 
+        // Load rank predictor model (optional – API starts without it if file is missing)
+        debug!("Loading rank predictor model");
+        let rank_predictor = match RankPredictor::load().await {
+            Ok(p) => {
+                debug!("Rank predictor loaded successfully");
+                Some(Arc::new(p))
+            }
+            Err(e) => {
+                warn!("Rank predictor not loaded (rank-predict endpoint will return 503): {e}");
+                None
+            }
+        };
+
         Ok(Self {
             config,
             s3_client,
@@ -277,6 +292,7 @@ impl AppState {
             assets_client,
             rate_limit_client,
             request_logger,
+            rank_predictor,
         })
     }
 }

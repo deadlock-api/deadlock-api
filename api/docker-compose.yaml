@@ -5,6 +5,8 @@ services:
     env_file: .env
     ports:
       - "3000:3000"
+    volumes:
+      - ./model:/app/model:ro
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/v1/info/health" ]
       interval: 30s

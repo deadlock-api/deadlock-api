@@ -5,6 +5,7 @@ pub mod hero_stats;
 pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
+mod rank_predict;
 pub mod steam;
 
 use core::time::Duration;
@@ -140,6 +141,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(mate_stats::mate_stats))
         .routes(routes!(enemy_stats::enemy_stats))
         .routes(routes!(hero_stats::player_hero_stats))
+        .routes(routes!(rank_predict::rank_predict))
         .merge(mmr::router())
         .merge(steam::router())
         .layer(

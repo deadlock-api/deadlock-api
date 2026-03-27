@@ -36,7 +36,7 @@ valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev 
 prost = "0.14.3"
 base64 = "0.22.1"
 tryhard = "0.5.2"
-async-compression = { version = "0.4.41", features = ["bzip2", "tokio"] }
+async-compression = { version = "0.4.41", features = ["bzip2", "zstd", "tokio"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.5", features = ["query"] }
 metrics = "0.24.3"
@@ -54,6 +54,8 @@ hex = "0.4"
 hmac = "0.12"
 md5 = { package = "md-5", version = "0.10" }
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+ort = "2.0.0-rc.12"
+ndarray = "0.17.2"
 
 [dev-dependencies]
 rstest = "0.26.1"
