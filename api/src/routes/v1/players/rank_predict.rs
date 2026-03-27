@@ -23,7 +23,10 @@ static W_NORM: LazyLock<[f32; N_MATCHES]> = LazyLock::new(|| {
     let mut weights = [0.0f32; N_MATCHES];
     let mut sum = 0.0f32;
     for (i, w) in weights.iter_mut().enumerate() {
-        *w = RECENCY_ALPHA.powi(i as i32);
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        {
+            *w = RECENCY_ALPHA.powi(i as i32);
+        }
         sum += *w;
     }
     for w in &mut weights {
