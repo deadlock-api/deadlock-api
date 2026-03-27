@@ -26,8 +26,8 @@ struct CombinedMatchRow {
     match_duration_s: u32,
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
-    enemy_nw_avg: Option<f64>,
-    enemy_dmg_avg: Option<f64>,
+    enemy_nw_avg: f32,
+    enemy_dmg_avg: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -37,8 +37,8 @@ struct Match {
     duration_s: u32,
     own_team_badge: f32,
     enemy_team_badge: f32,
-    enemy_nw_avg: Option<f32>,
-    enemy_dmg_avg: Option<f32>,
+    enemy_nw_avg: f32,
+    enemy_dmg_avg: f32,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -83,8 +83,8 @@ async fn fetch_matches(
                 m.match_duration_s,
                 m.average_badge_team0,
                 m.average_badge_team1,
-                es.nw_avg  AS enemy_nw_avg,
-                es.dmg_avg AS enemy_dmg_avg
+                toFloat32(es.nw_avg)  AS enemy_nw_avg,
+                toFloat32(es.dmg_avg) AS enemy_dmg_avg
             FROM t_matches m
             LEFT JOIN (
                 SELECT
@@ -119,8 +119,8 @@ async fn fetch_matches(
                 duration_s: r.match_duration_s,
                 own_team_badge: own_badge,
                 enemy_team_badge: enemy_badge,
-                enemy_nw_avg: r.enemy_nw_avg.map(|v| v as f32),
-                enemy_dmg_avg: r.enemy_dmg_avg.map(|v| v as f32),
+                enemy_nw_avg: r.enemy_nw_avg,
+                enemy_dmg_avg: r.enemy_dmg_avg,
             }
         })
         .collect())
@@ -191,15 +191,11 @@ fn aggregate_features(matches: &[Match]) -> Option<[f32; 13]> {
     let r10mean = |vals: &[f32]| vals[..10].iter().sum::<f32>() / 10.0;
 
     let (enemy_nw_avg_mean, enemy_dmg_avg_mean) = {
-        let (nw_sum, dmg_sum, count) =
-            window
-                .iter()
-                .fold((0.0f32, 0.0f32, 0u32), |(nw, dmg, n), m| {
-                    match m.enemy_nw_avg {
-                        Some(v) => (nw + v, dmg + m.enemy_dmg_avg.unwrap_or(0.0), n + 1),
-                        None => (nw, dmg, n),
-                    }
-                });
+        let (nw_sum, dmg_sum, count) = window
+            .iter()
+            .fold((0.0f32, 0.0f32, 0u32), |(nw, dmg, n), m| {
+                (nw + m.enemy_nw_avg, dmg + m.enemy_dmg_avg, n + 1)
+            });
         if count > 0 {
             (nw_sum / count as f32, dmg_sum / count as f32)
         } else {
