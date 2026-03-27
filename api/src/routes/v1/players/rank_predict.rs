@@ -79,11 +79,12 @@ async fn fetch_matches(
                     pmh.player_team,
                     pmh.player_kills,
                     pmh.match_duration_s,
+                    pmh.start_time,
                     mi.average_badge_team0,
                     mi.average_badge_team1,
                     if(pmh.player_team = 'Team0', 'Team1', 'Team0') AS enemy_team
                 FROM player_match_history pmh FINAL
-                JOIN match_info mi USING (match_id)  -- no FINAL
+                JOIN match_info mi FINAL USING (match_id)
                 WHERE pmh.account_id = ?
                   AND pmh.match_mode IN ('Ranked', 'Unranked')
                   AND pmh.game_mode = 'Normal'
@@ -108,11 +109,12 @@ async fn fetch_matches(
                     team,
                     avg(net_worth)          AS nw_avg,
                     avg(max_player_damage)  AS dmg_avg
-                FROM match_player
+                FROM match_player FINAL
                 WHERE match_id IN (SELECT match_id FROM t_matches)
                 GROUP BY match_id, team
             ) es ON es.match_id = m.match_id
-                AND es.team     = m.enemy_team",
+                AND es.team     = m.enemy_team
+            ORDER BY m.start_time DESC",
         )
         .bind(account_id)
         .bind(FETCH_LIMIT as u64)
