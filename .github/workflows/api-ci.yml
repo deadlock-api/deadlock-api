@@ -42,11 +42,7 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@v6
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add rustfmt
+      - run: rustup component add rustfmt
       - name: Rustfmt Check
         run: cargo fmt --all -- --check
 
@@ -58,12 +54,9 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@v6
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
-      - name: Install cargo-machete
-        run: cargo install cargo-machete
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-machete
       - name: Machete
         run: cargo machete
 
@@ -75,10 +68,6 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@v6
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: typos-cli
@@ -87,31 +76,62 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: api
     steps:
-      - uses: actions/checkout@v6
+      - uses: useblacksmith/checkout@v1
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-home
+          path: ~/.cargo
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-target
+          path: api/target
       - name: Install Protocol Buffers compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-stable"
+          shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "api -> target"
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add clippy
-      - name: Cargo Clippy (Deny Warnings)
+      - run: rustup component add clippy
+      - name: Cargo Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
-      - name: Cargo Clippy (Allow Warnings)
-        run: cargo clippy --all-targets --locked
 
-  test_deploy:
-    name: Test and Deploy
+  unit_test:
+    name: Unit Tests
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: useblacksmith/checkout@v1
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-home
+          path: ~/.cargo
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-target
+          path: api/target
+      - name: Install Protocol Buffers compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
+          workspaces: "api -> target"
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-nextest
+      - name: Unit Tests
+        run: cargo nextest run --locked --lib --status-level fail
+
+  build_and_test:
+    name: Build and Integration Test
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
@@ -128,21 +148,28 @@ jobs:
             DOCKER_TAG="${{ github.sha }}"
           fi
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "Using Docker tag: $DOCKER_TAG"
 
       ###############################
       ##           Setup           ##
       ###############################
-      - uses: actions/checkout@v6
+      - uses: useblacksmith/checkout@v1
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Setup go-task
-        run: if [ ! -f "~/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
       - name: Setup Docker Builder
         uses: useblacksmith/setup-docker-builder@v1
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-home
+          path: ~/.cargo
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-target
+          path: api/target
+      - name: Setup go-task
+        run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
       - name: Start API Dependency Docker Images (in Background)
         run: nohup task start-test-env-api-deps > pull.log 2>&1 &
       - name: Install Protocol Buffers compiler
@@ -150,21 +177,11 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-stable"
+          shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "api -> target"
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: cargo-nextest
-
-      ###############################
-      ##         Test Code         ##
-      ###############################
-      - name: Unit Tests
-        run: cargo nextest run --locked --lib --status-level fail
 
       ###############################
       ##           Build           ##
@@ -178,23 +195,44 @@ jobs:
           push: false
 
       ###############################
-      ##         Test Code         ##
+      ##    Integration Tests      ##
       ###############################
       - name: Create .env.testing from example
         run: cp .env.testing.example .env.testing
-      - name: Test Docker image
+      - name: Integration Tests
         run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
 
-      ###############################
-      ##        Deploy Code        ##
-      ###############################
+  deploy:
+    name: Deploy
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: [fmt, deps, typos, lint, unit_test, build_and_test]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Determine Docker Tag
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DOCKER_TAG="${{ inputs.tag }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            DOCKER_TAG="latest"
+          fi
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+      - uses: useblacksmith/checkout@v1
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push Docker image
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
-        run: docker push ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+      - name: Build and Push Docker image
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: api
+          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+          push: true
