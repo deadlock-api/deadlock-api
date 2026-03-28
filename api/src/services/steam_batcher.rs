@@ -30,7 +30,10 @@ impl SteamProfileBatcher {
         Self { tx }
     }
 
-    pub(crate) async fn load(&self, account_id: u32) -> APIResult<SteamProfile> {
+    async fn send_request(
+        &self,
+        account_id: u32,
+    ) -> APIResult<oneshot::Receiver<APIResult<SteamProfile>>> {
         let (response_tx, response_rx) = oneshot::channel();
         self.tx
             .send(BatchRequest {
@@ -41,10 +44,37 @@ impl SteamProfileBatcher {
             .map_err(|_| APIError::InternalError {
                 message: "Batcher unavailable".to_string(),
             })?;
-        counter!("steam_batcher.requests").increment(1);
-        response_rx.await.map_err(|_| APIError::InternalError {
+        Ok(response_rx)
+    }
+
+    async fn recv_response(
+        rx: oneshot::Receiver<APIResult<SteamProfile>>,
+    ) -> APIResult<APIResult<SteamProfile>> {
+        rx.await.map_err(|_| APIError::InternalError {
             message: "Batcher dropped response".to_string(),
-        })?
+        })
+    }
+
+    pub(crate) async fn load(&self, account_id: u32) -> APIResult<SteamProfile> {
+        let rx = self.send_request(account_id).await?;
+        counter!("steam_batcher.requests").increment(1);
+        Self::recv_response(rx).await?
+    }
+
+    pub(crate) async fn load_many(&self, account_ids: &[u32]) -> APIResult<Vec<SteamProfile>> {
+        let mut receivers = Vec::with_capacity(account_ids.len());
+        for &account_id in account_ids {
+            receivers.push(self.send_request(account_id).await?);
+        }
+        counter!("steam_batcher.requests").increment(account_ids.len() as u64);
+
+        let mut profiles = Vec::with_capacity(receivers.len());
+        for rx in receivers {
+            if let Ok(profile) = Self::recv_response(rx).await? {
+                profiles.push(profile);
+            }
+        }
+        Ok(profiles)
     }
 }
 

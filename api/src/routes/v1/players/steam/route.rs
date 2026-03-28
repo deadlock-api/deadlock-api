@@ -69,23 +69,6 @@ pub(crate) fn build_query_many(account_ids: &[u32]) -> String {
     )
 }
 
-pub(crate) async fn get_steam_many(
-    ch_client: &clickhouse::Client,
-    account_ids: &[u32],
-) -> APIResult<Vec<SteamProfile>> {
-    let query = build_query_many(account_ids);
-    debug!(?query);
-    match ch_client.query(&query).fetch_all().await {
-        Ok(profiles) => Ok(profiles),
-        Err(e) => {
-            warn!("Failed to fetch steam profiles for account_ids {account_ids:?}: {e}");
-            Err(APIError::InternalError {
-                message: "Failed to fetch steam profiles".to_string(),
-            })
-        }
-    }
-}
-
 #[utoipa::path(
     get,
     path = "/steam",
@@ -139,7 +122,9 @@ pub(super) async fn steam(
         .into_iter()
         .filter(|id| !protected_users.contains(id))
         .collect::<Vec<_>>();
-    get_steam_many(&state.ch_client_ro, &account_ids)
+    state
+        .steam_profile_batcher
+        .load_many(&account_ids)
         .await
         .map(Json)
 }
