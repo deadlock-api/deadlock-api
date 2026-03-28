@@ -84,14 +84,22 @@ jobs:
       - uses: useblacksmith/checkout@v1
       - uses: useblacksmith/stickydisk@v1
         with:
-          key: deadlock-api-cargo-home
-          path: ~/.cargo
+          key: deadlock-api-cargo-registry
+          path: ~/.cargo/registry
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-git
+          path: ~/.cargo/git
       - uses: useblacksmith/stickydisk@v1
         with:
           key: deadlock-api-cargo-target
           path: api/target
-      - name: Install Protocol Buffers compiler
+      - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -111,14 +119,22 @@ jobs:
       - uses: useblacksmith/checkout@v1
       - uses: useblacksmith/stickydisk@v1
         with:
-          key: deadlock-api-cargo-home
-          path: ~/.cargo
+          key: deadlock-api-cargo-registry
+          path: ~/.cargo/registry
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-git
+          path: ~/.cargo/git
       - uses: useblacksmith/stickydisk@v1
         with:
           key: deadlock-api-cargo-target
           path: api/target
-      - name: Install Protocol Buffers compiler
+      - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -162,8 +178,12 @@ jobs:
         uses: useblacksmith/setup-docker-builder@v1
       - uses: useblacksmith/stickydisk@v1
         with:
-          key: deadlock-api-cargo-home
-          path: ~/.cargo
+          key: deadlock-api-cargo-registry
+          path: ~/.cargo/registry
+      - uses: useblacksmith/stickydisk@v1
+        with:
+          key: deadlock-api-cargo-git
+          path: ~/.cargo/git
       - uses: useblacksmith/stickydisk@v1
         with:
           key: deadlock-api-cargo-target
@@ -172,8 +192,12 @@ jobs:
         run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
       - name: Start API Dependency Docker Images (in Background)
         run: nohup task start-test-env-api-deps > pull.log 2>&1 &
-      - name: Install Protocol Buffers compiler
+      - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+      - name: Install Rust toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
