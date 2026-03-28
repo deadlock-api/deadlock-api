@@ -1,34 +1,15 @@
-FROM rust:1.94-slim-trixie AS chef
-
+FROM rust:1.94-slim-trixie AS builder
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
+    && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
     && rm -rf /var/lib/apt/lists/*
-
-RUN cargo install --locked cargo-chef
-ENV RUSTC_WRAPPER=sccache SCCACHE_DIR=/sccache SQLX_OFFLINE=true
-
+ENV SQLX_OFFLINE=true
 WORKDIR /app
-
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS builder-base
-WORKDIR /app
-COPY --from=planner /app/recipe.json recipe.json
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo chef cook --release --recipe-path recipe.json --all-features
-
-FROM builder-base as builder
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
-    cargo build --release --all-features
-# Collect only built binaries into a temporary directory
-RUN mkdir -p /tmp/release-bin \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    cargo build --release --all-features \
+    && mkdir -p /tmp/release-bin \
     && find /app/target/release -maxdepth 1 -type f -executable -exec cp {} /tmp/release-bin/ \;
 
 # We do not need the Rust toolchain to run the binary!
