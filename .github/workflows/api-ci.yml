@@ -138,7 +138,7 @@ jobs:
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} | zstd -T0 -3 > /tmp/image.tar.zst
         working-directory: .
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docker-image
           path: /tmp/image.tar.zst
