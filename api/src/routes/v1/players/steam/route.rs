@@ -12,6 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher};
 use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
@@ -43,6 +44,31 @@ pub(crate) struct SteamProfile {
     pub(super) last_updated: chrono::DateTime<Utc>,
 }
 
+pub(crate) struct SteamProfileQuery;
+
+impl BatchQuery for SteamProfileQuery {
+    type Key = u32;
+    type Value = SteamProfile;
+
+    fn build_query(keys: &[u32]) -> String {
+        format!(
+            "
+            SELECT ?fields
+            FROM steam_profiles
+            WHERE account_id IN ({})
+            ORDER BY last_updated DESC
+             ",
+            keys.iter().map(ToString::to_string).join(",")
+        )
+    }
+
+    fn key_of(value: &SteamProfile) -> u32 {
+        value.account_id
+    }
+}
+
+pub(crate) type SteamProfileBatcher = ClickhouseBatcher<SteamProfileQuery>;
+
 pub(crate) async fn steam_single(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
@@ -55,18 +81,6 @@ pub(crate) async fn steam_single(
         return Err(APIError::protected_user());
     }
     state.steam_profile_batcher.load(account_id).await.map(Json)
-}
-
-pub(crate) fn build_query_many(account_ids: &[u32]) -> String {
-    format!(
-        "
-        SELECT ?fields
-        FROM steam_profiles
-        WHERE account_id IN ({})
-        ORDER BY last_updated DESC
-         ",
-        account_ids.iter().map(ToString::to_string).join(",")
-    )
 }
 
 #[utoipa::path(

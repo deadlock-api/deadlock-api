@@ -13,12 +13,12 @@ use thiserror::Error;
 use tracing::{debug, warn};
 
 use crate::context::config::Config;
+use crate::routes::v1::players::steam::route::SteamProfileBatcher;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
-use crate::services::steam_batcher::SteamProfileBatcher;
 
 #[derive(Debug, Error)]
 pub enum AppStateError {
