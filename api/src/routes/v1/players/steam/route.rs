@@ -3,8 +3,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TimedCache;
-use cached::proc_macro::cached;
 use chrono::Utc;
 use clickhouse::Row;
 use itertools::Itertools;
@@ -33,7 +31,7 @@ pub(super) struct SteamSearchQuery {
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
 pub(crate) struct SteamProfile {
-    pub(super) account_id: u32,
+    pub(crate) account_id: u32,
     pub(crate) personaname: String,
     pub(super) profileurl: String,
     pub(super) avatar: String,
@@ -43,47 +41,6 @@ pub(crate) struct SteamProfile {
     pub(super) countrycode: Option<String>,
     #[serde(with = "clickhouse::serde::chrono::datetime")]
     pub(super) last_updated: chrono::DateTime<Utc>,
-}
-
-fn build_query_single(account_id: u32) -> String {
-    format!(
-        "
-        SELECT ?fields
-        FROM steam_profiles
-        WHERE account_id = {account_id}
-        ORDER BY last_updated DESC
-        LIMIT 1
-         "
-    )
-}
-
-#[cached(
-    ty = "TimedCache<u32, SteamProfile>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
-    result = true,
-    convert = "{ account_id }",
-    sync_writes = "by_key",
-    key = "u32"
-)]
-pub(crate) async fn get_steam_single(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-) -> APIResult<SteamProfile> {
-    let query = build_query_single(account_id);
-    debug!(?query);
-    match ch_client.query(&query).fetch_one().await {
-        Ok(profile) => Ok(profile),
-        Err(clickhouse::error::Error::RowNotFound) => Err(APIError::status_msg(
-            StatusCode::NOT_FOUND,
-            "Steam profile not found.",
-        )),
-        Err(e) => {
-            warn!("Failed to fetch steam profile for account_id {account_id}: {e}");
-            Err(APIError::InternalError {
-                message: "Failed to fetch steam profile".to_string(),
-            })
-        }
-    }
 }
 
 pub(crate) async fn steam_single(
@@ -97,12 +54,10 @@ pub(crate) async fn steam_single(
     {
         return Err(APIError::protected_user());
     }
-    get_steam_single(&state.ch_client_ro, account_id)
-        .await
-        .map(Json)
+    state.steam_profile_batcher.load(account_id).await.map(Json)
 }
 
-fn build_query_many(account_ids: &[u32]) -> String {
+pub(crate) fn build_query_many(account_ids: &[u32]) -> String {
     format!(
         "
         SELECT ?fields

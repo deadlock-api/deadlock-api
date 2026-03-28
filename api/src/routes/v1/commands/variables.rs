@@ -19,8 +19,8 @@ use crate::routes::v1::players::match_history::{
     PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
     fetch_steam_match_history, insert_match_history_to_ch,
 };
+use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
-use crate::routes::v1::players::{mmr, steam};
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -993,11 +993,11 @@ async fn get_steam_account_name(
         Ok(name) => Ok(name),
         Err(e) => {
             warn!("Failed to fetch steam account name from API, falling back to db: {e}");
-            Ok(
-                steam::route::get_steam_single(&state.ch_client_ro, steam_id)
-                    .await?
-                    .personaname,
-            )
+            Ok(state
+                .steam_profile_batcher
+                .load(steam_id)
+                .await?
+                .personaname)
         }
     }
 }

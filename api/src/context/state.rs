@@ -18,6 +18,7 @@ use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
+use crate::services::steam_batcher::SteamProfileBatcher;
 
 #[derive(Debug, Error)]
 pub enum AppStateError {
@@ -58,6 +59,7 @@ pub(crate) struct AppState {
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
+    pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
 
 impl AppState {
@@ -278,6 +280,10 @@ impl AppState {
             }
         };
 
+        // Create Steam Profile Batcher
+        debug!("Creating Steam Profile Batcher");
+        let steam_profile_batcher = SteamProfileBatcher::new(ch_client_ro.clone());
+
         Ok(Self {
             config,
             s3_client,
@@ -293,6 +299,7 @@ impl AppState {
             rate_limit_client,
             request_logger,
             rank_predictor,
+            steam_profile_batcher,
         })
     }
 }
