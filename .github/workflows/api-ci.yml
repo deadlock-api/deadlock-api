@@ -150,7 +150,6 @@ jobs:
 
   unit_test:
     name: Unit Tests
-    needs: [fmt, deps, typos, lint, build]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
