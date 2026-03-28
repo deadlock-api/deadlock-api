@@ -148,38 +148,15 @@ jobs:
   ##     Stage 2: Test         ##
   ###############################
 
-  unit_test:
-    name: Unit Tests
+  test:
+    name: Test
+    needs: [fmt, deps, typos, lint, build]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: api
-    steps:
-      - uses: useblacksmith/checkout@v1
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
-      - name: Install Rust toolchain
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
-          workspaces: "api -> target"
-      - uses: taiki-e/cache-cargo-install-action@v3
-        with:
-          tool: cargo-nextest
-      - name: Unit Tests
-        run: cargo nextest run --locked --lib --status-level fail
-
-  integration_test:
-    name: Integration Tests
-    needs: [build]
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    defaults:
-      run:
-        working-directory: api
+    env:
+      DOCKER_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.ref == 'refs/heads/master' && 'latest' || github.sha) }}
     steps:
       - uses: useblacksmith/checkout@v1
       - name: Install system dependencies
@@ -208,10 +185,8 @@ jobs:
         run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
       - name: Create .env.testing from example
         run: cp .env.testing.example .env.testing
-      - name: Integration Tests
+      - name: Tests
         run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
-    env:
-      DOCKER_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.ref == 'refs/heads/master' && 'latest' || github.sha) }}
 
   ###############################
   ##     Stage 3: Deploy       ##
@@ -220,7 +195,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [unit_test, integration_test]
+    needs: [test]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
       - name: Determine Docker Tag
