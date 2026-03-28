@@ -6,6 +6,7 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
 
 - **[`api/`](api/)** - Rust API backend (Axum) serving game data, analytics, leaderboards, and more
 - **[`website/`](website/)** - React frontend (Vite + React Router) for the Deadlock API website
+- **[`tools/`](tools/)** - Rust microservices for data ingestion, scraping, and pipeline processing
 
 ## Getting Started
 
@@ -28,6 +29,16 @@ cp .env.example .env
 pnpm install
 pnpm dev
 ```
+
+### Tools
+
+```bash
+cd tools
+# Set up .env with your credentials
+cargo run -p <service-name>
+```
+
+See [`tools/README.md`](tools/README.md) for full documentation.
 
 ## License
 
