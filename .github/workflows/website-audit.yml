@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: latest
 
@@ -53,7 +53,7 @@ jobs:
         run: pnpm audit --audit-level ${{ inputs.level || 'high' }} --json > pnpm-audit-report.json
 
       - name: Upload audit report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pnpm-audit-report
           path: website/pnpm-audit-report.json
