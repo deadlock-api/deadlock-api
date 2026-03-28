@@ -2,6 +2,7 @@ use core::time::Duration;
 use std::collections::HashMap;
 
 use axum::http::StatusCode;
+use metrics::{counter, gauge, histogram};
 use tokio::sync::{mpsc, oneshot};
 use tracing::warn;
 
@@ -40,6 +41,7 @@ impl SteamProfileBatcher {
             .map_err(|_| APIError::InternalError {
                 message: "Batcher unavailable".to_string(),
             })?;
+        counter!("steam_batcher.requests").increment(1);
         response_rx.await.map_err(|_| APIError::InternalError {
             message: "Batcher dropped response".to_string(),
         })?
@@ -72,12 +74,16 @@ async fn batch_loop(ch_client: clickhouse::Client, mut rx: mpsc::Receiver<BatchR
         }
 
         prev_batch_size = pending.len();
+        gauge!("steam_batcher.window_ms").set(window.as_secs_f64() * 1000.0);
+
         let ch = ch_client.clone();
         tokio::spawn(async move { execute_batch(&ch, pending).await });
     }
 }
 
+#[allow(clippy::cast_precision_loss)] // batch sizes are small (<= 1000)
 async fn execute_batch(ch_client: &clickhouse::Client, pending: Vec<BatchRequest>) {
+    let batch_size = pending.len();
     let mut senders: HashMap<u32, Vec<oneshot::Sender<APIResult<SteamProfile>>>> = HashMap::new();
     for req in pending {
         senders
@@ -86,11 +92,20 @@ async fn execute_batch(ch_client: &clickhouse::Client, pending: Vec<BatchRequest
             .push(req.response_tx);
     }
 
+    let unique_ids = senders.len();
+    histogram!("steam_batcher.batch_size").record(batch_size as f64);
+    histogram!("steam_batcher.unique_ids").record(unique_ids as f64);
+    counter!("steam_batcher.batches").increment(1);
+
     let account_ids: Vec<u32> = senders.keys().copied().collect();
     let query = build_query_many(&account_ids);
 
+    let start = tokio::time::Instant::now();
     match ch_client.query(&query).fetch_all::<SteamProfile>().await {
         Ok(profiles) => {
+            histogram!("steam_batcher.query_duration_seconds")
+                .record(start.elapsed().as_secs_f64());
+
             for profile in profiles {
                 if let Some(txs) = senders.remove(&profile.account_id) {
                     let mut txs = txs;
@@ -103,6 +118,10 @@ async fn execute_batch(ch_client: &clickhouse::Client, pending: Vec<BatchRequest
                 }
             }
             // Remaining senders had no matching profile
+            let not_found = senders.len();
+            if not_found > 0 {
+                counter!("steam_batcher.not_found").increment(not_found as u64);
+            }
             for (_, txs) in senders {
                 for tx in txs {
                     let _ = tx.send(Err(APIError::status_msg(
@@ -113,6 +132,9 @@ async fn execute_batch(ch_client: &clickhouse::Client, pending: Vec<BatchRequest
             }
         }
         Err(e) => {
+            histogram!("steam_batcher.query_duration_seconds")
+                .record(start.elapsed().as_secs_f64());
+            counter!("steam_batcher.errors").increment(1);
             warn!("Batch steam profile query failed: {e}");
             for (_, txs) in senders {
                 for tx in txs {
