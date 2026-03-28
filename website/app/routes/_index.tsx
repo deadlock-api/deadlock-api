@@ -217,7 +217,7 @@ export default function Index() {
         </div>
 
         <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground">
-          A comprehensive set of endpoints to access Deadlock game data — match history, player statistics, hero
+          A comprehensive set of endpoints to access Deadlock game data, match history, player statistics, hero
           analytics, and more. Whether you're a developer integrating game data or a player analyzing performance, the
           Deadlock API has you covered.
         </p>
