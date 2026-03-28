@@ -1,0 +1,5 @@
+.env
+.env.testing
+.idea
+.vscode
+*.local.*

@@ -1,12 +1,18 @@
-name: Rust CI/CD
+name: API CI/CD
 
 on:
   push:
     branches:
       - master
+    paths:
+      - 'api/**'
+      - '.github/workflows/api-ci.yml'
   pull_request:
     branches:
       - master
+    paths:
+      - 'api/**'
+      - '.github/workflows/api-ci.yml'
   workflow_dispatch:
     inputs:
       tag:
@@ -30,6 +36,9 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
       - uses: actions/checkout@v6
       - name: Update Rust toolchain to stable
@@ -38,23 +47,31 @@ jobs:
           rustup update stable
           rustup component add rustfmt
       - name: Rustfmt Check
-        uses: actions-rust-lang/rustfmt@v1
+        run: cargo fmt --all -- --check
 
   deps:
     name: Dependencies
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
       - uses: actions/checkout@v6
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
           rustup update stable
+      - name: Install cargo-machete
+        run: cargo install cargo-machete
       - name: Machete
-        uses: bnjbvr/cargo-machete@7959c845782fed02ee69303126d4a12d64f1db18
+        run: cargo machete
 
   typos:
     name: Typos
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
       - uses: actions/checkout@v6
       - name: Update Rust toolchain to stable
@@ -70,6 +87,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
       - uses: actions/checkout@v6
       - name: Install Protocol Buffers compiler
@@ -78,6 +98,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-stable"
+          workspaces: "api -> target"
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -91,8 +112,12 @@ jobs:
   test_deploy:
     name: Test and Deploy
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
       - name: Determine Docker Tag
+        working-directory: .
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             DOCKER_TAG="${{ inputs.tag }}"
@@ -125,6 +150,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-stable"
+          workspaces: "api -> target"
       - name: Update Rust toolchain to stable
         run: |
           rustup override set stable
@@ -145,7 +171,7 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v7
         with:
-          context: .
+          context: api
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
           load: true
           push: false

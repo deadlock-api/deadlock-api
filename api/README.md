@@ -1,7 +1,7 @@
 # Deadlock API
 
-[![Rust CI/CD](https://github.com/deadlock-api/deadlock-api-rust/actions/workflows/rust.yml/badge.svg)](https://github.com/deadlock-api/deadlock-api-rust/actions/workflows/rust.yml)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/deadlock-api/deadlock-api-rust)
+[![API CI/CD](https://github.com/deadlock-api/deadlock-api/actions/workflows/api-ci.yml/badge.svg)](https://github.com/deadlock-api/deadlock-api/actions/workflows/api-ci.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/deadlock-api/deadlock-api)
 
 **Live API Documentation**: [https://api.deadlock-api.com/docs](https://api.deadlock-api.com/docs)
 
@@ -53,8 +53,8 @@ The API is built with:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/deadlock-api/deadlock-api-rust.git
-   cd deadlock-api-rust
+   git clone https://github.com/deadlock-api/deadlock-api.git
+   cd deadlock-api/api
    ```
 
 2. Install the Protocol Buffers compiler:

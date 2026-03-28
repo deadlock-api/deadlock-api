@@ -1,10 +1,10 @@
-name: Security Audit
+name: Website Security Audit
 
 on:
   push:
     paths:
-      - "**/pnpm-lock.yaml"
-      - "**/package.json"
+      - 'website/**/pnpm-lock.yaml'
+      - 'website/**/package.json'
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
@@ -25,11 +25,14 @@ jobs:
     name: PNPM Audit
     runs-on: ubuntu-latest
     permissions:
-      contents: read # Required to checkout the repository
+      contents: read
+    defaults:
+      run:
+        working-directory: website
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -37,19 +40,20 @@ jobs:
           version: latest
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20" # Specify your project's Node.js version
+          node-version: "24"
           cache: "pnpm"
+          cache-dependency-path: website/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Run pnpm audit
-        run: pnpm audit --audit-level ${{ inputs.level }} --json > pnpm-audit-report.json
+        run: pnpm audit --audit-level ${{ inputs.level || 'high' }} --json > pnpm-audit-report.json
 
       - name: Upload audit report
         uses: actions/upload-artifact@v4
         with:
           name: pnpm-audit-report
-          path: pnpm-audit-report.json
+          path: website/pnpm-audit-report.json
