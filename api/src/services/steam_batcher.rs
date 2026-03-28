@@ -8,7 +8,8 @@ use tracing::warn;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::steam::route::{SteamProfile, build_query_many};
 
-const BATCH_WINDOW: Duration = Duration::from_millis(100);
+const MIN_BATCH_WINDOW_MS: u64 = 0;
+const MAX_BATCH_WINDOW_MS: u64 = 300;
 const MAX_BATCH_SIZE: usize = 1000;
 
 struct BatchRequest {
@@ -45,11 +46,21 @@ impl SteamProfileBatcher {
     }
 }
 
+fn adaptive_window(prev_batch_size: usize) -> Duration {
+    let clamped = prev_batch_size.min(MAX_BATCH_SIZE) as u64;
+    let ms = MIN_BATCH_WINDOW_MS
+        + (MAX_BATCH_WINDOW_MS - MIN_BATCH_WINDOW_MS) * clamped / MAX_BATCH_SIZE as u64;
+    Duration::from_millis(ms)
+}
+
 async fn batch_loop(ch_client: clickhouse::Client, mut rx: mpsc::Receiver<BatchRequest>) {
+    let mut prev_batch_size: usize = 0;
+
     while let Some(first) = rx.recv().await {
         let mut pending = vec![first];
 
-        let deadline = tokio::time::Instant::now() + BATCH_WINDOW;
+        let window = adaptive_window(prev_batch_size);
+        let deadline = tokio::time::Instant::now() + window;
         loop {
             if pending.len() >= MAX_BATCH_SIZE {
                 break;
@@ -60,6 +71,7 @@ async fn batch_loop(ch_client: clickhouse::Client, mut rx: mpsc::Receiver<BatchR
             }
         }
 
+        prev_batch_size = pending.len();
         let ch = ch_client.clone();
         tokio::spawn(async move { execute_batch(&ch, pending).await });
     }
