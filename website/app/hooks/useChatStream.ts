@@ -1,0 +1,439 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { SSE } from "sse.js";
+import type { SSE as SSEType, SSEvent } from "sse.js/types/sse";
+
+import { AI_ASSISTANT_API_URL, IS_DEV } from "~/lib/constants";
+import type {
+  ChatDeltaEvent,
+  ChatEndEvent,
+  ChatError,
+  ChatErrorEvent,
+  ChatStartEvent,
+  ChatToolEndEvent,
+  ChatToolStartEvent,
+  ChatUsageEvent,
+  ConversationState,
+  Message,
+  SSEEvent,
+  TokenUsage,
+  ToolExecution,
+} from "~/types/chat";
+
+interface UseChatStreamOptions {
+  turnstileToken: string | null;
+  apiUrl?: string;
+  /** Callback to sync rate limit headers from responses */
+  onRateLimitHeaders?: (headers: Headers) => void;
+}
+
+interface UseChatStreamReturn {
+  conversation: ConversationState;
+  sendMessage: (message: string) => void;
+  stopStreaming: () => void;
+  clearConversation: () => void;
+  clearError: () => void;
+  isConnected: boolean;
+}
+
+const initialConversationState: ConversationState = {
+  conversationId: null,
+  messages: [],
+  isStreaming: false,
+  currentStreamingMessage: "",
+  activeTools: [],
+  error: null,
+};
+
+function generateMessageId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+function generateToolExecutionId(): string {
+  return `tool-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+export function useChatStream({
+  turnstileToken,
+  apiUrl,
+  onRateLimitHeaders,
+}: UseChatStreamOptions): UseChatStreamReturn {
+  const effectiveApiUrl = apiUrl || AI_ASSISTANT_API_URL;
+
+  const [conversation, setConversation] = useState<ConversationState>(initialConversationState);
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Use ref to store SSE instance for cleanup
+  const sseRef = useRef<SSEType | null>(null);
+  // Track current assistant message ID for streaming updates
+  const currentAssistantMessageIdRef = useRef<string | null>(null);
+  // Track token usage for the current response
+  const currentUsageRef = useRef<TokenUsage | null>(null);
+
+  // Cleanup SSE connection on unmount
+  useEffect(() => {
+    return () => {
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
+    };
+  }, []);
+
+  // Handle SSE start event
+  const handleStart = useCallback((event: ChatStartEvent) => {
+    setConversation((prev) => ({
+      ...prev,
+      conversationId: event.conversation_id,
+      isStreaming: true,
+      currentStreamingMessage: "",
+      error: null,
+    }));
+  }, []);
+
+  // Handle SSE delta event
+  const handleDelta = useCallback((event: ChatDeltaEvent) => {
+    setConversation((prev) => ({
+      ...prev,
+      currentStreamingMessage: event.content,
+    }));
+  }, []);
+
+  // Handle SSE usage event
+  const handleUsage = useCallback((event: ChatUsageEvent) => {
+    currentUsageRef.current = {
+      input_tokens: event.input_tokens,
+      output_tokens: event.output_tokens,
+      cache_read_tokens: event.cache_read_tokens,
+      cache_creation_tokens: event.cache_creation_tokens,
+    };
+  }, []);
+
+  // Handle SSE end event
+  const handleEnd = useCallback((_event: ChatEndEvent) => {
+    const usage = currentUsageRef.current;
+
+    setConversation((prev) => {
+      // Create the completed assistant message from streaming content
+      // Include the tools that were used during this response
+      const assistantMessage: Message = {
+        id: currentAssistantMessageIdRef.current || generateMessageId(),
+        role: "assistant",
+        content: prev.currentStreamingMessage,
+        timestamp: Date.now(),
+        isStreaming: false,
+        tools: prev.activeTools.length > 0 ? prev.activeTools : undefined,
+        usage: usage ?? undefined,
+      };
+
+      return {
+        ...prev,
+        messages: [...prev.messages, assistantMessage],
+        isStreaming: false,
+        currentStreamingMessage: "",
+        activeTools: [],
+      };
+    });
+
+    currentAssistantMessageIdRef.current = null;
+    currentUsageRef.current = null;
+    setIsConnected(false);
+  }, []);
+
+  // Handle SSE error event
+  const handleError = useCallback((event: ChatErrorEvent) => {
+    const chatError: ChatError = {
+      message: event.error,
+      code: event.code,
+      isRetryable: ["AGENT_ERROR", "REDIS_ERROR"].includes(event.code),
+    };
+
+    setConversation((prev) => ({
+      ...prev,
+      isStreaming: false,
+      error: chatError,
+    }));
+
+    setIsConnected(false);
+  }, []);
+
+  // Handle SSE tool_start event
+  const handleToolStart = useCallback((event: ChatToolStartEvent) => {
+    const toolExecution: ToolExecution = {
+      id: generateToolExecutionId(),
+      tool_name: event.tool_name,
+      arguments: event.arguments,
+      status: "running",
+    };
+
+    setConversation((prev) => ({
+      ...prev,
+      activeTools: [...prev.activeTools, toolExecution],
+    }));
+  }, []);
+
+  // Handle SSE tool_end event
+  const handleToolEnd = useCallback((event: ChatToolEndEvent) => {
+    setConversation((prev) => ({
+      ...prev,
+      activeTools: prev.activeTools.map((tool) =>
+        tool.tool_name === event.tool_name && tool.status === "running"
+          ? {
+              ...tool,
+              status: event.success ? "success" : "failed",
+              result_summary: event.result_summary,
+            }
+          : tool,
+      ),
+    }));
+  }, []);
+
+  // Parse and handle SSE message
+  const handleSSEMessage = useCallback(
+    (event: SSEvent) => {
+      try {
+        const data = JSON.parse(event.data as string) as SSEEvent;
+
+        switch (data.event) {
+          case "start":
+            handleStart(data);
+            break;
+          case "delta":
+            handleDelta(data);
+            break;
+          case "usage":
+            handleUsage(data);
+            break;
+          case "end":
+            handleEnd(data);
+            break;
+          case "error":
+            handleError(data);
+            break;
+          case "tool_start":
+            handleToolStart(data);
+            break;
+          case "tool_end":
+            handleToolEnd(data);
+            break;
+        }
+      } catch (error) {
+        console.error("Failed to parse SSE event:", error);
+      }
+    },
+    [handleStart, handleDelta, handleUsage, handleEnd, handleError, handleToolStart, handleToolEnd],
+  );
+
+  // Send a message to the chat API
+  const sendMessage = useCallback(
+    (message: string) => {
+      // Check for Patreon token first (takes priority over Turnstile)
+      const patreonToken = localStorage.getItem("patreon_token");
+      const hasPatreonAuth = !!patreonToken;
+
+      // In development mode, skip verification requirements
+      // In production, require either Patreon token or Turnstile token
+      if (!IS_DEV && !hasPatreonAuth && !turnstileToken) {
+        setConversation((prev) => ({
+          ...prev,
+          error: {
+            message: "Verification required. Please complete the Turnstile challenge.",
+            code: "AUTH_FAILED",
+            isRetryable: false,
+          },
+        }));
+        return;
+      }
+
+      // Close any existing SSE connection
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
+
+      // Add user message to conversation
+      const userMessage: Message = {
+        id: generateMessageId(),
+        role: "user",
+        content: message,
+        timestamp: Date.now(),
+      };
+
+      // Generate assistant message ID for streaming
+      currentAssistantMessageIdRef.current = generateMessageId();
+
+      setConversation((prev) => ({
+        ...prev,
+        messages: [...prev.messages, userMessage],
+        isStreaming: true,
+        currentStreamingMessage: "",
+        activeTools: [],
+        error: null,
+      }));
+
+      // Create SSE connection
+      const payload = JSON.stringify({
+        message,
+        conversation_id: conversation.conversationId,
+      });
+
+      // Build headers: Patreon token takes priority over Turnstile
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (hasPatreonAuth) {
+        headers["X-Patreon-Token"] = patreonToken;
+      } else if (!IS_DEV && turnstileToken) {
+        headers["cf-turnstile-response"] = turnstileToken;
+      }
+
+      const sse: SSEType = new SSE(`${effectiveApiUrl}/chat`, {
+        headers,
+        payload,
+        method: "POST",
+        start: false,
+      });
+
+      sseRef.current = sse;
+
+      // Set up event handlers
+      sse.onmessage = handleSSEMessage;
+
+      sse.onerror = (event: SSEvent) => {
+        console.error("SSE connection error:", event);
+
+        // Check if we have a response code that indicates an error
+        const responseCode = event.responseCode || 0;
+
+        // Try to parse rate limit headers from the response if available
+        // and call the callback even on error responses
+        if (onRateLimitHeaders && event.headers) {
+          // event.headers is Record<string, string[]> - convert to Headers-like interface
+          const headersObj: Headers = {
+            get: (name: string) => {
+              const values = event.headers?.[name.toLowerCase()];
+              return values && values.length > 0 ? values[0] : null;
+            },
+          } as Headers;
+          onRateLimitHeaders(headersObj);
+        }
+
+        let errorMessage = "Connection error. Please try again.";
+        let errorCode = "INTERNAL_ERROR";
+        let isRetryable = true;
+
+        if (responseCode === 401) {
+          errorMessage = "Verification expired. Please refresh the page and try again.";
+          errorCode = "AUTH_FAILED";
+          isRetryable = false;
+        } else if (responseCode === 400) {
+          errorMessage = "Invalid request. Please check your message and try again.";
+          errorCode = "VALIDATION_ERROR";
+          isRetryable = false;
+        } else if (responseCode === 429) {
+          errorMessage = "You've reached your rate limit. Please try again later.";
+          errorCode = "RATE_LIMIT_EXCEEDED";
+          isRetryable = false;
+        } else if (responseCode >= 500) {
+          errorMessage = "Server error. Please try again later.";
+          errorCode = "AGENT_ERROR";
+          isRetryable = true;
+        }
+
+        setConversation((prev) => ({
+          ...prev,
+          isStreaming: false,
+          error: {
+            message: errorMessage,
+            code: errorCode,
+            isRetryable,
+          },
+        }));
+
+        setIsConnected(false);
+        sseRef.current = null;
+      };
+
+      sse.onopen = () => {
+        setIsConnected(true);
+      };
+
+      sse.onabort = () => {
+        setIsConnected(false);
+        sseRef.current = null;
+      };
+
+      // Start the connection
+      sse.stream();
+    },
+    [turnstileToken, conversation.conversationId, effectiveApiUrl, handleSSEMessage, onRateLimitHeaders],
+  );
+
+  // Stop streaming (cancel SSE connection)
+  const stopStreaming = useCallback(() => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+
+    setConversation((prev) => {
+      // If there's streaming content, save it as a partial message
+      if (prev.currentStreamingMessage) {
+        const partialMessage: Message = {
+          id: currentAssistantMessageIdRef.current || generateMessageId(),
+          role: "assistant",
+          content: prev.currentStreamingMessage,
+          timestamp: Date.now(),
+          isStreaming: false,
+          tools: prev.activeTools.length > 0 ? prev.activeTools : undefined,
+        };
+
+        return {
+          ...prev,
+          messages: [...prev.messages, partialMessage],
+          isStreaming: false,
+          currentStreamingMessage: "",
+          activeTools: [],
+        };
+      }
+
+      return {
+        ...prev,
+        isStreaming: false,
+        currentStreamingMessage: "",
+        activeTools: [],
+      };
+    });
+
+    currentAssistantMessageIdRef.current = null;
+    setIsConnected(false);
+  }, []);
+
+  // Clear conversation and start fresh
+  const clearConversation = useCallback(() => {
+    if (sseRef.current) {
+      sseRef.current.close();
+      sseRef.current = null;
+    }
+
+    setConversation(initialConversationState);
+    currentAssistantMessageIdRef.current = null;
+    setIsConnected(false);
+  }, []);
+
+  // Clear error only
+  const clearError = useCallback(() => {
+    setConversation((prev) => ({
+      ...prev,
+      error: null,
+    }));
+  }, []);
+
+  return {
+    conversation,
+    sendMessage,
+    stopStreaming,
+    clearConversation,
+    clearError,
+    isConnected,
+  };
+}

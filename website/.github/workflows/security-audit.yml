@@ -1,0 +1,55 @@
+name: Security Audit
+
+on:
+  push:
+    paths:
+      - "**/pnpm-lock.yaml"
+      - "**/package.json"
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      level:
+        description: "The level of vulnerability to report (low, moderate, high, critical)"
+        required: false
+        default: high
+        type: choice
+        options:
+          - low
+          - moderate
+          - high
+          - critical
+
+jobs:
+  audit:
+    name: PNPM Audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required to checkout the repository
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Specify your project's Node.js version
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level ${{ inputs.level }} --json > pnpm-audit-report.json
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-audit-report
+          path: pnpm-audit-report.json

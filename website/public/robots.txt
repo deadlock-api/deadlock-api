@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+Disallow: /patron
+Disallow: /auth/
+Disallow: /streamkit/widgets/
+
+# AI Crawlers - explicitly allowed for all public content
+# Note: AI crawler-specific rules override the wildcard block,
+# so these bots CAN access /patron. This is intentional as
+# patron info is public-facing marketing content.
+User-agent: GPTBot
+Allow: /
+Disallow: /auth/
+Disallow: /streamkit/widgets/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /auth/
+Disallow: /streamkit/widgets/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /auth/
+Disallow: /streamkit/widgets/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /auth/
+Disallow: /streamkit/widgets/
+
+Sitemap: https://deadlock-api.com/sitemap.xml

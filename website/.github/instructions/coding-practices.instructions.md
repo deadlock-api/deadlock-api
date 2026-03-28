@@ -1,0 +1,11 @@
+---
+applyTo: "**"
+---
+
+- when using zod, always import from zod/v4, like `import z from "zod/v4"`
+- when calling apis, always create a strict zod schema for it.
+- never unsafely cast to types or use `any` unless you absolutely need to
+- when encountering biome lint errors, instead of fixing yourself, always try running `pnpm biome check --fix .` first.
+- avoid `useEffect` in most scenarios, attempt other solutions to the problem first.
+- when encountering things like opaque strings which are actually enums, try to encode that knowledge into the zod types to avoid problems in the future. Same goes with numbers which are actually enums/booleans.
+- use `z.int()` instead of `z.number().string()`

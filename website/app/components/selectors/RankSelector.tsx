@@ -1,0 +1,118 @@
+import { useQuery } from "@tanstack/react-query";
+import type { RankV2 } from "assets_deadlock_api_client";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import { getRankImageUrl } from "~/lib/rank-utils";
+import { ranksQueryOptions } from "~/queries/ranks-query";
+
+import { ImgWithSkeleton } from "../primitives/ImgWithSkeleton";
+import { Skeleton } from "../ui/skeleton";
+
+// Utility function to get rankId from tier and subrank
+function getRankId(tier: number, subrank: number): number {
+  if (tier === 0) {
+    return 0; // Obscurus has no subranks, assign ID 0
+  }
+  // For tiers 1-11, subranks are 1-6
+  // Tier 11 (Eternus) base is 110. Tier 1 base is 10.
+  // Adjusted: Eternus (tier 11) starts at 111. Tier 1 starts at 11.
+  const baseId = tier * 10;
+  // Eternus (tier 11) should map 111-116
+  // Ascendant (tier 10) should map 101-106
+  // ... Initiate (tier 1) should map 11-16
+  return baseId + subrank;
+}
+
+export function RankSelector({
+  onRankSelected,
+  selectedRank,
+  label,
+}: {
+  onRankSelected: (selectedRankId: number) => void;
+  selectedRank?: number | null;
+  label?: string;
+}) {
+  type RankOption = { value: number; label: string; rank: RankV2; subrank: number };
+
+  const { data: selectOptions = [], isLoading } = useQuery({
+    ...ranksQueryOptions,
+    select: (ranks): RankOption[] => {
+      const sorted = [...ranks].sort((a, b) => a.tier - b.tier);
+      const options: RankOption[] = [];
+      for (const rank of sorted) {
+        const subRanksToShow = rank.tier === 0 ? [1] : [1, 2, 3, 4, 5, 6];
+        for (const subrank of subRanksToShow) {
+          const rankId = getRankId(rank.tier, subrank);
+          options.push({
+            value: rankId,
+            label: `${rank.name} ${rank.tier === 0 ? "" : subrank}`.trim(),
+            rank: rank,
+            subrank: subrank,
+          });
+        }
+      }
+      return options;
+    },
+  });
+
+  const handleValueChange = (value: string) => {
+    if (value && value !== "") {
+      // Check if value is a non-empty string
+      onRankSelected(Number(value));
+    }
+    // If value is "", do nothing, maintaining the placeholder state
+    // This component doesn't seem to support selecting null explicitly
+  };
+
+  // Determine the value for the Select component
+  // Use empty string "" for null or undefined to show the placeholder
+  const selectValue = selectedRank === null || selectedRank === undefined ? "" : String(selectedRank);
+
+  // Find the details for the currently selected rank
+  const currentSelectedDetails = selectOptions.find((opt) => opt.value === selectedRank);
+
+  return (
+    <div className="flex shrink-0 flex-col gap-1.5">
+      <div className="flex h-8 items-center justify-center md:justify-start">
+        <span className="text-sm font-semibold text-foreground">{label || "Rank"}</span>
+      </div>
+      {isLoading ? (
+        <Skeleton className="h-10 w-32" />
+      ) : (
+        <Select value={selectValue} onValueChange={handleValueChange}>
+          <SelectTrigger className="focus-visible:ring-0">
+            <SelectValue placeholder={"Select Rank..."}>
+              {currentSelectedDetails ? (
+                <div className="flex w-fit flex-nowrap items-center gap-2">
+                  <ImgWithSkeleton
+                    src={
+                      getRankImageUrl(currentSelectedDetails.rank, currentSelectedDetails.subrank, "small", "webp") ??
+                      ""
+                    }
+                    alt={currentSelectedDetails.label}
+                    className="mb-1 size-6 shrink-0 object-contain"
+                  />
+                  <span className="truncate">{currentSelectedDetails.label}</span>
+                </div>
+              ) : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="flex max-h-[70vh] w-fit flex-row flex-nowrap items-center gap-2 overflow-y-scroll">
+            {selectOptions.map((optionData) => (
+              <SelectItem key={optionData.value} value={String(optionData.value)}>
+                <div className="flex flex-nowrap items-center gap-2">
+                  <ImgWithSkeleton
+                    src={getRankImageUrl(optionData.rank, optionData.subrank, "small", "webp") ?? ""}
+                    alt={optionData.label}
+                    className="mr-2 mb-1 size-6 shrink-0 object-contain"
+                  />
+                  <span className="truncate">{optionData.label}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </div>
+  );
+}

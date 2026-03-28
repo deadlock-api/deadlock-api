@@ -1,0 +1,72 @@
+import type React from "react";
+import { useMemo } from "react";
+
+import { cn } from "~/lib/utils";
+
+import { CATEGORY_ICONS, getFilteredCategories } from "./stat-definitions";
+
+export function StatSelector({
+  value,
+  onChange,
+  children,
+  isStreetBrawl = false,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  children?: React.ReactNode;
+  isStreetBrawl?: boolean;
+}) {
+  const categories = useMemo(() => getFilteredCategories(isStreetBrawl), [isStreetBrawl]);
+  const activeCategory = useMemo(() => {
+    return categories.find((c) => c.stats.some((s) => s.key === value)) ?? categories[0];
+  }, [value, categories]);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5">
+        {categories.map((category) => {
+          const Icon = CATEGORY_ICONS[category.label];
+          const isActive = category.label === activeCategory.label;
+          return (
+            <button
+              key={category.label}
+              type="button"
+              onClick={() => onChange(category.stats[0].key)}
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                isActive
+                  ? "border border-primary/30 bg-primary/15 text-primary"
+                  : "border border-white/[0.06] bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08]",
+              )}
+            >
+              {Icon && <Icon className="size-3.5" />}
+              {category.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        {activeCategory.stats.map((stat) => {
+          const isActive = stat.key === value;
+          return (
+            <button
+              key={stat.key}
+              type="button"
+              onClick={() => onChange(stat.key)}
+              className={cn(
+                "cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-white/[0.06] bg-white/[0.04] text-muted-foreground hover:bg-white/[0.08]",
+              )}
+            >
+              {stat.label}
+            </button>
+          );
+        })}
+      </div>
+      {children}
+    </div>
+  );
+}

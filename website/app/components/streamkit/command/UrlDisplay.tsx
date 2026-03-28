@@ -1,0 +1,25 @@
+import { CopyButton } from "~/components/copy-button";
+
+interface UrlDisplayProps {
+  generatedUrl: string;
+}
+
+export function UrlDisplay({ generatedUrl }: UrlDisplayProps) {
+  return (
+    <div className="space-y-1">
+      <h3 className="text-sm font-medium text-foreground">Generated URL</h3>
+      {generatedUrl ? (
+        <div className="relative">
+          <div className="rounded-md border border-border bg-muted p-3 pr-24 text-sm break-all text-muted-foreground">
+            {generatedUrl}
+          </div>
+          <CopyButton size="sm" text={generatedUrl} className="absolute top-1/2 right-2 -translate-y-1/2" />
+        </div>
+      ) : (
+        <div className="rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
+          No URL available yet. Fill in the fields to generate a URL.
+        </div>
+      )}
+    </div>
+  );
+}
