@@ -1,0 +1,82 @@
+services:
+  active-matches-scraper:
+    build:
+      args:
+        EXE_NAME: active-matches-scraper
+    restart: always
+    env_file: .env
+
+  ingest-worker:
+    build:
+      args:
+        EXE_NAME: ingest-worker
+    restart: always
+    env_file: .env
+    stop_grace_period: 30s
+
+  matchdata-downloader:
+    build:
+      args:
+        EXE_NAME: matchdata-downloader
+    restart: always
+    env_file: .env
+    stop_grace_period: 30s
+
+  salt-scraper:
+    build:
+      args:
+        EXE_NAME: salt-scraper
+    restart: always
+    environment:
+      RUST_LOG: debug
+    env_file: salt-scraper/.env
+
+  history-fetcher:
+    build:
+      args:
+        EXE_NAME: history-fetcher
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
+  steam-profile-fetcher:
+    build:
+      args:
+        EXE_NAME: steam-profile-fetcher
+    restart: always
+    env_file: .env
+
+  builds-fetcher:
+    build:
+      args:
+        EXE_NAME: builds-fetcher
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
+  update-assets-tables:
+    build:
+      args:
+        EXE_NAME: update-assets-tables
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
+  hltv-spectator:
+    build:
+      args:
+        EXE_NAME: hltv-scraper
+    restart: always
+    env_file: .env
+
+  hltv-scraper:
+    build:
+      args:
+        EXE_NAME: hltv-scraper
+    restart: always
+    env_file: .env
+    volumes:
+    - ./local-store:/matches

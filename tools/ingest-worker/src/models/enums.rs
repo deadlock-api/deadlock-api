@@ -1,0 +1,219 @@
+use serde_repr::{Deserialize_repr, Serialize_repr};
+use valveprotos::deadlock::c_msg_match_meta_data_contents::EMatchOutcome;
+use valveprotos::deadlock::{
+    ECitadelBotDifficulty, ECitadelGameMode, ECitadelLobbyTeam, ECitadelMatchMode,
+    ECitadelTeamObjective,
+};
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum GameMode {
+    Invalid = 0,
+    Normal = 1,
+    OnevOneTest = 2,
+    Sandbox = 3,
+    StreetBrawl = 4,
+    ExploreNYC = 5,
+}
+
+impl From<ECitadelGameMode> for GameMode {
+    fn from(value: ECitadelGameMode) -> Self {
+        match value {
+            ECitadelGameMode::KECitadelGameModeInvalid => Self::Invalid,
+            ECitadelGameMode::KECitadelGameModeNormal => Self::Normal,
+            ECitadelGameMode::KECitadelGameMode1v1Test => Self::OnevOneTest,
+            ECitadelGameMode::KECitadelGameModeSandbox => Self::Sandbox,
+            ECitadelGameMode::KECitadelGameModeStreetBrawl => Self::StreetBrawl,
+            ECitadelGameMode::KECitadelGameModeExploreNyc => Self::ExploreNYC,
+        }
+    }
+}
+
+impl From<u8> for GameMode {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => GameMode::Normal,
+            2 => GameMode::OnevOneTest,
+            3 => GameMode::Sandbox,
+            4 => GameMode::StreetBrawl,
+            5 => GameMode::ExploreNYC,
+            _ => GameMode::Invalid,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum BotDifficulty {
+    None = 0,
+    Easy = 1,
+    Medium = 2,
+    Hard = 3,
+    Nightmare = 4,
+    Guided = 5,
+}
+
+impl From<ECitadelBotDifficulty> for BotDifficulty {
+    fn from(value: ECitadelBotDifficulty) -> Self {
+        match value {
+            ECitadelBotDifficulty::KECitadelBotDifficultyNone => Self::None,
+            ECitadelBotDifficulty::KECitadelBotDifficultyEasy => Self::Easy,
+            ECitadelBotDifficulty::KECitadelBotDifficultyMedium => Self::Medium,
+            ECitadelBotDifficulty::KECitadelBotDifficultyHard => Self::Hard,
+            ECitadelBotDifficulty::KECitadelBotDifficultyNightmare => Self::Nightmare,
+            ECitadelBotDifficulty::KECitadelBotDifficultyGuided => Self::Guided,
+        }
+    }
+}
+
+impl From<u8> for BotDifficulty {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => BotDifficulty::Easy,
+            2 => BotDifficulty::Medium,
+            3 => BotDifficulty::Hard,
+            4 => BotDifficulty::Nightmare,
+            5 => BotDifficulty::Guided,
+            _ => BotDifficulty::None,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum MatchMode {
+    Invalid = 0,
+    Unranked = 1,
+    PrivateLobby = 2,
+    CoopBot = 3,
+    Ranked = 4,
+    ServerTest = 5,
+    Tutorial = 6,
+    HeroLabs = 7,
+    Calibration = 8,
+}
+
+impl From<ECitadelMatchMode> for MatchMode {
+    fn from(value: ECitadelMatchMode) -> Self {
+        match value {
+            ECitadelMatchMode::KECitadelMatchModeInvalid => Self::Invalid,
+            ECitadelMatchMode::KECitadelMatchModeUnranked => Self::Unranked,
+            ECitadelMatchMode::KECitadelMatchModePrivateLobby => Self::PrivateLobby,
+            ECitadelMatchMode::KECitadelMatchModeCoopBot => Self::CoopBot,
+            ECitadelMatchMode::KECitadelMatchModeRanked => Self::Ranked,
+            ECitadelMatchMode::KECitadelMatchModeServerTest => Self::ServerTest,
+            ECitadelMatchMode::KECitadelMatchModeTutorial => Self::Tutorial,
+            ECitadelMatchMode::KECitadelMatchModeHeroLabs => Self::HeroLabs,
+            ECitadelMatchMode::KECitadelMatchModeCalibration => Self::Calibration,
+        }
+    }
+}
+
+impl From<u8> for MatchMode {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => MatchMode::Unranked,
+            2 => MatchMode::PrivateLobby,
+            3 => MatchMode::CoopBot,
+            4 => MatchMode::Ranked,
+            5 => MatchMode::ServerTest,
+            6 => MatchMode::Tutorial,
+            7 => MatchMode::HeroLabs,
+            _ => MatchMode::Invalid,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum MatchOutcome {
+    TeamWin = 0,
+    Error = 1,
+    Draw = 2,
+}
+
+impl From<EMatchOutcome> for MatchOutcome {
+    fn from(value: EMatchOutcome) -> Self {
+        match value {
+            EMatchOutcome::KEOutcomeTeamWin => MatchOutcome::TeamWin,
+            EMatchOutcome::KEOutcomeError => MatchOutcome::Error,
+            EMatchOutcome::KEOutcomeMatchDraw => MatchOutcome::Draw,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum Team {
+    Team0 = 0,
+    Team1 = 1,
+    Spectator = 16,
+}
+
+impl From<ECitadelLobbyTeam> for Team {
+    fn from(value: ECitadelLobbyTeam) -> Self {
+        match value {
+            ECitadelLobbyTeam::KECitadelLobbyTeamTeam0 => Self::Team0,
+            ECitadelLobbyTeam::KECitadelLobbyTeamTeam1 => Self::Team1,
+            ECitadelLobbyTeam::KECitadelLobbyTeamSpectator => Self::Spectator,
+        }
+    }
+}
+
+impl From<u8> for Team {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => Team::Team0,
+            1 => Team::Team1,
+            _ => Team::Spectator,
+        }
+    }
+}
+
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
+#[repr(i8)]
+pub(crate) enum Objective {
+    Core = 0,
+    Tier1Lane1 = 1,
+    Tier1Lane2 = 2,
+    Tier1Lane3 = 3,
+    Tier1Lane4 = 4,
+    Tier2Lane1 = 5,
+    Tier2Lane2 = 6,
+    Tier2Lane3 = 7,
+    Tier2Lane4 = 8,
+    Titan = 9,
+    TitanShieldGenerator1 = 10,
+    TitanShieldGenerator2 = 11,
+    BarrackBossLane1 = 12,
+    BarrackBossLane2 = 13,
+    BarrackBossLane3 = 14,
+    BarrackBossLane4 = 15,
+}
+
+impl From<ECitadelTeamObjective> for Objective {
+    fn from(value: ECitadelTeamObjective) -> Self {
+        match value {
+            ECitadelTeamObjective::KECitadelTeamObjectiveCore => Self::Core,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier1Lane1 => Self::Tier1Lane1,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier1Lane2 => Self::Tier1Lane2,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier1Lane3 => Self::Tier1Lane3,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier1Lane4 => Self::Tier1Lane4,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier2Lane1 => Self::Tier2Lane1,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier2Lane2 => Self::Tier2Lane2,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier2Lane3 => Self::Tier2Lane3,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTier2Lane4 => Self::Tier2Lane4,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTitan => Self::Titan,
+            ECitadelTeamObjective::KECitadelTeamObjectiveTitanShieldGenerator1 => {
+                Self::TitanShieldGenerator1
+            }
+            ECitadelTeamObjective::KECitadelTeamObjectiveTitanShieldGenerator2 => {
+                Self::TitanShieldGenerator2
+            }
+            ECitadelTeamObjective::KECitadelTeamObjectiveBarrackBossLane1 => Self::BarrackBossLane1,
+            ECitadelTeamObjective::KECitadelTeamObjectiveBarrackBossLane2 => Self::BarrackBossLane2,
+            ECitadelTeamObjective::KECitadelTeamObjectiveBarrackBossLane3 => Self::BarrackBossLane3,
+            ECitadelTeamObjective::KECitadelTeamObjectiveBarrackBossLane4 => Self::BarrackBossLane4,
+        }
+    }
+}

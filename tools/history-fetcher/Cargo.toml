@@ -1,0 +1,17 @@
+[package]
+name = "history-fetcher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+clickhouse = "0.14.2"
+common = { version = "0.1.0", path = "../common" }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+reqwest = "0.13.2"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "9625c0784beca10634442ef11ede5f022ab186da", features = ["gc-client", "serde"] }
+metrics = "0.24.3"
+tracing = "0.1.44"
+serde = { version = "1.0.228", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
+futures = "0.3.32"

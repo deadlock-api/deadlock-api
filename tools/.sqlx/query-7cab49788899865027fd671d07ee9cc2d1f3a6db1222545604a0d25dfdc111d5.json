@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT EXISTS (\n            SELECT 1\n            FROM prioritized_steam_accounts psa\n            WHERE psa.steam_id3 = $1\n              AND psa.deleted_at IS NULL\n        ) AS \"exists!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7cab49788899865027fd671d07ee9cc2d1f3a6db1222545604a0d25dfdc111d5"
+}

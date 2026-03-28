@@ -1,0 +1,19 @@
+[package]
+name = "steam-profile-fetcher"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.102"
+clickhouse = "0.14.2"
+common = { path = "../common" }
+itertools = "0.14.0"
+metrics = "0.24.3"
+rand = "0.10.0"
+reqwest = { version = "0.13.2", features = ["json"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_repr = "0.1.20"
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+tracing = "0.1.44"
+cached = { version = "0.59.0", features = ["async", "tokio"] }
+sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio"] }

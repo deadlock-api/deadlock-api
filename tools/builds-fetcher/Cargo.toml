@@ -1,0 +1,18 @@
+[package]
+name = "builds-fetcher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { version = "0.13.2", features = ["json"] }
+sqlx = { version = "0.8.6", features = ["macros", "postgres", "runtime-tokio", "time"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+anyhow = "1.0.102"
+itertools = "0.14.0"
+serde_json = "1.0.149"
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "9625c0784beca10634442ef11ede5f022ab186da", features = ["gc-client", "serde"] }
+time = "0.3.47"
+metrics = "0.24.3"
+tracing = "0.1.44"
+common = { version = "0.1.0", path = "../common" }
+rand = "0.10.0"

@@ -1,0 +1,17 @@
+[package]
+name = "salt-scraper"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "9625c0784beca10634442ef11ede5f022ab186da", features = ["gc-client"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+metrics = "0.24.3"
+tracing = "0.1.44"
+clickhouse = "0.14.2"
+tryhard = "0.5.2"
+anyhow = "1.0.102"
+common = { version = "0.1.0", path = "../common" }
+futures = "0.3.32"
+reqwest = "0.13.2"
