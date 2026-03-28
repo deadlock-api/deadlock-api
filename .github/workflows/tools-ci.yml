@@ -1,4 +1,4 @@
-name: Rust Docker Images
+name: Tools CI/CD
 
 env:
   CARGO_TERM_COLOR: always
@@ -7,21 +7,16 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "master"
+      - master
     paths:
-      - "Dockerfile"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "common/**"
-      - "salt-scraper/**"
-      - "hltv-scraper/**"
-      - "ingest-worker/**"
-      - "matchdata-downloader/**"
-      - "active-matches-scraper/**"
-      - "builds-fetcher/**"
-      - "history-fetcher/**"
-      - "steam-profile-fetcher/**"
-      - "update-assets-tables/**"
+      - 'tools/**'
+      - '.github/workflows/tools-ci.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'tools/**'
+      - '.github/workflows/tools-ci.yml'
 
 permissions:
   contents: read
@@ -36,7 +31,9 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        working-directory: tools
     steps:
       - uses: actions/checkout@v6
       - name: Update Rust toolchain
@@ -46,10 +43,15 @@ jobs:
           rustup component add rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
+        with:
+          manifest-path: tools/Cargo.toml
 
   deps:
     name: Dependencies
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools
     steps:
       - uses: actions/checkout@v6
       - name: Update Rust toolchain to stable
@@ -58,21 +60,24 @@ jobs:
           rustup update stable
       - name: Machete
         uses: bnjbvr/cargo-machete@8a8e0cd1046f54206f6d2e050cf028e6db9dbc75
+        with:
+          manifest-path: tools/Cargo.toml
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools
     steps:
       - uses: actions/checkout@v6
       - name: Install Protocol Buffers compiler
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: protobuf-compiler libprotobuf-dev clang mold
-          version: 1.0
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}"
+          shared-key: "tools-build-cache-${{ runner.os }}-${{ runner.arch }}"
+          workspaces: "tools -> target"
       - name: Update Rust toolchain
         run: |
           rustup override set stable
@@ -83,6 +88,7 @@ jobs:
 
   build-base:
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v6
       - name: Setup Docker Builder
@@ -97,13 +103,15 @@ jobs:
         id: build-base
         uses: useblacksmith/build-push-action@v2
         with:
+          context: tools
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/${{ github.repository }}/rust-base:latest
+          tags: ghcr.io/${{ github.repository }}/tools-base:latest
 
   push-components:
     runs-on: ubuntu-24.04
     needs: build-base
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     strategy:
       matrix:
         component:
@@ -123,7 +131,7 @@ jobs:
         uses: dorny/paths-filter@v4
         with:
           filters: |
-            change: [ '${{ matrix.component }}/**', 'common/**', 'Cargo.toml', 'Cargo.lock', 'Dockerfile' ]
+            change: [ 'tools/${{ matrix.component }}/**', 'tools/common/**', 'tools/Cargo.toml', 'tools/Cargo.lock', 'tools/Dockerfile' ]
       - name: Check if component should build
         id: should_deploy
         run: |
@@ -145,6 +153,6 @@ jobs:
       - name: Push Component
         if: steps.should_deploy.outputs.deploy == 'true'
         run: |
-          docker pull ghcr.io/${{ github.repository }}/rust-base:latest
-          docker tag ghcr.io/${{ github.repository }}/rust-base:latest ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
+          docker pull ghcr.io/${{ github.repository }}/tools-base:latest
+          docker tag ghcr.io/${{ github.repository }}/tools-base:latest ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
           docker push ghcr.io/${{ github.repository }}/${{ matrix.component }}:latest
