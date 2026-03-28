@@ -27,13 +27,13 @@ _deadlock-api.com is not endorsed by Valve and does not reflect the views or opi
         contact(name = "Deadlock API - Discord", url = "https://discord.gg/XMF9Xrgfqu"),
         license(
             name = "MIT",
-            url = "https://github.com/deadlock-api/deadlock-api-rust/blob/master/LICENSE"
+            url = "https://github.com/deadlock-api/deadlock-api/blob/master/LICENSE"
         )
     ),
     modifiers(&SecurityAddon),
     external_docs(
         description = "Source Code",
-        url = "https://github.com/deadlock-api/deadlock-api-rust"
+        url = "https://github.com/deadlock-api/deadlock-api"
     )
 )]
 pub(super) struct ApiDoc;

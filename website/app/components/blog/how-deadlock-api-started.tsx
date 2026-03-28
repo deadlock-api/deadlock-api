@@ -267,13 +267,9 @@ export default function HowDeadlockApiStarted() {
           Discord
         </a>{" "}
         is where we hang out. If you want to contribute, the{" "}
-        <a href="https://github.com/deadlock-api/deadlock-api-rust" target="_blank" rel="noopener noreferrer">
-          API
+        <a href="https://github.com/deadlock-api/deadlock-api" target="_blank" rel="noopener noreferrer">
+          API, Website and Data Pipeline
         </a>
-        , this website, and the{" "}
-        <a href="https://github.com/deadlock-api/deadlock-api-tools" target="_blank" rel="noopener noreferrer">
-          data pipeline
-        </a>{" "}
         all take PRs. Or just show up in Discord and tell us what's broken.
       </p>
     </>
