@@ -34,6 +34,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  ###############################
+  ##    Stage 1: Build & Lint  ##
+  ###############################
+
   fmt:
     name: Format
     runs-on: ubuntu-latest
@@ -82,18 +86,6 @@ jobs:
         working-directory: api
     steps:
       - uses: useblacksmith/checkout@v1
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-registry
-          path: ~/.cargo/registry
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-git
-          path: ~/.cargo/git
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-target
-          path: api/target
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Install Rust toolchain
@@ -109,26 +101,62 @@ jobs:
       - name: Cargo Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
 
+  build:
+    name: Build Docker Image
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Determine Docker Tag
+        working-directory: .
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            DOCKER_TAG="${{ inputs.tag }}"
+          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            DOCKER_TAG="latest"
+          else
+            DOCKER_TAG="${{ github.sha }}"
+          fi
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
+      - uses: useblacksmith/checkout@v1
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
+      - name: Build Docker image
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: api
+          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+          load: true
+          push: false
+      - name: Save Docker image
+        run: docker save ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} | zstd -T0 -3 > /tmp/image.tar.zst
+        working-directory: .
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar.zst
+          retention-days: 1
+
+  ###############################
+  ##     Stage 2: Test         ##
+  ###############################
+
   unit_test:
     name: Unit Tests
+    needs: [fmt, deps, typos, lint, build]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: api
     steps:
       - uses: useblacksmith/checkout@v1
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-registry
-          path: ~/.cargo/registry
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-git
-          path: ~/.cargo/git
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-target
-          path: api/target
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Install Rust toolchain
@@ -146,52 +174,15 @@ jobs:
       - name: Unit Tests
         run: cargo nextest run --locked --lib --status-level fail
 
-  build_and_test:
-    name: Build and Integration Test
+  integration_test:
+    name: Integration Tests
+    needs: [fmt, deps, typos, lint, build]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: api
     steps:
-      - name: Determine Docker Tag
-        working-directory: .
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            DOCKER_TAG="${{ inputs.tag }}"
-          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
-            DOCKER_TAG="latest"
-          else
-            DOCKER_TAG="${{ github.sha }}"
-          fi
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-
-      ###############################
-      ##           Setup           ##
-      ###############################
       - uses: useblacksmith/checkout@v1
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Setup Docker Builder
-        uses: useblacksmith/setup-docker-builder@v1
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-registry
-          path: ~/.cargo/registry
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-git
-          path: ~/.cargo/git
-      - uses: useblacksmith/stickydisk@v1
-        with:
-          key: deadlock-api-cargo-target
-          path: api/target
-      - name: Setup go-task
-        run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
-      - name: Start API Dependency Docker Images (in Background)
-        run: nohup task start-test-env-api-deps > pull.log 2>&1 &
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Install Rust toolchain
@@ -206,30 +197,31 @@ jobs:
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: cargo-nextest
-
-      ###############################
-      ##           Build           ##
-      ###############################
-      - name: Build Docker image
-        uses: useblacksmith/build-push-action@v2
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
         with:
-          context: api
-          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
-          load: true
-          push: false
-
-      ###############################
-      ##    Integration Tests      ##
-      ###############################
+          name: docker-image
+          path: /tmp
+      - name: Load Docker image
+        run: zstd -d /tmp/image.tar.zst --stdout | docker load
+        working-directory: .
+      - name: Setup go-task
+        run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
       - name: Create .env.testing from example
         run: cp .env.testing.example .env.testing
       - name: Integration Tests
         run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
+    env:
+      DOCKER_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.ref == 'refs/heads/master' && 'latest' || github.sha) }}
+
+  ###############################
+  ##     Stage 3: Deploy       ##
+  ###############################
 
   deploy:
     name: Deploy
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [fmt, deps, typos, lint, unit_test, build_and_test]
+    needs: [unit_test, integration_test]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
       - name: Determine Docker Tag
@@ -240,23 +232,18 @@ jobs:
             DOCKER_TAG="latest"
           fi
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-      - uses: useblacksmith/checkout@v1
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Setup Docker Builder
-        uses: useblacksmith/setup-docker-builder@v1
+          name: docker-image
+          path: /tmp
+      - name: Load Docker image
+        run: zstd -d /tmp/image.tar.zst --stdout | docker load
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push Docker image
-        uses: useblacksmith/build-push-action@v2
-        with:
-          context: api
-          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
-          push: true
+      - name: Push Docker image
+        run: docker push ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
