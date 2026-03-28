@@ -30,6 +30,35 @@ create table if not exists player_match_history
         PARTITION BY (toStartOfMonth(start_time), match_mode)
         ORDER BY (toStartOfMonth(start_time), match_mode, account_id, match_id);
 
+CREATE TABLE default.player_match_by_match
+(
+    `match_id` UInt64,
+    `account_id` UInt32,
+    `player_team` Enum8('Team0' = 0, 'Team1' = 1, 'Spectator' = 16),
+    `won` Bool,
+    `hero_id` UInt32,
+    `match_mode` Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'Calibration' = 8),
+    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5),
+    `start_time` DateTime,
+    `match_duration_s` UInt32,
+    `player_kills` UInt32,
+    `player_deaths` UInt32,
+    `player_assists` UInt32,
+    `net_worth` UInt32
+)
+    ENGINE = ReplacingMergeTree
+        PARTITION BY toYYYYMM(start_time)
+        ORDER BY (match_id, account_id)
+        SETTINGS index_granularity = 8192;
+
+CREATE MATERIALIZED VIEW player_match_by_match_mv
+            TO player_match_by_match AS
+SELECT match_id, account_id, player_team,
+       player_team = match_result AS won,
+       hero_id, match_mode, game_mode, start_time, match_duration_s,
+       player_kills, player_deaths, player_assists, net_worth
+FROM player_match_history;
+
 INSERT INTO player_match_history (account_id, match_id, hero_id, hero_level, start_time, game_mode, match_mode,
                                   player_team, player_kills, player_deaths, player_assists, denies, net_worth,
                                   last_hits, team_abandoned, abandoned_time_s, match_duration_s, match_result,
