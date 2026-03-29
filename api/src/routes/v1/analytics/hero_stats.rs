@@ -321,9 +321,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
             format!(
                 ",
         t_players2 AS (
-            SELECT hero_id, account_id
+            SELECT account_id, hero_id
             FROM player_match_history
-            GROUP BY hero_id, account_id
+            GROUP BY account_id, hero_id
             HAVING {player_hero_total_filters}
         )"
             )
@@ -354,7 +354,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             .or(query.max_hero_matches_total)
             .is_some_and(|v| v > 1)
         {
-            "AND (hero_id, account_id) IN t_players2"
+            "AND (account_id, hero_id) IN t_players2"
         } else {
             ""
         }
