@@ -135,9 +135,9 @@ impl ScoreboardQuerySortBy {
     pub(super) fn get_select_clause(self) -> &'static str {
         match self {
             Self::Matches => "uniq(match_id)",
-            Self::Wins => "sum(won)",
-            Self::Losses => "sum(not won)",
-            Self::Winrate => "sum(won) / uniq(match_id)",
+            Self::Wins => "countIf(won)",
+            Self::Losses => "countIf(not won)",
+            Self::Winrate => "countIf(won) / uniq(match_id)",
             Self::MaxKillsPerMatch => "max(kills)",
             Self::AvgKillsPerMatch => "avg(kills)",
             Self::Kills => "sum(kills)",

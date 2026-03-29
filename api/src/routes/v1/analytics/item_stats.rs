@@ -331,8 +331,8 @@ WITH
 SELECT
     item_id,
     {bucket_expr}    AS bucket,
-    sum(won)         AS wins,
-    sum(not won)     AS losses,
+    countIf(won)         AS wins,
+    countIf(not won)     AS losses,
     wins + losses    AS matches,
     uniq(account_id) AS players,
     avg(buy_time) AS avg_buy_time_s,

@@ -267,8 +267,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
     SELECT
         hero_id,
         {bucket} AS bucket,
-        sum(won) AS wins,
-        sum(not won) AS losses,
+        countIf(won) AS wins,
+        countIf(not won) AS losses,
         wins + losses AS matches,
         {} AS matches_per_bucket,
         uniq(account_id) AS players,

@@ -175,7 +175,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         COUNT() AS matches_played,
         max(start_time) AS last_played,
         sum(duration_s) AS time_played,
-        sum(won) AS wins,
+        countIf(won) AS wins,
         avg(max_level) AS ending_level,
         sum(kills) AS kills,
         sum(deaths) AS deaths,
@@ -340,7 +340,7 @@ mod test {
         assert!(sql.contains("COUNT() AS matches_played"));
         assert!(sql.contains("max(start_time) AS last_played"));
         assert!(sql.contains("sum(duration_s) AS time_played"));
-        assert!(sql.contains("sum(won) AS wins"));
+        assert!(sql.contains("countIf(won) AS wins"));
         assert!(sql.contains("FROM match_player mp FINAL"));
         assert!(sql.contains("INNER JOIN match_info mi USING (match_id)"));
         assert!(sql.contains("match_mode IN ('Ranked', 'Unranked')"));

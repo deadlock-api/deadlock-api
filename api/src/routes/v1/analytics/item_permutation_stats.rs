@@ -147,8 +147,8 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                 WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
         SELECT
             arrayIntersect(items.item_id, {items_list}) AS item_ids,
-            sum(won)      AS wins,
-            sum(not won)  AS losses,
+            countIf(won)      AS wins,
+            countIf(not won)  AS losses,
             wins + losses AS matches
         FROM match_player
         WHERE hasAll(items.item_id, {items_list})
@@ -179,8 +179,8 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                 FROM match_player
                 WHERE match_id IN t_matches {player_filters})
         SELECT [{intersect_array}] AS item_ids,
-               sum(won)      AS wins,
-               sum(not won)  AS losses,
+               countIf(won)      AS wins,
+               countIf(not won)  AS losses,
                wins + losses AS matches
         FROM t_players {joins}
         WHERE {filters_distinct}
