@@ -1,0 +1,10 @@
+[project]
+name = "deadlock-api-deployer"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.2",
+    "httpx>=0.28.1",
+    "docker>=7.1.0",
+]
