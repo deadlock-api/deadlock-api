@@ -1,0 +1,98 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/workspaces/deadlock-api:cached
+      - cargo-registry:/home/vscode/.cargo/registry
+      - cargo-git:/home/vscode/.cargo/git
+      - cargo-target:/workspaces/deadlock-api/api/target
+    command: sleep infinity
+    env_file: .env
+    ports:
+      - "3000:3000"
+      - "5173:5173"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: root
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "root"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass sdfdsmplvmdfs
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "sdfdsmplvmdfs", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.10
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ijojdmkasd
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://default:ijojdmkasd@localhost:8123/?query=SELECT%201 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.90
+    security_opt:
+      - "no-new-privileges:true"
+    ports:
+      - "9001:9000"
+    environment:
+      RUSTFS_VOLUMES: /data/rustfs
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CORS_ALLOWED_ORIGINS: "*"
+      RUSTFS_LOG_LEVEL: info
+      RUSTFS_ACCESS_KEY: devcontainer-access-key
+      RUSTFS_SECRET_KEY: devcontainer-secret-key-at-least-32-chars
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres-data:
+  clickhouse-data:
+  rustfs-data:
+  cargo-registry:
+  cargo-git:
+  cargo-target:
