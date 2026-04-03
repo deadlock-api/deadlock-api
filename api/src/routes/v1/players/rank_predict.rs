@@ -7,6 +7,7 @@ use axum::http::StatusCode;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
@@ -35,15 +36,23 @@ static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
 });
 
 #[derive(Debug, Clone, Row, Deserialize)]
-struct CombinedMatchRow {
+struct MatchRow {
+    match_id: u64,
     hero_id: u32,
     player_team: i8,
     player_kills: u32,
     match_duration_s: u32,
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
-    enemy_nw_avg: f64,
-    enemy_dmg_avg: f64,
+    enemy_team: u8,
+}
+
+#[derive(Debug, Clone, Row, Deserialize)]
+struct EnemyStatsRow {
+    match_id: u64,
+    team: i8,
+    nw_avg: f64,
+    dmg_avg: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -70,58 +79,76 @@ async fn fetch_matches(
     ch: &clickhouse::Client,
     account_id: u32,
 ) -> clickhouse::error::Result<Vec<Match>> {
-    let rows: Vec<CombinedMatchRow> = ch
+    // Step 1: Get the match rows (fast — uses pmh primary key).
+    let match_rows: Vec<MatchRow> = ch
         .query(
-            "WITH t_matches AS (
-                SELECT
-                    pmh.match_id,
-                    pmh.hero_id,
-                    pmh.player_team,
-                    pmh.player_kills,
-                    pmh.match_duration_s,
-                    pmh.start_time,
-                    mi.average_badge_team0,
-                    mi.average_badge_team1,
-                    if(pmh.player_team = 'Team0', 'Team1', 'Team0') AS enemy_team
-                FROM player_match_history pmh FINAL
-                JOIN match_info mi FINAL USING (match_id)
-                WHERE pmh.account_id = ?
-                  AND pmh.match_mode IN ('Ranked', 'Unranked')
-                  AND pmh.game_mode = 'Normal'
-                  AND mi.average_badge_team0 > 0
-                  AND mi.average_badge_team1 > 0
-                ORDER BY pmh.start_time DESC
-                LIMIT ?
-            )
-            SELECT
-                m.hero_id,
-                m.player_team,
-                m.player_kills,
-                m.match_duration_s,
-                m.average_badge_team0,
-                m.average_badge_team1,
-                es.nw_avg  AS enemy_nw_avg,
-                es.dmg_avg AS enemy_dmg_avg
-            FROM t_matches m
-            LEFT JOIN (
-                SELECT
-                    match_id,
-                    team,
-                    avg(net_worth)          AS nw_avg,
-                    avg(max_player_damage)  AS dmg_avg
-                FROM match_player FINAL
-                WHERE match_id IN (SELECT match_id FROM t_matches)
-                GROUP BY match_id, team
-            ) es ON es.match_id = m.match_id
-                AND es.team     = m.enemy_team
-            ORDER BY m.start_time DESC",
+            "SELECT
+                pmh.match_id,
+                pmh.hero_id,
+                pmh.player_team,
+                pmh.player_kills,
+                pmh.match_duration_s,
+                mi.average_badge_team0,
+                mi.average_badge_team1,
+                if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
+            FROM player_match_history pmh
+            JOIN match_info mi USING (match_id)
+            WHERE pmh.account_id = ?
+              AND pmh.match_mode IN ('Ranked', 'Unranked')
+              AND pmh.game_mode = 'Normal'
+              AND mi.average_badge_team0 > 0
+              AND mi.average_badge_team1 > 0
+            ORDER BY pmh.match_id DESC
+            LIMIT 1 BY match_id
+            LIMIT ?",
         )
         .bind(account_id)
         .bind(FETCH_LIMIT as u64)
         .fetch_all()
         .await?;
 
-    Ok(rows
+    if match_rows.len() < N_MATCHES {
+        return Ok(Vec::new());
+    }
+
+    // Step 2: Fetch enemy stats with explicit (match_id, team) tuples so ClickHouse
+    // can prune match_player by primary key instead of scanning the full table.
+    let tuples: String = match_rows
+        .iter()
+        .map(|r| format!("({}, {})", r.match_id, r.enemy_team))
+        .join(", ");
+
+    warn!("SELECT
+            match_id,
+            team,
+            avg(net_worth)         AS nw_avg,
+            avg(max_player_damage) AS dmg_avg
+        FROM match_player
+        WHERE (match_id, team) IN ({tuples})
+        GROUP BY match_id, team"
+    );
+
+    let enemy_stats: Vec<EnemyStatsRow> = ch
+        .query(&format!(
+            "SELECT
+                match_id,
+                team,
+                avg(net_worth)         AS nw_avg,
+                avg(max_player_damage) AS dmg_avg
+            FROM match_player
+            WHERE (match_id, team) IN ({tuples})
+            GROUP BY match_id, team"
+        ))
+        .fetch_all()
+        .await?;
+
+    // Index enemy stats by (match_id, team) for O(1) lookup.
+    let enemy_map: HashMap<(u64, i8), &EnemyStatsRow> = enemy_stats
+        .iter()
+        .map(|e| ((e.match_id, e.team), e))
+        .collect();
+
+    Ok(match_rows
         .into_iter()
         .map(|r| {
             let b0 = r.average_badge_team0.unwrap_or(0).cast_signed();
@@ -131,16 +158,17 @@ async fn fetch_matches(
             } else {
                 (b1, b0)
             };
-            // Convert raw badge values (11-116) to contiguous 1-based indices (1-66)
-            // to match the Python training pipeline.
+            let (enemy_nw, enemy_dmg) = enemy_map
+                .get(&(r.match_id, r.enemy_team as i8))
+                .map_or((0.0, 0.0), |e| (e.nw_avg, e.dmg_avg));
             Match {
                 hero_id: r.hero_id,
                 player_kills: r.player_kills,
                 duration_s: r.match_duration_s,
                 own_team_badge: f64::from(badge_to_idx(own_raw)),
                 enemy_team_badge: f64::from(badge_to_idx(enemy_raw)),
-                enemy_nw_avg: r.enemy_nw_avg,
-                enemy_dmg_avg: r.enemy_dmg_avg,
+                enemy_nw_avg: enemy_nw,
+                enemy_dmg_avg: enemy_dmg,
             }
         })
         .collect())
