@@ -55,7 +55,14 @@ class Config:
 
 
 cfg = Config()
-docker_client = docker.from_env()
+_docker_client: docker.DockerClient | None = None
+
+
+def _get_docker_client() -> docker.DockerClient:
+    global _docker_client
+    if _docker_client is None:
+        _docker_client = docker.from_env()
+    return _docker_client
 
 
 class DeployState:
@@ -97,7 +104,7 @@ async def _container_healthy(name: str, timeout: int | None = None) -> bool:
     timeout = timeout if timeout is not None else cfg.health_timeout
     for _ in range(timeout // 2):
         try:
-            container = await asyncio.to_thread(docker_client.containers.get, name)
+            container = await asyncio.to_thread(_get_docker_client().containers.get, name)
             attrs = await asyncio.to_thread(getattr, container, "attrs")
             health = attrs.get("State", {}).get("Health", {})
             if health.get("Status") == "healthy":
