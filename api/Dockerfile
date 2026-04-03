@@ -22,4 +22,5 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /usr/local/bin/${EXE_NAME} /usr/local/bin/
+COPY model/xgb.onnx.zst /app/model/xgb.onnx.zst
 ENTRYPOINT ["/usr/local/bin/deadlock-api-rust"]
