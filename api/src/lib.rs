@@ -77,14 +77,16 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     state.request_logger.clone().start_background_flush();
 
     // Start the daily Patreon verification job for token refresh and membership sync
-    let patreon_verification_job = std::sync::Arc::new(PatreonVerificationJob::new(
-        state.pg_client.clone(),
-        state.config.patron_encryption_key.clone(),
-        state.config.patreon.client_id.clone(),
-        state.config.patreon.client_secret.clone(),
-        state.config.patreon.redirect_uri.clone(),
-    ));
-    patreon_verification_job.start_background_verification();
+    if let Some(ref patreon_config) = state.config.patreon {
+        let patreon_verification_job = std::sync::Arc::new(PatreonVerificationJob::new(
+            state.pg_client.clone(),
+            state.config.patron_encryption_key.clone(),
+            patreon_config.client_id.clone(),
+            patreon_config.client_secret.clone(),
+            patreon_config.redirect_uri.clone(),
+        ));
+        patreon_verification_job.start_background_verification();
+    }
 
     let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
     prometheus_layer.enable_response_body_size();
