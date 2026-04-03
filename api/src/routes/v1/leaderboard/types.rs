@@ -1,3 +1,4 @@
+use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -57,6 +58,29 @@ impl From<c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry> for Lea
 pub(crate) struct Leaderboard {
     /// The leaderboard entries.
     pub(crate) entries: Vec<LeaderboardEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Row)]
+pub(super) struct LeaderboardClickhouse {
+    pub fetched_at: u32,
+    pub region: i8,
+    pub account_name: Option<String>,
+    pub rank: u32,
+    pub leaderboard_position: u32,
+    pub top_hero_ids: Vec<u32>,
+    pub badge_level: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Row)]
+pub(super) struct HeroLeaderboardClickhouse {
+    pub fetched_at: u32,
+    pub region: i8,
+    pub hero_id: u32,
+    pub account_name: Option<String>,
+    pub rank: u32,
+    pub leaderboard_position: u32,
+    pub top_hero_ids: Vec<u32>,
+    pub badge_level: Option<u32>,
 }
 
 impl TryFrom<CMsgClientToGcGetLeaderboardResponse> for Leaderboard {

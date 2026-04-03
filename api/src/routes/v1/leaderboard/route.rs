@@ -1,5 +1,6 @@
 use core::time::Duration;
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -11,16 +12,20 @@ use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
 use futures::join;
+use prost::Message;
 use serde::Deserialize;
 use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
-    CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse, EgcCitadelClientMessages,
+    CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse,
+    EgcCitadelClientMessages, c_msg_client_to_gc_get_leaderboard_response,
 };
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardRegion};
+use crate::routes::v1::leaderboard::types::{
+    HeroLeaderboardClickhouse, Leaderboard, LeaderboardClickhouse, LeaderboardRegion,
+};
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
     SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
@@ -111,6 +116,91 @@ async fn fetch_all_steam_names(
     Ok(out)
 }
 
+async fn insert_leaderboard_to_ch(
+    ch_client: &clickhouse::Client,
+    region: LeaderboardRegion,
+    entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
+) {
+    #[allow(clippy::cast_possible_truncation)]
+    let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as u32) else {
+        warn!("Failed to get current time");
+        return;
+    };
+
+    let Ok(mut inserter) = ch_client.insert::<LeaderboardClickhouse>("leaderboard").await else {
+        warn!("Failed to create inserter for leaderboard");
+        return;
+    };
+
+    for (i, entry) in entries.iter().enumerate() {
+        let Some(rank) = entry.rank else {
+            continue;
+        };
+        let row = LeaderboardClickhouse {
+            fetched_at: now,
+            region: region as i8,
+            account_name: entry.account_name.clone(),
+            rank,
+            #[allow(clippy::cast_possible_truncation)]
+            leaderboard_position: (i as u32) + 1,
+            top_hero_ids: entry.top_hero_ids.clone(),
+            badge_level: entry.badge_level,
+        };
+        if let Err(e) = inserter.write(&row).await {
+            warn!("Failed to write leaderboard entry to CH: {e}");
+            return;
+        }
+    }
+    if let Err(e) = inserter.end().await {
+        warn!("Failed to insert leaderboard to CH: {e}");
+    }
+}
+
+async fn insert_hero_leaderboard_to_ch(
+    ch_client: &clickhouse::Client,
+    region: LeaderboardRegion,
+    hero_id: u32,
+    entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
+) {
+    #[allow(clippy::cast_possible_truncation)]
+    let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as u32) else {
+        warn!("Failed to get current time");
+        return;
+    };
+
+    let Ok(mut inserter) = ch_client
+        .insert::<HeroLeaderboardClickhouse>("hero_leaderboard")
+        .await
+    else {
+        warn!("Failed to create inserter for hero_leaderboard");
+        return;
+    };
+
+    for (i, entry) in entries.iter().enumerate() {
+        let Some(rank) = entry.rank else {
+            continue;
+        };
+        let row = HeroLeaderboardClickhouse {
+            fetched_at: now,
+            region: region as i8,
+            hero_id,
+            account_name: entry.account_name.clone(),
+            rank,
+            #[allow(clippy::cast_possible_truncation)]
+            leaderboard_position: (i as u32) + 1,
+            top_hero_ids: entry.top_hero_ids.clone(),
+            badge_level: entry.badge_level,
+        };
+        if let Err(e) = inserter.write(&row).await {
+            warn!("Failed to write hero_leaderboard entry to CH: {e}");
+            return;
+        }
+    }
+    if let Err(e) = inserter.end().await {
+        warn!("Failed to insert hero_leaderboard to CH: {e}");
+    }
+}
+
 #[utoipa::path(
     get,
     path = "/{region}/raw",
@@ -153,7 +243,14 @@ pub(super) async fn leaderboard_raw(
             .retries(3)
             .fixed_backoff(Duration::from_millis(10))
             .await?;
-    Ok(BASE64_STANDARD.decode(&steam_response.data)?)
+    let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
+    if let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice()) {
+        let ch_client = state.ch_client.clone();
+        tokio::spawn(async move {
+            insert_leaderboard_to_ch(&ch_client, region, &proto.entries).await;
+        });
+    }
+    Ok(decoded)
 }
 
 #[utoipa::path(
@@ -204,7 +301,14 @@ pub(super) async fn leaderboard_hero_raw(
             .retries(3)
             .fixed_backoff(Duration::from_millis(10))
             .await?;
-    Ok(BASE64_STANDARD.decode(&steam_response.data)?)
+    let decoded = BASE64_STANDARD.decode(&steam_response.data)?;
+    if let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(decoded.as_slice()) {
+        let ch_client = state.ch_client.clone();
+        tokio::spawn(async move {
+            insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &proto.entries).await;
+        });
+    }
+    Ok(decoded)
 }
 
 #[utoipa::path(
@@ -243,6 +347,11 @@ pub(super) async fn leaderboard(
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
+    let ch_client = state.ch_client.clone();
+    let entries = proto_leaderboard.msg.entries.clone();
+    tokio::spawn(async move {
+        insert_leaderboard_to_ch(&ch_client, region, &entries).await;
+    });
     let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
     match steam_names {
         Ok(steam_names) => {
@@ -304,6 +413,11 @@ pub(super) async fn leaderboard_hero(
     );
     let proto_leaderboard: SteamProxyResponse<CMsgClientToGcGetLeaderboardResponse> =
         raw_leaderboard?.try_into()?;
+    let ch_client = state.ch_client.clone();
+    let entries = proto_leaderboard.msg.entries.clone();
+    tokio::spawn(async move {
+        insert_hero_leaderboard_to_ch(&ch_client, region, hero_id, &entries).await;
+    });
     let mut leaderboard: APIResult<Leaderboard> = proto_leaderboard.msg.try_into();
     match steam_names {
         Ok(steam_names) => {
