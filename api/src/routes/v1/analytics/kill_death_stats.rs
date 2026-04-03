@@ -196,16 +196,16 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     format!(
         "
     WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH AND {game_mode_filter} {info_filters}),
-         t_events AS (SELECT toInt32(round(tupleElement(dd.death_pos, 1), -2)) as position_x,
-                             toInt32(round(tupleElement(dd.death_pos, 2), -2)) as position_y,
+         t_events AS (SELECT toInt32(floor(tupleElement(dd.death_pos, 1) / 128) * 128) as position_x,
+                             toInt32(floor(tupleElement(dd.death_pos, 2) / 128) * 128) as position_y,
                              if(team = 'Team0', 1, 0) as killer_team,
                              'death' as type
                       FROM match_player
                                ARRAY JOIN death_details as dd
                       WHERE match_id IN t_matches {death_filters} {player_filters}
                       UNION ALL
-                      SELECT toInt32(round(tupleElement(dd.killer_pos, 1), -2)) as position_x,
-                             toInt32(round(tupleElement(dd.killer_pos, 2), -2)) as position_y,
+                      SELECT toInt32(floor(tupleElement(dd.killer_pos, 1) / 128) * 128) as position_x,
+                             toInt32(floor(tupleElement(dd.killer_pos, 2) / 128) * 128) as position_y,
                              if(team = 'Team0', 1, 0) as killer_team,
                              'kill' as type
                       FROM match_player
@@ -245,7 +245,7 @@ async fn get_kill_death_stats(
     tags = ["Analytics"],
     summary = "Kill Death Stats",
     description = "
-This endpoint returns the kill-death statistics across a 100x100 pixel raster.
+This endpoint returns the kill-death statistics across a 128x128 pixel raster.
 
 ### Rate Limits:
 | Type | Limit |
