@@ -17,8 +17,8 @@ use serde::Deserialize;
 use tracing::warn;
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
-    CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse,
-    EgcCitadelClientMessages, c_msg_client_to_gc_get_leaderboard_response,
+    CMsgClientToGcGetLeaderboard, CMsgClientToGcGetLeaderboardResponse, EgcCitadelClientMessages,
+    c_msg_client_to_gc_get_leaderboard_response,
 };
 
 use crate::context::AppState;
@@ -122,12 +122,18 @@ async fn insert_leaderboard_to_ch(
     entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
 ) {
     #[allow(clippy::cast_possible_truncation)]
-    let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as u32) else {
+    let Ok(now) = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as u32)
+    else {
         warn!("Failed to get current time");
         return;
     };
 
-    let Ok(mut inserter) = ch_client.insert::<LeaderboardClickhouse>("leaderboard").await else {
+    let Ok(mut inserter) = ch_client
+        .insert::<LeaderboardClickhouse>("leaderboard")
+        .await
+    else {
         warn!("Failed to create inserter for leaderboard");
         return;
     };
@@ -163,7 +169,10 @@ async fn insert_hero_leaderboard_to_ch(
     entries: &[c_msg_client_to_gc_get_leaderboard_response::LeaderboardEntry],
 ) {
     #[allow(clippy::cast_possible_truncation)]
-    let Ok(now) = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as u32) else {
+    let Ok(now) = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as u32)
+    else {
         warn!("Failed to get current time");
         return;
     };
