@@ -177,7 +177,7 @@ fn kills_per_min(m: &Match) -> f64 {
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap
 )]
-fn aggregate_features(matches: &[Match]) -> Option<[f64; 13]> {
+fn aggregate_features(matches: &[Match]) -> Option<[f64; 15]> {
     if matches.len() < N_MATCHES {
         return None;
     }
@@ -229,9 +229,14 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 13]> {
     };
     let r10mean = |vals: &[f64]| vals[..10].iter().sum::<f64>() / 10.0;
 
+    let own_badge_mean = own_b.iter().sum::<f64>() / N_MATCHES as f64;
+    let enemy_badge_mean = enemy_b.iter().sum::<f64>() / N_MATCHES as f64;
+
     Some([
         wmean(&own_b, w_norm),
         wmean(&enemy_b, w_norm),
+        own_badge_mean,
+        enemy_badge_mean,
         r10mean(&own_b),
         r10mean(&enemy_b),
         wstd(&own_b, w_norm),

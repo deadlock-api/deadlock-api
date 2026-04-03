@@ -90,9 +90,9 @@ impl RankPredictor {
     /// Run inference on a 13-element feature vector.
     pub(crate) fn predict(
         &self,
-        features: [f64; 13],
+        features: [f64; 15],
     ) -> Result<RankPrediction, RankPredictorError> {
-        let input = Array2::from_shape_fn((1, 13), |(_, j)| features[j]);
+        let input = Array2::from_shape_fn((1, 15), |(_, j)| features[j]);
         let tensor = Tensor::from_array(input)?;
         let mut guard = self
             .session
