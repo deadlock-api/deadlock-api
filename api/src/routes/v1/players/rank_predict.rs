@@ -7,7 +7,7 @@ use axum::http::StatusCode;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::debug;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
@@ -80,28 +80,30 @@ async fn fetch_matches(
     account_id: u32,
 ) -> clickhouse::error::Result<Vec<Match>> {
     // Step 1: Get the match rows (fast — uses pmh primary key).
+    let query = "
+        SELECT
+            pmh.match_id,
+            pmh.hero_id,
+            pmh.player_team,
+            pmh.player_kills,
+            pmh.match_duration_s,
+            mi.average_badge_team0,
+            mi.average_badge_team1,
+            if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
+        FROM player_match_history pmh
+        JOIN match_info mi USING (match_id)
+        WHERE pmh.account_id = ?
+          AND pmh.match_mode IN ('Ranked', 'Unranked')
+          AND pmh.game_mode = 'Normal'
+          AND mi.average_badge_team0 > 0
+          AND mi.average_badge_team1 > 0
+        ORDER BY pmh.match_id DESC
+        LIMIT 1 BY match_id
+        LIMIT ?
+    ";
+    debug!("Match rows query: {query}");
     let match_rows: Vec<MatchRow> = ch
-        .query(
-            "SELECT
-                pmh.match_id,
-                pmh.hero_id,
-                pmh.player_team,
-                pmh.player_kills,
-                pmh.match_duration_s,
-                mi.average_badge_team0,
-                mi.average_badge_team1,
-                if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
-            FROM player_match_history pmh
-            JOIN match_info mi USING (match_id)
-            WHERE pmh.account_id = ?
-              AND pmh.match_mode IN ('Ranked', 'Unranked')
-              AND pmh.game_mode = 'Normal'
-              AND mi.average_badge_team0 > 0
-              AND mi.average_badge_team1 > 0
-            ORDER BY pmh.match_id DESC
-            LIMIT 1 BY match_id
-            LIMIT ?",
-        )
+        .query(query)
         .bind(account_id)
         .bind(FETCH_LIMIT as u64)
         .fetch_all()
@@ -118,7 +120,7 @@ async fn fetch_matches(
         .map(|r| format!("({}, {})", r.match_id, r.enemy_team))
         .join(", ");
 
-    info!(
+    let query = format!(
         "SELECT
             match_id,
             team,
@@ -128,20 +130,9 @@ async fn fetch_matches(
         WHERE (match_id, team) IN ({tuples})
         GROUP BY match_id, team"
     );
+    debug!("Enemy stats query: {query}");
 
-    let enemy_stats: Vec<EnemyStatsRow> = ch
-        .query(&format!(
-            "SELECT
-                match_id,
-                team,
-                avg(net_worth)         AS nw_avg,
-                avg(max_player_damage) AS dmg_avg
-            FROM match_player
-            WHERE (match_id, team) IN ({tuples})
-            GROUP BY match_id, team"
-        ))
-        .fetch_all()
-        .await?;
+    let enemy_stats: Vec<EnemyStatsRow> = ch.query(&query).fetch_all().await?;
 
     // Index enemy stats by (match_id, team) for O(1) lookup.
     let enemy_map: HashMap<(u64, i8), &EnemyStatsRow> = enemy_stats
