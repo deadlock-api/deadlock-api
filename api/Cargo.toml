@@ -8,10 +8,10 @@ license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.13.2", features = ["json", "http2", "zstd", "gzip", "form"] }
-tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.51.0", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 redis = { version = "1.1.0", default-features = false, features = ["tokio-comp"] }
-clickhouse = { version = "0.14.2", features = ["chrono", "uuid"] }
+clickhouse = { version = "0.14.3", features = ["chrono", "uuid"] }
 sqlx = { version = "0.8.6", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.23.0", features = ["serde", "v4"] }
 cached = { version = "0.59.0", features = ["async", "serde"] }
@@ -51,8 +51,8 @@ urlencoding = "2.1.3"
 url = "2.5.8"
 aes-gcm = "0.10"
 hex = "0.4"
-hmac = "0.12"
-md5 = { package = "md-5", version = "0.10" }
+hmac = "0.13"
+md5 = { package = "md-5", version = "0.11" }
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 ort = "2.0.0-rc.12"
 ndarray = "0.17.2"
