@@ -118,16 +118,6 @@ async fn fetch_matches(
         .map(|r| format!("({}, {})", r.match_id, r.enemy_team))
         .join(", ");
 
-    warn!("SELECT
-            match_id,
-            team,
-            avg(net_worth)         AS nw_avg,
-            avg(max_player_damage) AS dmg_avg
-        FROM match_player
-        WHERE (match_id, team) IN ({tuples})
-        GROUP BY match_id, team"
-    );
-
     let enemy_stats: Vec<EnemyStatsRow> = ch
         .query(&format!(
             "SELECT
@@ -159,7 +149,7 @@ async fn fetch_matches(
                 (b1, b0)
             };
             let (enemy_nw, enemy_dmg) = enemy_map
-                .get(&(r.match_id, r.enemy_team as i8))
+                .get(&(r.match_id, r.enemy_team.cast_signed()))
                 .map_or((0.0, 0.0), |e| (e.nw_avg, e.dmg_avg));
             Match {
                 hero_id: r.hero_id,
