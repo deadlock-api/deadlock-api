@@ -201,7 +201,7 @@ fn kills_per_min(m: &Match) -> f64 {
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap
 )]
-fn aggregate_features(matches: &[Match]) -> Option<[f64; 16]> {
+fn aggregate_features(matches: &[Match]) -> Option<[f64; 17]> {
     if matches.len() < N_MATCHES {
         return None;
     }
@@ -263,6 +263,17 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 16]> {
         cs_efficiencies.iter().sum::<f64>() / cs_efficiencies.len() as f64
     };
 
+    let cs_x_hero_vals: Vec<f64> = window
+        .iter()
+        .zip(hero_hist_badges.iter())
+        .filter_map(|(m, &hero_badge)| m.cs_efficiency.map(|cs| cs * hero_badge.max(1.0)))
+        .collect();
+    let cs_x_hero_badge = if cs_x_hero_vals.is_empty() {
+        0.0
+    } else {
+        cs_x_hero_vals.iter().sum::<f64>() / cs_x_hero_vals.len() as f64
+    };
+
     Some([
         wmean(&own_b, w_norm),
         wmean(&enemy_b, w_norm),
@@ -280,6 +291,7 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 16]> {
         wmean(&kills_pm, w_norm),
         r10mean(&kills_pm),
         cs_efficiency_mean,
+        cs_x_hero_badge,
     ])
 }
 
