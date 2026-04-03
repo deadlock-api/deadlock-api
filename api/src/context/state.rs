@@ -13,7 +13,6 @@ use thiserror::Error;
 use tracing::{debug, warn};
 
 use crate::context::config::Config;
-use crate::routes::v1::players::rank_predict::RankPredictBatcher;
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rank_predictor::RankPredictor;
@@ -59,7 +58,7 @@ pub(crate) struct AppState {
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
-    pub(crate) rank_predict_batcher: Option<RankPredictBatcher>,
+    pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
 
@@ -281,12 +280,6 @@ impl AppState {
             }
         };
 
-        // Create Rank Predict Batcher (only if the model is loaded)
-        let rank_predict_batcher = rank_predictor.as_ref().map(|p| {
-            debug!("Creating Rank Predict Batcher");
-            RankPredictBatcher::new(ch_client_ro.clone(), Arc::clone(p))
-        });
-
         // Create Steam Profile Batcher
         debug!("Creating Steam Profile Batcher");
         let steam_profile_batcher = SteamProfileBatcher::new(ch_client_ro.clone());
@@ -305,7 +298,7 @@ impl AppState {
             assets_client,
             rate_limit_client,
             request_logger,
-            rank_predict_batcher,
+            rank_predictor,
             steam_profile_batcher,
         })
     }
