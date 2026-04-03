@@ -46,10 +46,6 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
-    git-lfs:
-      run: git lfs pre-push origin "$@"
-      fail_text: "Git LFS pre-push failed"
-
     api-clippy:
       root: "api/"
       glob: "api/**/*.rs"
