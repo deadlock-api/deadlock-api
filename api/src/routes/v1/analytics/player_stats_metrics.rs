@@ -136,6 +136,9 @@ pub(super) enum Metric {
     SelfHealingPerMin,
     PlayerHealingPerMin,
     HealingPerMin,
+    TeammateHealing,
+    TeammateBarriering,
+    HealPrevented,
 }
 
 impl Metric {
@@ -169,6 +172,9 @@ impl Metric {
             Self::SelfHealingPerMin => "max_self_healing / duration_m",
             Self::PlayerHealingPerMin => "max_player_healing / duration_m",
             Self::HealingPerMin => "(max_self_healing + max_player_healing) / duration_m",
+            Self::TeammateHealing => "max_teammate_healing",
+            Self::TeammateBarriering => "max_teammate_barriering",
+            Self::HealPrevented => "max_heal_prevented",
         }
     }
 
@@ -287,6 +293,21 @@ impl Metric {
                 row.std_healing_per_min,
                 &row.quantiles_healing_per_min,
             ),
+            Self::TeammateHealing => MetricValues::from_stats(
+                row.avg_teammate_healing,
+                row.std_teammate_healing,
+                &row.quantiles_teammate_healing,
+            ),
+            Self::TeammateBarriering => MetricValues::from_stats(
+                row.avg_teammate_barriering,
+                row.std_teammate_barriering,
+                &row.quantiles_teammate_barriering,
+            ),
+            Self::HealPrevented => MetricValues::from_stats(
+                row.avg_heal_prevented,
+                row.std_heal_prevented,
+                &row.quantiles_heal_prevented,
+            ),
         }
     }
 }
@@ -373,6 +394,15 @@ pub(super) struct AnalyticsPlayerStatsMetricsRow {
     avg_healing_per_min: f64,
     std_healing_per_min: f64,
     quantiles_healing_per_min: Vec<f64>,
+    avg_teammate_healing: f64,
+    std_teammate_healing: f64,
+    quantiles_teammate_healing: Vec<f64>,
+    avg_teammate_barriering: f64,
+    std_teammate_barriering: f64,
+    quantiles_teammate_barriering: Vec<f64>,
+    avg_heal_prevented: f64,
+    std_heal_prevented: f64,
+    quantiles_heal_prevented: Vec<f64>,
 }
 
 #[allow(clippy::too_many_lines)]
