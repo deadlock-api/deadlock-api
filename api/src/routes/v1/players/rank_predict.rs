@@ -55,6 +55,13 @@ struct EnemyStatsRow {
     dmg_avg: f64,
 }
 
+#[derive(Debug, Clone, Row, Deserialize)]
+struct PlayerCreepRow {
+    match_id: u64,
+    max_creep_kills: u32,
+    max_possible_creeps: u32,
+}
+
 #[derive(Debug, Clone)]
 struct Match {
     hero_id: u32,
@@ -64,6 +71,7 @@ struct Match {
     enemy_team_badge: f64,
     enemy_nw_avg: f64,
     enemy_dmg_avg: f64,
+    cs_efficiency: Option<f64>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -140,6 +148,18 @@ async fn fetch_matches(
         .map(|e| ((e.match_id, e.team), e))
         .collect();
 
+    // Step 3: Fetch the player's own creep stats for CS efficiency.
+    let match_ids: String = match_rows.iter().map(|r| r.match_id.to_string()).join(", ");
+    let query = format!(
+        "SELECT match_id, max_creep_kills, max_possible_creeps
+         FROM match_player
+         WHERE match_id IN ({match_ids}) AND account_id = {account_id}"
+    );
+    debug!("Player creep stats query: {query}");
+    let creep_rows: Vec<PlayerCreepRow> = ch.query(&query).fetch_all().await?;
+    let creep_map: HashMap<u64, &PlayerCreepRow> =
+        creep_rows.iter().map(|c| (c.match_id, c)).collect();
+
     Ok(match_rows
         .into_iter()
         .map(|r| {
@@ -153,6 +173,9 @@ async fn fetch_matches(
             let (enemy_nw, enemy_dmg) = enemy_map
                 .get(&(r.match_id, r.enemy_team.cast_signed()))
                 .map_or((0.0, 0.0), |e| (e.nw_avg, e.dmg_avg));
+            let cs_efficiency = creep_map
+                .get(&r.match_id)
+                .map(|c| f64::from(c.max_creep_kills) / f64::from(c.max_possible_creeps.max(1)));
             Match {
                 hero_id: r.hero_id,
                 player_kills: r.player_kills,
@@ -161,6 +184,7 @@ async fn fetch_matches(
                 enemy_team_badge: f64::from(badge_to_idx(enemy_raw)),
                 enemy_nw_avg: enemy_nw,
                 enemy_dmg_avg: enemy_dmg,
+                cs_efficiency,
             }
         })
         .collect())
@@ -177,7 +201,7 @@ fn kills_per_min(m: &Match) -> f64 {
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap
 )]
-fn aggregate_features(matches: &[Match]) -> Option<[f64; 15]> {
+fn aggregate_features(matches: &[Match]) -> Option<[f64; 16]> {
     if matches.len() < N_MATCHES {
         return None;
     }
@@ -232,6 +256,13 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 15]> {
     let own_badge_mean = own_b.iter().sum::<f64>() / N_MATCHES as f64;
     let enemy_badge_mean = enemy_b.iter().sum::<f64>() / N_MATCHES as f64;
 
+    let cs_efficiencies: Vec<f64> = window.iter().filter_map(|m| m.cs_efficiency).collect();
+    let cs_efficiency_mean = if cs_efficiencies.is_empty() {
+        0.0
+    } else {
+        cs_efficiencies.iter().sum::<f64>() / cs_efficiencies.len() as f64
+    };
+
     Some([
         wmean(&own_b, w_norm),
         wmean(&enemy_b, w_norm),
@@ -248,6 +279,7 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 15]> {
         hist_hero_diversity,
         wmean(&kills_pm, w_norm),
         r10mean(&kills_pm),
+        cs_efficiency_mean,
     ])
 }
 
