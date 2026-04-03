@@ -7,7 +7,7 @@ use axum::http::StatusCode;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
+use tracing::info;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
@@ -117,6 +117,17 @@ async fn fetch_matches(
         .iter()
         .map(|r| format!("({}, {})", r.match_id, r.enemy_team))
         .join(", ");
+
+    info!(
+        "SELECT
+            match_id,
+            team,
+            avg(net_worth)         AS nw_avg,
+            avg(max_player_damage) AS dmg_avg
+        FROM match_player
+        WHERE (match_id, team) IN ({tuples})
+        GROUP BY match_id, team"
+    );
 
     let enemy_stats: Vec<EnemyStatsRow> = ch
         .query(&format!(
