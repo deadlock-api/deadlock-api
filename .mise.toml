@@ -1,0 +1,14 @@
+[tools]
+pnpm = "latest"
+rust = "1.94"
+lefthook = "latest"
+"cargo:typos-cli" = "latest"
+"cargo:cargo-machete" = "latest"
+
+[tasks.setup]
+description = "Install dev tools and git hooks"
+run = [
+  "rustup component add rustfmt clippy",
+  "cd website && pnpm install",
+  "lefthook install",
+]

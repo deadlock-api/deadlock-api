@@ -1,0 +1,69 @@
+pre-commit:
+  parallel: true
+  commands:
+    api-fmt:
+      root: "api/"
+      glob: "api/**/*.rs"
+      run: cargo fmt --all && git add -u {staged_files}
+      fail_text: "Rust formatting failed in api/"
+
+    tools-fmt:
+      root: "tools/"
+      glob: "tools/**/*.rs"
+      run: cargo fmt --all && git add -u {staged_files}
+      fail_text: "Rust formatting failed in tools/"
+
+    api-machete:
+      root: "api/"
+      glob: "api/{Cargo.toml,Cargo.lock,src/**}"
+      run: cargo machete
+      fail_text: "Unused dependencies in api/. Run 'cargo machete --fix' to fix."
+
+    tools-machete:
+      root: "tools/"
+      glob: "tools/{Cargo.toml,Cargo.lock,**/Cargo.toml,**/*.rs}"
+      run: cargo machete
+      fail_text: "Unused dependencies in tools/. Run 'cargo machete --fix' to fix."
+
+    api-typos:
+      root: "api/"
+      glob: "api/src/**"
+      run: typos src/
+      fail_text: "Typos found in api/src/. Run 'typos --write-changes src/' to fix."
+
+    website-fmt:
+      root: "website/"
+      glob: "website/**/*.{ts,tsx,js,jsx,css}"
+      run: pnpm fmt && git add -u {staged_files}
+      fail_text: "Website formatting failed"
+
+    website-lint:
+      root: "website/"
+      glob: "website/**/*.{ts,tsx,js,jsx}"
+      run: pnpm lint
+      fail_text: "oxlint found issues in website/. Run 'pnpm lint' to see details."
+
+pre-push:
+  parallel: true
+  commands:
+    git-lfs:
+      run: git lfs pre-push origin "$@"
+      fail_text: "Git LFS pre-push failed"
+
+    api-clippy:
+      root: "api/"
+      glob: "api/**/*.rs"
+      run: cargo clippy --all-targets --locked -- -D warnings
+      fail_text: "Clippy warnings in api/"
+
+    tools-clippy:
+      root: "tools/"
+      glob: "tools/**/*.rs"
+      run: cargo clippy --all-targets --locked --all-features -- -D warnings
+      fail_text: "Clippy warnings in tools/"
+
+    website-build:
+      root: "website/"
+      glob: "website/**/*.{ts,tsx,js,jsx,css}"
+      run: pnpm build
+      fail_text: "Website build failed"
