@@ -1,7 +1,6 @@
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
-use axum::response::{IntoResponse, Response};
 use hmac::{Hmac, KeyInit, Mac};
 use md5::Md5;
 use tracing::{error, info, warn};
@@ -32,59 +31,34 @@ fn verify_signature(body: &[u8], secret: &str, signature_hex: &str) -> bool {
 /// and processes membership updates in the background.
 #[allow(clippy::too_many_lines)]
 pub(crate) async fn webhook(
-    State(state): State<AppState>,
+    State(app_state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> impl IntoResponse {
-    let Some(patreon_config) = &state.config.patreon else {
-        return Response::builder()
-            .status(StatusCode::SERVICE_UNAVAILABLE)
-            .body(axum::body::Body::from(
-                "Patreon authentication is not configured",
-            ))
-            .expect("Failed to build error response");
-    };
-
+) -> StatusCode {
     // Extract required headers
     let Some(signature) = headers
         .get("X-Patreon-Signature")
         .and_then(|v| v.to_str().ok())
     else {
         warn!("Patreon webhook: missing or invalid X-Patreon-Signature header");
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from(
-                "Missing or invalid X-Patreon-Signature header",
-            ))
-            .expect("Failed to build error response");
+        return StatusCode::BAD_REQUEST;
     };
 
     let Some(event_header) = headers.get("X-Patreon-Event").and_then(|v| v.to_str().ok()) else {
         warn!("Patreon webhook: missing or invalid X-Patreon-Event header");
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from(
-                "Missing or invalid X-Patreon-Event header",
-            ))
-            .expect("Failed to build error response");
+        return StatusCode::BAD_REQUEST;
     };
 
     // Verify HMAC-MD5 signature
-    if !verify_signature(&body, &patreon_config.webhook_secret, signature) {
+    if !verify_signature(&body, &app_state.config.patreon.webhook_secret, signature) {
         warn!("Patreon webhook: invalid signature");
-        return Response::builder()
-            .status(StatusCode::UNAUTHORIZED)
-            .body(axum::body::Body::from("Invalid signature"))
-            .expect("Failed to build error response");
+        return StatusCode::FORBIDDEN;
     }
 
     // Parse event type - return 200 for unrecognized events
     let Some(event) = PatreonWebhookEvent::from_header(event_header) else {
         info!("Patreon webhook: ignoring unrecognized event: {event_header}");
-        return Response::builder()
-            .status(StatusCode::OK)
-            .body(axum::body::Body::from("Event received but not processed"))
-            .expect("Failed to build response");
+        return StatusCode::OK;
     };
 
     // Deserialize JSON:API payload
@@ -92,10 +66,7 @@ pub(crate) async fn webhook(
         Ok(p) => p,
         Err(e) => {
             error!("Patreon webhook: failed to parse payload: {e}");
-            return Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(axum::body::Body::from("Invalid JSON payload"))
-                .expect("Failed to build error response");
+            return StatusCode::BAD_REQUEST;
         }
     };
 
@@ -106,14 +77,11 @@ pub(crate) async fn webhook(
         .campaign
         .data
         .as_ref()
-        .is_some_and(|c| c.id == patreon_config.campaign_id);
+        .is_some_and(|c| c.id == app_state.config.patreon.campaign_id);
 
     if !campaign_matches {
         warn!("Patreon webhook: campaign ID mismatch, ignoring");
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from("Campaign ID mismatch in payload"))
-            .expect("Failed to build error response");
+        return StatusCode::OK;
     }
 
     // Extract patreon user ID from relationships
@@ -126,12 +94,7 @@ pub(crate) async fn webhook(
         .map(|u| u.id.clone())
     else {
         error!("Patreon webhook: missing user relationship in payload");
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(axum::body::Body::from(
-                "Missing user relationship in payload",
-            ))
-            .expect("Failed to build error response");
+        return StatusCode::BAD_REQUEST;
     };
 
     // Extract membership data
@@ -156,8 +119,8 @@ pub(crate) async fn webhook(
     );
 
     // Spawn background task for DB operations
-    let pg_client = state.pg_client.clone();
-    let encryption_key = state.config.patron_encryption_key.clone();
+    let pg_client = app_state.pg_client.clone();
+    let encryption_key = app_state.config.patron_encryption_key.clone();
 
     tokio::spawn(async move {
         let patron_repo = PatronRepository::new(pg_client.clone(), encryption_key);
@@ -222,10 +185,7 @@ pub(crate) async fn webhook(
     });
 
     // Return 200 immediately so Patreon doesn't retry
-    Response::builder()
-        .status(StatusCode::OK)
-        .body(axum::body::Body::from("Event received"))
-        .expect("Failed to build response")
+    StatusCode::OK
 }
 
 #[cfg(test)]

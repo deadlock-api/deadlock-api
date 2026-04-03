@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use serde_with::{DefaultOnError, serde_as};
 
 use crate::utils::parse::default_true;
 
@@ -113,7 +112,6 @@ fn default_assets_base_url() -> String {
     "https://assets.deadlock-api.com".to_owned()
 }
 
-#[serde_as]
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct Config {
     #[serde(default)]
@@ -125,8 +123,7 @@ pub(crate) struct Config {
     pub(super) s3_cache: S3Config,
     pub(crate) clickhouse: ClickhouseConfig,
     pub(super) postgres: PostgresConfig,
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    pub(crate) patreon: Option<PatreonConfig>,
+    pub(crate) patreon: PatreonConfig,
     pub(crate) jwt_secret: String,
     /// Encryption key for patron tokens (32-byte hex-encoded for AES-256-GCM)
     pub(crate) patron_encryption_key: String,
