@@ -14,6 +14,7 @@
 #![allow(clippy::struct_field_names)]
 
 use core::time::Duration;
+use std::collections::HashSet;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 
@@ -62,8 +63,11 @@ async fn main() -> anyhow::Result<()> {
         .timeout(Duration::from_mins(2))
         .build()?;
 
+    let mut failed_matches: HashSet<u64> = HashSet::new();
+
     loop {
-        let matches = fetch_pending_matches(&ch_client).await?;
+        let mut matches = fetch_pending_matches(&ch_client).await?;
+        matches.retain(|m| !failed_matches.contains(&m.match_id));
 
         if matches.is_empty() {
             info!("No pending matches to process");
@@ -74,8 +78,13 @@ async fn main() -> anyhow::Result<()> {
             continue;
         }
 
-        info!("Processing {} matches", matches.len());
+        info!(
+            "Processing {} matches ({} previously failed, skipped)",
+            matches.len(),
+            failed_matches.len()
+        );
         gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
+        gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
 
         let mut pending_rows: Vec<DemoPlayer> = Vec::new();
         let mut stream = futures::stream::iter(matches)
@@ -86,12 +95,12 @@ async fn main() -> anyhow::Result<()> {
                     match process_demo(http, &m).await {
                         Ok(rows) => {
                             counter!("demo_analyzer.demo_processed.success").increment(1);
-                            Some(rows)
+                            Ok(rows)
                         }
                         Err(e) => {
                             counter!("demo_analyzer.demo_processed.failure").increment(1);
                             warn!("Failed to process match {match_id}: {e}");
-                            None
+                            Err(match_id)
                         }
                     }
                 }
@@ -99,8 +108,11 @@ async fn main() -> anyhow::Result<()> {
             .buffer_unordered(cli.parallelism);
 
         while let Some(result) = stream.next().await {
-            if let Some(rows) = result {
-                pending_rows.extend(rows);
+            match result {
+                Ok(rows) => pending_rows.extend(rows),
+                Err(match_id) => {
+                    failed_matches.insert(match_id);
+                }
             }
             if pending_rows.len() >= cli.batch_size {
                 info!("Inserting {} rows into ClickHouse", pending_rows.len());
