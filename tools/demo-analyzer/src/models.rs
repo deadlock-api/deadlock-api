@@ -1,0 +1,18 @@
+use clickhouse::Row;
+use serde::{Deserialize, Serialize};
+
+#[derive(Row, Deserialize, Debug, Clone)]
+pub(crate) struct MatchWithReplay {
+    pub match_id: u64,
+    pub cluster_id: Option<u32>,
+    pub replay_salt: Option<u32>,
+    pub game_mode: String,
+}
+
+#[derive(Row, Serialize, Debug)]
+pub(crate) struct DemoPlayerBuild {
+    pub match_id: u64,
+    pub account_id: u32,
+    pub hero_id: u32,
+    pub hero_build_id: u64,
+}

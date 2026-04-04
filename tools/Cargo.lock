@@ -118,9 +118,9 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "arc-swap"
-version = "1.9.0"
+version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07d1f37ff60921c83bdfc7407723bdefe89b44b98a9b772f225c8f9d67141a6"
+checksum = "6a3a1fd6f75306b68087b831f025c712524bcb19aad54e557b1129cfa0a2b207"
 dependencies = [
  "rustversion",
 ]
@@ -793,6 +793,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "demo-analyzer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-compression",
+ "clap",
+ "clickhouse",
+ "common",
+ "dungers",
+ "futures",
+ "haste",
+ "metrics",
+ "os_pipe",
+ "prost",
+ "reqwest 0.13.2",
+ "serde",
+ "snap",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tryhard",
+ "valveprotos",
+]
+
+[[package]]
 name = "der"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1280,7 +1306,7 @@ dependencies = [
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=34a3a495d9414b865d47ce4513e1487cf2aef91c#34a3a495d9414b865d47ce4513e1487cf2aef91c"
+source = "git+https://github.com/deadlock-api/haste.git?rev=714492f67995f0305732076cdd3cc1885a454dc9#714492f67995f0305732076cdd3cc1885a454dc9"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -1289,7 +1315,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=34a3a495d9414b865d47ce4513e1487cf2aef91c#34a3a495d9414b865d47ce4513e1487cf2aef91c"
+source = "git+https://github.com/deadlock-api/haste.git?rev=714492f67995f0305732076cdd3cc1885a454dc9#714492f67995f0305732076cdd3cc1885a454dc9"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1308,7 +1334,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=34a3a495d9414b865d47ce4513e1487cf2aef91c#34a3a495d9414b865d47ce4513e1487cf2aef91c"
+source = "git+https://github.com/deadlock-api/haste.git?rev=714492f67995f0305732076cdd3cc1885a454dc9#714492f67995f0305732076cdd3cc1885a454dc9"
 dependencies = [
  "anyhow",
  "dungers",
@@ -1326,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=34a3a495d9414b865d47ce4513e1487cf2aef91c#34a3a495d9414b865d47ce4513e1487cf2aef91c"
+source = "git+https://github.com/deadlock-api/haste.git?rev=714492f67995f0305732076cdd3cc1885a454dc9#714492f67995f0305732076cdd3cc1885a454dc9"
 dependencies = [
  "dungers",
  "thiserror 2.0.18",
@@ -2265,6 +2291,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
+name = "os_pipe"
+version = "1.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d8fae84b431384b68627d0f9b3b1245fcf9f46f6c0e3dc902e9dce64edd1967"
+dependencies = [
+ "libc",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3078,9 +3114,9 @@ dependencies = [
 
 [[package]]
 name = "semver"
-version = "1.0.27"
+version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d767eb0aabc880b29956c35734170f26ed551a859dbd361d140cdbeca61ab1e2"
+checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
 
 [[package]]
 name = "serde"

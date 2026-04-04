@@ -65,6 +65,13 @@ services:
     environment:
       RUST_LOG: info
 
+  demo-analyzer:
+    build:
+      args:
+        EXE_NAME: demo-analyzer
+    restart: always
+    env_file: .env
+
   hltv-spectator:
     build:
       args:
