@@ -5,9 +5,6 @@ Listens for Watchtower webhooks, then orchestrates a canary deployment
 by gradually shifting traffic from api-stable to api-canary via Caddy's
 admin API. Rolls back automatically if the canary error rate exceeds
 the configured threshold.
-
-Uses the Docker SDK directly — no compose file or volume mounts needed.
-The canary container is cloned from the running stable container's config.
 """
 
 from __future__ import annotations
@@ -21,7 +18,6 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
 import docker
-import docker.errors
 import httpx
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI, Request, Response
@@ -35,8 +31,6 @@ logging.basicConfig(
 log = logging.getLogger("deployer")
 
 HEALTH_PATH = "/v1/info/health"
-CANARY_NAME = "api-canary"
-STABLE_NAME = "api-stable"
 
 
 @dataclass(frozen=True)
@@ -53,10 +47,10 @@ class Config:
     )
     step_observe_seconds: int = int(os.getenv("STEP_OBSERVE_SECONDS", "60"))
     health_timeout: int = int(os.getenv("HEALTH_TIMEOUT", "60"))
+    compose_dir: str = os.getenv("COMPOSE_DIR", "/workdir")
     image_name: str = os.getenv(
         "IMAGE_NAME", "ghcr.io/deadlock-api/deadlock-api"
     )
-    image_tag: str = os.getenv("IMAGE_TAG", "latest")
     tls: bool = os.getenv("TLS", "true").lower() == "true"
 
 
@@ -64,7 +58,7 @@ cfg = Config()
 _docker_client: docker.DockerClient | None = None
 
 
-def _get_docker() -> docker.DockerClient:
+def _get_docker_client() -> docker.DockerClient:
     global _docker_client
     if _docker_client is None:
         _docker_client = docker.from_env()
@@ -91,180 +85,26 @@ class DeployState:
 state = DeployState()
 
 
-def _pull_image() -> docker.models.images.Image:
-    log.info("Pulling %s:%s...", cfg.image_name, cfg.image_tag)
-    image = _get_docker().images.pull(cfg.image_name, tag=cfg.image_tag)
-    log.info("Pulled %s", image.id[:19])
-    return image
-
-
-def _remove_container(name: str) -> None:
-    try:
-        c = _get_docker().containers.get(name)
-        c.stop(timeout=10)
-        c.remove()
-        log.info("Removed container %s", name)
-    except docker.errors.NotFound:
-        pass
-
-
-def _clone_container_as_canary(image: docker.models.images.Image) -> docker.models.containers.Container:
-    """Create a canary container by cloning the stable container's config."""
-    client = _get_docker()
-
-    try:
-        stable = client.containers.get(STABLE_NAME)
-    except docker.errors.NotFound:
-        raise RuntimeError(f"Stable container '{STABLE_NAME}' not found")
-
-    attrs = stable.attrs
-    config = attrs["Config"]
-    host_config = attrs["HostConfig"]
-    network_settings = attrs["NetworkSettings"]["Networks"]
-
-    # Clean up any leftover canary
-    _remove_container(CANARY_NAME)
-
-    # Extract volume binds and mounts
-    binds = host_config.get("Binds") or []
-    mounts = host_config.get("Mounts")
-
-    # Extract healthcheck
-    healthcheck = config.get("Healthcheck")
-
-    # Extract resource limits
-    mem_limit = host_config.get("Memory", 0)
-    nano_cpus = host_config.get("NanoCpus", 0)
-
-    # Extract log config
-    log_config = host_config.get("LogConfig")
-
-    # Build environment, preserving all env vars from stable
-    environment = config.get("Env") or []
-
-    # Extract restart policy
-    restart_policy = host_config.get("RestartPolicy") or {"Name": "always"}
-
-    # Figure out which networks stable is connected to
-    networks = list(network_settings.keys())
-
-    # Create canary — connect to first network during creation
-    first_network = networks[0] if networks else None
-    networking_config = None
-    if first_network:
-        networking_config = client.api.create_networking_config({
-            first_network: client.api.create_endpoint_config()
-        })
-
-    # Build host config
-    host_config_kwargs = {
-        "binds": binds,
-        "restart_policy": restart_policy,
-    }
-    if mem_limit:
-        host_config_kwargs["mem_limit"] = mem_limit
-    if nano_cpus:
-        host_config_kwargs["nano_cpus"] = nano_cpus
-    if log_config:
-        host_config_kwargs["log_config"] = docker.types.LogConfig(
-            type=log_config.get("Type", "json-file"),
-            config=log_config.get("Config", {}),
-        )
-
-    # Use the labels from stable but update container name reference
-    labels = dict(config.get("Labels") or {})
-
-    container_id = client.api.create_container(
-        image=image.id,
-        name=CANARY_NAME,
-        environment=environment,
-        healthcheck=healthcheck,
-        labels=labels,
-        host_config=client.api.create_host_config(**host_config_kwargs),
-        networking_config=networking_config,
+async def _compose(*args: str) -> asyncio.subprocess.Process:
+    cmd = ["docker", "compose", *args]
+    log.info("Running: %s", " ".join(cmd))
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        cwd=cfg.compose_dir,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
-
-    # Connect to remaining networks
-    for net in networks[1:]:
-        client.api.connect_container_to_network(container_id["Id"], net)
-
-    client.api.start(container_id["Id"])
-    log.info("Started canary container from image %s", image.id[:19])
-    return client.containers.get(CANARY_NAME)
-
-
-def _recreate_stable(image: docker.models.images.Image) -> None:
-    """Recreate the stable container with the new image, preserving its config."""
-    client = _get_docker()
-
-    try:
-        stable = client.containers.get(STABLE_NAME)
-    except docker.errors.NotFound:
-        raise RuntimeError(f"Stable container '{STABLE_NAME}' not found")
-
-    attrs = stable.attrs
-    config = attrs["Config"]
-    host_config = attrs["HostConfig"]
-    network_settings = attrs["NetworkSettings"]["Networks"]
-
-    binds = host_config.get("Binds") or []
-    healthcheck = config.get("Healthcheck")
-    mem_limit = host_config.get("Memory", 0)
-    nano_cpus = host_config.get("NanoCpus", 0)
-    log_config = host_config.get("LogConfig")
-    environment = config.get("Env") or []
-    restart_policy = host_config.get("RestartPolicy") or {"Name": "always"}
-    labels = dict(config.get("Labels") or {})
-    networks = list(network_settings.keys())
-
-    # Stop and remove old stable
-    stable.stop(timeout=10)
-    stable.remove()
-    log.info("Removed old stable container")
-
-    first_network = networks[0] if networks else None
-    networking_config = None
-    if first_network:
-        networking_config = client.api.create_networking_config({
-            first_network: client.api.create_endpoint_config()
-        })
-
-    host_config_kwargs = {
-        "binds": binds,
-        "restart_policy": restart_policy,
-    }
-    if mem_limit:
-        host_config_kwargs["mem_limit"] = mem_limit
-    if nano_cpus:
-        host_config_kwargs["nano_cpus"] = nano_cpus
-    if log_config:
-        host_config_kwargs["log_config"] = docker.types.LogConfig(
-            type=log_config.get("Type", "json-file"),
-            config=log_config.get("Config", {}),
-        )
-
-    container_id = client.api.create_container(
-        image=image.id,
-        name=STABLE_NAME,
-        environment=environment,
-        healthcheck=healthcheck,
-        labels=labels,
-        host_config=client.api.create_host_config(**host_config_kwargs),
-        networking_config=networking_config,
-    )
-
-    for net in networks[1:]:
-        client.api.connect_container_to_network(container_id["Id"], net)
-
-    client.api.start(container_id["Id"])
-    log.info("Started new stable container from image %s", image.id[:19])
+    stdout, stderr = await proc.communicate()
+    if proc.returncode != 0 and stderr:
+        log.warning("compose stderr: %s", stderr.decode().strip())
+    return proc
 
 
 async def _container_healthy(name: str, timeout: int | None = None) -> bool:
     timeout = timeout if timeout is not None else cfg.health_timeout
     for _ in range(timeout // 2):
         try:
-            container = await asyncio.to_thread(_get_docker().containers.get, name)
+            container = await asyncio.to_thread(_get_docker_client().containers.get, name)
             attrs = await asyncio.to_thread(getattr, container, "attrs")
             health = attrs.get("State", {}).get("Health", {})
             if health.get("Status") == "healthy":
@@ -276,7 +116,7 @@ async def _container_healthy(name: str, timeout: int | None = None) -> bool:
 
 
 async def _stop_canary() -> None:
-    await asyncio.to_thread(_remove_container, CANARY_NAME)
+    await _compose("--profile", "canary", "stop", "api-canary")
 
 
 async def _apply_canary_weight(
@@ -380,14 +220,15 @@ def _windowed_error_rate(
     return (fails_delta / requests_delta) * 100.0
 
 
-async def _promote(client: httpx.AsyncClient, image: docker.models.images.Image) -> None:
+async def _promote(client: httpx.AsyncClient) -> None:
     log.info("Canary passed all steps. Promoting to stable...")
     await _apply_canary_weight(client, 100)
 
-    await asyncio.to_thread(_recreate_stable, image)
+    await _compose("pull", "api-stable")
+    await _compose("up", "-d", "api-stable")
 
     log.info("Waiting for new stable to become healthy...")
-    if not await _container_healthy(STABLE_NAME):
+    if not await _container_healthy("api-stable"):
         log.error("New stable never became healthy! Keeping canary as primary.")
         return
 
@@ -406,12 +247,12 @@ async def deploy() -> None:
         async with httpx.AsyncClient(timeout=10.0) as client:
             log.info("Starting canary deployment...")
 
-            image = await asyncio.to_thread(_pull_image)
-            await asyncio.to_thread(_clone_container_as_canary, image)
+            await _compose("pull", "api-canary")
+            await _compose("--profile", "canary", "up", "-d", "api-canary")
             canary_started = True
 
             log.info("Waiting for canary to become healthy...")
-            if not await _container_healthy(CANARY_NAME):
+            if not await _container_healthy("api-canary"):
                 log.error("Canary never became healthy. Aborting.")
                 await _stop_canary()
                 return
@@ -442,7 +283,7 @@ async def deploy() -> None:
 
                 log.info("Step %d%% passed.", pct)
 
-            await _promote(client, image)
+            await _promote(client)
     except Exception:
         log.exception("Unexpected error during deployment")
         if canary_started:
@@ -473,6 +314,8 @@ async def _trigger_deploy(background_tasks: BackgroundTasks) -> Response:
     if not await state.try_start():
         await state.finish()
         return Response(status_code=409, content="deploy in progress")
+    # Release the lock — deploy() will re-acquire via try_start.
+    # We claimed it just to do an atomic check; let deploy() own the lifecycle.
     await state.finish()
     background_tasks.add_task(deploy)
     return Response(status_code=202, content="deploy started")

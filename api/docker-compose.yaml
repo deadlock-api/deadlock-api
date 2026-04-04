@@ -69,6 +69,8 @@ services:
     container_name: deployer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workdir
+    working_dir: /workdir
     environment:
       CADDY_API: http://caddy:2019
       STABLE_UPSTREAM: api-stable:3000
