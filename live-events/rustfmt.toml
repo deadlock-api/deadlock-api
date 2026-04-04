@@ -1,0 +1,9 @@
+# Nightly Features
+imports_granularity = "Module"
+group_imports = "StdExternalCrate"
+format_code_in_doc_comments = true
+
+# Stable Features
+merge_derives = true
+use_field_init_shorthand = true
+use_try_shorthand = true
