@@ -75,15 +75,9 @@ pub(crate) enum VisitorError {
     Decode(#[from] prost::DecodeError),
 }
 
-/// Extra ticks to parse after all players are complete, waiting for ban data.
-/// At 64 ticks/s this is ~1 second.
-const BAN_GRACE_TICKS: i32 = 64;
-
 pub(crate) struct DemoAnalyzerVisitor {
     pub state: Arc<Mutex<SharedState>>,
     expected_players: usize,
-    /// Tick at which all players became complete. `None` until that happens.
-    players_complete_tick: Option<i32>,
 }
 
 impl DemoAnalyzerVisitor {
@@ -91,7 +85,6 @@ impl DemoAnalyzerVisitor {
         Self {
             state,
             expected_players,
-            players_complete_tick: None,
         }
     }
 }
@@ -131,21 +124,12 @@ impl Visitor for DemoAnalyzerVisitor {
                     entity_index = idx,
                     steam_id, tick, "PlayerController complete ({count}/{expected})",
                 );
-                if state.all_players_complete(expected) {
-                    if state.bans_received {
-                        debug!(
-                            tick,
-                            "All {expected} players + bans collected, stopping parse early"
-                        );
-                        return Err(VisitorError::AllDataCollected);
-                    }
-                    if self.players_complete_tick.is_none() {
-                        debug!(
-                            tick,
-                            "All {expected} players complete, waiting for ban data"
-                        );
-                        self.players_complete_tick = Some(tick);
-                    }
+                if state.all_data_complete(expected) {
+                    debug!(
+                        tick,
+                        "All {expected} players + bans collected, stopping parse early"
+                    );
+                    return Err(VisitorError::AllDataCollected);
                 }
             }
         } else if hash == PLAYER_PAWN_HASH {
@@ -175,21 +159,12 @@ impl Visitor for DemoAnalyzerVisitor {
                     tick,
                     "PlayerPawn complete ({count}/{expected})",
                 );
-                if state.all_players_complete(expected) {
-                    if state.bans_received {
-                        debug!(
-                            tick,
-                            "All {expected} players + bans collected, stopping parse early"
-                        );
-                        return Err(VisitorError::AllDataCollected);
-                    }
-                    if self.players_complete_tick.is_none() {
-                        debug!(
-                            tick,
-                            "All {expected} players complete, waiting for ban data"
-                        );
-                        self.players_complete_tick = Some(tick);
-                    }
+                if state.all_data_complete(expected) {
+                    debug!(
+                        tick,
+                        "All {expected} players + bans collected, stopping parse early"
+                    );
+                    return Err(VisitorError::AllDataCollected);
                 }
             }
         }
@@ -222,15 +197,6 @@ impl Visitor for DemoAnalyzerVisitor {
     }
 
     async fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
-        if let Some(complete_tick) = self.players_complete_tick
-            && ctx.tick() >= complete_tick + BAN_GRACE_TICKS
-        {
-            debug!(
-                tick = ctx.tick(),
-                "Ban grace period expired, stopping without ban data"
-            );
-            return Err(VisitorError::AllDataCollected);
-        }
         if ctx.tick() > MAX_PARSE_TICKS {
             debug!(
                 tick = ctx.tick(),
