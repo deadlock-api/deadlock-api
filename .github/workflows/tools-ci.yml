@@ -124,6 +124,7 @@ jobs:
           - history-fetcher
           - steam-profile-fetcher
           - update-assets-tables
+          - demo-analyzer
     steps:
       - uses: actions/checkout@v6
       - name: Filter changed paths
