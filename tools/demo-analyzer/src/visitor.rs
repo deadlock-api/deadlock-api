@@ -62,8 +62,8 @@ impl SharedState {
     }
 }
 
-/// Maximum tick to parse before stopping. At 64 ticks/s this is ~30 seconds.
-const MAX_PARSE_TICKS: i32 = 64 * 30;
+/// Maximum tick to parse before stopping. At 64 ticks/s this is ~10 seconds.
+const MAX_PARSE_TICKS: i32 = 640;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum VisitorError {
