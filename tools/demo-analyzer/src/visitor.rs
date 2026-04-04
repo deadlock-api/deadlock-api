@@ -41,6 +41,7 @@ pub(crate) struct SharedState {
     pub controllers: HashMap<i32, ControllerData>,
     pub pawns: HashMap<i32, PawnData>,
     pub banned_hero_ids: Vec<u32>,
+    pub bans_received: bool,
 }
 
 impl SharedState {
@@ -57,12 +58,12 @@ impl SharedState {
 
     /// Returns true when all data (players + bans) has been collected.
     fn all_data_complete(&self, expected_players: usize) -> bool {
-        self.all_players_complete(expected_players) && !self.banned_hero_ids.is_empty()
+        self.all_players_complete(expected_players) && self.bans_received
     }
 }
 
-/// Maximum tick to parse before stopping. At 64 ticks/s this is ~5 minutes.
-const MAX_PARSE_TICKS: i32 = 64 * 300;
+/// Maximum tick to parse before stopping. At 64 ticks/s this is ~30 seconds.
+const MAX_PARSE_TICKS: i32 = 64 * 30;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum VisitorError {
@@ -173,6 +174,7 @@ impl Visitor for DemoAnalyzerVisitor {
                 .lock()
                 .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
             state.banned_hero_ids = msg.banned_hero_ids;
+            state.bans_received = true;
             debug!(banned_heroes = ?state.banned_hero_ids, "Extracted banned heroes");
             if state.all_data_complete(self.expected_players) {
                 debug!("All data collected after bans, stopping parse early");
