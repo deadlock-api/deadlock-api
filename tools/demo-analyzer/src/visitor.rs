@@ -58,7 +58,7 @@ impl SharedState {
 
     /// Returns true when all data (players + bans) has been collected.
     fn all_data_complete(&self, expected_players: usize) -> bool {
-        self.all_players_complete(expected_players)
+        self.all_players_complete(expected_players) && self.bans_received
     }
 }
 
