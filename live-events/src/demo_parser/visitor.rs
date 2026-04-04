@@ -10,7 +10,8 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::debug;
 use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
 use valveprotos::deadlock::{
-    CCitadelUserMsgChatMsg, CCitadelUserMsgHeroKilled, CitadelUserMessageIds,
+    CCitadelUserMsgBannedHeroes, CCitadelUserMsgChatMsg, CCitadelUserMsgHeroKilled,
+    CitadelUserMessageIds,
 };
 
 use crate::demo_parser::entity_events::{
@@ -149,6 +150,20 @@ impl Visitor for SendingVisitor {
                 tick: ctx.tick(),
                 game_time: self.game_time,
                 event: DemoEventPayload::HeroKilled(msg),
+            };
+            let sse_event = demo_event.try_into()?;
+            self.sender.send(sse_event)?;
+        }
+
+        if packet_type == CitadelUserMessageIds::KEUserMsgBannedHeroes as u32
+            && let Ok(msg) = CCitadelUserMsgBannedHeroes::decode(data)
+        {
+            let demo_event = DemoEvent {
+                tick: ctx.tick(),
+                game_time: self.game_time,
+                event: DemoEventPayload::BannedHeroes {
+                    banned_hero_ids: msg.banned_hero_ids,
+                },
             };
             let sse_event = demo_event.try_into()?;
             self.sender.send(sse_event)?;

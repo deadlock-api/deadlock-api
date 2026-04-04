@@ -45,6 +45,9 @@ pub(super) enum DemoEventPayload {
         lane_color: Option<i32>,
     },
     HeroKilled(CCitadelUserMsgHeroKilled),
+    BannedHeroes {
+        banned_hero_ids: Vec<u32>,
+    },
     TickEnd,
 }
 
@@ -56,6 +59,7 @@ impl Display for DemoEventPayload {
             } => write!(f, "{entity_type}_entity_{delta}"),
             Self::ChatMessage { .. } => write!(f, "chat_message"),
             Self::HeroKilled { .. } => write!(f, "hero_killed"),
+            Self::BannedHeroes { .. } => write!(f, "banned_heroes"),
             Self::TickEnd => write!(f, "tick_end"),
         }
     }
