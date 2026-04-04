@@ -122,6 +122,10 @@ impl Visitor for DemoAnalyzerVisitor {
                     entity_index = idx,
                     steam_id, "PlayerController complete ({count}/{expected})",
                 );
+                if state.all_data_complete(expected) {
+                    debug!("All {expected} players + bans collected, stopping parse early");
+                    return Err(VisitorError::AllDataCollected);
+                }
             }
         } else if hash == PLAYER_PAWN_HASH {
             let idx = entity.index();
