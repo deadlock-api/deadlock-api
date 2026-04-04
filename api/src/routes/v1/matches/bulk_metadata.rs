@@ -191,7 +191,13 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         || query.include_player_stats
         || query.include_player_death_details;
     if has_player_fields {
-        let mut player_select_fields = vec!["account_id", "hero_id", "player_slot", "team"];
+        let mut player_select_fields = vec![
+            "match_player.account_id",
+            "hero_id",
+            "player_slot",
+            "team",
+            "dp.hero_build_id",
+        ];
         if query.include_player_info || query.include_player_kda {
             player_select_fields.extend(vec!["kills", "deaths", "assists"]);
         }
@@ -372,8 +378,10 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     query.push_str(&select_fields.join(", "));
     if has_player_fields {
         query.push_str(
-            " FROM match_player INNER JOIN match_info USING (match_id) WHERE match_id IN \
-             t_matches ",
+            " FROM match_player \
+             INNER JOIN match_info USING (match_id) \
+             LEFT JOIN demo_player AS dp ON match_player.match_id = dp.match_id AND match_player.account_id = dp.account_id \
+             WHERE match_player.match_id IN t_matches ",
         );
     } else {
         query.push_str(" FROM match_info WHERE match_id IN t_matches ");
@@ -420,6 +428,10 @@ async fn parse_lines(mut lines: Lines<BytesCursor>) -> APIResult<Vec<serde_json:
     summary = "Bulk Metadata",
     description = "
 This endpoints lets you fetch multiple match metadata at once. The response is a JSON array of match metadata.
+
+When player info is included, each player object contains a `hero_build_id` field (if available) from demo analysis.
+
+> **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
 
 ### Rate Limits:
 | Type | Limit |
@@ -720,7 +732,7 @@ mod tests {
         let result = build_query(query).unwrap();
         let normalized = normalize_whitespace(&result);
 
-        assert!(normalized.contains("groupUniqArray(12)((account_id, hero_id, player_slot, team, kills, deaths, assists, items)::JSON) as players"));
+        assert!(normalized.contains("groupUniqArray(12)((match_player.account_id, hero_id, player_slot, team, dp.hero_build_id, kills, deaths, assists, items)::JSON) as players"));
         assert!(!normalized.contains("player_tracked_stats"));
         assert!(!normalized.contains("accolades"));
         assert!(!normalized.contains("net_worth"));

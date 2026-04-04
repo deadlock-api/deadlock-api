@@ -31,6 +31,23 @@ use crate::services::rate_limiter::{Quota, RateLimitClient};
 use crate::services::steam::client::SteamClient;
 use crate::utils::types::MatchIdQuery;
 
+#[derive(clickhouse::Row, serde::Deserialize)]
+struct DemoPlayerBuild {
+    account_id: u32,
+    hero_build_id: u64,
+}
+
+/// Wrapper around `CMsgMatchMetaDataContents` that adds hero build IDs from demo analysis.
+#[derive(serde::Serialize)]
+struct MatchMetadataResponse {
+    #[serde(flatten)]
+    metadata: CMsgMatchMetaDataContents,
+    /// Map of `account_id` to `hero_build_id`.
+    /// The `hero_build_id` is the first build the player had selected when the game started.
+    /// It does not reflect any build changes made during the match.
+    hero_build_ids: std::collections::HashMap<u32, u64>,
+}
+
 static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 
 async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
@@ -250,6 +267,10 @@ pub(super) async fn metadata_raw(
     description = "
 This endpoint returns the match metadata for the given `match_id` parsed into JSON.
 
+Each player object is enriched with a `hero_build_id` field (if available) from demo analysis.
+
+> **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
+
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
 Relevant Protobuf Messages:
@@ -281,5 +302,23 @@ pub(super) async fn metadata(
         is_custom.unwrap_or_default(),
     )
     .await?;
-    parse_match_metadata_raw(&raw_data).await.map(Json)
+    let (metadata, builds) = tokio::join!(parse_match_metadata_raw(&raw_data), async {
+        state
+            .ch_client_ro
+            .query("SELECT account_id, hero_build_id FROM demo_player WHERE match_id = ?")
+            .bind(match_id)
+            .fetch_all::<DemoPlayerBuild>()
+            .await
+            .unwrap_or_default()
+    });
+
+    let hero_build_ids = builds
+        .into_iter()
+        .map(|b| (b.account_id, b.hero_build_id))
+        .collect();
+
+    Ok(Json(MatchMetadataResponse {
+        metadata: metadata?,
+        hero_build_ids,
+    }))
 }
