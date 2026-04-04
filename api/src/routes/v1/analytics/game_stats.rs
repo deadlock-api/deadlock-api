@@ -1,5 +1,6 @@
 use axum::Json;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::TimedCache;
@@ -11,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::default_last_month_timestamp;
 
@@ -83,9 +84,11 @@ pub(crate) struct GameStatsQuery {
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
     /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Only works for `game_modes` with badge data (e.g. `normal`, not `street_brawl`).
     #[param(minimum = 0, maximum = 116)]
     min_average_badge: Option<u8>,
     /// Filter matches based on the average badge level (tier = first digits, subtier = last digit) of *both* teams involved. See more: <https://assets.deadlock-api.com/v2/ranks>
+    /// Only works for `game_modes` with badge data (e.g. `normal`, not `street_brawl`).
     #[param(minimum = 0, maximum = 116)]
     max_average_badge: Option<u8>,
     /// Filter matches based on their ID.
@@ -301,6 +304,15 @@ pub(crate) async fn game_stats(
     Query(query): Query<GameStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
+        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
+    {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot filter by average badge for street brawl game mode".to_string(),
+        });
+    }
+
     get_game_stats(&state.ch_client_ro, query).await.map(Json)
 }
 

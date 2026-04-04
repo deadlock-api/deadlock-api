@@ -2,6 +2,7 @@
 
 use axum::Json;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
@@ -11,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -259,6 +260,14 @@ pub(crate) async fn kill_death_stats(
     Query(query): Query<KillDeathStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
+        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
+    {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot filter by average badge for street brawl game mode".to_string(),
+        });
+    }
     get_kill_death_stats(&state.ch_client_ro, query)
         .await
         .map(Json)

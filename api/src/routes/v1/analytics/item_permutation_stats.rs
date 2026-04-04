@@ -244,6 +244,14 @@ pub(super) async fn item_permutation_stats(
     Query(mut query): Query<ItemPermutationStatsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
+        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
+    {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot filter by average badge for street brawl game mode".to_string(),
+        });
+    }
     #[allow(deprecated)]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     if query.comb_size.is_some() && query.item_ids.is_some() {

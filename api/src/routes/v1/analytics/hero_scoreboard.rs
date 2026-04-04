@@ -1,5 +1,6 @@
 use axum::Json;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::TimedCache;
@@ -223,6 +224,14 @@ pub(super) async fn hero_scoreboard(
     Query(mut query): Query<HeroScoreboardQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
+        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
+    {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot filter by average badge for street brawl game mode".to_string(),
+        });
+    }
     if let Some(account_ids) = query.account_ids {
         let protected_users = state
             .steam_client

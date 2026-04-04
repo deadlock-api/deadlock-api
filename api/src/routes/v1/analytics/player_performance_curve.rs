@@ -1,5 +1,6 @@
 use axum::Json;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::TimedCache;
@@ -12,7 +13,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{MatchInfoFilters, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -258,6 +259,14 @@ pub(crate) async fn player_performance_curve(
     Query(mut query): Query<PlayerPerformanceCurveQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    if query.game_mode.is_some_and(|g| g == GameMode::StreetBrawl)
+        && (query.min_average_badge.is_some() || query.max_average_badge.is_some())
+    {
+        return Err(APIError::StatusMsg {
+            status: StatusCode::BAD_REQUEST,
+            message: "Cannot filter by average badge for street brawl game mode".to_string(),
+        });
+    }
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
     get_player_performance_curve(&state.ch_client_ro, query)
         .await
