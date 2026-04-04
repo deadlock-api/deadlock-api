@@ -39,15 +39,15 @@ const STEAM_ID_64_IDENT: u64 = 76_561_197_960_265_728;
 #[command(about = "Analyze Deadlock demo files to extract player hero build data")]
 struct Cli {
     /// Number of demos to process concurrently
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, env, default_value_t = 5)]
     parallelism: usize,
 
     /// Batch size for `ClickHouse` inserts
-    #[arg(long, default_value_t = 100)]
+    #[arg(long, env, default_value_t = 100)]
     batch_size: usize,
 
     /// Run once and exit (no loop)
-    #[arg(long)]
+    #[arg(long, env)]
     once: bool,
 }
 

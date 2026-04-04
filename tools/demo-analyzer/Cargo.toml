@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 async-compression = { version = "0.4", features = ["tokio", "bzip2"] }
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 clickhouse = { version = "0.14.3", features = ["time"] }
 common = { version = "0.1.0", path = "../common" }
 dungers = { git = "https://github.com/deadlock-api/dungers.git", rev = "5e1e2aac76a027987911de3ef3d23ecfd992a7fb", features = ["varint"] }
