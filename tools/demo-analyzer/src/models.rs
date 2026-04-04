@@ -6,7 +6,6 @@ pub(crate) struct MatchWithReplay {
     pub match_id: u64,
     pub cluster_id: Option<u32>,
     pub replay_salt: Option<u32>,
-    pub game_mode: String,
 }
 
 #[derive(Row, Serialize, Debug)]

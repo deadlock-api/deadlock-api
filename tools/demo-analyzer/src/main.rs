@@ -134,7 +134,7 @@ async fn fetch_pending_matches(
 ) -> anyhow::Result<Vec<MatchWithReplay>> {
     let matches = ch_client
         .query(
-            "SELECT ms.match_id, ms.cluster_id, ms.replay_salt, CAST(mi.game_mode AS String) AS game_mode \
+            "SELECT ms.match_id, ms.cluster_id, ms.replay_salt \
              FROM match_salts ms FINAL \
              INNER JOIN match_info mi ON ms.match_id = mi.match_id \
              WHERE ms.created_at > now() - INTERVAL 30 DAY \
@@ -142,6 +142,7 @@ async fn fetch_pending_matches(
                AND ms.replay_salt > 0 \
                AND ms.cluster_id IS NOT NULL \
                AND ms.cluster_id > 0 \
+               AND mi.game_mode = 'Normal' \
                AND ms.match_id NOT IN ( \
                  SELECT DISTINCT match_id FROM demo_player \
                ) \
@@ -169,8 +170,7 @@ async fn process_demo(
     );
 
     let match_id = match_info.match_id;
-    let expected_players = expected_players_for_game_mode(&match_info.game_mode);
-    debug!(match_id, %url, game_mode = %match_info.game_mode, expected_players, "Downloading demo");
+    debug!(match_id, %url, "Downloading demo");
     let response = http_client.get(&url).send().await?.error_for_status()?;
 
     // Stream HTTP → bz2 decompress → pipe to sync reader → parser.
@@ -199,7 +199,7 @@ async fn process_demo(
     let parse_handle = std::thread::spawn(move || -> anyhow::Result<()> {
         let reader = BufReader::new(pipe_reader);
         let demo_file = StreamingDemoFile::start_reading(reader)?;
-        let visitor = DemoAnalyzerVisitor::new(state_clone, expected_players);
+        let visitor = DemoAnalyzerVisitor::new(state_clone, 12);
         let mut parser = haste::parser::Parser::from_stream_with_visitor(demo_file, visitor)?;
 
         // The visitor's async methods are actually sync (just HashMap ops),
@@ -244,13 +244,6 @@ async fn process_demo(
 
     info!("Match {match_id}: extracted {} player rows", rows.len());
     Ok(rows)
-}
-
-fn expected_players_for_game_mode(game_mode: &str) -> usize {
-    match game_mode {
-        "StreetBrawl" => 8,
-        _ => 12,
-    }
 }
 
 fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayerBuild> {
