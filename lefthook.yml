@@ -37,6 +37,18 @@ pre-commit:
       run: pnpm fmt && git add -u {staged_files}
       fail_text: "Website formatting failed"
 
+    live-events-fmt:
+      root: "live-events/"
+      glob: "live-events/**/*.rs"
+      run: cargo fmt --all && git add -u {staged_files}
+      fail_text: "Rust formatting failed in live-events/"
+
+    live-events-machete:
+      root: "live-events/"
+      glob: "live-events/{Cargo.toml,Cargo.lock,src/**}"
+      run: cargo machete
+      fail_text: "Unused dependencies in live-events/. Run 'cargo machete --fix' to fix."
+
     website-lint:
       root: "website/"
       glob: "website/**/*.{ts,tsx,js,jsx}"
@@ -57,6 +69,12 @@ pre-push:
       glob: "tools/**/*.rs"
       run: cargo clippy --all-targets --locked --all-features -- -D warnings
       fail_text: "Clippy warnings in tools/"
+
+    live-events-clippy:
+      root: "live-events/"
+      glob: "live-events/**/*.rs"
+      run: cargo clippy --all-targets --locked -- -D warnings
+      fail_text: "Clippy warnings in live-events/"
 
     website-build:
       root: "website/"

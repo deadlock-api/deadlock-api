@@ -1,22 +1,28 @@
-name: Rust CI/CD
+name: Live Events CI/CD
 
 on:
   push:
     branches:
       - master
+    paths:
+      - 'live-events/**'
+      - '.github/workflows/live-events-ci.yml'
   pull_request:
     branches:
       - master
+    paths:
+      - 'live-events/**'
+      - '.github/workflows/live-events-ci.yml'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Docker image tag to push (e.g., v1.0.0, specific-feature)"
+        description: 'Docker image tag to push (e.g., v1.0.0, specific-feature)'
         required: true
         type: string
 
 env:
   CARGO_TERM_COLOR: always
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository }}-live-events
 
 permissions:
   contents: read
@@ -31,37 +37,37 @@ jobs:
   fmt:
     name: Format
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: live-events
     steps:
       - uses: actions/checkout@v6
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add rustfmt
+      - run: rustup component add rustfmt
       - name: Rustfmt Check
-        uses: actions-rust-lang/rustfmt@v1
+        run: cargo fmt --all -- --check
 
   deps:
     name: Dependencies
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: live-events
     steps:
       - uses: actions/checkout@v6
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-machete
       - name: Machete
-        uses: bnjbvr/cargo-machete@7959c845782fed02ee69303126d4a12d64f1db18
+        run: cargo machete
 
   typos:
     name: Typos
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: live-events
     steps:
       - uses: actions/checkout@v6
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
       - uses: taiki-e/cache-cargo-install-action@v3
         with:
           tool: typos-cli
@@ -71,25 +77,24 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: live-events
     steps:
       - uses: actions/checkout@v6
-      - name: Install Protocol Buffers compiler
+      - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-cache-${{ runner.os }}-${{ runner.arch }}-stable"
-      - name: Update Rust toolchain to stable
-        run: |
-          rustup override set stable
-          rustup update stable
-          rustup component add clippy
-      - name: Cargo Clippy (Deny Warnings)
+          shared-key: "live-events-build-cache-${{ runner.os }}-${{ runner.arch }}"
+          workspaces: "live-events -> target"
+      - run: rustup component add clippy
+      - name: Cargo Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
-      - name: Cargo Clippy (Allow Warnings)
-        run: cargo clippy --all-targets --locked
-  deploy-build:
-    name: "Deploy: Build"
+
+  deploy:
+    name: Deploy
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
     strategy:
       matrix:
@@ -103,8 +108,7 @@ jobs:
             docker_platform: linux/arm64
     runs-on: ${{ matrix.runner }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -126,11 +130,11 @@ jobs:
             DOCKER_TAG="${{ github.sha }}"
           fi
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "Using Docker tag: $DOCKER_TAG"
 
       - name: Build and push Docker image
         uses: useblacksmith/build-push-action@v2
         with:
+          context: live-events
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}-${{ matrix.platform }}
           platforms: ${{ matrix.docker_platform }}
@@ -138,7 +142,7 @@ jobs:
   deploy-merge-manifests:
     name: "Deploy: Merge Manifests"
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    needs: deploy-build
+    needs: deploy
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Login to GitHub Container Registry
@@ -158,7 +162,6 @@ jobs:
             DOCKER_TAG="${{ github.sha }}"
           fi
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "Using Docker tag: $DOCKER_TAG"
 
       - name: Create and push multi-arch manifest
         run: |

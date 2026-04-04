@@ -52,6 +52,27 @@ updates:
           - "*"
     rebase-strategy: auto
 
+  - package-ecosystem: cargo
+    directory: /live-events
+    schedule:
+      interval: daily
+    rebase-strategy: auto
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+
+  - package-ecosystem: docker
+    directory: /live-events
+    schedule:
+      interval: daily
+    groups:
+      all-docker:
+        patterns:
+          - "*"
+    rebase-strategy: auto
+
   - package-ecosystem: npm
     directory: /website
     schedule:
