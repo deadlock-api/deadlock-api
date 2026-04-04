@@ -9,9 +9,9 @@ pub(crate) struct MatchWithReplay {
 }
 
 #[derive(Row, Serialize, Debug)]
-pub(crate) struct DemoPlayerBuild {
+pub(crate) struct DemoPlayer {
     pub match_id: u64,
     pub account_id: u32,
-    pub hero_id: u32,
     pub hero_build_id: u64,
+    pub banned_hero_ids: Vec<u32>,
 }

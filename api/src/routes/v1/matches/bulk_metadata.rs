@@ -376,6 +376,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     // SELECT
     query.push_str("SELECT ");
     query.push_str(&select_fields.join(", "));
+    select_fields.push("any(dp.banned_hero_ids) as banned_hero_ids".to_owned());
     if has_player_fields {
         query.push_str(
             " FROM match_player \
@@ -384,7 +385,11 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
              WHERE match_player.match_id IN t_matches ",
         );
     } else {
-        query.push_str(" FROM match_info WHERE match_id IN t_matches ");
+        query.push_str(
+            " FROM match_info \
+             LEFT JOIN demo_player AS dp ON match_info.match_id = dp.match_id \
+             WHERE match_info.match_id IN t_matches ",
+        );
     }
     // GROUP By
     query.push_str(" GROUP BY match_id ");

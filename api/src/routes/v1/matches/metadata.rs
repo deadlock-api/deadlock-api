@@ -32,9 +32,10 @@ use crate::services::steam::client::SteamClient;
 use crate::utils::types::MatchIdQuery;
 
 #[derive(clickhouse::Row, serde::Deserialize)]
-struct DemoPlayerBuild {
+struct DemoPlayerRow {
     account_id: u32,
     hero_build_id: u64,
+    banned_hero_ids: Vec<u32>,
 }
 
 /// Wrapper around `CMsgMatchMetaDataContents` that adds hero build IDs from demo analysis.
@@ -46,6 +47,8 @@ struct MatchMetadataResponse {
     /// The `hero_build_id` is the first build the player had selected when the game started.
     /// It does not reflect any build changes made during the match.
     hero_build_ids: std::collections::HashMap<u32, u64>,
+    /// List of hero IDs that were banned in this match.
+    banned_hero_ids: Vec<u32>,
 }
 
 static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
@@ -302,23 +305,31 @@ pub(super) async fn metadata(
         is_custom.unwrap_or_default(),
     )
     .await?;
-    let (metadata, builds) = tokio::join!(parse_match_metadata_raw(&raw_data), async {
+    let (metadata, demo_rows) = tokio::join!(parse_match_metadata_raw(&raw_data), async {
         state
             .ch_client_ro
-            .query("SELECT account_id, hero_build_id FROM demo_player WHERE match_id = ?")
+            .query(
+                "SELECT account_id, hero_build_id, banned_hero_ids \
+                 FROM demo_player WHERE match_id = ?",
+            )
             .bind(match_id)
-            .fetch_all::<DemoPlayerBuild>()
+            .fetch_all::<DemoPlayerRow>()
             .await
             .unwrap_or_default()
     });
 
-    let hero_build_ids = builds
+    let banned_hero_ids = demo_rows
+        .first()
+        .map(|r| r.banned_hero_ids.clone())
+        .unwrap_or_default();
+    let hero_build_ids = demo_rows
         .into_iter()
-        .map(|b| (b.account_id, b.hero_build_id))
+        .map(|r| (r.account_id, r.hero_build_id))
         .collect();
 
     Ok(Json(MatchMetadataResponse {
         metadata: metadata?,
         hero_build_ids,
+        banned_hero_ids,
     }))
 }

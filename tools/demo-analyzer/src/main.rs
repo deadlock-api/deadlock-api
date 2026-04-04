@@ -29,7 +29,7 @@ mod models;
 mod streaming_demo;
 mod visitor;
 
-use models::{DemoPlayerBuild, MatchWithReplay};
+use models::{DemoPlayer, MatchWithReplay};
 use streaming_demo::StreamingDemoFile;
 use visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
@@ -77,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
         info!("Processing {} matches", matches.len());
         gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
 
-        let mut pending_rows: Vec<DemoPlayerBuild> = Vec::new();
+        let mut pending_rows: Vec<DemoPlayer> = Vec::new();
         let mut stream = futures::stream::iter(matches)
             .map(|m| {
                 let http = &http_client;
@@ -157,7 +157,7 @@ async fn fetch_pending_matches(
 async fn process_demo(
     http_client: &reqwest::Client,
     match_info: &MatchWithReplay,
-) -> anyhow::Result<Vec<DemoPlayerBuild>> {
+) -> anyhow::Result<Vec<DemoPlayer>> {
     let cluster_id = match_info
         .cluster_id
         .ok_or_else(|| anyhow::anyhow!("missing cluster_id for match {}", match_info.match_id))?;
@@ -213,7 +213,7 @@ async fn process_demo(
             Ok(()) => Ok(()),
             Err(e)
                 if e.downcast_ref::<VisitorError>()
-                    .is_some_and(|ve| matches!(ve, VisitorError::AllPlayersCollected)) =>
+                    .is_some_and(|ve| matches!(ve, VisitorError::AllDataCollected)) =>
             {
                 Ok(())
             }
@@ -242,11 +242,15 @@ async fn process_demo(
     let state = state.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
     let rows = correlate(match_id, &state);
 
-    info!("Match {match_id}: extracted {} player rows", rows.len());
+    info!(
+        "Match {match_id}: extracted {} player rows, {} bans",
+        rows.len(),
+        state.banned_hero_ids.len()
+    );
     Ok(rows)
 }
 
-fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayerBuild> {
+fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayer> {
     let mut rows = Vec::new();
     for pawn in state.pawns.values() {
         let Some(ctrl_idx) = pawn.controller_index else {
@@ -255,9 +259,7 @@ fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayerBuild> {
         let Some(ctrl) = state.controllers.get(&ctrl_idx) else {
             continue;
         };
-        let (Some(steam_id), Some(hero_id), Some(hero_build_id)) =
-            (ctrl.steam_id, ctrl.hero_id, pawn.hero_build_id)
-        else {
+        let (Some(steam_id), Some(hero_build_id)) = (ctrl.steam_id, pawn.hero_build_id) else {
             continue;
         };
 
@@ -270,22 +272,19 @@ fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayerBuild> {
             continue;
         };
 
-        rows.push(DemoPlayerBuild {
+        rows.push(DemoPlayer {
             match_id,
             account_id,
-            hero_id,
             hero_build_id,
+            banned_hero_ids: state.banned_hero_ids.clone(),
         });
     }
     rows
 }
 
-async fn insert_batch(
-    ch_client: &clickhouse::Client,
-    rows: &[DemoPlayerBuild],
-) -> anyhow::Result<()> {
+async fn insert_batch(ch_client: &clickhouse::Client, rows: &[DemoPlayer]) -> anyhow::Result<()> {
     tryhard::retry_fn(|| async {
-        let mut inserter = ch_client.insert::<DemoPlayerBuild>("demo_player").await?;
+        let mut inserter = ch_client.insert::<DemoPlayer>("demo_player").await?;
         for row in rows {
             inserter.write(row).await?;
         }

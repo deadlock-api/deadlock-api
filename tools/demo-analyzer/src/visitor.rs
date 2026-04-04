@@ -4,9 +4,11 @@ use std::sync::{Arc, Mutex};
 use haste::entities::{DeltaHeader, Entity, ehandle_to_index};
 use haste::fxhash;
 use haste::parser::{Context, Visitor};
+use prost::Message;
 use tracing::debug;
+use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
 
-use crate::hashes::{CONTROLLER_HASH, HERO_BUILD_ID_HASH, HERO_ID_HASH, STEAM_ID_HASH};
+use crate::hashes::{CONTROLLER_HASH, HERO_BUILD_ID_HASH, STEAM_ID_HASH};
 
 const PLAYER_CONTROLLER_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerController");
 const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
@@ -14,12 +16,11 @@ const PLAYER_PAWN_HASH: u64 = fxhash::hash_bytes(b"CCitadelPlayerPawn");
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ControllerData {
     pub steam_id: Option<u64>,
-    pub hero_id: Option<u32>,
 }
 
 impl ControllerData {
     fn is_complete(&self) -> bool {
-        self.steam_id.is_some() && self.hero_id.is_some()
+        self.steam_id.is_some()
     }
 }
 
@@ -39,6 +40,7 @@ impl PawnData {
 pub(crate) struct SharedState {
     pub controllers: HashMap<i32, ControllerData>,
     pub pawns: HashMap<i32, PawnData>,
+    pub banned_hero_ids: Vec<u32>,
 }
 
 impl SharedState {
@@ -52,14 +54,24 @@ impl SharedState {
         let complete_pawns = self.pawns.values().filter(|p| p.is_complete()).count();
         complete_controllers >= expected && complete_pawns >= expected
     }
+
+    /// Returns true when all data (players + bans) has been collected.
+    fn all_data_complete(&self, expected_players: usize) -> bool {
+        self.all_players_complete(expected_players) && !self.banned_hero_ids.is_empty()
+    }
 }
+
+/// Maximum tick to parse before stopping. At 64 ticks/s this is ~5 minutes.
+const MAX_PARSE_TICKS: i32 = 64 * 300;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum VisitorError {
     #[error("lock poisoned: {0}")]
     LockPoisoned(String),
-    #[error("early exit: all player data collected")]
-    AllPlayersCollected,
+    #[error("early exit: all data collected")]
+    AllDataCollected,
+    #[error("protobuf decode: {0}")]
+    Decode(#[from] prost::DecodeError),
 }
 
 pub(crate) struct DemoAnalyzerVisitor {
@@ -98,12 +110,8 @@ impl Visitor for DemoAnalyzerVisitor {
             if let Some(v) = entity.get_value::<u64>(&STEAM_ID_HASH) {
                 entry.steam_id = Some(v);
             }
-            if let Some(v) = entity.get_value::<u32>(&HERO_ID_HASH) {
-                entry.hero_id = Some(v);
-            }
             if !was_complete && entry.is_complete() {
                 let steam_id = entry.steam_id;
-                let hero_id = entry.hero_id;
                 let count = state
                     .controllers
                     .values()
@@ -112,7 +120,7 @@ impl Visitor for DemoAnalyzerVisitor {
                 let expected = self.expected_players;
                 debug!(
                     entity_index = idx,
-                    steam_id, hero_id, "PlayerController complete ({count}/{expected})",
+                    steam_id, "PlayerController complete ({count}/{expected})",
                 );
             }
         } else if hash == PLAYER_PAWN_HASH {
@@ -138,13 +146,46 @@ impl Visitor for DemoAnalyzerVisitor {
                     entity_index = idx,
                     controller_index, hero_build_id, "PlayerPawn complete ({count}/{expected})",
                 );
-                if state.all_players_complete(expected) {
-                    debug!("All {expected} players collected, stopping parse early");
-                    return Err(VisitorError::AllPlayersCollected);
+                if state.all_data_complete(expected) {
+                    debug!("All {expected} players + bans collected, stopping parse early");
+                    return Err(VisitorError::AllDataCollected);
                 }
             }
         }
 
+        Ok(())
+    }
+
+    async fn on_packet(
+        &mut self,
+        _ctx: &Context,
+        packet_type: u32,
+        data: &[u8],
+    ) -> Result<(), Self::Error> {
+        if packet_type == CitadelUserMessageIds::KEUserMsgBannedHeroes as u32 {
+            let msg = CCitadelUserMsgBannedHeroes::decode(data)?;
+            let mut state = self
+                .state
+                .lock()
+                .map_err(|e| VisitorError::LockPoisoned(e.to_string()))?;
+            state.banned_hero_ids = msg.banned_hero_ids;
+            debug!(banned_heroes = ?state.banned_hero_ids, "Extracted banned heroes");
+            if state.all_data_complete(self.expected_players) {
+                debug!("All data collected after bans, stopping parse early");
+                return Err(VisitorError::AllDataCollected);
+            }
+        }
+        Ok(())
+    }
+
+    async fn on_tick_end(&mut self, ctx: &Context) -> Result<(), Self::Error> {
+        if ctx.tick() > MAX_PARSE_TICKS {
+            debug!(
+                tick = ctx.tick(),
+                "Reached max parse tick limit, stopping with partial data"
+            );
+            return Err(VisitorError::AllDataCollected);
+        }
         Ok(())
     }
 }
