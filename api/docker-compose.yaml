@@ -1,95 +1,12 @@
-x-api-common: &api-common
-  image: ghcr.io/deadlock-api/deadlock-api
-  restart: always
-  env_file: .env
-  environment:
-    MIMALLOC_PAGE_RESET: 1
-    MIMALLOC_SHOW_STATS: 1
-    ONLY_STORED_HISTORY: true
-  healthcheck:
-    test: ["CMD", "curl", "--head", "-f", "http://localhost:3000/v1/info/health"]
-    interval: 30s
-    timeout: 10s
-    start_period: 30s
-    retries: 3
-  volumes:
-    - ./purge_cache.sh:/purge_cache.sh
-    - ./widget_versions.json:/app/widget_versions.json
-    - ./feature_flags.json:/app/feature_flags.json
-    - ./model:/app/model:ro
-  networks:
-    - caddy
-    - database
-    - monitoring
-    - object-store
-  deploy:
-    resources:
-      limits:
-        memory: 13gb
-  logging:
-    driver: "json-file"
-    options:
-      max-size: "200m"
-      max-file: "10"
-      compress: "true"
-
 services:
-  api-stable:
-    <<: *api-common
-    container_name: api-stable
-    labels:
-      caddy: api.deadlock-api.com
-      caddy.reverse_proxy: "{{upstreams 3000}}"
-
-  # Canary is not started by default — the deployer brings it up
-  api-canary:
-    <<: *api-common
-    container_name: api-canary
-    profiles: ["canary"]
-    labels:
-      caddy: api.deadlock-api.com
-      caddy.reverse_proxy: "{{upstreams 3000}}"
-
-  watchtower:
-    image: containrrr/watchtower:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      WATCHTOWER_MONITOR_ONLY: "true"
-      WATCHTOWER_POLL_INTERVAL: "300"
-      WATCHTOWER_CLEANUP: "true"
-      WATCHTOWER_NOTIFICATIONS: shoutrrr
-      WATCHTOWER_NOTIFICATION_URL: generic+http://deployer:8080/webhook
-    restart: unless-stopped
-    networks:
-      - caddy
-
-  deployer:
-    image: ghcr.io/deadlock-api/deadlock-api-deployer:latest
-    container_name: deployer
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - .:/workdir
-    working_dir: /workdir
-    environment:
-      CADDY_API: http://caddy:2019
-      STABLE_UPSTREAM: api-stable:3000
-      CANARY_UPSTREAM: api-canary:3000
-      DOMAIN: api.deadlock-api.com
-      ERROR_THRESHOLD: "5"
-      CANARY_STEPS: "10,25,50,100"
-      STEP_OBSERVE_SECONDS: "60"
-      IMAGE_NAME: ghcr.io/deadlock-api/deadlock-api
-    restart: unless-stopped
-    networks:
-      - caddy
-
-networks:
-  caddy:
-    external: true
-  database:
-    external: true
-  monitoring:
-    external: true
-  object-store:
-    external: true
+  api:
+    image: ghcr.io/deadlock-api/deadlock-api:latest
+    build: .
+    env_file: .env
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/v1/info/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
