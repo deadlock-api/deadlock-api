@@ -255,7 +255,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               icon: HardDrive,
             },
             {
-              href: "https://github.com/deadlock-api/deadlock-live-events",
+              href: "https://github.com/deadlock-api/deadlock-api/tree/master/live-events",
               label: "Live Events",
               icon: Radio,
             },

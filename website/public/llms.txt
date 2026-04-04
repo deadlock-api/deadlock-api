@@ -23,7 +23,7 @@ Deadlock API is a free, open-source community project providing comprehensive ga
 ## APIs
 - Game Data API: https://api.deadlock-api.com (OpenAPI spec: https://api.deadlock-api.com/openapi.json)
 - Assets API: https://assets.deadlock-api.com (OpenAPI spec: https://assets.deadlock-api.com/openapi.json)
-- Live Events API: Server-Sent Events for real-time match data (https://github.com/deadlock-api/deadlock-live-events)
+- Live Events API: Server-Sent Events for real-time match data (https://github.com/deadlock-api/deadlock-api/tree/master/live-events)
 
 ## Data
 - Match data tracked and updated in real time for millions of players

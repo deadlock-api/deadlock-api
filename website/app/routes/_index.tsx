@@ -87,7 +87,7 @@ const services = [
   {
     title: "Live Events API",
     description: "Real-time game events via Server-Sent Events for live match tracking.",
-    href: "https://github.com/deadlock-api/deadlock-live-events",
+    href: "https://github.com/deadlock-api/deadlock-api/tree/master/live-events",
     icon: Radio,
     external: true,
     cta: "View Live Events API",
