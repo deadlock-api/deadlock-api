@@ -1,6 +1,7 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 
 export function getDefaultRegion(): LeaderboardRegionEnum {
+  if (typeof navigator === "undefined") return LeaderboardRegionEnum.Europe;
   const lang = navigator.language?.toLowerCase() ?? "";
   const langPrefix = lang.split("-")[0];
   const region = lang.split("-")[1];
