@@ -2,6 +2,7 @@ import { ArrowLeft, Calendar, Tag } from "lucide-react";
 import Markdown from "react-markdown";
 import type { MetaFunction } from "react-router";
 import { Link, useParams } from "react-router";
+import remarkGfm from "remark-gfm";
 
 import type { BlogPost } from "~/lib/blog";
 import { getBlogPost, getRecentPosts } from "~/lib/blog";
@@ -57,6 +58,7 @@ const tagColors: Record<string, string> = {
   guide: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   engineering: "bg-violet-500/15 text-violet-400 border-violet-500/30",
   infrastructure: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+  meta: "bg-rose-500/15 text-rose-400 border-rose-500/30",
 };
 
 const proseClasses =
@@ -73,7 +75,7 @@ function PostContent({ post }: { post: BlogPost }) {
   }
   return (
     <article className={proseClasses}>
-      <Markdown>{post.content}</Markdown>
+      <Markdown remarkPlugins={[remarkGfm]}>{post.content}</Markdown>
     </article>
   );
 }
