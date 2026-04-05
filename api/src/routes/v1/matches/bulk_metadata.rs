@@ -29,7 +29,7 @@ fn default_limit() -> u32 {
     1000
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema, Default, Display)]
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 enum SortKey {
@@ -154,7 +154,6 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if query.include_info {
         select_fields.extend(vec![
-            "match_id".to_owned(),
             "any(start_time) as start_time".to_owned(),
             "any(winning_team) as winning_team".to_owned(),
             "any(duration_s) as duration_s".to_owned(),
@@ -192,11 +191,11 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         || query.include_player_death_details;
     if has_player_fields {
         let mut player_select_fields = vec![
-            "match_player.account_id",
+            "match_player.account_id as account_id",
             "hero_id",
             "player_slot",
             "team",
-            "dp.hero_build_id",
+            "dp.hero_build_id as hero_build_id",
         ];
         if query.include_player_info || query.include_player_kda {
             player_select_fields.extend(vec!["kills", "deaths", "assists"]);
@@ -225,7 +224,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             player_select_fields.push("death_details");
         }
         let player_select_fields = format!(
-            "groupUniqArray(12)(({})::JSON) as players",
+            "groupUniqArray(12)(tuple({})::JSON) as players",
             player_select_fields.join(", ")
         );
         select_fields.push(player_select_fields);
@@ -363,6 +362,16 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         other => other.to_string(),
     };
     let order = format!(" ORDER BY {} {} ", order_by_expr, query.order_direction);
+    // For the outer query, match_id needs table qualification to avoid ambiguity
+    let outer_order = if matches!(query.order_by, SortKey::MatchId) {
+        if has_player_fields {
+            format!(" ORDER BY match_player.match_id {} ", query.order_direction)
+        } else {
+            format!(" ORDER BY match_info.match_id {} ", query.order_direction)
+        }
+    } else {
+        order.clone()
+    };
     let limit = format!(" LIMIT {} ", query.limit);
 
     let mut query = String::new();
@@ -375,14 +384,22 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
 
     // SELECT
     query.push_str("SELECT ");
-    query.push_str(&select_fields.join(", "));
+    if has_player_fields {
+        query.push_str("match_player.match_id");
+    } else {
+        query.push_str("match_info.match_id");
+    }
+    if !select_fields.is_empty() {
+        query.push_str(", ");
+        query.push_str(&select_fields.join(", "));
+    }
     select_fields.push("any(dp.banned_hero_ids) as banned_hero_ids".to_owned());
     if has_player_fields {
         query.push_str(
             " FROM match_player \
-             INNER JOIN match_info USING (match_id) \
+             INNER JOIN match_info ON match_player.match_id = match_info.match_id \
              LEFT JOIN demo_player AS dp ON match_player.match_id = dp.match_id AND match_player.account_id = dp.account_id \
-             WHERE match_player.match_id IN t_matches ",
+             WHERE match_player.match_id IN t_matches",
         );
     } else {
         query.push_str(
@@ -392,9 +409,13 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         );
     }
     // GROUP By
-    query.push_str(" GROUP BY match_id ");
+    if has_player_fields {
+        query.push_str(" GROUP BY match_player.match_id ");
+    } else {
+        query.push_str(" GROUP BY match_info.match_id ");
+    }
     // Order By
-    query.push_str(&order);
+    query.push_str(&outer_order);
     // Limit
     query.push_str(&limit);
     debug!(?query);
@@ -737,7 +758,7 @@ mod tests {
         let result = build_query(query).unwrap();
         let normalized = normalize_whitespace(&result);
 
-        assert!(normalized.contains("groupUniqArray(12)((match_player.account_id, hero_id, player_slot, team, dp.hero_build_id, kills, deaths, assists, items)::JSON) as players"));
+        assert!(normalized.contains("groupUniqArray(12)(tuple(match_player.account_id as account_id, hero_id, player_slot, team, dp.hero_build_id as hero_build_id, kills, deaths, assists, items)::JSON) as players"));
         assert!(!normalized.contains("player_tracked_stats"));
         assert!(!normalized.contains("accolades"));
         assert!(!normalized.contains("net_worth"));
