@@ -175,6 +175,9 @@ where
     })
 }
 
+/// March 1, 2026 00:00:00 UTC — absolute minimum for demo_player-based endpoints.
+pub(crate) const MIN_DEMO_PLAYER_TIMESTAMP: i64 = 1_772_323_200;
+
 pub(crate) fn default_last_month_timestamp() -> Option<i64> {
     let now = chrono::Utc::now().date_naive();
     let last_month = now - chrono::Duration::days(30);

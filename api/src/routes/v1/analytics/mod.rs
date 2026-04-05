@@ -3,6 +3,8 @@ pub mod badge_distribution;
 pub mod build_item_stats;
 mod common_filters;
 pub mod game_stats;
+pub mod hero_ban_stats;
+pub mod hero_build_stats;
 pub mod hero_comb_stats;
 pub mod hero_counters_stats;
 pub mod hero_scoreboard;
@@ -40,6 +42,8 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             .routes(routes!(player_stats_metrics::player_stats_metrics))
             .routes(routes!(kill_death_stats::kill_death_stats))
             .routes(routes!(hero_stats::hero_stats))
+            .routes(routes!(hero_ban_stats::hero_ban_stats))
+            .routes(routes!(hero_build_stats::hero_build_stats))
             .routes(routes!(item_stats::item_stats))
             .routes(routes!(item_permutation_stats::item_permutation_stats))
             .routes(routes!(hero_counters_stats::hero_counters_stats))
