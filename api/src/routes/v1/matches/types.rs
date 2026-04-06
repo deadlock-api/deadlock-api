@@ -1,7 +1,7 @@
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use strum::{Display, FromRepr};
+use strum::{Display, EnumString, FromRepr};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
@@ -209,6 +209,64 @@ pub enum GameMode {
     Normal = 1,
     StreetBrawl = 4,
     ExploreNYC = 5,
+}
+
+#[derive(
+    FromRepr,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    Display,
+    EnumString,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub(crate) enum MatchMode {
+    #[strum(serialize = "unranked", to_string = "Unranked")]
+    Unranked = 1,
+    #[strum(serialize = "private_lobby", to_string = "PrivateLobby")]
+    PrivateLobby = 2,
+    #[strum(serialize = "coop_bot", to_string = "CoopBot")]
+    CoopBot = 3,
+    #[strum(serialize = "ranked", to_string = "Ranked")]
+    Ranked = 4,
+    #[strum(serialize = "server_test", to_string = "ServerTest")]
+    ServerTest = 5,
+    #[strum(serialize = "tutorial", to_string = "Tutorial")]
+    Tutorial = 6,
+    #[strum(serialize = "hero_labs", to_string = "HeroLabs")]
+    HeroLabs = 7,
+}
+
+impl MatchMode {
+    /// Returns a SQL filter clause for `match_mode`.
+    /// If specific modes are provided, filters to those modes.
+    /// If None, defaults to `Ranked` and `Unranked`.
+    pub(crate) fn sql_filter(match_modes: Option<&[Self]>) -> String {
+        match match_modes {
+            Some(modes) if !modes.is_empty() => {
+                if modes.len() == 1 {
+                    format!("match_mode = '{}'", modes[0])
+                } else {
+                    format!(
+                        "match_mode IN ({})",
+                        modes
+                            .iter()
+                            .map(|m| format!("'{m}'"))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                }
+            }
+            _ => format!("match_mode IN ('{}', '{}')", Self::Ranked, Self::Unranked),
+        }
+    }
 }
 
 impl GameMode {
