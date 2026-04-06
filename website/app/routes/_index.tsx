@@ -12,6 +12,7 @@ import {
   Map,
   Medal,
   MessageCircle,
+  Package,
   Radio,
   ShoppingBag,
   Swords,
@@ -83,6 +84,14 @@ const services = [
     icon: ImageIcon,
     external: true,
     cta: "Visit Assets API",
+  },
+  {
+    title: "UI Components",
+    description: "Drop-in Web Components (React/Vue/HTML) to visualize items, tooltips, and the full in-game shop.",
+    href: "https://ui.deadlock-api.com/",
+    icon: Package,
+    external: true,
+    cta: "Explore UI Components",
   },
   {
     title: "Live Events API",
