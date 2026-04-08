@@ -264,9 +264,8 @@ export function HeroStatsByRankChart({
     [heroDataByHero],
   );
 
-  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(heroIdMap, {
+  const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap, {
     heroIdFilter: heroIdsWithData,
-    legendType: "circle",
   });
 
   const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes;
@@ -305,18 +304,21 @@ export function HeroStatsByRankChart({
                 layout="horizontal"
                 align="center"
                 verticalAlign="bottom"
+                iconType="circle"
+                inactiveColor="#666666"
                 onClick={handleLegendClick}
-                payload={legendPayload}
                 wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
               />
-              {visibleHeroIds.map((heroId) => (
+              {allHeroIds.map((heroId) => (
                 <Scatter
                   key={heroId}
                   name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
+                  dataKey={heroId}
                   data={heroDataByHero[heroId]}
                   fill={heroIdMap[heroId]?.color ?? "#ffffff"}
                   line={{ stroke: heroIdMap[heroId]?.color ?? "#ffffff", strokeWidth: 2 }}
                   shape={<BadgePoint badgeMap={badgeMap} />}
+                  hide={!effectiveVisibleSet.has(heroId)}
                 />
               ))}
             </ScatterChart>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
+import type { LegendPayload } from "recharts";
 
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
@@ -24,18 +25,21 @@ export function useHeroColorMap() {
 
 /**
  * Manages hero visibility toggling for chart legends.
- * Returns visible hero IDs, the legend click handler,
- * and a pre-built Recharts Legend payload.
+ * Returns the full hero list, the visible-set, and a Recharts legend click handler.
+ *
+ * Recharts v3 ignores any explicit `payload` prop on <Legend> and instead derives
+ * the legend from the rendered <Line> components in the chart. To make every hero
+ * appear in the legend (even when hidden), render a <Line> for every id in
+ * `allHeroIds` and toggle its `hide` prop based on `effectiveVisibleSet`.
  */
 export function useChartHeroVisibility(
   heroIdMap: Record<number, { name: string; color: string }>,
   options: {
     heroIdFilter?: number[];
-    legendType?: "line" | "circle" | "square";
     showAllByDefault?: boolean;
   } = {},
 ) {
-  const { heroIdFilter, legendType = "line", showAllByDefault = false } = options;
+  const { heroIdFilter, showAllByDefault = false } = options;
   const allHeroIds = useMemo(() => {
     const ids = heroIdFilter ?? Object.keys(heroIdMap).map(Number);
     return ids.sort((a, b) => (heroIdMap[a]?.name ?? "").localeCompare(heroIdMap[b]?.name ?? ""));
@@ -43,40 +47,26 @@ export function useChartHeroVisibility(
 
   const [visibleHeroSet, setVisibleHeroSet] = useState<Set<number>>(() => new Set([2]));
 
-  const handleLegendClick = useCallback(
-    (entry: { value?: string }) => {
-      const heroId = allHeroIds.find((id) => (heroIdMap[id]?.name ?? `Hero ${id}`) === entry.value);
-      if (heroId === undefined) return;
-      setVisibleHeroSet((prev) => {
-        const next = new Set(prev);
-        if (next.has(heroId)) {
-          next.delete(heroId);
-        } else {
-          next.add(heroId);
-        }
-        return next;
-      });
-    },
-    [allHeroIds, heroIdMap],
-  );
+  const handleLegendClick = useCallback((entry: LegendPayload) => {
+    if (entry.dataKey == null || typeof entry.dataKey === "function") return;
+    const heroId = Number(entry.dataKey);
+    if (Number.isNaN(heroId)) return;
+    setVisibleHeroSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(heroId)) {
+        next.delete(heroId);
+      } else {
+        next.add(heroId);
+      }
+      return next;
+    });
+  }, []);
 
   const allHeroIdSet = useMemo(() => new Set(allHeroIds), [allHeroIds]);
-  const effectiveVisibleSet = showAllByDefault ? allHeroIdSet : visibleHeroSet;
-
-  const visibleHeroIds = useMemo(
-    () => allHeroIds.filter((id) => effectiveVisibleSet.has(id)),
-    [allHeroIds, effectiveVisibleSet],
+  const effectiveVisibleSet = useMemo(
+    () => (showAllByDefault ? allHeroIdSet : visibleHeroSet),
+    [showAllByDefault, allHeroIdSet, visibleHeroSet],
   );
 
-  const legendPayload = useMemo(
-    () =>
-      allHeroIds.map((heroId) => ({
-        value: heroIdMap[heroId]?.name ?? `Hero ${heroId}`,
-        type: legendType,
-        color: effectiveVisibleSet.has(heroId) ? (heroIdMap[heroId]?.color ?? "#ffffff") : "#555555",
-      })),
-    [allHeroIds, heroIdMap, legendType, effectiveVisibleSet],
-  );
-
-  return { visibleHeroIds, handleLegendClick, legendPayload };
+  return { allHeroIds, effectiveVisibleSet, handleLegendClick };
 }

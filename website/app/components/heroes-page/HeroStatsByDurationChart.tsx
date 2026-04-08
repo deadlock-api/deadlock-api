@@ -62,7 +62,7 @@ export function HeroStatsByDurationChart({
   });
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
-  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(heroIdMap);
+  const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap);
 
   const isLoading = bucketQueries.some((q) => q.isLoading) || isLoadingHeroes;
   const allLoaded = bucketQueries.every((q) => q.data != null);
@@ -140,11 +140,12 @@ export function HeroStatsByDurationChart({
                 layout="horizontal"
                 align="center"
                 verticalAlign="bottom"
+                iconType="line"
+                inactiveColor="#666666"
                 onClick={handleLegendClick}
-                payload={legendPayload}
                 wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
               />
-              {visibleHeroIds.map((heroId) => (
+              {allHeroIds.map((heroId) => (
                 <Line
                   key={heroId}
                   type="monotone"
@@ -154,6 +155,7 @@ export function HeroStatsByDurationChart({
                   activeDot={{ r: 6 }}
                   strokeWidth={2}
                   name={heroIdMap[heroId]?.name}
+                  hide={!effectiveVisibleSet.has(heroId)}
                   connectNulls
                 />
               ))}

@@ -188,9 +188,13 @@ export function HeroStatsOverTimeChart({
   }, [heroStat, heroData]);
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
-  const { visibleHeroIds, handleLegendClick, legendPayload } = useChartHeroVisibility(heroIdMap, {
+  const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap, {
     showAllByDefault: bumpChart,
   });
+  const visibleHeroIds = useMemo(
+    () => allHeroIds.filter((id) => effectiveVisibleSet.has(id)),
+    [allHeroIds, effectiveVisibleSet],
+  );
 
   const sortedStats = useMemo(() => {
     const out: number[] = [];
@@ -467,12 +471,13 @@ export function HeroStatsOverTimeChart({
                   layout="horizontal"
                   align="center"
                   verticalAlign="bottom"
+                  iconType="line"
+                  inactiveColor="#666666"
                   onClick={handleLegendClick}
-                  payload={legendPayload}
                   wrapperStyle={{ cursor: "pointer", paddingTop: 30 }}
                 />
               )}
-              {visibleHeroIds.map((heroId) => (
+              {allHeroIds.map((heroId) => (
                 <Line
                   key={heroId}
                   type={bumpChart ? "bump" : "monotone"}
@@ -483,6 +488,7 @@ export function HeroStatsOverTimeChart({
                   strokeWidth={2}
                   name={heroIdMap[heroId]?.name ?? `Hero ${heroId}`}
                   isAnimationActive={false}
+                  hide={!effectiveVisibleSet.has(heroId)}
                   connectNulls
                 />
               ))}
