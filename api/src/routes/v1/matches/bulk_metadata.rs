@@ -387,18 +387,19 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         "t_matches AS (SELECT match_id FROM match_info FINAL {info_filters} {order} {limit})"
     )?;
 
+    select_fields.push("any(dp.banned_hero_ids) as banned_hero_ids".to_owned());
+
     // SELECT
     query.push_str("SELECT ");
     if has_player_fields {
-        query.push_str("match_player.match_id");
+        query.push_str("match_player.match_id as match_id");
     } else {
-        query.push_str("match_info.match_id");
+        query.push_str("match_info.match_id as match_id");
     }
     if !select_fields.is_empty() {
         query.push_str(", ");
         query.push_str(&select_fields.join(", "));
     }
-    select_fields.push("any(dp.banned_hero_ids) as banned_hero_ids".to_owned());
     if has_player_fields {
         query.push_str(
             " FROM match_player \
