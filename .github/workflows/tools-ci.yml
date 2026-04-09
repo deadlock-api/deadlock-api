@@ -59,7 +59,7 @@ jobs:
           rustup override set stable
           rustup update stable
       - name: Machete
-        uses: bnjbvr/cargo-machete@b81ce1560c5fbd0210cb66d88bf210329ff04266
+        uses: bnjbvr/cargo-machete@db87f5ee388b462ee8c4311742246d599b78a00a
         with:
           manifest-path: tools/Cargo.toml
 
