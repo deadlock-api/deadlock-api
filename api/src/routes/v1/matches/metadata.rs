@@ -92,15 +92,25 @@ async fn fetch_match_metadata_raw(
             fetch_from_s3(s3_cache, format!("{match_id}.meta_hltv.bz2")),
         )
         .await;
-        if let Ok(data) = results.0 {
-            debug!("Match metadata found in cache");
-            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
-            return Ok(data);
-        }
-        if let Ok(data) = results.1 {
-            debug!("Match metadata found in cache, hltv");
-            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
-            return Ok(data);
+        match results {
+            (Ok(data), _) => {
+                debug!(match_id, "Match metadata found in s3 cache (salt)");
+                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
+                return Ok(data);
+            }
+            (_, Ok(data)) => {
+                debug!(match_id, "Match metadata found in s3 cache (hltv)");
+                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
+                return Ok(data);
+            }
+            (Err(salt_err), Err(hltv_err)) => {
+                debug!(
+                    match_id,
+                    salt_err = %salt_err,
+                    hltv_err = %hltv_err,
+                    "Match metadata not found in s3 cache, falling back to s3"
+                );
+            }
         }
     }
 
@@ -122,15 +132,25 @@ async fn fetch_match_metadata_raw(
         fetch_from_s3(s3, format!("processed/metadata/{match_id}.meta_hltv.bz2")),
     )
     .await;
-    if let Ok(data) = results.0 {
-        debug!("Match metadata found on s3");
-        counter!("metadata.fetch", "s3" => "hetzner", "source" => "salt").increment(1);
-        return Ok(data);
-    }
-    if let Ok(data) = results.1 {
-        debug!("Match metadata found on s3, hltv");
-        counter!("metadata.fetch", "s3" => "hetzner", "source" => "hltv").increment(1);
-        return Ok(data);
+    match results {
+        (Ok(data), _) => {
+            debug!(match_id, "Match metadata found on s3 (salt)");
+            counter!("metadata.fetch", "s3" => "hetzner", "source" => "salt").increment(1);
+            return Ok(data);
+        }
+        (_, Ok(data)) => {
+            debug!(match_id, "Match metadata found on s3 (hltv)");
+            counter!("metadata.fetch", "s3" => "hetzner", "source" => "hltv").increment(1);
+            return Ok(data);
+        }
+        (Err(salt_err), Err(hltv_err)) => {
+            debug!(
+                match_id,
+                salt_err = %salt_err,
+                hltv_err = %hltv_err,
+                "Match metadata not found on s3, falling back to steam"
+            );
+        }
     }
 
     // If not in S3, fetch from Steam
@@ -228,15 +248,25 @@ pub(super) async fn metadata_raw(
             fetch_from_s3_stream(&state.s3_cache_client, format!("{match_id}.meta_hltv.bz2")),
         )
         .await;
-        if let Ok(data) = results.0 {
-            debug!("Match metadata found in cache");
-            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
-            return Ok(Body::from_stream(data));
-        }
-        if let Ok(data) = results.1 {
-            debug!("Match metadata found in cache, hltv");
-            counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
-            return Ok(Body::from_stream(data));
+        match results {
+            (Ok(data), _) => {
+                debug!(match_id, "Match metadata found in s3 cache (salt)");
+                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "salt").increment(1);
+                return Ok(Body::from_stream(data));
+            }
+            (_, Ok(data)) => {
+                debug!(match_id, "Match metadata found in s3 cache (hltv)");
+                counter!("metadata.fetch", "s3" => "s3-cache", "source" => "hltv").increment(1);
+                return Ok(Body::from_stream(data));
+            }
+            (Err(salt_err), Err(hltv_err)) => {
+                debug!(
+                    match_id,
+                    salt_err = %salt_err,
+                    hltv_err = %hltv_err,
+                    "Match metadata not found in s3 cache, falling back to s3"
+                );
+            }
         }
     }
 

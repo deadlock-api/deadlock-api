@@ -112,13 +112,8 @@ impl AppState {
                     .with_timeout(Duration::from_secs(5)),
             )
             .with_retry(RetryConfig {
-                backoff: BackoffConfig {
-                    init_backoff: Duration::from_millis(200),
-                    max_backoff: Duration::from_secs(3),
-                    base: 2.,
-                },
-                max_retries: 3,
-                retry_timeout: Duration::from_secs(5),
+                max_retries: 0,
+                ..Default::default()
             })
             .build()?;
 
