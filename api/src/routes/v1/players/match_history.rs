@@ -137,10 +137,26 @@ pub(crate) async fn fetch_match_history_from_clickhouse(
         .await
 }
 
+async fn fetch_bot_username(
+    pg_client: &sqlx::Pool<sqlx::Postgres>,
+    account_id: u32,
+) -> Option<String> {
+    sqlx::query!(
+        "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
+        i32::try_from(account_id).unwrap_or(-1)
+    )
+    .fetch_optional(pg_client)
+    .await
+    .ok()
+    .flatten()
+    .map(|r| r.bot_id)
+}
+
 async fn fetch_match_history_raw(
     steam_client: &SteamClient,
     account_id: u32,
     continue_cursor: Option<u64>,
+    bot_username: Option<String>,
 ) -> APIResult<(PlayerMatchHistory, Option<u64>)> {
     let msg = CMsgClientToGcGetMatchHistory {
         account_id: Some(account_id),
@@ -156,7 +172,7 @@ async fn fetch_match_history_raw(
             in_any_groups: None,
             cooldown_time: Duration::from_secs(24 * 60 * 60 / 100),
             request_timeout: Duration::from_secs(3),
-            username: None,
+            username: bot_username,
             soft_cooldown_millis: None,
         })
         .await?
@@ -198,6 +214,7 @@ pub(crate) async fn fetch_steam_match_history(
     steam_client: &SteamClient,
     account_id: u32,
     force_refetch: bool,
+    bot_username: Option<String>,
 ) -> APIResult<PlayerMatchHistory> {
     debug!("Fetching match history from Steam for account_id {account_id}");
     let mut continue_cursor = None;
@@ -205,7 +222,13 @@ pub(crate) async fn fetch_steam_match_history(
     let mut iterations = 0;
     loop {
         iterations += 1;
-        let result = fetch_match_history_raw(steam_client, account_id, continue_cursor).await?;
+        let result = fetch_match_history_raw(
+            steam_client,
+            account_id,
+            continue_cursor,
+            bot_username.clone(),
+        )
+        .await?;
 
         // Check if the result is empty, in which case we can stop
         if result.0.is_empty() {
@@ -353,16 +376,24 @@ pub(super) async fn match_history(
         ));
     }
 
+    // Look up bot friend username for this account
+    let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
+
     // Fetch player match history from Steam and ClickHouse
-    let steam_match_history =
-        match fetch_steam_match_history(&state.steam_client, account_id, query.force_refetch).await
-        {
-            Ok(r) => r,
-            Err(e) => {
-                warn!("Failed to fetch player match history from Steam: {e:?}");
-                vec![]
-            }
-        };
+    let steam_match_history = match fetch_steam_match_history(
+        &state.steam_client,
+        account_id,
+        query.force_refetch,
+        bot_username,
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => {
+            warn!("Failed to fetch player match history from Steam: {e:?}");
+            vec![]
+        }
+    };
 
     // Insert missing entries to ClickHouse
     let ch_match_ids: HashSet<u64> = ch_match_history.iter().map(|e| e.match_id).collect();

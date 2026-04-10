@@ -901,7 +901,7 @@ impl Variable {
         steam_client: &SteamClient,
         account_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
-        let matches = match fetch_steam_match_history(steam_client, account_id, false).await {
+        let matches = match fetch_steam_match_history(steam_client, account_id, false, None).await {
             Ok(m) => {
                 let ch_client = ch_client.clone();
                 let matches = m.clone();
