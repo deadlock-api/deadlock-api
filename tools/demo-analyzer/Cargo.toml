@@ -7,7 +7,7 @@ edition = "2024"
 anyhow = "1.0.102"
 async-compression = { version = "0.4", features = ["tokio", "bzip2"] }
 clap = { version = "4", features = ["derive", "env"] }
-clickhouse = { version = "0.14.3", features = ["time"] }
+clickhouse = { version = "0.15.0", features = ["time"] }
 common = { version = "0.1.0", path = "../common" }
 dungers = { git = "https://github.com/deadlock-api/dungers.git", rev = "5e1e2aac76a027987911de3ef3d23ecfd992a7fb", features = ["varint"] }
 futures = "0.3.32"
@@ -18,7 +18,7 @@ prost = "0.14.3"
 reqwest = { version = "0.13.2", features = ["stream"] }
 serde = { version = "1.0.228", features = ["derive"] }
 snap = "1.1.1"
-tokio = { version = "1.51.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.51.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = { version = "0.7", features = ["io"] }
 thiserror = "2.0.18"
 tracing = "0.1.44"
