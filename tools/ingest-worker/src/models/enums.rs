@@ -14,6 +14,7 @@ pub(crate) enum GameMode {
     Sandbox = 3,
     StreetBrawl = 4,
     ExploreNYC = 5,
+    Internal = 6,
 }
 
 impl From<ECitadelGameMode> for GameMode {
@@ -25,6 +26,7 @@ impl From<ECitadelGameMode> for GameMode {
             ECitadelGameMode::KECitadelGameModeSandbox => Self::Sandbox,
             ECitadelGameMode::KECitadelGameModeStreetBrawl => Self::StreetBrawl,
             ECitadelGameMode::KECitadelGameModeExploreNyc => Self::ExploreNYC,
+            ECitadelGameMode::KECitadelGameModeInternal => Self::Internal,
         }
     }
 }
@@ -37,6 +39,7 @@ impl From<u8> for GameMode {
             3 => GameMode::Sandbox,
             4 => GameMode::StreetBrawl,
             5 => GameMode::ExploreNYC,
+            6 => GameMode::Internal,
             _ => GameMode::Invalid,
         }
     }

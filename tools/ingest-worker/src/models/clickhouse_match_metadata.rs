@@ -205,6 +205,8 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub items_flags: Vec<u32>,
     #[serde(rename = "items.imbued_ability_id")]
     pub items_imbued_ability_id: Vec<u32>,
+    #[serde(rename = "items.upgrade_info")]
+    pub items_upgrade_info: Vec<u32>,
     #[serde(rename = "stats.time_stamp_s")]
     pub stats_time_stamp_s: Vec<u32>,
     #[serde(rename = "stats.net_worth")]
@@ -388,6 +390,7 @@ impl From<(u64, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
             items_sold_time_s: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::sold_time_s).collect(),
             items_flags: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::flags).collect(),
             items_imbued_ability_id: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::imbued_ability_id).collect(),
+            items_upgrade_info: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::upgrade_info).collect(),
             stats_time_stamp_s: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::time_stamp_s).collect(),
             stats_net_worth: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::net_worth).collect(),
             stats_gold_player: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_player).collect(),

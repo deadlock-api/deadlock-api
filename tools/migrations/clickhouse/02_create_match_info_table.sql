@@ -7,7 +7,7 @@ create table default.match_info
     duration_s                  UInt32,
     match_outcome               Enum8('TeamWin' = 0, 'Error' = 1, 'Draw' = 2),
     match_mode                  Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'Calibration' = 8),
-    game_mode                   Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5),
+    game_mode                   Enum8('OneVsOneTest' = 2, 'Normal' = 1, 'Invalid' = 0, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6),
     objectives_mask_team0       UInt16,
     objectives_mask_team1       UInt16,
     objectives                  Nested(destroyed_time_s UInt32,

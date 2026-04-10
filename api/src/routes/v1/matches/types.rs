@@ -209,6 +209,7 @@ pub enum GameMode {
     Normal = 1,
     StreetBrawl = 4,
     ExploreNYC = 5,
+    Internal = 6,
 }
 
 #[derive(

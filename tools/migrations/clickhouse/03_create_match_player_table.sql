@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS match_player
         upgrade_id UInt32,
         sold_time_s UInt32,
         flags UInt32,
-        imbued_ability_id UInt32
+        imbued_ability_id UInt32,
+        upgrade_info UInt32
     ),
     stats Nested (
         time_stamp_s UInt32,

@@ -106,6 +106,7 @@ async fn create_party(
                 .await?
                 .into(),
             region_mode: region_mode.map(Into::into),
+            pgi_verified: true.into(),
         }
         .into(),
         invite_account_id: None,
