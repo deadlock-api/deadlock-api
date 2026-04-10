@@ -62,7 +62,7 @@ const valueProps = [
 
 const patronFeatures = [
   "Priority queue updates",
-  "Up to 10 Steam accounts",
+  "Up to 50 Steam accounts",
   "Full match history from first to last game",
   "100% funds infrastructure",
   "Accurate rank data from Steam",
@@ -244,7 +244,7 @@ export default function Index() {
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold">Prioritized Fetching</h2>
-                    <p className="text-sm text-muted-foreground">Starting at just $3/month</p>
+                    <p className="text-sm text-muted-foreground">Starting at just $1.50/month</p>
                   </div>
                 </div>
                 <p className="max-w-xl text-sm text-muted-foreground">
@@ -463,7 +463,7 @@ export default function Index() {
           </p>
           <p>
             The platform is fully open source and provides free access to all data, including daily database dumps for
-            researchers and developers. A $3/month patron tier offers prioritized data fetching for personal Steam
+            researchers and developers. A $1.50/month patron tier offers prioritized data fetching for personal Steam
             accounts, ensuring your matches and stats are always up to date.
           </p>
         </div>

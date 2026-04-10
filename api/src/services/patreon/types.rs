@@ -162,7 +162,7 @@ pub(crate) struct Patron {
 impl Patron {
     /// Calculates the number of Steam account slots for this patron.
     ///
-    /// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 100` capped at 10.
+    /// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 150` capped at 50.
     pub(crate) fn slot_limit(&self) -> i32 {
         calculate_slot_limit(self.slot_override, self.pledge_amount_cents)
     }
@@ -170,7 +170,7 @@ impl Patron {
 
 /// Calculates the number of Steam account slots from raw values.
 ///
-/// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 100` capped at 10.
+/// Uses `slot_override` if set, otherwise calculates from `pledge_amount_cents / 150` capped at 50.
 pub(crate) fn calculate_slot_limit(
     slot_override: Option<i32>,
     pledge_amount_cents: Option<i32>,
@@ -181,8 +181,8 @@ pub(crate) fn calculate_slot_limit(
             0
         } else {
             #[allow(clippy::cast_possible_truncation)]
-            let slots = (f64::from(pledge_amount_cents) / 300.0).round() as i32;
-            slots.clamp(1, 10)
+            let slots = (f64::from(pledge_amount_cents) / 150.0).round() as i32;
+            slots.clamp(1, 50)
         }
     })
 }
@@ -200,12 +200,14 @@ mod tests {
 
     #[test]
     fn test_slot_limit_without_override_uses_pledge() {
-        assert_eq!(calculate_slot_limit(None, Some(500)), 2);
-        assert_eq!(calculate_slot_limit(None, Some(250)), 1);
-        assert_eq!(calculate_slot_limit(None, Some(2500)), 8);
-        // Capped at 10
-        assert_eq!(calculate_slot_limit(None, Some(3000)), 10);
-        assert_eq!(calculate_slot_limit(None, Some(5000)), 10);
+        assert_eq!(calculate_slot_limit(None, Some(500)), 3);
+        assert_eq!(calculate_slot_limit(None, Some(250)), 2);
+        assert_eq!(calculate_slot_limit(None, Some(150)), 1);
+        assert_eq!(calculate_slot_limit(None, Some(1500)), 10);
+        assert_eq!(calculate_slot_limit(None, Some(3000)), 20);
+        // Capped at 50
+        assert_eq!(calculate_slot_limit(None, Some(7500)), 50);
+        assert_eq!(calculate_slot_limit(None, Some(10000)), 50);
     }
 
     #[test]

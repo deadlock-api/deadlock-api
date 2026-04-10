@@ -133,7 +133,7 @@ export function PatronStatusCard() {
           <div className="space-y-3 rounded-xl border border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 p-6 text-center">
             <p className="text-base font-medium">Want to prioritize more accounts?</p>
             <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Each additional $3/month unlocks another slot. You can add up to {10 - total_slots} more.
+              Each additional $1.50/month unlocks another slot. You can add up to {50 - total_slots} more.
             </p>
             <Button size="lg" asChild className="bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
               <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">

@@ -60,7 +60,7 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
               </a>
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Starting at $3/month — every cent goes to infrastructure</p>
+          <p className="text-xs text-muted-foreground">Starting at $1.50/month — every cent goes to infrastructure</p>
         </div>
       </section>
 
@@ -81,7 +81,7 @@ export function UnauthenticatedState({ onLogin }: { onLogin: () => void }) {
           <ComparisonRow label="Dedicated queue with reserved resources" checked />
           <ComparisonRow label="Faster data updates" checked />
           <ComparisonRow label="Full match history from first to last game" checked />
-          <ComparisonRow label="Up to 10 prioritized accounts" checked />
+          <ComparisonRow label="Up to 50 prioritized accounts" checked />
           <ComparisonRow label="Swap accounts anytime" checked />
           <ComparisonRow label="Accurate rank data from Steam" checked />
         </div>
@@ -122,7 +122,7 @@ export function NotSubscribedState() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
-            <p className="text-xs text-muted-foreground">Starting at $3/month — every cent goes to infrastructure</p>
+            <p className="text-xs text-muted-foreground">Starting at $1.50/month — every cent goes to infrastructure</p>
           </div>
         </CardContent>
       </Card>
