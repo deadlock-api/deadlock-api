@@ -18,7 +18,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { formatCooldownRemaining, formatDate, formatRelativeTime } from "~/lib/format";
-import { type PlayerCard, steamId3ToSteamId64 } from "~/lib/patron-api";
+import { type PlayerCard, type SteamAccount, steamId3ToSteamId64 } from "~/lib/patron-api";
 import { getRankImageUrl, getRankLabel } from "~/lib/rank-utils";
 import {
   useDeleteSteamAccount,
@@ -53,13 +53,10 @@ function SteamAccountsListSkeleton() {
   );
 }
 
-function BotFriendCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const cardQuery = usePlayerCard(steamId3, isActive);
+type CardQuery = ReturnType<typeof usePlayerCard>;
 
-  if (!isActive) {
-    return <span className="text-muted-foreground">—</span>;
-  }
+function BotFriendCell({ cardQuery }: { cardQuery: CardQuery }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   if (cardQuery.isLoading) {
     return <Skeleton className="h-5 w-20" />;
@@ -100,13 +97,8 @@ function BotFriendCell({ steamId3, isActive }: { steamId3: number; isActive: boo
   );
 }
 
-function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
-  const cardQuery = usePlayerCard(steamId3, isActive);
+function PlayerCardRankCell({ cardQuery }: { cardQuery: CardQuery }) {
   const ranksQuery = useQuery(ranksQueryOptions);
-
-  if (!isActive) {
-    return <span className="text-muted-foreground">—</span>;
-  }
 
   if (cardQuery.isLoading || cardQuery.isError) {
     return <span className="text-muted-foreground">—</span>;
@@ -176,6 +168,92 @@ function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isA
       <RefreshCw className={`h-3.5 w-3.5 ${refetchMutation.isPending ? "animate-spin" : ""}`} />
       Refetch Match History
     </button>
+  );
+}
+
+function AccountRow({
+  account,
+  onDelete,
+  isDeleting,
+  onReplace,
+  isReplacing,
+  onReactivate,
+  isReactivating,
+}: {
+  account: SteamAccount;
+  onDelete: () => void;
+  isDeleting: boolean;
+  onReplace: (steamId3: number) => void;
+  isReplacing: boolean;
+  onReactivate: () => void;
+  isReactivating: boolean;
+}) {
+  const isActive = account.deleted_at === null;
+  const cardQuery = usePlayerCard(account.steam_id3, isActive);
+  const cooldownRemaining = account.deleted_at ? formatCooldownRemaining(account.deleted_at) : null;
+  const canReplace = account.deleted_at !== null && !account.is_in_cooldown;
+  const isDeleted = account.deleted_at !== null;
+
+  return (
+    <TableRow>
+      <TableCell className="font-mono">{account.steam_id3}</TableCell>
+      <TableCell className="font-mono text-muted-foreground">{steamId3ToSteamId64(account.steam_id3)}</TableCell>
+      <TableCell>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{formatRelativeTime(account.created_at)}</span>
+          </TooltipTrigger>
+          <TooltipContent>{formatDate(account.created_at)}</TooltipContent>
+        </Tooltip>
+      </TableCell>
+      <TableCell>
+        {isActive ? (
+          <Badge className="bg-green-600 hover:bg-green-600">
+            <CheckCircle className="mr-1 h-3 w-3" />
+            Active
+          </Badge>
+        ) : account.is_in_cooldown && cooldownRemaining ? (
+          <div className="flex flex-col gap-1">
+            <Badge variant="destructive">
+              <XCircle className="mr-1 h-3 w-3" />
+              Removed
+            </Badge>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              Available in {cooldownRemaining}
+            </span>
+          </div>
+        ) : (
+          <Badge variant="destructive">
+            <XCircle className="mr-1 h-3 w-3" />
+            Removed
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell>{isActive ? <BotFriendCell cardQuery={cardQuery} /> : <span className="text-muted-foreground">—</span>}</TableCell>
+      <TableCell>{isActive ? <PlayerCardRankCell cardQuery={cardQuery} /> : <span className="text-muted-foreground">—</span>}</TableCell>
+      <TableCell>
+        <RefetchMatchHistoryCell steamId3={account.steam_id3} isActive={isActive} />
+      </TableCell>
+      <TableCell>
+        {isActive ? (
+          <DeleteAccountDialog steamId3={account.steam_id3} onDelete={onDelete} isDeleting={isDeleting} />
+        ) : (
+          <div className="flex gap-1">
+            {canReplace && (
+              <ReplaceAccountDialog oldSteamId3={account.steam_id3} onReplace={onReplace} isReplacing={isReplacing} />
+            )}
+            {isDeleted && (
+              <ReactivateAccountDialog
+                steamId3={account.steam_id3}
+                onReactivate={onReactivate}
+                isReactivating={isReactivating}
+              />
+            )}
+          </div>
+        )}
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -273,95 +351,26 @@ export function SteamAccountsList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map((account) => {
-                const isActive = account.deleted_at === null;
-                const cooldownRemaining = account.deleted_at ? formatCooldownRemaining(account.deleted_at) : null;
-                const isDeleting =
-                  deleteSteamAccountMutation.isPending && deleteSteamAccountMutation.variables === account.id;
-                const isReplacing =
-                  replaceSteamAccountMutation.isPending &&
-                  replaceSteamAccountMutation.variables?.accountId === account.id;
-                const isReactivating =
-                  reactivateSteamAccountMutation.isPending && reactivateSteamAccountMutation.variables === account.id;
-                const canReplace = account.deleted_at !== null && !account.is_in_cooldown;
-                const isDeleted = account.deleted_at !== null;
-
-                return (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-mono">{account.steam_id3}</TableCell>
-                    <TableCell className="font-mono text-muted-foreground">
-                      {steamId3ToSteamId64(account.steam_id3)}
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-help">{formatRelativeTime(account.created_at)}</span>
-                        </TooltipTrigger>
-                        <TooltipContent>{formatDate(account.created_at)}</TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      {isActive ? (
-                        <Badge className="bg-green-600 hover:bg-green-600">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          Active
-                        </Badge>
-                      ) : account.is_in_cooldown && cooldownRemaining ? (
-                        <div className="flex flex-col gap-1">
-                          <Badge variant="destructive">
-                            <XCircle className="mr-1 h-3 w-3" />
-                            Removed
-                          </Badge>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            Available in {cooldownRemaining}
-                          </span>
-                        </div>
-                      ) : (
-                        <Badge variant="destructive">
-                          <XCircle className="mr-1 h-3 w-3" />
-                          Removed
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <BotFriendCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
-                    </TableCell>
-                    <TableCell>
-                      <PlayerCardRankCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
-                    </TableCell>
-                    <TableCell>
-                      <RefetchMatchHistoryCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
-                    </TableCell>
-                    <TableCell>
-                      {isActive ? (
-                        <DeleteAccountDialog
-                          steamId3={account.steam_id3}
-                          onDelete={() => handleDeleteAccount(account.id)}
-                          isDeleting={isDeleting}
-                        />
-                      ) : (
-                        <div className="flex gap-1">
-                          {canReplace && (
-                            <ReplaceAccountDialog
-                              oldSteamId3={account.steam_id3}
-                              onReplace={(steamId3) => handleReplaceAccount(account.id, steamId3)}
-                              isReplacing={isReplacing}
-                            />
-                          )}
-                          {isDeleted && (
-                            <ReactivateAccountDialog
-                              steamId3={account.steam_id3}
-                              onReactivate={() => handleReactivateAccount(account.id)}
-                              isReactivating={isReactivating}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {accounts.map((account) => (
+                <AccountRow
+                  key={account.id}
+                  account={account}
+                  onDelete={() => handleDeleteAccount(account.id)}
+                  isDeleting={
+                    deleteSteamAccountMutation.isPending && deleteSteamAccountMutation.variables === account.id
+                  }
+                  onReplace={(steamId3) => handleReplaceAccount(account.id, steamId3)}
+                  isReplacing={
+                    replaceSteamAccountMutation.isPending &&
+                    replaceSteamAccountMutation.variables?.accountId === account.id
+                  }
+                  onReactivate={() => handleReactivateAccount(account.id)}
+                  isReactivating={
+                    reactivateSteamAccountMutation.isPending &&
+                    reactivateSteamAccountMutation.variables === account.id
+                  }
+                />
+              ))}
             </TableBody>
           </Table>
         )}
