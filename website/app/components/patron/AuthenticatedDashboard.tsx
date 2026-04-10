@@ -1,3 +1,4 @@
+import { useQueries } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 
 import { AddSteamAccountForm } from "~/components/patron/AddSteamAccountForm";
@@ -6,7 +7,7 @@ import { SteamAccountsList } from "~/components/patron/SteamAccountsList";
 import { NotSubscribedState } from "~/components/patron/UnauthenticatedState";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Skeleton } from "~/components/ui/skeleton";
-import { usePatronStatus } from "~/queries/patron-queries";
+import { playerCardQueryOptions, usePatronStatus, useSteamAccounts } from "~/queries/patron-queries";
 
 export function PatronPageSkeleton() {
   return (
@@ -27,6 +28,19 @@ export function AuthenticatedDashboard() {
   const hasAvailableSlots = (status?.steam_accounts_summary.available_slots ?? 0) > 0;
   const totalSlots = status?.total_slots ?? 0;
 
+  const accountsQuery = useSteamAccounts();
+  const activeAccounts = (accountsQuery.data?.accounts ?? []).filter((a) => a.deleted_at === null);
+
+  const cardQueries = useQueries({
+    queries: activeAccounts.map((a) => ({ ...playerCardQueryOptions(a.steam_id3), enabled: true })),
+  });
+
+  const hasUnfriendedAccount = cardQueries.some((q) => {
+    if (!q.isError) return false;
+    const err = q.error as unknown as Record<string, unknown>;
+    return Object.hasOwn(err, "invites") && Array.isArray(err.invites);
+  });
+
   if (isLoading) {
     return <PatronPageSkeleton />;
   }
@@ -45,14 +59,14 @@ export function AuthenticatedDashboard() {
 
       <PatronStatusCard />
 
-      {(status?.steam_accounts_summary.active_count ?? 0) > 0 && (
-        <Alert>
+      {hasUnfriendedAccount && (
+        <Alert className="border-primary/30 bg-primary/5">
           <UserPlus className="h-4 w-4" />
           <AlertTitle>Add our bot as a Steam friend</AlertTitle>
           <AlertDescription>
-            For priority data fetching to work, each of your Steam accounts must be friends with one of our bots. If you
-            see an "Add bot" button in the Rank column below, click it to get an invite link and accept the friend
-            request in Steam.
+            Some of your accounts are not yet friends with one of our bots. Priority data fetching only works for
+            accounts that have a bot friend. Click the "Add bot" button in the Rank column below to get an invite link,
+            then accept the friend request in Steam.
           </AlertDescription>
         </Alert>
       )}
