@@ -1,7 +1,7 @@
 import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { AlertCircle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -77,10 +77,10 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
           >
-            <UserPlus className="h-3.5 w-3.5" />
-            Add bot
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Add bot friend
           </button>
           <AddBotDialog
             open={dialogOpen}
