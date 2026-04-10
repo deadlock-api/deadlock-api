@@ -1,7 +1,10 @@
+import { UserPlus } from "lucide-react";
+
 import { AddSteamAccountForm } from "~/components/patron/AddSteamAccountForm";
 import { PatronStatusCard } from "~/components/patron/PatronStatusCard";
 import { SteamAccountsList } from "~/components/patron/SteamAccountsList";
 import { NotSubscribedState } from "~/components/patron/UnauthenticatedState";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { usePatronStatus } from "~/queries/patron-queries";
 
@@ -41,6 +44,18 @@ export function AuthenticatedDashboard() {
       </div>
 
       <PatronStatusCard />
+
+      {(status?.steam_accounts_summary.active_count ?? 0) > 0 && (
+        <Alert>
+          <UserPlus className="h-4 w-4" />
+          <AlertTitle>Add our bot as a Steam friend</AlertTitle>
+          <AlertDescription>
+            For priority data fetching to work, each of your Steam accounts must be friends with one of our bots. If you
+            see an "Add bot" button in the Rank column below, click it to get an invite link and accept the friend
+            request in Steam.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {hasAvailableSlots && <AddSteamAccountForm />}
 

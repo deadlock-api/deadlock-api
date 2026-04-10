@@ -92,3 +92,30 @@ pub async fn get_all_prioritized_accounts(pool: &Pool<Postgres>) -> anyhow::Resu
         }
     }
 }
+
+/// Returns all currently prioritized Steam accounts that are friends with a bot.
+///
+/// Only includes accounts that have an entry in `bot_friends`, returning both the
+/// `steam_id3` and the `bot_id` (username) of the befriended bot.
+pub async fn get_all_prioritized_accounts_with_bots(
+    pool: &Pool<Postgres>,
+) -> anyhow::Result<Vec<(i64, String)>> {
+    let result: Result<Vec<(i64, String)>, sqlx::Error> = sqlx::query_as(
+        r"
+        SELECT psa.steam_id3, bf.bot_id
+        FROM prioritized_steam_accounts psa
+        INNER JOIN bot_friends bf ON bf.friend_id = psa.steam_id3
+        WHERE psa.deleted_at IS NULL
+        ",
+    )
+    .fetch_all(pool)
+    .await;
+
+    match result {
+        Ok(rows) => Ok(rows),
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to fetch prioritized accounts with bots");
+            Err(e.into())
+        }
+    }
+}
