@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE prioritized_steam_accounts\n            SET deleted_at = NULL, user_deleted = false\n            WHERE id = ANY($1)\n              AND patron_id = $2\n              AND deleted_at IS NOT NULL\n            RETURNING steam_id3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "steam_id3",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c13fd7f6802188457a8303a41a462da3016ddd3c2e2d8e1753f7b00467928e70"
+}

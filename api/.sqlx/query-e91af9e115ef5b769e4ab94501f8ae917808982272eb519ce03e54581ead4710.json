@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO prioritized_steam_accounts (id, patron_id, steam_id3, created_at)\n            VALUES (gen_random_uuid(), $1, $2, NOW())\n            RETURNING id, patron_id, steam_id3, created_at, deleted_at\n            ",
+  "query": "\n            SELECT id, patron_id, steam_id3, created_at, deleted_at, user_deleted\n            FROM prioritized_steam_accounts\n            WHERE patron_id = $1\n              AND steam_id3 = $2\n              AND deleted_at IS NOT NULL\n            ORDER BY deleted_at DESC\n            LIMIT 1\n            ",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,11 @@
         "ordinal": 4,
         "name": "deleted_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_deleted",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -40,8 +45,9 @@
       true,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "4e7e08ae892444365462e9836d12363f47ea63e664974be8978365182c0017d7"
+  "hash": "e91af9e115ef5b769e4ab94501f8ae917808982272eb519ce03e54581ead4710"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                patron_id,\n                steam_id3,\n                created_at,\n                deleted_at\n            FROM prioritized_steam_accounts\n            WHERE id = $1\n              AND patron_id = $2\n            ",
+  "query": "\n            UPDATE prioritized_steam_accounts\n            SET deleted_at = NULL, user_deleted = false\n            WHERE id = $1\n              AND patron_id = $2\n              AND deleted_at IS NOT NULL\n            RETURNING id, patron_id, steam_id3, created_at, deleted_at, user_deleted\n            ",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,11 @@
         "ordinal": 4,
         "name": "deleted_at",
         "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_deleted",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -40,8 +45,9 @@
       true,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "0b18226cf751a07739a19e81fd8fddc3ee236f8b444bd1814f0c1c7f178ed626"
+  "hash": "2b6ccd439e0435735f4e20d51185943a0f8809ad0ee9fe8d84d7e2012ad1b43a"
 }
