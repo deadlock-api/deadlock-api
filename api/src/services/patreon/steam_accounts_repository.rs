@@ -27,6 +27,7 @@ pub(crate) struct SteamAccount {
     pub(crate) steam_id3: i64,
     pub(crate) created_at: DateTime<Utc>,
     pub(crate) deleted_at: Option<DateTime<Utc>>,
+    pub(crate) user_deleted: bool,
 }
 
 /// Repository for prioritized Steam accounts database operations
@@ -53,7 +54,8 @@ impl SteamAccountsRepository {
                 patron_id,
                 steam_id3,
                 created_at,
-                deleted_at
+                deleted_at,
+                user_deleted
             FROM prioritized_steam_accounts
             WHERE id = $1
               AND patron_id = $2
@@ -70,6 +72,7 @@ impl SteamAccountsRepository {
             steam_id3: row.steam_id3,
             created_at: row.created_at,
             deleted_at: row.deleted_at,
+            user_deleted: row.user_deleted,
         }))
     }
 
@@ -85,7 +88,8 @@ impl SteamAccountsRepository {
                 patron_id,
                 steam_id3,
                 created_at,
-                deleted_at
+                deleted_at,
+                user_deleted
             FROM prioritized_steam_accounts
             WHERE patron_id = $1
             ORDER BY created_at ASC
@@ -103,6 +107,7 @@ impl SteamAccountsRepository {
                 steam_id3: row.steam_id3,
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
+                user_deleted: row.user_deleted,
             })
             .collect())
     }
@@ -194,7 +199,7 @@ impl SteamAccountsRepository {
     ) -> SteamAccountsRepositoryResult<Option<SteamAccount>> {
         let row = sqlx::query!(
             r#"
-            SELECT id, patron_id, steam_id3, created_at, deleted_at
+            SELECT id, patron_id, steam_id3, created_at, deleted_at, user_deleted
             FROM prioritized_steam_accounts
             WHERE patron_id = $1
               AND steam_id3 = $2
@@ -214,6 +219,7 @@ impl SteamAccountsRepository {
             steam_id3: row.steam_id3,
             created_at: row.created_at,
             deleted_at: row.deleted_at,
+            user_deleted: row.user_deleted,
         }))
     }
 
@@ -227,7 +233,7 @@ impl SteamAccountsRepository {
             r#"
             INSERT INTO prioritized_steam_accounts (id, patron_id, steam_id3, created_at)
             VALUES (gen_random_uuid(), $1, $2, NOW())
-            RETURNING id, patron_id, steam_id3, created_at, deleted_at
+            RETURNING id, patron_id, steam_id3, created_at, deleted_at, user_deleted
             "#,
             patron_id,
             steam_id3,
@@ -243,6 +249,7 @@ impl SteamAccountsRepository {
             steam_id3: row.steam_id3,
             created_at: row.created_at,
             deleted_at: row.deleted_at,
+            user_deleted: row.user_deleted,
         })
     }
 
@@ -256,7 +263,7 @@ impl SteamAccountsRepository {
         let result = sqlx::query!(
             r#"
             UPDATE prioritized_steam_accounts
-            SET deleted_at = NOW()
+            SET deleted_at = NOW(), user_deleted = true
             WHERE id = $1
               AND patron_id = $2
               AND deleted_at IS NULL
@@ -322,11 +329,11 @@ impl SteamAccountsRepository {
         let row = sqlx::query!(
             r#"
             UPDATE prioritized_steam_accounts
-            SET deleted_at = NULL
+            SET deleted_at = NULL, user_deleted = false
             WHERE id = $1
               AND patron_id = $2
               AND deleted_at IS NOT NULL
-            RETURNING id, patron_id, steam_id3, created_at, deleted_at
+            RETURNING id, patron_id, steam_id3, created_at, deleted_at, user_deleted
             "#,
             account_id,
             patron_id,
@@ -346,6 +353,7 @@ impl SteamAccountsRepository {
                     steam_id3: row.steam_id3,
                     created_at: row.created_at,
                     deleted_at: row.deleted_at,
+                    user_deleted: row.user_deleted,
                 })
             }
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
@@ -365,7 +373,8 @@ impl SteamAccountsRepository {
                 patron_id,
                 steam_id3,
                 created_at,
-                deleted_at
+                deleted_at,
+                user_deleted
             FROM prioritized_steam_accounts
             WHERE patron_id = $1
               AND deleted_at IS NULL
@@ -384,6 +393,7 @@ impl SteamAccountsRepository {
                 steam_id3: row.steam_id3,
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
+                user_deleted: row.user_deleted,
             })
             .collect())
     }
@@ -401,10 +411,12 @@ impl SteamAccountsRepository {
                 patron_id,
                 steam_id3,
                 created_at,
-                deleted_at
+                deleted_at,
+                user_deleted
             FROM prioritized_steam_accounts
             WHERE patron_id = $1
               AND deleted_at IS NOT NULL
+              AND user_deleted = false
             ORDER BY created_at ASC
             "#,
             patron_id,
@@ -420,6 +432,7 @@ impl SteamAccountsRepository {
                 steam_id3: row.steam_id3,
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
+                user_deleted: row.user_deleted,
             })
             .collect())
     }
@@ -438,7 +451,7 @@ impl SteamAccountsRepository {
         let result = sqlx::query!(
             r#"
             UPDATE prioritized_steam_accounts
-            SET deleted_at = NULL
+            SET deleted_at = NULL, user_deleted = false
             WHERE id = ANY($1)
               AND patron_id = $2
               AND deleted_at IS NOT NULL
