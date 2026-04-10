@@ -1,7 +1,7 @@
 import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, RefreshCw, UserPlus, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Clock, RefreshCw, XCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -53,12 +53,9 @@ function SteamAccountsListSkeleton() {
   );
 }
 
-function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
+function BotFriendCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-
   const cardQuery = usePlayerCard(steamId3, isActive);
-
-  const ranksQuery = useQuery(ranksQueryOptions);
 
   if (!isActive) {
     return <span className="text-muted-foreground">—</span>;
@@ -92,6 +89,26 @@ function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive
         </>
       );
     }
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <Badge className="bg-green-600 hover:bg-green-600">
+      <CheckCircle className="mr-1 h-3 w-3" />
+      Connected
+    </Badge>
+  );
+}
+
+function PlayerCardRankCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
+  const cardQuery = usePlayerCard(steamId3, isActive);
+  const ranksQuery = useQuery(ranksQueryOptions);
+
+  if (!isActive) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  if (cardQuery.isLoading || cardQuery.isError) {
     return <span className="text-muted-foreground">—</span>;
   }
 
@@ -249,6 +266,7 @@ export function SteamAccountsList() {
                 <TableHead>SteamID64</TableHead>
                 <TableHead>Added</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Bot Friend</TableHead>
                 <TableHead>Rank</TableHead>
                 <TableHead>Refetch</TableHead>
                 <TableHead className="w-[60px]">Actions</TableHead>
@@ -305,6 +323,9 @@ export function SteamAccountsList() {
                           Removed
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <BotFriendCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
                     </TableCell>
                     <TableCell>
                       <PlayerCardRankCell steamId3={account.steam_id3} isActive={account.deleted_at === null} />
