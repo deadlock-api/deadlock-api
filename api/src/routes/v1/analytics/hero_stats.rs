@@ -287,7 +287,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_max_health) AS total_max_health,
         sum(max_shots_hit) AS total_shots_hit,
         sum(max_shots_missed) AS total_shots_missed
-    FROM match_player
+    FROM match_player FINAL
     {}
     WHERE TRUE {player_filters}
         {}
