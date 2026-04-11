@@ -29,6 +29,8 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 #[openapi(tags((name = "Players", description = "Player related endpoints")))]
 struct ApiDoc;
 
+const INVITE_LINK_PREFIX: &str = "invite_link:";
+
 /// Shared logic for patreon-gated bot endpoints: checks protected user status,
 /// verifies patreon membership, applies rate limits, and resolves `bot_username`.
 pub(super) async fn resolve_bot_for_account(
@@ -97,7 +99,7 @@ pub(super) async fn resolve_bot_for_account(
                 let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
                     .arg(cursor)
                     .arg("MATCH")
-                    .arg("invite_link:*")
+                    .arg(format!("{INVITE_LINK_PREFIX}*"))
                     .arg("COUNT")
                     .arg(100)
                     .query_async(&mut state.redis_client)
@@ -108,16 +110,38 @@ pub(super) async fn resolve_bot_for_account(
                     break;
                 }
             }
-            let invite_keys: Vec<String> = invite_keys_set.into_iter().collect();
-            let mut invites: Vec<String> = if invite_keys.is_empty() {
+            let mut bot_ids: Vec<String> = invite_keys_set
+                .into_iter()
+                .filter_map(|k| k.strip_prefix(INVITE_LINK_PREFIX).map(str::to_owned))
+                .collect();
+            let counts: std::collections::HashMap<String, i64> = if bot_ids.is_empty() {
+                std::collections::HashMap::new()
+            } else {
+                sqlx::query!(
+                    "SELECT bot_id, COUNT(*) AS count FROM bot_friends WHERE bot_id = ANY($1) GROUP BY bot_id",
+                    &bot_ids
+                )
+                .fetch_all(&state.pg_client)
+                .await?
+                .into_iter()
+                .map(|r| (r.bot_id, r.count.unwrap_or(0)))
+                .collect()
+            };
+            // Shuffle before the stable sort so ties break fairly.
+            bot_ids.shuffle(&mut rand::rng());
+            bot_ids.sort_by_key(|id| counts.get(id).copied().unwrap_or(0));
+            bot_ids.truncate(5);
+            let invites: Vec<String> = if bot_ids.is_empty() {
                 vec![]
             } else {
+                let selected_keys: Vec<String> = bot_ids
+                    .iter()
+                    .map(|id| format!("{INVITE_LINK_PREFIX}{id}"))
+                    .collect();
                 let results: Vec<Option<String>> =
-                    AsyncTypedCommands::mget(&mut state.redis_client, &invite_keys).await?;
+                    AsyncTypedCommands::mget(&mut state.redis_client, &selected_keys).await?;
                 results.into_iter().flatten().collect()
             };
-            invites.shuffle(&mut rand::rng());
-            invites.truncate(5);
 
             return Err(APIError::StatusMsgJson {
                 status: StatusCode::BAD_REQUEST,
