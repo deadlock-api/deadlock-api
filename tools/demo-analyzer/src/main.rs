@@ -295,7 +295,7 @@ fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayer> {
 }
 
 async fn insert_batch(ch_client: &clickhouse::Client, rows: &[DemoPlayer]) -> anyhow::Result<()> {
-    tryhard::retry_fn(|| async {
+    common::retry_fn_with_backoff("insert_batch", || async {
         let mut inserter = ch_client.insert::<DemoPlayer>("demo_player").await?;
         for row in rows {
             inserter.write(row).await?;
@@ -303,8 +303,6 @@ async fn insert_batch(ch_client: &clickhouse::Client, rows: &[DemoPlayer]) -> an
         inserter.end().await?;
         Ok::<_, clickhouse::error::Error>(())
     })
-    .retries(5)
-    .exponential_backoff(Duration::from_millis(100))
     .await?;
     Ok(())
 }

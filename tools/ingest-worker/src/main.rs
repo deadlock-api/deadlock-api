@@ -372,16 +372,7 @@ async fn batch_inserter(
 
 /// Flush a batch with retries and exponential backoff using `tryhard`.
 async fn flush_batch(client: &clickhouse::Client, batch: &[ParsedMatch]) -> anyhow::Result<()> {
-    tryhard::retry_fn(|| write_and_flush_batch(client, batch))
-        .retries(5)
-        .exponential_backoff(Duration::from_millis(100))
-        .on_retry(|attempt, _, error: &anyhow::Error| {
-            let err = format!("{error:#}");
-            async move {
-                warn!("Batch flush attempt {attempt} failed: {err}");
-            }
-        })
-        .await
+    common::retry_fn_with_backoff("Batch flush", || write_and_flush_batch(client, batch)).await
 }
 
 /// Fetch a match from S3, decompress, parse, and convert to ``ClickHouse`` types.
@@ -616,7 +607,7 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
         .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(match_info, p))
         .collect();
 
-    tryhard::retry_fn(|| async {
+    common::retry_fn_with_backoff("insert_match", || async {
         let mut match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
         let mut match_player_insert = client
             .insert::<ClickhouseMatchPlayer>("match_player")
@@ -636,14 +627,6 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
         }
         history_insert.end().await?;
         Ok(())
-    })
-    .retries(5)
-    .exponential_backoff(Duration::from_millis(100))
-    .on_retry(|attempt, _, error: &anyhow::Error| {
-        let err = format!("{error:#}");
-        async move {
-            warn!("insert_match attempt {attempt} failed: {err}");
-        }
     })
     .await
 }

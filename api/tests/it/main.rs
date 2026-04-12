@@ -61,7 +61,13 @@ macro_rules! push_query {
     };
     ($queries:ident, $key:expr =>[] $val:expr) => {
         if let Some(ref __v) = $val {
-            $queries.push(($key, __v.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")));
+            $queries.push((
+                $key,
+                __v.iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ));
         }
     };
 }

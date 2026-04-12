@@ -59,11 +59,11 @@ fn send_info_event() -> Result<Event, axum::Error> {
 }
 
 async fn demo_event_stream(
+    http_client: reqwest::Client,
     broadcast_url: impl Into<String>,
     query: DemoEventsQuery,
 ) -> Result<impl Stream<Item = Result<Event, DemoParseError>>, DemoParseError> {
-    let client = reqwest::Client::new();
-    let demo_stream = BroadcastHttp::start_streaming(client, broadcast_url).await?;
+    let demo_stream = BroadcastHttp::start_streaming(http_client, broadcast_url).await?;
     let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
     let visitor = SendingVisitor::new(
         sender.clone(),
@@ -143,7 +143,7 @@ pub(super) async fn events(
     utils::wait_for_live_demo(&state.http_client, &response.broadcast_url).await?;
 
     info!("Demo available for match {match_id}");
-    let stream = demo_event_stream(response.broadcast_url, body)
+    let stream = demo_event_stream(state.http_client.clone(), response.broadcast_url, body)
         .await
         .map_err(|e| APIError::internal(e.to_string()))?
         .inspect_err(|e| error!("Error in demo event stream: {e}"));
@@ -165,7 +165,7 @@ pub(super) async fn events_by_broadcast_url(
     info!("Connecting to broadcast URL: {}", query.broadcast_url);
     utils::wait_for_live_demo(&state.http_client, &query.broadcast_url).await?;
 
-    let stream = demo_event_stream(query.broadcast_url, query.query)
+    let stream = demo_event_stream(state.http_client.clone(), query.broadcast_url, query.query)
         .await
         .map_err(|e| APIError::internal(e.to_string()))?
         .inspect_err(|e| error!("Error in demo event stream: {e}"));

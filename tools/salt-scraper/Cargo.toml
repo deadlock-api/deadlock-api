@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-serde = { version = "1.0.228", features = ["derive"] }
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "2239ea7df0984240c292c691967eccca69556c5b", features = ["gc-client"] }
-tokio = { version = "1.51.1", features = ["rt-multi-thread", "macros"] }
-metrics = "0.24.3"
-tracing = "0.1.44"
-clickhouse = "0.15.0"
-tryhard = "0.5.2"
-anyhow = "1.0.102"
-common = { version = "0.1.0", path = "../common" }
-futures = "0.3.32"
-reqwest = "0.13.2"
+anyhow = { workspace = true }
+clickhouse = { workspace = true }
+common = { workspace = true }
+futures = { workspace = true }
+metrics = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tryhard = { workspace = true }
+valveprotos = { workspace = true, features = ["gc-client"] }

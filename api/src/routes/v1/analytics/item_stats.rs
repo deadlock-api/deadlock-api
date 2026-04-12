@@ -209,7 +209,11 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     #[allow(deprecated)]
     let mut player_filters = PlayerFilters {
-        hero_ids: if hero_ids.is_empty() { None } else { Some(&hero_ids) },
+        hero_ids: if hero_ids.is_empty() {
+            None
+        } else {
+            Some(&hero_ids)
+        },
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
         min_networth: query.min_networth,

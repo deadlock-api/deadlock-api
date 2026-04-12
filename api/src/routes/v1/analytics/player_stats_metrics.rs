@@ -421,15 +421,18 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let player_filters = join_filters(&PlayerFilters {
-        hero_ids: query.hero_ids.as_deref(),
-        account_ids: query.account_ids.as_deref(),
-        min_networth: query.min_networth,
-        max_networth: query.max_networth,
-        include_item_ids: query.include_item_ids.as_deref(),
-        exclude_item_ids: query.exclude_item_ids.as_deref(),
-        ..Default::default()
-    }.build());
+    let player_filters = join_filters(
+        &PlayerFilters {
+            hero_ids: query.hero_ids.as_deref(),
+            account_ids: query.account_ids.as_deref(),
+            min_networth: query.min_networth,
+            max_networth: query.max_networth,
+            include_item_ids: query.include_item_ids.as_deref(),
+            exclude_item_ids: query.exclude_item_ids.as_deref(),
+            ..Default::default()
+        }
+        .build(),
+    );
     let quantiles = "quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)";
     let selects = Metric::VARIANTS.iter()
         .map(|metric| (metric, metric.get_select_clause()))

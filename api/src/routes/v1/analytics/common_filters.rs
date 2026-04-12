@@ -77,13 +77,13 @@ impl PlayerFilters<'_> {
         if let Some(hero_id) = self.hero_id {
             filters.push(format!("hero_id = {hero_id}"));
         }
-        if let Some(hero_ids) = self.hero_ids {
-            if !hero_ids.is_empty() {
-                filters.push(format!(
-                    "hero_id IN ({})",
-                    hero_ids.iter().map(ToString::to_string).join(", ")
-                ));
-            }
+        if let Some(hero_ids) = self.hero_ids
+            && !hero_ids.is_empty()
+        {
+            filters.push(format!(
+                "hero_id IN ({})",
+                hero_ids.iter().map(ToString::to_string).join(", ")
+            ));
         }
         if let Some(account_id) = self.account_id {
             filters.push(format!("account_id = {account_id}"));

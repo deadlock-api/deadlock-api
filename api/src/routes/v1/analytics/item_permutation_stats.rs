@@ -109,14 +109,21 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         hero_ids.push(hero_id);
     }
     #[allow(deprecated)]
-    let player_filters = join_filters(&PlayerFilters {
-        hero_ids: if hero_ids.is_empty() { None } else { Some(&hero_ids) },
-        account_id: query.account_id,
-        account_ids: query.account_ids.as_deref(),
-        min_networth: query.min_networth,
-        max_networth: query.max_networth,
-        ..Default::default()
-    }.build());
+    let player_filters = join_filters(
+        &PlayerFilters {
+            hero_ids: if hero_ids.is_empty() {
+                None
+            } else {
+                Some(&hero_ids)
+            },
+            account_id: query.account_id,
+            account_ids: query.account_ids.as_deref(),
+            min_networth: query.min_networth,
+            max_networth: query.max_networth,
+            ..Default::default()
+        }
+        .build(),
+    );
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     if let Some(item_ids) = &query.item_ids {
         if item_ids.len() < 2 {

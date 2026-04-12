@@ -21,13 +21,19 @@ pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {
         .with_compression(Compression::None))
 }
 
-pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
+fn build_s3_client(
+    region_env: &str,
+    bucket_env: &str,
+    access_key_env: &str,
+    secret_key_env: &str,
+    endpoint_env: &str,
+) -> anyhow::Result<object_store::aws::AmazonS3> {
     Ok(AmazonS3Builder::new()
-        .with_region(env::var("S3_REGION")?)
-        .with_bucket_name(env::var("S3_BUCKET_NAME")?)
-        .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("S3_ENDPOINT_URL")?)
+        .with_region(env::var(region_env)?)
+        .with_bucket_name(env::var(bucket_env)?)
+        .with_access_key_id(env::var(access_key_env)?)
+        .with_secret_access_key(env::var(secret_key_env)?)
+        .with_endpoint(env::var(endpoint_env)?)
         .with_allow_http(true)
         .with_client_options(
             ClientOptions::default()
@@ -37,20 +43,24 @@ pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
         .build()?)
 }
 
+pub fn get_store() -> anyhow::Result<impl object_store::ObjectStore> {
+    build_s3_client(
+        "S3_REGION",
+        "S3_BUCKET_NAME",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_ENDPOINT_URL",
+    )
+}
+
 pub fn get_cache_store() -> anyhow::Result<impl object_store::ObjectStore> {
-    Ok(AmazonS3Builder::new()
-        .with_region(env::var("S3_CACHE_REGION")?)
-        .with_bucket_name(env::var("S3_CACHE_BUCKET_NAME")?)
-        .with_access_key_id(env::var("S3_CACHE_ACCESS_KEY_ID")?)
-        .with_secret_access_key(env::var("S3_CACHE_SECRET_ACCESS_KEY")?)
-        .with_endpoint(env::var("S3_CACHE_ENDPOINT_URL")?)
-        .with_allow_http(true)
-        .with_client_options(
-            ClientOptions::default()
-                .with_allow_http(true)
-                .with_timeout(Duration::from_secs(30)),
-        )
-        .build()?)
+    build_s3_client(
+        "S3_CACHE_REGION",
+        "S3_CACHE_BUCKET_NAME",
+        "S3_CACHE_ACCESS_KEY_ID",
+        "S3_CACHE_SECRET_ACCESS_KEY",
+        "S3_CACHE_ENDPOINT_URL",
+    )
 }
 
 pub async fn get_pg_client() -> anyhow::Result<Pool<Postgres>> {

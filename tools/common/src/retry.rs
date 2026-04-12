@@ -63,3 +63,27 @@ where
             );
         })
 }
+
+/// Retries an async operation with exponential backoff starting at 100ms.
+///
+/// Performs up to 5 retries with delays of 100ms, 200ms, 400ms, 800ms, 1600ms.
+/// Logs each retry attempt at warn level using the provided label.
+pub async fn retry_fn_with_backoff<F, Fut, T, E>(label: &str, operation: F) -> Result<T, E>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T, E>>,
+    E: Display,
+{
+    let label = label.to_owned();
+    tryhard::retry_fn(operation)
+        .retries(5)
+        .exponential_backoff(Duration::from_millis(100))
+        .on_retry(move |attempt, _, error: &E| {
+            let label = label.clone();
+            let err = format!("{error:#}");
+            async move {
+                tracing::warn!("{label} attempt {attempt} failed: {err}");
+            }
+        })
+        .await
+}

@@ -31,15 +31,7 @@ struct ApiDoc;
 
 const INVITE_LINK_PREFIX: &str = "invite_link:";
 
-/// Shared logic for patreon-gated bot endpoints: checks protected user status,
-/// verifies patreon membership, applies rate limits, and resolves `bot_username`.
-#[allow(clippy::too_many_lines)]
-pub(super) async fn resolve_bot_for_account(
-    state: &mut AppState,
-    rate_limit_key: &RateLimitKey,
-    account_id: u32,
-    endpoint_name: &str,
-) -> APIResult<String> {
+async fn check_account_not_protected(state: &AppState, account_id: u32) -> APIResult<()> {
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)
@@ -47,16 +39,20 @@ pub(super) async fn resolve_bot_for_account(
     {
         return Err(APIError::protected_user());
     }
+    Ok(())
+}
 
-    let is_prioritized =
-        patreon::is_account_prioritized(&state.pg_client, i64::from(account_id)).await?;
+async fn check_patreon_access(
+    pg: &sqlx::PgPool,
+    rate_limit_key: &RateLimitKey,
+    account_id: u32,
+) -> APIResult<()> {
+    let is_prioritized = patreon::is_account_prioritized(pg, i64::from(account_id)).await?;
     if !is_prioritized {
         let has_patron_key = match rate_limit_key.api_key {
-            Some(api_key) => {
-                patreon::extractor::get_patron_id_for_api_key(&state.pg_client, api_key)
-                    .await
-                    .is_some()
-            }
+            Some(api_key) => patreon::extractor::get_patron_id_for_api_key(pg, api_key)
+                .await
+                .is_some(),
             None => false,
         };
         if !has_patron_key {
@@ -66,7 +62,14 @@ pub(super) async fn resolve_bot_for_account(
             ));
         }
     }
+    Ok(())
+}
 
+async fn apply_bot_rate_limits(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+    endpoint_name: &str,
+) -> APIResult<()> {
     state
         .rate_limit_client
         .apply_limits(
@@ -79,83 +82,101 @@ pub(super) async fn resolve_bot_for_account(
                 Quota::global_limit(200, Duration::from_mins(1)),
             ],
         )
-        .await?;
+        .await
+        .map(|_| ())
+}
 
+async fn lookup_bot_for_friend(pg: &sqlx::PgPool, account_id: u32) -> APIResult<Option<String>> {
     let friend_id = i32::try_from(account_id).map_err(|_| {
         APIError::status_msg(StatusCode::BAD_REQUEST, "Invalid account ID".to_owned())
     })?;
-    let bot_username = match sqlx::query!(
+    match sqlx::query!(
         "SELECT bot_id FROM bot_friends WHERE friend_id = $1",
         friend_id
     )
-    .fetch_one(&state.pg_client)
+    .fetch_one(pg)
     .await
     {
-        Ok(r) => r.bot_id,
-        Err(sqlx::Error::RowNotFound) => {
-            let mut invite_keys_set: std::collections::HashSet<String> =
-                std::collections::HashSet::new();
-            let mut cursor: u64 = 0;
-            loop {
-                let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
-                    .arg(cursor)
-                    .arg("MATCH")
-                    .arg(format!("{INVITE_LINK_PREFIX}*"))
-                    .arg("COUNT")
-                    .arg(100)
-                    .query_async(&mut state.redis_client)
-                    .await?;
-                invite_keys_set.extend(keys);
-                cursor = next_cursor;
-                if cursor == 0 {
-                    break;
-                }
-            }
-            let mut bot_ids: Vec<String> = invite_keys_set
-                .into_iter()
-                .filter_map(|k| k.strip_prefix(INVITE_LINK_PREFIX).map(str::to_owned))
-                .collect();
-            let counts: std::collections::HashMap<String, i64> = if bot_ids.is_empty() {
-                std::collections::HashMap::new()
-            } else {
-                sqlx::query!(
-                    "SELECT bot_id, COUNT(*) AS count FROM bot_friends WHERE bot_id = ANY($1) GROUP BY bot_id",
-                    &bot_ids
-                )
-                .fetch_all(&state.pg_client)
-                .await?
-                .into_iter()
-                .map(|r| (r.bot_id, r.count.unwrap_or(0)))
-                .collect()
-            };
-            // Shuffle before the stable sort so ties break fairly.
-            bot_ids.shuffle(&mut rand::rng());
-            bot_ids.sort_by_key(|id| counts.get(id).copied().unwrap_or(0));
-            bot_ids.truncate(5);
-            let invites: Vec<String> = if bot_ids.is_empty() {
-                vec![]
-            } else {
-                let selected_keys: Vec<String> = bot_ids
-                    .iter()
-                    .map(|id| format!("{INVITE_LINK_PREFIX}{id}"))
-                    .collect();
-                let results: Vec<Option<String>> =
-                    AsyncTypedCommands::mget(&mut state.redis_client, &selected_keys).await?;
-                results.into_iter().flatten().collect()
-            };
+        Ok(r) => Ok(Some(r.bot_id)),
+        Err(sqlx::Error::RowNotFound) => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
 
-            return Err(APIError::StatusMsgJson {
-                status: StatusCode::BAD_REQUEST,
-                message: json!({
-                    "message": "Account ID is not a friend of any bot. Please add the bot as friend first using one of these invites.",
-                    "invites": invites,
-                }),
-            });
+async fn collect_invite_links(
+    pg: &sqlx::PgPool,
+    redis: &mut redis::aio::MultiplexedConnection,
+) -> APIResult<Vec<String>> {
+    let mut invite_keys_set: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut cursor: u64 = 0;
+    loop {
+        let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+            .arg(cursor)
+            .arg("MATCH")
+            .arg(format!("{INVITE_LINK_PREFIX}*"))
+            .arg("COUNT")
+            .arg(100)
+            .query_async(redis)
+            .await?;
+        invite_keys_set.extend(keys);
+        cursor = next_cursor;
+        if cursor == 0 {
+            break;
         }
-        Err(e) => return Err(e.into()),
+    }
+    let mut bot_ids: Vec<String> = invite_keys_set
+        .into_iter()
+        .filter_map(|k| k.strip_prefix(INVITE_LINK_PREFIX).map(str::to_owned))
+        .collect();
+    let counts: std::collections::HashMap<String, i64> = if bot_ids.is_empty() {
+        std::collections::HashMap::new()
+    } else {
+        sqlx::query!(
+            "SELECT bot_id, COUNT(*) AS count FROM bot_friends WHERE bot_id = ANY($1) GROUP BY bot_id",
+            &bot_ids
+        )
+        .fetch_all(pg)
+        .await?
+        .into_iter()
+        .map(|r| (r.bot_id, r.count.unwrap_or(0)))
+        .collect()
     };
+    bot_ids.shuffle(&mut rand::rng());
+    bot_ids.sort_by_key(|id| counts.get(id).copied().unwrap_or(0));
+    bot_ids.truncate(5);
+    if bot_ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let selected_keys: Vec<String> = bot_ids
+        .iter()
+        .map(|id| format!("{INVITE_LINK_PREFIX}{id}"))
+        .collect();
+    let results: Vec<Option<String>> = AsyncTypedCommands::mget(redis, &selected_keys).await?;
+    Ok(results.into_iter().flatten().collect())
+}
 
-    Ok(bot_username)
+pub(super) async fn resolve_bot_for_account(
+    state: &mut AppState,
+    rate_limit_key: &RateLimitKey,
+    account_id: u32,
+    endpoint_name: &str,
+) -> APIResult<String> {
+    check_account_not_protected(state, account_id).await?;
+    check_patreon_access(&state.pg_client, rate_limit_key, account_id).await?;
+    apply_bot_rate_limits(state, rate_limit_key, endpoint_name).await?;
+
+    if let Some(bot_username) = lookup_bot_for_friend(&state.pg_client, account_id).await? {
+        return Ok(bot_username);
+    }
+
+    let invites = collect_invite_links(&state.pg_client, &mut state.redis_client).await?;
+    Err(APIError::StatusMsgJson {
+        status: StatusCode::BAD_REQUEST,
+        message: json!({
+            "message": "Account ID is not a friend of any bot. Please add the bot as friend first using one of these invites.",
+            "invites": invites,
+        }),
+    })
 }
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

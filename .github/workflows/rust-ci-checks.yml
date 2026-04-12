@@ -1,0 +1,93 @@
+name: Rust CI Checks
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: "Workspace subdirectory to run checks in."
+        required: true
+        type: string
+      lint-runs-on:
+        description: "Runner label for the lint job."
+        required: false
+        type: string
+        default: ubuntu-latest
+      lint-extra-apt-packages:
+        description: "Space-separated extra apt packages to install before clippy (e.g. 'clang mold')."
+        required: false
+        type: string
+        default: ""
+      lint-install-rust-toolchain:
+        description: "Whether to install the Rust toolchain via rustup installer script (needed on self-hosted runners without Rust pre-installed)."
+        required: false
+        type: boolean
+        default: false
+      rust-cache-shared-key:
+        description: "Shared key prefix for Swatinem/rust-cache."
+        required: true
+        type: string
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v6
+      - run: rustup component add rustfmt
+      - name: Rustfmt Check
+        run: cargo fmt --all -- --check
+
+  deps:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-machete
+      - name: Machete
+        run: cargo machete
+
+  typos:
+    name: Typos
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: typos-cli
+      - name: Typos Check
+        run: typos src/
+
+  lint:
+    name: Lint
+    runs-on: ${{ inputs.lint-runs-on }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev ${{ inputs.lint-extra-apt-packages }}
+      - name: Install Rust toolchain
+        if: inputs.lint-install-rust-toolchain
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "${{ inputs.rust-cache-shared-key }}-${{ runner.os }}-${{ runner.arch }}"
+          workspaces: "${{ inputs.working-directory }} -> target"
+      - run: rustup component add clippy
+      - name: Cargo Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings

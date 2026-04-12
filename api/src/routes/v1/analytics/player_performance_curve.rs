@@ -114,15 +114,18 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let player_filters = join_filters(&PlayerFilters {
-        hero_ids: query.hero_ids.as_deref(),
-        account_ids: query.account_ids.as_deref(),
-        min_networth: query.min_networth,
-        max_networth: query.max_networth,
-        include_item_ids: query.include_item_ids.as_deref(),
-        exclude_item_ids: query.exclude_item_ids.as_deref(),
-        ..Default::default()
-    }.build());
+    let player_filters = join_filters(
+        &PlayerFilters {
+            hero_ids: query.hero_ids.as_deref(),
+            account_ids: query.account_ids.as_deref(),
+            min_networth: query.min_networth,
+            max_networth: query.max_networth,
+            include_item_ids: query.include_item_ids.as_deref(),
+            exclude_item_ids: query.exclude_item_ids.as_deref(),
+            ..Default::default()
+        }
+        .build(),
+    );
 
     let resolution = query.resolution.unwrap_or(10);
     let (game_time_selection, additional_filter) = if resolution == 0 {

@@ -25,10 +25,6 @@ use crate::utils::parse::{
     comma_separated_deserialize_option, default_last_month_timestamp, parse_steam_id_option,
 };
 
-fn default_min_matches() -> Option<u32> {
-    default_min_matches_u32()
-}
-
 #[allow(clippy::unnecessary_wraps)]
 fn default_comb_size() -> Option<u8> {
     6.into()
@@ -79,7 +75,7 @@ pub(crate) struct HeroCombStatsQuery {
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     exclude_enemy_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
-    #[serde(default = "default_min_matches")]
+    #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
     /// The maximum number of matches played for a hero combination to be included in the response.
@@ -135,11 +131,14 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let player_filters = join_filters(&PlayerFilters {
-        min_networth: query.min_networth,
-        max_networth: query.max_networth,
-        ..Default::default()
-    }.build());
+    let player_filters = join_filters(
+        &PlayerFilters {
+            min_networth: query.min_networth,
+            max_networth: query.max_networth,
+            ..Default::default()
+        }
+        .build(),
+    );
     let mut grouped_filters = vec![];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
@@ -297,7 +296,7 @@ async fn get_comb_stats(
                 >= u64::from(
                     query
                         .min_matches
-                        .or(default_min_matches())
+                        .or(default_min_matches_u32())
                         .unwrap_or_default(),
                 )
                 && c.matches <= u64::from(query.max_matches.unwrap_or(u32::MAX))
