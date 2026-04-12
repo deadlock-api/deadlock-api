@@ -43,7 +43,10 @@ async fn setup() -> &'static TestEnv {
                     .with_tag("18")
                     .start(),
                 Redis::default().with_tag("alpine").start(),
-                ClickHouse::default().with_tag("25.10").start(),
+                ClickHouse::default()
+                    .with_tag("25.10")
+                    .with_env_var("CLICKHOUSE_PASSWORD", "ijojdmkasd")
+                    .start(),
                 MinIO::default().start(),
             );
             let pg = pg.expect("failed to start postgres");
@@ -84,22 +87,30 @@ async fn setup() -> &'static TestEnv {
             };
 
             let ch_import = async {
-                let ch_url = format!("http://127.0.0.1:{ch_http_port}/?user=default&password=");
+                let ch_url = format!("http://127.0.0.1:{ch_http_port}/?user=default&password=ijojdmkasd");
                 for path in &sorted_sql_files("tests/data/clickhouse") {
-                    let sql = std::fs::read_to_string(path)
+                    let contents = std::fs::read_to_string(path)
                         .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
-                    let resp = http
-                        .post(&ch_url)
-                        .body(sql)
-                        .send()
-                        .await
-                        .unwrap_or_else(|e| panic!("failed to post {}: {e}", path.display()));
-                    assert!(
-                        resp.status().is_success(),
-                        "ClickHouse import of {} failed: {}",
-                        path.display(),
-                        resp.text().await.unwrap_or_default()
-                    );
+                    // The HTTP API doesn't support multi-statement queries,
+                    // so split on `;` and send each statement individually.
+                    for stmt in contents.split(';') {
+                        let stmt = stmt.trim();
+                        if stmt.is_empty() {
+                            continue;
+                        }
+                        let resp = http
+                            .post(&ch_url)
+                            .body(stmt.to_owned())
+                            .send()
+                            .await
+                            .unwrap_or_else(|e| panic!("failed to post {}: {e}", path.display()));
+                        assert!(
+                            resp.status().is_success(),
+                            "ClickHouse import of {} failed: {}",
+                            path.display(),
+                            resp.text().await.unwrap_or_default()
+                        );
+                    }
                 }
             };
 
@@ -126,7 +137,7 @@ async fn setup() -> &'static TestEnv {
                 ("CLICKHOUSE_HOST", "127.0.0.1".to_owned()),
                 ("CLICKHOUSE_HTTP_PORT", ch_http_port.to_string()),
                 ("CLICKHOUSE_USERNAME", "default".to_owned()),
-                ("CLICKHOUSE_PASSWORD", String::new()),
+                ("CLICKHOUSE_PASSWORD", "ijojdmkasd".to_owned()),
                 ("CLICKHOUSE_DBNAME", "default".to_owned()),
                 ("CLICKHOUSE_RESTRICTED_USERNAME", "api_readonly_user".to_owned()),
                 ("CLICKHOUSE_RESTRICTED_PASSWORD", "testing".to_owned()),
