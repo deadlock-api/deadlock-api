@@ -1,3 +1,6 @@
-onlyBuiltDependencies:
-  - "deadlock_api_client"
-  - "assets_deadlock_api_client"
+allowBuilds:
+  deadlock_api_client: true
+  assets_deadlock_api_client: true
+  esbuild: true
+  core-js: true
+  protobufjs: true
