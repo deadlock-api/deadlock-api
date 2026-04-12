@@ -46,6 +46,7 @@ async fn setup() -> &'static TestEnv {
                 ClickHouse::default()
                     .with_tag("25.10")
                     .with_env_var("CLICKHOUSE_PASSWORD", "ijojdmkasd")
+                    .with_env_var("CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT", "1")
                     .start(),
                 MinIO::default().start(),
             );
@@ -167,18 +168,24 @@ async fn setup() -> &'static TestEnv {
             }
 
             // Start the API in-process on a random port.
-            let router = deadlock_api_rust::router(0)
-                .await
-                .expect("failed to build router");
-            let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-                .await
+            // The server must run on its own dedicated runtime thread so it
+            // survives across individual #[tokio::test] runtimes.
+            let std_listener = std::net::TcpListener::bind("127.0.0.1:0")
                 .expect("failed to bind listener");
-            let actual_port = listener.local_addr().unwrap().port();
+            std_listener.set_nonblocking(true).unwrap();
+            let actual_port = std_listener.local_addr().unwrap().port();
             let base_url = format!("http://127.0.0.1:{actual_port}");
 
-            let make_service = ServiceExt::<Request>::into_make_service(router);
-            tokio::spawn(async move {
-                axum::serve(listener, make_service).await.unwrap();
+            std::thread::spawn(move || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(async move {
+                    let router = deadlock_api_rust::router(0)
+                        .await
+                        .expect("failed to build router");
+                    let listener = tokio::net::TcpListener::from_std(std_listener).unwrap();
+                    let make_service = ServiceExt::<Request>::into_make_service(router);
+                    axum::serve(listener, make_service).await.unwrap();
+                });
             });
 
             // Wait for the health endpoint to respond.
