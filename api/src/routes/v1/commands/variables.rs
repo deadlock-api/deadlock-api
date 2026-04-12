@@ -16,8 +16,8 @@ use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::players::card::{PlayerCard, get_player_card};
 use crate::routes::v1::players::match_history::{
-    PlayerMatchHistory, PlayerMatchHistoryEntry, fetch_match_history_from_clickhouse,
-    fetch_steam_match_history, insert_match_history_to_ch,
+    MatchHistoryInsertBatcher, PlayerMatchHistory, PlayerMatchHistoryEntry,
+    fetch_match_history_from_clickhouse, fetch_steam_match_history,
 };
 use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
@@ -123,8 +123,8 @@ impl ResolverContext {
     pub(super) async fn new(
         variables: &[&Variable],
         ch_client_ro: &clickhouse::Client,
-        ch_client: &clickhouse::Client,
         steam_client: &SteamClient,
+        match_history_insert_batcher: &MatchHistoryInsertBatcher,
         steam_id: u32,
     ) -> Self {
         let needs_all = variables.iter().any(|v| v.needs_all_matches());
@@ -143,9 +143,14 @@ impl ResolverContext {
             },
             async {
                 if needs_today {
-                    Variable::get_todays_matches(ch_client, steam_client, steam_id)
-                        .await
-                        .map_err(|e| e.to_string())
+                    Variable::get_todays_matches(
+                        ch_client_ro,
+                        steam_client,
+                        match_history_insert_batcher,
+                        steam_id,
+                    )
+                    .await
+                    .map_err(|e| e.to_string())
                 } else {
                     Ok(Vec::new())
                 }
@@ -899,18 +904,12 @@ impl Variable {
     async fn get_todays_matches(
         ch_client: &clickhouse::Client,
         steam_client: &SteamClient,
+        match_history_insert_batcher: &MatchHistoryInsertBatcher,
         account_id: u32,
     ) -> Result<PlayerMatchHistory, VariableResolveError> {
         let matches = match fetch_steam_match_history(steam_client, account_id, false, None).await {
             Ok(m) => {
-                let ch_client = ch_client.clone();
-                let matches = m.clone();
-                tokio::spawn(async move {
-                    let result = insert_match_history_to_ch(&ch_client, &matches).await;
-                    if let Err(e) = result {
-                        warn!("Failed to insert player match history to ClickHouse: {e:?}");
-                    }
-                });
+                match_history_insert_batcher.insert(m.clone()).await;
                 m
             }
             Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id).await?,

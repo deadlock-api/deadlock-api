@@ -174,8 +174,8 @@ pub(super) async fn command_resolve(
     let context = ResolverContext::new(
         &variables_needed,
         &state.ch_client_ro,
-        &state.ch_client,
         &state.steam_client,
+        &state.match_history_insert_batcher,
         query.account_id,
     )
     .await;
@@ -287,8 +287,8 @@ pub(super) async fn variables_resolve(
     let context = ResolverContext::new(
         &variables_needed,
         &state.ch_client_ro,
-        &state.ch_client,
         &state.steam_client,
+        &state.match_history_insert_batcher,
         query.account_id,
     )
     .await;

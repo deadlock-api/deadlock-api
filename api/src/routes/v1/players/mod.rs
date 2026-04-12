@@ -33,6 +33,7 @@ const INVITE_LINK_PREFIX: &str = "invite_link:";
 
 /// Shared logic for patreon-gated bot endpoints: checks protected user status,
 /// verifies patreon membership, applies rate limits, and resolves `bot_username`.
+#[allow(clippy::too_many_lines)]
 pub(super) async fn resolve_bot_for_account(
     state: &mut AppState,
     rate_limit_key: &RateLimitKey,

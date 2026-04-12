@@ -19,6 +19,8 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti};
+use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -28,6 +30,39 @@ use crate::utils::types::AccountIdQuery;
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 
 pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
+
+pub(crate) struct MatchHistoryReadQuery;
+
+impl BatchQueryMulti for MatchHistoryReadQuery {
+    type Key = u32;
+    type Value = PlayerMatchHistoryEntry;
+
+    fn build_query(keys: &[u32]) -> String {
+        format!(
+            "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history \
+             WHERE account_id IN ({}) ORDER BY match_id DESC",
+            keys.iter().map(ToString::to_string).join(",")
+        )
+    }
+
+    fn key_of(value: &PlayerMatchHistoryEntry) -> u32 {
+        value.account_id
+    }
+}
+
+pub(crate) type MatchHistoryReadBatcher = ClickhouseBatcherMulti<MatchHistoryReadQuery>;
+
+pub(crate) struct MatchHistoryInsert;
+
+impl BatchInsert for MatchHistoryInsert {
+    type Row = PlayerMatchHistoryEntry;
+
+    fn table_name() -> &'static str {
+        "player_match_history"
+    }
+}
+
+pub(crate) type MatchHistoryInsertBatcher = ClickhouseInsertBatcher<MatchHistoryInsert>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Row, Eq, PartialEq, Hash)]
 pub(crate) struct PlayerMatchHistoryEntry {
@@ -102,19 +137,6 @@ pub(crate) struct MatchHistoryQuery {
     #[serde(default)]
     #[param(default)]
     force_refetch: bool,
-}
-
-pub(crate) async fn insert_match_history_to_ch(
-    ch_client: &clickhouse::Client,
-    match_history: &[PlayerMatchHistoryEntry],
-) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client
-        .insert::<PlayerMatchHistoryEntry>("player_match_history")
-        .await?;
-    for entry in match_history {
-        inserter.write(entry).await?;
-    }
-    inserter.end().await
 }
 
 pub(crate) async fn fetch_match_history_from_clickhouse(
@@ -311,8 +333,7 @@ pub(super) async fn match_history(
         return Err(APIError::protected_user());
     }
 
-    let ch_match_history =
-        fetch_match_history_from_clickhouse(&state.ch_client_ro, account_id).await?;
+    let ch_match_history = state.match_history_read_batcher.load(account_id).await?;
 
     // Look up bot friend username for this account
     let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
@@ -383,17 +404,18 @@ pub(super) async fn match_history(
         }
     };
 
-    // Insert missing entries to ClickHouse
+    // Queue missing entries for batch insertion to ClickHouse
     let ch_match_ids: HashSet<u64> = ch_match_history.iter().map(|e| e.match_id).collect();
     let ch_missing_entries = steam_match_history
         .iter()
         .filter(|e| !ch_match_ids.contains(&e.match_id))
         .cloned()
         .collect_vec();
-    if !ch_missing_entries.is_empty()
-        && let Err(e) = insert_match_history_to_ch(&state.ch_client, &ch_missing_entries).await
-    {
-        warn!("Failed to insert player match history to ClickHouse: {e:?}");
+    if !ch_missing_entries.is_empty() {
+        state
+            .match_history_insert_batcher
+            .insert(ch_missing_entries)
+            .await;
     }
 
     // Combine and return player match history

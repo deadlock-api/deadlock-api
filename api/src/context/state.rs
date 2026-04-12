@@ -13,6 +13,9 @@ use thiserror::Error;
 use tracing::{debug, warn};
 
 use crate::context::config::Config;
+use crate::routes::v1::players::match_history::{
+    MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
+};
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rank_predictor::RankPredictor;
@@ -58,6 +61,8 @@ pub(crate) struct AppState {
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
+    pub(crate) match_history_read_batcher: MatchHistoryReadBatcher,
+    pub(crate) match_history_insert_batcher: Arc<MatchHistoryInsertBatcher>,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
@@ -279,6 +284,12 @@ impl AppState {
         debug!("Creating Steam Profile Batcher");
         let steam_profile_batcher = SteamProfileBatcher::new(ch_client_ro.clone());
 
+        // Create Match History Batchers
+        debug!("Creating Match History Batchers");
+        let match_history_read_batcher = MatchHistoryReadBatcher::new(ch_client_ro.clone());
+        let match_history_insert_batcher =
+            Arc::new(MatchHistoryInsertBatcher::new(ch_client.clone()));
+
         Ok(Self {
             config,
             s3_client,
@@ -293,6 +304,8 @@ impl AppState {
             assets_client,
             rate_limit_client,
             request_logger,
+            match_history_read_batcher,
+            match_history_insert_batcher,
             rank_predictor,
             steam_profile_batcher,
         })
