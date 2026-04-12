@@ -2,7 +2,6 @@ import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 import { ogImages } from "./plugins/vite-plugin-og-images";
 
@@ -11,6 +10,9 @@ const ReactCompilerConfig = {};
 const isDev = process.env.NODE_ENV !== "production";
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
     ogImages(),
     reactRouter(),
@@ -28,7 +30,6 @@ export default defineConfig({
           }),
         ]
       : []),
-    tsconfigPaths(),
     tailwindcss(),
   ],
   optimizeDeps: {

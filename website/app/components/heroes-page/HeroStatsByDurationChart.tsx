@@ -132,9 +132,10 @@ export function HeroStatsByDurationChart({
               <Tooltip
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                 itemStyle={{ color: "#e5e5e5" }}
-                formatter={(value: number) =>
-                  heroStat === "winrate" ? `${value.toFixed(2)}%` : value.toLocaleString()
-                }
+                formatter={(value) => {
+                  const v = value as number;
+                  return heroStat === "winrate" ? `${v.toFixed(2)}%` : v.toLocaleString();
+                }}
               />
               <Legend
                 layout="horizontal"

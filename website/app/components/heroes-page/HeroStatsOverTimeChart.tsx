@@ -462,9 +462,9 @@ export function HeroStatsOverTimeChart({
                 labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
                 contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
                 itemStyle={{ color: "#e5e5e5" }}
-                formatter={(value: number) => (bumpChart ? `#${value}` : value)}
+                formatter={(value) => (bumpChart ? `#${value}` : value)}
                 itemSorter={(item) => (bumpChart ? (item.value as number) : 0)}
-                {...(bumpChart && { content: bumpTooltipContent })}
+                content={bumpChart ? (bumpTooltipContent as any) : undefined}
               />
               {!bumpChart && (
                 <Legend

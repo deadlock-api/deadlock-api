@@ -105,8 +105,8 @@ export default function GamesOverTimeChart({
                 />
                 <Tooltip
                   labelFormatter={(label) => day(label).format("YYYY-MM-DD")}
-                  formatter={(value: number) => [
-                    statDef ? formatStatValue(value, statDef.format) : value,
+                  formatter={(value) => [
+                    statDef ? formatStatValue(value as number, statDef.format) : value,
                     statDef?.label ?? stat,
                   ]}
                   contentStyle={{ backgroundColor: "#0a0a0a", borderColor: "#1a1a1a" }}
