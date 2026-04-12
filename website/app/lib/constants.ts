@@ -1,4 +1,4 @@
-import { day } from "~/dayjs";
+import { type Dayjs, day } from "~/dayjs";
 
 export const PATCHES = [
   {
@@ -32,6 +32,19 @@ export const PATCHES = [
     endDate: day.utc("2025-05-08T19:43:20Z").local(),
   },
 ];
+
+const MIN_PATCH_AGE_DAYS = 7;
+const FALLBACK_RANGE_DAYS = 14;
+
+/** Fresh patches lack enough data for meaningful stats, so fall back to a rolling window. */
+export const DEFAULT_DATE_RANGE: [Dayjs, Dayjs] = (() => {
+  const latestPatch = PATCHES[0];
+  const daysSincePatch = day().diff(latestPatch.startDate, "day");
+  if (daysSincePatch < MIN_PATCH_AGE_DAYS) {
+    return [day().subtract(FALLBACK_RANGE_DAYS, "day").startOf("day"), day().endOf("day")];
+  }
+  return [latestPatch.startDate, latestPatch.endDate];
+})();
 
 export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;

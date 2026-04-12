@@ -11,7 +11,7 @@ import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import { PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -40,10 +40,10 @@ export default function Games() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
-    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
   const [prevDates, setPrevDates] = useState(() =>
-    computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES),
+    computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES),
   );
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);

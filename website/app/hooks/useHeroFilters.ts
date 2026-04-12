@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BY_RANK_STATS } from "~/components/heroes-page/HeroStatSelectors";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
-import { PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { HERO_STATS } from "~/types/api_hero_stats";
 
@@ -42,10 +42,10 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
   const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
-    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
   const [prevDates, setPrevDates] = useState(() =>
-    computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES),
+    computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES),
   );
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TAB_VALUES).withDefault(initialTab));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));

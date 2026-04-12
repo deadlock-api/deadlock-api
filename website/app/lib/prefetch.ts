@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { day } from "~/dayjs";
-import { PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { getDefaultRegion } from "~/lib/region";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
@@ -16,7 +16,7 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 type PrefetchFn = (queryClient: QueryClient) => void;
 
-const latestPatch = PATCHES[0];
+const [defaultStart, defaultEnd] = DEFAULT_DATE_RANGE;
 
 const prefetchMap: Record<string, PrefetchFn> = {
   "/heroes": (qc) => {
@@ -27,8 +27,8 @@ const prefetchMap: Record<string, PrefetchFn> = {
         gameMode: "normal",
         minAverageBadge: 91,
         maxAverageBadge: 116,
-        minUnixTimestamp: latestPatch.startDate.unix(),
-        maxUnixTimestamp: latestPatch.endDate.unix(),
+        minUnixTimestamp: defaultStart.unix(),
+        maxUnixTimestamp: defaultEnd.unix(),
       }),
     );
   },
@@ -42,8 +42,8 @@ const prefetchMap: Record<string, PrefetchFn> = {
         minAverageBadge: 91,
         maxAverageBadge: 116,
         minMatches: 10,
-        minUnixTimestamp: latestPatch.startDate.unix(),
-        maxUnixTimestamp: latestPatch.endDate.unix(),
+        minUnixTimestamp: defaultStart.unix(),
+        maxUnixTimestamp: defaultEnd.unix(),
       }),
     );
   },
@@ -56,8 +56,8 @@ const prefetchMap: Record<string, PrefetchFn> = {
         heroId: 2,
         gameMode: "normal",
         minMatches: 20,
-        minUnixTimestamp: latestPatch.startDate.unix(),
-        maxUnixTimestamp: latestPatch.endDate.unix(),
+        minUnixTimestamp: defaultStart.unix(),
+        maxUnixTimestamp: defaultEnd.unix(),
       }),
     );
   },
@@ -67,8 +67,8 @@ const prefetchMap: Record<string, PrefetchFn> = {
       gameStatsQueryOptions({
         gameMode: "normal",
         bucket: "no_bucket",
-        minUnixTimestamp: latestPatch.startDate.unix(),
-        maxUnixTimestamp: latestPatch.endDate.unix(),
+        minUnixTimestamp: defaultStart.unix(),
+        maxUnixTimestamp: defaultEnd.unix(),
       }),
     );
   },

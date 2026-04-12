@@ -10,7 +10,7 @@ const AbilityOrderTree = lazy(() => import("~/components/abilities/AbilityOrderT
 
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
-import { PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
@@ -29,7 +29,7 @@ export default function AbilityOrder() {
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
-    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());

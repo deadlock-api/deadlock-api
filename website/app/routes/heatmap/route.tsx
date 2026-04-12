@@ -9,7 +9,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
-import { PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
@@ -41,7 +41,7 @@ export default function Heatmap() {
   const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
-    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
 
   const requestParams: AnalyticsApiKillDeathStatsRequest = {

@@ -10,7 +10,7 @@ import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import { PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -44,10 +44,10 @@ export default function Items(
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
-    parseAsDayjsRange.withDefault([PATCHES[0].startDate, PATCHES[0].endDate]),
+    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
   const [prevDates, setPrevDates] = useState(() =>
-    computePreviousPeriod(PATCHES[0].startDate, PATCHES[0].endDate, PATCHES),
+    computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES),
   );
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(gameMode, minRankId, maxRankId);
 
