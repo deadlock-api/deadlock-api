@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   ###############################
-  ##    Stage 1: Build & Lint  ##
+  ##    Stage 1: Lint & Check  ##
   ###############################
 
   checks:
@@ -47,66 +47,21 @@ jobs:
       lint-install-rust-toolchain: true
       rust-cache-shared-key: api-build-cache
 
-  build:
-    name: Build Docker Image
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    defaults:
-      run:
-        working-directory: api
-    steps:
-      - name: Determine Docker Tag
-        working-directory: .
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            DOCKER_TAG="${{ inputs.tag }}"
-          elif [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
-            DOCKER_TAG="latest"
-          else
-            DOCKER_TAG="${{ github.sha }}"
-          fi
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-      - uses: useblacksmith/checkout@v1
-        with:
-          lfs: true
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Setup Docker Builder
-        uses: useblacksmith/setup-docker-builder@v1
-      - name: Build Docker image
-        uses: useblacksmith/build-push-action@v2
-        with:
-          context: api
-          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
-          load: true
-          push: false
-      - name: Save Docker image
-        run: docker save ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} | zstd -T0 -3 > /tmp/image.tar.zst
-        working-directory: .
-      - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: docker-image
-          path: /tmp/image.tar.zst
-          retention-days: 1
-
   ###############################
   ##     Stage 2: Test         ##
   ###############################
 
   test:
     name: Test
-    needs: [build]
+    needs: [checks]
     runs-on: blacksmith-4vcpu-ubuntu-2404
     defaults:
       run:
         working-directory: api
-    env:
-      DOCKER_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.ref == 'refs/heads/master' && 'latest' || github.sha) }}
     steps:
       - uses: useblacksmith/checkout@v1
+        with:
+          lfs: true
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
       - name: Install Rust toolchain
@@ -118,23 +73,8 @@ jobs:
         with:
           shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "api -> target"
-      - uses: taiki-e/cache-cargo-install-action@v3
-        with:
-          tool: cargo-nextest
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: docker-image
-          path: /tmp
-      - name: Load Docker image
-        run: zstd -d /tmp/image.tar.zst --stdout | docker load
-        working-directory: .
-      - name: Setup go-task
-        run: if [ ! -f "$HOME/.local/bin/task" ]; then curl -sSf https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin; fi
-      - name: Create .env.testing from example
-        run: cp .env.testing.example .env.testing
       - name: Tests
-        run: NO_BUILD=1 IMAGE=${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }} task test
+        run: cargo test --locked
 
   ###############################
   ##     Stage 3: Deploy       ##
@@ -142,11 +82,15 @@ jobs:
 
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
-    needs: [build, test]
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: [test]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    defaults:
+      run:
+        working-directory: api
     steps:
       - name: Determine Docker Tag
+        working-directory: .
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             DOCKER_TAG="${{ inputs.tag }}"
@@ -154,18 +98,25 @@ jobs:
             DOCKER_TAG="latest"
           fi
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-      - name: Download Docker image artifact
-        uses: actions/download-artifact@v8
+      - uses: useblacksmith/checkout@v1
         with:
-          name: docker-image
-          path: /tmp
-      - name: Load Docker image
-        run: zstd -d /tmp/image.tar.zst --stdout | docker load
+          lfs: true
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push Docker image
-        run: docker push ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@v1
+      - name: Build and push Docker image
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: api
+          tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}
+          push: true
