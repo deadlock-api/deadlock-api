@@ -633,7 +633,7 @@ checksum = "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
 [[package]]
 name = "haste"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=998632cbc9f55a78a395836ab493799f3feff314#998632cbc9f55a78a395836ab493799f3feff314"
+source = "git+https://github.com/deadlock-api/haste.git?rev=0828e48e92ebf90f6efb630e0d94a9ac0d525924#0828e48e92ebf90f6efb630e0d94a9ac0d525924"
 dependencies = [
  "haste_broadcast",
  "haste_core",
@@ -642,7 +642,7 @@ dependencies = [
 [[package]]
 name = "haste_broadcast"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=998632cbc9f55a78a395836ab493799f3feff314#998632cbc9f55a78a395836ab493799f3feff314"
+source = "git+https://github.com/deadlock-api/haste.git?rev=0828e48e92ebf90f6efb630e0d94a9ac0d525924#0828e48e92ebf90f6efb630e0d94a9ac0d525924"
 dependencies = [
  "anyhow",
  "bytes",
@@ -661,7 +661,7 @@ dependencies = [
 [[package]]
 name = "haste_core"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=998632cbc9f55a78a395836ab493799f3feff314#998632cbc9f55a78a395836ab493799f3feff314"
+source = "git+https://github.com/deadlock-api/haste.git?rev=0828e48e92ebf90f6efb630e0d94a9ac0d525924#0828e48e92ebf90f6efb630e0d94a9ac0d525924"
 dependencies = [
  "anyhow",
  "dungers",
@@ -679,7 +679,7 @@ dependencies = [
 [[package]]
 name = "haste_vartype"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/haste.git?rev=998632cbc9f55a78a395836ab493799f3feff314#998632cbc9f55a78a395836ab493799f3feff314"
+source = "git+https://github.com/deadlock-api/haste.git?rev=0828e48e92ebf90f6efb630e0d94a9ac0d525924#0828e48e92ebf90f6efb630e0d94a9ac0d525924"
 dependencies = [
  "dungers",
  "thiserror 2.0.18",
@@ -2214,7 +2214,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 [[package]]
 name = "valveprotos"
 version = "0.0.0"
-source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=8dffcdb105e3765276d90a5229de21446bc11bd1#8dffcdb105e3765276d90a5229de21446bc11bd1"
+source = "git+https://github.com/deadlock-api/valveprotos-rs.git?rev=2239ea7df0984240c292c691967eccca69556c5b#2239ea7df0984240c292c691967eccca69556c5b"
 dependencies = [
  "heck",
  "prost",

@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 pub(super) struct MatchInfoFilters {
     pub min_unix_timestamp: Option<i64>,
     pub max_unix_timestamp: Option<i64>,
@@ -51,6 +53,75 @@ impl MatchInfoFilters {
         } else {
             format!(" AND {}", filters.join(" AND "))
         }
+    }
+}
+
+/// Common player-level filters shared across analytics queries.
+/// Returns a `Vec<String>` so callers can extend with file-specific filters
+/// before formatting.
+#[derive(Default)]
+pub(super) struct PlayerFilters<'a> {
+    pub account_id: Option<u32>,
+    pub account_ids: Option<&'a [u32]>,
+    pub hero_id: Option<u32>,
+    pub hero_ids: Option<&'a [u32]>,
+    pub min_networth: Option<u64>,
+    pub max_networth: Option<u64>,
+    pub include_item_ids: Option<&'a [u32]>,
+    pub exclude_item_ids: Option<&'a [u32]>,
+}
+
+impl PlayerFilters<'_> {
+    pub(super) fn build(&self) -> Vec<String> {
+        let mut filters = vec![];
+        if let Some(hero_id) = self.hero_id {
+            filters.push(format!("hero_id = {hero_id}"));
+        }
+        if let Some(hero_ids) = self.hero_ids {
+            if !hero_ids.is_empty() {
+                filters.push(format!(
+                    "hero_id IN ({})",
+                    hero_ids.iter().map(ToString::to_string).join(", ")
+                ));
+            }
+        }
+        if let Some(account_id) = self.account_id {
+            filters.push(format!("account_id = {account_id}"));
+        }
+        if let Some(account_ids) = self.account_ids {
+            filters.push(format!(
+                "account_id IN ({})",
+                account_ids.iter().map(ToString::to_string).join(", ")
+            ));
+        }
+        if let Some(v) = self.min_networth {
+            filters.push(format!("net_worth >= {v}"));
+        }
+        if let Some(v) = self.max_networth {
+            filters.push(format!("net_worth <= {v}"));
+        }
+        if let Some(ids) = self.include_item_ids {
+            filters.push(format!(
+                "hasAll(items.item_id, [{}])",
+                ids.iter().map(ToString::to_string).join(", ")
+            ));
+        }
+        if let Some(ids) = self.exclude_item_ids {
+            filters.push(format!(
+                "not hasAny(items.item_id, [{}])",
+                ids.iter().map(ToString::to_string).join(", ")
+            ));
+        }
+        filters
+    }
+}
+
+/// Formats a filter vec as ` AND ...` or empty string.
+pub(super) fn join_filters(filters: &[String]) -> String {
+    if filters.is_empty() {
+        String::new()
+    } else {
+        format!(" AND {}", filters.join(" AND "))
     }
 }
 

@@ -17,7 +17,7 @@ use deadlock_api_rust::utils::types::SortDirectionDesc;
 use itertools::Itertools;
 use rstest::rstest;
 
-use crate::request_endpoint;
+use crate::{query_refs, request_endpoint};
 
 #[rstest]
 #[tokio::test]
@@ -26,28 +26,12 @@ async fn test_build_item_stats(
     #[values(None, Some(1741801678))] min_last_updated_unix_timestamp: Option<i64>,
     #[values(None, Some(1742233678))] max_last_updated_unix_timestamp: Option<i64>,
 ) {
-    let mut queries = vec![];
-    if let Some(hero_id) = hero_id {
-        queries.push(("hero_id", hero_id.to_string()));
-    }
-    if let Some(min_last_updated_unix_timestamp) = min_last_updated_unix_timestamp {
-        queries.push((
-            "min_last_updated_unix_timestamp",
-            min_last_updated_unix_timestamp.to_string(),
-        ));
-    }
-    if let Some(max_last_updated_unix_timestamp) = max_last_updated_unix_timestamp {
-        queries.push((
-            "max_last_updated_unix_timestamp",
-            max_last_updated_unix_timestamp.to_string(),
-        ));
-    }
+    let mut q = vec![];
+    push_query!(q, "hero_id" =>? hero_id);
+    push_query!(q, "min_last_updated_unix_timestamp" =>? min_last_updated_unix_timestamp);
+    push_query!(q, "max_last_updated_unix_timestamp" =>? max_last_updated_unix_timestamp);
 
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/build-item-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/build-item-stats", query_refs(&q)).await;
     let item_stats: Vec<BuildItemStats> = response.json().await.expect("Failed to parse response");
 
     assert_eq!(
@@ -94,66 +78,25 @@ async fn test_hero_comb_stats(
     #[values(None, Some(18373975))] account_idss: Option<u32>,
     #[values(None, Some(3), Some(6))] comb_size: Option<u8>,
 ) {
-    let mut queries = vec![];
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(max_matches) = max_matches {
-        queries.push(("max_matches", max_matches.to_string()));
-    }
-    if let Some(include_hero_ids) = include_hero_ids.as_ref() {
-        queries.push((
-            "include_hero_ids",
-            include_hero_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(exclude_hero_ids) = exclude_hero_ids.as_ref() {
-        queries.push((
-            "exclude_hero_ids",
-            exclude_hero_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(account_idss) = account_idss {
-        queries.push(("account_idss", account_idss.to_string()));
-    }
-    if let Some(comb_size) = comb_size {
-        queries.push(("comb_size", comb_size.to_string()));
-    }
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/hero-comb-stats", queries).await;
+    let mut q = vec![];
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "max_matches" =>? max_matches);
+    push_query!(q, "include_hero_ids" =>[] include_hero_ids);
+    push_query!(q, "exclude_hero_ids" =>[] exclude_hero_ids);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "account_idss" =>? account_idss);
+    push_query!(q, "comb_size" =>? comb_size);
+
+    let response = request_endpoint("/v1/analytics/hero-comb-stats", query_refs(&q)).await;
     let comb_stats: Vec<HeroCombStats> = response.json().await.expect("Failed to parse response");
 
     for comb in &comb_stats {
@@ -215,60 +158,25 @@ async fn test_hero_counters_stats(
     #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
     #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
-    let mut queries = vec![];
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(max_matches) = max_matches {
-        queries.push(("max_matches", max_matches.to_string()));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_enemy_networth) = min_enemy_networth {
-        queries.push(("min_enemy_networth", min_enemy_networth.to_string()));
-    }
-    if let Some(max_enemy_networth) = max_enemy_networth {
-        queries.push(("max_enemy_networth", max_enemy_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(same_lane_filter) = same_lane_filter {
-        queries.push(("same_lane_filter", same_lane_filter.to_string()));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/hero-counter-stats", queries).await;
+    let mut q = vec![];
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "max_matches" =>? max_matches);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_enemy_networth" =>? min_enemy_networth);
+    push_query!(q, "max_enemy_networth" =>? max_enemy_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "same_lane_filter" =>? same_lane_filter);
+    push_query!(q, "account_ids" =>? account_ids);
+
+    let response = request_endpoint("/v1/analytics/hero-counter-stats", query_refs(&q)).await;
     let counter_stats: Vec<HeroCounterStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -386,53 +294,24 @@ async fn test_hero_scoreboard(
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
     #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
-    let mut queries = vec![];
-    queries.push(("sort_by", sort_by.to_string()));
-    queries.push(("sort_direction", sort_direction.to_string()));
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(max_matches) = max_matches {
-        queries.push(("max_matches", max_matches.to_string()));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/scoreboards/heroes", queries).await;
+    let mut q = vec![];
+    push_query!(q, "sort_by" => sort_by);
+    push_query!(q, "sort_direction" => sort_direction);
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "max_matches" =>? max_matches);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "account_ids" =>? account_ids);
+
+    let response = request_endpoint("/v1/analytics/scoreboards/heroes", query_refs(&q)).await;
     let hero_scoreboard: Vec<hero_scoreboard::HeroEntry> =
         response.json().await.expect("Failed to parse response");
 
@@ -567,55 +446,24 @@ async fn test_player_scoreboard(
     #[values(None, Some(18373975))] account_ids: Option<u32>,
     #[case] limit: Option<u32>,
 ) {
-    let mut queries = vec![];
-    queries.push(("sort_by", sort_by.to_string()));
-    if let Some(sort_direction) = sort_direction {
-        queries.push(("sort_direction", sort_direction.to_string()));
-    }
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(max_matches) = max_matches {
-        queries.push(("max_matches", max_matches.to_string()));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/scoreboards/players", queries).await;
+    let mut q = vec![];
+    push_query!(q, "sort_by" => sort_by);
+    push_query!(q, "sort_direction" =>? sort_direction);
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "max_matches" =>? max_matches);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "account_ids" =>? account_ids);
+
+    let response = request_endpoint("/v1/analytics/scoreboards/players", query_refs(&q)).await;
     let player_scoreboard: Vec<player_scoreboard::PlayerEntry> =
         response.json().await.expect("Failed to parse response");
 
@@ -700,67 +548,27 @@ async fn test_hero_stats(
     #[case] exclude_item_ids: Option<Vec<u32>>,
     #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
-    let mut queries = vec![];
-    if let Some(bucket) = bucket {
-        queries.push(("bucket", bucket.to_string()));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(min_hero_matches) = min_hero_matches {
-        queries.push(("min_hero_matches", min_hero_matches.to_string()));
-    }
-    if let Some(max_hero_matches) = max_hero_matches {
-        queries.push(("max_hero_matches", max_hero_matches.to_string()));
-    }
-    if let Some(include_item_ids) = include_item_ids.as_ref() {
-        queries.push((
-            "include_item_ids",
-            include_item_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(exclude_item_ids) = exclude_item_ids.as_ref() {
-        queries.push((
-            "exclude_item_ids",
-            exclude_item_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    queries.iter().for_each(|(k, v)| println!("{k}={v}"));
-    let response = request_endpoint("/v1/analytics/hero-stats", queries).await;
+    let mut q = vec![];
+    push_query!(q, "bucket" =>? bucket);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "min_hero_matches" =>? min_hero_matches);
+    push_query!(q, "max_hero_matches" =>? max_hero_matches);
+    push_query!(q, "include_item_ids" =>[] include_item_ids);
+    push_query!(q, "exclude_item_ids" =>[] exclude_item_ids);
+    push_query!(q, "account_ids" =>? account_ids);
+
+    let refs = query_refs(&q);
+    refs.iter().for_each(|(k, v)| println!("{k}={v}"));
+    let response = request_endpoint("/v1/analytics/hero-stats", refs).await;
     let hero_stats: Vec<AnalyticsHeroStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -807,55 +615,23 @@ async fn test_hero_synergies_stats(
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
-    let mut queries = vec![];
-    if let Some(same_lane_filter) = same_lane_filter {
-        queries.push(("same_lane_filter", same_lane_filter.to_string()));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(max_matches) = max_matches {
-        queries.push(("max_matches", max_matches.to_string()));
-    }
+    let mut q = vec![];
+    push_query!(q, "same_lane_filter" =>? same_lane_filter);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "account_ids" =>? account_ids);
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "max_matches" =>? max_matches);
 
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/hero-synergy-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/hero-synergy-stats", query_refs(&q)).await;
     let synergy_stats: Vec<HeroSynergyStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -981,85 +757,26 @@ async fn test_item_stats(
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
-    let mut queries = vec![];
-    if let Some(bucket) = bucket {
-        queries.push(("bucket", bucket.to_string()));
-    }
-    if let Some(hero_ids) = hero_ids.as_ref() {
-        queries.push((
-            "hero_ids",
-            hero_ids
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(","),
-        ));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(include_item_ids) = include_item_ids.as_ref() {
-        queries.push((
-            "include_item_ids",
-            include_item_ids
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(","),
-        ));
-    }
-    if let Some(exclude_item_ids) = exclude_item_ids.as_ref() {
-        queries.push((
-            "exclude_item_ids",
-            exclude_item_ids
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(","),
-        ));
-    }
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(max_matches) = max_matches {
-        queries.push(("max_matches", max_matches.to_string()));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
+    let mut q = vec![];
+    push_query!(q, "bucket" =>? bucket);
+    push_query!(q, "hero_ids" =>[] hero_ids);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "include_item_ids" =>[] include_item_ids);
+    push_query!(q, "exclude_item_ids" =>[] exclude_item_ids);
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "max_matches" =>? max_matches);
+    push_query!(q, "account_ids" =>? account_ids);
 
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/item-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/item-stats", query_refs(&q)).await;
     let item_stats: Vec<ItemStats> = response.json().await.expect("Failed to parse response");
 
     assert_eq!(
@@ -1119,56 +836,24 @@ async fn test_ability_order_stats(
     #[case] min_matches: Option<u32>,
     #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
-    let mut queries = vec![];
-    queries.push(("hero_id", hero_id.to_string()));
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_ability_upgrades) = min_ability_upgrades {
-        queries.push(("min_ability_upgrades", min_ability_upgrades.to_string()));
-    }
-    if let Some(max_ability_upgrades) = max_ability_upgrades {
-        queries.push(("max_ability_upgrades", max_ability_upgrades.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(min_matches) = min_matches {
-        queries.push(("min_matches", min_matches.to_string()));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
+    let mut q = vec![];
+    push_query!(q, "hero_id" => hero_id);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_ability_upgrades" =>? min_ability_upgrades);
+    push_query!(q, "max_ability_upgrades" =>? max_ability_upgrades);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "min_matches" =>? min_matches);
+    push_query!(q, "account_ids" =>? account_ids);
 
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/ability-order-stats", queries).await;
+    let response = request_endpoint("/v1/analytics/ability-order-stats", query_refs(&q)).await;
     let ability_order_stats: Vec<AnalyticsAbilityOrderStats> =
         response.json().await.expect("Failed to parse response");
 
@@ -1243,64 +928,23 @@ async fn test_player_performance_curve(
     #[case] exclude_item_ids: Option<Vec<u32>>,
     #[values(None, Some(18373975))] account_ids: Option<u32>,
 ) {
-    let mut queries = vec![];
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_networth) = min_networth {
-        queries.push(("min_networth", min_networth.to_string()));
-    }
-    if let Some(max_networth) = max_networth {
-        queries.push(("max_networth", max_networth.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    if let Some(hero_ids) = hero_ids.as_ref() {
-        queries.push((
-            "hero_ids",
-            hero_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(include_item_ids) = include_item_ids.as_ref() {
-        queries.push((
-            "include_item_ids",
-            include_item_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(exclude_item_ids) = exclude_item_ids.as_ref() {
-        queries.push((
-            "exclude_item_ids",
-            exclude_item_ids.iter().map(ToString::to_string).join(","),
-        ));
-    }
-    if let Some(account_ids) = account_ids {
-        queries.push(("account_ids", account_ids.to_string()));
-    }
+    let mut q = vec![];
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_networth" =>? min_networth);
+    push_query!(q, "max_networth" =>? max_networth);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+    push_query!(q, "hero_ids" =>[] hero_ids);
+    push_query!(q, "include_item_ids" =>[] include_item_ids);
+    push_query!(q, "exclude_item_ids" =>[] exclude_item_ids);
+    push_query!(q, "account_ids" =>? account_ids);
 
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/player-performance-curve", queries).await;
+    let response = request_endpoint("/v1/analytics/player-performance-curve", query_refs(&q)).await;
     let player_performance_curve: Vec<PlayerPerformanceCurvePoint> =
         response.json().await.expect("Failed to parse response");
 
@@ -1358,39 +1002,18 @@ async fn test_game_stats(
     #[values(None, Some(34000226))] min_match_id: Option<u64>,
     #[values(None, Some(34000226))] max_match_id: Option<u64>,
 ) {
-    let mut queries = vec![];
-    if let Some(bucket) = bucket {
-        queries.push(("bucket", bucket.to_string()));
-    }
-    if let Some(min_unix_timestamp) = min_unix_timestamp {
-        queries.push(("min_unix_timestamp", min_unix_timestamp.to_string()));
-    }
-    if let Some(max_unix_timestamp) = max_unix_timestamp {
-        queries.push(("max_unix_timestamp", max_unix_timestamp.to_string()));
-    }
-    if let Some(min_duration_s) = min_duration_s {
-        queries.push(("min_duration_s", min_duration_s.to_string()));
-    }
-    if let Some(max_duration_s) = max_duration_s {
-        queries.push(("max_duration_s", max_duration_s.to_string()));
-    }
-    if let Some(min_average_badge) = min_average_badge {
-        queries.push(("min_average_badge", min_average_badge.to_string()));
-    }
-    if let Some(max_average_badge) = max_average_badge {
-        queries.push(("max_average_badge", max_average_badge.to_string()));
-    }
-    if let Some(min_match_id) = min_match_id {
-        queries.push(("min_match_id", min_match_id.to_string()));
-    }
-    if let Some(max_match_id) = max_match_id {
-        queries.push(("max_match_id", max_match_id.to_string()));
-    }
-    let queries = queries
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect::<Vec<_>>();
-    let response = request_endpoint("/v1/analytics/game-stats", queries).await;
+    let mut q = vec![];
+    push_query!(q, "bucket" =>? bucket);
+    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
+    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
+    push_query!(q, "min_duration_s" =>? min_duration_s);
+    push_query!(q, "max_duration_s" =>? max_duration_s);
+    push_query!(q, "min_average_badge" =>? min_average_badge);
+    push_query!(q, "max_average_badge" =>? max_average_badge);
+    push_query!(q, "min_match_id" =>? min_match_id);
+    push_query!(q, "max_match_id" =>? max_match_id);
+
+    let response = request_endpoint("/v1/analytics/game-stats", query_refs(&q)).await;
     let game_stats: Vec<AnalyticsGameStats> =
         response.json().await.expect("Failed to parse response");
 

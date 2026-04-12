@@ -6,12 +6,13 @@ use axum_extra::extract::Query;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{MatchInfoFilters, filter_protected_accounts, round_timestamps};
+use super::common_filters::{
+    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
@@ -113,42 +114,15 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let mut player_filters = vec![];
-    if let Some(hero_ids) = query.hero_ids.as_ref() {
-        player_filters.push(format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(",")
-        ));
-    }
-    if let Some(account_ids) = query.account_ids.as_ref() {
-        player_filters.push(format!(
-            "account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
-    }
-    if let Some(min_networth) = query.min_networth {
-        player_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        player_filters.push(format!("net_worth <= {max_networth}"));
-    }
-    if let Some(include_item_ids) = &query.include_item_ids {
-        player_filters.push(format!(
-            "hasAll(items.item_id, [{}])",
-            include_item_ids.iter().map(ToString::to_string).join(", ")
-        ));
-    }
-    if let Some(exclude_item_ids) = &query.exclude_item_ids {
-        player_filters.push(format!(
-            "not hasAny(items.item_id, [{}])",
-            exclude_item_ids.iter().map(ToString::to_string).join(", ")
-        ));
-    }
-    let player_filters = if player_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", player_filters.join(" AND "))
-    };
+    let player_filters = join_filters(&PlayerFilters {
+        hero_ids: query.hero_ids.as_deref(),
+        account_ids: query.account_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        include_item_ids: query.include_item_ids.as_deref(),
+        exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ..Default::default()
+    }.build());
 
     let resolution = query.resolution.unwrap_or(10);
     let (game_time_selection, additional_filter) = if resolution == 0 {

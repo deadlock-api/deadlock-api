@@ -43,6 +43,34 @@ pub async fn request_endpoint(
     response
 }
 
+/// Append a query parameter to a `Vec<(&str, String)>`.
+///
+/// Supports three forms:
+/// - `push_query!(q, "key" => expr)` -- always included, calls `.to_string()`
+/// - `push_query!(q, "key" =>? opt_expr)` -- included only if `Some`, calls `.to_string()`
+/// - `push_query!(q, "key" =>[] opt_vec_expr)` -- included only if `Some`, joins elements with commas
+#[macro_export]
+macro_rules! push_query {
+    ($queries:ident, $key:expr => $val:expr) => {
+        $queries.push(($key, $val.to_string()));
+    };
+    ($queries:ident, $key:expr =>? $val:expr) => {
+        if let Some(ref __v) = $val {
+            $queries.push(($key, __v.to_string()));
+        }
+    };
+    ($queries:ident, $key:expr =>[] $val:expr) => {
+        if let Some(ref __v) = $val {
+            $queries.push(($key, __v.iter().map(ToString::to_string).collect::<Vec<_>>().join(",")));
+        }
+    };
+}
+
+/// Convert owned query params to borrowed refs for `request_endpoint`.
+pub fn query_refs<'a>(params: &'a [(&'a str, String)]) -> Vec<(&'a str, &'a str)> {
+    params.iter().map(|(k, v)| (*k, v.as_str())).collect()
+}
+
 mod analytics;
 mod builds;
 mod info;

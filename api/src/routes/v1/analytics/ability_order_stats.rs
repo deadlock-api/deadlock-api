@@ -6,11 +6,13 @@ use axum_extra::extract::Query;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
+use super::common_filters::{
+    MatchInfoFilters, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
@@ -98,85 +100,36 @@ pub struct AnalyticsAbilityOrderStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &AbilityOrderStatsQuery) -> String {
-    let mut info_filters = vec![];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
+    let info_filters = MatchInfoFilters {
+        min_unix_timestamp: query.min_unix_timestamp,
+        max_unix_timestamp: query.max_unix_timestamp,
+        min_match_id: query.min_match_id,
+        max_match_id: query.max_match_id,
+        min_average_badge: query.min_average_badge,
+        max_average_badge: query.max_average_badge,
+        min_duration_s: query.min_duration_s,
+        max_duration_s: query.max_duration_s,
     }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    if let Some(min_badge_level) = query.min_average_badge
-        && min_badge_level > 11
-    {
-        info_filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
-        ));
-    }
-    if let Some(max_badge_level) = query.max_average_badge
-        && max_badge_level < 116
-    {
-        info_filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
-        ));
-    }
-    if let Some(min_duration_s) = query.min_duration_s {
-        info_filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    let info_filters = if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
-    };
-    let mut player_filters = vec![];
-    player_filters.push(format!("hero_id = {}", query.hero_id));
+    .build();
     #[allow(deprecated)]
-    if let Some(account_id) = query.account_id {
-        player_filters.push(format!("account_id = {account_id}"));
+    let mut player_filters = PlayerFilters {
+        hero_id: Some(query.hero_id),
+        account_id: query.account_id,
+        account_ids: query.account_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        include_item_ids: query.include_item_ids.as_deref(),
+        exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ..Default::default()
     }
-    if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!(
-            "account_id IN ({})",
-            account_ids.iter().map(ToString::to_string).join(",")
-        ));
-    }
-    if let Some(min_networth) = query.min_networth {
-        player_filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        player_filters.push(format!("net_worth <= {max_networth}"));
-    }
+    .build();
     if let Some(min_ability_upgrades) = query.min_ability_upgrades {
         player_filters.push(format!("length(abilities) >= {min_ability_upgrades}"));
     }
     if let Some(max_ability_upgrades) = query.max_ability_upgrades {
         player_filters.push(format!("length(abilities) <= {max_ability_upgrades}"));
     }
-    if let Some(include_item_ids) = &query.include_item_ids {
-        player_filters.push(format!(
-            "hasAll(items.item_id, [{}])",
-            include_item_ids.iter().map(ToString::to_string).join(", ")
-        ));
-    }
-    if let Some(exclude_item_ids) = &query.exclude_item_ids {
-        player_filters.push(format!(
-            "not hasAny(items.item_id, [{}])",
-            exclude_item_ids.iter().map(ToString::to_string).join(", ")
-        ));
-    }
-    let player_filters = if player_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", player_filters.join(" AND "))
-    };
+    let player_filters = join_filters(&player_filters);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
@@ -227,8 +180,7 @@ async fn get_ability_order_stats(
     ch_client: &clickhouse::Client,
     mut query: AbilityOrderStatsQuery,
 ) -> APIResult<Vec<AnalyticsAbilityOrderStats>> {
-    query.min_unix_timestamp = query.min_unix_timestamp.map(|v| v - v % 3600);
-    query.max_unix_timestamp = query.max_unix_timestamp.map(|v| v + 3600 - v % 3600);
+    round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
@@ -268,29 +220,8 @@ pub(super) async fn ability_order_stats(
             message: "Cannot filter by average badge for street brawl game mode".to_string(),
         });
     }
-    if let Some(account_ids) = query.account_ids {
-        let protected_users = state
-            .steam_client
-            .get_protected_users(&state.pg_client)
-            .await?;
-        let filtered_account_ids = account_ids
-            .into_iter()
-            .filter(|id| !protected_users.contains(id))
-            .collect::<Vec<_>>();
-        if filtered_account_ids.is_empty() {
-            return Err(APIError::protected_user());
-        }
-        query.account_ids = Some(filtered_account_ids);
-    }
     #[allow(deprecated)]
-    if let Some(account_id) = query.account_id
-        && state
-            .steam_client
-            .is_user_protected(&state.pg_client, account_id)
-            .await?
-    {
-        return Err(APIError::protected_user());
-    }
+    filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
     if !state.assets_client.validate_hero_id(query.hero_id).await {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
