@@ -16,7 +16,7 @@ fred = { workspace = true }
 haste = { workspace = true }
 itertools = { workspace = true }
 jiff = { version = "0.2.23", features = ["serde"] }
-lru = "0.16.3"
+lru = "0.16.4"
 metrics = { workspace = true }
 object_store = { workspace = true }
 prost = { workspace = true }
