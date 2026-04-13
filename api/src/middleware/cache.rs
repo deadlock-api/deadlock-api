@@ -116,7 +116,7 @@ where
             if !response.status().is_success() {
                 response
                     .headers_mut()
-                    .insert(CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+                    .insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
                 return Ok(response);
             }
 
