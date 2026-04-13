@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { TableHead } from "~/components/ui/table";
 import { cn } from "~/lib/utils";
 
-export type SortKey = "hero" | "winrate" | "zScore" | "residual" | "pickRate";
+export type SortKey = "hero" | "winrate" | "zScore" | "residual" | "pickRate" | "banRate";
 export type SortDir = "asc" | "desc";
 
 export function SortableHeader({

@@ -19,6 +19,7 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { api } from "~/lib/api";
+import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import { queryKeys } from "~/queries/query-keys";
@@ -50,7 +51,7 @@ interface DataPoint {
 }
 
 function formatStatValue(stat: ByRankStat, value: number): string {
-  if (stat === "winrate" || stat === "pickrate") return `${value.toFixed(2)}%`;
+  if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return `${value.toFixed(2)}%`;
   if (stat === "net_worth_per_match") return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
   if (stat === "wins" || stat === "losses" || stat === "matches" || stat === "players")
     return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -60,11 +61,12 @@ function formatStatValue(stat: ByRankStat, value: number): string {
 function formatStatLabel(stat: ByRankStat): string {
   if (stat === "pickrate") return "Pick Rate (%)";
   if (stat === "winrate") return "Win Rate (%)";
+  if (stat === "ban_rate") return "Ban Rate (%)";
   return stat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function tickFormatter(stat: ByRankStat): (v: number) => string {
-  if (stat === "winrate" || stat === "pickrate") return (v) => `${Number(v).toFixed(0)}%`;
+  if (stat === "winrate" || stat === "pickrate" || stat === "ban_rate") return (v) => `${Number(v).toFixed(0)}%`;
   if (stat === "net_worth_per_match") return (v) => Number(v).toLocaleString();
   if (stat === "wins" || stat === "losses" || stat === "matches" || stat === "players")
     return (v) => Number(v).toLocaleString();
@@ -136,6 +138,20 @@ function computeStatValue(stat: ByRankStat, agg: AggregatedTier, gameMode?: Game
   return hero_stats_transform(agg as unknown as AnalyticsHeroStats, stat as (typeof HERO_STATS)[number]);
 }
 
+function getStatValue(
+  stat: ByRankStat,
+  agg: AggregatedTier,
+  gameMode: GameMode | undefined,
+  banRateByTier: Map<number, Map<number, number>> | undefined,
+  heroId: number,
+  tier: number,
+): number {
+  if (stat === "ban_rate") {
+    return banRateByTier?.get(tier)?.get(heroId) ?? 0;
+  }
+  return computeStatValue(stat, agg, gameMode);
+}
+
 interface AggregatedTier {
   wins: number;
   losses: number;
@@ -192,6 +208,8 @@ export function HeroStatsByRankChart({
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
 
+  const needsBanData = xStat === "ban_rate" || yStat === "ban_rate";
+
   const heroStatsByRankQuery = {
     minHeroMatches: minHeroMatches,
     minHeroMatchesTotal: minHeroMatchesTotal,
@@ -208,6 +226,47 @@ export function HeroStatsByRankChart({
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
   });
+
+  const banStatsByRankQuery = {
+    bucket: "avg_badge" as const,
+    minAverageBadge: undefined,
+    maxAverageBadge: undefined,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+  };
+  const { data: banData, isLoading: isLoadingBanStats } = useQuery({
+    queryKey: queryKeys.analytics.heroBanStats(banStatsByRankQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroBanStats(banStatsByRankQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: needsBanData,
+  });
+
+  const banRateByTier = useMemo(() => {
+    if (!banData) return undefined;
+    // Aggregate subtier buckets into tiers before computing rates
+    const tierTotals = new Map<number, number>();
+    const tierHeroBans = new Map<number, Map<number, number>>();
+    for (const row of banData) {
+      const tier = Math.floor(row.bucket / 10);
+      tierTotals.set(tier, (tierTotals.get(tier) ?? 0) + row.bans);
+      if (!tierHeroBans.has(tier)) tierHeroBans.set(tier, new Map());
+      const heroMap = tierHeroBans.get(tier)!;
+      heroMap.set(row.hero_id, (heroMap.get(row.hero_id) ?? 0) + row.bans);
+    }
+    const result = new Map<number, Map<number, number>>();
+    for (const [tier, heroMap] of tierHeroBans) {
+      const totalMatches = (tierTotals.get(tier) ?? 0) / BANS_PER_MATCH;
+      const rateMap = new Map<number, number>();
+      for (const [heroId, bans] of heroMap) {
+        rateMap.set(heroId, totalMatches > 0 ? (bans / totalMatches) * 100 : 0);
+      }
+      result.set(tier, rateMap);
+    }
+    return result;
+  }, [banData]);
 
   const { data: ranksData, isLoading: isLoadingRanks } = useQuery(ranksQueryOptions);
 
@@ -241,8 +300,8 @@ export function HeroStatsByRankChart({
         const hero = heroIdMap[heroId];
         grouped[heroId].push({
           badge,
-          xValue: computeStatValue(xStat, agg, gameMode),
-          yValue: computeStatValue(yStat, agg, gameMode),
+          xValue: getStatValue(xStat, agg, gameMode, banRateByTier, heroId, tier),
+          yValue: getStatValue(yStat, agg, gameMode, banRateByTier, heroId, tier),
           rankName: badgeInfo?.name ?? `Rank ${tier}`,
           subtier: 6,
           matches: agg.matches,
@@ -254,7 +313,7 @@ export function HeroStatsByRankChart({
       grouped[heroId].sort((a, b) => a.badge - b.badge);
     }
     return grouped;
-  }, [tierAggByHero, badgeMap, gameMode, heroIdMap, xStat, yStat]);
+  }, [tierAggByHero, badgeMap, gameMode, heroIdMap, xStat, yStat, banRateByTier]);
 
   const heroIdsWithData = useMemo(
     () =>
@@ -268,7 +327,7 @@ export function HeroStatsByRankChart({
     heroIdFilter: heroIdsWithData,
   });
 
-  const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes;
+  const isLoading = isLoadingHeroStats || isLoadingRanks || isLoadingHeroes || isLoadingBanStats;
 
   return (
     <div aria-live="polite" aria-busy={isLoading}>

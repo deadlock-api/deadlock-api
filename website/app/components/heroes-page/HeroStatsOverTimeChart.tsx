@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroStatsBucketEnum } from "deadlock_api_client/api";
+import type { HeroBanStatsBucketEnum, HeroStatsBucketEnum } from "deadlock_api_client/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -9,8 +9,9 @@ import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
 import { api } from "~/lib/api";
+import { computeBanRatesByBucket } from "~/lib/ban-rate";
 import { queryKeys } from "~/queries/query-keys";
-import { type HERO_STATS, hero_stats_transform } from "~/types/api_hero_stats";
+import { type HERO_STATS_WITH_BAN_RATE, hero_stats_transform } from "~/types/api_hero_stats";
 
 function useEndLabelPositions(
   chartRef: React.RefObject<HTMLDivElement | null>,
@@ -143,7 +144,7 @@ export function HeroStatsOverTimeChart({
   gameMode,
   bumpChart = false,
 }: {
-  heroStat: (typeof HERO_STATS)[number];
+  heroStat: (typeof HERO_STATS_WITH_BAN_RATE)[number];
   heroTimeInterval: HeroStatsBucketEnum;
   minRankId?: number;
   maxRankId?: number;
@@ -156,6 +157,8 @@ export function HeroStatsOverTimeChart({
 }) {
   const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
   const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+
+  const isBanRate = heroStat === "ban_rate";
 
   const heroStatsOverTimeQuery = {
     minHeroMatches: minHeroMatches,
@@ -174,9 +177,39 @@ export function HeroStatsOverTimeChart({
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: !isBanRate,
+  });
+
+  const banStatsOverTimeQuery = {
+    bucket: heroTimeInterval as HeroBanStatsBucketEnum,
+    minAverageBadge: minRankId ?? 0,
+    maxAverageBadge: maxRankId ?? 116,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+  };
+  const { data: banData, isLoading: isLoadingBanStats } = useQuery({
+    queryKey: queryKeys.analytics.heroBanStats(banStatsOverTimeQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroBanStats(banStatsOverTimeQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: isBanRate,
   });
 
   const heroStatMap: { [key: number]: [number, number][] } = useMemo(() => {
+    if (isBanRate) {
+      if (!banData) return {};
+      const ratesByBucket = computeBanRatesByBucket(banData);
+      const map: Record<number, [number, number][]> = {};
+      for (const [bucket, heroRates] of ratesByBucket) {
+        map[bucket] = [];
+        for (const [heroId, rate] of heroRates) {
+          map[bucket].push([heroId, rate * 100]);
+        }
+      }
+      return map;
+    }
     const map: Record<number, [number, number][]> = {};
     if (heroData) {
       for (const hero of heroData) {
@@ -185,7 +218,7 @@ export function HeroStatsOverTimeChart({
       }
     }
     return map;
-  }, [heroStat, heroData]);
+  }, [heroStat, heroData, isBanRate, banData]);
 
   const { heroIdMap, isLoadingHeroes } = useHeroColorMap();
   const { allHeroIds, effectiveVisibleSet, handleLegendClick } = useChartHeroVisibility(heroIdMap, {
@@ -366,7 +399,7 @@ export function HeroStatsOverTimeChart({
     }
   }, [hoveredHeroId, visibleHeroIds, bumpChart]);
 
-  const isLoading = isLoadingHeroStats || isLoadingHeroes;
+  const isLoading = isLoadingHeroStats || isLoadingBanStats || isLoadingHeroes;
 
   const bumpTooltipContent = useCallback(
     ({ label, payload }: { label?: string | number; payload?: any[] }) => {

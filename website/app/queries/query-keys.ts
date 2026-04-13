@@ -2,6 +2,7 @@ import type { AnalyticsApiBadgeDistributionRequest, AnalyticsApiKillDeathStatsRe
 import {
   AnalyticsApiAbilityOrderStatsRequest,
   AnalyticsApiGameStatsRequest,
+  AnalyticsApiHeroBanStatsRequest,
   AnalyticsApiHeroCombStatsRequest,
   AnalyticsApiHeroCountersStatsRequest,
   AnalyticsApiHeroStatsRequest,
@@ -21,6 +22,7 @@ export const queryKeys = {
   },
   analytics: {
     heroStats: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats", params] as const,
+    heroBanStats: (params: AnalyticsApiHeroBanStatsRequest) => ["api-hero-ban-stats", params] as const,
     heroSynergyStats: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-stats", params] as const,
     heroCounterStats: (params: AnalyticsApiHeroCountersStatsRequest) => ["api-hero-counter-stats", params] as const,
     heroCombStats: (params: AnalyticsApiHeroCombStatsRequest) => ["api-hero-comb-stats", params] as const,

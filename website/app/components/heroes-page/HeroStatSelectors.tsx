@@ -1,5 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
-import { HERO_STATS, TIME_INTERVALS } from "~/types/api_hero_stats";
+import { HERO_STATS, HERO_STATS_WITH_BAN_RATE, TIME_INTERVALS } from "~/types/api_hero_stats";
 
 export function HeroStatSelector<T extends readonly string[]>({
   value,
@@ -40,5 +40,5 @@ export function HeroTimeIntervalSelector({ value, onChange }: { value: string; o
   );
 }
 
-export const BY_RANK_STATS = [...HERO_STATS, "pickrate"] as const;
+export const BY_RANK_STATS = [...HERO_STATS_WITH_BAN_RATE, "pickrate"] as const;
 export type ByRankStat = (typeof BY_RANK_STATS)[number];

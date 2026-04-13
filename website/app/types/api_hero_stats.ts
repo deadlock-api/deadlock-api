@@ -14,6 +14,8 @@ export const HERO_STATS = [
   "denies_per_match",
 ] as const;
 
+export const HERO_STATS_WITH_BAN_RATE = [...HERO_STATS, "ban_rate"] as const;
+
 export function hero_stats_transform(heroStats: AnalyticsHeroStats, heroStat: (typeof HERO_STATS)[number]) {
   switch (heroStat) {
     case "winrate":

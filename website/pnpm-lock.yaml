@@ -67,7 +67,7 @@ importers:
         version: 1.11.20
       deadlock_api_client:
         specifier: github:deadlock-api/openapi-clients#path:/typescript/api
-        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/a8ade315251bc22c008466d87e9fbf09f99a976f#path:/typescript/api
+        version: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/c67f71e70897680335471a062abbd2791f5e54b3#path:/typescript/api
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -2627,8 +2627,8 @@ packages:
   dayjs@1.11.20:
     resolution: {integrity: sha512-YbwwqR/uYpeoP4pu043q+LTDLFBLApUP6VxRihdfNTqu4ubqMlGDLd6ErXhEgsyvY0K6nCs7nggYumAN+9uEuQ==}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/a8ade315251bc22c008466d87e9fbf09f99a976f#path:/typescript/api:
-    resolution: {path: /typescript/api, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/a8ade315251bc22c008466d87e9fbf09f99a976f}
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/c67f71e70897680335471a062abbd2791f5e54b3#path:/typescript/api:
+    resolution: {path: /typescript/api, tarball: https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/c67f71e70897680335471a062abbd2791f5e54b3}
     version: 0.1.0
 
   debug@4.4.3:
@@ -6359,7 +6359,7 @@ snapshots:
 
   dayjs@1.11.20: {}
 
-  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/a8ade315251bc22c008466d87e9fbf09f99a976f#path:/typescript/api:
+  deadlock_api_client@https://codeload.github.com/deadlock-api/openapi-clients/tar.gz/c67f71e70897680335471a062abbd2791f5e54b3#path:/typescript/api:
     dependencies:
       axios: 1.15.0
     transitivePeerDependencies:

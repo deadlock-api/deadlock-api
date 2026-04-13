@@ -5,6 +5,7 @@ import type { MetaFunction } from "react-router";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
+import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
@@ -113,7 +114,7 @@ export default function Heroes(
               <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
             </div>
             <HeroStatsTable
-              columns={["winRate", "pickRate", "zScore", "residual", "details"]}
+              columns={["winRate", "pickRate", "banRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
               minRankId={filters.effectiveMinRankId}
               maxRankId={filters.effectiveMaxRankId}
@@ -136,6 +137,7 @@ export default function Heroes(
                 <HeroStatSelector
                   value={filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS_WITH_BAN_RATE}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -171,15 +173,16 @@ export default function Heroes(
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
-                  value={filters.heroStat}
+                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS}
                 />
               </div>
             </div>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
                 <HeroStatsByDurationChart
-                  heroStat={filters.heroStat}
+                  heroStat={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   minRankId={filters.effectiveMinRankId}
                   maxRankId={filters.effectiveMaxRankId}
                   minHeroMatches={filters.minHeroMatches}
@@ -235,15 +238,16 @@ export default function Heroes(
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
                 <HeroStatSelector
-                  value={filters.heroStat}
+                  value={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   onChange={(val) => filters.setHeroStat(val as typeof filters.heroStat)}
+                  options={HERO_STATS}
                 />
               </div>
             </div>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
                 <HeroStatsByExperienceTable
-                  heroStat={filters.heroStat}
+                  heroStat={filters.heroStat === "ban_rate" ? "winrate" : filters.heroStat}
                   minRankId={filters.effectiveMinRankId}
                   maxRankId={filters.effectiveMaxRankId}
                   minHeroMatches={filters.minHeroMatches}

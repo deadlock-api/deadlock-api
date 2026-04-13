@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
+import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client/api";
 import {
   ArrowDown,
   ArrowUp,
@@ -25,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
+import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { Z_SCORE_PR_WEIGHT, Z_SCORE_WR_WEIGHT, computeResiduals, computeZScores } from "~/lib/hero-scoring";
 import { cn } from "~/lib/utils";
@@ -129,6 +131,40 @@ export function HeroStatsTable({
     enabled: hasPreviousInterval,
   });
 
+  const showBanRate = columns.includes("banRate");
+
+  const banStatsQuery: AnalyticsApiHeroBanStatsRequest = {
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: minDateTimestamp,
+    maxUnixTimestamp: maxDateTimestamp,
+  };
+  const { data: banData } = useQuery({
+    queryKey: queryKeys.analytics.heroBanStats(banStatsQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroBanStats(banStatsQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: showBanRate,
+  });
+
+  const prevBanStatsQuery: AnalyticsApiHeroBanStatsRequest = {
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: prevMinTimestamp,
+    maxUnixTimestamp: prevMaxTimestamp,
+  };
+  const { data: prevBanData } = useQuery({
+    queryKey: queryKeys.analytics.heroBanStats(prevBanStatsQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroBanStats(prevBanStatsQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: showBanRate && hasPreviousInterval,
+  });
+
   const pickrateMultiplier = getPickrateMultiplier(gameMode);
 
   const { data: heroes, isLoading: isLoadingHeroes } = useQuery(heroesQueryOptions);
@@ -188,6 +224,36 @@ export function HeroStatsTable({
     }
     return map;
   }, [prevHeroData, pickrateMultiplier]);
+
+  const { banStatsMap, banCountMap, sumBans, minBanRate, maxBanRate } = useMemo(() => {
+    if (!banData || banData.length === 0)
+      return {
+        banStatsMap: new Map<number, number>(),
+        banCountMap: new Map<number, number>(),
+        sumBans: 0,
+        minBanRate: 0,
+        maxBanRate: 0,
+      };
+    const rateMap = computeBanRates(banData);
+    let sumB = 0;
+    const countMap = new Map<number, number>();
+    for (const row of banData) {
+      sumB += row.bans;
+      countMap.set(row.hero_id, row.bans);
+    }
+    let minBR = Infinity;
+    let maxBR = -Infinity;
+    for (const rate of rateMap.values()) {
+      if (rate < minBR) minBR = rate;
+      if (rate > maxBR) maxBR = rate;
+    }
+    return { banStatsMap: rateMap, banCountMap: countMap, sumBans: sumB, minBanRate: minBR, maxBanRate: maxBR };
+  }, [banData]);
+
+  const prevBanStatsMap = useMemo(() => {
+    if (!prevBanData) return undefined;
+    return computeBanRates(prevBanData);
+  }, [prevBanData]);
 
   const { minWinrate, maxWinrate, minMatches, maxMatches, sumMatches } = useMemo(() => {
     if (!heroData || heroData.length === 0)
@@ -266,10 +332,13 @@ export function HeroStatsTable({
         case "pickRate":
           diff = b.matches - a.matches;
           break;
+        case "banRate":
+          diff = (banStatsMap.get(b.hero_id) ?? 0) - (banStatsMap.get(a.hero_id) ?? 0);
+          break;
       }
       return diff * dir;
     });
-  }, [heroData, activeSortKey, sortDir, heroNameMap, zScoreMap, residualMap]);
+  }, [heroData, activeSortKey, sortDir, heroNameMap, zScoreMap, residualMap, banStatsMap]);
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
   const groupedData = useMemo(() => {
@@ -309,6 +378,28 @@ export function HeroStatsTable({
       }
     }
 
+    // Aggregate bans by type
+    const bansByType = new Map<HeroType, number>();
+    if (banData) {
+      for (const row of banData) {
+        const type = heroTypeMap.get(row.hero_id);
+        if (type) {
+          bansByType.set(type, (bansByType.get(type) ?? 0) + row.bans);
+        }
+      }
+    }
+    const prevBansByType = new Map<HeroType, number>();
+    let prevSumBans = 0;
+    if (prevBanData) {
+      for (const row of prevBanData) {
+        prevSumBans += row.bans;
+        const type = heroTypeMap.get(row.hero_id);
+        if (type) {
+          prevBansByType.set(type, (prevBansByType.get(type) ?? 0) + row.bans);
+        }
+      }
+    }
+
     return HERO_TYPE_ORDER.map((type) => {
       const heroesInGroup = groupedData.get(type) ?? [];
       const totalMatches = heroesInGroup.reduce((acc, row) => acc + row.matches, 0);
@@ -322,6 +413,13 @@ export function HeroStatsTable({
         prevPickrate = prev.matches / prevSumMatches;
       }
 
+      const typeBans = bansByType.get(type) ?? 0;
+      const banTotalMatches = sumBans / BANS_PER_MATCH;
+      const banRate = banTotalMatches > 0 ? typeBans / banTotalMatches : 0;
+      const prevTypeBans = prevBansByType.get(type);
+      const prevBanTotalMatches = prevSumBans / BANS_PER_MATCH;
+      const prevBanRate = prevTypeBans !== undefined && prevBanTotalMatches > 0 ? prevTypeBans / prevBanTotalMatches : undefined;
+
       return {
         type,
         winrate: totalMatches > 0 ? totalWins / totalMatches : 0,
@@ -329,9 +427,11 @@ export function HeroStatsTable({
         totalMatches,
         prevWinrate,
         prevPickrate,
+        banRate,
+        prevBanRate,
       };
     }).filter((g) => g.totalMatches > 0);
-  }, [groupByType, groupedData, heroData, prevHeroData, heroTypeMap, sumMatches]);
+  }, [groupByType, groupedData, heroData, prevHeroData, heroTypeMap, sumMatches, banData, prevBanData, sumBans]);
 
   if (isLoading || (groupByType && isLoadingHeroes)) {
     return (
@@ -381,6 +481,16 @@ export function HeroStatsTable({
           <SortableHeader
             label={minHeroMatchesTotal || minHeroMatches ? "Pick Rate (Normalized)" : "Pick Rate"}
             sortKey="pickRate"
+            activeSortKey={activeSortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+            className="w-[17%] text-center"
+          />
+        )}
+        {columns.includes("banRate") && (
+          <SortableHeader
+            label="Ban Rate"
+            sortKey="banRate"
             activeSortKey={activeSortKey}
             sortDir={sortDir}
             onSort={handleSort}
@@ -534,6 +644,40 @@ export function HeroStatsTable({
           />
         </TableCell>
       )}
+      {columns.includes("banRate") && (
+        <TableCell>
+          <ProgressBarWithLabel
+            min={minBanRate}
+            max={maxBanRate}
+            value={banStatsMap.get(row.hero_id) ?? 0}
+            color={"#f97316"}
+            label={`${((banStatsMap.get(row.hero_id) ?? 0) * 100).toFixed(1)}%`}
+            delta={
+              prevBanStatsMap?.get(row.hero_id) !== undefined
+                ? (banStatsMap.get(row.hero_id) ?? 0) - prevBanStatsMap.get(row.hero_id)!
+                : undefined
+            }
+            tooltip={
+              <div className="flex flex-col gap-1 text-xs">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Bans</span>
+                  <span className="font-medium">{(banCountMap.get(row.hero_id) ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Ban Rate</span>
+                  <span className="font-medium">{((banStatsMap.get(row.hero_id) ?? 0) * 100).toFixed(2)}%</span>
+                </div>
+                {prevBanStatsMap?.get(row.hero_id) !== undefined && (
+                  <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                    <span className="text-muted-foreground">Previous</span>
+                    <span className="font-medium">{(prevBanStatsMap.get(row.hero_id)! * 100).toFixed(2)}%</span>
+                  </div>
+                )}
+              </div>
+            }
+          />
+        </TableCell>
+      )}
       {columns.includes("zScore") && (
         <TableCell>
           {(() => {
@@ -649,6 +793,7 @@ export function HeroStatsTable({
           const config = HERO_TYPE_CONFIG[group.type];
           const winrateDelta = group.prevWinrate !== undefined ? group.winrate - group.prevWinrate : undefined;
           const pickrateDelta = group.prevPickrate !== undefined ? group.pickrate - group.prevPickrate : undefined;
+          const banRateDelta = group.prevBanRate !== undefined ? group.banRate - group.prevBanRate : undefined;
 
           return (
             <div key={group.type} className="overflow-hidden rounded-lg border border-border">
@@ -683,6 +828,20 @@ export function HeroStatsTable({
                         >
                           {pickrateDelta > 0 ? "+" : ""}
                           {(pickrateDelta * 100).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {columns.includes("banRate") && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground">Ban Rate:</span>
+                      <span className="font-semibold">{(group.banRate * 100).toFixed(1)}%</span>
+                      {banRateDelta !== undefined && banRateDelta !== 0 && (
+                        <span
+                          className={cn("text-xs font-medium", banRateDelta > 0 ? "text-red-500" : "text-green-500")}
+                        >
+                          {banRateDelta > 0 ? "+" : ""}
+                          {(banRateDelta * 100).toFixed(1)}%
                         </span>
                       )}
                     </div>
