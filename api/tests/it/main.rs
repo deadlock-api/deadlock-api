@@ -88,7 +88,8 @@ async fn setup() -> &'static TestEnv {
             };
 
             let ch_import = async {
-                let ch_url = format!("http://127.0.0.1:{ch_http_port}/?user=default&password=ijojdmkasd");
+                let ch_url =
+                    format!("http://127.0.0.1:{ch_http_port}/?user=default&password=ijojdmkasd");
                 for path in &sorted_sql_files("tests/data/clickhouse") {
                     let contents = std::fs::read_to_string(path)
                         .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
@@ -134,22 +135,34 @@ async fn setup() -> &'static TestEnv {
                 ("S3_CACHE_BUCKET", "test-cache".to_owned()),
                 ("S3_CACHE_ACCESS_KEY_ID", "minioadmin".to_owned()),
                 ("S3_CACHE_SECRET_ACCESS_KEY", "minioadmin".to_owned()),
-                ("S3_CACHE_ENDPOINT", format!("http://127.0.0.1:{minio_port}")),
+                (
+                    "S3_CACHE_ENDPOINT",
+                    format!("http://127.0.0.1:{minio_port}"),
+                ),
                 ("CLICKHOUSE_HOST", "127.0.0.1".to_owned()),
                 ("CLICKHOUSE_HTTP_PORT", ch_http_port.to_string()),
                 ("CLICKHOUSE_USERNAME", "default".to_owned()),
                 ("CLICKHOUSE_PASSWORD", "ijojdmkasd".to_owned()),
                 ("CLICKHOUSE_DBNAME", "default".to_owned()),
-                ("CLICKHOUSE_RESTRICTED_USERNAME", "api_readonly_user".to_owned()),
+                (
+                    "CLICKHOUSE_RESTRICTED_USERNAME",
+                    "api_readonly_user".to_owned(),
+                ),
                 ("CLICKHOUSE_RESTRICTED_PASSWORD", "testing".to_owned()),
                 ("POSTGRES_HOST", "127.0.0.1".to_owned()),
                 ("POSTGRES_PORT", pg_port.to_string()),
                 ("POSTGRES_USERNAME", "root".to_owned()),
                 ("POSTGRES_PASSWORD", "postgres".to_owned()),
                 ("POSTGRES_DBNAME", "root".to_owned()),
-                ("ASSETS_BASE_URL", "https://assets.deadlock-api.com".to_owned()),
+                (
+                    "ASSETS_BASE_URL",
+                    "https://assets.deadlock-api.com".to_owned(),
+                ),
                 ("PATREON_CLIENT_ID", "your_patreon_client_id".to_owned()),
-                ("PATREON_CLIENT_SECRET", "your_patreon_client_secret".to_owned()),
+                (
+                    "PATREON_CLIENT_SECRET",
+                    "your_patreon_client_secret".to_owned(),
+                ),
                 (
                     "PATREON_REDIRECT_URI",
                     "http://localhost:8080/v1/auth/patreon/callback".to_owned(),
@@ -159,7 +172,10 @@ async fn setup() -> &'static TestEnv {
                     "http://localhost:3000/patreon/callback".to_owned(),
                 ),
                 ("PATREON_CAMPAIGN_ID", "your_patreon_campaign_id".to_owned()),
-                ("PATRON_ENCRYPTION_KEY", "your_32_byte_hex_encryption_key".to_owned()),
+                (
+                    "PATRON_ENCRYPTION_KEY",
+                    "your_32_byte_hex_encryption_key".to_owned(),
+                ),
                 ("PATREON_WEBHOOK_SECRET", "whatever-secret".to_owned()),
                 ("JWT_SECRET", "your_jwt_secret_at_least_32_chars".to_owned()),
             ];
@@ -170,8 +186,8 @@ async fn setup() -> &'static TestEnv {
             // Start the API in-process on a random port.
             // The server must run on its own dedicated runtime thread so it
             // survives across individual #[tokio::test] runtimes.
-            let std_listener = std::net::TcpListener::bind("127.0.0.1:0")
-                .expect("failed to bind listener");
+            let std_listener =
+                std::net::TcpListener::bind("127.0.0.1:0").expect("failed to bind listener");
             std_listener.set_nonblocking(true).unwrap();
             let actual_port = std_listener.local_addr().unwrap().port();
             let base_url = format!("http://127.0.0.1:{actual_port}");
@@ -192,7 +208,12 @@ async fn setup() -> &'static TestEnv {
             let health_url = format!("{base_url}/v1/info/health");
             let mut healthy = false;
             for _ in 0..60 {
-                if http.get(&health_url).send().await.is_ok_and(|r| r.status().is_success()) {
+                if http
+                    .get(&health_url)
+                    .send()
+                    .await
+                    .is_ok_and(|r| r.status().is_success())
+                {
                     healthy = true;
                     break;
                 }
