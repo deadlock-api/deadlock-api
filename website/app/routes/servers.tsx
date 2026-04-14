@@ -73,7 +73,7 @@ export default function Servers() {
       .filter((s) => {
         if (region && s.region !== region) return false;
         if (gameMode && s.game_mode !== gameMode) return false;
-        if (q && !s.server_id.toLowerCase().includes(q) && !`${s.ip}:${s.port}`.toLowerCase().includes(q)) return false;
+        if (q && !`${s.ip}:${s.port}`.toLowerCase().includes(q)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -125,7 +125,7 @@ export default function Servers() {
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search IP or server id"
+              placeholder="Search IP"
               value={search ?? ""}
               onChange={(e) => setSearch(e.target.value || null)}
               className="w-60 pl-8"
