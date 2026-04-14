@@ -8,14 +8,14 @@ license = "MIT"
 
 [dependencies]
 reqwest = { version = "0.13.2", features = ["json", "http2", "zstd", "gzip", "form"] }
-tokio = { version = "1.51.1", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.52.0", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 redis = { version = "1.2.0", default-features = false, features = ["tokio-comp"] }
 clickhouse = { version = "0.15.0", features = ["chrono", "uuid"] }
 sqlx = { version = "0.8.6", features = ["chrono", "derive", "postgres", "runtime-tokio", "uuid"] }
 uuid = { version = "1.23.0", features = ["serde", "v4"] }
 cached = { version = "0.59.0", features = ["async", "serde"] }
-axum = "0.8.8"
+axum = "0.8.9"
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -38,7 +38,7 @@ base64 = "0.22.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.41", features = ["bzip2", "zstd", "tokio"] }
 strum = { version = "0.28.0", features = ["derive"] }
-axum-extra = { version = "0.12.5", features = ["query"] }
+axum-extra = { version = "0.12.6", features = ["query"] }
 metrics = "0.24.3"
 bytes = { version = "1.11.1", features = ["serde"] }
 thiserror = "2.0.18"
