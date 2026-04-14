@@ -15,7 +15,7 @@ pub(super) struct ListServersResponse {
 
 #[utoipa::path(
     get,
-    path = "/list",
+    path = "/",
     responses(
         (status = OK, body = ListServersResponse),
     ),
