@@ -13,7 +13,7 @@ pub mod matches;
 mod patches;
 mod patron;
 pub mod players;
-mod servers;
+pub(crate) mod servers;
 pub mod sql;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {

@@ -7,16 +7,10 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use super::{is_safe_identifier, require_game_server_secret};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::game_server::{GAME_SERVER_TTL_SECS, GameServerInfo, GameServerService};
-
-fn is_safe_identifier(s: &str) -> bool {
-    !s.is_empty()
-        && s.len() <= 64
-        && s.chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
-}
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub(super) struct ServerStatusRequest {
@@ -64,22 +58,7 @@ pub(super) async fn status(
     headers: HeaderMap,
     Json(request): Json<ServerStatusRequest>,
 ) -> APIResult<impl IntoResponse> {
-    let token = headers
-        .get("authorization")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer "));
-
-    match token {
-        Some(t)
-            if !state.config.game_server_secret.is_empty()
-                && t == state.config.game_server_secret => {}
-        _ => {
-            return Err(APIError::status_msg(
-                StatusCode::UNAUTHORIZED,
-                "Invalid or missing game server secret",
-            ));
-        }
-    }
+    require_game_server_secret(&headers, &state.config.game_server_secret)?;
 
     if !is_safe_identifier(&request.server_id) {
         return Err(APIError::status_msg(

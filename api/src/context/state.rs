@@ -17,6 +17,7 @@ use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
 };
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
+use crate::routes::v1::servers::metrics::GameServerMetricsInsertBatcher;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
@@ -63,6 +64,7 @@ pub(crate) struct AppState {
     pub(crate) request_logger: Arc<RequestLogger>,
     pub(crate) match_history_read_batcher: MatchHistoryReadBatcher,
     pub(crate) match_history_insert_batcher: Arc<MatchHistoryInsertBatcher>,
+    pub(crate) game_server_metrics_batcher: Arc<GameServerMetricsInsertBatcher>,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
@@ -290,6 +292,11 @@ impl AppState {
         let match_history_insert_batcher =
             Arc::new(MatchHistoryInsertBatcher::new(ch_client.clone()));
 
+        // Create Game Server Metrics Insert Batcher
+        debug!("Creating Game Server Metrics Insert Batcher");
+        let game_server_metrics_batcher =
+            Arc::new(GameServerMetricsInsertBatcher::new(ch_client.clone()));
+
         Ok(Self {
             config,
             s3_client,
@@ -306,6 +313,7 @@ impl AppState {
             request_logger,
             match_history_read_batcher,
             match_history_insert_batcher,
+            game_server_metrics_batcher,
             rank_predictor,
             steam_profile_batcher,
         })

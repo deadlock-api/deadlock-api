@@ -82,6 +82,12 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .clone()
         .start_background_flush();
 
+    // Start the background game server metrics insert batcher flush task
+    state
+        .game_server_metrics_batcher
+        .clone()
+        .start_background_flush();
+
     // Start the daily Patreon verification job for token refresh and membership sync
     let patreon_verification_job = std::sync::Arc::new(PatreonVerificationJob::new(
         state.pg_client.clone(),
