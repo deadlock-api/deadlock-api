@@ -137,6 +137,7 @@ export default function Servers() {
             selected={region}
             onSelect={(v) => setRegion(v || null)}
             allowSelectNull
+            nullLabel="All"
           />
           <StringSelector
             label="Game Mode"
@@ -144,6 +145,7 @@ export default function Servers() {
             selected={gameMode}
             onSelect={(v) => setGameMode(v || null)}
             allowSelectNull
+            nullLabel="All"
           />
         </div>
 

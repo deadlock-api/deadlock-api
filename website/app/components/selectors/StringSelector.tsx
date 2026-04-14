@@ -11,6 +11,7 @@ export interface StringSelectorProps {
   placeholder?: string;
   label?: string;
   defaultValue?: string;
+  nullLabel?: string;
 }
 
 export function StringSelector({
@@ -20,6 +21,7 @@ export function StringSelector({
   allowSelectNull = false,
   label,
   defaultValue,
+  nullLabel = "None",
 }: StringSelectorProps) {
   const valueLabelMap = new Map<string, string>(options.map((o) => [o.value, o.label]));
   const displayValue = selected ? valueLabelMap.get(selected) : undefined;
@@ -37,7 +39,7 @@ export function StringSelector({
             )}
             onClick={() => onSelect("")}
           >
-            None
+            {nullLabel}
             {!selected && <CheckIcon className="size-3.5" />}
           </button>
         )}
