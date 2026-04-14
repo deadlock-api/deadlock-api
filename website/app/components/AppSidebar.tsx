@@ -14,6 +14,7 @@ import {
   Menu,
   MessageSquare,
   Radio,
+  Server,
   Shield,
   ShoppingBag,
   Swords,
@@ -65,6 +66,7 @@ const navGroups: NavGroup[] = [
       { to: "/player-scoreboard", label: "Player Scoreboard", icon: Users },
       { to: "/badge-distribution", label: "Rank Distribution", icon: Medal },
       { to: "/heatmap", label: "Kill Heatmap", icon: Map },
+      { to: "/servers", label: "Game Servers", icon: Server },
     ],
   },
   {

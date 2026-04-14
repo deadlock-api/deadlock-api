@@ -10,7 +10,7 @@ const AbilityOrderTree = lazy(() => import("~/components/abilities/AbilityOrderT
 
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
-import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 

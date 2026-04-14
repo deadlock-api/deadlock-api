@@ -1,5 +1,5 @@
 import type { AxiosInstance } from "axios";
-import { AnalyticsApi, LeaderboardApi, MatchesApi, PlayersApi, SteamApi } from "deadlock_api_client";
+import { AnalyticsApi, LeaderboardApi, MatchesApi, PlayersApi, ServersApi, SteamApi } from "deadlock_api_client";
 
 import { API_ORIGIN } from "~/lib/constants";
 import { createApiClient } from "~/lib/create-api-client";
@@ -17,6 +17,7 @@ export class Api {
   public leaderboard_api: LeaderboardApi;
   public matches_api: MatchesApi;
   public players_api: PlayersApi;
+  public servers_api: ServersApi;
   public steam_api: SteamApi;
   public client: AxiosInstance;
 
@@ -27,6 +28,7 @@ export class Api {
     this.leaderboard_api = new LeaderboardApi(undefined, API_ORIGIN, axios_client);
     this.matches_api = new MatchesApi(undefined, API_ORIGIN, axios_client);
     this.players_api = new PlayersApi(undefined, API_ORIGIN, axios_client);
+    this.servers_api = new ServersApi(undefined, API_ORIGIN, axios_client);
     this.steam_api = new SteamApi(undefined, API_ORIGIN, axios_client);
   }
 }

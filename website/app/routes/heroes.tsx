@@ -5,7 +5,6 @@ import type { MetaFunction } from "react-router";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
-import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
@@ -16,6 +15,7 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { createPageMeta } from "~/lib/meta";
+import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 const HeroStatsOverTimeChart = lazy(() =>
   import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({

@@ -6,7 +6,7 @@ import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
+import { HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 const TAB_VALUES = [
   "stats",
@@ -49,7 +49,10 @@ export function useHeroFilters(initialTab: HeroTab = "stats") {
   );
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TAB_VALUES).withDefault(initialTab));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
-  const [heroStat, setHeroStat] = useQueryState("hero_stat", parseAsStringLiteral(HERO_STATS_WITH_BAN_RATE).withDefault("winrate"));
+  const [heroStat, setHeroStat] = useQueryState(
+    "hero_stat",
+    parseAsStringLiteral(HERO_STATS_WITH_BAN_RATE).withDefault("winrate"),
+  );
   const [heroTimeInterval, setHeroTimeInterval] = useQueryState(
     "time_interval",
     parseAsStringLiteral(["start_time_hour", "start_time_day", "start_time_week"] as const).withDefault(

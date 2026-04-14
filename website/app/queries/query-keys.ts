@@ -41,6 +41,9 @@ export const queryKeys = {
   leaderboard: {
     data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,
   },
+  servers: {
+    list: () => ["api-servers-list"] as const,
+  },
   steam: {
     profiles: (batch: number[]) => ["steam-profiles", batch] as const,
     profile: (accountId: number | undefined) => ["steam-profile", accountId] as const,

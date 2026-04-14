@@ -35,13 +35,7 @@ export function AssetImage({ asset, isLoading, skeletonClassName, emptyClassName
     <picture>
       {asset.webp && <source srcSet={asset.webp} type="image/webp" />}
       {asset.png && <source srcSet={asset.png} type="image/png" />}
-      <img
-        loading="lazy"
-        src={src}
-        alt={asset.alt}
-        title={asset.title ?? asset.alt}
-        className={imgClassName}
-      />
+      <img loading="lazy" src={src} alt={asset.alt} title={asset.title ?? asset.alt} className={imgClassName} />
     </picture>
   );
 }

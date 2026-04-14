@@ -230,8 +230,12 @@ function AccountRow({
           </Badge>
         )}
       </TableCell>
-      <TableCell>{isActive ? <BotFriendCell cardQuery={cardQuery} /> : <span className="text-muted-foreground">—</span>}</TableCell>
-      <TableCell>{isActive ? <PlayerCardRankCell cardQuery={cardQuery} /> : <span className="text-muted-foreground">—</span>}</TableCell>
+      <TableCell>
+        {isActive ? <BotFriendCell cardQuery={cardQuery} /> : <span className="text-muted-foreground">—</span>}
+      </TableCell>
+      <TableCell>
+        {isActive ? <PlayerCardRankCell cardQuery={cardQuery} /> : <span className="text-muted-foreground">—</span>}
+      </TableCell>
       <TableCell>
         <RefetchMatchHistoryCell steamId3={account.steam_id3} isActive={isActive} />
       </TableCell>
@@ -366,8 +370,7 @@ export function SteamAccountsList() {
                   }
                   onReactivate={() => handleReactivateAccount(account.id)}
                   isReactivating={
-                    reactivateSteamAccountMutation.isPending &&
-                    reactivateSteamAccountMutation.variables === account.id
+                    reactivateSteamAccountMutation.isPending && reactivateSteamAccountMutation.variables === account.id
                   }
                 />
               ))}

@@ -19,10 +19,10 @@
     "@iconify-json/mdi": "^1.2.3",
     "@iconify/tailwind4": "^1.2.3",
     "@posthog/react": "^1.9.0",
-    "@react-router/fs-routes": "^7.14.0",
-    "@react-router/node": "^7.14.0",
+    "@react-router/fs-routes": "^7.14.1",
+    "@react-router/node": "^7.14.1",
     "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
+    "@react-three/fiber": "^9.6.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.99.0",
     "@tanstack/react-query-devtools": "^5.99.0",
@@ -30,23 +30,23 @@
     "axios": "^1.15.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-"dayjs": "^1.11.20",
+    "dayjs": "^1.11.20",
     "deadlock_api_client": "github:deadlock-api/openapi-clients#path:/typescript/api",
     "framer-motion": "^12.38.0",
     "fuse.js": "^7.3.0",
-    "gsap": "^3.14.2",
+    "gsap": "^3.15.0",
     "highlight.js": "^11.11.1",
-    "isbot": "^5.1.37",
+    "isbot": "^5.1.38",
     "lucide-react": "^1.8.0",
     "next-themes": "^0.4.6",
     "nuqs": "^2.8.9",
-    "posthog-js": "^1.367.0",
+    "posthog-js": "^1.368.2",
     "radix-ui": "^1.4.3",
     "react": "^19.2.5",
     "react-day-picker": "9.14.0",
     "react-dom": "^19.2.5",
     "react-markdown": "^10.1.0",
-    "react-router": "^7.14.0",
+    "react-router": "^7.14.1",
     "react-turnstile": "^1.1.5",
     "recharts": "3.8.1",
     "rehype-highlight": "^7.0.2",
@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.28.5",
-    "@react-router/dev": "^7.14.0",
+    "@react-router/dev": "^7.14.1",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4.2.2",
     "@tailwindcss/vite": "^4.2.2",
@@ -68,7 +68,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "oxfmt": "^0.44.0",
-    "oxlint": "^1.59.0",
+    "oxlint": "^1.60.0",
     "postcss": "^8.5.9",
     "satori": "^0.26.0",
     "tailwindcss": "^4.2.2",
@@ -78,12 +78,12 @@
     "vite-plugin-babel": "^1.6.0",
     "zod-validation-error": "^5.0.0"
   },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "pnpm": {
     "overrides": {
       "typescript": "^6.0.2"
     }
-  },
-  "engines": {
-    "node": ">=24.0.0"
   }
 }

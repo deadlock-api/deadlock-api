@@ -418,7 +418,8 @@ export function HeroStatsTable({
       const banRate = banTotalMatches > 0 ? typeBans / banTotalMatches : 0;
       const prevTypeBans = prevBansByType.get(type);
       const prevBanTotalMatches = prevSumBans / BANS_PER_MATCH;
-      const prevBanRate = prevTypeBans !== undefined && prevBanTotalMatches > 0 ? prevTypeBans / prevBanTotalMatches : undefined;
+      const prevBanRate =
+        prevTypeBans !== undefined && prevBanTotalMatches > 0 ? prevTypeBans / prevBanTotalMatches : undefined;
 
       return {
         type,

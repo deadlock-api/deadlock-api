@@ -9,7 +9,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
-import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
