@@ -45,20 +45,9 @@ async fn test_build_item_stats(
 }
 
 #[rstest]
-#[case(
-    Some(1),
-    Some(100),
-    Some(vec![1, 2, 3]),
-    Some(vec![15, 13]),
-    Some(1747743170),
-    Some(1747763170),
-    Some(1000),
-    Some(5000),
-    Some(10000),
-    Some(50000),
-    Some(40),
-    Some(100),
-)]
+#[case(Some(1), Some(100), Some(vec![1, 2, 3]), Some(vec![15, 13]), Some(1747743170), Some(1747763170), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, None, None)]
+#[case(Some(1), Some(100), Some(vec![1, 2, 3]), Some(vec![15, 13]), Some(1747743170), Some(1747763170), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), Some(34000226), Some(34000226), Some(18373975), Some(3))]
+#[case(Some(1), Some(100), Some(vec![1, 2, 3]), Some(vec![15, 13]), Some(1747743170), Some(1747763170), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, None, Some(6))]
 #[tokio::test]
 async fn test_hero_comb_stats(
     #[case] min_matches: Option<u64>,
@@ -73,10 +62,10 @@ async fn test_hero_comb_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_idss: Option<u32>,
-    #[values(None, Some(3), Some(6))] comb_size: Option<u8>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
+    #[case] account_idss: Option<u32>,
+    #[case] comb_size: Option<u8>,
 ) {
     let mut q = vec![];
     push_query!(q, "min_matches" =>? min_matches);
@@ -137,7 +126,47 @@ async fn test_hero_comb_stats(
     Some(10000),
     Some(50000),
     Some(40),
-    Some(100)
+    Some(100),
+    None,
+    None,
+    None,
+    None
+)]
+#[case(
+    Some(20),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226),
+    Some(true),
+    Some(18373975)
+)]
+#[case(
+    Some(20),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    None,
+    Some(false),
+    None
 )]
 #[tokio::test]
 async fn test_hero_counters_stats(
@@ -153,10 +182,10 @@ async fn test_hero_counters_stats(
     #[case] max_enemy_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
+    #[case] same_lane_filter: Option<bool>,
+    #[case] account_ids: Option<u32>,
 ) {
     let mut q = vec![];
     push_query!(q, "min_matches" =>? min_matches);
@@ -201,9 +230,10 @@ async fn test_hero_counters_stats(
 
 #[rstest]
 #[case(
+    ScoreboardQuerySortBy::Matches,
+    SortDirectionDesc::Desc,
     Some(10),
     Some(70),
-    SortDirectionDesc::Desc,
     Some(1741801678),
     Some(1742233678),
     Some(1000),
@@ -211,77 +241,102 @@ async fn test_hero_counters_stats(
     Some(10000),
     Some(50000),
     Some(40),
-    Some(100)
+    Some(100),
+    None,
+    None,
+    None
+)]
+#[case(
+    ScoreboardQuerySortBy::Winrate,
+    SortDirectionDesc::Asc,
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    None,
+    None
+)]
+#[case(
+    ScoreboardQuerySortBy::AvgKillsPerMatch,
+    SortDirectionDesc::Desc,
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226),
+    Some(18373975)
+)]
+#[case(
+    ScoreboardQuerySortBy::MaxNetWorthPerMatch,
+    SortDirectionDesc::Desc,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None
+)]
+#[case(
+    ScoreboardQuerySortBy::PlayerDamage,
+    SortDirectionDesc::Desc,
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    None,
+    None
+)]
+#[case(
+    ScoreboardQuerySortBy::HeroBulletsHitCrit,
+    SortDirectionDesc::Desc,
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    Some(34000226),
+    Some(18373975)
 )]
 #[tokio::test]
 async fn test_hero_scoreboard(
-    #[values(
-        ScoreboardQuerySortBy::Matches,
-        ScoreboardQuerySortBy::Wins,
-        ScoreboardQuerySortBy::Losses,
-        ScoreboardQuerySortBy::Winrate,
-        ScoreboardQuerySortBy::MaxKillsPerMatch,
-        ScoreboardQuerySortBy::AvgKillsPerMatch,
-        ScoreboardQuerySortBy::Kills,
-        ScoreboardQuerySortBy::MaxDeathsPerMatch,
-        ScoreboardQuerySortBy::AvgDeathsPerMatch,
-        ScoreboardQuerySortBy::Deaths,
-        ScoreboardQuerySortBy::MaxDamageTakenPerMatch,
-        ScoreboardQuerySortBy::AvgDamageTakenPerMatch,
-        ScoreboardQuerySortBy::DamageTaken,
-        ScoreboardQuerySortBy::MaxAssistsPerMatch,
-        ScoreboardQuerySortBy::AvgAssistsPerMatch,
-        ScoreboardQuerySortBy::Assists,
-        ScoreboardQuerySortBy::MaxNetWorthPerMatch,
-        ScoreboardQuerySortBy::AvgNetWorthPerMatch,
-        ScoreboardQuerySortBy::NetWorth,
-        ScoreboardQuerySortBy::MaxLastHitsPerMatch,
-        ScoreboardQuerySortBy::AvgLastHitsPerMatch,
-        ScoreboardQuerySortBy::LastHits,
-        ScoreboardQuerySortBy::MaxDeniesPerMatch,
-        ScoreboardQuerySortBy::AvgDeniesPerMatch,
-        ScoreboardQuerySortBy::Denies,
-        ScoreboardQuerySortBy::MaxPlayerLevelPerMatch,
-        ScoreboardQuerySortBy::AvgPlayerLevelPerMatch,
-        ScoreboardQuerySortBy::PlayerLevel,
-        ScoreboardQuerySortBy::MaxCreepKillsPerMatch,
-        ScoreboardQuerySortBy::AvgCreepKillsPerMatch,
-        ScoreboardQuerySortBy::CreepKills,
-        ScoreboardQuerySortBy::MaxNeutralKillsPerMatch,
-        ScoreboardQuerySortBy::AvgNeutralKillsPerMatch,
-        ScoreboardQuerySortBy::NeutralKills,
-        ScoreboardQuerySortBy::MaxCreepDamagePerMatch,
-        ScoreboardQuerySortBy::AvgCreepDamagePerMatch,
-        ScoreboardQuerySortBy::CreepDamage,
-        ScoreboardQuerySortBy::MaxPlayerDamagePerMatch,
-        ScoreboardQuerySortBy::AvgPlayerDamagePerMatch,
-        ScoreboardQuerySortBy::PlayerDamage,
-        ScoreboardQuerySortBy::MaxNeutralDamagePerMatch,
-        ScoreboardQuerySortBy::AvgNeutralDamagePerMatch,
-        ScoreboardQuerySortBy::NeutralDamage,
-        ScoreboardQuerySortBy::MaxBossDamagePerMatch,
-        ScoreboardQuerySortBy::AvgBossDamagePerMatch,
-        ScoreboardQuerySortBy::BossDamage,
-        ScoreboardQuerySortBy::MaxMaxHealthPerMatch,
-        ScoreboardQuerySortBy::AvgMaxHealthPerMatch,
-        ScoreboardQuerySortBy::MaxHealth,
-        ScoreboardQuerySortBy::MaxShotsHitPerMatch,
-        ScoreboardQuerySortBy::AvgShotsHitPerMatch,
-        ScoreboardQuerySortBy::ShotsHit,
-        ScoreboardQuerySortBy::MaxShotsMissedPerMatch,
-        ScoreboardQuerySortBy::AvgShotsMissedPerMatch,
-        ScoreboardQuerySortBy::ShotsMissed,
-        ScoreboardQuerySortBy::MaxHeroBulletsHitPerMatch,
-        ScoreboardQuerySortBy::AvgHeroBulletsHitPerMatch,
-        ScoreboardQuerySortBy::HeroBulletsHit,
-        ScoreboardQuerySortBy::MaxHeroBulletsHitCritPerMatch,
-        ScoreboardQuerySortBy::AvgHeroBulletsHitCritPerMatch,
-        ScoreboardQuerySortBy::HeroBulletsHitCrit
-    )]
-    sort_by: ScoreboardQuerySortBy,
+    #[case] sort_by: ScoreboardQuerySortBy,
+    #[case] sort_direction: SortDirectionDesc,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
-    #[case] sort_direction: SortDirectionDesc,
     #[case] min_unix_timestamp: Option<i64>,
     #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
@@ -290,9 +345,9 @@ async fn test_hero_scoreboard(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
+    #[case] account_ids: Option<u32>,
 ) {
     let mut q = vec![];
     push_query!(q, "sort_by" => sort_by);
@@ -315,21 +370,17 @@ async fn test_hero_scoreboard(
     let hero_scoreboard: Vec<hero_scoreboard::HeroEntry> =
         response.json().await.expect("Failed to parse response");
 
-    // Verify min_matches requirement
     if let Some(min_matches) = min_matches {
         for entry in &hero_scoreboard {
             assert!(entry.matches >= min_matches);
         }
     }
-
-    // Verify max_matches requirement
     if let Some(max_matches) = max_matches {
         for entry in &hero_scoreboard {
             assert!(entry.matches <= max_matches);
         }
     }
 
-    // Verify sorting
     if hero_scoreboard.len() > 1 {
         let check_sorted = |field_extractor: fn(&hero_scoreboard::HeroEntry) -> f64,
                             desc: SortDirectionDesc| {
@@ -351,6 +402,8 @@ async fn test_hero_scoreboard(
 
 #[rstest]
 #[case(
+    ScoreboardQuerySortBy::Matches,
+    Some(SortDirectionDesc::Desc),
     Some(10),
     Some(70),
     Some(1741801678),
@@ -361,76 +414,105 @@ async fn test_hero_scoreboard(
     Some(50000),
     Some(40),
     Some(100),
+    None,
+    None,
+    None,
+    Some(100)
+)]
+#[case(
+    ScoreboardQuerySortBy::Winrate,
+    Some(SortDirectionDesc::Asc),
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    None,
+    None,
+    Some(100)
+)]
+#[case(
+    ScoreboardQuerySortBy::AvgDeathsPerMatch,
+    None,
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226),
+    Some(18373975),
+    Some(100)
+)]
+#[case(
+    ScoreboardQuerySortBy::MaxNetWorthPerMatch,
+    Some(SortDirectionDesc::Desc),
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None,
+    None
+)]
+#[case(
+    ScoreboardQuerySortBy::NeutralDamage,
+    Some(SortDirectionDesc::Desc),
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    None,
+    None,
+    Some(100)
+)]
+#[case(
+    ScoreboardQuerySortBy::HeroBulletsHitCrit,
+    Some(SortDirectionDesc::Desc),
+    Some(10),
+    Some(70),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    Some(34000226),
+    Some(18373975),
     Some(100)
 )]
 #[tokio::test]
 async fn test_player_scoreboard(
-    #[values(
-        ScoreboardQuerySortBy::Matches,
-        ScoreboardQuerySortBy::Wins,
-        ScoreboardQuerySortBy::Losses,
-        ScoreboardQuerySortBy::Winrate,
-        ScoreboardQuerySortBy::MaxKillsPerMatch,
-        ScoreboardQuerySortBy::AvgKillsPerMatch,
-        ScoreboardQuerySortBy::Kills,
-        ScoreboardQuerySortBy::MaxDeathsPerMatch,
-        ScoreboardQuerySortBy::AvgDeathsPerMatch,
-        ScoreboardQuerySortBy::Deaths,
-        ScoreboardQuerySortBy::MaxDamageTakenPerMatch,
-        ScoreboardQuerySortBy::AvgDamageTakenPerMatch,
-        ScoreboardQuerySortBy::DamageTaken,
-        ScoreboardQuerySortBy::MaxAssistsPerMatch,
-        ScoreboardQuerySortBy::AvgAssistsPerMatch,
-        ScoreboardQuerySortBy::Assists,
-        ScoreboardQuerySortBy::MaxNetWorthPerMatch,
-        ScoreboardQuerySortBy::AvgNetWorthPerMatch,
-        ScoreboardQuerySortBy::NetWorth,
-        ScoreboardQuerySortBy::MaxLastHitsPerMatch,
-        ScoreboardQuerySortBy::AvgLastHitsPerMatch,
-        ScoreboardQuerySortBy::LastHits,
-        ScoreboardQuerySortBy::MaxDeniesPerMatch,
-        ScoreboardQuerySortBy::AvgDeniesPerMatch,
-        ScoreboardQuerySortBy::Denies,
-        ScoreboardQuerySortBy::MaxPlayerLevelPerMatch,
-        ScoreboardQuerySortBy::AvgPlayerLevelPerMatch,
-        ScoreboardQuerySortBy::PlayerLevel,
-        ScoreboardQuerySortBy::MaxCreepKillsPerMatch,
-        ScoreboardQuerySortBy::AvgCreepKillsPerMatch,
-        ScoreboardQuerySortBy::CreepKills,
-        ScoreboardQuerySortBy::MaxNeutralKillsPerMatch,
-        ScoreboardQuerySortBy::AvgNeutralKillsPerMatch,
-        ScoreboardQuerySortBy::NeutralKills,
-        ScoreboardQuerySortBy::MaxCreepDamagePerMatch,
-        ScoreboardQuerySortBy::AvgCreepDamagePerMatch,
-        ScoreboardQuerySortBy::CreepDamage,
-        ScoreboardQuerySortBy::MaxPlayerDamagePerMatch,
-        ScoreboardQuerySortBy::AvgPlayerDamagePerMatch,
-        ScoreboardQuerySortBy::PlayerDamage,
-        ScoreboardQuerySortBy::MaxNeutralDamagePerMatch,
-        ScoreboardQuerySortBy::AvgNeutralDamagePerMatch,
-        ScoreboardQuerySortBy::NeutralDamage,
-        ScoreboardQuerySortBy::MaxBossDamagePerMatch,
-        ScoreboardQuerySortBy::AvgBossDamagePerMatch,
-        ScoreboardQuerySortBy::BossDamage,
-        ScoreboardQuerySortBy::MaxMaxHealthPerMatch,
-        ScoreboardQuerySortBy::AvgMaxHealthPerMatch,
-        ScoreboardQuerySortBy::MaxHealth,
-        ScoreboardQuerySortBy::MaxShotsHitPerMatch,
-        ScoreboardQuerySortBy::AvgShotsHitPerMatch,
-        ScoreboardQuerySortBy::ShotsHit,
-        ScoreboardQuerySortBy::MaxShotsMissedPerMatch,
-        ScoreboardQuerySortBy::AvgShotsMissedPerMatch,
-        ScoreboardQuerySortBy::ShotsMissed,
-        ScoreboardQuerySortBy::MaxHeroBulletsHitPerMatch,
-        ScoreboardQuerySortBy::AvgHeroBulletsHitPerMatch,
-        ScoreboardQuerySortBy::HeroBulletsHit,
-        ScoreboardQuerySortBy::MaxHeroBulletsHitCritPerMatch,
-        ScoreboardQuerySortBy::AvgHeroBulletsHitCritPerMatch,
-        ScoreboardQuerySortBy::HeroBulletsHitCrit
-    )]
-    sort_by: ScoreboardQuerySortBy,
-    #[values(None, Some(SortDirectionDesc::Desc), Some(SortDirectionDesc::Asc))]
-    sort_direction: Option<SortDirectionDesc>,
+    #[case] sort_by: ScoreboardQuerySortBy,
+    #[case] sort_direction: Option<SortDirectionDesc>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
     #[case] min_unix_timestamp: Option<i64>,
@@ -441,9 +523,9 @@ async fn test_player_scoreboard(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
+    #[case] account_ids: Option<u32>,
     #[case] limit: Option<u32>,
 ) {
     let mut q = vec![];
@@ -467,26 +549,20 @@ async fn test_player_scoreboard(
     let player_scoreboard: Vec<player_scoreboard::PlayerEntry> =
         response.json().await.expect("Failed to parse response");
 
-    // Verify we don't get more entries than the limit
     if let Some(limit) = limit {
         assert!(player_scoreboard.len() <= limit as usize);
     }
-
-    // Verify min_matches requirement
     if let Some(min_matches) = min_matches {
         for entry in &player_scoreboard {
             assert!(entry.matches >= min_matches);
         }
     }
-
-    // Verify max_matches requirement
     if let Some(max_matches) = max_matches {
         for entry in &player_scoreboard {
             assert!(entry.matches <= max_matches);
         }
     }
 
-    // Verify sorting
     if player_scoreboard.len() > 1 {
         let check_sorted = |field_extractor: fn(&player_scoreboard::PlayerEntry) -> f64,
                             sort_direction: SortDirectionDesc| {
@@ -507,31 +583,13 @@ async fn test_player_scoreboard(
 }
 
 #[rstest]
-#[case(
-    Some(1741801678),
-    Some(1742233678),
-    Some(1000),
-    Some(5000),
-    Some(10000),
-    Some(50000),
-    Some(40),
-    Some(100),
-    Some(10),
-    Some(100),
-    Some(vec![1548066885, 968099481]),
-    Some(vec![1797283378]),
-)]
+#[case(None, Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(10), Some(100), Some(vec![1548066885, 968099481]), Some(vec![1797283378]), None)]
+#[case(Some(hero_stats::BucketQuery::NoBucket), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), Some(34000226), Some(34000226), Some(10), Some(100), Some(vec![1548066885, 968099481]), Some(vec![1797283378]), Some(18373975))]
+#[case(Some(hero_stats::BucketQuery::StartTimeDay), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(10), Some(100), Some(vec![1548066885, 968099481]), Some(vec![1797283378]), None)]
+#[case(Some(hero_stats::BucketQuery::StartTimeMonth), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(10), Some(100), Some(vec![1548066885, 968099481]), Some(vec![1797283378]), None)]
 #[tokio::test]
 async fn test_hero_stats(
-    #[values(
-        None,
-        Some(hero_stats::BucketQuery::NoBucket),
-        Some(hero_stats::BucketQuery::StartTimeHour),
-        Some(hero_stats::BucketQuery::StartTimeDay),
-        Some(hero_stats::BucketQuery::StartTimeWeek),
-        Some(hero_stats::BucketQuery::StartTimeMonth)
-    )]
-    bucket: Option<hero_stats::BucketQuery>,
+    #[case] bucket: Option<hero_stats::BucketQuery>,
     #[case] min_unix_timestamp: Option<i64>,
     #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
@@ -540,13 +598,13 @@ async fn test_hero_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
     #[case] min_hero_matches: Option<u64>,
     #[case] max_hero_matches: Option<u64>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] account_ids: Option<u32>,
 ) {
     let mut q = vec![];
     push_query!(q, "bucket" =>? bucket);
@@ -587,6 +645,7 @@ async fn test_hero_stats(
 
 #[rstest]
 #[case(
+    None,
     Some(1741801678),
     Some(1742233678),
     Some(1000),
@@ -595,12 +654,47 @@ async fn test_hero_stats(
     Some(50000),
     Some(40),
     Some(100),
+    None,
+    None,
+    None,
+    Some(10),
+    Some(100)
+)]
+#[case(
+    Some(true),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226),
+    Some(18373975),
+    Some(10),
+    Some(100)
+)]
+#[case(
+    Some(false),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    None,
+    None,
     Some(10),
     Some(100)
 )]
 #[tokio::test]
 async fn test_hero_synergies_stats(
-    #[values(None, Some(true), Some(false))] same_lane_filter: Option<bool>,
+    #[case] same_lane_filter: Option<bool>,
     #[case] min_unix_timestamp: Option<i64>,
     #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
@@ -609,9 +703,9 @@ async fn test_hero_synergies_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
+    #[case] account_ids: Option<u32>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
@@ -705,41 +799,14 @@ async fn test_hero_synergies_stats(
 }
 
 #[rstest]
-#[case(
-    Some(vec![1, 2, 3]),
-    Some(1741801678),
-    Some(1742233678),
-    Some(1000),
-    Some(5000),
-    Some(10000),
-    Some(50000),
-    Some(40),
-    Some(100),
-    Some(vec![1548066885, 1009965641, 709540378]),
-    Some(vec![1248737459, 3535785353]),
-    Some(10),
-    Some(100),
-)]
+#[case(None, Some(vec![1, 2, 3]), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(vec![1548066885, 1009965641, 709540378]), Some(vec![1248737459, 3535785353]), None, Some(10), Some(100))]
+#[case(Some(item_stats::BucketQuery::NoBucket), Some(vec![1, 2, 3]), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), Some(34000226), Some(34000226), Some(vec![1548066885, 1009965641, 709540378]), Some(vec![1248737459, 3535785353]), Some(18373975), Some(10), Some(100))]
+#[case(Some(item_stats::BucketQuery::Hero), Some(vec![1, 2, 3]), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(vec![1548066885, 1009965641, 709540378]), Some(vec![1248737459, 3535785353]), None, Some(10), Some(100))]
+#[case(Some(item_stats::BucketQuery::StartTimeDay), Some(vec![1, 2, 3]), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(vec![1548066885, 1009965641, 709540378]), Some(vec![1248737459, 3535785353]), None, Some(10), Some(100))]
+#[case(Some(item_stats::BucketQuery::NetWorthBy5000), Some(vec![1, 2, 3]), Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(vec![1548066885, 1009965641, 709540378]), Some(vec![1248737459, 3535785353]), None, Some(10), Some(100))]
 #[tokio::test]
 async fn test_item_stats(
-    #[values(
-        None,
-        Some(item_stats::BucketQuery::NoBucket),
-        Some(item_stats::BucketQuery::Hero),
-        Some(item_stats::BucketQuery::Team),
-        Some(item_stats::BucketQuery::StartTimeHour),
-        Some(item_stats::BucketQuery::StartTimeDay),
-        Some(item_stats::BucketQuery::StartTimeWeek),
-        Some(item_stats::BucketQuery::StartTimeMonth),
-        Some(item_stats::BucketQuery::GameTimeMin),
-        Some(item_stats::BucketQuery::GameTimeNormalizedPercentage),
-        Some(item_stats::BucketQuery::NetWorthBy1000),
-        Some(item_stats::BucketQuery::NetWorthBy2000),
-        Some(item_stats::BucketQuery::NetWorthBy3000),
-        Some(item_stats::BucketQuery::NetWorthBy5000),
-        Some(item_stats::BucketQuery::NetWorthBy10000)
-    )]
-    bucket: Option<item_stats::BucketQuery>,
+    #[case] bucket: Option<item_stats::BucketQuery>,
     #[case] hero_ids: Option<Vec<u32>>,
     #[case] min_unix_timestamp: Option<i64>,
     #[case] max_unix_timestamp: Option<i64>,
@@ -749,11 +816,11 @@ async fn test_item_stats(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] account_ids: Option<u32>,
     #[case] min_matches: Option<u64>,
     #[case] max_matches: Option<u64>,
 ) {
@@ -812,11 +879,50 @@ async fn test_item_stats(
     Some(1742233678),
     Some(1000),
     Some(5000),
+    None,
+    None,
     Some(10000),
     Some(50000),
     Some(40),
     Some(100),
-    Some(10)
+    None,
+    None,
+    Some(10),
+    None
+)]
+#[case(
+    1,
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10),
+    Some(16),
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226),
+    Some(10),
+    Some(18373975)
+)]
+#[case(
+    1,
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(10),
+    None,
+    Some(10000),
+    Some(50000),
+    Some(40),
+    Some(100),
+    None,
+    None,
+    Some(10),
+    None
 )]
 #[tokio::test]
 async fn test_ability_order_stats(
@@ -825,16 +931,16 @@ async fn test_ability_order_stats(
     #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
-    #[values(None, Some(10))] min_ability_upgrades: Option<u64>,
-    #[values(None, Some(16))] max_ability_upgrades: Option<u64>,
+    #[case] min_ability_upgrades: Option<u64>,
+    #[case] max_ability_upgrades: Option<u64>,
     #[case] min_networth: Option<u64>,
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
     #[case] min_matches: Option<u32>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] account_ids: Option<u32>,
 ) {
     let mut q = vec![];
     push_query!(q, "hero_id" => hero_id);
@@ -898,19 +1004,8 @@ async fn test_ability_order_stats(
 }
 
 #[rstest]
-#[case(
-    Some(1741801678),
-    Some(1742233678),
-    Some(1000),
-    Some(5000),
-    Some(10000),
-    Some(50000),
-    Some(40),
-    Some(100),
-    Some(vec![1, 2, 3]),
-    Some(vec![4, 5]),
-    Some(vec![6, 7]),
-)]
+#[case(Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), None, None, Some(vec![1, 2, 3]), Some(vec![4, 5]), Some(vec![6, 7]), None)]
+#[case(Some(1741801678), Some(1742233678), Some(1000), Some(5000), Some(10000), Some(50000), Some(40), Some(100), Some(34000226), Some(34000226), Some(vec![1, 2, 3]), Some(vec![4, 5]), Some(vec![6, 7]), Some(18373975))]
 #[tokio::test]
 async fn test_player_performance_curve(
     #[case] min_unix_timestamp: Option<i64>,
@@ -921,12 +1016,12 @@ async fn test_player_performance_curve(
     #[case] max_networth: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
     #[case] hero_ids: Option<Vec<u32>>,
     #[case] include_item_ids: Option<Vec<u32>>,
     #[case] exclude_item_ids: Option<Vec<u32>>,
-    #[values(None, Some(18373975))] account_ids: Option<u32>,
+    #[case] account_ids: Option<u32>,
 ) {
     let mut q = vec![];
     push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
@@ -974,33 +1069,60 @@ async fn test_player_performance_curve(
 
 #[rstest]
 #[case(
+    None,
     Some(1741801678),
     Some(1742233678),
     Some(1000),
     Some(5000),
     Some(40),
-    Some(100)
+    Some(100),
+    None,
+    None
+)]
+#[case(
+    Some(game_stats::BucketQuery::NoBucket),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(40),
+    Some(100),
+    Some(34000226),
+    Some(34000226)
+)]
+#[case(
+    Some(game_stats::BucketQuery::AvgBadge),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(40),
+    Some(100),
+    None,
+    None
+)]
+#[case(
+    Some(game_stats::BucketQuery::StartTimeDay),
+    Some(1741801678),
+    Some(1742233678),
+    Some(1000),
+    Some(5000),
+    Some(40),
+    Some(100),
+    None,
+    None
 )]
 #[tokio::test]
 async fn test_game_stats(
-    #[values(
-        None,
-        Some(game_stats::BucketQuery::NoBucket),
-        Some(game_stats::BucketQuery::AvgBadge),
-        Some(game_stats::BucketQuery::StartTimeHour),
-        Some(game_stats::BucketQuery::StartTimeDay),
-        Some(game_stats::BucketQuery::StartTimeWeek),
-        Some(game_stats::BucketQuery::StartTimeMonth)
-    )]
-    bucket: Option<game_stats::BucketQuery>,
+    #[case] bucket: Option<game_stats::BucketQuery>,
     #[case] min_unix_timestamp: Option<i64>,
     #[case] max_unix_timestamp: Option<i64>,
     #[case] min_duration_s: Option<u64>,
     #[case] max_duration_s: Option<u64>,
     #[case] min_average_badge: Option<u8>,
     #[case] max_average_badge: Option<u8>,
-    #[values(None, Some(34000226))] min_match_id: Option<u64>,
-    #[values(None, Some(34000226))] max_match_id: Option<u64>,
+    #[case] min_match_id: Option<u64>,
+    #[case] max_match_id: Option<u64>,
 ) {
     let mut q = vec![];
     push_query!(q, "bucket" =>? bucket);

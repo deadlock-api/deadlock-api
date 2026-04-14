@@ -13,6 +13,7 @@ pub mod matches;
 mod patches;
 mod patron;
 pub mod players;
+mod servers;
 pub mod sql;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
@@ -28,4 +29,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/sql", sql::router())
         .nest("/auth", auth::router())
         .nest("/patron", patron::router())
+        .nest("/servers", servers::router())
 }

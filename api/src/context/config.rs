@@ -128,6 +128,9 @@ pub(crate) struct Config {
     /// Encryption key for patron tokens (32-byte hex-encoded for AES-256-GCM)
     pub(crate) patron_encryption_key: String,
 
+    #[serde(default)]
+    pub(crate) game_server_secret: String,
+
     #[serde(default = "default_assets_base_url")]
     pub(super) assets_base_url: String,
 }

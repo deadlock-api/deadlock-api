@@ -21,20 +21,25 @@ async fn test_table_schema(#[case] table: &str) {
     assert!(!schema.is_empty());
 }
 
-#[rstest]
-#[case("SELECT 1", r#"[{"1":1}]"#)]
-#[case("SELECT COUNT() as count FROM match_info", r#"[{"count":100}]"#)]
-#[case("SELECT COUNT() as count FROM match_player", r#"[{"count":1200}]"#)]
 #[tokio::test]
-async fn test_sql_query(#[case] query: &str, #[case] expected: &str) {
+async fn test_sql_query_literal() {
+    let response = request_endpoint("/v1/sql", [("query", "SELECT 1")]).await;
+    let result: Vec<serde_json::Value> = response.json().await.expect("Failed to parse response");
+    assert_eq!(result, vec![serde_json::json!({"1": 1})]);
+}
+
+#[rstest]
+#[case("SELECT COUNT() as count FROM match_info")]
+#[case("SELECT COUNT() as count FROM match_player")]
+#[tokio::test]
+async fn test_sql_query_count(#[case] query: &str) {
     let response = request_endpoint("/v1/sql", [("query", query)]).await;
     let result: Vec<serde_json::Value> = response.json().await.expect("Failed to parse response");
-    let expected: Vec<serde_json::Value> =
-        serde_json::from_str(expected).expect("Failed to parse expected");
-    assert_eq!(result.len(), expected.len());
-    for (row, expected) in result.iter().zip(expected.iter()) {
-        assert_eq!(row.as_str(), expected.as_str());
-    }
+    assert_eq!(result.len(), 1);
+    let count = result[0]["count"]
+        .as_u64()
+        .expect("count should be a number");
+    assert!(count > 0, "table should have rows, got {count}");
 }
 
 #[rstest]
