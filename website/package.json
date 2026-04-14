@@ -80,10 +80,5 @@
   },
   "engines": {
     "node": ">=24.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "typescript": "^6.0.2"
-    }
   }
 }

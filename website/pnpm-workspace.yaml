@@ -4,3 +4,6 @@ allowBuilds:
   esbuild: true
   core-js: true
   protobufjs: true
+
+overrides:
+  typescript: ^6.0.2
