@@ -34,6 +34,15 @@ function prettyGameMode(mode: string) {
   return snakeToPretty(mode.replace(/-/g, "_"));
 }
 
+function formatSince(timestamp: string | number | Date) {
+  const seconds = Math.max(0, day().diff(day(timestamp), "second"));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m ago`;
+}
+
 export default function Servers() {
   const { data, isPending, isError, error, dataUpdatedAt } = useQuery(serversQueryOptions);
   const showEmptyState = !isPending && !isError;
@@ -196,8 +205,10 @@ function ServerRow({ server }: { server: GameServerInfo }) {
         {server.ip}:{server.port}
       </TableCell>
       <TableCell className="text-right tabular-nums">{server.current_player_count}</TableCell>
-      <TableCell className={cn("text-right text-xs", isStale ? "text-amber-400" : "text-muted-foreground")}>
-        {day(server.last_updated).fromNow()}
+      <TableCell
+        className={cn("text-right text-xs tabular-nums", isStale ? "text-amber-400" : "text-muted-foreground")}
+      >
+        {formatSince(server.last_updated)}
       </TableCell>
       <TableCell className="text-right">
         <Button asChild size="sm" className="h-8 gap-1">
