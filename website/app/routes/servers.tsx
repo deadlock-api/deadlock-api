@@ -28,7 +28,7 @@ export function meta() {
 }
 
 function connectUrl(server: GameServerInfo) {
-  return `steam://run/1422450//+connect%20${server.ip}:${server.port}`;
+  return `steam://connect/${server.ip}:${server.port}`;
 }
 
 function prettyGameMode(mode: string) {
