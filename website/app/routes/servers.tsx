@@ -5,7 +5,6 @@ import type { LucideIcon } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { LoadingLogo } from "~/components/LoadingLogo";
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -37,6 +36,7 @@ function prettyGameMode(mode: string) {
 
 export default function Servers() {
   const { data, isPending, isError, error, dataUpdatedAt } = useQuery(serversQueryOptions);
+  const showEmptyState = !isPending && !isError;
 
   const [region, setRegion] = useQueryState("region", parseAsString);
   const [gameMode, setGameMode] = useQueryState("mode", parseAsString);
@@ -138,11 +138,7 @@ export default function Servers() {
           />
         </div>
 
-        {isPending ? (
-          <div className="flex items-center justify-center py-24">
-            <LoadingLogo />
-          </div>
-        ) : isError ? (
+        {isError ? (
           <div className="py-8 text-center text-sm text-destructive">Failed to load servers: {error?.message}</div>
         ) : (
           <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
@@ -158,7 +154,11 @@ export default function Servers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 ? (
+                {isPending ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-10" />
+                  </TableRow>
+                ) : showEmptyState && filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                       No servers match your filters.
