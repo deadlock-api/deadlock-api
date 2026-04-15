@@ -5,8 +5,9 @@ import "./tailwind.css";
 import "./dayjs";
 import { QueryClient, QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { motion, useReducedMotion } from "framer-motion";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { Component, Suspense, lazy } from "react";
+import { Component, Suspense, lazy, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import type { LinksFunction } from "react-router";
 import {
@@ -284,6 +285,57 @@ function RoutePrefetcher() {
   return null;
 }
 
+const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
+const EASE_OUT_QUART = [0.22, 1, 0.36, 1] as const;
+const CLIP_HIDDEN_BOTTOM = "polygon(0 100%, 100% 100%, 100% 100%, 0 100%)";
+const CLIP_VISIBLE = "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
+
+const OUTLET_INITIAL = {
+  opacity: 0,
+  y: 20,
+  scale: 0.98,
+  filter: "blur(6px)",
+  clipPath: CLIP_HIDDEN_BOTTOM,
+};
+const OUTLET_ANIMATE = {
+  opacity: 1,
+  y: 0,
+  scale: 1,
+  filter: "blur(0px)",
+  clipPath: CLIP_VISIBLE,
+};
+const OUTLET_TRANSITION = {
+  duration: 0.5,
+  ease: EASE_OUT_EXPO,
+  opacity: { duration: 0.35 },
+  filter: { duration: 0.4 },
+  clipPath: { duration: 0.55, ease: EASE_OUT_QUART },
+};
+const OUTLET_STYLE_ANIMATING: React.CSSProperties = {
+  willChange: "opacity, transform, filter, clip-path",
+  transformOrigin: "center top",
+};
+const OUTLET_STYLE_IDLE: React.CSSProperties = { transformOrigin: "center top" };
+
+function AnimatedOutlet() {
+  const reduceMotion = useReducedMotion();
+  const [animating, setAnimating] = useState(true);
+  if (reduceMotion) {
+    return <Outlet />;
+  }
+  return (
+    <motion.div
+      initial={OUTLET_INITIAL}
+      animate={OUTLET_ANIMATE}
+      transition={OUTLET_TRANSITION}
+      style={animating ? OUTLET_STYLE_ANIMATING : OUTLET_STYLE_IDLE}
+      onAnimationComplete={() => setAnimating(false)}
+    >
+      <Outlet />
+    </motion.div>
+  );
+}
+
 export default function App() {
   const { pathname, search, hash } = useLocation();
 
@@ -333,9 +385,7 @@ export default function App() {
                             <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
                           )}
                         >
-                          <div key={pathname}>
-                            <Outlet />
-                          </div>
+                          <AnimatedOutlet key={pathname} />
                         </QueryErrorBoundary>
                       )}
                     </QueryErrorResetBoundary>
