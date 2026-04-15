@@ -7,6 +7,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { DURATION_BUCKETS, MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import { queryKeys } from "~/queries/query-keys";
@@ -33,8 +34,7 @@ export function HeroStatsByDurationChart({
   maxDate,
   gameMode,
 }: HeroStatsByDurationChartProps) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const bucketQueries = useQueries({
     queries: DURATION_BUCKETS.map((bucket) => {
@@ -43,8 +43,8 @@ export function HeroStatsByDurationChart({
         minHeroMatchesTotal,
         minAverageBadge: minRankId ?? 0,
         maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
+        minUnixTimestamp: minUnixTimestamp ?? 0,
+        maxUnixTimestamp,
         minDurationS: bucket.minS,
         maxDurationS: bucket.maxS,
         bucket: "no_bucket" as const,

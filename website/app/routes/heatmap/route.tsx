@@ -9,6 +9,7 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
@@ -44,14 +45,16 @@ export default function Heatmap() {
     parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
 
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
+
   const requestParams: AnalyticsApiKillDeathStatsRequest = {
     team: team,
     heroIds: heroId ? String(heroId) : undefined,
     gameMode: gameMode === "street_brawl" ? "street_brawl" : "normal",
     minAverageBadge: minRankId || undefined,
     maxAverageBadge: maxRankId < 116 ? maxRankId : undefined,
-    minUnixTimestamp: startDate?.unix(),
-    maxUnixTimestamp: endDate?.unix(),
+    minUnixTimestamp,
+    maxUnixTimestamp,
     minGameTimeS: minGameTime || undefined,
     maxGameTimeS: maxGameTime < 3600 ? maxGameTime : undefined,
   };

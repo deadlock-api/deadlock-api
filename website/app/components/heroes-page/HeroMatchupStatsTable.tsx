@@ -10,6 +10,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
 import type { Color } from "~/types/general";
@@ -230,15 +231,18 @@ export function HeroMatchupStatsTable({
   sameLaneFilter?: boolean;
   gameMode?: GameMode;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
+  const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
+    prevMinDate,
+    prevMaxDate,
+  );
 
   const heroStatsQuery = {
     minHeroMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: heroData, isLoading: isLoadingHero } = useQuery({
@@ -255,8 +259,8 @@ export function HeroMatchupStatsTable({
     minMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
@@ -273,8 +277,8 @@ export function HeroMatchupStatsTable({
     minMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({
@@ -286,15 +290,13 @@ export function HeroMatchupStatsTable({
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
-  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
-  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const prevHeroStatsQuery = {
     minHeroMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
   };
@@ -313,7 +315,7 @@ export function HeroMatchupStatsTable({
     minMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
   };
@@ -332,7 +334,7 @@ export function HeroMatchupStatsTable({
     minMatches: minMatches,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: prevMinTimestamp,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
   };

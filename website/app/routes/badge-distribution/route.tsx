@@ -7,9 +7,10 @@ import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import type { Dayjs } from "~/dayjs";
-import { day } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { roundedNow } from "~/lib/time-normalize";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -24,8 +25,8 @@ export function meta() {
 }
 
 const defaultDateRange: [Dayjs | undefined, Dayjs | undefined] = [
-  day().subtract(30, "day").startOf("day"),
-  day().endOf("day"),
+  roundedNow("day").subtract(30, "day"),
+  roundedNow("day").endOf("day"),
 ];
 
 export default function BadgeDistribution() {
@@ -36,9 +37,11 @@ export default function BadgeDistribution() {
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
 
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
+
   const filter = {
-    minUnixTimestamp: startDate ? startDate.unix() : 0,
-    maxUnixTimestamp: endDate ? endDate.unix() : undefined,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     minDurationS: minDurationS ?? undefined,
     maxDurationS: maxDurationS ?? undefined,
   };

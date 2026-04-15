@@ -18,6 +18,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
@@ -205,16 +206,15 @@ export function HeroStatsByRankChart({
   xStat = "pickrate",
   yStat = "winrate",
 }: HeroStatsByRankChartProps) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const needsBanData = xStat === "ban_rate" || yStat === "ban_rate";
 
   const heroStatsByRankQuery = {
     minHeroMatches: minHeroMatches,
     minHeroMatchesTotal: minHeroMatchesTotal,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     bucket: "avg_badge" as const,
     gameMode: gameMode,
   };
@@ -231,8 +231,8 @@ export function HeroStatsByRankChart({
     bucket: "avg_badge" as const,
     minAverageBadge: undefined,
     maxAverageBadge: undefined,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
   };
   const { data: banData, isLoading: isLoadingBanStats } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsByRankQuery),

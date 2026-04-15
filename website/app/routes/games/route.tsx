@@ -11,6 +11,7 @@ import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
@@ -60,10 +61,16 @@ export default function Games() {
 
   const isStreetBrawl = isStreetBrawlMode(gameMode);
 
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
+  const { minUnixTimestamp: prevMinUnix, maxUnixTimestamp: prevMaxUnix } = useNormalizedTimeRange(
+    prevDates.prevStartDate,
+    prevDates.prevEndDate,
+  );
+
   const baseParams: AnalyticsApiGameStatsRequest = {
     gameMode: gameMode ?? undefined,
-    minUnixTimestamp: startDate ? startDate.unix() : 0,
-    maxUnixTimestamp: endDate ? endDate.unix() : undefined,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     minDurationS: minDurationS ?? undefined,
     maxDurationS: maxDurationS ?? undefined,
     minAverageBadge: isStreetBrawl ? undefined : minRankId,
@@ -71,11 +78,11 @@ export default function Games() {
   };
 
   const prevParams: AnalyticsApiGameStatsRequest | null =
-    prevDates.prevStartDate && prevDates.prevEndDate
+    prevDates.prevStartDate && prevDates.prevEndDate && prevMinUnix != null && prevMaxUnix != null
       ? {
           ...baseParams,
-          minUnixTimestamp: prevDates.prevStartDate.unix(),
-          maxUnixTimestamp: prevDates.prevEndDate.unix(),
+          minUnixTimestamp: prevMinUnix,
+          maxUnixTimestamp: prevMaxUnix,
         }
       : null;
 

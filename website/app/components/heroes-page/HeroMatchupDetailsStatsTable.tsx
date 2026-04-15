@@ -10,6 +10,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { cn } from "~/lib/utils";
 import { queryKeys } from "~/queries/query-keys";
@@ -42,15 +43,14 @@ export function HeroMatchupDetailsStatsTable({
   minHeroMatches?: number;
   gameMode?: GameMode;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const heroStatsQuery = {
     minHeroMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: heroData, isLoading: isLoadingHero } = useQuery({
@@ -67,8 +67,8 @@ export function HeroMatchupDetailsStatsTable({
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: synergyData, isLoading: isLoadingSynergy } = useQuery({
@@ -85,8 +85,8 @@ export function HeroMatchupDetailsStatsTable({
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: counterData, isLoading: isLoadingCounter } = useQuery({

@@ -19,6 +19,7 @@ import { Switch } from "~/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -614,11 +615,11 @@ export function ItemStatsTable({
   maxBoughtAtS?: number;
   gameMode?: GameMode;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
-
-  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
-  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
+  const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
+    prevMinDate,
+    prevMaxDate,
+  );
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
@@ -628,8 +629,8 @@ export function ItemStatsTable({
     heroId: hero,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     minBoughtAtS,
     maxBoughtAtS,
     gameMode,
@@ -649,7 +650,7 @@ export function ItemStatsTable({
     heroId: hero,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: prevMinTimestamp,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     minBoughtAtS,
     maxBoughtAtS,
@@ -705,11 +706,11 @@ export function ItemStatsTable({
       heroId: hero,
       minAverageBadge: minRankId ?? 0,
       maxAverageBadge: maxRankId ?? 116,
-      minUnixTimestamp: minDateTimestamp,
-      maxUnixTimestamp: maxDateTimestamp,
+      minUnixTimestamp: minUnixTimestamp ?? 0,
+      maxUnixTimestamp,
       gameMode,
     }),
-    [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, gameMode],
+    [minMatches, hero, minRankId, maxRankId, minUnixTimestamp, maxUnixTimestamp, gameMode],
   );
 
   return (

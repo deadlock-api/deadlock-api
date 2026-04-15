@@ -15,6 +15,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { day, type Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { cn } from "~/lib/utils";
@@ -169,8 +170,7 @@ export function ItemCombsExplore({
     parseAsStringLiteral(["weapon", "vitality", "spirit"] as const).withDefault("weapon"),
   );
 
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const { data: assetsItems, isLoading: isLoadingItemAssets } = useQuery(itemUpgradesQueryOptions);
 
@@ -186,8 +186,8 @@ export function ItemCombsExplore({
       heroId: hero,
       minAverageBadge: minRankId ?? 0,
       maxAverageBadge: maxRankId ?? 116,
-      minUnixTimestamp: minDateTimestamp,
-      maxUnixTimestamp: maxDateTimestamp,
+      minUnixTimestamp: minUnixTimestamp ?? 0,
+      maxUnixTimestamp,
       includeItemIds: includeItems ? Array.from(includeItems) : undefined,
       excludeItemIds: excludeItems ? Array.from(excludeItems) : undefined,
       minBoughtAtS,
@@ -199,8 +199,8 @@ export function ItemCombsExplore({
       hero,
       minRankId,
       maxRankId,
-      minDateTimestamp,
-      maxDateTimestamp,
+      minUnixTimestamp,
+      maxUnixTimestamp,
       includeItems,
       excludeItems,
       minBoughtAtS,
@@ -237,8 +237,8 @@ export function ItemCombsExplore({
     excludeItemIds: excludeItems.size > 0 ? Array.from(excludeItems).sort().join(",") : undefined,
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode as MatchesApiBulkMetadataRequest["gameMode"],
     orderBy: "average_badge",
     orderDirection: "desc",

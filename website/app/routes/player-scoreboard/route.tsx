@@ -8,10 +8,11 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
-import { day } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { roundedNow } from "~/lib/time-normalize";
 import { queryKeys } from "~/queries/query-keys";
 
 import { ScoreboardTable } from "./ScoreboardTable";
@@ -40,10 +41,11 @@ export default function PlayerScoreboard() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const defaultDateRange = [day().subtract(30, "day").startOf("day"), day().endOf("day")] as const;
+  const defaultDateRange = [roundedNow("day").subtract(30, "day"), roundedNow("day").endOf("day")] as const;
   const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault([...defaultDateRange]));
   const startDate = dateRange[0] ?? defaultDateRange[0];
   const endDate = dateRange[1] ?? defaultDateRange[1];
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const MAX_ENTRIES = 1000;
 
@@ -55,8 +57,8 @@ export default function PlayerScoreboard() {
     minMatches,
     minAverageBadge: gameMode === "street_brawl" ? undefined : minRankId,
     maxAverageBadge: gameMode === "street_brawl" ? undefined : maxRankId,
-    minUnixTimestamp: startDate?.unix() ?? 0,
-    maxUnixTimestamp: endDate?.unix(),
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     start: 0,
     limit: MAX_ENTRIES,
   };

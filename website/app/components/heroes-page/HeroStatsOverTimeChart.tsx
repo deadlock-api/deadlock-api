@@ -8,6 +8,7 @@ import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { type Dayjs, day } from "~/dayjs";
 import { useChartHeroVisibility, useHeroColorMap } from "~/hooks/useChartHeroVisibility";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { computeBanRatesByBucket } from "~/lib/ban-rate";
 import { queryKeys } from "~/queries/query-keys";
@@ -155,8 +156,7 @@ export function HeroStatsOverTimeChart({
   gameMode?: GameMode;
   bumpChart?: boolean;
 }) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const isBanRate = heroStat === "ban_rate";
 
@@ -165,8 +165,8 @@ export function HeroStatsOverTimeChart({
     minHeroMatchesTotal: minHeroMatchesTotal,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     bucket: heroTimeInterval,
     gameMode: gameMode,
   };
@@ -184,8 +184,8 @@ export function HeroStatsOverTimeChart({
     bucket: heroTimeInterval as HeroBanStatsBucketEnum,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
   };
   const { data: banData, isLoading: isLoadingBanStats } = useQuery({
     queryKey: queryKeys.analytics.heroBanStats(banStatsOverTimeQuery),

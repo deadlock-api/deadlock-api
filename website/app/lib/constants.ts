@@ -1,29 +1,32 @@
 import { type Dayjs, day } from "~/dayjs";
 
+// UTC end-of-day so all users share one Cloudflare cache key regardless of TZ.
+const utcEndOfToday = () => day.utc().endOf("day");
+
 export const PATCHES = [
   {
     id: "2026-04-10",
     name: "Update (2026-04-10)",
     startDate: day.utc("2026-04-11T04:03:00Z").local(),
-    endDate: day.utc().endOf("day").local(),
+    endDate: utcEndOfToday(),
   },
   {
     id: "2026-01-21",
     name: "Old Gods, New Blood (2026-01-21)",
     startDate: day.utc("2026-01-21T02:10:58Z").local(),
-    endDate: day.utc().endOf("day").local(),
+    endDate: utcEndOfToday(),
   },
   {
     id: "2025-09-06",
     name: "Six New Heroes (2025-09-06)",
     startDate: day.utc("2025-09-06T20:00:00Z").local(),
-    endDate: day.utc().endOf("day").local(),
+    endDate: utcEndOfToday(),
   },
   {
     id: "2025-05-08",
     name: "Major Item Rework (2025-05-08)",
     startDate: day.utc("2025-05-08T19:43:20Z").local(),
-    endDate: day.utc().endOf("day").local(),
+    endDate: utcEndOfToday(),
   },
   {
     id: "2025-02-25",
@@ -39,9 +42,9 @@ const FALLBACK_RANGE_DAYS = 14;
 /** Fresh patches lack enough data for meaningful stats, so fall back to a rolling window. */
 export const DEFAULT_DATE_RANGE: [Dayjs, Dayjs] = (() => {
   const latestPatch = PATCHES[0];
-  const daysSincePatch = day().diff(latestPatch.startDate, "day");
+  const daysSincePatch = day.utc().diff(latestPatch.startDate, "day");
   if (daysSincePatch < MIN_PATCH_AGE_DAYS) {
-    return [day().subtract(FALLBACK_RANGE_DAYS, "day").startOf("day"), day().endOf("day")];
+    return [day.utc().subtract(FALLBACK_RANGE_DAYS, "day").startOf("day"), day.utc().endOf("day")];
   }
   return [latestPatch.startDate, latestPatch.endDate];
 })();

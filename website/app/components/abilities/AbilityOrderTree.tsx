@@ -6,6 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { buildAbilityTrie, getSortedChildren, mergeStreetBrawlRows } from "~/lib/ability-order-utils";
 import { assetsApi } from "~/lib/assets-api";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
@@ -44,15 +45,14 @@ export default function AbilityOrderTree({
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [focusedPaths, setFocusedPaths] = useState<Set<string>>(new Set());
 
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const abilityOrderStatsQuery = {
     heroId,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     minMatches: minMatches,
     gameMode,
     includeItemIds: includeItemIds?.length ? includeItemIds : undefined,

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
 import { useDraftValue } from "~/hooks/useDraftValue";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -50,11 +51,11 @@ export function HeroCombStatsTable({
   const [combsToShow, setCombsToShow] = useQueryState("combs_to_show", parseAsInteger.withDefault(limit ?? 50));
   const [combsToShowDraft, setCombsToShowDraft] = useDraftValue(combsToShow);
 
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
-
-  const prevMinTimestamp = useMemo(() => prevMinDate?.unix() ?? 0, [prevMinDate]);
-  const prevMaxTimestamp = useMemo(() => prevMaxDate?.unix(), [prevMaxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
+  const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
+    prevMinDate,
+    prevMaxDate,
+  );
   const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
 
   const combStatsQuery = {
@@ -62,8 +63,8 @@ export function HeroCombStatsTable({
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: minDateTimestamp,
-    maxUnixTimestamp: maxDateTimestamp,
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp,
     gameMode: gameMode,
   };
   const { data: heroData, isLoading } = useQuery({
@@ -80,7 +81,7 @@ export function HeroCombStatsTable({
     minMatches: minHeroMatches ?? 0,
     minAverageBadge: minRankId ?? 0,
     maxAverageBadge: maxRankId ?? 116,
-    minUnixTimestamp: prevMinTimestamp,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,
   };

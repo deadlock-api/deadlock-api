@@ -6,6 +6,7 @@ import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
 import type { GameMode } from "~/components/selectors/GameModeSelector";
 import { ItemSelectorMultiple } from "~/components/selectors/ItemSelector";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
 
 export function ItemPurchaseAnalysis({
@@ -30,8 +31,7 @@ export function ItemPurchaseAnalysis({
   gameMode?: GameMode;
 }) {
   const [itemIds, setItemIds] = useQueryState("item_ids", parseAsSetOf(parseAsInteger).withDefault(new Set()));
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const queryStatOptions: Omit<AnalyticsApiItemStatsRequest, "bucket"> = useMemo(
     () => ({
@@ -39,13 +39,13 @@ export function ItemPurchaseAnalysis({
       heroId: hero,
       minAverageBadge: minRankId ?? 0,
       maxAverageBadge: maxRankId ?? 116,
-      minUnixTimestamp: minDateTimestamp,
-      maxUnixTimestamp: maxDateTimestamp,
+      minUnixTimestamp: minUnixTimestamp ?? 0,
+      maxUnixTimestamp,
       minBoughtAtS,
       maxBoughtAtS,
       gameMode,
     }),
-    [minMatches, hero, minRankId, maxRankId, minDateTimestamp, maxDateTimestamp, minBoughtAtS, maxBoughtAtS, gameMode],
+    [minMatches, hero, minRankId, maxRankId, minUnixTimestamp, maxUnixTimestamp, minBoughtAtS, maxBoughtAtS, gameMode],
   );
 
   return (

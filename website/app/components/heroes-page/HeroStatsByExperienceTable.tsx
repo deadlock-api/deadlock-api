@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import type { Dayjs } from "~/dayjs";
+import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -46,8 +47,7 @@ export function HeroStatsByExperienceTable({
   maxDate,
   gameMode,
 }: HeroStatsByExperienceTableProps) {
-  const minDateTimestamp = useMemo(() => minDate?.unix() ?? 0, [minDate]);
-  const maxDateTimestamp = useMemo(() => maxDate?.unix(), [maxDate]);
+  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
 
   const bucketQueries = useQueries({
     queries: EXPERIENCE_BUCKETS.map((bucket) => {
@@ -57,8 +57,8 @@ export function HeroStatsByExperienceTable({
         maxHeroMatchesTotal: bucket.max,
         minAverageBadge: minRankId ?? 0,
         maxAverageBadge: maxRankId ?? 116,
-        minUnixTimestamp: minDateTimestamp,
-        maxUnixTimestamp: maxDateTimestamp,
+        minUnixTimestamp: minUnixTimestamp ?? 0,
+        maxUnixTimestamp,
         bucket: "no_bucket" as const,
         gameMode,
       };
