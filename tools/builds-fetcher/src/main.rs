@@ -106,6 +106,7 @@ async fn update_builds(
         }
     };
     if builds.is_empty() {
+        warn!("No builds found for hero_id {hero_id}, langs {langs:?}, search {search:?}");
         return;
     }
     match insert_builds(pg_client, builds).await {
