@@ -68,8 +68,12 @@ async fn run_update_loop(http_client: &reqwest::Client, pg_client: &Pool<Postgre
     for hero_id in heroes {
         for langs in ALL_LANGS.chunks(2) {
             if langs.contains(&0) {
-                for search in ASCII_LOWER.iter().cartesian_product(ASCII_LOWER.iter()) {
-                    let search = format!("{}{}", search.0, search.1);
+                for search in ASCII_LOWER
+                    .iter()
+                    .cartesian_product(ASCII_LOWER.iter())
+                    .cartesian_product(ASCII_LOWER.iter())
+                {
+                    let search = format!("{}{}{}", search.0.0, search.0.1, search.1);
                     update_builds(http_client, pg_client, hero_id, langs, Some(search)).await;
                 }
             } else {
