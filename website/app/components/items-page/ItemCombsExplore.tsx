@@ -184,8 +184,8 @@ export function ItemCombsExplore({
     () => ({
       minMatches,
       heroId: hero,
-      minAverageBadge: minRankId ?? 0,
-      maxAverageBadge: maxRankId ?? 116,
+      minAverageBadge: minRankId,
+      maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
       maxUnixTimestamp,
       includeItemIds: includeItems ? Array.from(includeItems) : undefined,

@@ -61,8 +61,8 @@ export function HeroCombStatsTable({
   const combStatsQuery = {
     combSize: combSizeFilter,
     minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
@@ -79,8 +79,8 @@ export function HeroCombStatsTable({
   const prevCombStatsQuery = {
     combSize: combSizeFilter,
     minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     gameMode: gameMode,

@@ -41,8 +41,8 @@ export function HeroStatsByDurationChart({
       const heroStatsByDurationQuery = {
         minHeroMatches,
         minHeroMatchesTotal,
-        minAverageBadge: minRankId ?? 0,
-        maxAverageBadge: maxRankId ?? 116,
+        minAverageBadge: minRankId,
+        maxAverageBadge: maxRankId,
         minUnixTimestamp: minUnixTimestamp ?? 0,
         maxUnixTimestamp,
         minDurationS: bucket.minS,

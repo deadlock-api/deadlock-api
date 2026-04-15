@@ -49,8 +49,8 @@ export default function AbilityOrderTree({
 
   const abilityOrderStatsQuery = {
     heroId,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minMatches: minMatches,

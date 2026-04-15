@@ -163,8 +163,8 @@ export function HeroStatsOverTimeChart({
   const heroStatsOverTimeQuery = {
     minHeroMatches: minHeroMatches,
     minHeroMatchesTotal: minHeroMatchesTotal,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     bucket: heroTimeInterval,
@@ -182,8 +182,8 @@ export function HeroStatsOverTimeChart({
 
   const banStatsOverTimeQuery = {
     bucket: heroTimeInterval as HeroBanStatsBucketEnum,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
   };

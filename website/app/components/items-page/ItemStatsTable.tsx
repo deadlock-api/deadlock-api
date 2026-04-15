@@ -627,8 +627,8 @@ export function ItemStatsTable({
   const itemStatsQuery: AnalyticsApiItemStatsRequest = {
     minMatches,
     heroId: hero,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     minBoughtAtS,
@@ -648,8 +648,8 @@ export function ItemStatsTable({
   const prevItemStatsQuery: AnalyticsApiItemStatsRequest = {
     minMatches,
     heroId: hero,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
     minBoughtAtS,
@@ -704,8 +704,8 @@ export function ItemStatsTable({
     () => ({
       minMatches,
       heroId: hero,
-      minAverageBadge: minRankId ?? 0,
-      maxAverageBadge: maxRankId ?? 116,
+      minAverageBadge: minRankId,
+      maxAverageBadge: maxRankId,
       minUnixTimestamp: minUnixTimestamp ?? 0,
       maxUnixTimestamp,
       gameMode,

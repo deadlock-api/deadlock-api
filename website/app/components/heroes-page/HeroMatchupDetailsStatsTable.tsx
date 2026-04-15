@@ -47,8 +47,8 @@ export function HeroMatchupDetailsStatsTable({
 
   const heroStatsQuery = {
     minHeroMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
@@ -65,8 +65,8 @@ export function HeroMatchupDetailsStatsTable({
   const synergyStatsQuery = {
     sameLaneFilter: sameLaneFilter,
     minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
@@ -83,8 +83,8 @@ export function HeroMatchupDetailsStatsTable({
   const counterStatsQuery = {
     sameLaneFilter: sameLaneFilter,
     minMatches: minHeroMatches ?? 0,
-    minAverageBadge: minRankId ?? 0,
-    maxAverageBadge: maxRankId ?? 116,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
     minUnixTimestamp: minUnixTimestamp ?? 0,
     maxUnixTimestamp,
     gameMode: gameMode,
