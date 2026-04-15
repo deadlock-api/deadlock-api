@@ -5,7 +5,7 @@ use std::io;
 use std::sync::Arc;
 
 use object_store::aws::{AmazonS3, AmazonS3Builder};
-use object_store::{BackoffConfig, ClientOptions, RetryConfig};
+use object_store::{BackoffConfig, RetryConfig};
 use serde::Deserialize;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
@@ -87,11 +87,6 @@ impl AppState {
             .with_secret_access_key(&config.s3.secret_access_key)
             .with_endpoint(&config.s3.endpoint)
             .with_allow_http(true)
-            .with_client_options(
-                ClientOptions::default()
-                    .with_allow_http2()
-                    .with_timeout(Duration::from_secs(5)),
-            )
             .with_retry(RetryConfig {
                 backoff: BackoffConfig {
                     init_backoff: Duration::from_millis(200),
@@ -112,12 +107,6 @@ impl AppState {
             .with_secret_access_key(&config.s3_cache.secret_access_key)
             .with_endpoint(&config.s3_cache.endpoint)
             .with_allow_http(true)
-            .with_client_options(
-                ClientOptions::default()
-                    .with_allow_http2()
-                    .with_allow_http(true)
-                    .with_timeout(Duration::from_secs(5)),
-            )
             .with_retry(RetryConfig {
                 max_retries: 0,
                 ..Default::default()

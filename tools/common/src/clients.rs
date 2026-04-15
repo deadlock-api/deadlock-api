@@ -6,7 +6,6 @@ use clickhouse::Compression;
 use fred::clients::Client as RedisClient;
 use fred::interfaces::{ClientLike, FredResult};
 use fred::prelude::{Config as RedisConfig, ReconnectPolicy};
-use object_store::ClientOptions;
 use object_store::aws::AmazonS3Builder;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{ConnectOptions, Pool, Postgres};
@@ -35,11 +34,6 @@ fn build_s3_client(
         .with_secret_access_key(env::var(secret_key_env)?)
         .with_endpoint(env::var(endpoint_env)?)
         .with_allow_http(true)
-        .with_client_options(
-            ClientOptions::default()
-                .with_timeout(Duration::from_secs(30))
-                .with_pool_max_idle_per_host(256),
-        )
         .build()?)
 }
 
