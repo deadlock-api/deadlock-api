@@ -10,6 +10,7 @@ import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
+import { useItemsTabPrefetchIdle } from "~/hooks/useTabPrefetchIdle";
 import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
@@ -55,6 +56,20 @@ export default function Items(
     "tab",
     parseAsStringLiteral(["stats", "item-purchase-analysis", "item-combs"] as const).withDefault(initialTab || "stats"),
   );
+
+  useItemsTabPrefetchIdle(tab ?? "stats", {
+    minRankId: effectiveMinRankId,
+    maxRankId: effectiveMaxRankId,
+    hero,
+    minMatches,
+    minBoughtAtS: minBoughtAtS ?? undefined,
+    maxBoughtAtS: maxBoughtAtS ?? undefined,
+    startDate: startDate ?? undefined,
+    endDate: endDate ?? undefined,
+    prevStartDate: prevDates.prevStartDate,
+    prevEndDate: prevDates.prevEndDate,
+    gameMode,
+  });
 
   return (
     <div className="space-y-6">
