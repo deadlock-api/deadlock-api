@@ -119,6 +119,9 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
             "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
         ));
     }
+    if let Some(min_duration_s) = query.min_duration_s {
+        info_filters.push(format!("duration_s >= {min_duration_s}"));
+    }
     if let Some(max_duration_s) = query.max_duration_s {
         info_filters.push(format!("duration_s <= {max_duration_s}"));
     }
@@ -169,17 +172,37 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     } else {
         format!(" AND {}", player_filters.join(" AND "))
     };
-    let mut death_filters = vec![];
+    let mut game_time_filters = vec![];
     if let Some(min_game_time_s) = query.min_game_time_s {
-        death_filters.push(format!("dd.game_time_s >= {min_game_time_s}"));
+        game_time_filters.push(format!("g_time >= {min_game_time_s}"));
     }
     if let Some(max_game_time_s) = query.max_game_time_s {
-        death_filters.push(format!("dd.game_time_s <= {max_game_time_s}"));
+        game_time_filters.push(format!("g_time <= {max_game_time_s}"));
     }
-    let death_filters = if death_filters.is_empty() {
+    let game_time_filters = if game_time_filters.is_empty() {
         String::new()
     } else {
-        format!(" AND {}", death_filters.join(" AND "))
+        format!(" AND {}", game_time_filters.join(" AND "))
+    };
+    let mut death_join_cols = vec!["death_details.death_pos AS dpos"];
+    if !game_time_filters.is_empty() {
+        death_join_cols.push("death_details.game_time_s AS g_time");
+    }
+    let death_array_join = death_join_cols.join(", ");
+    let mut kill_join_cols = vec!["death_details.killer_pos AS kpos"];
+    if !game_time_filters.is_empty() {
+        kill_join_cols.push("death_details.game_time_s AS g_time");
+    }
+    if !player_filters.is_empty() {
+        kill_join_cols.push("death_details.killer_player_slot AS killer_player_slot");
+    }
+    let kill_array_join = kill_join_cols.join(", ");
+    let kill_player_filter = if player_filters.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "AND (match_id, killer_player_slot) IN (SELECT match_id, player_slot FROM match_player WHERE match_id IN t_matches {player_filters})"
+        )
     };
     let min_kills_per_raster = query
         .min_kills_per_raster
@@ -196,32 +219,32 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
-    WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH AND {game_mode_filter} {info_filters}),
-         t_events AS (SELECT toInt32(floor(tupleElement(dd.death_pos, 1) / 128) * 128) as position_x,
-                             toInt32(floor(tupleElement(dd.death_pos, 2) / 128) * 128) as position_y,
-                             if(team = 'Team0', 1, 0) as killer_team,
-                             'death' as type
-                      FROM match_player
-                               ARRAY JOIN death_details as dd
-                      WHERE match_id IN t_matches {death_filters} {player_filters}
-                      UNION ALL
-                      SELECT toInt32(floor(tupleElement(dd.killer_pos, 1) / 128) * 128) as position_x,
-                             toInt32(floor(tupleElement(dd.killer_pos, 2) / 128) * 128) as position_y,
-                             if(team = 'Team0', 1, 0) as killer_team,
-                             'kill' as type
-                      FROM match_player
-                               ARRAY JOIN death_details as dd
-                      WHERE match_id IN t_matches {death_filters} {})
-    SELECT position_x, position_y, killer_team, countIf(type = 'death') as deaths, countIf(type = 'kill') as kills
-    FROM t_events
+    WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH AND {game_mode_filter} {info_filters})
+    SELECT position_x, position_y, killer_team, sum(deaths) AS deaths, sum(kills) AS kills
+    FROM (
+        SELECT toInt32(floor(tupleElement(dpos, 1) / 128) * 128) AS position_x,
+               toInt32(floor(tupleElement(dpos, 2) / 128) * 128) AS position_y,
+               if(team = 'Team0', 1, 0) AS killer_team,
+               count() AS deaths,
+               0::UInt64 AS kills
+        FROM match_player
+                 ARRAY JOIN {death_array_join}
+        WHERE match_id IN t_matches {game_time_filters} {player_filters}
+        GROUP BY position_x, position_y, killer_team
+        UNION ALL
+        SELECT toInt32(floor(tupleElement(kpos, 1) / 128) * 128) AS position_x,
+               toInt32(floor(tupleElement(kpos, 2) / 128) * 128) AS position_y,
+               if(team = 'Team0', 1, 0) AS killer_team,
+               0::UInt64 AS deaths,
+               count() AS kills
+        FROM match_player
+                 ARRAY JOIN {kill_array_join}
+        WHERE match_id IN t_matches {game_time_filters} {kill_player_filter}
+        GROUP BY position_x, position_y, killer_team
+    )
     GROUP BY position_x, position_y, killer_team
     HAVING TRUE {min_deaths_per_raster} {min_kills_per_raster} {max_deaths_per_raster} {max_kills_per_raster}
-    ",
-        if player_filters.is_empty() {
-            String::new()
-        } else {
-            format!("AND (match_id, dd.killer_player_slot) in (SELECT match_id, player_slot FROM match_player WHERE match_id IN t_matches {player_filters})")
-        },
+    "
     )
 }
 
