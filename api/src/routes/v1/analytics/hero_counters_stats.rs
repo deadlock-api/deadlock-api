@@ -140,37 +140,32 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let mut player_filters = vec![];
-    if query.same_lane_filter.unwrap_or(true) {
-        player_filters.push("p1.assigned_lane = p2.assigned_lane".to_owned());
-    }
+    let mut p1_filters = vec!["match_id IN t_matches".to_owned()];
+    let mut p2_filters = vec!["match_id IN t_matches".to_owned()];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
-        player_filters.push(format!("p1.account_id = {account_id}"));
+        p1_filters.push(format!("account_id = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!(
-            "p1.account_id IN ({})",
+        p1_filters.push(format!(
+            "account_id IN ({})",
             account_ids.iter().map(ToString::to_string).join(",")
         ));
     }
     if let Some(min_networth) = query.min_networth {
-        player_filters.push(format!("p1.net_worth >= {min_networth}"));
+        p1_filters.push(format!("net_worth >= {min_networth}"));
     }
     if let Some(max_networth) = query.max_networth {
-        player_filters.push(format!("p1.net_worth <= {max_networth}"));
+        p1_filters.push(format!("net_worth <= {max_networth}"));
     }
     if let Some(min_enemy_networth) = query.min_enemy_networth {
-        player_filters.push(format!("p2.net_worth >= {min_enemy_networth}"));
+        p2_filters.push(format!("net_worth >= {min_enemy_networth}"));
     }
     if let Some(max_enemy_networth) = query.max_enemy_networth {
-        player_filters.push(format!("p2.net_worth <= {max_enemy_networth}"));
+        p2_filters.push(format!("net_worth <= {max_enemy_networth}"));
     }
-    let player_filters = if player_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", player_filters.join(" AND "))
-    };
+    let p1_where = p1_filters.join(" AND ");
+    let p2_where = p2_filters.join(" AND ");
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("matches_played >= {min_matches}"));
@@ -184,39 +179,74 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let join_keys = if query.same_lane_filter.unwrap_or(true) {
+        "USING (match_id, assigned_lane)"
+    } else {
+        "USING (match_id)"
+    };
+    #[allow(deprecated)]
+    let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
+    let p1_account_col = if needs_account_id { "account_id, " } else { "" };
+    let p1_cols = format!(
+        "match_id, assigned_lane, hero_id, {p1_account_col}won, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills"
+    );
+    let p2_cols = "match_id, assigned_lane, hero_id, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills";
+    let pair_select = "
+            p1.hero_id AS hero_id,
+            p2.hero_id AS enemy_hero_id,
+            p1.won AS won,
+            p1.kills AS kills,
+            p2.kills AS enemy_kills,
+            p1.deaths AS deaths,
+            p2.deaths AS enemy_deaths,
+            p1.assists AS assists,
+            p2.assists AS enemy_assists,
+            p1.denies AS denies,
+            p2.denies AS enemy_denies,
+            p1.last_hits AS last_hits,
+            p2.last_hits AS enemy_last_hits,
+            p1.net_worth AS networth,
+            p2.net_worth AS enemy_networth,
+            p1.max_boss_damage AS obj_damage,
+            p2.max_boss_damage AS enemy_obj_damage,
+            p1.max_creep_kills AS creeps,
+            p2.max_creep_kills AS enemy_creeps";
     format!(
         "
     WITH t_matches AS (SELECT match_id
                  FROM match_info
                  WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
-    SELECT p1.hero_id  AS hero_id,
-           p2.hero_id  AS enemy_hero_id,
-           SUM(p1.won) AS wins,
-           COUNT()     AS matches_played,
-           SUM(p1.kills) AS kills,
-           SUM(p2.kills) AS enemy_kills,
-           SUM(p1.deaths) AS deaths,
-           SUM(p2.deaths) AS enemy_deaths,
-           SUM(p1.assists) AS assists,
-           SUM(p2.assists) AS enemy_assists,
-           SUM(p1.denies) AS denies,
-           SUM(p2.denies) AS enemy_denies,
-           SUM(p1.last_hits) AS last_hits,
-           SUM(p2.last_hits) AS enemy_last_hits,
-           SUM(p1.net_worth) AS networth,
-           SUM(p2.net_worth) AS enemy_networth,
-           SUM(p1.max_boss_damage) AS obj_damage,
-           SUM(p2.max_boss_damage) AS enemy_obj_damage,
-           SUM(p1.max_creep_kills) AS creeps,
-           SUM(p2.max_creep_kills) AS enemy_creeps
-    FROM match_player p1
-             INNER JOIN match_player p2 USING (match_id)
-    WHERE match_id IN t_matches
-      AND p1.team != p2.team
-      {player_filters}
-    GROUP BY p1.hero_id, p2.hero_id
+    SELECT hero_id,
+           enemy_hero_id,
+           SUM(won) AS wins,
+           COUNT() AS matches_played,
+           SUM(kills) AS kills,
+           SUM(enemy_kills) AS enemy_kills,
+           SUM(deaths) AS deaths,
+           SUM(enemy_deaths) AS enemy_deaths,
+           SUM(assists) AS assists,
+           SUM(enemy_assists) AS enemy_assists,
+           SUM(denies) AS denies,
+           SUM(enemy_denies) AS enemy_denies,
+           SUM(last_hits) AS last_hits,
+           SUM(enemy_last_hits) AS enemy_last_hits,
+           SUM(networth) AS networth,
+           SUM(enemy_networth) AS enemy_networth,
+           SUM(obj_damage) AS obj_damage,
+           SUM(enemy_obj_damage) AS enemy_obj_damage,
+           SUM(creeps) AS creeps,
+           SUM(enemy_creeps) AS enemy_creeps
+    FROM (
+        SELECT {pair_select}
+        FROM (SELECT {p1_cols} FROM match_player WHERE team = 'Team0' AND {p1_where}) p1
+        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team = 'Team1' AND {p2_where}) p2 {join_keys}
+        UNION ALL
+        SELECT {pair_select}
+        FROM (SELECT {p1_cols} FROM match_player WHERE team = 'Team1' AND {p1_where}) p1
+        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team = 'Team0' AND {p2_where}) p2 {join_keys}
+    )
+    GROUP BY hero_id, enemy_hero_id
     {having_clause}
-    ORDER BY p1.hero_id, p2.hero_id
     "
     )
 }
@@ -363,7 +393,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("p1.net_worth >= 1000"));
+        assert!(sql.contains("net_worth >= 1000"));
     }
 
     #[test]
@@ -378,7 +408,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("p1.net_worth <= 10000"));
+        assert!(sql.contains("net_worth <= 10000"));
     }
 
     #[test]
@@ -393,7 +423,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("p2.net_worth >= 1000"));
+        assert!(sql.contains("net_worth >= 1000"));
     }
 
     #[test]
@@ -408,7 +438,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("p2.net_worth <= 10000"));
+        assert!(sql.contains("net_worth <= 10000"));
     }
 
     #[test]
@@ -483,7 +513,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("p1.assigned_lane = p2.assigned_lane"));
+        assert!(sql.contains("USING (match_id, assigned_lane)"));
     }
 
     #[test]
@@ -498,7 +528,8 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(!sql.contains("p1.assigned_lane = p2.assigned_lane"));
+        assert!(!sql.contains("USING (match_id, assigned_lane)"));
+        assert!(sql.contains("USING (match_id)"));
     }
 
     #[test]
