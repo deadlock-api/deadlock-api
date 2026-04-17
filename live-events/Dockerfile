@@ -1,6 +1,6 @@
 ARG EXE_NAME=deadlock-live-events
 
-FROM rust:1.94-slim-trixie AS chef
+FROM rust:1.95-slim-trixie AS chef
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev sccache ca-certificates gcc libssl-dev pkg-config cmake build-essential curl
 RUN cargo install --locked cargo-chef

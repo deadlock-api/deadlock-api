@@ -1,4 +1,4 @@
-FROM rust:1.94-slim-trixie AS builder
+FROM rust:1.95-slim-trixie AS builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
     && rm -rf /var/lib/apt/lists/*

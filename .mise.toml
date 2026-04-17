@@ -1,6 +1,6 @@
 [tools]
 pnpm = "latest"
-rust = "1.94"
+rust = "1.95"
 lefthook = "latest"
 "cargo:typos-cli" = "latest"
 "cargo:cargo-machete" = "latest"

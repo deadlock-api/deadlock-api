@@ -1,6 +1,6 @@
 ARG EXE_NAME=deadlock-api-rust
 
-FROM rust:1.94-slim-trixie AS builder
+FROM rust:1.95-slim-trixie AS builder
 ARG EXE_NAME
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl mold \
