@@ -94,6 +94,25 @@ impl BucketQuery {
             Self::NetWorthBy10000 => "toUInt32(floor(net_worth_at_buy / 10000) * 10000)",
         }
     }
+
+    fn get_extra_col_clause(self) -> &'static str {
+        match self {
+            Self::Hero => ", hero_id",
+            Self::Team => ", team",
+            Self::StartTimeHour
+            | Self::StartTimeDay
+            | Self::StartTimeWeek
+            | Self::StartTimeMonth => ", start_time",
+            Self::NoBucket
+            | Self::GameTimeMin
+            | Self::GameTimeNormalizedPercentage
+            | Self::NetWorthBy1000
+            | Self::NetWorthBy2000
+            | Self::NetWorthBy3000
+            | Self::NetWorthBy5000
+            | Self::NetWorthBy10000 => "",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -233,6 +252,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
 
     /* ---------- misc ---------- */
     let bucket_expr = query.bucket.get_select_clause();
+    let bucket_extra_col = query.bucket.get_extra_col_clause();
 
     let net_worth_expr = if [
         BucketQuery::NetWorthBy1000,
@@ -280,15 +300,13 @@ WITH
     ),
     exploded_players AS (
         SELECT
-            team,
             account_id,
-            hero_id,
-            start_time,
             duration_s,
             item_id,
             won,
             buy_time,
             sold_time
+            {bucket_extra_col}
             {net_worth_expr}
         FROM match_player
         INNER JOIN t_matches USING (match_id)
