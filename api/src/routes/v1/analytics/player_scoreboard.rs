@@ -94,48 +94,62 @@ pub struct PlayerEntry {
 }
 
 fn build_query(query: &PlayerScoreboardQuery) -> String {
-    let match_info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let info_filters = format!(
-        " WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {match_info_filters} "
-    );
-    let mut player_filters = vec![];
-    if !info_filters.is_empty() {
-        player_filters.push(format!(
-            "match_id IN (SELECT match_id FROM match_info FINAL {info_filters}) "
+    let mut inner_filters = vec!["account_id > 0".to_owned()];
+    // The default match_mode/game_mode semijoin is intentionally skipped:
+    // materialising ~20M match_ids as an IN set blows memory on match_player
+    // and prevents the hero_stats_by_account projection from being picked.
+    let needs_match_info_filter = query.min_unix_timestamp.is_some()
+        || query.max_unix_timestamp.is_some()
+        || query.min_match_id.is_some()
+        || query.max_match_id.is_some()
+        || query.min_average_badge.is_some_and(|v| v > 11)
+        || query.max_average_badge.is_some_and(|v| v < 116)
+        || query.min_duration_s.is_some()
+        || query.max_duration_s.is_some()
+        || query.game_mode.is_some_and(|g| g != GameMode::Normal);
+    if needs_match_info_filter {
+        let match_info_filters = MatchInfoFilters {
+            min_unix_timestamp: query.min_unix_timestamp,
+            max_unix_timestamp: query.max_unix_timestamp,
+            min_match_id: query.min_match_id,
+            max_match_id: query.max_match_id,
+            min_average_badge: query.min_average_badge,
+            max_average_badge: query.max_average_badge,
+            min_duration_s: query.min_duration_s,
+            max_duration_s: query.max_duration_s,
+        }
+        .build();
+        let game_mode_filter = GameMode::sql_filter(query.game_mode);
+        inner_filters.push(format!(
+            "match_id IN (SELECT match_id FROM match_info \
+             WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {match_info_filters}) "
         ));
     }
     if let Some(hero_id) = query.hero_id {
-        player_filters.push(format!("hero_id = {hero_id}"));
+        inner_filters.push(format!("hero_id = {hero_id}"));
     }
     if let Some(min_networth) = query.min_networth {
-        player_filters.push(format!("net_worth >= {min_networth}"));
+        inner_filters.push(format!("net_worth >= {min_networth}"));
     }
     if let Some(max_networth) = query.max_networth {
-        player_filters.push(format!("net_worth <= {max_networth}"));
+        inner_filters.push(format!("net_worth <= {max_networth}"));
     }
-    player_filters.push("account_id > 0".to_owned());
     if let Some(account_ids) = &query.account_ids {
-        player_filters.push(format!(
+        inner_filters.push(format!(
             "has([{}], account_id)",
             account_ids.iter().map(|i| (*i).to_string()).join(", ")
         ));
     }
-    let player_filters = if player_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" WHERE {} ", player_filters.join(" AND "))
-    };
+    let inner_where = format!(" WHERE {} ", inner_filters.join(" AND "));
+
+    // Dedup ReplacingMergeTree inline by grouping on (account_id, match_id).
+    // FINAL would block the hero_stats_by_account projection; leaving dupes
+    // inflates sum/countIf by 20-50% on partitions with un-merged inserts.
+    let inner_projection = query
+        .sort_by
+        .inner_column()
+        .map_or(String::new(), |col| format!(", any({col}) as {col}"));
+
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("uniq(match_id) >= {min_matches}"));
@@ -148,22 +162,25 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     } else {
         format!(" HAVING {} ", having_filters.join(" AND "))
     };
+    let offset = query.start.unwrap_or(1).max(1) - 1;
     format!(
         "
-SELECT rowNumberInAllBlocks() + {} as rank, account_id, toFloat64({}) as value, uniq(\
+SELECT rowNumberInAllBlocks() + {offset} as rank, account_id, toFloat64({}) as value, uniq(\
          match_id) as matches
-FROM match_player FINAL
-{player_filters}
+FROM (
+    SELECT account_id, match_id{inner_projection}
+    FROM match_player
+    {inner_where}
+    GROUP BY account_id, match_id
+)
 GROUP BY account_id
 {having_clause}
 ORDER BY value {}
-LIMIT {} OFFSET {}
+LIMIT {} OFFSET {offset}
     ",
-        query.start.unwrap_or(1).max(1) - 1,
         query.sort_by.get_select_clause(),
         query.sort_direction,
         query.limit.unwrap_or_default(),
-        query.start.unwrap_or(1).max(1) - 1,
     )
 }
 
@@ -385,5 +402,29 @@ mod test {
         };
         let query_str = build_query(&query);
         assert!(query_str.contains("net_worth <= 10000"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_dedups_inner_subquery() {
+        let query = PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Kills,
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains("GROUP BY account_id, match_id"));
+        assert!(query_str.contains("any(kills) as kills"));
+        assert!(!query_str.contains("FINAL"));
+    }
+
+    #[test]
+    fn test_build_player_scoreboard_query_matches_sort_has_no_inner_projection() {
+        let query = PlayerScoreboardQuery {
+            sort_by: ScoreboardQuerySortBy::Matches,
+            ..Default::default()
+        };
+        let query_str = build_query(&query);
+        assert!(query_str.contains("SELECT account_id, match_id"));
+        assert!(!query_str.contains("any("));
+        assert!(query_str.contains("GROUP BY account_id, match_id"));
     }
 }

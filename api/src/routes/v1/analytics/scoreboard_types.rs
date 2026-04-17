@@ -197,4 +197,64 @@ impl ScoreboardQuerySortBy {
             Self::HeroBulletsHitCrit => "sum(max_hero_bullets_hit_crit)",
         }
     }
+
+    /// Column from `match_player` that must be carried through the per-(`account_id`, `match_id`)
+    /// dedup subquery. `None` means the sort only needs `match_id`, which is always projected.
+    /// Used by `player_scoreboard` to deduplicate `ReplacingMergeTree` rows without `FINAL`
+    /// while still getting correct `sum` / `countIf` aggregates.
+    pub(super) fn inner_column(self) -> Option<&'static str> {
+        match self {
+            Self::Matches => None,
+            Self::Wins | Self::Losses | Self::Winrate => Some("won"),
+            Self::MaxKillsPerMatch | Self::AvgKillsPerMatch | Self::Kills => Some("kills"),
+            Self::MaxDeathsPerMatch | Self::AvgDeathsPerMatch | Self::Deaths => Some("deaths"),
+            Self::MaxDamageTakenPerMatch | Self::AvgDamageTakenPerMatch | Self::DamageTaken => {
+                Some("max_player_damage_taken")
+            }
+            Self::MaxAssistsPerMatch | Self::AvgAssistsPerMatch | Self::Assists => Some("assists"),
+            Self::MaxNetWorthPerMatch | Self::AvgNetWorthPerMatch | Self::NetWorth => {
+                Some("net_worth")
+            }
+            Self::MaxLastHitsPerMatch | Self::AvgLastHitsPerMatch | Self::LastHits => {
+                Some("last_hits")
+            }
+            Self::MaxDeniesPerMatch | Self::AvgDeniesPerMatch | Self::Denies => Some("denies"),
+            Self::MaxPlayerLevelPerMatch | Self::AvgPlayerLevelPerMatch | Self::PlayerLevel => {
+                Some("player_level")
+            }
+            Self::MaxCreepKillsPerMatch | Self::AvgCreepKillsPerMatch | Self::CreepKills => {
+                Some("max_creep_kills")
+            }
+            Self::MaxNeutralKillsPerMatch | Self::AvgNeutralKillsPerMatch | Self::NeutralKills => {
+                Some("max_neutral_kills")
+            }
+            Self::MaxCreepDamagePerMatch | Self::AvgCreepDamagePerMatch | Self::CreepDamage => {
+                Some("max_creep_damage")
+            }
+            Self::MaxPlayerDamagePerMatch | Self::AvgPlayerDamagePerMatch | Self::PlayerDamage => {
+                Some("max_player_damage")
+            }
+            Self::MaxNeutralDamagePerMatch
+            | Self::AvgNeutralDamagePerMatch
+            | Self::NeutralDamage => Some("max_neutral_damage"),
+            Self::MaxBossDamagePerMatch | Self::AvgBossDamagePerMatch | Self::BossDamage => {
+                Some("max_boss_damage")
+            }
+            Self::MaxMaxHealthPerMatch | Self::AvgMaxHealthPerMatch | Self::MaxHealth => {
+                Some("max_max_health")
+            }
+            Self::MaxShotsHitPerMatch | Self::AvgShotsHitPerMatch | Self::ShotsHit => {
+                Some("max_shots_hit")
+            }
+            Self::MaxShotsMissedPerMatch | Self::AvgShotsMissedPerMatch | Self::ShotsMissed => {
+                Some("max_shots_missed")
+            }
+            Self::MaxHeroBulletsHitPerMatch
+            | Self::AvgHeroBulletsHitPerMatch
+            | Self::HeroBulletsHit => Some("max_hero_bullets_hit"),
+            Self::MaxHeroBulletsHitCritPerMatch
+            | Self::AvgHeroBulletsHitCritPerMatch
+            | Self::HeroBulletsHitCrit => Some("max_hero_bullets_hit_crit"),
+        }
+    }
 }
