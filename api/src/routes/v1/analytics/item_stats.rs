@@ -224,23 +224,15 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     .build();
     if let Some(min_bought_at_s) = query.min_bought_at_s {
-        player_filters.push(format!("it.game_time_s >= {min_bought_at_s}"));
+        player_filters.push(format!("buy_time >= {min_bought_at_s}"));
     }
     if let Some(max_bought_at_s) = query.max_bought_at_s {
-        player_filters.push(format!("it.game_time_s <= {max_bought_at_s}"));
+        player_filters.push(format!("buy_time <= {max_bought_at_s}"));
     }
     let player_filters = join_filters(&player_filters);
 
     /* ---------- misc ---------- */
     let bucket_expr = query.bucket.get_select_clause();
-
-    let buy_time_expr = if query.bucket == BucketQuery::GameTimeMin
-        || query.bucket == BucketQuery::GameTimeNormalizedPercentage
-    {
-        ",it.game_time_s AS buy_time"
-    } else {
-        ""
-    };
 
     let net_worth_expr = if [
         BucketQuery::NetWorthBy1000,
@@ -255,7 +247,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         , coalesce(
             arrayElementOrNull(
                 stats.net_worth,
-                arrayFirstIndex(ts -> ts >= it.game_time_s, stats.time_stamp_s) - 1
+                arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1
             ), net_worth
         ) AS net_worth_at_buy
         "
@@ -288,21 +280,27 @@ WITH
     ),
     exploded_players AS (
         SELECT
-            match_id,
             team,
             account_id,
             hero_id,
-            it.item_id AS item_id,
+            start_time,
+            duration_s,
+            item_id,
             won,
-            it.game_time_s AS buy_time,
-            it.sold_time_s AS sold_time
-            {buy_time_expr}
+            buy_time,
+            sold_time
             {net_worth_expr}
         FROM match_player
-            ARRAY JOIN items AS it
+        INNER JOIN t_matches USING (match_id)
+        ARRAY JOIN
+            items.item_id AS item_id,
+            items.game_time_s AS buy_time,
+            items.sold_time_s AS sold_time
+        -- IN (SELECT ...) drives match_player partition/MinMax pruning;
+        -- the JOIN above only adds a runtime filter, so keep both.
         WHERE match_id IN (SELECT match_id FROM t_matches)
-            AND it.item_id IN t_upgrades
-            AND it.game_time_s > 0
+            AND item_id IN t_upgrades
+            AND buy_time > 0
             {player_filters}
     )
 SELECT
@@ -316,9 +314,7 @@ SELECT
     avgIf(sold_time, sold_time > 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
     avgIf((sold_time / duration_s) * 100, sold_time > 0) AS avg_sell_time_relative
-FROM exploded_players ep
-INNER JOIN t_matches USING (match_id)
-WHERE exploded_players.match_id = t_matches.match_id
+FROM exploded_players
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
@@ -557,7 +553,7 @@ mod test {
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("it.game_time_s >= {min_bought_at_s}")));
+        assert!(query_str.contains(&format!("buy_time >= {min_bought_at_s}")));
     }
 
     #[test]
@@ -568,6 +564,6 @@ mod test {
             ..Default::default()
         };
         let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("it.game_time_s <= {max_bought_at_s}")));
+        assert!(query_str.contains(&format!("buy_time <= {max_bought_at_s}")));
     }
 }
