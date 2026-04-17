@@ -11,7 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::GameMode;
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize, comma_separated_deserialize_option};
 use crate::utils::types::AccountIdQuery;
 
@@ -94,116 +94,141 @@ pub struct HeroStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroStatsQuery) -> String {
-    let mut filters = vec![];
-    filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
-    filters.push(format!("mi.{}", GameMode::sql_filter(query.game_mode)));
-    filters.push(format!(
-        "account_id IN ({})",
-        query.account_ids.iter().map(ToString::to_string).join(",")
-    ));
+    let account_ids = query.account_ids.iter().map(ToString::to_string).join(",");
+    let hero_ids_in = query
+        .hero_ids
+        .as_ref()
+        .map(|heroes| heroes.iter().map(ToString::to_string).join(","));
+
+    // Push time/mode/match_id filters into PMH: it's partitioned by them, so this prunes
+    // partitions before touching match_player/match_info.
+    let mut pmh_filters = vec![
+        format!("account_id IN ({account_ids})"),
+        MatchMode::sql_filter(None),
+        GameMode::sql_filter(query.game_mode),
+    ];
+    if let Some(ref ids) = hero_ids_in {
+        pmh_filters.push(format!("hero_id IN ({ids})"));
+    }
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
+        pmh_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
+        pmh_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
+        pmh_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
+        pmh_filters.push(format!("match_id <= {max_match_id}"));
     }
-    if let Some(hero_ids) = query.hero_ids.as_ref() {
-        filters.push(format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(",")
-        ));
+    let pmh_where = pmh_filters.join(" AND ");
+
+    // account_id/hero_id/net_worth are columns in the `hero_stats_by_account` projection,
+    // so ClickHouse can serve this read from the projection.
+    let mut mp_filters = vec![
+        "match_id IN t_histories".to_owned(),
+        format!("account_id IN ({account_ids})"),
+    ];
+    if let Some(ref ids) = hero_ids_in {
+        mp_filters.push(format!("hero_id IN ({ids})"));
+    }
+    if let Some(min_networth) = query.min_networth {
+        mp_filters.push(format!("net_worth >= {min_networth}"));
+    }
+    if let Some(max_networth) = query.max_networth {
+        mp_filters.push(format!("net_worth <= {max_networth}"));
+    }
+    let mp_where = mp_filters.join(" AND ");
+
+    let mut outer_filters: Vec<String> = vec![];
+    if let Some(min_duration_s) = query.min_duration_s {
+        outer_filters.push(format!("mi.duration_s >= {min_duration_s}"));
+    }
+    if let Some(max_duration_s) = query.max_duration_s {
+        outer_filters.push(format!("mi.duration_s <= {max_duration_s}"));
     }
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
     {
-        filters.push(format!(
-            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= {min_badge_level}"
+        outer_filters.push(format!(
+            "mi.average_badge_team0 >= {min_badge_level} AND mi.average_badge_team1 >= \
+             {min_badge_level}"
         ));
     }
     if let Some(max_badge_level) = query.max_average_badge
         && max_badge_level < 116
     {
-        filters.push(format!(
-            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= {max_badge_level}"
+        outer_filters.push(format!(
+            "mi.average_badge_team0 <= {max_badge_level} AND mi.average_badge_team1 <= \
+             {max_badge_level}"
         ));
     }
-    if let Some(min_duration_s) = query.min_duration_s {
-        filters.push(format!("duration_s >= {min_duration_s}"));
-    }
-    if let Some(max_duration_s) = query.max_duration_s {
-        filters.push(format!("duration_s <= {max_duration_s}"));
-    }
-    if let Some(min_networth) = query.min_networth {
-        filters.push(format!("net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        filters.push(format!("net_worth <= {max_networth}"));
-    }
-    let filters = if filters.is_empty() {
+    let outer_where = if outer_filters.is_empty() {
         String::new()
     } else {
-        format!(" AND {}", filters.join(" AND "))
+        format!("WHERE {}", outer_filters.join(" AND "))
     };
-    let mut history_filters = vec![];
-    history_filters.push(format!(
-        "account_id IN ({})",
-        query.account_ids.iter().map(ToString::to_string).join(",")
-    ));
-    if let Some(hero_ids) = query.hero_ids.as_ref() {
-        history_filters.push(format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(",")
-        ));
-    }
-    let history_filters = if history_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", history_filters.join(" AND "))
-    };
+
     format!(
         "
-    WITH t_histories AS (SELECT match_id FROM player_match_history WHERE TRUE {history_filters})
+    WITH
+    t_histories AS (
+        SELECT match_id FROM player_match_history WHERE {pmh_where}
+    ),
+    mi AS (
+        SELECT match_id,
+               any(duration_s) AS duration_s,
+               any(start_time) AS start_time,
+               any(average_badge_team0) AS average_badge_team0,
+               any(average_badge_team1) AS average_badge_team1
+        FROM match_info
+        WHERE match_id IN t_histories
+        GROUP BY match_id
+    ),
+    mp AS (
+        SELECT account_id, match_id, hero_id, won, kills, deaths, assists, denies,
+               net_worth, last_hits, max_level, max_player_damage, max_player_damage_taken,
+               max_creep_kills, max_boss_damage, max_shots_hit, max_shots_missed,
+               max_hero_bullets_hit, max_hero_bullets_hit_crit
+        FROM match_player
+        WHERE {mp_where}
+        LIMIT 1 BY match_id, account_id
+    )
     SELECT
-        account_id,
-        hero_id,
+        mp.account_id,
+        mp.hero_id,
         COUNT() AS matches_played,
-        max(start_time) AS last_played,
-        sum(duration_s) AS time_played,
+        max(mi.start_time) AS last_played,
+        sum(mi.duration_s) AS time_played,
         countIf(won) AS wins,
         avg(max_level) AS ending_level,
-        sum(kills) AS kills,
-        sum(deaths) AS deaths,
-        sum(assists) AS assists,
+        sum(mp.kills) AS kills,
+        sum(mp.deaths) AS deaths,
+        sum(mp.assists) AS assists,
         avg(denies) AS denies_per_match,
-        60 * avg(mp.kills / duration_s) AS kills_per_min,
-        60 * avg(mp.deaths / duration_s) AS deaths_per_min,
-        60 * avg(mp.assists / duration_s) AS assists_per_min,
-        60 * avg(denies / duration_s) AS denies_per_min,
-        60 * avg(net_worth / duration_s) AS networth_per_min,
-        60 * avg(last_hits / duration_s) AS last_hits_per_min,
-        60 * avg(max_player_damage / duration_s) AS damage_per_min,
+        60 * avg(mp.kills / mi.duration_s) AS kills_per_min,
+        60 * avg(mp.deaths / mi.duration_s) AS deaths_per_min,
+        60 * avg(mp.assists / mi.duration_s) AS assists_per_min,
+        60 * avg(denies / mi.duration_s) AS denies_per_min,
+        60 * avg(net_worth / mi.duration_s) AS networth_per_min,
+        60 * avg(last_hits / mi.duration_s) AS last_hits_per_min,
+        60 * avg(max_player_damage / mi.duration_s) AS damage_per_min,
         avg(max_player_damage / net_worth) AS damage_per_soul,
-        60 * avg(max_player_damage / duration_s) AS damage_mitigated_per_min,
-        60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min,
+        60 * avg(max_player_damage / mi.duration_s) AS damage_mitigated_per_min,
+        60 * avg(max_player_damage_taken / mi.duration_s) AS damage_taken_per_min,
         avg(max_player_damage_taken / net_worth) AS damage_taken_per_soul,
-        60 * avg(max_creep_kills / duration_s) AS creeps_per_min,
-        60 * avg(max_boss_damage / duration_s) AS obj_damage_per_min,
+        60 * avg(max_creep_kills / mi.duration_s) AS creeps_per_min,
+        60 * avg(max_boss_damage / mi.duration_s) AS obj_damage_per_min,
         avg(max_boss_damage / net_worth) AS obj_damage_per_soul,
         avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy,
         avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
          max_hero_bullets_hit)) AS crit_shot_rate,
         groupUniqArray(mi.match_id) as matches
-    FROM match_player mp FINAL
-        INNER JOIN match_info mi USING (match_id)
-    WHERE match_id IN t_histories {filters}
-    GROUP BY account_id, hero_id
-    ORDER BY account_id, hero_id
+    FROM mp INNER JOIN mi USING (match_id)
+    {outer_where}
+    GROUP BY mp.account_id, mp.hero_id
+    ORDER BY mp.account_id, mp.hero_id
     "
     )
 }
@@ -346,20 +371,23 @@ mod test {
         assert!(sql.contains("SELECT"));
         assert!(sql.contains("hero_id"));
         assert!(sql.contains("COUNT() AS matches_played"));
-        assert!(sql.contains("max(start_time) AS last_played"));
-        assert!(sql.contains("sum(duration_s) AS time_played"));
+        assert!(sql.contains("max(mi.start_time) AS last_played"));
+        assert!(sql.contains("sum(mi.duration_s) AS time_played"));
         assert!(sql.contains("countIf(won) AS wins"));
-        assert!(sql.contains("FROM match_player mp FINAL"));
-        assert!(sql.contains("INNER JOIN match_info mi USING (match_id)"));
+        assert!(sql.contains("FROM match_player"));
+        assert!(!sql.contains("FINAL"));
+        assert!(sql.contains("LIMIT 1 BY match_id, account_id"));
+        assert!(sql.contains("FROM mp INNER JOIN mi USING (match_id)"));
         assert!(sql.contains("match_mode IN ('Ranked', 'Unranked')"));
-        assert!(sql.contains("GROUP BY account_id, hero_id"));
-        assert!(sql.contains("ORDER BY account_id, hero_id"));
+        assert!(sql.contains("GROUP BY mp.account_id, mp.hero_id"));
+        assert!(sql.contains("ORDER BY mp.account_id, mp.hero_id"));
         // Should not contain any filters
         assert!(!sql.contains("start_time >="));
         assert!(!sql.contains("start_time <="));
         assert!(!sql.contains("match_id >="));
         assert!(!sql.contains("match_id <="));
-        assert!(!sql.contains("average_badge_team"));
+        assert!(!sql.contains("average_badge_team0 >="));
+        assert!(!sql.contains("average_badge_team0 <="));
     }
 
     #[test]
@@ -444,7 +472,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
+        assert!(sql.contains("mi.average_badge_team0 >= 61 AND mi.average_badge_team1 >= 61"));
     }
 
     #[test]
@@ -461,7 +489,7 @@ mod test {
         {
             warn!("Failed to parse SQL: {sql}: {e}");
         }
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
+        assert!(sql.contains("mi.average_badge_team0 <= 112 AND mi.average_badge_team1 <= 112"));
     }
 
     #[test]
@@ -488,8 +516,8 @@ mod test {
         assert!(sql.contains("start_time <= 1675209599"));
         assert!(sql.contains("match_id >= 5000"));
         assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
+        assert!(sql.contains("mi.average_badge_team0 >= 61 AND mi.average_badge_team1 >= 61"));
+        assert!(sql.contains("mi.average_badge_team0 <= 112 AND mi.average_badge_team1 <= 112"));
     }
 
     #[test]
@@ -507,24 +535,26 @@ mod test {
         }
         // Verify all statistical fields are included
         assert!(sql.contains("avg(max_level) AS ending_level"));
-        assert!(sql.contains("sum(kills) AS kills"));
-        assert!(sql.contains("sum(deaths) AS deaths"));
-        assert!(sql.contains("sum(assists) AS assists"));
+        assert!(sql.contains("sum(mp.kills) AS kills"));
+        assert!(sql.contains("sum(mp.deaths) AS deaths"));
+        assert!(sql.contains("sum(mp.assists) AS assists"));
         assert!(sql.contains("avg(denies) AS denies_per_match"));
-        assert!(sql.contains("60 * avg(mp.kills / duration_s) AS kills_per_min"));
-        assert!(sql.contains("60 * avg(mp.deaths / duration_s) AS deaths_per_min"));
-        assert!(sql.contains("60 * avg(mp.assists / duration_s) AS assists_per_min"));
-        assert!(sql.contains("60 * avg(denies / duration_s) AS denies_per_min"));
-        assert!(sql.contains("60 * avg(net_worth / duration_s) AS networth_per_min"));
-        assert!(sql.contains("60 * avg(last_hits / duration_s) AS last_hits_per_min"));
-        assert!(sql.contains("60 * avg(max_player_damage / duration_s) AS damage_per_min"));
+        assert!(sql.contains("60 * avg(mp.kills / mi.duration_s) AS kills_per_min"));
+        assert!(sql.contains("60 * avg(mp.deaths / mi.duration_s) AS deaths_per_min"));
+        assert!(sql.contains("60 * avg(mp.assists / mi.duration_s) AS assists_per_min"));
+        assert!(sql.contains("60 * avg(denies / mi.duration_s) AS denies_per_min"));
+        assert!(sql.contains("60 * avg(net_worth / mi.duration_s) AS networth_per_min"));
+        assert!(sql.contains("60 * avg(last_hits / mi.duration_s) AS last_hits_per_min"));
+        assert!(sql.contains("60 * avg(max_player_damage / mi.duration_s) AS damage_per_min"));
         assert!(sql.contains("avg(max_player_damage / net_worth) AS damage_per_soul"));
         assert!(
-            sql.contains("60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min")
+            sql.contains(
+                "60 * avg(max_player_damage_taken / mi.duration_s) AS damage_taken_per_min"
+            )
         );
         assert!(sql.contains("avg(max_player_damage_taken / net_worth) AS damage_taken_per_soul"));
-        assert!(sql.contains("60 * avg(max_creep_kills / duration_s) AS creeps_per_min"));
-        assert!(sql.contains("60 * avg(max_boss_damage / duration_s) AS obj_damage_per_min"));
+        assert!(sql.contains("60 * avg(max_creep_kills / mi.duration_s) AS creeps_per_min"));
+        assert!(sql.contains("60 * avg(max_boss_damage / mi.duration_s) AS obj_damage_per_min"));
         assert!(sql.contains("avg(max_boss_damage / net_worth) AS obj_damage_per_soul"));
         assert!(sql.contains(
             "avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy"

@@ -57,6 +57,7 @@ impl BatchQuery for SteamProfileQuery {
             FROM steam_profiles
             WHERE account_id IN ({})
             ORDER BY last_updated DESC
+            LIMIT 1 BY account_id
              ",
             keys.iter().map(ToString::to_string).join(",")
         )
