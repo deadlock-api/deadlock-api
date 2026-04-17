@@ -441,7 +441,10 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             "avg({expr}) AS avg_{name}, std({expr}) AS std_{name}, {quantiles}({expr}) AS quantiles_{name}"
         )
     }).join(",\n");
-    let match_limit = query.max_matches.unwrap_or(1000000);
+    let match_limit_clause = query
+        .max_matches
+        .map(|n| format!("ORDER BY match_id DESC LIMIT {n}"))
+        .unwrap_or_default();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
@@ -451,15 +454,22 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             WHERE match_mode IN ('Ranked', 'Unranked')
                 AND {game_mode_filter}
                 {info_filters}
+            {match_limit_clause}
         ),
         t_data AS (
-            SELECT mp.*, duration_m
-            FROM match_player mp
+            SELECT
+                kills, deaths, assists, net_worth, denies, last_hits,
+                max_hero_bullets_hit_crit, max_hero_bullets_hit,
+                max_shots_hit, max_shots_missed,
+                max_player_damage, max_max_health, max_player_damage_taken,
+                max_neutral_damage, max_boss_damage,
+                max_self_healing, max_player_healing,
+                max_teammate_healing, max_teammate_barriering,
+                max_heal_prevented,
+                duration_m
+            FROM match_player
                 INNER JOIN t_matches USING (match_id)
-            WHERE mp.match_id = t_matches.match_id {player_filters}
-            ORDER BY match_id DESC
-            LIMIT {match_limit}
-            SETTINGS asterisk_include_materialized_columns = 1
+            WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
         )
     SELECT {selects}
     FROM t_data
