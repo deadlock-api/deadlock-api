@@ -169,9 +169,10 @@ export function ElectricBorder({
     const borderOffset = 60;
 
     const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      const width = rect.width + borderOffset * 2;
-      const height = rect.height + borderOffset * 2;
+      // offsetWidth/Height ignore ancestor CSS transforms (AnimatedOutlet's scale anim),
+      // unlike getBoundingClientRect which would size the canvas to the scaled box.
+      const width = container.offsetWidth + borderOffset * 2;
+      const height = container.offsetHeight + borderOffset * 2;
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = width * dpr;
