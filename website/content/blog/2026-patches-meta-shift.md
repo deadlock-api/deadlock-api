@@ -75,7 +75,7 @@ We split the data into two brackets: **Initiate through Arcanist** (badge 11 to 
 
 ![Seven and Calico pickrate and winrate shifts split by low rank versus high rank](/blog/images/rank_split.png)
 
-High-rank players reacted faster in almost every direction. Seven's pickrate jumped +25.7 points at high rank versus +18.9 at low, even though his winrate gained *more* at low rank (+1.8 vs +0.7). Calico's winrate fell 4.2 points at high rank against 1.9 at low, even though her pickrate collapsed by a nearly identical amount in both brackets.
+High-rank players reacted faster in almost every direction. Seven's pickrate jumped +25.7 points at high rank versus +18.9 at low, even though his winrate gained _more_ at low rank (+1.8 vs +0.7). Calico's winrate fell 4.2 points at high rank against 1.9 at low, even though her pickrate collapsed by a nearly identical amount in both brackets.
 
 Top-five winrate lists share only two heroes between the brackets in both January and April. "Best hero right now" has never had one answer.
 
