@@ -53,6 +53,7 @@ jobs:
         run: pnpm audit --audit-level ${{ inputs.level || 'high' }} --json > pnpm-audit-report.json
 
       - name: Upload audit report
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: pnpm-audit-report
