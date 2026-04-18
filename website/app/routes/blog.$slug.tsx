@@ -57,6 +57,8 @@ const tagColors: Record<string, string> = {
   guide: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   engineering: "bg-violet-500/15 text-violet-400 border-violet-500/30",
   infrastructure: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
+  meta: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  patch: "bg-orange-500/15 text-orange-400 border-orange-500/30",
 };
 
 const proseClasses =
