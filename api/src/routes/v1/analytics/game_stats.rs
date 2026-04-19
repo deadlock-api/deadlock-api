@@ -18,6 +18,7 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum BucketQuery {
@@ -63,6 +64,7 @@ impl BucketQuery {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct GameStatsQuery {
     /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
@@ -298,116 +300,32 @@ pub(crate) async fn game_stats(
 }
 
 #[cfg(test)]
-mod test {
-    use tracing::warn;
+mod proptests {
+    use proptest::prelude::*;
 
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_query_no_bucket() {
-        let query = GameStatsQuery::default();
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("toUInt32(0) AS bucket"));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_query_avg_badge_bucket() {
-        let query = GameStatsQuery {
-            bucket: BucketQuery::AvgBadge,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
+        #[test]
+        fn game_stats_build_query_is_valid_sql(query: GameStatsQuery) {
+            // The generated SELECT has ~44 deeply-nested expressions which can
+            // exhaust the default test thread's 2 MiB stack inside the parser.
+            // Validate on a thread with a larger stack instead.
+            let sql = build_query(&query);
+            match std::thread::Builder::new()
+                .stack_size(16 * 1024 * 1024)
+                .spawn(move || assert_valid_sql(&sql))
+            {
+                Ok(handle) => {
+                    if let Err(panic) = handle.join() {
+                        std::panic::resume_unwind(panic);
+                    }
+                }
+                Err(err) => panic!("failed to spawn validator thread: {err}"),
+            }
         }
-        assert!(sql.contains("toUInt32(max_avg_badge) AS bucket"));
-    }
-
-    #[test]
-    fn test_build_query_min_unix_timestamp() {
-        let query = GameStatsQuery {
-            min_unix_timestamp: Some(1672531200),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
-
-    #[test]
-    fn test_build_query_max_unix_timestamp() {
-        let query = GameStatsQuery {
-            max_unix_timestamp: Some(1675209599),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_query_duration_filters() {
-        let query = GameStatsQuery {
-            min_duration_s: Some(600),
-            max_duration_s: Some(1800),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s >= 600"));
-        assert!(sql.contains("duration_s <= 1800"));
-    }
-
-    #[test]
-    fn test_build_query_badge_filters() {
-        let query = GameStatsQuery {
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_query_match_id_filters() {
-        let query = GameStatsQuery {
-            min_match_id: Some(10000),
-            max_match_id: Some(1000000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-        assert!(sql.contains("match_id <= 1000000"));
     }
 }

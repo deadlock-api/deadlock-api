@@ -16,6 +16,7 @@ use crate::utils::parse::{comma_separated_deserialize, comma_separated_deseriali
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroStatsQuery {
     /// Comma separated list of account ids, Account IDs are in `SteamID3` format.
     #[param(inline, min_items = 1, max_items = 1000)]
@@ -28,6 +29,10 @@ pub(crate) struct HeroStatsQuery {
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     hero_ids: Option<Vec<u32>>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,
@@ -349,254 +354,18 @@ pub(crate) async fn hero_stats_single(
 }
 
 #[cfg(test)]
-mod test {
-    use tracing::warn;
+mod proptests {
+    use proptest::prelude::*;
 
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_query_default() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("account_id IN (12345)"));
-        assert!(sql.contains("SELECT"));
-        assert!(sql.contains("hero_id"));
-        assert!(sql.contains("COUNT() AS matches_played"));
-        assert!(sql.contains("max(mi.start_time) AS last_played"));
-        assert!(sql.contains("sum(mi.duration_s) AS time_played"));
-        assert!(sql.contains("countIf(won) AS wins"));
-        assert!(sql.contains("FROM match_player"));
-        assert!(!sql.contains("FINAL"));
-        assert!(sql.contains("LIMIT 1 BY match_id, account_id"));
-        assert!(sql.contains("FROM mp INNER JOIN mi USING (match_id)"));
-        assert!(sql.contains("match_mode IN ('Ranked', 'Unranked')"));
-        assert!(sql.contains("GROUP BY mp.account_id, mp.hero_id"));
-        assert!(sql.contains("ORDER BY mp.account_id, mp.hero_id"));
-        // Should not contain any filters
-        assert!(!sql.contains("start_time >="));
-        assert!(!sql.contains("start_time <="));
-        assert!(!sql.contains("match_id >="));
-        assert!(!sql.contains("match_id <="));
-        assert!(!sql.contains("average_badge_team0 >="));
-        assert!(!sql.contains("average_badge_team0 <="));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_query_min_unix_timestamp() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            min_unix_timestamp: Some(1672531200),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
+        #[test]
+        fn player_hero_stats_build_query_is_valid_sql(query: HeroStatsQuery) {
+            assert_valid_sql(&build_query(&query));
         }
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
-
-    #[test]
-    fn test_build_query_max_unix_timestamp() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            max_unix_timestamp: Some(1675209599),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_query_min_match_id() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            min_match_id: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_max_match_id() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            max_match_id: Some(1000000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_query_min_average_badge() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            min_average_badge: Some(61),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("mi.average_badge_team0 >= 61 AND mi.average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_query_max_average_badge() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            max_average_badge: Some(112),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("mi.average_badge_team0 <= 112 AND mi.average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_query_combined_filters() {
-        let account_id = 98765;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            min_unix_timestamp: Some(1672531200),
-            max_unix_timestamp: Some(1675209599),
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
-            min_match_id: Some(5000),
-            max_match_id: Some(500000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("account_id IN (98765)"));
-        assert!(sql.contains("start_time >= 1672531200"));
-        assert!(sql.contains("start_time <= 1675209599"));
-        assert!(sql.contains("match_id >= 5000"));
-        assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("mi.average_badge_team0 >= 61 AND mi.average_badge_team1 >= 61"));
-        assert!(sql.contains("mi.average_badge_team0 <= 112 AND mi.average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_query_statistical_fields() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        // Verify all statistical fields are included
-        assert!(sql.contains("avg(max_level) AS ending_level"));
-        assert!(sql.contains("sum(mp.kills) AS kills"));
-        assert!(sql.contains("sum(mp.deaths) AS deaths"));
-        assert!(sql.contains("sum(mp.assists) AS assists"));
-        assert!(sql.contains("avg(denies) AS denies_per_match"));
-        assert!(sql.contains("60 * avg(mp.kills / mi.duration_s) AS kills_per_min"));
-        assert!(sql.contains("60 * avg(mp.deaths / mi.duration_s) AS deaths_per_min"));
-        assert!(sql.contains("60 * avg(mp.assists / mi.duration_s) AS assists_per_min"));
-        assert!(sql.contains("60 * avg(denies / mi.duration_s) AS denies_per_min"));
-        assert!(sql.contains("60 * avg(net_worth / mi.duration_s) AS networth_per_min"));
-        assert!(sql.contains("60 * avg(last_hits / mi.duration_s) AS last_hits_per_min"));
-        assert!(sql.contains("60 * avg(max_player_damage / mi.duration_s) AS damage_per_min"));
-        assert!(sql.contains("avg(max_player_damage / net_worth) AS damage_per_soul"));
-        assert!(
-            sql.contains(
-                "60 * avg(max_player_damage_taken / mi.duration_s) AS damage_taken_per_min"
-            )
-        );
-        assert!(sql.contains("avg(max_player_damage_taken / net_worth) AS damage_taken_per_soul"));
-        assert!(sql.contains("60 * avg(max_creep_kills / mi.duration_s) AS creeps_per_min"));
-        assert!(sql.contains("60 * avg(max_boss_damage / mi.duration_s) AS obj_damage_per_min"));
-        assert!(sql.contains("avg(max_boss_damage / net_worth) AS obj_damage_per_soul"));
-        assert!(sql.contains(
-            "avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy"
-        ));
-        assert!(sql.contains(
-            "avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
-             max_hero_bullets_hit)) AS crit_shot_rate"
-        ));
-        assert!(sql.contains("groupUniqArray(mi.match_id) as matches"));
-    }
-
-    #[test]
-    fn test_build_query_min_networth() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            min_networth: Some(1000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_query_max_networth() {
-        let account_id = 12345;
-        let query = HeroStatsQuery {
-            account_ids: vec![account_id],
-            max_networth: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
     }
 }

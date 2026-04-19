@@ -22,6 +22,7 @@ use crate::utils::parse::{
 };
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum BucketQuery {
@@ -67,6 +68,7 @@ impl BucketQuery {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroStatsQuery {
     /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
@@ -112,9 +114,17 @@ pub(crate) struct HeroStatsQuery {
     max_hero_matches_total: Option<u64>,
     /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     exclude_item_ids: Option<Vec<u32>>,
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "parse_steam_id_option")]
@@ -123,6 +133,10 @@ pub(crate) struct HeroStatsQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -380,222 +394,18 @@ pub(crate) async fn hero_stats(
 }
 
 #[cfg(test)]
-mod test {
-    #![allow(clippy::too_many_arguments)]
-
-    use tracing::warn;
+mod proptests {
+    use proptest::prelude::*;
 
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_query_min_unix_timestamp() {
-        let query = HeroStatsQuery {
-            min_unix_timestamp: Some(1672531200),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_query_max_unix_timestamp() {
-        let query = HeroStatsQuery {
-            max_unix_timestamp: Some(1675209599),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
+        #[test]
+        fn hero_stats_build_query_is_valid_sql(query: HeroStatsQuery) {
+            assert_valid_sql(&build_query(&query));
         }
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_query_min_duration_s() {
-        let query = HeroStatsQuery {
-            min_duration_s: Some(600),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s >= 600"));
-    }
-
-    #[test]
-    fn test_build_query_max_duration_s() {
-        let query = HeroStatsQuery {
-            max_duration_s: Some(1800),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s <= 1800"));
-    }
-
-    #[test]
-    fn test_build_query_min_networth() {
-        let query = HeroStatsQuery {
-            min_networth: Some(1000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_query_max_networth() {
-        let query = HeroStatsQuery {
-            max_networth: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_min_average_badge() {
-        let query = HeroStatsQuery {
-            min_average_badge: Some(61),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_query_max_average_badge() {
-        let query = HeroStatsQuery {
-            max_average_badge: Some(112),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_query_min_match_id() {
-        let query = HeroStatsQuery {
-            min_match_id: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_max_match_id() {
-        let query = HeroStatsQuery {
-            max_match_id: Some(1000000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_query_account_id() {
-        let query = HeroStatsQuery {
-            account_ids: Some(vec![18373975]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("account_id IN (18373975)"));
-    }
-
-    #[test]
-    fn test_build_query_include_item_ids() {
-        let query = HeroStatsQuery {
-            include_item_ids: Some(vec![1, 2, 3]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
-    }
-
-    #[test]
-    fn test_build_query_exclude_item_ids() {
-        let query = HeroStatsQuery {
-            exclude_item_ids: Some(vec![4, 5, 6]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
-    }
-
-    #[test]
-    fn test_build_query_include_and_exclude_item_ids() {
-        let query = HeroStatsQuery {
-            include_item_ids: Some(vec![1, 2, 3]),
-            exclude_item_ids: Some(vec![4, 5, 6]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
-        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
     }
 }

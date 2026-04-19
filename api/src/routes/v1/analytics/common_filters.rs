@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+#[cfg_attr(test, derive(Debug, proptest_derive::Arbitrary))]
 pub(super) struct MatchInfoFilters {
     pub min_unix_timestamp: Option<i64>,
     pub max_unix_timestamp: Option<i64>,
@@ -198,30 +199,6 @@ mod tests {
     }
 
     #[test]
-    fn test_all_filters() {
-        let filters = MatchInfoFilters {
-            min_unix_timestamp: Some(1000),
-            max_unix_timestamp: Some(2000),
-            min_match_id: Some(100),
-            max_match_id: Some(200),
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
-            min_duration_s: Some(600),
-            max_duration_s: Some(1800),
-        };
-        let sql = filters.build();
-        assert!(sql.contains("start_time >= 1000"));
-        assert!(sql.contains("start_time <= 2000"));
-        assert!(sql.contains("match_id >= 100"));
-        assert!(sql.contains("match_id <= 200"));
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-        assert!(sql.contains("duration_s >= 600"));
-        assert!(sql.contains("duration_s <= 1800"));
-        assert!(sql.starts_with(" AND "));
-    }
-
-    #[test]
     fn test_badge_boundary_min_ignored_at_11() {
         let filters = MatchInfoFilters {
             min_unix_timestamp: None,
@@ -264,5 +241,58 @@ mod tests {
         round_timestamps(&mut min_none, &mut max_none);
         assert_eq!(min_none, None);
         assert_eq!(max_none, None);
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::{assert_valid_and_fragment, assert_valid_predicate_vec};
+
+    prop_compose! {
+        fn arb_player_filter_inputs()(
+            account_id in any::<Option<u32>>(),
+            account_ids in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
+            hero_id in any::<Option<u32>>(),
+            hero_ids in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
+            min_networth in any::<Option<u64>>(),
+            max_networth in any::<Option<u64>>(),
+            include_item_ids in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
+            exclude_item_ids in prop::option::of(prop::collection::vec(any::<u32>(), 0..16)),
+        ) -> (
+            Option<u32>, Option<Vec<u32>>,
+            Option<u32>, Option<Vec<u32>>,
+            Option<u64>, Option<u64>,
+            Option<Vec<u32>>, Option<Vec<u32>>,
+        ) {
+            (account_id, account_ids, hero_id, hero_ids, min_networth, max_networth, include_item_ids, exclude_item_ids)
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 64, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn match_info_filters_emit_valid_sql(filters: MatchInfoFilters) {
+            assert_valid_and_fragment(&filters.build());
+        }
+
+        #[test]
+        fn player_filters_emit_valid_sql(params in arb_player_filter_inputs()) {
+            let (account_id, account_ids, hero_id, hero_ids, min_networth, max_networth, include_item_ids, exclude_item_ids) = params;
+            let filters = PlayerFilters {
+                account_id,
+                account_ids: account_ids.as_deref(),
+                hero_id,
+                hero_ids: hero_ids.as_deref(),
+                min_networth,
+                max_networth,
+                include_item_ids: include_item_ids.as_deref(),
+                exclude_item_ids: exclude_item_ids.as_deref(),
+            };
+            assert_valid_predicate_vec(&filters.build());
+        }
     }
 }

@@ -240,3 +240,32 @@ pub(super) async fn hero_mmr(
         .await
         .map(Json)?)
 }
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn mmr_batch_build_mmr_query_is_valid_sql(
+            account_ids in prop::collection::vec(any::<u32>(), 0..=4),
+            max_match_id in any::<Option<u64>>(),
+        ) {
+            assert_valid_sql(&build_mmr_query(&account_ids, max_match_id));
+        }
+
+        #[test]
+        fn mmr_batch_build_hero_mmr_query_is_valid_sql(
+            account_ids in prop::collection::vec(any::<u32>(), 0..=4),
+            hero_id in any::<u8>(),
+            max_match_id in any::<Option<u64>>(),
+        ) {
+            assert_valid_sql(&build_hero_mmr_query(&account_ids, hero_id, max_match_id));
+        }
+    }
+}

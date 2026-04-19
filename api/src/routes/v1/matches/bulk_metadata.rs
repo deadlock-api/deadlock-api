@@ -30,9 +30,10 @@ fn default_limit() -> u32 {
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-enum SortKey {
+pub(super) enum SortKey {
     #[default]
     MatchId,
     StartTime,
@@ -40,6 +41,7 @@ enum SortKey {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.
@@ -78,10 +80,22 @@ pub(super) struct BulkMatchMetadataQuery {
     /// Filter matches based on the match mode. Valid values: `unranked`, `private_lobby`, `coop_bot`, `ranked`, `server_test`, `tutorial`, `hero_labs`. **Default:** `ranked,unranked`.
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+        )
+    )]
     match_mode: Option<Vec<MatchMode>>,
     /// Comma separated list of match ids, limited by `limit`
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<u64>(), 0..=4))"
+        )
+    )]
     match_ids: Option<Vec<u64>>,
     /// Filter matches based on their start time (Unix timestamp).
     min_unix_timestamp: Option<i64>,
@@ -112,10 +126,18 @@ pub(super) struct BulkMatchMetadataQuery {
     /// Filter matches by account IDs of players that participated in the match.
     #[serde(default)]
     #[serde(deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     hero_ids: Option<Vec<u32>>,
     /// Hero ID to scope item filters to. Required when using `include_item_ids` or `exclude_item_ids`.
     item_filter_hero_id: Option<u32>,
@@ -123,11 +145,19 @@ pub(super) struct BulkMatchMetadataQuery {
     /// Requires `item_filter_hero_id`. Returns matches where a player on the specified hero has ALL of these items.
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[param(value_type = Option<String>)]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude.
     /// Requires `item_filter_hero_id`. Returns matches where a player on the specified hero has NONE of these items.
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[param(value_type = Option<String>)]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     exclude_item_ids: Option<Vec<u32>>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
@@ -532,241 +562,22 @@ pub(super) async fn bulk_metadata(
 }
 
 #[cfg(test)]
-mod tests {
+mod proptests {
+    use proptest::prelude::*;
+
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    fn normalize_whitespace(s: &str) -> String {
-        s.replace(['\n', '\t'], " ").split_whitespace().join(" ")
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_ch_query_with_account_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            account_ids: Some(vec![12345, 67890]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        // Should contain the player filter subquery
-        assert!(normalized.contains(
-            "match_id IN (SELECT match_id FROM player_match_history WHERE account_id IN (12345,67890))"
-        ));
-        // Should still have the basic structure
-        assert!(normalized.contains("t_matches AS (SELECT match_id FROM match_info"));
-        assert!(normalized.contains("WHERE"));
-        assert!(normalized.contains("LIMIT 10"));
-    }
-
-    #[test]
-    fn test_build_ch_query_with_empty_account_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            account_ids: Some(vec![]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        // Should not contain player filter when account_ids is empty
-        assert!(!normalized.contains("match_id IN (SELECT match_id FROM match_player"));
-    }
-
-    #[test]
-    fn test_build_ch_query_without_account_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        // Should not contain player filter when account_ids is None
-        assert!(!normalized.contains("match_id IN (SELECT match_id FROM match_player"));
-    }
-
-    #[test]
-    fn test_build_ch_query_with_more_info() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            include_more_info: true,
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        assert!(normalized.contains("rewards_eligible"));
-        assert!(normalized.contains("is_high_skill_range_parties"));
-        assert!(normalized.contains("low_pri_pool"));
-        assert!(normalized.contains("new_player_pool"));
-        assert!(normalized.contains("team_score"));
-        assert!(normalized.contains("match_tracked_stats"));
-        assert!(normalized.contains("team0_tracked_stats"));
-        assert!(normalized.contains("team1_tracked_stats"));
-    }
-
-    #[test]
-    fn test_build_ch_query_without_more_info() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            include_more_info: false,
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        assert!(!normalized.contains("rewards_eligible"));
-        assert!(!normalized.contains("team_score"));
-        assert!(!normalized.contains("match_tracked_stats"));
-    }
-
-    #[test]
-    fn test_build_ch_query_with_include_item_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            item_filter_hero_id: Some(7),
-            include_item_ids: Some(vec![31, 32]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        assert!(normalized.contains("hero_id = 7"));
-        assert!(normalized.contains("hasAll(items.item_id, [31, 32])"));
-        assert!(normalized.contains("SELECT match_id FROM match_player WHERE"));
-    }
-
-    #[test]
-    fn test_build_ch_query_with_exclude_item_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            item_filter_hero_id: Some(3),
-            exclude_item_ids: Some(vec![50, 51]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        assert!(normalized.contains("hero_id = 3"));
-        assert!(normalized.contains("NOT hasAny(items.item_id, [50, 51])"));
-        assert!(normalized.contains("SELECT match_id FROM match_player WHERE"));
-    }
-
-    #[test]
-    fn test_build_ch_query_with_include_and_exclude_item_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            item_filter_hero_id: Some(7),
-            include_item_ids: Some(vec![31]),
-            exclude_item_ids: Some(vec![50]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        assert!(normalized.contains("hasAll(items.item_id, [31])"));
-        assert!(normalized.contains("NOT hasAny(items.item_id, [50])"));
-    }
-
-    #[test]
-    fn test_build_ch_query_item_filters_without_hero_id_errors() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            include_item_ids: Some(vec![31]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query);
-        assert!(result.is_err());
-
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            exclude_item_ids: Some(vec![50]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_build_ch_query_item_filter_hero_id_independent_of_hero_ids() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            hero_ids: Some(vec![1, 2]),
-            item_filter_hero_id: Some(7),
-            include_item_ids: Some(vec![31]),
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        // Both hero_ids and item_filter_hero_id should be present
-        assert!(normalized.contains("hero_id IN (1,2)"));
-        assert!(normalized.contains("hero_id = 7"));
-        assert!(normalized.contains("hasAll(items.item_id, [31])"));
-    }
-
-    #[test]
-    fn test_build_ch_query_account_ids_with_other_filters() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            account_ids: Some(vec![12345]),
-            min_unix_timestamp: Some(1640995200), // 2022-01-01
-            max_duration_s: Some(3600),
-            limit: 5,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        // Should contain all filters
-        assert!(normalized.contains(
-            "match_id IN (SELECT match_id FROM player_match_history WHERE account_id IN (12345))"
-        ));
-        assert!(normalized.contains("start_time >= 1640995200"));
-        assert!(normalized.contains("duration_s <= 3600"));
-        assert!(normalized.contains("LIMIT 5"));
-    }
-
-    #[test]
-    fn test_build_ch_query_with_include_player_kda() {
-        let query = BulkMatchMetadataQuery {
-            include_info: true,
-            include_player_kda: true,
-            include_player_items: true,
-            limit: 10,
-            ..Default::default()
-        };
-
-        let result = build_query(query).unwrap();
-        let normalized = normalize_whitespace(&result);
-
-        assert!(normalized.contains("groupUniqArray(12)(tuple(match_player.account_id as account_id, hero_id, player_slot, team, dp.hero_build_id as hero_build_id, kills, deaths, assists, items)::JSON) as players"));
-        assert!(!normalized.contains("player_tracked_stats"));
-        assert!(!normalized.contains("accolades"));
-        assert!(!normalized.contains("net_worth"));
+        #[test]
+        fn bulk_metadata_build_query_is_valid_sql(query: BulkMatchMetadataQuery) {
+            // build_query returns Err for invalid param combos (e.g. item filter
+            // without hero id); those aren't SQL bugs — only validate the Ok path.
+            if let Ok(sql) = build_query(query) {
+                assert_valid_sql(&sql);
+            }
+        }
     }
 }

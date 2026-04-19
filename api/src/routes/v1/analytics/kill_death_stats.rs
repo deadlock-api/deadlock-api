@@ -17,6 +17,7 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct KillDeathStatsQuery {
     /// Filter by team number.
     #[param(minimum = 0, maximum = 1)]
@@ -40,10 +41,18 @@ pub(crate) struct KillDeathStatsQuery {
     /// Filter matches by account IDs of players that participated in the match.
     #[serde(default)]
     #[serde(deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     hero_ids: Option<Vec<u32>>,
     /// Filter players based on their final net worth.
     min_networth: Option<u64>,
@@ -294,4 +303,21 @@ pub(crate) async fn kill_death_stats(
     get_kill_death_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn kill_death_stats_build_query_is_valid_sql(query: KillDeathStatsQuery) {
+            assert_valid_sql(&build_query(&query));
+        }
+    }
 }

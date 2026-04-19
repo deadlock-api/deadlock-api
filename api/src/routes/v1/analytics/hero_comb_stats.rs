@@ -31,6 +31,7 @@ fn default_comb_size() -> Option<u8> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroCombStatsQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(default = "GameMode::default_option")]
@@ -64,15 +65,31 @@ pub(crate) struct HeroCombStatsQuery {
     max_match_id: Option<u64>,
     /// Comma separated list of hero ids to include. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     include_hero_ids: Option<Vec<u32>>,
     /// Comma separated list of hero ids to exclude. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     exclude_hero_ids: Option<Vec<u32>>,
     /// Comma separated list of enemy hero ids to include. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     include_enemy_hero_ids: Option<Vec<u32>>,
     /// Comma separated list of enemy hero ids to exclude. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     exclude_enemy_hero_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for a hero combination to be included in the response.
     #[serde(default = "default_min_matches_u32")]
@@ -93,6 +110,10 @@ pub(crate) struct HeroCombStatsQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -344,264 +365,19 @@ pub(crate) async fn hero_comb_stats(
 }
 
 #[cfg(test)]
-mod test {
-    #![allow(clippy::too_many_arguments)]
+mod proptests {
+    use proptest::prelude::*;
+
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_query_min_unix_timestamp() {
-        let min_unix_timestamp = Some(1672531200);
-        let comb_query = HeroCombStatsQuery {
-            min_unix_timestamp,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_query_max_unix_timestamp() {
-        let max_unix_timestamp = Some(1675209599);
-        let comb_query = HeroCombStatsQuery {
-            max_unix_timestamp,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
+        #[test]
+        #[allow(deprecated)]
+        fn hero_comb_stats_build_query_is_valid_sql(query: HeroCombStatsQuery) {
+            assert_valid_sql(&build_query(&query));
         }
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_query_min_duration_s() {
-        let min_duration_s = Some(600);
-        let comb_query = HeroCombStatsQuery {
-            min_duration_s,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s >= 600"));
-    }
-
-    #[test]
-    fn test_build_query_max_duration_s() {
-        let max_duration_s = Some(1800);
-        let comb_query = HeroCombStatsQuery {
-            max_duration_s,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s <= 1800"));
-    }
-
-    #[test]
-    fn test_build_query_min_networth() {
-        let min_networth = Some(1000);
-        let comb_query = HeroCombStatsQuery {
-            min_networth,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_query_max_networth() {
-        let max_networth = Some(10000);
-        let comb_query = HeroCombStatsQuery {
-            max_networth,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_min_average_badge() {
-        let min_average_badge = Some(61);
-        let comb_query = HeroCombStatsQuery {
-            min_average_badge,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_query_max_average_badge() {
-        let max_average_badge = Some(112);
-        let comb_query = HeroCombStatsQuery {
-            max_average_badge,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_query_min_match_id() {
-        let min_match_id = Some(10000);
-        let comb_query = HeroCombStatsQuery {
-            min_match_id,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_max_match_id() {
-        let max_match_id = Some(1000000);
-        let comb_query = HeroCombStatsQuery {
-            max_match_id,
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_query_account_id() {
-        let comb_query = HeroCombStatsQuery {
-            account_ids: Some(vec![18373975]),
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("hasAny(account_ids, [18373975])"));
-    }
-
-    #[test]
-    fn test_build_query_include_hero_ids() {
-        let include_hero_ids = vec![1, 2, 3];
-        let comb_query = HeroCombStatsQuery {
-            include_hero_ids: include_hero_ids.clone().into(),
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains(&format!(
-            "hasAll(hero_ids, [{}])",
-            include_hero_ids.iter().map(ToString::to_string).join(", ")
-        )));
-    }
-
-    #[test]
-    fn test_build_query_exclude_hero_ids() {
-        let exclude_hero_ids = vec![1, 2, 3];
-        let comb_query = HeroCombStatsQuery {
-            exclude_hero_ids: exclude_hero_ids.clone().into(),
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains(&format!(
-            "not hasAny(hero_ids, [{}])",
-            exclude_hero_ids.iter().map(ToString::to_string).join(", ")
-        )));
-    }
-
-    #[test]
-    fn test_build_query_include_enemy_hero_ids() {
-        let include_enemy_hero_ids = vec![1, 2, 3];
-        let comb_query = HeroCombStatsQuery {
-            include_enemy_hero_ids: include_enemy_hero_ids.clone().into(),
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains(&format!(
-            "hasAll(enemy.hero_ids, [{}])",
-            include_enemy_hero_ids
-                .iter()
-                .map(ToString::to_string)
-                .join(", ")
-        )));
-    }
-
-    #[test]
-    fn test_build_query_exclude_enemy_hero_ids() {
-        let exclude_enemy_hero_ids = vec![1, 2, 3];
-        let comb_query = HeroCombStatsQuery {
-            exclude_enemy_hero_ids: exclude_enemy_hero_ids.clone().into(),
-            ..Default::default()
-        };
-        let sql = build_query(&comb_query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains(&format!(
-            "not hasAny(enemy.hero_ids, [{}])",
-            exclude_enemy_hero_ids
-                .iter()
-                .map(ToString::to_string)
-                .join(", ")
-        )));
     }
 }

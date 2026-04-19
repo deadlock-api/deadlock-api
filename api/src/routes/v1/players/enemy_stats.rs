@@ -13,6 +13,7 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct EnemyStatsQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(default = "GameMode::default_option")]
@@ -162,104 +163,21 @@ pub(super) async fn enemy_stats(
 }
 
 #[cfg(test)]
-mod test {
+mod proptests {
+    use proptest::prelude::*;
+
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_query_default() {
-        let account_id = 12345;
-        let query = EnemyStatsQuery::default();
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("account_id as enemy_id"));
-        assert!(sql.contains("countIf(not won) as wins"));
-        assert!(sql.contains("uniq(match_id) as matches_played"));
-        assert!(sql.contains("groupArray(match_id) as matches"));
-        assert!(sql.contains("GROUP BY account_id"));
-        assert!(sql.contains("ORDER BY matches_played DESC"));
-        // Should not contain any filters
-        assert!(!sql.contains("start_time >="));
-        assert!(!sql.contains("start_time <="));
-        assert!(!sql.contains("match_id >="));
-        assert!(!sql.contains("match_id <="));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_query_min_unix_timestamp() {
-        let account_id = 12345;
-        let query = EnemyStatsQuery {
-            min_unix_timestamp: Some(1672531200),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
-
-    #[test]
-    fn test_build_query_max_unix_timestamp() {
-        let account_id = 12345;
-        let query = EnemyStatsQuery {
-            max_unix_timestamp: Some(1675209599),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_query_min_match_id() {
-        let account_id = 12345;
-        let query = EnemyStatsQuery {
-            min_match_id: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("match_id >= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_max_match_id() {
-        let account_id = 12345;
-        let query = EnemyStatsQuery {
-            max_match_id: Some(1000000),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_query_min_matches_played() {
-        let account_id = 12345;
-        let query = EnemyStatsQuery {
-            min_matches_played: Some(5),
-            max_matches_played: Some(100),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("matches_played >= 5"));
-        assert!(sql.contains("matches_played <= 100"));
-    }
-
-    #[test]
-    fn test_build_query_combined_filters() {
-        let account_id = 98765;
-        let query = EnemyStatsQuery {
-            min_unix_timestamp: Some(1672531200),
-            max_unix_timestamp: Some(1675209599),
-            min_match_id: Some(5000),
-            max_match_id: Some(500000),
-            min_matches_played: Some(3),
-            max_matches_played: Some(100),
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("account_id = 98765"));
-        assert!(sql.contains("start_time >= 1672531200"));
-        assert!(sql.contains("start_time <= 1675209599"));
-        assert!(sql.contains("match_id >= 5000"));
-        assert!(sql.contains("match_id <= 500000"));
-        assert!(sql.contains("matches_played >= 3"));
-        assert!(sql.contains("matches_played <= 100"));
+        #[test]
+        fn enemy_stats_build_query_is_valid_sql(
+            account_id in any::<u32>(),
+            query: EnemyStatsQuery,
+        ) {
+            assert_valid_sql(&build_query(account_id, &query));
+        }
     }
 }

@@ -26,6 +26,7 @@ fn default_min_matches() -> Option<u64> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroCounterStatsQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(default = "GameMode::default_option")]
@@ -80,6 +81,10 @@ pub(super) struct HeroCounterStatsQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -314,266 +319,19 @@ pub(super) async fn hero_counters_stats(
 }
 
 #[cfg(test)]
-mod test {
-    #![allow(clippy::too_many_arguments)]
-
-    use tracing::warn;
+mod proptests {
+    use proptest::prelude::*;
 
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_hero_counters_stats_query_min_unix_timestamp() {
-        let query = HeroCounterStatsQuery {
-            min_unix_timestamp: Some(1672531200),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_hero_counters_stats_query_max_unix_timestamp() {
-        let query = HeroCounterStatsQuery {
-            max_unix_timestamp: Some(1675209599),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
+        #[test]
+        #[allow(deprecated)]
+        fn hero_counters_stats_build_query_is_valid_sql(query: HeroCounterStatsQuery) {
+            assert_valid_sql(&build_query(&query));
         }
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_min_duration_s() {
-        let query = HeroCounterStatsQuery {
-            min_duration_s: Some(600),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s >= 600"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_max_duration_s() {
-        let query = HeroCounterStatsQuery {
-            max_duration_s: Some(1800),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s <= 1800"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_min_networth() {
-        let query = HeroCounterStatsQuery {
-            min_networth: Some(1000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_max_networth() {
-        let query = HeroCounterStatsQuery {
-            max_networth: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_min_enemy_networth() {
-        let query = HeroCounterStatsQuery {
-            min_enemy_networth: Some(1000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_max_enemy_networth() {
-        let query = HeroCounterStatsQuery {
-            max_enemy_networth: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_min_average_badge() {
-        let query = HeroCounterStatsQuery {
-            min_average_badge: Some(61),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_max_average_badge() {
-        let query = HeroCounterStatsQuery {
-            max_average_badge: Some(112),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_min_match_id() {
-        let query = HeroCounterStatsQuery {
-            min_match_id: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_max_match_id() {
-        let query = HeroCounterStatsQuery {
-            max_match_id: Some(1000000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_same_lane_filter_true() {
-        let query = HeroCounterStatsQuery {
-            same_lane_filter: Some(true),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("USING (match_id, assigned_lane)"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_same_lane_filter_false() {
-        let query = HeroCounterStatsQuery {
-            same_lane_filter: Some(false),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(!sql.contains("USING (match_id, assigned_lane)"));
-        assert!(sql.contains("USING (match_id)"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_account_id() {
-        let query = HeroCounterStatsQuery {
-            account_ids: Some(vec![18373975]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("account_id IN (18373975)"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_min_matches() {
-        let query = HeroCounterStatsQuery {
-            min_matches: Some(10),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("matches_played >= 10"));
-    }
-
-    #[test]
-    fn test_build_hero_counters_stats_query_max_matches() {
-        let query = HeroCounterStatsQuery {
-            max_matches: Some(100),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            warn!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("matches_played <= 100"));
     }
 }

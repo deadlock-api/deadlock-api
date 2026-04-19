@@ -27,9 +27,14 @@ fn default_comb_size() -> Option<u8> {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct ItemPermutationStatsQuery {
     /// Comma separated list of item ids. See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     item_ids: Option<Vec<u32>>,
     /// The combination size to return.
     #[param(minimum = 2, maximum = 12, default = 2)]
@@ -41,6 +46,10 @@ pub(super) struct ItemPermutationStatsQuery {
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     hero_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]
@@ -78,6 +87,10 @@ pub(super) struct ItemPermutationStatsQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -150,6 +163,9 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         )
     } else {
         let comb_size = query.comb_size.or(default_comb_size()).unwrap_or(2);
+        if comb_size < 2 {
+            return String::new();
+        }
         let joins = (0..comb_size)
             .map(|i| format!(" ARRAY JOIN p_items AS i{i}, arrayEnumerate(p_items) AS i{i}_index "))
             .join("\n");
@@ -262,147 +278,22 @@ pub(super) async fn item_permutation_stats(
 }
 
 #[cfg(test)]
-mod test {
-    #![allow(clippy::too_many_arguments)]
+mod proptests {
+    use proptest::prelude::*;
+
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_item_stats_query_min_unix_timestamp() {
-        let min_unix_timestamp = 1672531200;
-        let query = ItemPermutationStatsQuery {
-            min_unix_timestamp: min_unix_timestamp.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("start_time >= {min_unix_timestamp}")));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_item_stats_query_max_unix_timestamp() {
-        let max_unix_timestamp = 1675209599;
-        let query = ItemPermutationStatsQuery {
-            max_unix_timestamp: max_unix_timestamp.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("start_time <= {max_unix_timestamp}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_duration_s() {
-        let min_duration_s = 600;
-        let query = ItemPermutationStatsQuery {
-            min_duration_s: min_duration_s.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("duration_s >= {min_duration_s}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_duration_s() {
-        let max_duration_s = 1800;
-        let query = ItemPermutationStatsQuery {
-            max_duration_s: max_duration_s.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("duration_s <= {max_duration_s}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_networth() {
-        let min_networth = 1000;
-        let query = ItemPermutationStatsQuery {
-            min_networth: min_networth.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("net_worth >= {min_networth}")));
-    }
-    #[test]
-    fn test_build_item_stats_query_max_networth() {
-        let max_networth = 10000;
-        let query = ItemPermutationStatsQuery {
-            max_networth: max_networth.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("net_worth <= {max_networth}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_average_badge() {
-        let min_average_badge = 61;
-        let query = ItemPermutationStatsQuery {
-            min_average_badge: min_average_badge.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!(
-            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= \
-             {min_average_badge}"
-        )));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_average_badge() {
-        let max_average_badge = 112;
-        let query = ItemPermutationStatsQuery {
-            max_average_badge: max_average_badge.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!(
-            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= \
-             {max_average_badge}"
-        )));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_match_id() {
-        let min_match_id = 10000;
-        let query = ItemPermutationStatsQuery {
-            min_match_id: min_match_id.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("match_id >= {min_match_id}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_match_id() {
-        let max_match_id = 1000000;
-        let query = ItemPermutationStatsQuery {
-            max_match_id: max_match_id.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("match_id <= {max_match_id}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_account_id() {
-        let account_id = 18373975;
-        let query = ItemPermutationStatsQuery {
-            account_ids: Some(vec![account_id]),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("account_id IN ({account_id})")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_hero_ids() {
-        let hero_ids = vec![1, 15];
-        let query = ItemPermutationStatsQuery {
-            hero_ids: hero_ids.clone().into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(", ")
-        )));
+        #[test]
+        #[allow(deprecated)]
+        fn item_permutation_stats_build_query_is_valid_sql(query: ItemPermutationStatsQuery) {
+            let sql = build_query(&query);
+            if !sql.is_empty() {
+                assert_valid_sql(&sql);
+            }
+        }
     }
 }

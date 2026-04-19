@@ -14,6 +14,7 @@ use crate::routes::v1::players::mmr::mmr_history::{SMOOTHING_FACTOR, WINDOW_SIZE
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct MMRDistributionQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
@@ -188,4 +189,24 @@ pub(super) async fn hero_mmr_distribution(
         .fetch_all::<DistributionEntry>()
         .await
         .map(Json)?)
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn mmr_distribution_build_query_is_valid_sql(
+            hero_id in any::<Option<u8>>(),
+            query: MMRDistributionQuery,
+        ) {
+            assert_valid_sql(&build_mmr_distribution_query(hero_id, &query));
+        }
+    }
 }

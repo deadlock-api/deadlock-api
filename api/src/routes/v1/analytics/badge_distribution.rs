@@ -13,6 +13,7 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct BadgeDistributionQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(default = "GameMode::default_option")]
@@ -136,4 +137,21 @@ pub(crate) async fn badge_distribution(
     get_badge_distribution(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn badge_distribution_build_query_is_valid_sql(query: BadgeDistributionQuery) {
+            assert_valid_sql(&build_query(&query));
+        }
+    }
 }

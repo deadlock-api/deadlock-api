@@ -32,6 +32,7 @@ pub(super) struct HeroBuildStatsPath {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroBuildStatsQuery {
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago. **Minimum:** March 1, 2026.
     #[serde(default = "default_last_month_timestamp")]
@@ -68,6 +69,10 @@ pub(super) struct HeroBuildStatsQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -228,4 +233,26 @@ pub(super) async fn hero_build_stats(
     get_hero_build_stats(&state.ch_client_ro, hero_id, &valid_build_ids, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        #[allow(deprecated)]
+        fn hero_build_stats_build_query_is_valid_sql(
+            hero_id in any::<u32>(),
+            valid_build_ids in prop::collection::vec(any::<i32>(), 0..16),
+            query: HeroBuildStatsQuery,
+        ) {
+            assert_valid_sql(&build_query(hero_id, &valid_build_ids, &query));
+        }
+    }
 }

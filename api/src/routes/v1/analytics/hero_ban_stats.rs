@@ -16,6 +16,7 @@ use crate::error::APIResult;
 use crate::utils::parse::{MIN_DEMO_PLAYER_TIMESTAMP, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum BucketQuery {
@@ -61,6 +62,7 @@ impl BucketQuery {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroBanStatsQuery {
     /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
@@ -205,4 +207,21 @@ pub(super) async fn hero_ban_stats(
     get_hero_ban_stats(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod proptests {
+    use proptest::prelude::*;
+
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn hero_ban_stats_build_query_is_valid_sql(query: HeroBanStatsQuery) {
+            assert_valid_sql(&build_query(&query));
+        }
+    }
 }

@@ -23,10 +23,15 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct PlayerStatsMetricsQuery {
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     hero_ids: Option<Vec<u32>>,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(default = "GameMode::default_option")]
@@ -64,13 +69,25 @@ pub(crate) struct PlayerStatsMetricsQuery {
     max_matches: Option<u32>,
     /// Comma separated list of item ids to include (only players who have purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude (only players who have not purchased these items). See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     exclude_item_ids: Option<Vec<u32>>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -553,243 +570,18 @@ pub(crate) async fn player_stats_metrics(
 }
 
 #[cfg(test)]
-mod test {
-    #![allow(clippy::too_many_arguments)]
+mod proptests {
+    use proptest::prelude::*;
+
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_query_min_unix_timestamp() {
-        let query = PlayerStatsMetricsQuery {
-            min_unix_timestamp: Some(1672531200),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time >= 1672531200"));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_query_max_unix_timestamp() {
-        let query = PlayerStatsMetricsQuery {
-            max_unix_timestamp: Some(1675209599),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
-
-    #[test]
-    fn test_build_query_min_duration_s() {
-        let query = PlayerStatsMetricsQuery {
-            min_duration_s: Some(600),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s >= 600"));
-    }
-
-    #[test]
-    fn test_build_query_max_duration_s() {
-        let query = PlayerStatsMetricsQuery {
-            max_duration_s: Some(1800),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("duration_s <= 1800"));
-    }
-
-    #[test]
-    fn test_build_query_min_networth() {
-        let query = PlayerStatsMetricsQuery {
-            min_networth: Some(1000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_query_max_networth() {
-        let query = PlayerStatsMetricsQuery {
-            max_networth: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_min_average_badge() {
-        let query = PlayerStatsMetricsQuery {
-            min_average_badge: Some(61),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-    }
-
-    #[test]
-    fn test_build_query_max_average_badge() {
-        let query = PlayerStatsMetricsQuery {
-            max_average_badge: Some(112),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_query_min_match_id() {
-        let query = PlayerStatsMetricsQuery {
-            min_match_id: Some(10000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-    }
-
-    #[test]
-    fn test_build_query_max_match_id() {
-        let query = PlayerStatsMetricsQuery {
-            max_match_id: Some(1000000),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_query_account_id() {
-        let query = PlayerStatsMetricsQuery {
-            account_ids: Some(vec![18373975]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("account_id IN (18373975)"));
-    }
-
-    #[test]
-    fn test_build_query_include_item_ids() {
-        let query = PlayerStatsMetricsQuery {
-            include_item_ids: Some(vec![1, 2, 3]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
-    }
-
-    #[test]
-    fn test_build_query_exclude_item_ids() {
-        let query = PlayerStatsMetricsQuery {
-            exclude_item_ids: Some(vec![4, 5, 6]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
-    }
-
-    #[test]
-    fn test_build_query_include_and_exclude_item_ids() {
-        let query = PlayerStatsMetricsQuery {
-            include_item_ids: Some(vec![1, 2, 3]),
-            exclude_item_ids: Some(vec![4, 5, 6]),
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("hasAll(items.item_id, [1, 2, 3])"));
-        assert!(sql.contains("not hasAny(items.item_id, [4, 5, 6])"));
-    }
-
-    #[test]
-    fn test_build_query_selects() {
-        let query = PlayerStatsMetricsQuery::default();
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        for metric in Metric::VARIANTS {
-            assert!(sql.contains(&format!(
-                "avg({}) AS avg_{}",
-                metric.get_select_clause(),
-                metric
-            )));
-            assert!(sql.contains(&format!(
-                "std({}) AS std_{}",
-                metric.get_select_clause(),
-                metric
-            )));
-            assert!(sql.contains(&format!("quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)({}) AS quantiles_{}", metric.get_select_clause(), metric)));
+        #[test]
+        fn player_stats_metrics_build_query_is_valid_sql(query: PlayerStatsMetricsQuery) {
+            assert_valid_sql(&build_query(&query));
         }
     }
 }

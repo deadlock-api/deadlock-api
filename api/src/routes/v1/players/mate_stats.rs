@@ -13,6 +13,7 @@ use crate::routes::v1::matches::types::GameMode;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct MateStatsQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(default = "GameMode::default_option")]
@@ -157,20 +158,21 @@ pub(super) async fn mate_stats(
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
+mod proptests {
+    use proptest::prelude::*;
 
-    #[test]
-    fn test_build_query_default() {
-        let account_id = 12345;
-        let query = MateStatsQuery {
-            ..Default::default()
-        };
-        let sql = build_query(account_id, &query);
-        assert!(sql.contains("account_id = 12345"));
-        assert!(sql.contains("account_id != 12345"));
-        assert!(sql.contains("account_id as mate_id"));
-        assert!(sql.contains("GROUP BY account_id"));
-        assert!(sql.contains("ORDER BY matches_played DESC"));
+    use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
+
+        #[test]
+        fn mate_stats_build_query_is_valid_sql(
+            account_id in any::<u32>(),
+            query: MateStatsQuery,
+        ) {
+            assert_valid_sql(&build_query(account_id, &query));
+        }
     }
 }

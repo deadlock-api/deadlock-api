@@ -201,6 +201,7 @@ impl From<ServerRegion> for u32 {
     Hash,
     Default,
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 #[repr(i32)]
@@ -226,6 +227,7 @@ pub enum GameMode {
     Eq,
     Hash,
 )]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[repr(i32)]
 pub(crate) enum MatchMode {

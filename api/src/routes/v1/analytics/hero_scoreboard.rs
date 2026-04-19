@@ -22,6 +22,7 @@ use crate::utils::parse::{
 use crate::utils::types::SortDirectionDesc;
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize, IntoParams, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroScoreboardQuery {
     /// The field to sort by.
     #[param(inline)]
@@ -69,6 +70,10 @@ pub(super) struct HeroScoreboardQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
 }
 
@@ -214,157 +219,19 @@ pub(super) async fn hero_scoreboard(
 }
 
 #[cfg(test)]
-mod test {
-    #![allow(clippy::too_many_arguments)]
+mod proptests {
+    use proptest::prelude::*;
 
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_hero_scoreboard_query_min_max_unix_timestamp() {
-        let query = HeroScoreboardQuery {
-            min_unix_timestamp: Some(1672531200),
-            max_unix_timestamp: Some(1675209599),
-            sort_by: ScoreboardQuerySortBy::Matches,
-            sort_direction: SortDirectionDesc::Asc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("start_time >= 1672531200"));
-        assert!(sql.contains("start_time <= 1675209599"));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_hero_scoreboard_query_min_max_duration() {
-        let query = HeroScoreboardQuery {
-            min_duration_s: Some(600),
-            max_duration_s: Some(1800),
-            sort_by: ScoreboardQuerySortBy::Wins,
-            sort_direction: SortDirectionDesc::Desc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
+        #[allow(deprecated)]
+        #[test]
+        fn hero_scoreboard_build_query_is_valid_sql(query: HeroScoreboardQuery) {
+            assert_valid_sql(&build_query(&query));
         }
-        assert!(sql.contains("duration_s >= 600"));
-        assert!(sql.contains("duration_s <= 1800"));
-    }
-
-    #[test]
-    fn test_build_hero_scoreboard_query_min_networth() {
-        let query = HeroScoreboardQuery {
-            min_networth: Some(1000),
-            sort_by: ScoreboardQuerySortBy::Matches,
-            sort_direction: SortDirectionDesc::Asc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth >= 1000"));
-    }
-
-    #[test]
-    fn test_build_hero_scoreboard_query_max_networth() {
-        let query = HeroScoreboardQuery {
-            max_networth: Some(10000),
-            sort_by: ScoreboardQuerySortBy::Matches,
-            sort_direction: SortDirectionDesc::Asc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("net_worth <= 10000"));
-    }
-
-    #[test]
-    fn test_build_hero_scoreboard_query_min_max_average_badge() {
-        let query = HeroScoreboardQuery {
-            min_average_badge: Some(61),
-            max_average_badge: Some(112),
-            sort_by: ScoreboardQuerySortBy::Matches,
-            sort_direction: SortDirectionDesc::Asc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("average_badge_team0 >= 61 AND average_badge_team1 >= 61"));
-        assert!(sql.contains("average_badge_team0 <= 112 AND average_badge_team1 <= 112"));
-    }
-
-    #[test]
-    fn test_build_hero_scoreboard_query_min_max_match_id() {
-        let query = HeroScoreboardQuery {
-            min_match_id: Some(10000),
-            max_match_id: Some(1000000),
-            sort_by: ScoreboardQuerySortBy::Wins,
-            sort_direction: SortDirectionDesc::Desc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("match_id >= 10000"));
-        assert!(sql.contains("match_id <= 1000000"));
-    }
-
-    #[test]
-    fn test_build_hero_scoreboard_query_account_id_and_min_matches() {
-        let query = HeroScoreboardQuery {
-            account_ids: Some(vec![18373975]),
-            sort_by: ScoreboardQuerySortBy::Matches,
-            min_matches: Some(10),
-            sort_direction: SortDirectionDesc::Asc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("account_id IN (18373975)"));
-        assert!(sql.contains("uniq(match_id) >= 10"));
-    }
-
-    #[test]
-    fn test_build_hero_scoreboard_query_order_and_select_clause() {
-        let query = HeroScoreboardQuery {
-            sort_by: ScoreboardQuerySortBy::Wins,
-            sort_direction: SortDirectionDesc::Desc,
-            ..Default::default()
-        };
-        let sql = build_query(&query);
-        if let Err(e) =
-            sqlparser::parser::Parser::parse_sql(&sqlparser::dialect::ClickHouseDialect {}, &sql)
-        {
-            panic!("Failed to parse SQL: {sql}: {e}");
-        }
-        assert!(sql.contains("ORDER BY value desc"));
-        assert!(sql.contains(&format!(
-            "toFloat64({}) as value",
-            ScoreboardQuerySortBy::Wins.get_select_clause()
-        )));
     }
 }

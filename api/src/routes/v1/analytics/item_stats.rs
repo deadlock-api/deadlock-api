@@ -29,6 +29,7 @@ fn default_min_matches() -> Option<u32> {
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum BucketQuery {
@@ -116,6 +117,7 @@ impl BucketQuery {
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct ItemStatsQuery {
     /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
@@ -128,6 +130,10 @@ pub(crate) struct ItemStatsQuery {
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     hero_ids: Option<Vec<u32>>,
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]
@@ -160,9 +166,17 @@ pub(crate) struct ItemStatsQuery {
     max_match_id: Option<u64>,
     /// Comma separated list of item ids to include. See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     include_item_ids: Option<Vec<u32>>,
     /// Comma separated list of item ids to exclude. See more: <https://assets.deadlock-api.com/v2/items>
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     exclude_item_ids: Option<Vec<u32>>,
     /// The minimum number of matches played for an item to be included in the response.
     #[serde(default = "default_min_matches")]
@@ -179,6 +193,10 @@ pub(crate) struct ItemStatsQuery {
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
     account_ids: Option<Vec<u32>>,
     /// Filter items bought after this game time (seconds).
     min_bought_at_s: Option<u32>,
@@ -407,181 +425,19 @@ pub(crate) async fn item_stats(
 }
 
 #[cfg(test)]
-mod test {
-    use itertools::Itertools;
+mod proptests {
+    use proptest::prelude::*;
 
     use super::*;
+    use crate::utils::proptest_utils::assert_valid_sql;
 
-    #[test]
-    fn test_build_item_stats_query_min_unix_timestamp() {
-        let min_unix_timestamp = 1672531200;
-        let query = ItemStatsQuery {
-            min_unix_timestamp: min_unix_timestamp.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("start_time >= {min_unix_timestamp}")));
-    }
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]
 
-    #[test]
-    fn test_build_item_stats_query_max_unix_timestamp() {
-        let max_unix_timestamp = 1675209599;
-        let query = ItemStatsQuery {
-            max_unix_timestamp: max_unix_timestamp.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("start_time <= {max_unix_timestamp}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_duration_s() {
-        let min_duration_s = 600;
-        let query = ItemStatsQuery {
-            min_duration_s: min_duration_s.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("duration_s >= {min_duration_s}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_duration_s() {
-        let max_duration_s = 1800;
-        let query = ItemStatsQuery {
-            max_duration_s: max_duration_s.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("duration_s <= {max_duration_s}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_networth() {
-        let min_networth = 1000;
-        let query = ItemStatsQuery {
-            min_networth: min_networth.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("net_worth >= {min_networth}")));
-    }
-    #[test]
-    fn test_build_item_stats_query_max_networth() {
-        let max_networth = 10000;
-        let query = ItemStatsQuery {
-            max_networth: max_networth.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("net_worth <= {max_networth}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_average_badge() {
-        let min_average_badge = 61;
-        let query = ItemStatsQuery {
-            min_average_badge: min_average_badge.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!(
-            "average_badge_team0 >= {min_average_badge} AND average_badge_team1 >= \
-             {min_average_badge}"
-        )));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_average_badge() {
-        let max_average_badge = 112;
-        let query = ItemStatsQuery {
-            max_average_badge: max_average_badge.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!(
-            "average_badge_team0 <= {max_average_badge} AND average_badge_team1 <= \
-             {max_average_badge}"
-        )));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_match_id() {
-        let min_match_id = 10000;
-        let query = ItemStatsQuery {
-            min_match_id: min_match_id.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("match_id >= {min_match_id}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_match_id() {
-        let max_match_id = 1000000;
-        let query = ItemStatsQuery {
-            max_match_id: max_match_id.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("match_id <= {max_match_id}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_account_id() {
-        let account_id = 18373975;
-        let query = ItemStatsQuery {
-            account_ids: Some(vec![account_id]),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("account_id IN ({account_id})")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_matches() {
-        let min_matches = 10;
-        let query = ItemStatsQuery {
-            min_matches: min_matches.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("matches >= {min_matches}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_hero_ids() {
-        let hero_ids = vec![1, 2, 3];
-        let query = ItemStatsQuery {
-            hero_ids: hero_ids.clone().into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!(
-            "hero_id IN ({})",
-            hero_ids.iter().map(ToString::to_string).join(", ")
-        )));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_min_bought_at_s() {
-        let min_bought_at_s = 300;
-        let query = ItemStatsQuery {
-            min_bought_at_s: min_bought_at_s.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("buy_time >= {min_bought_at_s}")));
-    }
-
-    #[test]
-    fn test_build_item_stats_query_max_bought_at() {
-        let max_bought_at_s = 600;
-        let query = ItemStatsQuery {
-            max_bought_at_s: max_bought_at_s.into(),
-            ..Default::default()
-        };
-        let query_str = build_query(&query);
-        assert!(query_str.contains(&format!("buy_time <= {max_bought_at_s}")));
+        #[test]
+        #[allow(deprecated)]
+        fn item_stats_build_query_is_valid_sql(query: ItemStatsQuery) {
+            assert_valid_sql(&build_query(&query));
+        }
     }
 }
