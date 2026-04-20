@@ -80,4 +80,3 @@ export function useGenericData() {
     staleTime: Number.POSITIVE_INFINITY,
   });
 }
-

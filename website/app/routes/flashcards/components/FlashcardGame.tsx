@@ -78,9 +78,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   altLabel,
   completionLabel,
 }: FlashcardGameProps<T>) {
-  const [card, setCard] = useState<Card<T> | null>(() =>
-    pool.length > 0 ? pickCard(pool, new Set()) : null,
-  );
+  const [card, setCard] = useState<Card<T> | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
   const [selected, setSelected] = useState<number | null>(null);
   const [stats, setStats] = useState({ correct: 0, seen: 0, streak: 0, bestStreak: 0 });
   const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
@@ -217,9 +215,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             <Check className="size-6" />
           </div>
           <div>
-            <p className="font-game text-xl tracking-tight text-foreground uppercase">
-              {completionLabel}
-            </p>
+            <p className="font-game text-xl tracking-tight text-foreground uppercase">{completionLabel}</p>
             <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground/60 uppercase">
               You got {stats.correct}/{stats.seen} correct ({accuracy}%)
             </p>
@@ -250,12 +246,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                       : "border-primary/50 ring-primary/30",
                 )}
               >
-                <img
-                  src={getIcon(card.answer)}
-                  alt={altLabel}
-                  className="size-full object-contain"
-                  draggable={false}
-                />
+                <img src={getIcon(card.answer)} alt={altLabel} className="size-full object-contain" draggable={false} />
               </div>
               <AnimatePresence>
                 {selected !== null && (
@@ -271,11 +262,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                         : "border-primary/70 bg-primary text-primary-foreground",
                     )}
                   >
-                    {selected === card.answer.id ? (
-                      <Check className="size-5" />
-                    ) : (
-                      <X className="size-5" />
-                    )}
+                    {selected === card.answer.id ? <Check className="size-5" /> : <X className="size-5" />}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -297,21 +284,13 @@ function FlashcardGameReady<T extends FlashcardEntry>({
                       !revealed &&
                         "border-border bg-card hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
                       revealed && isAnswer && "border-green-500/60 bg-green-500/10 text-green-300",
-                      revealed &&
-                        !isAnswer &&
-                        isPicked &&
-                        "border-primary/60 bg-primary/10 text-primary",
-                      revealed &&
-                        !isAnswer &&
-                        !isPicked &&
-                        "border-border/50 bg-card/40 text-muted-foreground/60",
+                      revealed && !isAnswer && isPicked && "border-primary/60 bg-primary/10 text-primary",
+                      revealed && !isAnswer && !isPicked && "border-border/50 bg-card/40 text-muted-foreground/60",
                     )}
                   >
                     <span className="truncate">{option.name}</span>
                     {revealed && isAnswer && <Check className="size-4 shrink-0 text-green-400" />}
-                    {revealed && !isAnswer && isPicked && (
-                      <X className="size-4 shrink-0 text-primary" />
-                    )}
+                    {revealed && !isAnswer && isPicked && <X className="size-4 shrink-0 text-primary" />}
                   </button>
                 );
               })}
@@ -327,9 +306,7 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="text-muted-foreground/50">{label}</span>
-      <span className={cn("font-semibold text-foreground", highlight && "text-primary")}>
-        {value}
-      </span>
+      <span className={cn("font-semibold text-foreground", highlight && "text-primary")}>{value}</span>
     </div>
   );
 }
