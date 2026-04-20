@@ -6,6 +6,7 @@ import { Link } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
+import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 
 const OPTION_COUNT = 4;
@@ -183,15 +184,22 @@ function FlashcardGameReady<T extends FlashcardEntry>({
       </div>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 px-1 font-mono text-xs tracking-wider uppercase">
-        <label className="flex cursor-pointer items-center gap-2 text-muted-foreground/70 hover:text-foreground">
-          <Checkbox checked={noRepeats} onCheckedChange={(v) => updateNoRepeats(v === true)} />
+        <Label
+          htmlFor="flashcard-no-repeats"
+          className="flex cursor-pointer items-center gap-2 text-muted-foreground/70 hover:text-foreground"
+        >
+          <Checkbox
+            id="flashcard-no-repeats"
+            checked={noRepeats}
+            onCheckedChange={(v) => updateNoRepeats(v === true)}
+          />
           <span>No repeats</span>
           {noRepeats && (
             <span className="text-muted-foreground/40 normal-case">
               ({seenIds.size}/{pool.length} seen)
             </span>
           )}
-        </label>
+        </Label>
       </div>
 
       {exhausted || !card ? (
