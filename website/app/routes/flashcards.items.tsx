@@ -17,15 +17,7 @@ export const meta: MetaFunction = () => {
 };
 
 function itemIconSrc(item: UpgradeV2): string {
-  return (
-    item.shop_image_webp ??
-    item.shop_image ??
-    item.shop_image_small_webp ??
-    item.shop_image_small ??
-    item.image_webp ??
-    item.image ??
-    ""
-  );
+  return item.shop_image_webp ?? "";
 }
 
 export default function ItemFlashcards() {
