@@ -6,13 +6,14 @@ import type { MetaFunction } from "react-router";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { GuessInput } from "./deadlockdle/components/GuessInput";
 import { HintReveal } from "./deadlockdle/components/HintReveal";
 import { ResultModal } from "./deadlockdle/components/ResultModal";
-import { filterPlayableHeroes, useAbilities, useHeroes } from "./deadlockdle/lib/queries";
+import { useAbilities, useHeroes } from "./deadlockdle/lib/queries";
 import { getModeSeed, seededPick, seededRandom } from "./deadlockdle/lib/seed";
 import { useDailyGame } from "./deadlockdle/lib/use-daily-game";
 

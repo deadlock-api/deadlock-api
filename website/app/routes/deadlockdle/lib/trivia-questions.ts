@@ -1,6 +1,7 @@
 import type { AbilityV2, HeroV2, UpgradeV2 } from "assets_deadlock_api_client/api";
 
-import { filterPlayableHeroes, filterShopableItems } from "./queries";
+import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
+
 import { seededPick, seededShuffle } from "./seed";
 
 export interface TriviaQuestion {

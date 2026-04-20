@@ -8,10 +8,11 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+import { filterShopableItems } from "~/queries/asset-queries";
 
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { NextGameButton } from "./deadlockdle/components/NextGameButton";
-import { filterShopableItems, useItems } from "./deadlockdle/lib/queries";
+import { useItems } from "./deadlockdle/lib/queries";
 import { getDayNumber, getModeSeed, getTodayDate, seededRandom, seededShuffle } from "./deadlockdle/lib/seed";
 import { useCountdown } from "./deadlockdle/lib/use-countdown";
 
