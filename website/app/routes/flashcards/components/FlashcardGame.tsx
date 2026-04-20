@@ -66,7 +66,7 @@ export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProp
       </div>
     );
   }
-  return <FlashcardGameReady key={props.storageKey} {...props} />;
+  return <FlashcardGameReady {...props} />;
 }
 
 function FlashcardGameReady<T extends FlashcardEntry>({
