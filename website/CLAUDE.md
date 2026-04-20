@@ -24,6 +24,16 @@ app
 │   ├── streamkit_.widgets.$region.$accountId.$widgetType.tsx  # OBS embed: 3x zoom, transparent bg, auto-reload on version bump
 │   ├── data-privacy.tsx        # GDPR: data deletion & tracking re-enable via Steam OpenID auth
 │   ├── ingest-cache.tsx        # Community data tool: scans Steam httpcache binaries for replay URLs, uploads match salts
+│   ├── deadlockdle._index.tsx       # Deadlockdle landing: daily minigames hub, per-game status + share
+│   ├── deadlockdle.guess-hero.tsx   # Daily: identify hero from silhouette; clues revealed each guess
+│   ├── deadlockdle.guess-item.tsx   # Daily: name item from blurred shop image; clearer each attempt
+│   ├── deadlockdle.guess-sound.tsx  # Daily: listen to ability sound, name the ability
+│   ├── deadlockdle.guess-ability.tsx # Daily: name the ability from its icon
+│   ├── deadlockdle.item-stats.tsx   # Daily: fill in missing stats for items
+│   ├── deadlockdle.trivia.tsx       # Daily: 10 trivia questions (heroes, items, NPCs, mechanics)
+│   ├── flashcards._index.tsx   # Flashcards landing: links to hero and item games
+│   ├── flashcards.heroes.tsx   # Hero flashcards: identify hero by icon (4 choices)
+│   ├── flashcards.items.tsx    # Item flashcards: identify item by shop image (4 choices)
 │   ├── auth.patreon.callback.tsx  # OAuth callback: sets session cookie, redirects to /patron
 │   └── deadlockstats-privacy.tsx  # Mobile app privacy policy (static page)
 │
