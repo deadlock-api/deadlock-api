@@ -87,6 +87,8 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     return localStorage.getItem(storageKey) === "true";
   });
   const advanceTimer = useRef<number | null>(null);
+  const noRepeatsRef = useRef(noRepeats);
+  noRepeatsRef.current = noRepeats;
 
   const updateNoRepeats = useCallback(
     (value: boolean) => {
@@ -122,13 +124,13 @@ function FlashcardGameReady<T extends FlashcardEntry>({
         () => {
           setSelected(null);
           setSeenIds(nextSeen);
-          const exclude = noRepeats ? nextSeen : new Set<number>([card.answer.id]);
+          const exclude = noRepeatsRef.current ? nextSeen : new Set<number>([card.answer.id]);
           setCard(pickCard(pool, exclude));
         },
         correct ? CORRECT_FEEDBACK_MS : WRONG_FEEDBACK_MS,
       );
     },
-    [card, selected, pool, seenIds, noRepeats],
+    [card, selected, pool, seenIds],
   );
 
   const resetStats = useCallback(() => {
