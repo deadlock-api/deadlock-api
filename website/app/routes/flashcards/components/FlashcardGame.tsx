@@ -55,7 +55,7 @@ export interface FlashcardGameProps<T extends FlashcardEntry> {
   isLoading: boolean;
   storageKey: string;
   altLabel: string;
-  completionLabel: string;
+  masteredLabel: string;
 }
 
 export function FlashcardGame<T extends FlashcardEntry>(props: FlashcardGameProps<T>) {
@@ -76,7 +76,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   getIcon,
   storageKey,
   altLabel,
-  completionLabel,
+  masteredLabel,
 }: FlashcardGameProps<T>) {
   const [card, setCard] = useState<Card<T> | null>(() => (pool.length > 0 ? pickCard(pool, new Set()) : null));
   const [selected, setSelected] = useState<number | null>(null);
@@ -198,7 +198,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
           <span>No repeats</span>
           {noRepeats && (
             <span className="text-muted-foreground/40 normal-case">
-              ({seenIds.size}/{pool.length} seen)
+              ({seenIds.size}/{pool.length} mastered)
             </span>
           )}
         </Label>
@@ -215,7 +215,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
             <Check className="size-6" />
           </div>
           <div>
-            <p className="font-game text-xl tracking-tight text-foreground uppercase">{completionLabel}</p>
+            <p className="font-game text-xl tracking-tight text-foreground uppercase">{masteredLabel}</p>
             <p className="mt-1 font-mono text-xs tracking-wider text-muted-foreground/60 uppercase">
               You got {stats.correct}/{stats.seen} correct ({accuracy}%)
             </p>

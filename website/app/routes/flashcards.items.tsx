@@ -37,7 +37,7 @@ export default function ItemFlashcards() {
       isLoading={isLoading}
       storageKey="flashcards:items:no-repeats"
       altLabel="Mystery item"
-      completionLabel="All items seen"
+      masteredLabel="All items mastered"
     />
   );
 }
