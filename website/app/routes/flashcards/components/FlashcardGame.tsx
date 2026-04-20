@@ -87,8 +87,12 @@ function FlashcardGameReady<T extends FlashcardEntry>({
     return localStorage.getItem(storageKey) === "true";
   });
   const advanceTimer = useRef<number | null>(null);
+  // Mirrors `noRepeats` so the 450–1800ms feedback-delay timer reads the toggle's current value at fire
+  // time; keeping `noRepeats` out of `handleChoice`'s deps avoids ignoring mid-delay toggles.
+  // Writes flow exclusively through `updateNoRepeats` — never mirrored during render.
   const noRepeatsRef = useRef(noRepeats);
 
+  // Single write path for both the `noRepeats` state and `noRepeatsRef`.
   const updateNoRepeats = useCallback(
     (value: boolean) => {
       noRepeatsRef.current = value;
