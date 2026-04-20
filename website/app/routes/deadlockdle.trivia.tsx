@@ -9,11 +9,12 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Button } from "~/components/ui/button";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
+import { filterPlayableHeroes } from "~/queries/asset-queries";
 
 import { GameShell } from "./deadlockdle/components/GameShell";
 import { GuessFeedback } from "./deadlockdle/components/GuessFeedback";
 import { NextGameButton } from "./deadlockdle/components/NextGameButton";
-import { filterPlayableHeroes, useAbilities, useHeroes, useItems, useNpcUnits } from "./deadlockdle/lib/queries";
+import { useAbilities, useHeroes, useItems, useNpcUnits } from "./deadlockdle/lib/queries";
 import { getDayNumber, getModeSeed, getTodayDate, seededRandom } from "./deadlockdle/lib/seed";
 import {
   buildAbilitiesWithHeroes,

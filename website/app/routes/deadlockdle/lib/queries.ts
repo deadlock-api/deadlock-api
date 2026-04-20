@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import type { UpgradeV2 } from "assets_deadlock_api_client/api";
 import axios from "axios";
 
 import { assetsApi } from "~/lib/assets-api";
@@ -81,10 +81,3 @@ export function useGenericData() {
   });
 }
 
-export function filterPlayableHeroes(heroes: HeroV2[]): HeroV2[] {
-  return heroes.filter((h) => h.player_selectable && !h.disabled && !h.in_development);
-}
-
-export function filterShopableItems(items: UpgradeV2[]): UpgradeV2[] {
-  return items.filter((item) => item.shopable && !item.disabled && item.shop_image_webp);
-}

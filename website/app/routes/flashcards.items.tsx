@@ -4,9 +4,8 @@ import { useMemo } from "react";
 import type { MetaFunction } from "react-router";
 
 import { createPageMeta } from "~/lib/meta";
-import { itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { filterShopableItems, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
-import { filterShopableItems } from "./deadlockdle/lib/queries";
 import { FlashcardGame } from "./flashcards/components/FlashcardGame";
 
 export const meta: MetaFunction = () => {
