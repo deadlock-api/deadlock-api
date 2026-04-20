@@ -37,7 +37,7 @@ export default function HeroFlashcards() {
       isLoading={isLoading}
       storageKey="flashcards:heroes:no-repeats"
       altLabel="Mystery hero"
-      completionLabel="All heroes seen"
+      masteredLabel="All heroes mastered"
     />
   );
 }
