@@ -88,10 +88,10 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   });
   const advanceTimer = useRef<number | null>(null);
   const noRepeatsRef = useRef(noRepeats);
-  noRepeatsRef.current = noRepeats;
 
   const updateNoRepeats = useCallback(
     (value: boolean) => {
+      noRepeatsRef.current = value;
       setNoRepeats(value);
       localStorage.setItem(storageKey, String(value));
     },
