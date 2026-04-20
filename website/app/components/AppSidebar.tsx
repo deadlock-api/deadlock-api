@@ -5,6 +5,7 @@ import {
   BookOpen,
   Database,
   Gamepad2,
+  GraduationCap,
   HardDrive,
   Home,
   ImageIcon,
@@ -79,7 +80,10 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Games",
-    links: [{ to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 }],
+    links: [
+      { to: "/deadlockdle", label: "Deadlockdle", icon: Gamepad2 },
+      { to: "/flashcards", label: "Flashcards", icon: GraduationCap },
+    ],
   },
 ];
 
