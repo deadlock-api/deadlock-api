@@ -146,6 +146,7 @@ function FlashcardGameReady<T extends FlashcardEntry>({
   }, [pool]);
 
   const accuracy = stats.seen > 0 ? Math.round((stats.correct / stats.seen) * 100) : 0;
+  const empty = pool.length === 0;
   const exhausted = noRepeats && pool.length > 0 && seenIds.size >= pool.length;
 
   return (
@@ -208,7 +209,16 @@ function FlashcardGameReady<T extends FlashcardEntry>({
         </Label>
       </div>
 
-      {exhausted || !card ? (
+      {empty ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="flex flex-col items-center gap-4 border border-border bg-card/40 px-6 py-12 text-center"
+        >
+          <p className="font-mono text-sm tracking-wider text-muted-foreground/70 uppercase">No cards available.</p>
+        </motion.div>
+      ) : exhausted || !card ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
