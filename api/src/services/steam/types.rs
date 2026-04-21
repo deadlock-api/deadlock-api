@@ -52,6 +52,55 @@ pub(super) struct GetPlayerSummariesResponse {
     pub(super) response: PlayerSummariesResponse,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct GetSteamServerListResponse {
+    pub(super) response: SteamServerListResponse,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub(super) struct SteamServerListResponse {
+    #[serde(default)]
+    pub(super) servers: Vec<SteamServer>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub(crate) struct SteamServer {
+    /// Full address of the server including port (e.g. `1.2.3.4:27015`)
+    pub(crate) addr: String,
+    /// Game port the server is listening on
+    pub(crate) gameport: u16,
+    /// `SteamID` of the server
+    pub(crate) steamid: String,
+    /// Server name as advertised to Steam
+    pub(crate) name: String,
+    /// Steam appid of the game running on this server
+    pub(crate) appid: u32,
+    /// Internal game directory name
+    pub(crate) gamedir: String,
+    /// Server build version
+    pub(crate) version: String,
+    /// Product identifier reported by the server
+    pub(crate) product: String,
+    /// Steam region code reported by the server
+    pub(crate) region: i32,
+    /// Current player count
+    pub(crate) players: u32,
+    /// Maximum player count
+    pub(crate) max_players: u32,
+    /// Number of bots on the server
+    pub(crate) bots: u32,
+    /// Current map
+    pub(crate) map: String,
+    /// Whether the server is VAC-secured
+    pub(crate) secure: bool,
+    /// Whether this is a dedicated server
+    pub(crate) dedicated: bool,
+    /// Operating system the server is running on (e.g. `l` for Linux, `w` for Windows)
+    pub(crate) os: String,
+    /// Steam gametype tags
+    pub(crate) gametype: String,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub(super) struct PlayerSummariesResponse {
     pub(super) players: Vec<PlayerSummary>,

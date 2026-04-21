@@ -19,8 +19,9 @@ use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
-    GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError, SteamAccountVerifyError,
-    SteamProxyError, SteamProxyQuery, SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult,
+    GetPlayerSummariesResponse, GetSteamServerListResponse, Patch, Rss, SteamAccountNameError,
+    SteamAccountVerifyError, SteamProxyError, SteamProxyQuery, SteamProxyRawResponse,
+    SteamProxyResponse, SteamProxyResult, SteamServer,
 };
 
 const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
@@ -203,6 +204,10 @@ impl SteamClient {
         fetch_patch_notes(&self.http_client).await
     }
 
+    pub(crate) async fn fetch_steam_server_list(&self) -> APIResult<Vec<SteamServer>> {
+        fetch_steam_server_list(&self.http_client, &self.steam_api_key).await
+    }
+
     pub(crate) async fn fetch_metadata_file(
         &self,
         match_id: u64,
@@ -284,6 +289,32 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch
                 format!("Failed to parse patch notes: {e}"),
             )
         })
+}
+
+#[cached(
+    ty = "TimedCache<u8, Vec<SteamServer>>",
+    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(30)) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+async fn fetch_steam_server_list(
+    http_client: &reqwest::Client,
+    steam_api_key: &str,
+) -> APIResult<Vec<SteamServer>> {
+    let response: GetSteamServerListResponse = http_client
+        .get(format!(
+            "https://api.steampowered.com/IGameServersService/GetServerList/v1/?key={steam_api_key}&filter=\\appid\\1422450"
+        ))
+        .timeout(Duration::from_secs(10))
+        .send()
+        .await
+        .and_then(Response::error_for_status)
+        .map_err(|e| APIError::internal(format!("Failed to fetch Steam server list: {e}")))?
+        .json()
+        .await
+        .map_err(|e| APIError::internal(format!("Failed to parse Steam server list: {e}")))?;
+    Ok(response.response.servers)
 }
 
 #[cached(

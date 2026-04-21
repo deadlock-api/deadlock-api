@@ -1,6 +1,7 @@
 mod list;
 pub(crate) mod metrics;
 mod status;
+mod steam_list;
 
 use core::time::Duration;
 
@@ -21,11 +22,23 @@ Used by game servers to report their status and by clients to discover available
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let private_routes = OpenApiRouter::new()
         .routes(routes!(status::status))
         .routes(routes!(list::list))
         .routes(routes!(metrics::ingest))
-        .layer(CacheControlMiddleware::new(Duration::from_secs(0)).private())
+        .layer(CacheControlMiddleware::new(Duration::from_secs(0)).private());
+
+    let steam_routes = OpenApiRouter::new()
+        .routes(routes!(steam_list::steam_list))
+        .layer(
+            CacheControlMiddleware::new(Duration::from_secs(30))
+                .with_stale_while_revalidate(Duration::from_mins(1))
+                .with_stale_if_error(Duration::from_mins(10)),
+        );
+
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .merge(private_routes)
+        .merge(steam_routes)
 }
 
 pub(super) fn is_safe_identifier(s: &str) -> bool {
