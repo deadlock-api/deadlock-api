@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { GameServerInfo, SteamServer } from "deadlock_api_client";
-import { ChevronDown, ChevronUp, Plug, Search, Server, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, Plug, Search, Server, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -12,7 +12,6 @@ import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { createPageMeta } from "~/lib/meta";
-import { cn } from "~/lib/utils";
 import { serversQueryOptions, steamServersQueryOptions } from "~/queries/servers-query";
 
 export function meta() {
@@ -25,6 +24,8 @@ export function meta() {
 }
 
 const DEFAULT_PORT = 27015;
+const DEFAULT_MAP = "dl_midtown";
+const DEADWORKS_URL = "https://deadworks.net/";
 
 const STEAM_REGION_LABELS: Record<number, string> = {
   [-1]: "World",
@@ -217,23 +218,22 @@ export default function Servers() {
                   <TableHead>Server Name</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead className="text-right">Players</TableHead>
-                  <TableHead className="text-right">Updated</TableHead>
                   <TableHead className="w-28 text-right">Connect</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isPending ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10" />
+                    <TableCell colSpan={6} className="py-10" />
                   </TableRow>
                 ) : showEmptyState && filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                       No servers match your filters.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((s) => <ServerRow key={s.server_id} server={s} now={now} />)
+                  filtered.map((s) => <ServerRow key={s.server_id} server={s} />)
                 )}
               </TableBody>
             </Table>
@@ -241,8 +241,9 @@ export default function Servers() {
         )}
 
         {dataUpdatedAt > 0 && (
-          <p className="text-center text-xs text-muted-foreground">
-            Last refreshed {formatSince(dataUpdatedAt, now)} · auto-refreshes every 30s
+          <p className="text-center text-xs text-muted-foreground tabular-nums">
+            Last refreshed <span className="inline-block w-20 text-left">{formatSince(dataUpdatedAt, now)}</span> ·
+            auto-refreshes every 30s
           </p>
         )}
 
@@ -305,8 +306,7 @@ export default function Servers() {
   );
 }
 
-function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
-  const isStale = day(now).diff(day(server.last_updated), "second") > 60;
+function ServerRow({ server }: { server: GameServerInfo }) {
   return (
     <TableRow>
       <TableCell>
@@ -320,16 +320,11 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
       </TableCell>
       <TableCell className="font-mono text-xs">{formatAddress(server.ip, server.port)}</TableCell>
       <TableCell className="text-right tabular-nums">{server.current_player_count}</TableCell>
-      <TableCell
-        className={cn("text-right text-xs tabular-nums", isStale ? "text-amber-400" : "text-muted-foreground")}
-      >
-        {formatSince(server.last_updated, now)}
-      </TableCell>
       <TableCell className="text-right">
         <Button asChild size="sm" className="h-8 gap-1">
           <a href={connectUrl(server)} title={`Connect to ${server.hostname || formatAddress(server.ip, server.port)}`}>
-            <Plug className="size-3.5" />
             Connect
+            <Plug className="size-3.5" />
           </a>
         </Button>
       </TableCell>
@@ -338,6 +333,7 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
 }
 
 function SteamServerRow({ server }: { server: SteamServer }) {
+  const isDefaultMap = server.map === DEFAULT_MAP;
   return (
     <TableRow>
       <TableCell>
@@ -355,12 +351,26 @@ function SteamServerRow({ server }: { server: SteamServer }) {
         {server.max_players > 0 && <span className="text-muted-foreground">/{server.max_players}</span>}
       </TableCell>
       <TableCell className="text-right">
-        <Button asChild size="sm" className="h-8 gap-1">
-          <a href={`steam://connect/${server.addr}`} title={`Connect to ${server.name || server.addr}`}>
-            <Plug className="size-3.5" />
-            Connect
-          </a>
-        </Button>
+        {isDefaultMap ? (
+          <Button asChild size="sm" className="h-8 gap-1">
+            <a href={`steam://connect/${server.addr}`} title={`Connect to ${server.name || server.addr}`}>
+              Connect
+              <Plug className="size-3.5" />
+            </a>
+          </Button>
+        ) : (
+          <Button asChild size="sm" variant="outline" className="h-8 gap-1">
+            <a
+              href={DEADWORKS_URL}
+              target="_blank"
+              rel="noreferrer noopener"
+              title="Custom map — requires the Deadworks client"
+            >
+              Deadworks
+              <ExternalLink className="size-3.5" />
+            </a>
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );
