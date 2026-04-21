@@ -34,8 +34,8 @@ function prettyGameMode(mode: string) {
   return snakeToPretty(mode.replace(/-/g, "_"));
 }
 
-function formatSince(timestamp: string | number | Date) {
-  const seconds = Math.max(0, day().diff(day(timestamp), "second"));
+function formatSince(timestamp: string | number | Date, now: number) {
+  const seconds = Math.max(0, day(now).diff(day(timestamp), "second"));
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ${seconds % 60}s ago`;
@@ -47,7 +47,7 @@ export default function Servers() {
   const { data, isPending, isError, error, dataUpdatedAt } = useQuery(serversQueryOptions);
   const showEmptyState = !isPending && !isError;
 
-  const [, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -57,11 +57,23 @@ export default function Servers() {
   const [gameMode, setGameMode] = useQueryState("mode", parseAsString);
   const [search, setSearch] = useQueryState("q", parseAsString);
 
+  const deduped = useMemo(() => {
+    const byAddress = new Map<string, GameServerInfo>();
+    for (const s of data ?? []) {
+      const key = `${s.ip}:${s.port}`;
+      const existing = byAddress.get(key);
+      if (!existing || day(s.last_updated).isAfter(day(existing.last_updated))) {
+        byAddress.set(key, s);
+      }
+    }
+    return [...byAddress.values()];
+  }, [data]);
+
   const { regions, gameModes, totalPlayers } = useMemo(() => {
     const regionSet = new Set<string>();
     const modeSet = new Set<string>();
     let players = 0;
-    for (const s of data ?? []) {
+    for (const s of deduped) {
       regionSet.add(s.region);
       modeSet.add(s.game_mode);
       players += s.current_player_count;
@@ -71,11 +83,11 @@ export default function Servers() {
       gameModes: [...modeSet].sort((a, b) => a.localeCompare(b)),
       totalPlayers: players,
     };
-  }, [data]);
+  }, [deduped]);
 
   const filtered = useMemo(() => {
     const q = search?.trim().toLowerCase() ?? "";
-    return (data ?? [])
+    return deduped
       .filter((s) => {
         if (region && s.region !== region) return false;
         if (gameMode && s.game_mode !== gameMode) return false;
@@ -86,7 +98,7 @@ export default function Servers() {
         if (a.region !== b.region) return a.region.localeCompare(b.region);
         return b.current_player_count - a.current_player_count;
       });
-  }, [data, region, gameMode, search]);
+  }, [deduped, region, gameMode, search]);
 
   const regionOptions = useMemo(() => regions.map((r) => ({ value: r, label: r.toUpperCase() })), [regions]);
   const gameModeOptions = useMemo(() => gameModes.map((m) => ({ value: m, label: prettyGameMode(m) })), [gameModes]);
@@ -121,7 +133,7 @@ export default function Servers() {
         </div>
 
         <div className="mx-auto flex max-w-4xl flex-wrap items-stretch justify-center gap-3">
-          <StatCard icon={Server} label="Servers" value={data?.length ?? 0} />
+          <StatCard icon={Server} label="Servers" value={deduped.length} />
           <StatCard icon={Users} label="Players online" value={totalPlayers} />
           <StatCard icon={Plug} label="Regions" value={regions.length} />
         </div>
@@ -182,7 +194,7 @@ export default function Servers() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((s) => <ServerRow key={s.server_id} server={s} />)
+                  filtered.map((s) => <ServerRow key={s.server_id} server={s} now={now} />)
                 )}
               </TableBody>
             </Table>
@@ -191,7 +203,7 @@ export default function Servers() {
 
         {dataUpdatedAt > 0 && (
           <p className="text-center text-xs text-muted-foreground">
-            Last refreshed {formatSince(dataUpdatedAt)} · auto-refreshes every 30s
+            Last refreshed {formatSince(dataUpdatedAt, now)} · auto-refreshes every 30s
           </p>
         )}
       </section>
@@ -199,8 +211,8 @@ export default function Servers() {
   );
 }
 
-function ServerRow({ server }: { server: GameServerInfo }) {
-  const isStale = day().diff(day(server.last_updated), "second") > 60;
+function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
+  const isStale = day(now).diff(day(server.last_updated), "second") > 60;
   return (
     <TableRow>
       <TableCell>
@@ -216,7 +228,7 @@ function ServerRow({ server }: { server: GameServerInfo }) {
       <TableCell
         className={cn("text-right text-xs tabular-nums", isStale ? "text-amber-400" : "text-muted-foreground")}
       >
-        {formatSince(server.last_updated)}
+        {formatSince(server.last_updated, now)}
       </TableCell>
       <TableCell className="text-right">
         <Button asChild size="sm" className="h-8 gap-1">
