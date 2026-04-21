@@ -81,13 +81,13 @@ pub(super) async fn status(
             "region must be 1-64 non-control characters",
         ));
     }
-    if let Some(ref h) = request.hostname {
-        if h.len() > 253 || h.chars().any(|c| c.is_control()) {
-            return Err(APIError::status_msg(
-                StatusCode::BAD_REQUEST,
-                "hostname must be at most 253 non-control characters",
-            ));
-        }
+    if let Some(ref h) = request.hostname
+        && (h.len() > 253 || h.chars().any(char::is_control))
+    {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "hostname must be at most 253 non-control characters",
+        ));
     }
     if request.ip.parse::<IpAddr>().is_err() {
         return Err(APIError::status_msg(
