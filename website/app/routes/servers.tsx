@@ -3,7 +3,7 @@ import type { GameServerInfo } from "deadlock_api_client";
 import { AlertTriangle, Plug, Search, Server, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { Badge } from "~/components/ui/badge";
@@ -46,6 +46,12 @@ function formatSince(timestamp: string | number | Date) {
 export default function Servers() {
   const { data, isPending, isError, error, dataUpdatedAt } = useQuery(serversQueryOptions);
   const showEmptyState = !isPending && !isError;
+
+  const [, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const [region, setRegion] = useQueryState("region", parseAsString);
   const [gameMode, setGameMode] = useQueryState("mode", parseAsString);
@@ -185,7 +191,7 @@ export default function Servers() {
 
         {dataUpdatedAt > 0 && (
           <p className="text-center text-xs text-muted-foreground">
-            Last refreshed {day(dataUpdatedAt).fromNow()} · auto-refreshes every 30s
+            Last refreshed {formatSince(dataUpdatedAt)} · auto-refreshes every 30s
           </p>
         )}
       </section>
