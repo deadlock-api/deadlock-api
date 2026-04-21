@@ -63,19 +63,19 @@ pub(super) async fn status(
     if !is_safe_identifier(&request.server_id) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "server_id must be 1-64 alphanumeric characters, hyphens, or underscores",
+            "server_id must be 1-64 alphanumeric characters, hyphens, underscores, or spaces",
         ));
     }
     if !is_safe_identifier(&request.game_mode) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "game_mode must be 1-64 alphanumeric characters, hyphens, or underscores",
+            "game_mode must be 1-64 alphanumeric characters, hyphens, underscores, or spaces",
         ));
     }
     if !is_safe_identifier(&request.region) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "region must be 1-64 alphanumeric characters, hyphens, or underscores",
+            "region must be 1-64 alphanumeric characters, hyphens, underscores, or spaces",
         ));
     }
     if request.ip.parse::<IpAddr>().is_err() {
