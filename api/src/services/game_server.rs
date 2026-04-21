@@ -14,6 +14,8 @@ pub(crate) struct GameServerInfo {
     pub(crate) server_id: String,
     pub(crate) game_mode: String,
     pub(crate) region: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) hostname: Option<String>,
     pub(crate) ip: String,
     pub(crate) port: u16,
     pub(crate) current_player_count: u32,
@@ -26,6 +28,7 @@ impl GameServerInfo {
             server_id: fields.get("server_id")?.clone(),
             game_mode: fields.get("game_mode")?.clone(),
             region: fields.get("region")?.clone(),
+            hostname: fields.get("hostname").filter(|s| !s.is_empty()).cloned(),
             ip: fields.get("ip")?.clone(),
             port: fields.get("port")?.parse().ok()?,
             current_player_count: fields.get("current_player_count")?.parse().ok()?,
@@ -46,6 +49,7 @@ impl GameServerService {
 
     pub(crate) async fn register(&self, info: &GameServerInfo) -> RedisResult<()> {
         let key = format!("{GAME_SERVER_KEY_PREFIX}{}", info.server_id);
+        let hostname = info.hostname.clone().unwrap_or_default();
 
         redis::pipe()
             .hset_multiple(
@@ -54,6 +58,7 @@ impl GameServerService {
                     ("server_id", &info.server_id),
                     ("game_mode", &info.game_mode),
                     ("region", &info.region),
+                    ("hostname", &hostname),
                     ("ip", &info.ip),
                     ("port", &info.port.to_string()),
                     (

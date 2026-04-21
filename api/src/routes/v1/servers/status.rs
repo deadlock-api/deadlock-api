@@ -20,6 +20,9 @@ pub(super) struct ServerStatusRequest {
     game_mode: String,
     /// Region the server is located in (e.g. "eu", "na", "sa", "asia", "oceania")
     region: String,
+    /// Hostname of the game server
+    #[serde(default)]
+    hostname: Option<String>,
     /// IP address of the game server
     ip: String,
     /// Port the game server is listening on
@@ -78,6 +81,14 @@ pub(super) async fn status(
             "region must be 1-64 non-control characters",
         ));
     }
+    if let Some(ref h) = request.hostname {
+        if h.len() > 253 || h.chars().any(|c| c.is_control()) {
+            return Err(APIError::status_msg(
+                StatusCode::BAD_REQUEST,
+                "hostname must be at most 253 non-control characters",
+            ));
+        }
+    }
     if request.ip.parse::<IpAddr>().is_err() {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -95,6 +106,7 @@ pub(super) async fn status(
         server_id: request.server_id.clone(),
         game_mode: request.game_mode,
         region: request.region,
+        hostname: request.hostname.filter(|h| !h.is_empty()),
         ip: request.ip,
         port: request.port,
         current_player_count: request.current_player_count,

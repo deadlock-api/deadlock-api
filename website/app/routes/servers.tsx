@@ -93,7 +93,7 @@ export default function Servers() {
       .filter((s) => {
         if (region && s.region !== region) return false;
         if (gameMode && s.game_mode !== gameMode) return false;
-        if (q && !`${s.ip}:${s.port}`.toLowerCase().includes(q)) return false;
+        if (q && !`${s.hostname} ${s.ip}:${s.port}`.toLowerCase().includes(q)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -128,7 +128,7 @@ export default function Servers() {
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search IP"
+              placeholder="Search hostname / IP"
               value={search ?? ""}
               onChange={(e) => setSearch(e.target.value || null)}
               className="w-60 pl-8"
@@ -207,7 +207,12 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
       </TableCell>
       <TableCell>{prettyGameMode(server.game_mode)}</TableCell>
       <TableCell className="font-mono text-xs">
-        {server.ip}:{server.port}
+        {server.hostname || `${server.ip}:${server.port}`}
+        {server.hostname && (
+          <span className="ml-1 text-muted-foreground">
+            ({server.ip}:{server.port})
+          </span>
+        )}
       </TableCell>
       <TableCell className="text-right tabular-nums">{server.current_player_count}</TableCell>
       <TableCell
@@ -217,7 +222,7 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
       </TableCell>
       <TableCell className="text-right">
         <Button asChild size="sm" className="h-8 gap-1">
-          <a href={connectUrl(server)} title={`Connect to ${server.ip}:${server.port}`}>
+          <a href={connectUrl(server)} title={`Connect to ${server.hostname || `${server.ip}:${server.port}`}`}>
             <Plug className="size-3.5" />
             Connect
           </a>
