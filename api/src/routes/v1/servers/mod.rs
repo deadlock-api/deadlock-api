@@ -32,7 +32,11 @@ pub(super) fn is_safe_identifier(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 64
         && s.chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ' ')
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+pub(super) fn is_safe_label(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 64 && s.chars().all(|c| !c.is_control())
 }
 
 pub(super) fn require_game_server_secret(headers: &HeaderMap, expected: &str) -> APIResult<()> {

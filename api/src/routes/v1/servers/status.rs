@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::{is_safe_identifier, require_game_server_secret};
+use super::{is_safe_identifier, is_safe_label, require_game_server_secret};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::game_server::{GAME_SERVER_TTL_SECS, GameServerInfo, GameServerService};
@@ -63,19 +63,19 @@ pub(super) async fn status(
     if !is_safe_identifier(&request.server_id) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "server_id must be 1-64 alphanumeric characters, hyphens, underscores, or spaces",
+            "server_id must be 1-64 alphanumeric characters, hyphens, or underscores",
         ));
     }
-    if !is_safe_identifier(&request.game_mode) {
+    if !is_safe_label(&request.game_mode) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "game_mode must be 1-64 alphanumeric characters, hyphens, underscores, or spaces",
+            "game_mode must be 1-64 non-control characters",
         ));
     }
-    if !is_safe_identifier(&request.region) {
+    if !is_safe_label(&request.region) {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "region must be 1-64 alphanumeric characters, hyphens, underscores, or spaces",
+            "region must be 1-64 non-control characters",
         ));
     }
     if request.ip.parse::<IpAddr>().is_err() {
