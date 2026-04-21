@@ -167,6 +167,7 @@ export default function Servers() {
                 <TableRow>
                   <TableHead>Region</TableHead>
                   <TableHead>Game Mode</TableHead>
+                  <TableHead>Server Name</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead className="text-right">Players</TableHead>
                   <TableHead className="text-right">Updated</TableHead>
@@ -176,11 +177,11 @@ export default function Servers() {
               <TableBody>
                 {isPending ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10" />
+                    <TableCell colSpan={7} className="py-10" />
                   </TableRow>
                 ) : showEmptyState && filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                       No servers match your filters.
                     </TableCell>
                   </TableRow>
@@ -207,17 +208,15 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
   return (
     <TableRow>
       <TableCell>
-        <Badge variant="outline" className="font-mono text-xs uppercase">
+        <Badge variant="outline" className="border-primary/30 bg-primary/10 font-mono text-xs text-primary uppercase">
           {server.region}
         </Badge>
       </TableCell>
       <TableCell>{prettyGameMode(server.game_mode)}</TableCell>
-      <TableCell className="font-mono text-xs">
-        {server.hostname || formatAddress(server.ip, server.port)}
-        {server.hostname && (
-          <span className="ml-1 text-muted-foreground">({formatAddress(server.ip, server.port)})</span>
-        )}
+      <TableCell className="whitespace-normal">
+        {server.hostname && <div className="line-clamp-3 w-80 text-sm leading-snug">{server.hostname}</div>}
       </TableCell>
+      <TableCell className="font-mono text-xs">{formatAddress(server.ip, server.port)}</TableCell>
       <TableCell className="text-right tabular-nums">{server.current_player_count}</TableCell>
       <TableCell
         className={cn("text-right text-xs tabular-nums", isStale ? "text-amber-400" : "text-muted-foreground")}
