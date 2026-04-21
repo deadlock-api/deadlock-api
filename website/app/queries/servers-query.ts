@@ -13,3 +13,13 @@ export const serversQueryOptions = queryOptions({
   staleTime: 30_000,
   refetchInterval: 30_000,
 });
+
+export const steamServersQueryOptions = queryOptions({
+  queryKey: queryKeys.servers.steamList(),
+  queryFn: async () => {
+    const response = await api.servers_api.steamList();
+    return response.data;
+  },
+  staleTime: 30_000,
+  refetchInterval: 30_000,
+});

@@ -43,6 +43,7 @@ export const queryKeys = {
   },
   servers: {
     list: () => ["api-servers-list"] as const,
+    steamList: () => ["api-servers-steam-list"] as const,
   },
   steam: {
     profiles: (batch: number[]) => ["steam-profiles", batch] as const,

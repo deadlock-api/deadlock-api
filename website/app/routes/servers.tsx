@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import type { GameServerInfo } from "deadlock_api_client";
-import { Plug, Search, Server, Users } from "lucide-react";
+import type { GameServerInfo, SteamServer } from "deadlock_api_client";
+import { ChevronDown, ChevronUp, Plug, Search, Server, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { parseAsString, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 
 import { StringSelector } from "~/components/selectors/StringSelector";
@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 import { day } from "~/dayjs";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
-import { serversQueryOptions } from "~/queries/servers-query";
+import { serversQueryOptions, steamServersQueryOptions } from "~/queries/servers-query";
 
 export function meta() {
   return createPageMeta({
@@ -26,12 +26,33 @@ export function meta() {
 
 const DEFAULT_PORT = 27015;
 
+const STEAM_REGION_LABELS: Record<number, string> = {
+  [-1]: "World",
+  0: "US-East",
+  1: "US-West",
+  2: "S. America",
+  3: "Europe",
+  4: "Asia",
+  5: "Australia",
+  6: "Middle East",
+  7: "Africa",
+  255: "World",
+};
+
+function steamRegionLabel(code: number) {
+  return STEAM_REGION_LABELS[code] ?? `R${code}`;
+}
+
 function connectUrl(server: GameServerInfo) {
   return `steam://connect/${server.ip}:${server.port}`;
 }
 
 function formatAddress(ip: string, port: number) {
   return port === DEFAULT_PORT ? ip : `${ip}:${port}`;
+}
+
+function formatSteamAddress(addr: string) {
+  return addr.endsWith(`:${DEFAULT_PORT}`) ? addr.slice(0, -`:${DEFAULT_PORT}`.length) : addr;
 }
 
 function prettyGameMode(mode: string) {
@@ -64,6 +85,14 @@ export default function Servers() {
   const [region, setRegion] = useQueryState("region", parseAsString);
   const [gameMode, setGameMode] = useQueryState("mode", parseAsString);
   const [search, setSearch] = useQueryState("q", parseAsString);
+  const [showAll, setShowAll] = useQueryState("all", parseAsBoolean.withDefault(false));
+
+  const {
+    data: steamData,
+    isPending: isSteamPending,
+    isError: isSteamError,
+    error: steamError,
+  } = useQuery({ ...steamServersQueryOptions, enabled: showAll });
 
   const deduped = useMemo(() => {
     const byAddress = new Map<string, GameServerInfo>();
@@ -110,6 +139,24 @@ export default function Servers() {
 
   const regionOptions = useMemo(() => regions.map((r) => ({ value: r, label: r.toUpperCase() })), [regions]);
   const gameModeOptions = useMemo(() => gameModes.map((m) => ({ value: m, label: prettyGameMode(m) })), [gameModes]);
+
+  const registeredAddrs = useMemo(() => new Set(deduped.map((s) => `${s.ip}:${s.port}`)), [deduped]);
+
+  const steamOnly = useMemo(() => {
+    const q = search?.trim().toLowerCase() ?? "";
+    return (steamData ?? [])
+      .filter((s) => !registeredAddrs.has(s.addr))
+      .filter((s) => {
+        if (q && !`${s.name} ${s.addr} ${s.map}`.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.region !== b.region) return a.region - b.region;
+        return b.players - a.players;
+      });
+  }, [steamData, registeredAddrs, search]);
+
+  const steamTotalPlayers = useMemo(() => steamOnly.reduce((sum, s) => sum + s.players, 0), [steamOnly]);
 
   return (
     <div className="space-y-6">
@@ -198,6 +245,61 @@ export default function Servers() {
             Last refreshed {formatSince(dataUpdatedAt, now)} · auto-refreshes every 30s
           </p>
         )}
+
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={() => setShowAll(showAll ? null : true)} className="gap-1.5">
+            {showAll ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            {showAll ? "Hide all Steam servers" : "Show all Steam servers"}
+          </Button>
+        </div>
+
+        {showAll && (
+          <div className="space-y-2">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold tracking-tight">All Steam Game Servers</h2>
+              <p className="mx-auto mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                Every Deadlock server registered with the Steam master server, excluding the ones already listed above.
+                {steamOnly.length > 0 && ` ${steamOnly.length} servers · ${steamTotalPlayers} players online.`}
+              </p>
+            </div>
+
+            {isSteamError ? (
+              <div className="py-8 text-center text-sm text-destructive">
+                Failed to load Steam servers: {steamError?.message}
+              </div>
+            ) : (
+              <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Region</TableHead>
+                      <TableHead>Server Name</TableHead>
+                      <TableHead>Map</TableHead>
+                      <TableHead>Address</TableHead>
+                      <TableHead className="text-right">Players</TableHead>
+                      <TableHead className="w-28 text-right">Connect</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isSteamPending ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-10" />
+                      </TableRow>
+                    ) : steamOnly.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                          No additional Steam servers found.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      steamOnly.map((s) => <SteamServerRow key={`${s.steamid}-${s.addr}`} server={s} />)
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );
@@ -226,6 +328,35 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
       <TableCell className="text-right">
         <Button asChild size="sm" className="h-8 gap-1">
           <a href={connectUrl(server)} title={`Connect to ${server.hostname || formatAddress(server.ip, server.port)}`}>
+            <Plug className="size-3.5" />
+            Connect
+          </a>
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function SteamServerRow({ server }: { server: SteamServer }) {
+  return (
+    <TableRow>
+      <TableCell>
+        <Badge variant="outline" className="border-primary/30 bg-primary/10 font-mono text-xs text-primary uppercase">
+          {steamRegionLabel(server.region)}
+        </Badge>
+      </TableCell>
+      <TableCell className="whitespace-normal">
+        {server.name && <div className="line-clamp-3 w-80 text-sm leading-snug">{server.name}</div>}
+      </TableCell>
+      <TableCell className="text-xs text-muted-foreground">{server.map || "—"}</TableCell>
+      <TableCell className="font-mono text-xs">{formatSteamAddress(server.addr)}</TableCell>
+      <TableCell className="text-right tabular-nums">
+        {server.players}
+        {server.max_players > 0 && <span className="text-muted-foreground">/{server.max_players}</span>}
+      </TableCell>
+      <TableCell className="text-right">
+        <Button asChild size="sm" className="h-8 gap-1">
+          <a href={`steam://connect/${server.addr}`} title={`Connect to ${server.name || server.addr}`}>
             <Plug className="size-3.5" />
             Connect
           </a>
