@@ -24,8 +24,14 @@ export function meta() {
   });
 }
 
+const DEFAULT_PORT = 27015;
+
 function connectUrl(server: GameServerInfo) {
   return `steam://connect/${server.ip}:${server.port}`;
+}
+
+function formatAddress(ip: string, port: number) {
+  return port === DEFAULT_PORT ? ip : `${ip}:${port}`;
 }
 
 function prettyGameMode(mode: string) {
@@ -207,11 +213,9 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
       </TableCell>
       <TableCell>{prettyGameMode(server.game_mode)}</TableCell>
       <TableCell className="font-mono text-xs">
-        {server.hostname || `${server.ip}:${server.port}`}
+        {server.hostname || formatAddress(server.ip, server.port)}
         {server.hostname && (
-          <span className="ml-1 text-muted-foreground">
-            ({server.ip}:{server.port})
-          </span>
+          <span className="ml-1 text-muted-foreground">({formatAddress(server.ip, server.port)})</span>
         )}
       </TableCell>
       <TableCell className="text-right tabular-nums">{server.current_player_count}</TableCell>
@@ -222,7 +226,7 @@ function ServerRow({ server, now }: { server: GameServerInfo; now: number }) {
       </TableCell>
       <TableCell className="text-right">
         <Button asChild size="sm" className="h-8 gap-1">
-          <a href={connectUrl(server)} title={`Connect to ${server.hostname || `${server.ip}:${server.port}`}`}>
+          <a href={connectUrl(server)} title={`Connect to ${server.hostname || formatAddress(server.ip, server.port)}`}>
             <Plug className="size-3.5" />
             Connect
           </a>
