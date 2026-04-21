@@ -20,6 +20,9 @@ export const steamServersQueryOptions = queryOptions({
     const response = await api.servers_api.steamList();
     return response.data;
   },
-  staleTime: 30_000,
-  refetchInterval: 30_000,
+  staleTime: Infinity,
+  gcTime: Infinity,
+  refetchOnMount: false,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
 });
