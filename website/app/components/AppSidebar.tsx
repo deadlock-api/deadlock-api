@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -24,7 +24,7 @@ import {
   Zap,
 } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { Button } from "~/components/ui/button";
@@ -32,6 +32,7 @@ import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { prefetchRouteQueries } from "~/lib/prefetch";
 import { cn } from "~/lib/utils";
+import { serversQueryOptions } from "~/queries/servers-query";
 
 interface NavLink {
   to: string;
@@ -159,6 +160,26 @@ function isActive(pathname: string, to: string) {
   return pathname.startsWith(to);
 }
 
+function ServerCountBadge() {
+  const { data } = useQuery(serversQueryOptions);
+  const count = useMemo(() => {
+    if (!data) return null;
+    const seen = new Set<string>();
+    for (const s of data) seen.add(`${s.ip}:${s.port}`);
+    return seen.size;
+  }, [data]);
+  if (count == null || count === 0) return null;
+  return (
+    <span
+      className="ml-auto inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300 tabular-nums"
+      title={`${count} live server${count === 1 ? "" : "s"}`}
+    >
+      <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
+      {count}
+    </span>
+  );
+}
+
 function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void }) {
   const { pathname } = useLocation();
   const active = isActive(pathname, link.to);
@@ -200,7 +221,8 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
       )}
     >
       <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-sidebar-foreground/40")} />
-      {link.label}
+      <span className="truncate">{link.label}</span>
+      {link.to === "/servers" && <ServerCountBadge />}
     </Link>
   );
 }

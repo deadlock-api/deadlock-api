@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { GameServerInfo } from "deadlock_api_client";
-import { AlertTriangle, Plug, Search, Server, Users } from "lucide-react";
+import { Plug, Search, Server, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -14,8 +14,6 @@ import { day } from "~/dayjs";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
 import { serversQueryOptions } from "~/queries/servers-query";
-
-const DISCORD_URL = "https://discord.gg/pqWQfTPQJu";
 
 export function meta() {
   return createPageMeta({
@@ -116,23 +114,6 @@ export default function Servers() {
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Browse currently active Deadlock game servers from the community server network. Filter by region and game
             mode, then hit Connect to deeplink straight into the server through Steam.
-          </p>
-        </div>
-
-        <div className="mx-auto flex max-w-3xl items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" />
-          <p className="text-amber-100/90">
-            <span className="font-semibold text-amber-200">Super early stage.</span> Open community game servers for
-            Deadlock are just getting off the ground. If you want to help build this out, come say hi on{" "}
-            <a
-              href={DISCORD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-amber-200 underline underline-offset-2 hover:text-amber-100"
-            >
-              our Discord
-            </a>
-            .
           </p>
         </div>
 
