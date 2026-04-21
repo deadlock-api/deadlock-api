@@ -12,7 +12,7 @@ import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { createPageMeta } from "~/lib/meta";
-import { cn, snakeToPretty } from "~/lib/utils";
+import { cn } from "~/lib/utils";
 import { serversQueryOptions } from "~/queries/servers-query";
 
 const DISCORD_URL = "https://discord.gg/pqWQfTPQJu";
@@ -31,7 +31,11 @@ function connectUrl(server: GameServerInfo) {
 }
 
 function prettyGameMode(mode: string) {
-  return snakeToPretty(mode.replace(/-/g, "_"));
+  return mode
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
 }
 
 function formatSince(timestamp: string | number | Date, now: number) {
