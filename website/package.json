@@ -15,7 +15,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/new-rocker": "^5.2.7",
-    "@iconify-json/material-symbols": "^1.2.67",
+    "@iconify-json/material-symbols": "^1.2.68",
     "@iconify-json/mdi": "^1.2.3",
     "@iconify/tailwind4": "^1.2.3",
     "@posthog/react": "^1.9.0",
@@ -40,7 +40,7 @@
     "lucide-react": "^1.8.0",
     "next-themes": "^0.4.6",
     "nuqs": "^2.8.9",
-    "posthog-js": "^1.369.5",
+    "posthog-js": "^1.370.1",
     "radix-ui": "^1.4.3",
     "react": "^19.2.5",
     "react-day-picker": "9.14.0",
