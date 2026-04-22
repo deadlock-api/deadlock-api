@@ -146,4 +146,104 @@ mod tests {
             assert_eq!(badge_to_idx(badge), idx);
         }
     }
+
+    /// Feature vector shaped like a mid-tier (Archon, idx ~44, badge 82) player.
+    /// Values correspond to the 17 features built in `aggregate_features`:
+    /// 0..=6 badge-index stats, 7..=8 enemy NW/damage, 9..=10 hero history,
+    /// 11 hist kills/min, 12 hero diversity, 13..=14 kills/min, 15..=16 CS.
+    fn sample_features() -> [f64; 17] {
+        [
+            44.0, 44.0, 44.0, 44.0, 44.0, 44.0, 1.5, 50_000.0, 30_000.0, 44.0, 46.0, 0.3, 5.0, 0.3,
+            0.3, 0.55, 24.0,
+        ]
+    }
+
+    #[tokio::test]
+    async fn test_model_loads_and_predicts_valid_badge() {
+        let predictor = RankPredictor::load()
+            .await
+            .expect("rank prediction model should load from model/xgb.onnx.zst");
+
+        let prediction = predictor
+            .predict(sample_features())
+            .expect("inference should succeed on a well-formed feature vector");
+
+        // Badge must fall inside the 66-slot badge space (11..=116) produced by
+        // `idx_to_badge`, and sub-rank digits only ever run 1..=6.
+        assert!(
+            (11..=116).contains(&prediction.badge),
+            "badge {} outside valid rank range",
+            prediction.badge
+        );
+        let tier = prediction.badge / 10;
+        let sub_rank = prediction.badge % 10;
+        assert!((1..=11).contains(&tier), "invalid tier {tier}");
+        assert!((1..=6).contains(&sub_rank), "invalid sub-rank {sub_rank}");
+
+        // Raw score is a 1-based index into the 66 badge slots. Allow a small
+        // out-of-range slack for regression extrapolation.
+        assert!(
+            prediction.raw_score.is_finite(),
+            "raw_score must be finite, got {}",
+            prediction.raw_score
+        );
+        assert!(
+            (0.0..=70.0).contains(&prediction.raw_score),
+            "raw_score {} outside plausible index range",
+            prediction.raw_score
+        );
+    }
+
+    #[tokio::test]
+    async fn test_model_is_deterministic() {
+        let predictor = RankPredictor::load()
+            .await
+            .expect("rank prediction model should load");
+
+        let features = sample_features();
+        let first = predictor.predict(features).expect("first inference");
+        let second = predictor.predict(features).expect("second inference");
+
+        assert_eq!(first.badge, second.badge);
+        assert!(
+            (first.raw_score - second.raw_score).abs() < f32::EPSILON,
+            "raw_score drifted between identical inferences: {} vs {}",
+            first.raw_score,
+            second.raw_score
+        );
+    }
+
+    #[tokio::test]
+    async fn test_model_is_monotonic_in_own_badge() {
+        // Holding all other signals fixed, bumping the player's own badge
+        // indices should not *decrease* the predicted rank. This is a soft
+        // sanity check that the model responds to its strongest feature.
+        let predictor = RankPredictor::load()
+            .await
+            .expect("rank prediction model should load");
+
+        let mut low = sample_features();
+        let mut high = sample_features();
+        // Features 0..=5 are all own/enemy badge-index summaries; move the
+        // own-team ones (0, 2, 4) up and leave enemy-team ones alone.
+        for i in [0usize, 2, 4] {
+            low[i] = 20.0; // Seeker-ish
+            high[i] = 60.0; // Ascendant-ish
+        }
+        // Shift hero-history features too — they correlate with own badge.
+        low[9] = 20.0;
+        low[10] = 22.0;
+        high[9] = 60.0;
+        high[10] = 62.0;
+
+        let low_pred = predictor.predict(low).expect("low-badge inference");
+        let high_pred = predictor.predict(high).expect("high-badge inference");
+
+        assert!(
+            high_pred.raw_score >= low_pred.raw_score,
+            "expected higher own-badge features to predict >= raw_score, got low={} high={}",
+            low_pred.raw_score,
+            high_pred.raw_score
+        );
+    }
 }
