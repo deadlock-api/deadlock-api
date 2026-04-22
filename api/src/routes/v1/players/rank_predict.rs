@@ -321,22 +321,22 @@ Requires at least 30 eligible matches (Ranked or Unranked, Normal game mode) wit
 
 | Metric | Value |
 |--------|-------|
-| R²     | 0.925 |
-| MAE    | 1.19 sub-ranks |
-| RMSE   | 2.06 sub-ranks |
-| Within ±1 sub-rank | 74.3% |
-| Within ±3 sub-rank | 93.2% |
-| Within ±5 sub-rank | 97.4% |
-| Within ±6 sub-rank | 98.3% |
-| Within ±10 sub-rank | 99.4% |
+| R²     | 0.912 |
+| MAE    | 1.32 sub-ranks |
+| RMSE   | 2.24 sub-ranks |
+| Within ±1 sub-rank | 71.7% |
+| Within ±3 sub-rank | 92.0% |
+| Within ±5 sub-rank | 96.8% |
+| Within ±6 sub-rank | 97.8% |
+| Within ±10 sub-rank | 99.3% |
 
 Accuracy by tier:
 
 | Tier range | n | MAE |
 |------------|---|-----|
-| Low (1-4)  | 760 | 5.24 sub-ranks |
-| Mid (5-7)  | 2065 | 3.02 sub-ranks |
-| High (8-11)| 72340 | 1.09 sub-ranks |
+| Low (1-4)  | 755 | 5.55 sub-ranks |
+| Mid (5-7)  | 2030 | 3.56 sub-ranks |
+| High (8-11)| 70620 | 1.21 sub-ranks |
 
 ### Rate Limits:
 | Type | Limit |
