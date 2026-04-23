@@ -137,6 +137,12 @@ pub(crate) struct MatchHistoryQuery {
     #[serde(default)]
     #[param(default)]
     force_refetch: bool,
+    /// Return only the already stored match history from `ClickHouse`.
+    /// There is no rate limit for this option, so if you need a lot of data, you can use this option.
+    /// This option is not compatible with `force_refetch`.
+    #[serde(default)]
+    #[param(default)]
+    only_stored_history: bool,
 }
 
 pub(crate) async fn fetch_match_history_from_clickhouse(
@@ -302,8 +308,7 @@ pub(crate) async fn fetch_steam_match_history(
     description = "
 This endpoint returns the player match history for the given `account_id`.
 
-If the account is friends with one of our bots, the match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.
-If the account is not friends with a bot, only the stored match history from **ClickHouse** is returned.
+The player match history is a combination of the data from **Steam** and **ClickHouse**, so you always get the most up-to-date data and full history.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
@@ -311,12 +316,12 @@ Relevant Protobuf Messages:
 - CMsgClientToGcGetMatchHistory
 - CMsgClientToGcGetMatchHistoryResponse
 
-### Rate Limits (only applies to bot friends):
+### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 3req/h<br>With `force_refetch=true`: 1req/h |
-| Key | 300req/h<br>With `force_refetch=true`: 5req/h |
-| Global | 1500req/h<br>With `force_refetch=true`: 10req/h |
+| IP | 3req/h<br>With `only_stored_history=true`: 100req/s<br>With `force_refetch=true`: 1req/h |
+| Key | 300req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 5req/h |
+| Global | 1500req/h<br>With `only_stored_history=true`: -<br>With `force_refetch=true`: 10req/h |
     "
 )]
 pub(super) async fn match_history(
@@ -333,13 +338,17 @@ pub(super) async fn match_history(
         return Err(APIError::protected_user());
     }
 
+    if query.force_refetch && query.only_stored_history {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "Cannot use both force_refetch and only_stored_history at the same time".to_owned(),
+        ));
+    }
+
     let ch_match_history = state.match_history_read_batcher.load(account_id).await?;
 
-    // Look up bot friend username for this account
-    let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
-
-    // If the account is not friends with a bot, return only stored history from ClickHouse
-    if bot_username.is_none() {
+    // If only stored history is requested, we can just return the data from ClickHouse
+    if query.only_stored_history {
         let mut headers = HeaderMap::new();
         headers.insert("Called-Steam", "false".parse().unwrap());
         return Ok((StatusCode::OK, headers, Json(ch_match_history)));
@@ -387,6 +396,9 @@ pub(super) async fn match_history(
             Json(ch_match_history),
         ));
     }
+
+    // Look up bot friend username for this account
+    let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
 
     // Fetch player match history from Steam and ClickHouse
     let steam_match_history = match fetch_steam_match_history(
