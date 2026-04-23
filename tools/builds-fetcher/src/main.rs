@@ -203,7 +203,6 @@ async fn fetch_builds(
             Duration::from_mins(20),
             None,
             Duration::from_secs(5),
-            None,
         )
         .await;
 
