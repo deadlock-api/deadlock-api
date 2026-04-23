@@ -27,5 +27,5 @@ tokio = { version = "1.52.1", features = ["rt-multi-thread", "macros"] }
 tokio-util = "0.7.18"
 tracing = "0.1.44"
 tryhard = "0.5.2"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "2239ea7df0984240c292c691967eccca69556c5b" }
-haste = { git = "https://github.com/deadlock-api/haste.git", rev = "0828e48e92ebf90f6efb630e0d94a9ac0d525924" }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "63a9001f9bd1bb9095cc5c503ec3db80085f6bae" }
+haste = { git = "https://github.com/deadlock-api/haste.git", rev = "b1d693dafc3f6290b4b1c0984cf98503a6643507" }

@@ -32,7 +32,7 @@ axum-prometheus = "0.10.0"
 itertools = "0.14.0"
 futures = "0.3.32"
 snap = "1.1.1"
-valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "2239ea7df0984240c292c691967eccca69556c5b", features = ["gc-client", "serde"] }
+valveprotos = { git = "https://github.com/deadlock-api/valveprotos-rs.git", rev = "63a9001f9bd1bb9095cc5c503ec3db80085f6bae", features = ["gc-client", "serde"] }
 prost = "0.14.3"
 base64 = "0.22.1"
 tryhard = "0.5.2"
