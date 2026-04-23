@@ -98,6 +98,7 @@ export default function Servers() {
   const deduped = useMemo(() => {
     const byAddress = new Map<string, GameServerInfo>();
     for (const s of data ?? []) {
+      if (s.hostname === "Deadlock") continue;
       const key = `${s.ip}:${s.port}`;
       const existing = byAddress.get(key);
       if (!existing || day(s.last_updated).isAfter(day(existing.last_updated))) {
@@ -146,6 +147,7 @@ export default function Servers() {
   const steamOnly = useMemo(() => {
     const q = search?.trim().toLowerCase() ?? "";
     return (steamData ?? [])
+      .filter((s) => s.name !== "Deadlock")
       .filter((s) => !registeredAddrs.has(s.addr))
       .filter((s) => {
         if (q && !`${s.name} ${s.addr} ${s.map}`.toLowerCase().includes(q)) return false;
