@@ -390,22 +390,33 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     } else {
         format!(" WHERE {} ", info_filters.join(" AND "))
     };
-    let order_by_expr = match query.order_by {
+    // Inner CTE has no GROUP BY — reference raw columns.
+    let inner_order_expr = match query.order_by {
         SortKey::AverageBadge => {
             "(coalesce(average_badge_team0, 0) + coalesce(average_badge_team1, 0)) / 2".to_owned()
         }
         other => other.to_string(),
     };
-    let order = format!(" ORDER BY {} {} ", order_by_expr, query.order_direction);
-    // For the outer query, match_id needs table qualification to avoid ambiguity
-    let outer_order = if matches!(query.order_by, SortKey::MatchId) {
-        if has_player_fields {
-            format!(" ORDER BY match_player.match_id {} ", query.order_direction)
-        } else {
-            format!(" ORDER BY match_info.match_id {} ", query.order_direction)
+    let order = format!(" ORDER BY {} {} ", inner_order_expr, query.order_direction);
+    // Outer query has GROUP BY match_id, so non-group columns must be aggregated.
+    // Wrapping in any() avoids relying on a SELECT alias that may not exist when
+    // include_info is false.
+    let outer_order = match query.order_by {
+        SortKey::MatchId => {
+            let match_id_col = if has_player_fields {
+                "match_player.match_id"
+            } else {
+                "match_info.match_id"
+            };
+            format!(" ORDER BY {match_id_col} {} ", query.order_direction)
         }
-    } else {
-        order.clone()
+        SortKey::StartTime => {
+            format!(" ORDER BY any(start_time) {} ", query.order_direction)
+        }
+        SortKey::AverageBadge => format!(
+            " ORDER BY (coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2 {} ",
+            query.order_direction
+        ),
     };
     let limit = format!(" LIMIT {} ", query.limit);
 
