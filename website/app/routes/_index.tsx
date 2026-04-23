@@ -195,11 +195,6 @@ const sponsors = [
     title: "Statlocker.GG",
     logo: "/logo/statlocker.png",
   },
-  {
-    href: "https://www.youtube.com/@mattiadl",
-    title: "Mattia DL",
-    logo: "/logo/mattia.png",
-  },
   { href: "https://blast.tv/", title: "Blast.TV", logo: "/logo/blast.svg" },
 ];
 
