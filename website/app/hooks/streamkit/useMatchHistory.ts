@@ -39,11 +39,6 @@ export const useMatchHistory = ({ accountId, numMatches = 10 }: UseMatchHistoryP
     queryKey: queryKeys.streamkit.matchHistory(accountId),
     queryFn: async () => {
       const res = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history`);
-      if (res.status === 429) {
-        const fallback = await fetch(`${API_ORIGIN}/v1/players/${accountId}/match-history?only_stored_history=true`);
-        if (!fallback.ok) throw new Error(`Failed to fetch match history fallback: ${fallback.status}`);
-        return await fallback.json();
-      }
       if (!res.ok) throw new Error(`Failed to fetch match history: ${res.status}`);
       return await res.json();
     },
