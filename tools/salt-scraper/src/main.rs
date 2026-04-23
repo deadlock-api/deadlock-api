@@ -356,6 +356,7 @@ async fn fetch_salts(
         job_cooldown,
         soft_cooldown,
         Duration::from_secs(5),
+        None,
     )
     .await
 }
