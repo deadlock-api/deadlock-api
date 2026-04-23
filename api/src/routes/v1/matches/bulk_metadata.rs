@@ -201,7 +201,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     }
     if query.include_more_info {
         select_fields.extend(vec![
-            "any(rewards_eligible) as rewards_eligible".to_owned(),
+            "any(match_info.rewards_eligible) as rewards_eligible".to_owned(),
             "any(is_high_skill_range_parties) as is_high_skill_range_parties".to_owned(),
             "any(low_pri_pool) as low_pri_pool".to_owned(),
             "any(new_player_pool) as new_player_pool".to_owned(),
