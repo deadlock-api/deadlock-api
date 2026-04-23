@@ -245,6 +245,7 @@ async fn process_demo(
     // That's fine — we only care about the parse result.
     match copy_handle.await? {
         Ok(_) => {}
+        #[allow(clippy::std_instead_of_core)]
         Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
             debug!(match_id, "Copy task ended (parser stopped early)");
         }

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 async-compression = { workspace = true, features = ["tokio", "bzip2", "zstd"] }
-axum = "0.8.8"
+axum = "0.8.9"
 base64 = { workspace = true }
 cached = { workspace = true, features = ["async", "async_tokio_rt_multi_thread"] }
 clap = { workspace = true, features = ["env"] }
@@ -16,7 +16,7 @@ fred = { workspace = true }
 haste = { workspace = true }
 itertools = { workspace = true }
 jiff = { version = "0.2.23", features = ["serde"] }
-lru = "0.16.4"
+lru = "0.17.0"
 metrics = { workspace = true }
 object_store = { workspace = true }
 prost = { workspace = true }
