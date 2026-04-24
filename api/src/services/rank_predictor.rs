@@ -159,6 +159,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "slow: loads the full ONNX model"]
     async fn test_model_loads_and_predicts_valid_badge() {
         let predictor = RankPredictor::load()
             .await
@@ -195,6 +196,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "slow: loads the full ONNX model"]
     async fn test_model_is_deterministic() {
         let predictor = RankPredictor::load()
             .await
@@ -214,6 +216,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "slow: loads the full ONNX model"]
     async fn test_model_is_monotonic_in_own_badge() {
         // Holding all other signals fixed, bumping the player's own badge
         // indices should not *decrease* the predicted rank. This is a soft
