@@ -13,7 +13,9 @@ use thiserror::Error;
 use tracing::{debug, warn};
 
 use crate::context::config::Config;
-use crate::routes::v1::matches::salts::{MatchSaltsInsertBatcher, MatchSaltsReadBatcher};
+use crate::routes::v1::matches::salts::{
+    MatchSaltsExistsBatcher, MatchSaltsInsertBatcher, MatchSaltsReadBatcher,
+};
 use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
 };
@@ -66,6 +68,7 @@ pub(crate) struct AppState {
     pub(crate) match_history_read_batcher: MatchHistoryReadBatcher,
     pub(crate) match_history_insert_batcher: Arc<MatchHistoryInsertBatcher>,
     pub(crate) match_salts_read_batcher: MatchSaltsReadBatcher,
+    pub(crate) match_salts_exists_batcher: MatchSaltsExistsBatcher,
     pub(crate) match_salts_insert_batcher: Arc<MatchSaltsInsertBatcher>,
     pub(crate) game_server_metrics_batcher: Arc<GameServerMetricsInsertBatcher>,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
@@ -287,6 +290,7 @@ impl AppState {
         // Create Match Salts Batchers
         debug!("Creating Match Salts Batchers");
         let match_salts_read_batcher = MatchSaltsReadBatcher::new(ch_client_ro.clone());
+        let match_salts_exists_batcher = MatchSaltsExistsBatcher::new(ch_client_ro.clone());
         let match_salts_insert_batcher = Arc::new(MatchSaltsInsertBatcher::new(ch_client.clone()));
 
         // Create Game Server Metrics Insert Batcher
@@ -311,6 +315,7 @@ impl AppState {
             match_history_read_batcher,
             match_history_insert_batcher,
             match_salts_read_batcher,
+            match_salts_exists_batcher,
             match_salts_insert_batcher,
             game_server_metrics_batcher,
             rank_predictor,

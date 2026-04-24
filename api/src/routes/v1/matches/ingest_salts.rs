@@ -1,112 +1,20 @@
-use core::ops::Not;
 use core::time::Duration;
-use std::sync::Arc;
+use std::collections::HashMap;
 
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
-use clickhouse::Row;
-use futures::StreamExt;
-use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::Mutex;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::steam::client::SteamClient;
 
 const MAX_SALTS_PER_REQUEST: usize = 1000;
-
-pub(super) async fn insert_salts_to_clickhouse(
-    ch_client: &clickhouse::Client,
-    salts: Vec<impl Into<ClickhouseSalts>>,
-) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client.insert::<ClickhouseSalts>("match_salts").await?;
-    for salt in salts {
-        let salt = salt.into();
-        inserter.write(&salt).await?;
-        HAS_SALTS_IN_CLICKHOUSE.lock().await.insert(
-            (
-                salt.match_id,
-                salt.metadata_salt.is_some(),
-                salt.replay_salt.is_some(),
-            ),
-            Arc::new(Mutex::new(TimedCache::with_lifespan(Duration::from_hours(
-                1,
-            )))),
-        );
-    }
-    inserter.end().await
-}
-
-#[cached(
-    ty = "TimedCache<(u64, bool, bool), bool>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
-    convert = "{ (match_id, metadata, replay) }",
-    sync_writes = "by_key",
-    key = "(u64, bool, bool)"
-)]
-pub(super) async fn has_salts_in_clickhouse(
-    ch_client: &clickhouse::Client,
-    match_id: u64,
-    metadata: bool,
-    replay: bool,
-) -> bool {
-    #[derive(Deserialize, Row)]
-    struct HasSalts {
-        has_metadata: Option<u8>,
-        has_replay: Option<u8>,
-    }
-    ch_client
-        .query(
-            "SELECT metadata_salt > 0 AS has_metadata, replay_salt > 0 AS has_replay FROM match_salts FINAL WHERE match_id = ?",
-        )
-        .bind(match_id)
-        .fetch_one::<HasSalts>()
-        .await
-        .is_ok_and(|s| {
-            (s.has_metadata.unwrap_or_default() == 1 && metadata) ||
-                (s.has_replay.unwrap_or_default() == 1 && replay)
-        })
-}
-
-#[cached(
-    ty = "TimedCache<String, Option<ClickhouseSalts>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
-    convert = r#"{ format!("{salt:?}") }"#,
-    sync_writes = "by_key",
-    key = "String"
-)]
-async fn validate_salt(
-    steam_client: &SteamClient,
-    mut salt: ClickhouseSalts,
-) -> Option<ClickhouseSalts> {
-    if salt.match_id > 100000000 {
-        warn!("Match id too high, skipping");
-        return None;
-    }
-
-    if salt.metadata_salt.is_some() && steam_client.metadata_file_exists(&salt).await.is_err() {
-        warn!("Invalid metadata salt for match_id {}", salt.match_id);
-        salt.metadata_salt = None;
-    }
-    if salt.replay_salt.is_some() && steam_client.replay_file_exists(&salt).await.is_err() {
-        warn!("Invalid replay salt for match_id {}", salt.match_id);
-        salt.replay_salt = None;
-    }
-    if salt.metadata_salt.is_some() || salt.replay_salt.is_some() {
-        Some(salt)
-    } else {
-        None
-    }
-}
 
 #[utoipa::path(
     post,
@@ -172,34 +80,44 @@ pub(super) async fn ingest_salts(
         ));
     }
 
-    let match_salts = futures::stream::iter(match_salts)
-        .map(|salt| {
-            let ch_client = &state.ch_client;
-            async move {
-                has_salts_in_clickhouse(
-                    ch_client,
-                    salt.match_id,
-                    salt.metadata_salt.is_some(),
-                    salt.replay_salt.is_some(),
-                )
-                .await
-                .not()
-                .then_some(salt)
-            }
+    let match_ids: Vec<u64> = match_salts.iter().map(|s| s.match_id).collect();
+    let existing: HashMap<u64, (bool, bool)> = state
+        .match_salts_exists_batcher
+        .load_many(&match_ids)
+        .await?
+        .into_iter()
+        .map(|r| {
+            (
+                r.match_id,
+                (
+                    r.has_metadata.unwrap_or(0) == 1,
+                    r.has_replay.unwrap_or(0) == 1,
+                ),
+            )
         })
-        .buffer_unordered(10)
-        .filter_map(|s| async move { s })
-        .collect::<Vec<_>>()
-        .await;
+        .collect();
 
-    if match_salts.is_empty() {
+    let new_salts: Vec<ClickhouseSalts> = match_salts
+        .into_iter()
+        .filter(|salt| {
+            let (has_metadata, has_replay) = existing
+                .get(&salt.match_id)
+                .copied()
+                .unwrap_or((false, false));
+            let metadata_needed = salt.metadata_salt.is_some();
+            let replay_needed = salt.replay_salt.is_some();
+            !((has_metadata && metadata_needed) || (has_replay && replay_needed))
+        })
+        .collect();
+
+    if new_salts.is_empty() {
         debug!("No new salts to ingest");
         return Ok(Json(json!({ "status": "success" })));
     }
 
-    if match_salts.len() > 1 {
-        debug!("Inserting salts: {}", match_salts.len());
+    if new_salts.len() > 1 {
+        debug!("Inserting salts: {}", new_salts.len());
     }
-    insert_salts_to_clickhouse(&state.ch_client, match_salts).await?;
+    state.match_salts_insert_batcher.insert(new_salts).await;
     Ok(Json(json!({ "status": "success" })))
 }

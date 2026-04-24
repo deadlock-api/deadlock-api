@@ -6,8 +6,9 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use clickhouse::Row;
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
@@ -59,6 +60,38 @@ impl BatchInsert for MatchSaltsInsert {
 }
 
 pub(crate) type MatchSaltsInsertBatcher = ClickhouseInsertBatcher<MatchSaltsInsert>;
+
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct MatchSaltsExistsRow {
+    pub(crate) match_id: u64,
+    pub(crate) has_metadata: Option<u8>,
+    pub(crate) has_replay: Option<u8>,
+}
+
+pub(crate) struct MatchSaltsExistsQuery;
+
+impl BatchQuery for MatchSaltsExistsQuery {
+    type Key = u64;
+    type Value = MatchSaltsExistsRow;
+
+    fn build_query(keys: &[u64]) -> String {
+        format!(
+            "SELECT match_id, \
+                max(metadata_salt) > 0 AS has_metadata, \
+                max(replay_salt) > 0 AS has_replay \
+             FROM match_salts \
+             WHERE match_id IN ({}) \
+             GROUP BY match_id",
+            keys.iter().map(ToString::to_string).join(",")
+        )
+    }
+
+    fn key_of(value: &MatchSaltsExistsRow) -> u64 {
+        value.match_id
+    }
+}
+
+pub(crate) type MatchSaltsExistsBatcher = ClickhouseBatcher<MatchSaltsExistsQuery>;
 
 #[derive(Serialize, ToSchema)]
 struct MatchSaltsResponse {
