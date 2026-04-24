@@ -65,6 +65,12 @@ jobs:
           lfs: true
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+      - name: Install ONNX Runtime
+        run: |
+          ORT_VERSION=1.25.0
+          curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-x64-${ORT_VERSION}.tgz" \
+            | sudo tar -xz -C /opt
+          echo "ORT_DYLIB_PATH=/opt/onnxruntime-linux-x64-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}" >> $GITHUB_ENV
       - name: Install Rust toolchain
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
