@@ -122,7 +122,7 @@ Executes a SQL query on the database.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | API-Key ONLY |
+| IP | 5req/min, 50req/hr |
 | Key | 10req/min |
 | Global | 30req/min |
     "
@@ -145,6 +145,8 @@ pub(super) async fn sql(
             &rate_limit_key,
             "sql",
             &[
+                Quota::ip_limit(5, Duration::from_mins(1)),
+                Quota::ip_limit(50, Duration::from_hours(1)),
                 Quota::key_limit(10, Duration::from_mins(1)),
                 Quota::global_limit(30, Duration::from_mins(1)),
             ],
