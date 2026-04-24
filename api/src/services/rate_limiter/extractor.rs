@@ -21,7 +21,8 @@ where
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let ip = parts
             .headers
-            .get("CF-Connecting-IP")
+            .get("Cf-Pseudo-IPv4")
+            .or(parts.headers.get("CF-Connecting-IP"))
             .or(parts.headers.get("X-Real-IP"))
             .and_then(|v| v.to_str().ok().and_then(|s| s.parse().ok()))
             .unwrap_or(Ipv4Addr::UNSPECIFIED);
