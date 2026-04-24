@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.102"
-async-compression = "0.4.41"
+async-compression = "0.4.42"
 base64 = "0.22.1"
 cached = "0.59.0"
 clap = { version = "4.6.1", features = ["derive"] }
