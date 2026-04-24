@@ -29,6 +29,11 @@ use valveprotos::deadlock::{
 
 mod models;
 
+/// Upper bound for valid `match_ids`. `match_salts` has historical garbage values up to
+/// ~3.7e18 which otherwise force the anti-join set to cover a huge key range. Real
+/// `match_ids` fit in `u32`.
+const MAX_VALID_MATCH_ID: &str = "4294967295";
+
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
     std::env::var("SALTS_COOLDOWN_MILLIS").map_or(24 * 60 * 60 * 1000 / 100, |x| {
         x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number")
@@ -77,75 +82,179 @@ async fn main() -> anyhow::Result<()> {
                 Vec::new()
             });
 
-        // Query full match history for prioritized accounts (no LIMIT)
-        let mut pending_matches: Vec<PendingMatch> = Vec::new();
+        // Convert prioritized account IDs for ClickHouse (u32)
+        let account_ids_u32: Vec<u32> = prioritized_account_ids
+            .iter()
+            .filter_map(|&id| u32::try_from(id).ok())
+            .collect();
 
-        if !prioritized_account_ids.is_empty() {
+        // Prio scans full history via LEFT ANTI JOIN against a merged, bounded anti-set.
+        // The `match_id < MAX_VALID_MATCH_ID` bound on match_salts strips garbage sentinels
+        // so the join side stays dense.
+        let prio_fut = async {
+            if account_ids_u32.is_empty() {
+                return Ok(Vec::new());
+            }
             info!(
                 "Fetching full history for {} prioritized accounts",
-                prioritized_account_ids.len()
+                account_ids_u32.len()
             );
-
-            // Convert i64 to u32 for ClickHouse query
-            let account_ids_u32: Vec<u32> = prioritized_account_ids
-                .iter()
-                .filter_map(|&id| u32::try_from(id).ok())
-                .collect();
-
-            let prio_query = r"
-            SELECT match_id, groupArray(account_id) AS participants
-            FROM player_match_history
-            WHERE account_id IN ?
-              AND match_mode IN ('Ranked', 'Unranked')
-              AND start_time < now() - INTERVAL 2 HOUR
-              AND match_id >= 31247321
-              AND match_id NOT IN (SELECT match_id FROM match_salts)
-              AND match_id NOT IN (SELECT match_id FROM match_info)
-            GROUP BY match_id
-            ORDER BY match_id DESC
-            ";
-
-            match ch_client
-                .query(prio_query)
-                .bind(account_ids_u32)
+            let prio_query = format!(
+                r"
+            SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
+            FROM player_match_history pmh
+            LEFT ANTI JOIN (
+                SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+                UNION DISTINCT
+                SELECT match_id FROM match_info WHERE match_id >= 31247321
+            ) ex ON ex.match_id = pmh.match_id
+            WHERE pmh.account_id IN ?
+              AND pmh.match_mode IN ('Ranked', 'Unranked')
+              AND pmh.start_time < now() - INTERVAL 2 HOUR
+              AND pmh.match_id >= 31247321
+            GROUP BY pmh.match_id
+            ORDER BY pmh.match_id DESC
+            "
+            );
+            ch_client
+                .query(&prio_query)
+                .bind(&account_ids_u32)
                 .fetch_all::<PendingMatch>()
                 .await
-            {
-                Ok(matches) => {
-                    info!("Found {} matches for prioritized accounts", matches.len());
-                    pending_matches.extend(matches);
-                }
-                Err(e) => {
-                    warn!("Failed to fetch prioritized account matches: {e:?}");
-                }
-            }
-        }
+        };
 
-        // Query regular pending matches with participant account_ids for prioritization checking
-        let query = r"
+        // Fast path for regular queries: narrow match_id floor via PK lookup on recent data.
+        // If these return empty (scraper caught up or fell behind past the window),
+        // fall back to the full-range LEFT ANTI JOIN version below.
+        let pmh_fast = format!(
+            r"
+        WITH (SELECT max(match_id) - toUInt64(2000000) FROM match_info) AS mid_floor
         SELECT match_id, groupArray(account_id) AS participants
         FROM player_match_history
         WHERE match_mode IN ('Ranked', 'Unranked')
-          AND start_time BETWEEN '2025-08-01' AND now() - INTERVAL 2 HOUR
-          AND match_id NOT IN (SELECT match_id FROM match_salts)
-          AND match_id NOT IN (SELECT match_id FROM match_info)
+          AND start_time >= now() - INTERVAL 7 DAY
+          AND start_time < now() - INTERVAL 2 HOUR
+          AND match_id >= mid_floor
+          AND match_id NOT IN (
+            SELECT match_id FROM match_salts WHERE match_id >= mid_floor AND match_id < {MAX_VALID_MATCH_ID}
+            UNION DISTINCT
+            SELECT match_id FROM match_info WHERE match_id >= mid_floor
+          )
         GROUP BY match_id
         ORDER BY match_id DESC
         LIMIT 100
+        "
+        );
+        let pmh_fut = ch_client.query(&pmh_fast).fetch_all::<PendingMatch>();
 
-        UNION ALL
-
+        let active_fast = format!(
+            r"
+        WITH (SELECT max(match_id) - toUInt64(5000000) FROM active_matches) AS mid_floor
         SELECT match_id, players.account_id AS participants
         FROM active_matches
         WHERE match_mode IN ('Ranked', 'Unranked')
-          AND match_id NOT IN (SELECT match_id FROM match_salts)
-          AND match_id NOT IN (SELECT match_id FROM match_info)
-          AND start_time BETWEEN '2024-11-15' AND now() - INTERVAL 2 HOUR
+          AND match_id >= mid_floor
+          AND start_time < now() - INTERVAL 2 HOUR
+          AND match_id NOT IN (
+            SELECT match_id FROM match_salts WHERE match_id >= mid_floor AND match_id < {MAX_VALID_MATCH_ID}
+            UNION DISTINCT
+            SELECT match_id FROM match_info WHERE match_id >= mid_floor
+          )
         ORDER BY match_id DESC
         LIMIT 100
-        ";
-        let regular_matches: Vec<PendingMatch> = ch_client.query(query).fetch_all().await?;
-        pending_matches.extend(regular_matches);
+        "
+        );
+        let active_fut = ch_client.query(&active_fast).fetch_all::<PendingMatch>();
+
+        let (prio_res, pmh_res, active_res) = tokio::join!(prio_fut, pmh_fut, active_fut);
+
+        let mut pending_matches: Vec<PendingMatch> = Vec::new();
+        match prio_res {
+            Ok(matches) => {
+                if !matches.is_empty() {
+                    info!("Found {} matches for prioritized accounts", matches.len());
+                }
+                pending_matches.extend(matches);
+            }
+            Err(e) => warn!("Failed to fetch prioritized account matches: {e:?}"),
+        }
+
+        let mut pmh_empty = false;
+        match pmh_res {
+            Ok(matches) => {
+                pmh_empty = matches.is_empty();
+                pending_matches.extend(matches);
+            }
+            Err(e) => warn!("Failed to fetch pmh pending matches: {e:?}"),
+        }
+        let mut active_empty = false;
+        match active_res {
+            Ok(matches) => {
+                active_empty = matches.is_empty();
+                pending_matches.extend(matches);
+            }
+            Err(e) => warn!("Failed to fetch active_matches pending matches: {e:?}"),
+        }
+
+        // Fallback: when the recent-window fast path returns no rows, scan the full range
+        // via LEFT ANTI JOIN. Only hit in catch-up / cold-start scenarios.
+        if pmh_empty || active_empty {
+            let pmh_full_fut = async {
+                if !pmh_empty {
+                    return Ok(Vec::new());
+                }
+                info!("pmh fast path empty; falling back to full range");
+                let q = format!(
+                    r"
+                SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
+                FROM player_match_history pmh
+                LEFT ANTI JOIN (
+                    SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+                    UNION DISTINCT
+                    SELECT match_id FROM match_info WHERE match_id >= 31247321
+                ) ex ON ex.match_id = pmh.match_id
+                WHERE pmh.match_mode IN ('Ranked', 'Unranked')
+                  AND pmh.start_time < now() - INTERVAL 2 HOUR
+                  AND pmh.match_id >= 31247321
+                GROUP BY pmh.match_id
+                ORDER BY pmh.match_id DESC
+                LIMIT 100
+                "
+                );
+                ch_client.query(&q).fetch_all::<PendingMatch>().await
+            };
+            let active_full_fut = async {
+                if !active_empty {
+                    return Ok(Vec::new());
+                }
+                info!("active_matches fast path empty; falling back to full range");
+                let q = format!(
+                    r"
+                SELECT am.match_id, am.players.account_id AS participants
+                FROM active_matches am
+                LEFT ANTI JOIN (
+                    SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+                    UNION DISTINCT
+                    SELECT match_id FROM match_info WHERE match_id >= 31247321
+                ) ex ON ex.match_id = am.match_id
+                WHERE am.match_mode IN ('Ranked', 'Unranked')
+                  AND am.start_time < now() - INTERVAL 2 HOUR
+                ORDER BY am.match_id DESC
+                LIMIT 100
+                "
+                );
+                ch_client.query(&q).fetch_all::<PendingMatch>().await
+            };
+            let (pmh_full_res, active_full_res) = tokio::join!(pmh_full_fut, active_full_fut);
+            match pmh_full_res {
+                Ok(matches) => pending_matches.extend(matches),
+                Err(e) => warn!("Failed pmh full-range fallback: {e:?}"),
+            }
+            match active_full_res {
+                Ok(matches) => pending_matches.extend(matches),
+                Err(e) => warn!("Failed active_matches full-range fallback: {e:?}"),
+            }
+        }
 
         // Deduplicate matches by match_id (prioritized matches take precedence)
         let mut seen_matches = HashSet::new();
