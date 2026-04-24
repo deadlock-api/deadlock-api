@@ -16,9 +16,22 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 # We do not need the Rust toolchain to run the binary!
 FROM debian:trixie-slim AS runtime
 ARG EXE_NAME
+ARG ORT_VERSION=1.20.1
 ENV exe_name=$EXE_NAME
+ENV ORT_DYLIB_PATH=/usr/local/lib/libonnxruntime.so
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates libssl-dev openssl libc6 curl \
+    && ARCH="$(dpkg --print-architecture)" \
+    && case "$ARCH" in \
+         amd64) ORT_ARCH=x64 ;; \
+         arm64) ORT_ARCH=aarch64 ;; \
+         *) echo "Unsupported arch: $ARCH" >&2; exit 1 ;; \
+       esac \
+    && curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}.tgz" \
+        | tar -xz -C /tmp \
+    && cp "/tmp/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}" /usr/local/lib/libonnxruntime.so \
+    && rm -rf "/tmp/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}" \
+    && ldconfig \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /usr/local/bin/${EXE_NAME} /usr/local/bin/
