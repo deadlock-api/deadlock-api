@@ -128,7 +128,6 @@ pub struct HeroSynergyStats {
     pub creeps2: u64,
 }
 
-#[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroSynergyStatsQuery) -> String {
     let info_filters = MatchInfoFilters {
         min_unix_timestamp: query.min_unix_timestamp,
@@ -141,28 +140,33 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let mut p1_filters = vec!["match_id IN t_matches".to_owned()];
-    let mut p2_filters = vec!["match_id IN t_matches".to_owned()];
+    // Filters applied only to p1: match_id and account filters propagate to p2
+    // through the equi-join (match_id) and produce no extra rows, so duplicating
+    // them on p2 just forces a second wide scan of match_player.
+    let mut p1_filters = vec![
+        "p1.team IN ('Team0', 'Team1')".to_owned(),
+        "p1.match_id IN t_matches".to_owned(),
+    ];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
-        p1_filters.push(format!("account_id = {account_id}"));
+        p1_filters.push(format!("p1.account_id = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
         p1_filters.push(format!(
-            "account_id IN ({})",
+            "p1.account_id IN ({})",
             account_ids.iter().map(ToString::to_string).join(",")
         ));
     }
+    // net_worth is a per-player filter, so it must apply to both sides.
     if let Some(min_networth) = query.min_networth {
-        p1_filters.push(format!("net_worth >= {min_networth}"));
-        p2_filters.push(format!("net_worth >= {min_networth}"));
+        p1_filters.push(format!("p1.net_worth >= {min_networth}"));
+        p1_filters.push(format!("p2.net_worth >= {min_networth}"));
     }
     if let Some(max_networth) = query.max_networth {
-        p1_filters.push(format!("net_worth <= {max_networth}"));
-        p2_filters.push(format!("net_worth <= {max_networth}"));
+        p1_filters.push(format!("p1.net_worth <= {max_networth}"));
+        p1_filters.push(format!("p2.net_worth <= {max_networth}"));
     }
-    let p1_where = p1_filters.join(" AND ");
-    let p2_where = p2_filters.join(" AND ");
+    let where_clause = p1_filters.join(" AND ");
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("matches_played >= {min_matches}"));
@@ -176,69 +180,42 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let join_keys = if query.same_lane_filter.unwrap_or(true) {
-        "USING (match_id, team, assigned_lane)"
+    let lane_join = if query.same_lane_filter.unwrap_or(true) {
+        " AND p1.assigned_lane = p2.assigned_lane"
     } else {
-        "USING (match_id, team)"
+        ""
     };
-    #[allow(deprecated)]
-    let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
-    let p1_account_col = if needs_account_id { "account_id, " } else { "" };
-    let p1_cols = format!(
-        "match_id, team, assigned_lane, hero_id, {p1_account_col}won, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills"
-    );
-    let p2_cols = "match_id, team, assigned_lane, hero_id, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills";
-    let pair_select = "
-            p1.hero_id AS hero_id1,
-            p2.hero_id AS hero_id2,
-            p1.won AS won,
-            p1.kills AS kills1,
-            p2.kills AS kills2,
-            p1.deaths AS deaths1,
-            p2.deaths AS deaths2,
-            p1.assists AS assists1,
-            p2.assists AS assists2,
-            p1.denies AS denies1,
-            p2.denies AS denies2,
-            p1.last_hits AS last_hits1,
-            p2.last_hits AS last_hits2,
-            p1.net_worth AS networth1,
-            p2.net_worth AS networth2,
-            p1.max_boss_damage AS obj_damage1,
-            p2.max_boss_damage AS obj_damage2,
-            p1.max_creep_kills AS creeps1,
-            p2.max_creep_kills AS creeps2";
     format!(
         "
     WITH t_matches AS (SELECT match_id
                  FROM match_info
                  WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
-    SELECT hero_id1,
-           hero_id2,
-           SUM(won) AS wins,
+    SELECT p1.hero_id AS hero_id1,
+           p2.hero_id AS hero_id2,
+           SUM(p1.won) AS wins,
            COUNT() AS matches_played,
-           SUM(kills1) AS kills1,
-           SUM(kills2) AS kills2,
-           SUM(deaths1) AS deaths1,
-           SUM(deaths2) AS deaths2,
-           SUM(assists1) AS assists1,
-           SUM(assists2) AS assists2,
-           SUM(denies1) AS denies1,
-           SUM(denies2) AS denies2,
-           SUM(last_hits1) AS last_hits1,
-           SUM(last_hits2) AS last_hits2,
-           SUM(networth1) AS networth1,
-           SUM(networth2) AS networth2,
-           SUM(obj_damage1) AS obj_damage1,
-           SUM(obj_damage2) AS obj_damage2,
-           SUM(creeps1) AS creeps1,
-           SUM(creeps2) AS creeps2
-    FROM (
-        SELECT {pair_select}
-        FROM (SELECT {p1_cols} FROM match_player WHERE team IN ('Team0', 'Team1') AND {p1_where}) p1
-        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team IN ('Team0', 'Team1') AND {p2_where}) p2 {join_keys}
-        WHERE p1.hero_id < p2.hero_id
-    )
+           SUM(p1.kills) AS kills1,
+           SUM(p2.kills) AS kills2,
+           SUM(p1.deaths) AS deaths1,
+           SUM(p2.deaths) AS deaths2,
+           SUM(p1.assists) AS assists1,
+           SUM(p2.assists) AS assists2,
+           SUM(p1.denies) AS denies1,
+           SUM(p2.denies) AS denies2,
+           SUM(p1.last_hits) AS last_hits1,
+           SUM(p2.last_hits) AS last_hits2,
+           SUM(p1.net_worth) AS networth1,
+           SUM(p2.net_worth) AS networth2,
+           SUM(p1.max_boss_damage) AS obj_damage1,
+           SUM(p2.max_boss_damage) AS obj_damage2,
+           SUM(p1.max_creep_kills) AS creeps1,
+           SUM(p2.max_creep_kills) AS creeps2
+    FROM match_player p1
+    INNER JOIN match_player p2
+      ON p1.match_id = p2.match_id
+     AND p1.team = p2.team{lane_join}
+     AND p1.hero_id < p2.hero_id
+    WHERE {where_clause}
     GROUP BY hero_id1, hero_id2
     {having_clause}
     "

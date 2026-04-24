@@ -149,7 +149,7 @@ impl AppState {
             .with_setting("optimize_if_transform_strings_to_enum", "1")
             .with_setting("optimize_syntax_fuse_functions", "1")
             .with_setting("allow_aggregate_partitions_independently", "1")
-            .with_setting("max_threads", "12")
+            .with_setting("max_threads", "16")
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1");
         if let Err(e) = ch_client.query("SELECT 1").fetch_one::<u8>().await {
@@ -180,7 +180,7 @@ impl AppState {
             .with_setting("optimize_if_transform_strings_to_enum", "1")
             .with_setting("optimize_syntax_fuse_functions", "1")
             .with_setting("allow_aggregate_partitions_independently", "1")
-            .with_setting("max_threads", "12")
+            .with_setting("max_threads", "16")
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1")
             .with_setting("readonly", "2")
