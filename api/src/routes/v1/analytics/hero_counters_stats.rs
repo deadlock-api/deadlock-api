@@ -185,17 +185,17 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let join_keys = if query.same_lane_filter.unwrap_or(true) {
-        "USING (match_id, assigned_lane)"
+        "ON p1.match_id = p2.match_id AND p1.team != p2.team AND p1.assigned_lane = p2.assigned_lane"
     } else {
-        "USING (match_id)"
+        "ON p1.match_id = p2.match_id AND p1.team != p2.team"
     };
     #[allow(deprecated)]
     let needs_account_id = query.account_id.is_some() || query.account_ids.is_some();
     let p1_account_col = if needs_account_id { "account_id, " } else { "" };
     let p1_cols = format!(
-        "match_id, assigned_lane, hero_id, {p1_account_col}won, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills"
+        "match_id, team, assigned_lane, hero_id, {p1_account_col}won, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills"
     );
-    let p2_cols = "match_id, assigned_lane, hero_id, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills";
+    let p2_cols = "match_id, team, assigned_lane, hero_id, kills, deaths, assists, denies, last_hits, net_worth, max_boss_damage, max_creep_kills";
     let pair_select = "
             p1.hero_id AS hero_id,
             p2.hero_id AS enemy_hero_id,
@@ -243,12 +243,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
            SUM(enemy_creeps) AS enemy_creeps
     FROM (
         SELECT {pair_select}
-        FROM (SELECT {p1_cols} FROM match_player WHERE team = 'Team0' AND {p1_where}) p1
-        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team = 'Team1' AND {p2_where}) p2 {join_keys}
-        UNION ALL
-        SELECT {pair_select}
-        FROM (SELECT {p1_cols} FROM match_player WHERE team = 'Team1' AND {p1_where}) p1
-        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team = 'Team0' AND {p2_where}) p2 {join_keys}
+        FROM (SELECT {p1_cols} FROM match_player WHERE team IN ('Team0', 'Team1') AND {p1_where}) p1
+        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team IN ('Team0', 'Team1') AND {p2_where}) p2 {join_keys}
     )
     GROUP BY hero_id, enemy_hero_id
     {having_clause}
