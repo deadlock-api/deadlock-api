@@ -5,7 +5,7 @@ mod ingest_salts;
 mod live_url;
 mod metadata;
 mod recently_fetched;
-mod salts;
+pub(crate) mod salts;
 pub(crate) mod types;
 
 use core::time::Duration;

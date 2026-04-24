@@ -26,9 +26,8 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimitClient};
-use crate::services::steam::client::SteamClient;
 use crate::utils::types::MatchIdQuery;
 
 #[derive(clickhouse::Row, serde::Deserialize)]
@@ -72,19 +71,16 @@ async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::
     s3.get(&key.into()).await?.bytes().await.map(|b| b.to_vec())
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn fetch_match_metadata_raw(
-    rate_limit_client: &RateLimitClient,
+    state: &AppState,
     rate_limit_key: &RateLimitKey,
-    steam_client: &SteamClient,
-    ch_client: &clickhouse::Client,
     s3: &AmazonS3,
     s3_cache: Option<&AmazonS3>,
     match_id: u64,
     is_custom: bool,
 ) -> APIResult<Vec<u8>> {
     // Try to fetch from the cache first
-    if match_id >= *min_cache_match_id(ch_client).await
+    if match_id >= *min_cache_match_id(&state.ch_client).await
         && let Some(s3_cache) = s3_cache
     {
         let results = join(
@@ -114,7 +110,8 @@ async fn fetch_match_metadata_raw(
         }
     }
 
-    rate_limit_client
+    state
+        .rate_limit_client
         .apply_limits(
             rate_limit_key,
             "match_metadata_s3",
@@ -154,16 +151,11 @@ async fn fetch_match_metadata_raw(
     }
 
     // If not in S3, fetch from Steam
-    let salts = fetch_match_salts(
-        rate_limit_client,
-        rate_limit_key,
-        steam_client,
-        ch_client,
-        match_id,
-        is_custom,
-    )
-    .await?;
-    Ok(steam_client.fetch_metadata_file(match_id, salts).await?)
+    let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom).await?;
+    Ok(state
+        .steam_client
+        .fetch_metadata_file(match_id, salts)
+        .await?)
 }
 
 async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDataContents> {
@@ -271,10 +263,8 @@ pub(super) async fn metadata_raw(
     }
 
     fetch_match_metadata_raw(
-        &state.rate_limit_client,
+        &state,
         &rate_limit_key,
-        &state.steam_client,
-        &state.ch_client,
         &state.s3_client,
         None, // Skip cache
         match_id,
@@ -325,10 +315,8 @@ pub(super) async fn metadata(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let raw_data = fetch_match_metadata_raw(
-        &state.rate_limit_client,
+        &state,
         &rate_limit_key,
-        &state.steam_client,
-        &state.ch_client,
         &state.s3_client,
         Some(&state.s3_cache_client),
         match_id,

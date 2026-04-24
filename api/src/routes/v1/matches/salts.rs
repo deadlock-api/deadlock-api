@@ -6,6 +6,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
+use itertools::Itertools;
 use serde::Serialize;
 use tracing::{debug, warn};
 use utoipa::ToSchema;
@@ -16,15 +17,48 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::ingest_salts;
 use crate::routes::v1::matches::types::ClickhouseSalts;
+use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher};
+use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
+use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimitClient};
-use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{SteamProxyQuery, SteamProxyResponse};
 use crate::utils::types::MatchIdQuery;
 
 const FIRST_MATCH_DECEMBER_2024: u64 = 29507576;
+
+pub(crate) struct MatchSaltsReadQuery;
+
+impl BatchQuery for MatchSaltsReadQuery {
+    type Key = u64;
+    type Value = ClickhouseSalts;
+
+    fn build_query(keys: &[u64]) -> String {
+        format!(
+            "SELECT ?fields FROM match_salts FINAL \
+             WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0",
+            keys.iter().map(ToString::to_string).join(",")
+        )
+    }
+
+    fn key_of(value: &ClickhouseSalts) -> u64 {
+        value.match_id
+    }
+}
+
+pub(crate) type MatchSaltsReadBatcher = ClickhouseBatcher<MatchSaltsReadQuery>;
+
+pub(crate) struct MatchSaltsInsert;
+
+impl BatchInsert for MatchSaltsInsert {
+    type Row = ClickhouseSalts;
+
+    fn table_name() -> &'static str {
+        "match_salts"
+    }
+}
+
+pub(crate) type MatchSaltsInsertBatcher = ClickhouseInsertBatcher<MatchSaltsInsert>;
 
 #[derive(Serialize, ToSchema)]
 struct MatchSaltsResponse {
@@ -68,25 +102,19 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
     key = "u64"
 )]
 pub(super) async fn fetch_match_salts(
-    rate_limit_client: &RateLimitClient,
+    state: &AppState,
     rate_limit_key: &RateLimitKey,
-    steam_client: &SteamClient,
-    ch_client: &clickhouse::Client,
     match_id: u64,
     is_custom: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
-    // Try fetch from Clickhouse DB
-    let salts = ch_client
-        .query("SELECT ?fields FROM match_salts FINAL WHERE match_id = ? AND metadata_salt > 0 AND cluster_id > 0")
-        .bind(match_id)
-        .fetch_one::<ClickhouseSalts>()
-        .await;
-    if let Ok(salts) = salts {
+    // Try fetch from Clickhouse via batcher
+    if let Ok(salts) = state.match_salts_read_batcher.load(match_id).await {
         debug!("Match salts found in Clickhouse");
         return Ok(salts.into());
     }
 
-    let has_metadata = ch_client
+    let has_metadata = state
+        .ch_client
         .query("SELECT match_id FROM match_info WHERE match_id = ?")
         .bind(match_id)
         .fetch_one::<u64>()
@@ -110,7 +138,8 @@ pub(super) async fn fetch_match_salts(
         ));
     }
 
-    rate_limit_client
+    state
+        .rate_limit_client
         .apply_limits(
             rate_limit_key,
             "salts",
@@ -128,7 +157,8 @@ pub(super) async fn fetch_match_salts(
         metadata_salt: None,
         target_account_id: None,
     };
-    let result = steam_client
+    let result = state
+        .steam_client
         .call_steam_proxy_raw(SteamProxyQuery {
             msg_type: EgcCitadelClientMessages::KEMsgClientToGcGetMatchMetaData,
             msg,
@@ -152,13 +182,11 @@ pub(super) async fn fetch_match_salts(
         ));
     }
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
-        // Insert into Clickhouse
-        if let Err(e) =
-            ingest_salts::insert_salts_to_clickhouse(ch_client, vec![(match_id, salts, username)])
-                .await
-        {
-            warn!("Failed to insert match salts into Clickhouse: {e}");
-        }
+        // Queue for batch insertion into Clickhouse
+        state
+            .match_salts_insert_batcher
+            .insert(vec![(match_id, salts, username).into()])
+            .await;
         debug!("Match salts fetched from Steam");
         return Ok(salts);
     }
@@ -198,15 +226,8 @@ pub(super) async fn salts(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    fetch_match_salts(
-        &state.rate_limit_client,
-        &rate_limit_key,
-        &state.steam_client,
-        &state.ch_client,
-        match_id,
-        false,
-    )
-    .await
-    .map(|salts| (match_id, salts).into())
-    .map(|s: MatchSaltsResponse| Json(s))
+    fetch_match_salts(&state, &rate_limit_key, match_id, false)
+        .await
+        .map(|salts| (match_id, salts).into())
+        .map(|s: MatchSaltsResponse| Json(s))
 }

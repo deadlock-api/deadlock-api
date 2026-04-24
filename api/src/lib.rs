@@ -82,6 +82,12 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .clone()
         .start_background_flush();
 
+    // Start the background match salts insert batcher flush task
+    state
+        .match_salts_insert_batcher
+        .clone()
+        .start_background_flush();
+
     // Start the background game server metrics insert batcher flush task
     state
         .game_server_metrics_batcher
