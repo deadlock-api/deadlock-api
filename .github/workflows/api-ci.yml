@@ -75,8 +75,7 @@ jobs:
           shared-key: "api-build-cache-${{ runner.os }}-${{ runner.arch }}"
           workspaces: "api -> target"
       - name: Tests
-        # Integration tests temporarily disabled; run unit tests only (lib + bins).
-        run: cargo test --locked --lib --bins
+        run: cargo test --locked
 
   ###############################
   ##     Stage 3: Deploy       ##
