@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 # We do not need the Rust toolchain to run the binary!
 FROM debian:trixie-slim AS runtime
 ARG EXE_NAME
-ARG ORT_VERSION=1.20.1
+ARG ORT_VERSION=1.25.0
 ENV exe_name=$EXE_NAME
 ENV ORT_DYLIB_PATH=/usr/local/lib/libonnxruntime.so
 RUN apt-get update \
