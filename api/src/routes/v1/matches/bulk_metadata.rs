@@ -411,10 +411,13 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             format!(" ORDER BY {match_id_col} {} ", query.order_direction)
         }
         SortKey::StartTime => {
-            format!(" ORDER BY any(start_time) {} ", query.order_direction)
+            format!(
+                " ORDER BY any(match_info.start_time) {} ",
+                query.order_direction
+            )
         }
         SortKey::AverageBadge => format!(
-            " ORDER BY (coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2 {} ",
+            " ORDER BY (coalesce(any(match_info.average_badge_team0), 0) + coalesce(any(match_info.average_badge_team1), 0)) / 2 {} ",
             query.order_direction
         ),
     };
