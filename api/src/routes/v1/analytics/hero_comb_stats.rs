@@ -255,8 +255,8 @@ hero_combinations AS (
 )
 SELECT
     hc.hero_ids AS hero_ids,
-    sum(hc.won) AS wins,
-    sum(not hc.won) AS losses,
+    countIf(hc.won) AS wins,
+    countIf(not hc.won) AS losses,
     wins + losses AS matches
 FROM hero_combinations AS hc
 {enemy_join}
