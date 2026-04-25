@@ -16,8 +16,8 @@ use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
 use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::players::card::{PlayerCard, get_player_card};
 use crate::routes::v1::players::match_history::{
-    MatchHistoryInsertBatcher, PlayerMatchHistory, PlayerMatchHistoryEntry,
-    fetch_match_history_from_clickhouse, fetch_steam_match_history,
+    MatchHistoryInsertBatcher, MatchHistoryReadBatcher, PlayerMatchHistory,
+    PlayerMatchHistoryEntry, fetch_steam_match_history,
 };
 use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
@@ -122,7 +122,7 @@ pub(super) struct ResolverContext {
 impl ResolverContext {
     pub(super) async fn new(
         variables: &[&Variable],
-        ch_client_ro: &clickhouse::Client,
+        match_history_read_batcher: &MatchHistoryReadBatcher,
         steam_client: &SteamClient,
         match_history_insert_batcher: &MatchHistoryInsertBatcher,
         steam_id: u32,
@@ -133,7 +133,7 @@ impl ResolverContext {
         let (all_matches, todays_matches) = join(
             async {
                 if needs_all {
-                    Variable::get_all_matches(ch_client_ro, steam_id)
+                    Variable::get_all_matches(match_history_read_batcher, steam_id)
                         .await
                         .map(core::iter::Iterator::collect)
                         .map_err(|e| e.to_string())
@@ -144,7 +144,7 @@ impl ResolverContext {
             async {
                 if needs_today {
                     Variable::get_todays_matches(
-                        ch_client_ro,
+                        match_history_read_batcher,
                         steam_client,
                         match_history_insert_batcher,
                         steam_id,
@@ -872,10 +872,10 @@ impl Variable {
     }
 
     async fn get_all_matches(
-        ch_client: &clickhouse::Client,
+        match_history_read_batcher: &MatchHistoryReadBatcher,
         steam_id: u32,
     ) -> Result<impl Iterator<Item = PlayerMatchHistoryEntry>, VariableResolveError> {
-        let ch_match_history = fetch_match_history_from_clickhouse(ch_client, steam_id).await?;
+        let ch_match_history = match_history_read_batcher.load(steam_id).await?;
 
         Ok(ch_match_history
             .into_iter()
@@ -902,7 +902,7 @@ impl Variable {
     }
 
     async fn get_todays_matches(
-        ch_client: &clickhouse::Client,
+        match_history_read_batcher: &MatchHistoryReadBatcher,
         steam_client: &SteamClient,
         match_history_insert_batcher: &MatchHistoryInsertBatcher,
         account_id: u32,
@@ -912,7 +912,7 @@ impl Variable {
                 match_history_insert_batcher.insert(m.clone()).await;
                 m
             }
-            Err(_) => fetch_match_history_from_clickhouse(ch_client, account_id).await?,
+            Err(_) => match_history_read_batcher.load(account_id).await?,
         };
 
         let first_match = matches

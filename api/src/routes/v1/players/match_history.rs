@@ -139,20 +139,6 @@ pub(crate) struct MatchHistoryQuery {
     force_refetch: bool,
 }
 
-pub(crate) async fn fetch_match_history_from_clickhouse(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-) -> clickhouse::error::Result<PlayerMatchHistory> {
-    ch_client
-        .query(
-            "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history WHERE account_id = ? \
-             ORDER BY match_id DESC",
-        )
-        .bind(account_id)
-        .fetch_all()
-        .await
-}
-
 async fn fetch_bot_username(
     pg_client: &sqlx::Pool<sqlx::Postgres>,
     account_id: u32,
