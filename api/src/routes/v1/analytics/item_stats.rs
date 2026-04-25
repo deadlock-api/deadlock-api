@@ -278,10 +278,10 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     .build();
     if let Some(min_bought_at_s) = query.min_bought_at_s {
-        player_filters.push(format!("buy_time >= {min_bought_at_s}"));
+        player_filters.push(format!("tpl.2 >= {min_bought_at_s}"));
     }
     if let Some(max_bought_at_s) = query.max_bought_at_s {
-        player_filters.push(format!("buy_time <= {max_bought_at_s}"));
+        player_filters.push(format!("tpl.2 <= {max_bought_at_s}"));
     }
     let player_filters = join_filters(&player_filters);
 
@@ -387,23 +387,21 @@ WITH
         SELECT
             account_id,
             duration_s,
-            item_id,
+            tpl.1 AS item_id,
             won,
-            buy_time,
-            sold_time
+            tpl.2 AS buy_time,
+            tpl.3 AS sold_time
             {bucket_extra_col}
             {net_worth_expr}
         FROM match_player
         INNER JOIN t_matches USING (match_id){enemy_join}
-        ARRAY JOIN
-            items.item_id AS item_id,
-            items.game_time_s AS buy_time,
-            items.sold_time_s AS sold_time
+        ARRAY JOIN arrayFilter(
+            t -> t.1 IN t_upgrades AND t.2 > 0,
+            arrayZip(items.item_id, items.game_time_s, items.sold_time_s)
+        ) AS tpl
         -- IN (SELECT ...) drives match_player partition/MinMax pruning;
         -- the JOIN above only adds a runtime filter, so keep both.
-        WHERE match_id IN (SELECT match_id FROM t_matches)
-            AND item_id IN t_upgrades
-            AND buy_time > 0{enemy_where}
+        WHERE match_id IN (SELECT match_id FROM t_matches){enemy_where}
             {player_filters}
     )
 SELECT
