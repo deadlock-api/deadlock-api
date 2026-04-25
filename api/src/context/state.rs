@@ -19,6 +19,7 @@ use crate::routes::v1::matches::salts::{
 use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
 };
+use crate::routes::v1::players::rank_predict::RankPredictMatchesBatcher;
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
 use crate::routes::v1::servers::metrics::GameServerMetricsInsertBatcher;
 use crate::services::assets::client::AssetsClient;
@@ -72,6 +73,7 @@ pub(crate) struct AppState {
     pub(crate) match_salts_insert_batcher: Arc<MatchSaltsInsertBatcher>,
     pub(crate) game_server_metrics_batcher: Arc<GameServerMetricsInsertBatcher>,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
+    pub(crate) rank_predict_matches_batcher: RankPredictMatchesBatcher,
     pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
 
@@ -281,6 +283,10 @@ impl AppState {
         debug!("Creating Steam Profile Batcher");
         let steam_profile_batcher = SteamProfileBatcher::new(ch_client_ro.clone());
 
+        // Create Rank Predict Matches Batcher
+        debug!("Creating Rank Predict Matches Batcher");
+        let rank_predict_matches_batcher = RankPredictMatchesBatcher::new(ch_client_ro.clone());
+
         // Create Match History Batchers
         debug!("Creating Match History Batchers");
         let match_history_read_batcher = MatchHistoryReadBatcher::new(ch_client_ro.clone());
@@ -319,6 +325,7 @@ impl AppState {
             match_salts_insert_batcher,
             game_server_metrics_batcher,
             rank_predictor,
+            rank_predict_matches_batcher,
             steam_profile_batcher,
         })
     }

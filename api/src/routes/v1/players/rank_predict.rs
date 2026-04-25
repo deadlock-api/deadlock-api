@@ -12,6 +12,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti};
 use crate::services::rank_predictor::{RankPrediction, RankPredictorError, badge_to_idx};
 use crate::utils::types::AccountIdQuery;
 
@@ -36,7 +37,8 @@ static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
 });
 
 #[derive(Debug, Clone, Row, Deserialize)]
-struct MatchRow {
+pub(crate) struct MatchRow {
+    account_id: u32,
     match_id: u64,
     hero_id: u32,
     player_team: i8,
@@ -46,6 +48,46 @@ struct MatchRow {
     average_badge_team1: Option<u32>,
     enemy_team: u8,
 }
+
+pub(crate) struct RankPredictMatchesQuery;
+
+impl BatchQueryMulti for RankPredictMatchesQuery {
+    type Key = u32;
+    type Value = MatchRow;
+
+    fn build_query(keys: &[u32]) -> String {
+        format!(
+            "SELECT
+                pmh.account_id,
+                pmh.match_id,
+                pmh.hero_id,
+                pmh.player_team,
+                pmh.player_kills,
+                pmh.match_duration_s,
+                mi.average_badge_team0,
+                mi.average_badge_team1,
+                if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
+            FROM player_match_history pmh
+            JOIN match_info mi USING (match_id)
+            WHERE pmh.account_id IN ({})
+              AND pmh.match_mode IN ('Ranked', 'Unranked')
+              AND pmh.game_mode = 'Normal'
+              AND mi.average_badge_team0 > 0
+              AND mi.average_badge_team1 > 0
+            ORDER BY pmh.account_id, pmh.match_id DESC
+            LIMIT 1 BY pmh.account_id, pmh.match_id
+            LIMIT {} BY pmh.account_id",
+            keys.iter().map(ToString::to_string).join(","),
+            FETCH_LIMIT,
+        )
+    }
+
+    fn key_of(value: &MatchRow) -> u32 {
+        value.account_id
+    }
+}
+
+pub(crate) type RankPredictMatchesBatcher = ClickhouseBatcherMulti<RankPredictMatchesQuery>;
 
 #[derive(Debug, Clone, Row, Deserialize)]
 struct EnemyStatsRow {
@@ -84,51 +126,24 @@ pub(crate) struct RankPredictResponse {
 
 #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 async fn fetch_matches(
+    batcher: &RankPredictMatchesBatcher,
     ch: &clickhouse::Client,
     account_id: u32,
-) -> clickhouse::error::Result<Vec<Match>> {
-    // Step 1: Get the match rows (fast — uses pmh primary key).
-    let query = "
-        SELECT
-            pmh.match_id,
-            pmh.hero_id,
-            pmh.player_team,
-            pmh.player_kills,
-            pmh.match_duration_s,
-            mi.average_badge_team0,
-            mi.average_badge_team1,
-            if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
-        FROM player_match_history pmh
-        JOIN match_info mi USING (match_id)
-        WHERE pmh.account_id = ?
-          AND pmh.match_mode IN ('Ranked', 'Unranked')
-          AND pmh.game_mode = 'Normal'
-          AND mi.average_badge_team0 > 0
-          AND mi.average_badge_team1 > 0
-        ORDER BY pmh.match_id DESC
-        LIMIT 1 BY match_id
-        LIMIT ?
-    ";
-    debug!("Match rows query: {query}");
-    let match_rows: Vec<MatchRow> = ch
-        .query(query)
-        .bind(account_id)
-        .bind(FETCH_LIMIT as u64)
-        .fetch_all()
-        .await?;
+) -> APIResult<Vec<Match>> {
+    let match_rows = batcher.load(account_id).await?;
 
     if match_rows.len() < N_MATCHES {
         return Ok(Vec::new());
     }
 
-    // Step 2: Fetch enemy stats with explicit (match_id, team) tuples so ClickHouse
-    // can prune match_player by primary key instead of scanning the full table.
+    // Explicit (match_id, team) tuples let ClickHouse prune match_player by primary key
+    // instead of scanning the full table.
     let tuples: String = match_rows
         .iter()
         .map(|r| format!("({}, {})", r.match_id, r.enemy_team))
         .join(", ");
 
-    let query = format!(
+    let enemy_query = format!(
         "SELECT
             match_id,
             team,
@@ -138,25 +153,35 @@ async fn fetch_matches(
         WHERE (match_id, team) IN ({tuples})
         GROUP BY match_id, team"
     );
-    debug!("Enemy stats query: {query}");
+    debug!("Enemy stats query: {enemy_query}");
 
-    let enemy_stats: Vec<EnemyStatsRow> = ch.query(&query).fetch_all().await?;
-
-    // Index enemy stats by (match_id, team) for O(1) lookup.
-    let enemy_map: HashMap<(u64, i8), &EnemyStatsRow> = enemy_stats
-        .iter()
-        .map(|e| ((e.match_id, e.team), e))
-        .collect();
-
-    // Step 3: Fetch the player's own creep stats for CS efficiency.
     let match_ids: String = match_rows.iter().map(|r| r.match_id.to_string()).join(", ");
-    let query = format!(
+    let creep_query = format!(
         "SELECT match_id, max_creep_kills, max_possible_creeps
          FROM match_player
          WHERE match_id IN ({match_ids}) AND account_id = {account_id}"
     );
-    debug!("Player creep stats query: {query}");
-    let creep_rows: Vec<PlayerCreepRow> = ch.query(&query).fetch_all().await?;
+    debug!("Player creep stats query: {creep_query}");
+
+    let (enemy_stats, creep_rows): (Vec<EnemyStatsRow>, Vec<PlayerCreepRow>) = tokio::try_join!(
+        async {
+            ch.query(&enemy_query)
+                .fetch_all()
+                .await
+                .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))
+        },
+        async {
+            ch.query(&creep_query)
+                .fetch_all()
+                .await
+                .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))
+        },
+    )?;
+
+    let enemy_map: HashMap<(u64, i8), &EnemyStatsRow> = enemy_stats
+        .iter()
+        .map(|e| ((e.match_id, e.team), e))
+        .collect();
     let creep_map: HashMap<u64, &PlayerCreepRow> =
         creep_rows.iter().map(|c| (c.match_id, c)).collect();
 
@@ -365,9 +390,12 @@ pub(super) async fn rank_predict(
         return Err(APIError::protected_user());
     }
 
-    let matches = fetch_matches(&state.ch_client_ro, account_id)
-        .await
-        .map_err(|e| APIError::internal(format!("ClickHouse query failed: {e}")))?;
+    let matches = fetch_matches(
+        &state.rank_predict_matches_batcher,
+        &state.ch_client_ro,
+        account_id,
+    )
+    .await?;
 
     let features = aggregate_features(&matches).ok_or_else(|| {
         APIError::status_msg(

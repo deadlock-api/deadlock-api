@@ -5,7 +5,7 @@ pub mod hero_stats;
 pub(crate) mod match_history;
 pub mod mate_stats;
 pub mod mmr;
-mod rank_predict;
+pub(crate) mod rank_predict;
 pub mod steam;
 
 use core::time::Duration;
