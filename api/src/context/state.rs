@@ -13,6 +13,7 @@ use thiserror::Error;
 use tracing::{debug, warn};
 
 use crate::context::config::Config;
+use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
 use crate::routes::v1::matches::salts::{
     MatchSaltsExistsBatcher, MatchSaltsInsertBatcher, MatchSaltsReadBatcher,
 };
@@ -74,6 +75,7 @@ pub(crate) struct AppState {
     pub(crate) game_server_metrics_batcher: Arc<GameServerMetricsInsertBatcher>,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) rank_predict_matches_batcher: RankPredictMatchesBatcher,
+    pub(crate) demo_player_batcher: DemoPlayerBatcher,
     pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
 
@@ -287,6 +289,10 @@ impl AppState {
         debug!("Creating Rank Predict Matches Batcher");
         let rank_predict_matches_batcher = RankPredictMatchesBatcher::new(ch_client_ro.clone());
 
+        // Create Demo Player Batcher
+        debug!("Creating Demo Player Batcher");
+        let demo_player_batcher = DemoPlayerBatcher::new(ch_client_ro.clone());
+
         // Create Match History Batchers
         debug!("Creating Match History Batchers");
         let match_history_read_batcher = MatchHistoryReadBatcher::new(ch_client_ro.clone());
@@ -326,6 +332,7 @@ impl AppState {
             game_server_metrics_batcher,
             rank_predictor,
             rank_predict_matches_batcher,
+            demo_player_batcher,
             steam_profile_batcher,
         })
     }

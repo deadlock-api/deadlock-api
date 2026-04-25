@@ -3,7 +3,7 @@ mod bulk_metadata;
 mod custom;
 mod ingest_salts;
 mod live_url;
-mod metadata;
+pub(crate) mod metadata;
 mod recently_fetched;
 pub(crate) mod salts;
 pub(crate) mod types;

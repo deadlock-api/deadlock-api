@@ -8,8 +8,10 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
+use clickhouse::Row;
 use futures::future::join;
 use futures::stream::BoxStream;
+use itertools::Itertools;
 use metrics::counter;
 use object_store::aws::AmazonS3;
 use object_store::path::Path as S3Path;
@@ -27,16 +29,39 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::types::MatchIdQuery;
 
-#[derive(clickhouse::Row, serde::Deserialize)]
-struct DemoPlayerRow {
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct DemoPlayerRow {
+    match_id: u64,
     account_id: u32,
     hero_build_id: u64,
     banned_hero_ids: Vec<u32>,
 }
+
+pub(crate) struct DemoPlayerQuery;
+
+impl BatchQueryMulti for DemoPlayerQuery {
+    type Key = u64;
+    type Value = DemoPlayerRow;
+
+    fn build_query(keys: &[u64]) -> String {
+        format!(
+            "SELECT match_id, account_id, hero_build_id, banned_hero_ids \
+             FROM demo_player WHERE match_id IN ({})",
+            keys.iter().map(ToString::to_string).join(",")
+        )
+    }
+
+    fn key_of(value: &DemoPlayerRow) -> u64 {
+        value.match_id
+    }
+}
+
+pub(crate) type DemoPlayerBatcher = ClickhouseBatcherMulti<DemoPlayerQuery>;
 
 /// Wrapper around `CMsgMatchMetaDataContents` that adds hero build IDs from demo analysis.
 #[derive(serde::Serialize)]
@@ -345,13 +370,8 @@ pub(super) async fn metadata(
     .await?;
     let (metadata, demo_rows) = tokio::join!(parse_match_metadata_raw(&raw_data), async {
         state
-            .ch_client_ro
-            .query(
-                "SELECT account_id, hero_build_id, banned_hero_ids \
-                 FROM demo_player WHERE match_id = ?",
-            )
-            .bind(match_id)
-            .fetch_all::<DemoPlayerRow>()
+            .demo_player_batcher
+            .load(match_id)
             .await
             .unwrap_or_default()
     });
