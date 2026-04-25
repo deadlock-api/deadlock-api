@@ -8,6 +8,7 @@ use axum_extra::extract::Query;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tracing::debug;
@@ -138,6 +139,20 @@ pub(crate) struct ItemStatsQuery {
     /// Filter matches based on the hero ID. See more: <https://assets.deadlock-api.com/v2/heroes>
     #[deprecated(note = "Use hero_ids instead")]
     hero_id: Option<u32>,
+    /// Filter to matches where one or more of these heroes were on the opposing team. Comma separated. When set, returns "what items beat hero(es) X?" stats. See more: <https://assets.deadlock-api.com/v2/heroes>
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
+    )]
+    enemy_hero_ids: Option<Vec<u32>>,
+    /// Filter the specified enemy hero(es) by their final net worth. Ignored when `enemy_hero_ids` is unset.
+    min_enemy_networth: Option<u64>,
+    /// Filter the specified enemy hero(es) by their final net worth. Ignored when `enemy_hero_ids` is unset.
+    max_enemy_networth: Option<u64>,
+    /// When `true`, only counts buyers in the same `assigned_lane` as one of the specified enemy heroes. Ignored when `enemy_hero_ids` is unset. **Default:** `false`.
+    same_lane_filter: Option<bool>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.
     #[serde(default = "default_last_month_timestamp")]
     #[param(default = default_last_month_timestamp)]
@@ -305,6 +320,52 @@ fn build_query(query: &ItemStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
+
+    /* ---------- enemy-team filter (optional) ---------- */
+    let enemy_hero_ids = query
+        .enemy_hero_ids
+        .as_deref()
+        .filter(|ids| !ids.is_empty());
+    let (enemy_cte, enemy_join, enemy_where) = if let Some(ids) = enemy_hero_ids {
+        let mut enemy_having = vec![];
+        if let Some(v) = query.min_enemy_networth {
+            enemy_having.push(format!("min(net_worth) >= {v}"));
+        }
+        if let Some(v) = query.max_enemy_networth {
+            enemy_having.push(format!("max(net_worth) <= {v}"));
+        }
+        let enemy_having_clause = if enemy_having.is_empty() {
+            String::new()
+        } else {
+            format!("\n        HAVING {}", enemy_having.join(" AND "))
+        };
+        let cte = format!(
+            "
+    t_enemy_teams AS (
+        SELECT
+            match_id,
+            team AS enemy_team,
+            groupUniqArray(assigned_lane) AS enemy_lanes
+        FROM match_player
+        WHERE match_id IN (SELECT match_id FROM t_matches)
+            AND team IN ('Team0', 'Team1')
+            AND hero_id IN ({})
+        GROUP BY match_id, team{enemy_having_clause}
+    ),",
+            ids.iter().map(ToString::to_string).join(", ")
+        );
+        let lane_filter = if query.same_lane_filter == Some(true) {
+            "\n            AND has(et.enemy_lanes, assigned_lane)"
+        } else {
+            ""
+        };
+        let join = "\n        INNER JOIN t_enemy_teams et USING (match_id)".to_owned();
+        let where_extra = format!("\n            AND et.enemy_team != team{lane_filter}");
+        (cte, join, where_extra)
+    } else {
+        (String::new(), String::new(), String::new())
+    };
+
     /* ---------- final query ---------- */
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
@@ -315,7 +376,7 @@ WITH
         SELECT match_id, start_time, duration_s
         FROM match_info
         WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
-    ),
+    ),{enemy_cte}
     exploded_players AS (
         SELECT
             account_id,
@@ -327,7 +388,7 @@ WITH
             {bucket_extra_col}
             {net_worth_expr}
         FROM match_player
-        INNER JOIN t_matches USING (match_id)
+        INNER JOIN t_matches USING (match_id){enemy_join}
         ARRAY JOIN
             items.item_id AS item_id,
             items.game_time_s AS buy_time,
@@ -336,7 +397,7 @@ WITH
         -- the JOIN above only adds a runtime filter, so keep both.
         WHERE match_id IN (SELECT match_id FROM t_matches)
             AND item_id IN t_upgrades
-            AND buy_time > 0
+            AND buy_time > 0{enemy_where}
             {player_filters}
     )
 SELECT
