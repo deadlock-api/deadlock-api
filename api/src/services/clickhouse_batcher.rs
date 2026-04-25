@@ -18,7 +18,7 @@ pub(crate) trait BatchQuery: Send + Sync + 'static {
     fn key_of(value: &Self::Value) -> Self::Key;
 
     fn batch_window_ms() -> u64 {
-        20
+        100
     }
     fn max_batch_size() -> usize {
         1000
