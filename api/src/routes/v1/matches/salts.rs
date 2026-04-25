@@ -93,6 +93,31 @@ impl BatchQuery for MatchSaltsExistsQuery {
 
 pub(crate) type MatchSaltsExistsBatcher = ClickhouseBatcher<MatchSaltsExistsQuery>;
 
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct MatchInfoExistsRow {
+    pub(crate) match_id: u64,
+}
+
+pub(crate) struct MatchInfoExistsQuery;
+
+impl BatchQuery for MatchInfoExistsQuery {
+    type Key = u64;
+    type Value = MatchInfoExistsRow;
+
+    fn build_query(keys: &[u64]) -> String {
+        format!(
+            "SELECT match_id FROM match_info WHERE match_id IN ({})",
+            keys.iter().map(ToString::to_string).join(",")
+        )
+    }
+
+    fn key_of(value: &MatchInfoExistsRow) -> u64 {
+        value.match_id
+    }
+}
+
+pub(crate) type MatchInfoExistsBatcher = ClickhouseBatcher<MatchInfoExistsQuery>;
+
 #[derive(Serialize, ToSchema)]
 struct MatchSaltsResponse {
     match_id: u64,
@@ -146,13 +171,7 @@ pub(super) async fn fetch_match_salts(
         return Ok(salts.into());
     }
 
-    let has_metadata = state
-        .ch_client
-        .query("SELECT match_id FROM match_info WHERE match_id = ?")
-        .bind(match_id)
-        .fetch_one::<u64>()
-        .await
-        .is_ok();
+    let has_metadata = state.match_info_exists_batcher.load(match_id).await.is_ok();
 
     if has_metadata {
         warn!("Blocking request for match salts for match {match_id} with metadata");
