@@ -160,16 +160,30 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         }
         .build(),
     );
-    let mut grouped_filters = vec![];
+    let mut account_filter_values: Vec<u32> = Vec::new();
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
-        grouped_filters.push(format!("has(account_ids, {account_id})"));
+        account_filter_values.push(account_id);
     }
     if let Some(account_ids) = &query.account_ids {
-        grouped_filters.push(format!(
-            "hasAny(account_ids, [{}])",
-            account_ids.iter().map(ToString::to_string).join(", ")
-        ));
+        account_filter_values.extend(account_ids.iter().copied());
+    }
+    let has_account_filter = !account_filter_values.is_empty();
+    let account_list = account_filter_values
+        .iter()
+        .map(ToString::to_string)
+        .join(", ");
+    let account_prefilter = if has_account_filter {
+        format!(
+            " AND match_id IN (SELECT match_id FROM match_player WHERE account_id IN ({account_list}))"
+        )
+    } else {
+        String::new()
+    };
+
+    let mut grouped_filters = vec![];
+    if has_account_filter {
+        grouped_filters.push(format!("hasAny(account_ids, [{account_list}])"));
     }
     if let Some(include_hero_ids) = &query.include_hero_ids {
         grouped_filters.push(format!(
@@ -185,7 +199,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     }
     if let Some(include_enemy_hero_ids) = &query.include_enemy_hero_ids {
         grouped_filters.push(format!(
-            "hasAll(enemy.hero_ids, [{}])",
+            "hasAll(enemy_hero_ids, [{}])",
             include_enemy_hero_ids
                 .iter()
                 .map(ToString::to_string)
@@ -194,7 +208,7 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     }
     if let Some(exclude_enemy_hero_ids) = &query.exclude_enemy_hero_ids {
         grouped_filters.push(format!(
-            "not hasAny(enemy.hero_ids, [{}])",
+            "not hasAny(enemy_hero_ids, [{}])",
             exclude_enemy_hero_ids
                 .iter()
                 .map(ToString::to_string)
@@ -222,44 +236,43 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         format!("HAVING {}", having_filters.join(" AND "))
     };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let has_enemy_filter =
-        query.include_enemy_hero_ids.is_some() || query.exclude_enemy_hero_ids.is_some();
-    let match_team_select = if has_enemy_filter {
-        "match_id, team,"
+    let (cte_account_select, array_join_account) = if has_account_filter {
+        (
+            ",\n        groupArrayIf(account_id, team = 'Team0') AS team0_account_ids,\n        \
+             groupArrayIf(account_id, team = 'Team1') AS team1_account_ids",
+            ",\n    [team0_account_ids, team1_account_ids] AS account_ids",
+        )
     } else {
-        ""
-    };
-    let enemy_join = if has_enemy_filter {
-        "INNER JOIN hero_combinations AS enemy \
-         ON hc.match_id = enemy.match_id AND hc.team != enemy.team"
-    } else {
-        ""
+        ("", "")
     };
     format!(
         "
 WITH t_matches AS (
     SELECT match_id
     FROM match_info
-    WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
+    WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}{account_prefilter}
 ),
 hero_combinations AS (
     SELECT
-        {match_team_select}
-        arraySort(groupUniqArray({team_size})(hero_id)) AS hero_ids,
-        groupArray(account_id) AS account_ids,
-        any(won) AS won
+        arraySort(groupUniqArrayIf({team_size})(hero_id, team = 'Team0')) AS team0_hero_ids,
+        arraySort(groupUniqArrayIf({team_size})(hero_id, team = 'Team1')) AS team1_hero_ids,
+        anyIf(won, team = 'Team0') AS team0_won,
+        anyIf(won, team = 'Team1') AS team1_won{cte_account_select}
     FROM match_player
     WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
-    GROUP BY match_id, team
-    HAVING length(hero_ids) = {team_size}
+    GROUP BY match_id
+    HAVING length(team0_hero_ids) = {team_size} AND length(team1_hero_ids) = {team_size}
 )
 SELECT
-    hc.hero_ids AS hero_ids,
-    countIf(hc.won) AS wins,
-    countIf(not hc.won) AS losses,
+    hero_ids,
+    countIf(won) AS wins,
+    countIf(not won) AS losses,
     wins + losses AS matches
-FROM hero_combinations AS hc
-{enemy_join}
+FROM hero_combinations
+ARRAY JOIN
+    [team0_hero_ids, team1_hero_ids] AS hero_ids,
+    [team1_hero_ids, team0_hero_ids] AS enemy_hero_ids,
+    [team0_won, team1_won] AS won{array_join_account}
 WHERE true {grouped_filters}
 GROUP BY hero_ids
 {having_clause}
