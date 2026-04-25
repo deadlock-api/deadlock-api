@@ -7,7 +7,6 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::ToSchema;
@@ -19,7 +18,7 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::ClickhouseSalts;
-use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher};
+use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -38,7 +37,7 @@ impl BatchQuery for MatchSaltsReadQuery {
         format!(
             "SELECT ?fields FROM match_salts FINAL \
              WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0",
-            keys.iter().map(ToString::to_string).join(",")
+            in_clause(keys)
         )
     }
 
@@ -82,7 +81,7 @@ impl BatchQuery for MatchSaltsExistsQuery {
              FROM match_salts \
              WHERE match_id IN ({}) \
              GROUP BY match_id",
-            keys.iter().map(ToString::to_string).join(",")
+            in_clause(keys)
         )
     }
 
@@ -107,7 +106,7 @@ impl BatchQuery for MatchInfoExistsQuery {
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT match_id FROM match_info WHERE match_id IN ({})",
-            keys.iter().map(ToString::to_string).join(",")
+            in_clause(keys)
         )
     }
 
@@ -166,12 +165,17 @@ pub(super) async fn fetch_match_salts(
     is_custom: bool,
 ) -> APIResult<CMsgClientToGcGetMatchMetaDataResponse> {
     // Try fetch from Clickhouse via batcher
-    if let Ok(salts) = state.match_salts_read_batcher.load(match_id).await {
+    if let Ok(salts) = state.batchers.match_salts_read.load(match_id).await {
         debug!("Match salts found in Clickhouse");
         return Ok(salts.into());
     }
 
-    let has_metadata = state.match_info_exists_batcher.load(match_id).await.is_ok();
+    let has_metadata = state
+        .batchers
+        .match_info_exists
+        .load(match_id)
+        .await
+        .is_ok();
 
     if has_metadata {
         warn!("Blocking request for match salts for match {match_id} with metadata");
@@ -236,7 +240,8 @@ pub(super) async fn fetch_match_salts(
     if salts.replay_group_id.is_some() && salts.metadata_salt.unwrap_or_default() != 0 {
         // Queue for batch insertion into Clickhouse
         state
-            .match_salts_insert_batcher
+            .batchers
+            .match_salts_insert
             .insert(vec![(match_id, salts, username).into()])
             .await;
         debug!("Match salts fetched from Steam");

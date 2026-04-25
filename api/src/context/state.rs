@@ -12,17 +12,8 @@ use sqlx::{Pool, Postgres};
 use thiserror::Error;
 use tracing::{debug, warn};
 
+use crate::context::batchers::Batchers;
 use crate::context::config::Config;
-use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
-use crate::routes::v1::matches::salts::{
-    MatchInfoExistsBatcher, MatchSaltsExistsBatcher, MatchSaltsInsertBatcher, MatchSaltsReadBatcher,
-};
-use crate::routes::v1::players::match_history::{
-    MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
-};
-use crate::routes::v1::players::rank_predict::RankPredictMatchesBatcher;
-use crate::routes::v1::players::steam::route::SteamProfileBatcher;
-use crate::routes::v1::servers::metrics::GameServerMetricsInsertBatcher;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
@@ -67,17 +58,8 @@ pub(crate) struct AppState {
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
-    pub(crate) match_history_read_batcher: MatchHistoryReadBatcher,
-    pub(crate) match_history_insert_batcher: Arc<MatchHistoryInsertBatcher>,
-    pub(crate) match_salts_read_batcher: MatchSaltsReadBatcher,
-    pub(crate) match_salts_exists_batcher: MatchSaltsExistsBatcher,
-    pub(crate) match_salts_insert_batcher: Arc<MatchSaltsInsertBatcher>,
-    pub(crate) match_info_exists_batcher: MatchInfoExistsBatcher,
-    pub(crate) game_server_metrics_batcher: Arc<GameServerMetricsInsertBatcher>,
+    pub(crate) batchers: Batchers,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
-    pub(crate) rank_predict_matches_batcher: RankPredictMatchesBatcher,
-    pub(crate) demo_player_batcher: DemoPlayerBatcher,
-    pub(crate) steam_profile_batcher: SteamProfileBatcher,
 }
 
 impl AppState {
@@ -282,35 +264,9 @@ impl AppState {
             }
         };
 
-        // Create Steam Profile Batcher
-        debug!("Creating Steam Profile Batcher");
-        let steam_profile_batcher = SteamProfileBatcher::new(ch_client_ro.clone());
-
-        // Create Rank Predict Matches Batcher
-        debug!("Creating Rank Predict Matches Batcher");
-        let rank_predict_matches_batcher = RankPredictMatchesBatcher::new(ch_client_ro.clone());
-
-        // Create Demo Player Batcher
-        debug!("Creating Demo Player Batcher");
-        let demo_player_batcher = DemoPlayerBatcher::new(ch_client_ro.clone());
-
-        // Create Match History Batchers
-        debug!("Creating Match History Batchers");
-        let match_history_read_batcher = MatchHistoryReadBatcher::new(ch_client_ro.clone());
-        let match_history_insert_batcher =
-            Arc::new(MatchHistoryInsertBatcher::new(ch_client.clone()));
-
-        // Create Match Salts Batchers
-        debug!("Creating Match Salts Batchers");
-        let match_salts_read_batcher = MatchSaltsReadBatcher::new(ch_client_ro.clone());
-        let match_salts_exists_batcher = MatchSaltsExistsBatcher::new(ch_client_ro.clone());
-        let match_salts_insert_batcher = Arc::new(MatchSaltsInsertBatcher::new(ch_client.clone()));
-        let match_info_exists_batcher = MatchInfoExistsBatcher::new(ch_client_ro.clone());
-
-        // Create Game Server Metrics Insert Batcher
-        debug!("Creating Game Server Metrics Insert Batcher");
-        let game_server_metrics_batcher =
-            Arc::new(GameServerMetricsInsertBatcher::new(ch_client.clone()));
+        // Create batchers
+        debug!("Creating batchers");
+        let batchers = Batchers::new(&ch_client, &ch_client_ro);
 
         Ok(Self {
             config,
@@ -326,17 +282,8 @@ impl AppState {
             assets_client,
             rate_limit_client,
             request_logger,
-            match_history_read_batcher,
-            match_history_insert_batcher,
-            match_salts_read_batcher,
-            match_salts_exists_batcher,
-            match_salts_insert_batcher,
-            match_info_exists_batcher,
-            game_server_metrics_batcher,
+            batchers,
             rank_predictor,
-            rank_predict_matches_batcher,
-            demo_player_batcher,
-            steam_profile_batcher,
         })
     }
 }

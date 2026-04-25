@@ -19,7 +19,7 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti};
+use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -41,7 +41,7 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
         format!(
             "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history \
              WHERE account_id IN ({}) ORDER BY match_id DESC",
-            keys.iter().map(ToString::to_string).join(",")
+            in_clause(keys)
         )
     }
 
@@ -319,7 +319,7 @@ pub(super) async fn match_history(
         return Err(APIError::protected_user());
     }
 
-    let ch_match_history = state.match_history_read_batcher.load(account_id).await?;
+    let ch_match_history = state.batchers.match_history_read.load(account_id).await?;
 
     // Look up bot friend username for this account
     let bot_username = fetch_bot_username(&state.pg_client, account_id).await;
@@ -399,7 +399,8 @@ pub(super) async fn match_history(
         .collect_vec();
     if !ch_missing_entries.is_empty() {
         state
-            .match_history_insert_batcher
+            .batchers
+            .match_history_insert
             .insert(ch_missing_entries)
             .await;
     }

@@ -993,7 +993,8 @@ async fn get_steam_account_name(
         Err(e) => {
             warn!("Failed to fetch steam account name from API, falling back to db: {e}");
             Ok(state
-                .steam_profile_batcher
+                .batchers
+                .steam_profile
                 .load(steam_id)
                 .await?
                 .personaname)

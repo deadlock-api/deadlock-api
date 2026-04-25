@@ -12,7 +12,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti};
+use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::rank_predictor::{RankPrediction, RankPredictorError, badge_to_idx};
 use crate::utils::types::AccountIdQuery;
 
@@ -90,7 +90,7 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
             )
             ORDER BY account_id, match_id DESC
             LIMIT {} BY account_id",
-            keys.iter().map(ToString::to_string).join(","),
+            in_clause(keys),
             FETCH_LIMIT,
         )
     }
@@ -404,7 +404,7 @@ pub(super) async fn rank_predict(
     }
 
     let matches = fetch_matches(
-        &state.rank_predict_matches_batcher,
+        &state.batchers.rank_predict_matches,
         &state.ch_client_ro,
         account_id,
     )

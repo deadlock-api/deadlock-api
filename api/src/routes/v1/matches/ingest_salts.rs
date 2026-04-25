@@ -82,7 +82,8 @@ pub(super) async fn ingest_salts(
 
     let match_ids: Vec<u64> = match_salts.iter().map(|s| s.match_id).collect();
     let existing: HashMap<u64, (bool, bool)> = state
-        .match_salts_exists_batcher
+        .batchers
+        .match_salts_exists
         .load_many(&match_ids)
         .await?
         .into_iter()
@@ -118,6 +119,6 @@ pub(super) async fn ingest_salts(
     if new_salts.len() > 1 {
         debug!("Inserting salts: {}", new_salts.len());
     }
-    state.match_salts_insert_batcher.insert(new_salts).await;
+    state.batchers.match_salts_insert.insert(new_salts).await;
     Ok(Json(json!({ "status": "success" })))
 }

@@ -165,7 +165,7 @@ pub(super) async fn ingest(
         metadata: request.metadata,
     };
 
-    state.game_server_metrics_batcher.insert(vec![row]).await;
+    state.batchers.game_server_metrics.insert(vec![row]).await;
 
     Ok(StatusCode::ACCEPTED)
 }

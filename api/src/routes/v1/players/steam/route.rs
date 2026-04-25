@@ -5,14 +5,13 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use chrono::Utc;
 use clickhouse::Row;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher};
+use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
@@ -59,7 +58,7 @@ impl BatchQuery for SteamProfileQuery {
             ORDER BY last_updated DESC
             LIMIT 1 BY account_id
              ",
-            keys.iter().map(ToString::to_string).join(",")
+            in_clause(keys)
         )
     }
 
@@ -81,7 +80,12 @@ pub(crate) async fn steam_single(
     {
         return Err(APIError::protected_user());
     }
-    state.steam_profile_batcher.load(account_id).await.map(Json)
+    state
+        .batchers
+        .steam_profile
+        .load(account_id)
+        .await
+        .map(Json)
 }
 
 #[utoipa::path(
@@ -138,7 +142,8 @@ pub(super) async fn steam(
         .filter(|id| !protected_users.contains(id))
         .collect::<Vec<_>>();
     state
-        .steam_profile_batcher
+        .batchers
+        .steam_profile
         .load_many(&account_ids)
         .await
         .map(Json)

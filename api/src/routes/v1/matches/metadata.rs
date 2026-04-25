@@ -11,7 +11,6 @@ use bytes::Bytes;
 use clickhouse::Row;
 use futures::future::join;
 use futures::stream::BoxStream;
-use itertools::Itertools;
 use metrics::counter;
 use object_store::aws::AmazonS3;
 use object_store::path::Path as S3Path;
@@ -29,7 +28,7 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::fetch_match_salts;
-use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti};
+use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::types::MatchIdQuery;
@@ -52,7 +51,7 @@ impl BatchQueryMulti for DemoPlayerQuery {
         format!(
             "SELECT match_id, account_id, hero_build_id, banned_hero_ids \
              FROM demo_player WHERE match_id IN ({})",
-            keys.iter().map(ToString::to_string).join(",")
+            in_clause(keys)
         )
     }
 
@@ -370,7 +369,8 @@ pub(super) async fn metadata(
     .await?;
     let (metadata, demo_rows) = tokio::join!(parse_match_metadata_raw(&raw_data), async {
         state
-            .demo_player_batcher
+            .batchers
+            .demo_player
             .load(match_id)
             .await
             .unwrap_or_default()
