@@ -4,6 +4,7 @@ use async_compression::tokio::bufread::BzDecoder;
 use axum::Json;
 use axum::body::Body;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
@@ -65,6 +66,9 @@ async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
 #[derive(Deserialize, IntoParams)]
 pub(super) struct MetadataQuery {
     is_custom: Option<bool>,
+    /// If `true`, skip the Steam fallback when the metadata is not available in S3
+    /// and return an error instead.
+    disable_steam: Option<bool>,
 }
 
 async fn fetch_from_s3<T: Into<S3Path>>(s3: &AmazonS3, key: T) -> object_store::Result<Vec<u8>> {
@@ -78,6 +82,7 @@ async fn fetch_match_metadata_raw(
     s3_cache: Option<&AmazonS3>,
     match_id: u64,
     is_custom: bool,
+    disable_steam: bool,
 ) -> APIResult<Vec<u8>> {
     // Try to fetch from the cache first
     if match_id >= *min_cache_match_id(&state.ch_client).await
@@ -148,6 +153,13 @@ async fn fetch_match_metadata_raw(
                 "Match metadata not found on s3, falling back to steam"
             );
         }
+    }
+
+    if disable_steam {
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "Match metadata not found in S3 and Steam fallback is disabled",
+        ));
     }
 
     // If not in S3, fetch from Steam
@@ -223,7 +235,10 @@ Relevant Protobuf Messages:
 )]
 pub(super) async fn metadata_raw(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    Query(MetadataQuery { is_custom }): Query<MetadataQuery>,
+    Query(MetadataQuery {
+        is_custom,
+        disable_steam,
+    }): Query<MetadataQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -269,6 +284,7 @@ pub(super) async fn metadata_raw(
         None, // Skip cache
         match_id,
         is_custom.unwrap_or_default(),
+        disable_steam.unwrap_or_default(),
     )
     .await
     .map(Body::from)
@@ -310,7 +326,10 @@ Relevant Protobuf Messages:
 )]
 pub(super) async fn metadata(
     Path(MatchIdQuery { match_id }): Path<MatchIdQuery>,
-    Query(MetadataQuery { is_custom }): Query<MetadataQuery>,
+    Query(MetadataQuery {
+        is_custom,
+        disable_steam,
+    }): Query<MetadataQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
@@ -321,6 +340,7 @@ pub(super) async fn metadata(
         Some(&state.s3_cache_client),
         match_id,
         is_custom.unwrap_or_default(),
+        disable_steam.unwrap_or_default(),
     )
     .await?;
     let (metadata, demo_rows) = tokio::join!(parse_match_metadata_raw(&raw_data), async {
