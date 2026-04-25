@@ -408,9 +408,9 @@ SELECT
     wins + losses    AS matches,
     uniq(account_id) AS players,
     avg(buy_time) AS avg_buy_time_s,
-    avgIf(sold_time, sold_time > 0) AS avg_sell_time_s,
+    coalesce(avgIf(sold_time, sold_time > 0), 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
-    avgIf((sold_time / duration_s) * 100, sold_time > 0) AS avg_sell_time_relative
+    coalesce(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative
 FROM exploded_players
 GROUP BY item_id, bucket
 {having_clause}
