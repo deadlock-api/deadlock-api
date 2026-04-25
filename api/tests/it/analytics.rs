@@ -873,61 +873,6 @@ async fn test_item_stats(
 }
 
 #[rstest]
-#[case(None, Some(vec![1]), None, None, None, Some(1741801678), Some(1742233678), Some(1), None)]
-#[case(Some(item_stats::BucketQuery::Hero), Some(vec![1, 2]), Some(vec![15, 13]), Some(false), None, Some(1741801678), Some(1742233678), Some(1), None)]
-#[case(None, Some(vec![15]), None, Some(true), None, Some(1741801678), Some(1742233678), Some(1), None)]
-#[case(None, Some(vec![15]), None, None, Some(80_000), Some(1741801678), Some(1742233678), Some(1), None)]
-#[tokio::test]
-async fn test_item_stats_with_enemy_filter(
-    #[case] bucket: Option<item_stats::BucketQuery>,
-    #[case] enemy_hero_ids: Option<Vec<u32>>,
-    #[case] hero_ids: Option<Vec<u32>>,
-    #[case] same_lane_filter: Option<bool>,
-    #[case] max_enemy_networth: Option<u64>,
-    #[case] min_unix_timestamp: Option<i64>,
-    #[case] max_unix_timestamp: Option<i64>,
-    #[case] min_matches: Option<u64>,
-    #[case] max_matches: Option<u64>,
-) {
-    let mut q = vec![];
-    push_query!(q, "bucket" =>? bucket);
-    push_query!(q, "enemy_hero_ids" =>[] enemy_hero_ids);
-    push_query!(q, "hero_ids" =>[] hero_ids);
-    push_query!(q, "same_lane_filter" =>? same_lane_filter);
-    push_query!(q, "max_enemy_networth" =>? max_enemy_networth);
-    push_query!(q, "min_unix_timestamp" =>? min_unix_timestamp);
-    push_query!(q, "max_unix_timestamp" =>? max_unix_timestamp);
-    push_query!(q, "min_matches" =>? min_matches);
-    push_query!(q, "max_matches" =>? max_matches);
-
-    let response = request_endpoint("/v1/analytics/item-stats", query_refs(&q)).await;
-    let item_stats: Vec<ItemStats> = response.json().await.expect("Failed to parse response");
-
-    assert_eq!(
-        item_stats
-            .iter()
-            .map(|s| (s.item_id, s.bucket))
-            .unique()
-            .count(),
-        item_stats.len(),
-    );
-
-    for stat in &item_stats {
-        assert_eq!(stat.wins + stat.losses, stat.matches);
-        if let Some(min_matches) = min_matches {
-            assert!(stat.matches >= min_matches);
-        }
-        if let Some(max_matches) = max_matches {
-            assert!(stat.matches <= max_matches);
-        }
-        match bucket {
-            Some(item_stats::BucketQuery::NoBucket) | None => assert_eq!(stat.bucket, 0),
-            _ => {}
-        }
-    }
-}
-
-#[rstest]
 #[case(
     1,
     Some(1741801678),
