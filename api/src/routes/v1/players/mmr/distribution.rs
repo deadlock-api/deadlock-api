@@ -46,87 +46,128 @@ pub(super) struct DistributionEntry {
     players: u64,
 }
 
-fn build_info_filters(query: &MMRDistributionQuery) -> String {
-    let mut info_filters = vec![];
-    info_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        info_filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        info_filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        info_filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        info_filters.push(format!("match_id <= {max_match_id}"));
-    }
+/// Filters that live on `match_info` columns and must be applied via a
+/// `match_id IN (...)` subquery against `match_info` (or in the original JOIN).
+fn build_info_only_filters(query: &MMRDistributionQuery) -> Vec<String> {
+    let mut filters = vec![];
     if let Some(max_duration_s) = query.max_duration_s {
-        info_filters.push(format!("duration_s <= {max_duration_s}"));
+        filters.push(format!("duration_s <= {max_duration_s}"));
     }
     if let Some(is_high_skill_range_parties) = query.is_high_skill_range_parties {
-        info_filters.push(format!(
+        filters.push(format!(
             "is_high_skill_range_parties = {is_high_skill_range_parties}"
         ));
     }
     if let Some(is_low_pri_pool) = query.is_low_pri_pool {
-        info_filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
+        filters.push(format!("low_pri_pool = {is_low_pri_pool}"));
     }
     if let Some(is_new_player_pool) = query.is_new_player_pool {
-        info_filters.push(format!("new_player_pool = {is_new_player_pool}"));
+        filters.push(format!("new_player_pool = {is_new_player_pool}"));
     }
-    if info_filters.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", info_filters.join(" AND "))
+    filters
+}
+
+/// Filters that exist on both tables (or on `player_match_history` directly)
+/// and can be applied to `player_match_history` for partition/PK pruning.
+fn build_history_filters(query: &MMRDistributionQuery) -> Vec<String> {
+    let mut filters = vec![
+        "game_mode = 'Normal'".to_owned(),
+        "match_mode IN ('Ranked', 'Unranked')".to_owned(),
+    ];
+    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
+        filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
+    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
+        filters.push(format!("start_time <= {max_unix_timestamp}"));
+    }
+    if let Some(min_match_id) = query.min_match_id {
+        filters.push(format!("match_id >= {min_match_id}"));
+    }
+    if let Some(max_match_id) = query.max_match_id {
+        filters.push(format!("match_id <= {max_match_id}"));
+    }
+    filters
 }
 
 fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuery) -> String {
-    let info_filters = build_info_filters(query);
-    let hero_filter = hero_id
-        .map(|id| format!("\n            AND hero_id = {id}"))
-        .unwrap_or_default();
+    let mut history_filters = build_history_filters(query);
+    if let Some(id) = hero_id {
+        history_filters.push(format!("hero_id = {id}"));
+    }
+    let history_where = history_filters.join(" AND ");
+
+    let info_only_filters = build_info_only_filters(query);
+    let info_subfilter = if info_only_filters.is_empty() {
+        String::new()
+    } else {
+        // Pre-filter `match_id` via an `IN (...)` subquery against `match_info`.
+        // Re-apply the history filters here too (start_time/match_mode/match_id
+        // are present in both tables and partition-prune match_info as well).
+        let mut info_sq_filters = build_history_filters(query);
+        info_sq_filters.extend(info_only_filters);
+        format!(
+            "AND match_id IN (SELECT match_id FROM match_info WHERE {})",
+            info_sq_filters.join(" AND ")
+        )
+    };
+
     let min_window = if hero_id.is_some() {
         "window_size"
     } else {
         "window_size / 2"
     };
     let rank_filter = if hero_id.is_none() {
-        "\n    WHERE rank BETWEEN 11 AND 116"
+        "WHERE rank BETWEEN 11 AND 116"
     } else {
         ""
     };
+
     format!(
         "
     WITH
-        {WINDOW_SIZE} as window_size,
-        {SMOOTHING_FACTOR} as k,
-        t_matches AS (SELECT account_id,
-                             match_id,
-                             start_time,
-                             assumeNotNull(if(player_team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
-                             (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-                      FROM player_match_history
-                               INNER JOIN match_info USING (match_id)
-                      WHERE current_match_badge > 0{hero_filter}
-                        {info_filters}
-                      ORDER BY account_id, match_id),
-        mmr_data AS (SELECT account_id,
-                            groupArray(mmr)
-                                       OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
-                            groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
-                            arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
-                     FROM t_matches
-                     QUALIFY row_number() OVER (PARTITION BY account_id ORDER BY match_id DESC) = 1),
-        distribution AS (SELECT toUInt32(clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66)) AS player_score,
-                                uniq(account_id)                                                            as players
-                         FROM mmr_data
-                         WHERE length(mmr_window) >= {min_window}
-                         GROUP BY player_score)
+        {WINDOW_SIZE} AS window_size,
+        {SMOOTHING_FACTOR} AS k
     SELECT toUInt8(if(player_score <= 0, 0, 10 * intDiv(player_score - 1, 6) + 11 + modulo(player_score - 1, 6))) AS rank,
            players
-    FROM distribution{rank_filter}
+    FROM (
+        SELECT toUInt32(clamp(
+                   dotProduct(mmr_window, arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)) /
+                   arraySum(arrayMap(t -> pow(k, date_diff('hour', t, latest_start_time)), time_window)),
+                   0, 66
+               )) AS player_score,
+               uniq(account_id) AS players
+        FROM (
+            SELECT
+                account_id,
+                arrayMap(x -> x.2, recent_matches) AS mmr_window,
+                arrayMap(x -> x.3, recent_matches) AS time_window,
+                arrayMax(time_window) AS latest_start_time
+            FROM (
+                SELECT
+                    account_id,
+                    arraySlice(arraySort(x -> -x.1, groupArray((match_id, mmr, start_time))), 1, window_size) AS recent_matches
+                FROM (
+                    SELECT
+                        account_id,
+                        match_id,
+                        dictGet('match_info_dict', ('start_time', 'average_badge_team0', 'average_badge_team1'), match_id) AS info,
+                        info.1 AS start_time,
+                        assumeNotNull(if(player_team = 'Team1', info.3, info.2)) AS current_match_badge,
+                        (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
+                    FROM (
+                        SELECT account_id, match_id, player_team
+                        FROM player_match_history
+                        WHERE {history_where}
+                          {info_subfilter}
+                    )
+                )
+                GROUP BY account_id
+                HAVING length(recent_matches) >= {min_window}
+            )
+        )
+        GROUP BY player_score
+    )
+    {rank_filter}
     ORDER BY rank
     "
     )

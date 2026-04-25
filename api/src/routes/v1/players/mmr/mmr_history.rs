@@ -41,49 +41,17 @@ pub struct MMRHistory {
 }
 
 fn build_mmr_history_query(account_id: u32) -> String {
-    format!(
-        "
-    WITH
-        {WINDOW_SIZE} as window_size,
-        {SMOOTHING_FACTOR} as k,
-        t_matches AS (
-            SELECT
-                account_id,
-                match_id,
-                dictGet('match_info_dict', 'start_time', match_id) AS start_time,
-                assumeNotNull(if(player_team = 'Team1', dictGet('match_info_dict', 'average_badge_team1', match_id), dictGet('match_info_dict', 'average_badge_team0', match_id))) AS current_match_badge,
-                (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-            FROM player_match_history
-            WHERE current_match_badge > 0
-            AND account_id = {account_id}
-            AND match_mode IN ('Ranked', 'Unranked')
-            ORDER BY account_id, match_id
-        ),
-        mmr_data AS (
-            SELECT
-                account_id,
-                match_id,
-                start_time,
-                groupArray(mmr) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS mmr_window,
-                groupArray(start_time) OVER (PARTITION BY account_id ORDER BY match_id ROWS BETWEEN window_size - 1 PRECEDING AND CURRENT ROW) AS time_window,
-                arrayMap(i -> pow(k, date_diff('hour', time_window[i], start_time)), range(1, length(time_window) + 1)) AS weights
-            FROM t_matches
-            ORDER BY match_id
-        )
-    SELECT
-        account_id,
-        match_id,
-        start_time,
-        clamp(dotProduct(mmr_window, weights) / arraySum(weights), 0, 66) AS player_score,
-        toUInt32(if(toUInt32(round(player_score)) = 0, 0, 10 * intDiv(toUInt32(round(player_score)) - 1, 6) + 11 + modulo(toUInt32(round(player_score)) - 1, 6))) AS rank,
-        toUInt32(floor(rank / 10)) AS division,
-        toUInt32(rank % 10) AS division_tier
-    FROM mmr_data
-    "
-    )
+    build_mmr_history_query_inner(account_id, None)
 }
 
 fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
+    build_mmr_history_query_inner(account_id, Some(hero_id))
+}
+
+fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String {
+    let hero_filter = hero_id
+        .map(|id| format!("AND hero_id = {id}"))
+        .unwrap_or_default();
     format!(
         "
     WITH
@@ -93,13 +61,14 @@ fn build_hero_mmr_history_query(account_id: u32, hero_id: u8) -> String {
             SELECT
                 account_id,
                 match_id,
-                dictGet('match_info_dict', 'start_time', match_id) AS start_time,
-                assumeNotNull(if(player_team = 'Team1', dictGet('match_info_dict', 'average_badge_team1', match_id), dictGet('match_info_dict', 'average_badge_team0', match_id))) AS current_match_badge,
+                dictGet('match_info_dict', ('start_time', 'average_badge_team0', 'average_badge_team1'), match_id) AS info,
+                info.1 AS start_time,
+                assumeNotNull(if(player_team = 'Team1', info.3, info.2)) AS current_match_badge,
                 (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
             FROM player_match_history
-            WHERE current_match_badge > 0
-            AND account_id = {account_id}
-            AND hero_id = {hero_id}
+            WHERE account_id = {account_id}
+            {hero_filter}
+            AND game_mode = 'Normal'
             AND match_mode IN ('Ranked', 'Unranked')
             ORDER BY account_id, match_id
         ),
