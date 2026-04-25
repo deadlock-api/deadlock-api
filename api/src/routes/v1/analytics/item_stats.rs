@@ -147,6 +147,8 @@ pub(crate) struct ItemStatsQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     enemy_hero_ids: Option<Vec<u32>>,
+    /// When `true`, requires *all* of the specified `enemy_hero_ids` to be on the same enemy team. When `false` (default), matches if *any* of the specified hero(es) are on the enemy team. Ignored when `enemy_hero_ids` is unset.
+    enemy_hero_ids_all_match: Option<bool>,
     /// Filter the specified enemy hero(es) by their final net worth. Ignored when `enemy_hero_ids` is unset.
     min_enemy_networth: Option<u64>,
     /// Filter the specified enemy hero(es) by their final net worth. Ignored when `enemy_hero_ids` is unset.
@@ -327,7 +329,11 @@ fn build_query(query: &ItemStatsQuery) -> String {
         .as_deref()
         .filter(|ids| !ids.is_empty());
     let (enemy_cte, enemy_join, enemy_where) = if let Some(ids) = enemy_hero_ids {
+        let unique_ids: Vec<u32> = ids.iter().copied().sorted().dedup().collect();
         let mut enemy_having = vec![];
+        if query.enemy_hero_ids_all_match == Some(true) {
+            enemy_having.push(format!("uniqExact(hero_id) = {}", unique_ids.len()));
+        }
         if let Some(v) = query.min_enemy_networth {
             enemy_having.push(format!("min(net_worth) >= {v}"));
         }
@@ -352,7 +358,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             AND hero_id IN ({})
         GROUP BY match_id, team{enemy_having_clause}
     ),",
-            ids.iter().map(ToString::to_string).join(", ")
+            unique_ids.iter().map(ToString::to_string).join(", ")
         );
         let lane_filter = if query.same_lane_filter == Some(true) {
             "\n            AND has(et.enemy_lanes, assigned_lane)"
