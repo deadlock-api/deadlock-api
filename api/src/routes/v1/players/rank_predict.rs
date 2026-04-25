@@ -58,25 +58,38 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
     fn build_query(keys: &[u32]) -> String {
         format!(
             "SELECT
-                pmh.account_id,
-                pmh.match_id,
-                pmh.hero_id,
-                pmh.player_team,
-                pmh.player_kills,
-                pmh.match_duration_s,
-                mi.average_badge_team0,
-                mi.average_badge_team1,
-                if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
-            FROM player_match_history pmh
-            JOIN match_info mi USING (match_id)
-            WHERE pmh.account_id IN ({})
-              AND pmh.match_mode IN ('Ranked', 'Unranked')
-              AND pmh.game_mode = 'Normal'
-              AND mi.average_badge_team0 > 0
-              AND mi.average_badge_team1 > 0
-            ORDER BY pmh.account_id, pmh.match_id DESC
-            LIMIT 1 BY pmh.account_id, pmh.match_id
-            LIMIT {} BY pmh.account_id",
+                account_id,
+                match_id,
+                hero_id,
+                player_team,
+                player_kills,
+                match_duration_s,
+                average_badge_team0,
+                average_badge_team1,
+                enemy_team
+            FROM (
+                SELECT
+                    pmh.account_id AS account_id,
+                    pmh.match_id AS match_id,
+                    pmh.hero_id AS hero_id,
+                    pmh.player_team AS player_team,
+                    pmh.player_kills AS player_kills,
+                    pmh.match_duration_s AS match_duration_s,
+                    mi.average_badge_team0 AS average_badge_team0,
+                    mi.average_badge_team1 AS average_badge_team1,
+                    if(pmh.player_team = 'Team0', 1, 0) AS enemy_team
+                FROM player_match_history pmh
+                JOIN match_info mi USING (match_id)
+                WHERE pmh.account_id IN ({})
+                  AND pmh.match_mode IN ('Ranked', 'Unranked')
+                  AND pmh.game_mode = 'Normal'
+                  AND mi.average_badge_team0 > 0
+                  AND mi.average_badge_team1 > 0
+                ORDER BY pmh.account_id, pmh.match_id DESC
+                LIMIT 1 BY pmh.account_id, pmh.match_id
+            )
+            ORDER BY account_id, match_id DESC
+            LIMIT {} BY account_id",
             keys.iter().map(ToString::to_string).join(","),
             FETCH_LIMIT,
         )
