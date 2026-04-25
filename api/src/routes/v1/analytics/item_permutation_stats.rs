@@ -190,7 +190,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
                wins + losses AS matches
         FROM t_players {joins}
         WHERE {filters_distinct}
-        GROUP BY item_ids
+        GROUP BY {intersect_array}
         ORDER BY matches DESC
         "
         )
