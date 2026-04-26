@@ -272,11 +272,6 @@ pub async fn request_endpoint(
         url = format!("{url}?{query}");
     }
     let response = reqwest::get(url).await.expect("Failed to get response");
-    if response.status() != reqwest::StatusCode::OK {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        panic!("non-200 response: {status}\nbody: {body}");
-    }
     check_response(&response);
     response
 }
