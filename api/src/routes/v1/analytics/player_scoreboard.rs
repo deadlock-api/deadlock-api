@@ -141,22 +141,46 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
             account_ids.iter().map(|i| (*i).to_string()).join(", ")
         ));
     }
-    let inner_where = format!(" WHERE {} ", inner_filters.join(" AND "));
+    let where_clause = format!(" WHERE {} ", inner_filters.join(" AND "));
 
-    // Dedup ReplacingMergeTree inline by grouping on (account_id, match_id).
-    // FINAL would block the hero_stats_by_account projection; leaving dupes
-    // inflates sum/countIf by 20-50% on partitions with un-merged inserts.
-    let inner_projection = query
-        .sort_by
-        .inner_column()
-        .map_or(String::new(), |col| format!(", any({col}) as {col}"));
+    // FINAL streams the ReplacingMergeTree merge during read and beats the
+    // hand-rolled (account_id, match_id) GROUP BY dedup 3-7x, but blocks the
+    // planner from picking hero_stats_by_hero or the account_id bloom-filter
+    // index — so when hero_id or account_ids is set, the inline dedup wins.
+    let use_final = query.hero_id.is_none() && query.account_ids.is_none();
+
+    let (from_clause, outer_where, matches_expr) = if use_final {
+        (
+            String::from(" FROM match_player FINAL "),
+            where_clause.as_str(),
+            "count()",
+        )
+    } else {
+        let inner_projection = query
+            .sort_by
+            .inner_column()
+            .map_or(String::new(), |col| format!(", any({col}) as {col}"));
+        (
+            format!(
+                "
+FROM (
+    SELECT account_id, match_id{inner_projection}
+    FROM match_player
+    {where_clause}
+    GROUP BY account_id, match_id
+)"
+            ),
+            "",
+            "uniq(match_id)",
+        )
+    };
 
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
-        having_filters.push(format!("uniq(match_id) >= {min_matches}"));
+        having_filters.push(format!("{matches_expr} >= {min_matches}"));
     }
     if let Some(max_matches) = query.max_matches {
-        having_filters.push(format!("uniq(match_id) <= {max_matches}"));
+        having_filters.push(format!("{matches_expr} <= {max_matches}"));
     }
     let having_clause = if having_filters.is_empty() {
         String::new()
@@ -164,24 +188,21 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         format!(" HAVING {} ", having_filters.join(" AND "))
     };
     let offset = query.start.unwrap_or(1).max(1) - 1;
+    let select_clause = query.sort_by.get_select_clause();
+    let sort_direction = query.sort_direction;
+    let limit = query.limit.unwrap_or_default();
+
     format!(
         "
-SELECT rowNumberInAllBlocks() + {offset} as rank, account_id, toFloat64({}) as value, uniq(\
-         match_id) as matches
-FROM (
-    SELECT account_id, match_id{inner_projection}
-    FROM match_player
-    {inner_where}
-    GROUP BY account_id, match_id
-)
+SELECT rowNumberInAllBlocks() + {offset} as rank, account_id, toFloat64({select_clause}) as \
+         value, {matches_expr} as matches
+{from_clause}
+{outer_where}
 GROUP BY account_id
 {having_clause}
-ORDER BY value {}
-LIMIT {} OFFSET {offset}
-    ",
-        query.sort_by.get_select_clause(),
-        query.sort_direction,
-        query.limit.unwrap_or_default(),
+ORDER BY value {sort_direction}
+LIMIT {limit} OFFSET {offset}
+    "
     )
 }
 
