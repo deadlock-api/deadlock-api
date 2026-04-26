@@ -1122,14 +1122,17 @@ VALUES (34000002, '2025-03-17 06:19:56', 'Team0', 1241, 'TeamWin', 'Unranked', '
         ['Team0'], ['Team0'], [1622], false, false, false, 76, 76, '2025-03-18 07:27:41', 2);
 
 
-CREATE DICTIONARY match_info_dict
+CREATE OR REPLACE DICTIONARY default.match_info_dict
 (
-    `match_id` UInt64,
-    `start_time` DateTime,
+    `match_id`            UInt64,
+    `start_time`          DateTime,
     `average_badge_team0` Nullable(UInt32),
-    `average_badge_team1` Nullable(UInt32)
+    `average_badge_team1` Nullable(UInt32),
+    `match_mode`          UInt8,
+    `game_mode`           UInt8,
+    `duration_s`          UInt32
 )
-PRIMARY KEY match_id
-SOURCE(CLICKHOUSE(TABLE 'match_info'))
-LIFETIME(MIN 0 MAX 0)
-LAYOUT(HASHED());
+    PRIMARY KEY match_id
+    SOURCE (CLICKHOUSE(TABLE 'match_info' DB 'default' USER 'default' PASSWORD 'ijojdmkasd'))
+    LIFETIME (1800)
+    LAYOUT (HASHED());
