@@ -165,7 +165,8 @@ impl IntoResponse for APIError {
             Self::Request(_) => {
                 Self::internal("A needed request failed. Retry your request later.").into_response()
             }
-            Self::Clickhouse(_) | Self::PostgreSQL(_) | Self::Redis(_) => {
+            Self::Clickhouse(e) => Self::internal(format!("Database error: {e}")).into_response(),
+            Self::PostgreSQL(_) | Self::Redis(_) => {
                 Self::internal("Database error.").into_response()
             }
             Self::Json(_) | Self::Io(_) | Self::Snappy(_) | Self::Fmt(_) => {
