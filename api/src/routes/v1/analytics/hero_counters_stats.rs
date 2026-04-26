@@ -146,10 +146,10 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     }
     .build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let mut p1_filters = vec![format!(
-        "match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter}{info_filters}"
-    )];
-    let mut p2_filters: Vec<String> = vec![];
+    let match_filters =
+        format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter}{info_filters}");
+    let mut p1_filters = vec![match_filters.clone()];
+    let mut p2_filters = vec![match_filters];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         p1_filters.push(format!("account_id = {account_id}"));
@@ -173,11 +173,7 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         p2_filters.push(format!("net_worth <= {max_enemy_networth}"));
     }
     let p1_where = p1_filters.join(" AND ");
-    let p2_where = if p2_filters.is_empty() {
-        "1".to_owned()
-    } else {
-        p2_filters.join(" AND ")
-    };
+    let p2_where = p2_filters.join(" AND ");
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("matches_played >= {min_matches}"));
@@ -246,8 +242,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
            SUM(enemy_creeps) AS enemy_creeps
     FROM (
         SELECT {pair_select}
-        FROM (SELECT {p1_cols} FROM match_player WHERE team IN ('Team0', 'Team1') AND {p1_where}) p1
-        INNER JOIN (SELECT {p2_cols} FROM match_player WHERE team IN ('Team0', 'Team1') AND {p2_where}) p2 {join_keys}
+        FROM (SELECT {p1_cols} FROM match_player FINAL WHERE team IN ('Team0', 'Team1') AND {p1_where}) p1
+        INNER JOIN (SELECT {p2_cols} FROM match_player FINAL WHERE team IN ('Team0', 'Team1') AND {p2_where}) p2 {join_keys}
     )
     GROUP BY hero_id, enemy_hero_id
     {having_clause}
