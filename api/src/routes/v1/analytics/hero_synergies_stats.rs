@@ -10,9 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{
-    MatchInfoFilters, default_min_matches_u64, filter_protected_accounts, round_timestamps,
-};
+use super::common_filters::{default_min_matches_u64, filter_protected_accounts, round_timestamps};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
@@ -129,24 +127,47 @@ pub struct HeroSynergyStats {
 }
 
 fn build_query(query: &HeroSynergyStatsQuery) -> String {
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp: query.min_unix_timestamp,
-        max_unix_timestamp: query.max_unix_timestamp,
-        min_match_id: query.min_match_id,
-        max_match_id: query.max_match_id,
-        min_average_badge: query.min_average_badge,
-        max_average_badge: query.max_average_badge,
-        min_duration_s: query.min_duration_s,
-        max_duration_s: query.max_duration_s,
-    }
-    .build();
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     // Filters applied only to p1: match_id and account filters propagate to p2
     // through the equi-join (match_id) and produce no extra rows, so duplicating
     // them on p2 just forces a second wide scan of match_player.
     let mut p1_filters = vec![
         "p1.team IN ('Team0', 'Team1')".to_owned(),
-        "p1.match_id IN t_matches".to_owned(),
+        "p1.match_mode IN ('Ranked', 'Unranked')".to_owned(),
+        game_mode_filter.replace("game_mode", "p1.game_mode"),
     ];
+    if let Some(v) = query.min_unix_timestamp {
+        p1_filters.push(format!("p1.start_time >= {v}"));
+    }
+    if let Some(v) = query.max_unix_timestamp {
+        p1_filters.push(format!("p1.start_time <= {v}"));
+    }
+    if let Some(v) = query.min_match_id {
+        p1_filters.push(format!("p1.match_id >= {v}"));
+    }
+    if let Some(v) = query.max_match_id {
+        p1_filters.push(format!("p1.match_id <= {v}"));
+    }
+    if let Some(v) = query.min_average_badge
+        && v > 11
+    {
+        p1_filters.push(format!(
+            "p1.average_badge_team0 >= {v} AND p1.average_badge_team1 >= {v}"
+        ));
+    }
+    if let Some(v) = query.max_average_badge
+        && v < 116
+    {
+        p1_filters.push(format!(
+            "p1.average_badge_team0 <= {v} AND p1.average_badge_team1 <= {v}"
+        ));
+    }
+    if let Some(v) = query.min_duration_s {
+        p1_filters.push(format!("p1.duration_s >= {v}"));
+    }
+    if let Some(v) = query.max_duration_s {
+        p1_filters.push(format!("p1.duration_s <= {v}"));
+    }
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         p1_filters.push(format!("p1.account_id = {account_id}"));
@@ -179,7 +200,6 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let lane_join = if query.same_lane_filter.unwrap_or(true) {
         " AND p1.assigned_lane = p2.assigned_lane"
     } else {
@@ -187,9 +207,6 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     };
     format!(
         "
-    WITH t_matches AS (SELECT match_id
-                 FROM match_info
-                 WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
     SELECT p1.hero_id AS hero_id1,
            p2.hero_id AS hero_id2,
            SUM(p1.won) AS wins,

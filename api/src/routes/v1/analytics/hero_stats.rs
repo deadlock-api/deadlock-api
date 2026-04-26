@@ -45,24 +45,13 @@ impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => "toUInt32(max_avg_badge)",
+            Self::AvgBadge => {
+                "toUInt32(assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)))"
+            }
             Self::StartTimeHour => "toStartOfHour(start_time)",
             Self::StartTimeDay => "toStartOfDay(start_time)",
             Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
             Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        }
-    }
-
-    fn get_info_select_clause(self) -> &'static str {
-        match self {
-            Self::StartTimeHour
-            | Self::StartTimeDay
-            | Self::StartTimeWeek
-            | Self::StartTimeMonth => ", start_time",
-            Self::AvgBadge => {
-                ", assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)) as max_avg_badge"
-            }
-            Self::NoBucket => "",
         }
     }
 }
@@ -180,7 +169,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     }
     .build();
     #[allow(deprecated)]
-    let mut player_filters = PlayerFilters {
+    let player_filters = PlayerFilters {
         account_id: query.account_id,
         account_ids: query.account_ids.as_deref(),
         min_networth: query.min_networth,
@@ -190,9 +179,6 @@ fn build_query(query: &HeroStatsQuery) -> String {
         ..Default::default()
     }
     .build();
-    if query.bucket == BucketQuery::NoBucket {
-        player_filters.push("match_id IN t_matches".to_owned());
-    }
     let player_filters = join_filters(&player_filters);
     let mut player_hero_filters = vec![];
     if let Some(min_hero_matches) = query.min_hero_matches {
@@ -219,19 +205,20 @@ fn build_query(query: &HeroStatsQuery) -> String {
         player_hero_total_filters.join(" AND ")
     };
     let bucket = query.bucket.get_select_clause();
-    let match_info_select = query.bucket.get_info_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_filters =
+        format!("AND match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
+    let has_player_hero_cte = query
+        .min_hero_matches
+        .or(query.max_hero_matches)
+        .is_some_and(|v| v > 1);
+    let has_player_hero_total_cte = query
+        .min_hero_matches_total
+        .or(query.max_hero_matches_total)
+        .is_some_and(|v| v > 1);
     format!(
         "
-    WITH t_matches AS (
-            SELECT match_id {match_info_select}
-            FROM match_info
-            WHERE match_mode IN ('Ranked', 'Unranked')
-                AND {game_mode_filter}
-                {info_filters}
-        )
-        {}
-        {}
+    {}{}
     SELECT
         hero_id,
         {bucket} AS bucket,
@@ -255,25 +242,21 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_shots_hit) AS total_shots_hit,
         sum(max_shots_missed) AS total_shots_missed
     FROM match_player FINAL
-    {}
     WHERE TRUE {player_filters}
+        {match_filters}
         {}
         {}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     ",
-        if query
-            .min_hero_matches
-            .or(query.max_hero_matches)
-            .is_some_and(|v| v > 1)
-        {
+        if has_player_hero_cte {
             format!(
-                ",
-        t_players AS (
+                "WITH t_players AS (
             SELECT account_id, hero_id
             FROM match_player
-            WHERE match_id IN (SELECT match_id FROM t_matches)
+            WHERE TRUE
                 {player_filters}
+                {match_filters}
             GROUP BY account_id, hero_id
             HAVING {player_hero_filters}
         )"
@@ -281,14 +264,10 @@ fn build_query(query: &HeroStatsQuery) -> String {
         } else {
             String::new()
         },
-        if query
-            .min_hero_matches_total
-            .or(query.max_hero_matches_total)
-            .is_some_and(|v| v > 1)
-        {
+        if has_player_hero_total_cte {
+            let prefix = if has_player_hero_cte { "," } else { "WITH" };
             format!(
-                ",
-        t_players2 AS (
+                "{prefix} t_players2 AS (
             SELECT account_id, hero_id
             FROM player_match_history
             GROUP BY account_id, hero_id
@@ -303,25 +282,12 @@ fn build_query(query: &HeroStatsQuery) -> String {
         } else {
             format!("sum(count(distinct match_id)) OVER (PARTITION BY {bucket})")
         },
-        if query.bucket == BucketQuery::NoBucket {
-            ""
-        } else {
-            "INNER JOIN t_matches USING (match_id)"
-        },
-        if query
-            .min_hero_matches
-            .or(query.max_hero_matches)
-            .is_some_and(|v| v > 1)
-        {
+        if has_player_hero_cte {
             "AND (account_id, hero_id) IN t_players"
         } else {
             ""
         },
-        if query
-            .min_hero_matches_total
-            .or(query.max_hero_matches_total)
-            .is_some_and(|v| v > 1)
-        {
+        if has_player_hero_total_cte {
             "AND (account_id, hero_id) IN t_players2"
         } else {
             ""

@@ -99,15 +99,9 @@ fn build_query(query: &HeroScoreboardQuery) -> String {
     }
     .build();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let info_filters = format!(
-        " WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {match_info_filters} "
-    );
-    let mut player_filters = vec![];
-    if !info_filters.is_empty() {
-        player_filters.push(format!(
-            "match_id IN (SELECT match_id FROM match_info {info_filters}) "
-        ));
-    }
+    let mut player_filters = vec![format!(
+        "match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {match_info_filters}"
+    )];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         player_filters.push(format!("account_id = {account_id}"));

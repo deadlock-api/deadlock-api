@@ -145,8 +145,11 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let mut p1_filters = vec!["match_id IN t_matches".to_owned()];
-    let mut p2_filters = vec!["match_id IN t_matches".to_owned()];
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let mut p1_filters = vec![format!(
+        "match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter}{info_filters}"
+    )];
+    let mut p2_filters: Vec<String> = vec![];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
         p1_filters.push(format!("account_id = {account_id}"));
@@ -170,7 +173,11 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
         p2_filters.push(format!("net_worth <= {max_enemy_networth}"));
     }
     let p1_where = p1_filters.join(" AND ");
-    let p2_where = p2_filters.join(" AND ");
+    let p2_where = if p2_filters.is_empty() {
+        "1".to_owned()
+    } else {
+        p2_filters.join(" AND ")
+    };
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("matches_played >= {min_matches}"));
@@ -183,7 +190,6 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let join_keys = if query.same_lane_filter.unwrap_or(true) {
         "ON p1.match_id = p2.match_id AND p1.team != p2.team AND p1.assigned_lane = p2.assigned_lane"
     } else {
@@ -218,9 +224,6 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
             p2.max_creep_kills AS enemy_creeps";
     format!(
         "
-    WITH t_matches AS (SELECT match_id
-                 FROM match_info
-                 WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
     SELECT hero_id,
            enemy_hero_id,
            SUM(won) AS wins,

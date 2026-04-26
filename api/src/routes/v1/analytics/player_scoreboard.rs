@@ -100,9 +100,6 @@ pub struct PlayerEntry {
 
 fn build_query(query: &PlayerScoreboardQuery) -> String {
     let mut inner_filters = vec!["account_id > 0".to_owned()];
-    // The default match_mode/game_mode semijoin is intentionally skipped:
-    // materialising ~20M match_ids as an IN set blows memory on match_player
-    // and prevents the hero_stats_by_account projection from being picked.
     let needs_match_info_filter = query.min_unix_timestamp.is_some()
         || query.max_unix_timestamp.is_some()
         || query.min_match_id.is_some()
@@ -126,8 +123,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         .build();
         let game_mode_filter = GameMode::sql_filter(query.game_mode);
         inner_filters.push(format!(
-            "match_id IN (SELECT match_id FROM match_info \
-             WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {match_info_filters}) "
+            "match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {match_info_filters}"
         ));
     }
     if let Some(hero_id) = query.hero_id {

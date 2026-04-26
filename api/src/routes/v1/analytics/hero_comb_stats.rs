@@ -247,19 +247,14 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     };
     format!(
         "
-WITH t_matches AS (
-    SELECT match_id
-    FROM match_info
-    WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}{account_prefilter}
-),
-hero_combinations AS (
+WITH hero_combinations AS (
     SELECT
         arraySort(groupUniqArrayIf({team_size})(hero_id, team = 'Team0')) AS team0_hero_ids,
         arraySort(groupUniqArrayIf({team_size})(hero_id, team = 'Team1')) AS team1_hero_ids,
         anyIf(won, team = 'Team0') AS team0_won,
         anyIf(won, team = 'Team1') AS team1_won{cte_account_select}
     FROM match_player
-    WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
+    WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}{account_prefilter} {player_filters}
     GROUP BY match_id
     HAVING length(team0_hero_ids) = {team_size} AND length(team1_hero_ids) = {team_size}
 )

@@ -206,11 +206,14 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
         kill_join_cols.push("death_details.killer_player_slot AS killer_player_slot");
     }
     let kill_array_join = kill_join_cols.join(", ");
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_filters =
+        format!("start_time > now() - interval 2 MONTH AND {game_mode_filter} {info_filters}");
     let kill_player_filter = if player_filters.is_empty() {
         String::new()
     } else {
         format!(
-            "AND (match_id, killer_player_slot) IN (SELECT match_id, player_slot FROM match_player WHERE match_id IN t_matches {player_filters})"
+            "AND (match_id, killer_player_slot) IN (SELECT match_id, player_slot FROM match_player WHERE {match_filters} {player_filters})"
         )
     };
     let min_kills_per_raster = query
@@ -225,10 +228,8 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
     let max_deaths_per_raster = query
         .max_deaths_per_raster
         .map_or(String::new(), |v| format!(" AND deaths <= {v}"));
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
-    WITH t_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - interval 2 MONTH AND {game_mode_filter} {info_filters})
     SELECT position_x, position_y, killer_team, sum(deaths) AS deaths, sum(kills) AS kills
     FROM (
         SELECT toInt32(floor(tupleElement(dpos, 1) / 128) * 128) AS position_x,
@@ -238,7 +239,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
                0::UInt64 AS kills
         FROM match_player
                  ARRAY JOIN {death_array_join}
-        WHERE match_id IN t_matches {game_time_filters} {player_filters}
+        WHERE {match_filters} {game_time_filters} {player_filters}
         GROUP BY position_x, position_y, killer_team
         UNION ALL
         SELECT toInt32(floor(tupleElement(kpos, 1) / 128) * 128) AS position_x,
@@ -248,7 +249,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
                count() AS kills
         FROM match_player
                  ARRAY JOIN {kill_array_join}
-        WHERE match_id IN t_matches {game_time_filters} {kill_player_filter}
+        WHERE {match_filters} {game_time_filters} {kill_player_filter}
         GROUP BY position_x, position_y, killer_team
     )
     GROUP BY position_x, position_y, killer_team

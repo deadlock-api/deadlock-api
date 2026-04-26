@@ -145,9 +145,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         let items_list = format!("[{}]", item_ids.iter().map(ToString::to_string).join(", "));
         format!(
             "
-        WITH t_matches AS (SELECT match_id
-                FROM match_info
-                WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters})
         SELECT
             arrayIntersect(items.item_id, {items_list}) AS item_ids,
             countIf(won)      AS wins,
@@ -155,7 +152,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             wins + losses AS matches
         FROM match_player
         WHERE hasAll(items.item_id, {items_list})
-            AND match_id IN t_matches
+            AND match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
             {player_filters}
         GROUP BY item_ids
         ORDER BY matches DESC
@@ -176,14 +173,11 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             .join(" AND ");
         format!(
             "
-        WITH t_matches AS (SELECT match_id
-                FROM match_info
-                WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}),
-            t_upgrades AS (SELECT id from items WHERE type = 'upgrade'),
+        WITH t_upgrades AS (SELECT id from items WHERE type = 'upgrade'),
             t_players AS (SELECT arrayFilter(x -> x IN t_upgrades, arrayDistinct(items.item_id))
              as p_items, won
                 FROM match_player
-                WHERE match_id IN t_matches {player_filters})
+                WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters} {player_filters})
         SELECT [{intersect_array}] AS item_ids,
                countIf(won)      AS wins,
                countIf(not won)  AS losses,

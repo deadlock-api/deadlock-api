@@ -16,38 +16,45 @@ impl MatchInfoFilters {
     /// Builds the SQL `AND ...` clause for `match_info` filters.
     /// Returns an empty string when no filters are set.
     pub(super) fn build(&self) -> String {
+        self.build_with_prefix("")
+    }
+
+    /// Same as [`Self::build`] but qualifies every column reference with the given
+    /// prefix (e.g. `"mp."`). Use when the surrounding query joins another table
+    /// that also has columns named `match_id`/`start_time`/etc.
+    pub(super) fn build_with_prefix(&self, prefix: &str) -> String {
         let mut filters = Vec::new();
         if let Some(v) = self.min_unix_timestamp {
-            filters.push(format!("start_time >= {v}"));
+            filters.push(format!("{prefix}start_time >= {v}"));
         }
         if let Some(v) = self.max_unix_timestamp {
-            filters.push(format!("start_time <= {v}"));
+            filters.push(format!("{prefix}start_time <= {v}"));
         }
         if let Some(v) = self.min_match_id {
-            filters.push(format!("match_id >= {v}"));
+            filters.push(format!("{prefix}match_id >= {v}"));
         }
         if let Some(v) = self.max_match_id {
-            filters.push(format!("match_id <= {v}"));
+            filters.push(format!("{prefix}match_id <= {v}"));
         }
         if let Some(v) = self.min_average_badge
             && v > 11
         {
             filters.push(format!(
-                "average_badge_team0 >= {v} AND average_badge_team1 >= {v}"
+                "{prefix}average_badge_team0 >= {v} AND {prefix}average_badge_team1 >= {v}"
             ));
         }
         if let Some(v) = self.max_average_badge
             && v < 116
         {
             filters.push(format!(
-                "average_badge_team0 <= {v} AND average_badge_team1 <= {v}"
+                "{prefix}average_badge_team0 <= {v} AND {prefix}average_badge_team1 <= {v}"
             ));
         }
         if let Some(v) = self.min_duration_s {
-            filters.push(format!("duration_s >= {v}"));
+            filters.push(format!("{prefix}duration_s >= {v}"));
         }
         if let Some(v) = self.max_duration_s {
-            filters.push(format!("duration_s <= {v}"));
+            filters.push(format!("{prefix}duration_s <= {v}"));
         }
         if filters.is_empty() {
             String::new()

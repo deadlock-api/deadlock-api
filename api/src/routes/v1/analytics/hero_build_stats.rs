@@ -103,7 +103,7 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
         min_duration_s: query.min_duration_s,
         max_duration_s: query.max_duration_s,
     }
-    .build();
+    .build_with_prefix("mp.");
     let mut player_filters = vec![format!("mp.hero_id = {hero_id}")];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
@@ -128,11 +128,6 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
     let min_matches = query.min_matches.unwrap_or(20);
     format!(
         "
-    WITH t_matches AS (
-        SELECT match_id
-        FROM match_info
-        WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
-    )
     SELECT
         mp.hero_id AS hero_id,
         dp.hero_build_id AS hero_build_id,
@@ -142,7 +137,7 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
         uniq(dp.account_id) AS players
     FROM demo_player dp
         INNER JOIN match_player mp ON dp.match_id = mp.match_id AND dp.account_id = mp.account_id
-    WHERE dp.match_id IN t_matches AND dp.hero_build_id != 0 {player_filters}
+    WHERE mp.match_mode IN ('Ranked', 'Unranked') AND mp.game_mode = 1 AND dp.hero_build_id != 0 {info_filters} {player_filters}
     GROUP BY hero_id, hero_build_id
     HAVING matches >= {min_matches}
     ORDER BY matches DESC
