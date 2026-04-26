@@ -188,14 +188,14 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if query.include_info {
         select_fields.extend(vec![
-            "any(start_time) as start_time".to_owned(),
+            "any(match_info.start_time) as start_time".to_owned(),
             "any(winning_team) as winning_team".to_owned(),
-            "any(duration_s) as duration_s".to_owned(),
+            "any(match_info.duration_s) as duration_s".to_owned(),
             "any(match_outcome) as match_outcome".to_owned(),
-            "any(match_mode) as match_mode".to_owned(),
-            "any(game_mode) as game_mode".to_owned(),
-            "any(average_badge_team0) as average_badge_team0".to_owned(),
-            "any(average_badge_team1) as average_badge_team1".to_owned(),
+            "any(match_info.match_mode) as match_mode".to_owned(),
+            "any(match_info.game_mode) as game_mode".to_owned(),
+            "any(match_info.average_badge_team0) as average_badge_team0".to_owned(),
+            "any(match_info.average_badge_team1) as average_badge_team1".to_owned(),
             "any(not_scored) as not_scored".to_owned(),
         ]);
     }

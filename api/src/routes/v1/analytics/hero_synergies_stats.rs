@@ -126,6 +126,7 @@ pub struct HeroSynergyStats {
     pub creeps2: u64,
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroSynergyStatsQuery) -> String {
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     // Filters applied only to p1: match_id and account filters propagate to p2
