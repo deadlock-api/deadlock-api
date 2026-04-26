@@ -114,6 +114,7 @@ async fn main() -> anyhow::Result<()> {
               AND pmh.match_id >= 31247321
             GROUP BY pmh.match_id
             ORDER BY pmh.match_id DESC
+            SETTINGS log_comment = 'salt_scraper_prio_pending_matches'
             "
             );
             ch_client
@@ -143,6 +144,7 @@ async fn main() -> anyhow::Result<()> {
         GROUP BY match_id
         ORDER BY match_id DESC
         LIMIT 100
+        SETTINGS log_comment = 'salt_scraper_pmh_fast_pending_matches'
         "
         );
         let pmh_fut = ch_client.query(&pmh_fast).fetch_all::<PendingMatch>();
@@ -162,6 +164,7 @@ async fn main() -> anyhow::Result<()> {
           )
         ORDER BY match_id DESC
         LIMIT 100
+        SETTINGS log_comment = 'salt_scraper_active_fast_pending_matches'
         "
         );
         let active_fut = ch_client.query(&active_fast).fetch_all::<PendingMatch>();
@@ -219,6 +222,7 @@ async fn main() -> anyhow::Result<()> {
                 GROUP BY pmh.match_id
                 ORDER BY pmh.match_id DESC
                 LIMIT 100
+                SETTINGS log_comment = 'salt_scraper_pmh_full_pending_matches'
                 "
                 );
                 ch_client.query(&q).fetch_all::<PendingMatch>().await
@@ -241,6 +245,7 @@ async fn main() -> anyhow::Result<()> {
                   AND am.start_time < now() - INTERVAL 2 HOUR
                 ORDER BY am.match_id DESC
                 LIMIT 100
+                SETTINGS log_comment = 'salt_scraper_active_full_pending_matches'
                 "
                 );
                 ch_client.query(&q).fetch_all::<PendingMatch>().await

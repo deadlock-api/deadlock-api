@@ -141,6 +141,7 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
     GROUP BY hero_id, hero_build_id
     HAVING matches >= {min_matches}
     ORDER BY matches DESC
+    SETTINGS log_comment = 'hero_build_stats'
     "
     )
 }

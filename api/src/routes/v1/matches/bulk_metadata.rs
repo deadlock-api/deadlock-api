@@ -468,6 +468,8 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     query.push_str(&outer_order);
     // Limit
     query.push_str(&limit);
+    // Settings
+    query.push_str(" SETTINGS log_comment = 'bulk_metadata' ");
     debug!(?query);
     Ok(query)
 }

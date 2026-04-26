@@ -40,7 +40,8 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
     fn build_query(keys: &[u32]) -> String {
         format!(
             "SELECT DISTINCT ON (match_id) ?fields FROM player_match_history \
-             WHERE account_id IN ({}) ORDER BY match_id DESC",
+             WHERE account_id IN ({}) ORDER BY match_id DESC \
+             SETTINGS log_comment = 'match_history'",
             in_clause(keys)
         )
     }

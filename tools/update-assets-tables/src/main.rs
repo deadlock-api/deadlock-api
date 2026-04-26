@@ -58,7 +58,12 @@ async fn update_heroes(
         .await?;
 
     // Truncate table
-    ch_client.query("TRUNCATE TABLE heroes").execute().await?;
+    ch_client
+        .query(
+            "TRUNCATE TABLE heroes SETTINGS log_comment = 'update_assets_tables_truncate_heroes'",
+        )
+        .execute()
+        .await?;
 
     let mut insert = ch_client.insert::<ChHero>("heroes").await?;
     for hero in heroes {
@@ -98,7 +103,10 @@ async fn update_items(
         .filter(|i| i.r#type != ItemType::Unknown);
 
     // Truncate table
-    ch_client.query("TRUNCATE TABLE items").execute().await?;
+    ch_client
+        .query("TRUNCATE TABLE items SETTINGS log_comment = 'update_assets_tables_truncate_items'")
+        .execute()
+        .await?;
 
     let mut insert = ch_client.insert::<ChItem>("items").await?;
     for item in items {

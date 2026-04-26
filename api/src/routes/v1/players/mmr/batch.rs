@@ -31,17 +31,18 @@ pub(super) struct HeroMMRPath {
 }
 
 fn build_mmr_query(account_ids: &[u32], max_match_id: Option<u64>) -> String {
-    build_mmr_query_inner(account_ids, None, max_match_id)
+    build_mmr_query_inner(account_ids, None, max_match_id, "mmr_batch")
 }
 
 fn build_hero_mmr_query(account_ids: &[u32], hero_id: u8, max_match_id: Option<u64>) -> String {
-    build_mmr_query_inner(account_ids, Some(hero_id), max_match_id)
+    build_mmr_query_inner(account_ids, Some(hero_id), max_match_id, "mmr_batch_hero")
 }
 
 fn build_mmr_query_inner(
     account_ids: &[u32],
     hero_id: Option<u8>,
     max_match_id: Option<u64>,
+    log_comment: &str,
 ) -> String {
     let account_ids = account_ids
         .iter()
@@ -101,6 +102,7 @@ fn build_mmr_query_inner(
         GROUP BY account_id
     )
     WHERE length(mmr_window) > 0
+    SETTINGS log_comment = '{log_comment}'
     "
     )
 }
@@ -237,5 +239,6 @@ mod proptests {
         ) {
             assert_valid_sql(&build_hero_mmr_query(&account_ids, hero_id, max_match_id));
         }
+
     }
 }

@@ -156,6 +156,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             {player_filters}
         GROUP BY item_ids
         ORDER BY matches DESC
+        SETTINGS log_comment = 'item_permutation_stats_intersect'
         "
         )
     } else {
@@ -186,6 +187,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         WHERE {filters_distinct}
         GROUP BY {intersect_array}
         ORDER BY matches DESC
+        SETTINGS log_comment = 'item_permutation_stats_combinations'
         "
         )
     }

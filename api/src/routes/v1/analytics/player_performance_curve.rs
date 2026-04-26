@@ -189,6 +189,7 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     {additional_filter}
     GROUP BY game_time
     ORDER BY game_time
+    SETTINGS log_comment = 'player_performance_curve'
     "
     )
 }

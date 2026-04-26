@@ -36,7 +36,8 @@ impl BatchQuery for MatchSaltsReadQuery {
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT ?fields FROM match_salts FINAL \
-             WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0",
+             WHERE match_id IN ({}) AND metadata_salt > 0 AND cluster_id > 0 \
+             SETTINGS log_comment = 'salts_read'",
             in_clause(keys)
         )
     }
@@ -80,7 +81,8 @@ impl BatchQuery for MatchSaltsExistsQuery {
                 max(replay_salt) > 0 AS has_replay \
              FROM match_salts \
              WHERE match_id IN ({}) \
-             GROUP BY match_id",
+             GROUP BY match_id \
+             SETTINGS log_comment = 'salts_exists'",
             in_clause(keys)
         )
     }
@@ -105,7 +107,8 @@ impl BatchQuery for MatchInfoExistsQuery {
 
     fn build_query(keys: &[u64]) -> String {
         format!(
-            "SELECT match_id FROM match_info WHERE match_id IN ({})",
+            "SELECT match_id FROM match_info WHERE match_id IN ({}) \
+             SETTINGS log_comment = 'salts_match_info_exists'",
             in_clause(keys)
         )
     }

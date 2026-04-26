@@ -140,7 +140,11 @@ impl AppState {
             .with_setting("max_execution_time", "20")
             .with_setting("enable_named_columns_in_function_tuple", "1")
             .with_setting("do_not_merge_across_partitions_select_final", "1");
-        if let Err(e) = ch_client.query("SELECT 1").fetch_one::<u8>().await {
+        if let Err(e) = ch_client
+            .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
+            .fetch_one::<u8>()
+            .await
+        {
             return Err(AppStateError::Clickhouse(e));
         }
 
@@ -175,7 +179,11 @@ impl AppState {
             .with_setting("readonly", "2")
             .with_setting("allow_ddl", "0")
             .with_setting("allow_introspection_functions", "0");
-        if let Err(e) = ch_client_ro.query("SELECT 1").fetch_one::<u8>().await {
+        if let Err(e) = ch_client_ro
+            .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
+            .fetch_one::<u8>()
+            .await
+        {
             return Err(AppStateError::Clickhouse(e));
         }
 
@@ -190,7 +198,7 @@ impl AppState {
             .with_password(&config.clickhouse.restricted_password)
             .with_database(&config.clickhouse.dbname);
         if let Err(e) = ch_client_restricted
-            .query("SELECT 1")
+            .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
             .fetch_one::<u8>()
             .await
         {

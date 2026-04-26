@@ -413,6 +413,7 @@ FROM exploded_players
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
+SETTINGS log_comment = 'item_stats'
         "
     )
 }

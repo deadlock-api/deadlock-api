@@ -134,6 +134,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
     {join}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
+    SETTINGS log_comment = 'hero_ban_stats'
     ",
         join = if query.bucket == BucketQuery::NoBucket {
             ""

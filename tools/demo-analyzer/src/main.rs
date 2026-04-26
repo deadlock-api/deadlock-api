@@ -159,7 +159,8 @@ async fn fetch_pending_matches(
                  SELECT DISTINCT match_id FROM demo_player \
                ) \
              ORDER BY ms.match_id DESC \
-             LIMIT 1000",
+             LIMIT 1000 \
+             SETTINGS log_comment = 'demo_analyzer_fetch_pending_matches'",
         )
         .fetch_all::<MatchWithReplay>()
         .await?;

@@ -57,6 +57,7 @@ impl BatchQuery for SteamProfileQuery {
             WHERE account_id IN ({})
             ORDER BY last_updated DESC
             LIMIT 1 BY account_id
+            SETTINGS log_comment = 'steam_profile'
              ",
             in_clause(keys)
         )
@@ -162,6 +163,7 @@ async fn search_steam(
                  if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
                  jaroWinklerSimilarity(lower(personaname), lower(query)) DESC
         LIMIT 100
+        SETTINGS log_comment = 'steam_search'
     ";
     debug!(?query);
     match ch_client.query(query).bind(&search_query).fetch_all().await {

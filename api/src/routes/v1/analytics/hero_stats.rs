@@ -248,6 +248,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         {}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
+    SETTINGS log_comment = 'hero_stats'
     ",
         if has_player_hero_cte {
             format!(

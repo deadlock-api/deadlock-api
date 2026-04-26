@@ -89,7 +89,8 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                 LIMIT 1 BY pmh.account_id, pmh.match_id
             )
             ORDER BY account_id, match_id DESC
-            LIMIT {} BY account_id",
+            LIMIT {} BY account_id
+            SETTINGS log_comment = 'rank_predict_matches'",
             in_clause(keys),
             FETCH_LIMIT,
         )
@@ -164,7 +165,8 @@ async fn fetch_matches(
             avg(max_player_damage) AS dmg_avg
         FROM match_player
         WHERE (match_id, team) IN ({tuples})
-        GROUP BY match_id, team"
+        GROUP BY match_id, team
+        SETTINGS log_comment = 'rank_predict_enemy_stats'"
     );
     debug!("Enemy stats query: {enemy_query}");
 
@@ -172,7 +174,8 @@ async fn fetch_matches(
     let creep_query = format!(
         "SELECT match_id, max_creep_kills, max_possible_creeps
          FROM match_player
-         WHERE match_id IN ({match_ids}) AND account_id = {account_id}"
+         WHERE match_id IN ({match_ids}) AND account_id = {account_id}
+         SETTINGS log_comment = 'rank_predict_creep_stats'"
     );
     debug!("Player creep stats query: {creep_query}");
 

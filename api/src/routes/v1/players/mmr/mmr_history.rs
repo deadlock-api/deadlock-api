@@ -52,6 +52,11 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
     let hero_filter = hero_id
         .map(|id| format!("AND hero_id = {id}"))
         .unwrap_or_default();
+    let log_comment = if hero_id.is_some() {
+        "mmr_history_hero"
+    } else {
+        "mmr_history"
+    };
     format!(
         "
     WITH
@@ -92,6 +97,7 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
         toUInt32(floor(rank / 10)) AS division,
         toUInt32(rank % 10) AS division_tier
     FROM mmr_data
+    SETTINGS log_comment = '{log_comment}'
     "
     )
 }

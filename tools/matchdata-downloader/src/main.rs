@@ -58,6 +58,7 @@ t_matches AS (
 SELECT match_id, cluster_id, metadata_salt
 FROM t_salts
 WHERE match_id NOT IN t_matches
+SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
         ";
         let match_ids_to_fetch = ch_client
             .query(query)

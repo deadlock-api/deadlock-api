@@ -202,6 +202,7 @@ GROUP BY account_id
 {having_clause}
 ORDER BY value {sort_direction}
 LIMIT {limit} OFFSET {offset}
+SETTINGS log_comment = 'player_scoreboard'
     "
     )
 }

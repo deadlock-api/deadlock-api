@@ -236,6 +236,7 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     WHERE {where_clause}
     GROUP BY hero_id1, hero_id2
     {having_clause}
+    SETTINGS log_comment = 'hero_synergies_stats'
     "
     )
 }

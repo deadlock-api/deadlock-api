@@ -225,6 +225,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     {outer_where}
     GROUP BY account_id, hero_id
     ORDER BY account_id, hero_id
+    SETTINGS log_comment = 'player_hero_stats'
     "
     )
 }

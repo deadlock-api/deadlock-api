@@ -140,6 +140,7 @@ FROM match_player
 GROUP BY hero_id
 {player_having}
 ORDER BY value {}
+SETTINGS log_comment = 'hero_scoreboard'
     ",
         query.sort_by.get_select_clause(),
         query.sort_direction,

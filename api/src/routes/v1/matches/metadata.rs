@@ -50,7 +50,8 @@ impl BatchQueryMulti for DemoPlayerQuery {
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT match_id, account_id, hero_build_id, banned_hero_ids \
-             FROM demo_player WHERE match_id IN ({})",
+             FROM demo_player WHERE match_id IN ({}) \
+             SETTINGS log_comment = 'metadata_demo_player'",
             in_clause(keys)
         )
     }
@@ -80,7 +81,7 @@ static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
     MIN_MATCH_ID_IN_CACHE
         .get_or_init(|| async { ch_client
-            .query("SELECT min(match_id) FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK")
+            .query("SELECT min(match_id) FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK SETTINGS log_comment = 'metadata_min_cache_match_id'")
             .fetch_one()
             .await
             .unwrap_or_default() })

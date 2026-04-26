@@ -121,6 +121,11 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     } else {
         ""
     };
+    let log_comment = if hero_id.is_some() {
+        "mmr_distribution_hero"
+    } else {
+        "mmr_distribution"
+    };
 
     format!(
         "
@@ -169,6 +174,7 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
     )
     {rank_filter}
     ORDER BY rank
+    SETTINGS log_comment = '{log_comment}'
     "
     )
 }

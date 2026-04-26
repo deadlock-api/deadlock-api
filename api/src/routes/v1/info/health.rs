@@ -50,7 +50,11 @@ async fn check_health(
     let mut status = Status::default();
 
     // Check Clickhouse connection
-    status.services.clickhouse = ch_client.query("SELECT 1").execute().await.is_ok();
+    status.services.clickhouse = ch_client
+        .query("SELECT 1 SETTINGS log_comment = 'health_check'")
+        .execute()
+        .await
+        .is_ok();
 
     // Check Postgres connection
     status.services.postgres = !pg_client.is_closed();

@@ -104,6 +104,7 @@ async fn fetch_all_steam_names(
                 FROM steam_profiles
                 ARRAY JOIN [personaname, realname] AS name
                 WHERE name IS NOT NULL AND not empty(name)
+                SETTINGS log_comment = 'leaderboard'
             ",
         )
         .fetch_all::<CHResponse>()

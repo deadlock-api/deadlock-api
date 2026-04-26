@@ -95,6 +95,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} AND badge_level > 0 {filters}
     GROUP BY badge_level
     ORDER BY badge_level
+    SETTINGS log_comment = 'badge_distribution'
     "
     )
 }

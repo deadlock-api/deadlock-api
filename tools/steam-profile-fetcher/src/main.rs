@@ -155,6 +155,7 @@ UNION DISTINCT
 SELECT account_id
 FROM steam_profiles FINAL
 WHERE last_updated < now() - {OUTDATED_INTERVAL}
+SETTINGS log_comment = 'steam_profile_fetcher_get_account_ids_to_update'
     "
     );
     ch_client.query(&query).fetch_all().await
@@ -180,7 +181,7 @@ async fn delete_profiles(
     profiles: &[u32],
 ) -> clickhouse::error::Result<()> {
     ch_client
-        .query("DELETE FROM steam_profiles WHERE account_id IN ?")
+        .query("DELETE FROM steam_profiles WHERE account_id IN ? SETTINGS log_comment = 'steam_profile_fetcher_delete_profiles'")
         .bind(profiles)
         .execute()
         .await

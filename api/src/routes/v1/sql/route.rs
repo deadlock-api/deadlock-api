@@ -253,6 +253,7 @@ async fn fetch_list_tables(
             WHERE database = 'default'
                 AND name NOT LIKE '%inner%'
                 AND engine != 'MaterializedView'
+            SETTINGS log_comment = 'sql_list_tables'
         ",
         )
         .fetch_all::<String>()
@@ -335,6 +336,7 @@ async fn fetch_table_schema(
             SELECT name, type, nullIf(comment, '') AS comment
             FROM system.columns
             WHERE database = 'default' AND table = ?
+            SETTINGS log_comment = 'sql_table_schema'
         ",
         )
         .bind(table)

@@ -109,6 +109,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
     GROUP BY account_id
     {having_clause}
     ORDER BY matches_played DESC
+    SETTINGS log_comment = 'enemy_stats'
     "
     )
 }

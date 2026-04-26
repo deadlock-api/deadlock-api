@@ -26,6 +26,7 @@ WHERE database = 'default'
     AND total_bytes IS NOT NULL
     AND total_bytes_uncompressed IS NOT NULL
 ORDER BY table
+SETTINGS log_comment = 'info_table_sizes'
 ";
 
 const FETCHED_MATCHES_LAST_24H_QUERY: &str = "
@@ -40,6 +41,7 @@ WITH fetched_matches AS (
     WHERE created_at > now() - INTERVAL 1 DAY
 )
 SELECT uniq(match_id) FROM fetched_matches
+SETTINGS log_comment = 'info_fetched_matches_24h'
 ";
 
 #[derive(Deserialize, Row)]

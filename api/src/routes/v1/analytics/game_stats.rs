@@ -219,6 +219,7 @@ fn build_query(query: &GameStatsQuery) -> String {
     WHERE mp.match_id IN (SELECT match_id FROM t_matches)
     GROUP BY bucket
     ORDER BY bucket
+    SETTINGS log_comment = 'game_stats'
     "
     )
 }

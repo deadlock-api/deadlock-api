@@ -862,6 +862,7 @@ impl Variable {
                 WHERE
                     match_mode IN ('Ranked', 'Unranked')
                     AND account_id=?
+                SETTINGS log_comment = 'variables'
                 ",
             )
             .bind(ability_id)
