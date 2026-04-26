@@ -198,7 +198,7 @@ impl AppState {
             .with_password(&config.clickhouse.restricted_password)
             .with_database(&config.clickhouse.dbname);
         if let Err(e) = ch_client_restricted
-            .query("SELECT 1 SETTINGS log_comment = 'startup_health_check'")
+            .query("SELECT 1")
             .fetch_one::<u8>()
             .await
         {
