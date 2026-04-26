@@ -41,24 +41,13 @@ impl BucketQuery {
     fn get_select_clause(self) -> &'static str {
         match self {
             Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => "toUInt32(max_avg_badge)",
-            Self::StartTimeHour => "toStartOfHour(start_time)",
-            Self::StartTimeDay => "toStartOfDay(start_time)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        }
-    }
-
-    fn get_info_select_clause(self) -> &'static str {
-        match self {
-            Self::StartTimeHour
-            | Self::StartTimeDay
-            | Self::StartTimeWeek
-            | Self::StartTimeMonth => ", start_time",
             Self::AvgBadge => {
-                ", assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)) as max_avg_badge"
+                "toUInt32(assumeNotNull(coalesce(greatest(mp.average_badge_team0, mp.average_badge_team1), 0)))"
             }
-            Self::NoBucket => "",
+            Self::StartTimeHour => "toStartOfHour(mp.start_time)",
+            Self::StartTimeDay => "toStartOfDay(mp.start_time)",
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(mp.start_time))",
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(mp.start_time))",
         }
     }
 }
@@ -164,13 +153,11 @@ fn build_query(query: &GameStatsQuery) -> String {
     }
     .build();
     let bucket = query.bucket.get_select_clause();
-    let info_select = query.bucket.get_info_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
     WITH t_matches AS (
         SELECT match_id, duration_s, winning_team
-            {info_select}
             , arrayMin(arrayFilter(x -> x > 0, `mid_boss.destroyed_time_s`)) AS first_mid_boss_time_s
             , length(`mid_boss.destroyed_time_s`) > 0 AS has_mid_boss
             , arrayAvg(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) AS avg_obj_destroyed_time_s

@@ -324,6 +324,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
 
     /* ---------- enemy-team filter (optional) ---------- */
+    let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let enemy_hero_ids = query
         .enemy_hero_ids
         .as_deref()
@@ -353,7 +354,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             team AS enemy_team,
             groupUniqArray(assigned_lane) AS enemy_lanes
         FROM match_player
-        WHERE match_id IN (SELECT match_id FROM t_matches)
+        WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
             AND team IN ('Team0', 'Team1')
             AND hero_id IN ({})
         GROUP BY match_id, team{enemy_having_clause}
@@ -373,16 +374,12 @@ fn build_query(query: &ItemStatsQuery) -> String {
     };
 
     /* ---------- final query ---------- */
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    let match_filters =
+        format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
     format!(
         "
 WITH
-    t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'),
-    t_matches AS (
-        SELECT match_id, start_time, duration_s
-        FROM match_info
-        WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
-    ),{enemy_cte}
+    t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'),{enemy_cte}
     exploded_players AS (
         SELECT
             account_id,
@@ -393,15 +390,12 @@ WITH
             tpl.3 AS sold_time
             {bucket_extra_col}
             {net_worth_expr}
-        FROM match_player
-        INNER JOIN t_matches USING (match_id){enemy_join}
+        FROM match_player{enemy_join}
         ARRAY JOIN arrayFilter(
             t -> t.1 IN t_upgrades AND t.2 > 0,
             arrayZip(items.item_id, items.game_time_s, items.sold_time_s)
         ) AS tpl
-        -- IN (SELECT ...) drives match_player partition/MinMax pruning;
-        -- the JOIN above only adds a runtime filter, so keep both.
-        WHERE match_id IN (SELECT match_id FROM t_matches){enemy_where}
+        WHERE {match_filters}{enemy_where}
             {player_filters}
     )
 SELECT
