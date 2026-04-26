@@ -14,7 +14,8 @@ CREATE USER api_readonly_user IDENTIFIED BY 'testing'
         max_result_rows = 100000, -- Max 100,000 rows in result set.
         max_result_bytes = 100000000, -- Max 100 MB result set.
         result_overflow_mode = 'throw', -- Error thrown if result limits are exceeded.
-        max_concurrent_queries_for_user = 5 -- Max 5 concurrent queries for this user.
+        max_concurrent_queries_for_user = 5, -- Max 5 concurrent queries for this user.
+        log_comment = '' CHANGEABLE_IN_READONLY -- Allow per-query log_comment overrides for query_log lookup.
 ;
 GRANT SELECT ON default.* TO api_readonly_user;
 GRANT SHOW ON default.* TO api_readonly_user;
