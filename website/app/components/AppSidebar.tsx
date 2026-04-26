@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -24,13 +24,12 @@ import {
   Zap,
 } from "lucide-react";
 import { VisuallyHidden } from "radix-ui";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
-import { prefetchRouteQueries } from "~/lib/prefetch";
 import { cn } from "~/lib/utils";
 import { serversQueryOptions } from "~/queries/servers-query";
 
@@ -184,18 +183,12 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
   const { pathname } = useLocation();
   const active = isActive(pathname, link.to);
   const Icon = link.icon;
-  const queryClient = useQueryClient();
-
-  const handleMouseEnter = useCallback(() => {
-    prefetchRouteQueries(link.to, queryClient);
-  }, [link.to, queryClient]);
 
   if (link.special) {
     return (
       <Link
         to={link.to}
         onClick={onNavigate}
-        onMouseEnter={handleMouseEnter}
         className={cn(
           "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150",
           "border border-primary/30 bg-primary/15 text-primary hover:bg-primary/25",
@@ -212,7 +205,6 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
     <Link
       to={link.to}
       onClick={onNavigate}
-      onMouseEnter={handleMouseEnter}
       className={cn(
         "flex items-center gap-2.5 rounded-md border-l-2 px-3 py-1.5 text-sm font-medium transition-colors duration-150",
         active

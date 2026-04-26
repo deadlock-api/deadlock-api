@@ -14,7 +14,6 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
-import { useHeroesTabPrefetchIdle } from "~/hooks/useTabPrefetchIdle";
 import { createPageMeta } from "~/lib/meta";
 import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
@@ -67,22 +66,6 @@ export default function Heroes(
   },
 ) {
   const filters = useHeroFilters(initialTab);
-  useHeroesTabPrefetchIdle(filters.tab ?? "stats", {
-    minRankId: filters.effectiveMinRankId,
-    maxRankId: filters.effectiveMaxRankId,
-    minHeroMatches: filters.minHeroMatches,
-    minHeroMatchesTotal: filters.minHeroMatchesTotal,
-    minMatches: filters.minMatches,
-    sameLaneFilter: filters.sameLaneFilter,
-    heroId: filters.heroId,
-    heroStat: filters.heroStat,
-    heroTimeInterval: filters.heroTimeInterval,
-    startDate: filters.startDate ?? undefined,
-    endDate: filters.endDate ?? undefined,
-    prevStartDate: filters.prevDates.prevStartDate,
-    prevEndDate: filters.prevDates.prevEndDate,
-    gameMode: filters.gameMode,
-  });
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();
   const sameLaneFilterId1 = useId();

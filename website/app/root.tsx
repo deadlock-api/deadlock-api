@@ -29,7 +29,6 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
-import { useRoutePrefetchIdle } from "~/hooks/useRoutePrefetchIdle";
 
 const ReactQueryDevtools = lazy(() =>
   import("@tanstack/react-query-devtools").then((m) => ({ default: m.ReactQueryDevtools })),
@@ -280,11 +279,6 @@ class QueryErrorBoundary extends Component<QueryErrorBoundaryProps, QueryErrorBo
   }
 }
 
-function RoutePrefetcher() {
-  useRoutePrefetchIdle();
-  return null;
-}
-
 const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
 const EASE_OUT_QUART = [0.22, 1, 0.36, 1] as const;
 const CLIP_HIDDEN_BOTTOM = "polygon(0 100%, 100% 100%, 100% 100%, 0 100%)";
@@ -355,7 +349,6 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <RoutePrefetcher />
       <PatronAuthProvider>
         <NuqsAdapter>
           <TooltipProvider>
