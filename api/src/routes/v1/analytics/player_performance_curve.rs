@@ -162,24 +162,18 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     format!(
         "
-    WITH t_matches AS (
-            SELECT match_id, duration_s
-            FROM match_info
+    WITH t_players AS (
+            SELECT stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills_arr, stats.deaths as deaths_arr, stats.assists as assists_arr, duration_s
+            FROM match_player
             WHERE match_mode IN ('Ranked', 'Unranked')
                 AND {game_mode_filter}
                 {info_filters}
-        ),
-        t_players AS (
-            SELECT match_id, stats.time_stamp_s as timestamp_s, stats.net_worth as net_worths, stats.kills as kills, stats.deaths as deaths, stats.assists as assists
-            FROM match_player
-            WHERE match_id IN (SELECT match_id FROM t_matches)
                 {player_filters}
         ),
         t_data AS (
-            SELECT tp.timestamp_s as timestamp_s, tp.net_worths as net_worth, tp.kills as kills, tp.deaths as deaths, tp.assists as assists, tm.duration_s as duration_s
-            FROM t_players tp
-            JOIN t_matches tm ON tp.match_id = tm.match_id
-            ARRAY JOIN timestamp_s, net_worths, kills, deaths, assists
+            SELECT timestamp_s, net_worths as net_worth, kills_arr as kills, deaths_arr as deaths, assists_arr as assists, duration_s
+            FROM t_players
+            ARRAY JOIN timestamp_s, net_worths, kills_arr, deaths_arr, assists_arr
         )
     SELECT
         {game_time_selection} AS game_time,

@@ -148,16 +148,16 @@ fn build_query(query: &HeroStatsQuery) -> String {
 
     let mut outer_filters: Vec<String> = vec![];
     if let Some(min_duration_s) = query.min_duration_s {
-        outer_filters.push(format!("mi.duration_s >= {min_duration_s}"));
+        outer_filters.push(format!("duration_s >= {min_duration_s}"));
     }
     if let Some(max_duration_s) = query.max_duration_s {
-        outer_filters.push(format!("mi.duration_s <= {max_duration_s}"));
+        outer_filters.push(format!("duration_s <= {max_duration_s}"));
     }
     if let Some(min_badge_level) = query.min_average_badge
         && min_badge_level > 11
     {
         outer_filters.push(format!(
-            "mi.average_badge_team0 >= {min_badge_level} AND mi.average_badge_team1 >= \
+            "average_badge_team0 >= {min_badge_level} AND average_badge_team1 >= \
              {min_badge_level}"
         ));
     }
@@ -165,7 +165,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         && max_badge_level < 116
     {
         outer_filters.push(format!(
-            "mi.average_badge_team0 <= {max_badge_level} AND mi.average_badge_team1 <= \
+            "average_badge_team0 <= {max_badge_level} AND average_badge_team1 <= \
              {max_badge_level}"
         ));
     }
@@ -181,59 +181,50 @@ fn build_query(query: &HeroStatsQuery) -> String {
     t_histories AS (
         SELECT match_id FROM player_match_history WHERE {pmh_where}
     ),
-    mi AS (
-        SELECT match_id,
-               any(duration_s) AS duration_s,
-               any(start_time) AS start_time,
-               any(average_badge_team0) AS average_badge_team0,
-               any(average_badge_team1) AS average_badge_team1
-        FROM match_info
-        WHERE match_id IN t_histories
-        GROUP BY match_id
-    ),
     mp AS (
         SELECT account_id, match_id, hero_id, won, kills, deaths, assists, denies,
                net_worth, last_hits, max_level, max_player_damage, max_player_damage_taken,
                max_creep_kills, max_boss_damage, max_shots_hit, max_shots_missed,
-               max_hero_bullets_hit, max_hero_bullets_hit_crit
+               max_hero_bullets_hit, max_hero_bullets_hit_crit,
+               duration_s, start_time, average_badge_team0, average_badge_team1
         FROM match_player
         WHERE {mp_where}
         LIMIT 1 BY match_id, account_id
     )
     SELECT
-        mp.account_id,
-        mp.hero_id,
+        account_id,
+        hero_id,
         COUNT() AS matches_played,
-        max(mi.start_time) AS last_played,
-        sum(mi.duration_s) AS time_played,
+        max(start_time) AS last_played,
+        sum(duration_s) AS time_played,
         countIf(won) AS wins,
         avg(max_level) AS ending_level,
-        sum(mp.kills) AS kills,
-        sum(mp.deaths) AS deaths,
-        sum(mp.assists) AS assists,
+        sum(kills) AS kills,
+        sum(deaths) AS deaths,
+        sum(assists) AS assists,
         avg(denies) AS denies_per_match,
-        60 * avg(mp.kills / mi.duration_s) AS kills_per_min,
-        60 * avg(mp.deaths / mi.duration_s) AS deaths_per_min,
-        60 * avg(mp.assists / mi.duration_s) AS assists_per_min,
-        60 * avg(denies / mi.duration_s) AS denies_per_min,
-        60 * avg(net_worth / mi.duration_s) AS networth_per_min,
-        60 * avg(last_hits / mi.duration_s) AS last_hits_per_min,
-        60 * avg(max_player_damage / mi.duration_s) AS damage_per_min,
+        60 * avg(kills / duration_s) AS kills_per_min,
+        60 * avg(deaths / duration_s) AS deaths_per_min,
+        60 * avg(assists / duration_s) AS assists_per_min,
+        60 * avg(denies / duration_s) AS denies_per_min,
+        60 * avg(net_worth / duration_s) AS networth_per_min,
+        60 * avg(last_hits / duration_s) AS last_hits_per_min,
+        60 * avg(max_player_damage / duration_s) AS damage_per_min,
         avg(max_player_damage / net_worth) AS damage_per_soul,
-        60 * avg(max_player_damage / mi.duration_s) AS damage_mitigated_per_min,
-        60 * avg(max_player_damage_taken / mi.duration_s) AS damage_taken_per_min,
+        60 * avg(max_player_damage / duration_s) AS damage_mitigated_per_min,
+        60 * avg(max_player_damage_taken / duration_s) AS damage_taken_per_min,
         avg(max_player_damage_taken / net_worth) AS damage_taken_per_soul,
-        60 * avg(max_creep_kills / mi.duration_s) AS creeps_per_min,
-        60 * avg(max_boss_damage / mi.duration_s) AS obj_damage_per_min,
+        60 * avg(max_creep_kills / duration_s) AS creeps_per_min,
+        60 * avg(max_boss_damage / duration_s) AS obj_damage_per_min,
         avg(max_boss_damage / net_worth) AS obj_damage_per_soul,
         avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy,
         avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
          max_hero_bullets_hit)) AS crit_shot_rate,
-        groupUniqArray(mi.match_id) as matches
-    FROM mp INNER JOIN mi USING (match_id)
+        groupUniqArray(match_id) as matches
+    FROM mp
     {outer_where}
-    GROUP BY mp.account_id, mp.hero_id
-    ORDER BY mp.account_id, mp.hero_id
+    GROUP BY account_id, hero_id
+    ORDER BY account_id, hero_id
     "
     )
 }
