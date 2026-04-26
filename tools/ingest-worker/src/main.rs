@@ -401,7 +401,7 @@ async fn fetch_and_parse_match(
         .cloned()
         .map(|p| {
             (
-                match_info.match_id.unwrap(),
+                &match_info,
                 match_info
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))
@@ -586,7 +586,7 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
         .cloned()
         .map(|p| {
             (
-                match_info.match_id.unwrap(),
+                match_info,
                 match_info
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))

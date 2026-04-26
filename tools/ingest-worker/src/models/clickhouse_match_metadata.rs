@@ -158,6 +158,12 @@ impl From<MatchInfo> for ClickhouseMatchInfo {
 #[derive(Row, Debug, Clone, Serialize)]
 pub(crate) struct ClickhouseMatchPlayer {
     pub match_id: u64,
+    pub start_time: u32,
+    pub duration_s: u32,
+    pub match_mode: MatchMode,
+    pub game_mode: GameMode,
+    pub average_badge_team0: Option<u32>,
+    pub average_badge_team1: Option<u32>,
     pub account_id: u32,
     pub won: bool,
     pub player_slot: u32,
@@ -335,10 +341,18 @@ pub(crate) struct ClickhouseMatchPlayer {
 }
 
 #[allow(clippy::too_many_lines)]
-impl From<(u64, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
-    fn from((match_id, won, match_path, value): (u64, bool, Option<&Path>, Players)) -> Self {
+impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer {
+    fn from(
+        (match_info, won, match_path, value): (&MatchInfo, bool, Option<&Path>, Players),
+    ) -> Self {
         Self {
-            match_id,
+            match_id: match_info.match_id(),
+            start_time: match_info.start_time(),
+            duration_s: match_info.duration_s(),
+            match_mode: MatchMode::from(match_info.match_mode()),
+            game_mode: GameMode::from(match_info.game_mode()),
+            average_badge_team0: match_info.average_badge_team0,
+            average_badge_team1: match_info.average_badge_team1,
             account_id: value.account_id(),
             won,
             player_slot: value.player_slot(),
