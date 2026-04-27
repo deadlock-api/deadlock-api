@@ -12,7 +12,6 @@ async fn test_list_tables() {
 
 #[rstest]
 #[case("items")]
-#[case("match_info")]
 #[case("match_player")]
 #[tokio::test]
 async fn test_table_schema(#[case] table: &str) {
@@ -29,7 +28,6 @@ async fn test_sql_query_literal() {
 }
 
 #[rstest]
-#[case("SELECT COUNT() as count FROM match_info")]
 #[case("SELECT COUNT() as count FROM match_player")]
 #[tokio::test]
 async fn test_sql_query_count(#[case] query: &str) {
@@ -43,12 +41,12 @@ async fn test_sql_query_count(#[case] query: &str) {
 }
 
 #[rstest]
-#[case("DROP TABLE match_info")]
-#[case("TRUNCATE TABLE match_info")]
-#[case("ALTER TABLE match_info ADD COLUMN test String")]
-#[case("INSERT INTO match_info (match_id, start_time) VALUES (1, 1)")]
-#[case("UPDATE match_info SET start_time = 1 WHERE match_id = 1")]
-#[case("DELETE FROM match_info WHERE match_id = 1")]
+#[case("DROP TABLE match_player")]
+#[case("TRUNCATE TABLE match_player")]
+#[case("ALTER TABLE match_player ADD COLUMN test String")]
+#[case("INSERT INTO match_player (match_id, start_time) VALUES (1, 1)")]
+#[case("UPDATE match_player SET start_time = 1 WHERE match_id = 1")]
+#[case("DELETE FROM match_player WHERE match_id = 1")]
 #[case("CREATE TABLE test (test String)")]
 #[case("SELECT username FROM match_salts")] // username is restricted
 #[case("DROP USER default")]
