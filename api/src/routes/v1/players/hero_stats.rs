@@ -117,6 +117,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
         MatchMode::sql_filter(None),
         GameMode::sql_filter(query.game_mode),
     ];
+    mp_filters.push("net_worth > 0".to_string());
+    mp_filters.push("duration_s > 0".to_string());
     if let Some(ref ids) = hero_ids_in {
         mp_filters.push(format!("hero_id IN ({ids})"));
     }
