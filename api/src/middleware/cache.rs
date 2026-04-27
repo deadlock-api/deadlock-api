@@ -16,7 +16,6 @@ use tower_service::Service;
 pub(crate) struct CacheControlMiddleware {
     max_age: Duration,
     stale_while_revalidate: Option<Duration>,
-    stale_if_error: Option<Duration>,
     is_private: bool,
 }
 
@@ -25,7 +24,6 @@ impl CacheControlMiddleware {
         Self {
             max_age,
             stale_while_revalidate: None,
-            stale_if_error: None,
             is_private: false,
         }
     }
@@ -37,11 +35,6 @@ impl CacheControlMiddleware {
 
     pub(crate) fn with_stale_while_revalidate(mut self, stale_while_revalidate: Duration) -> Self {
         self.stale_while_revalidate = Some(stale_while_revalidate);
-        self
-    }
-
-    pub(crate) fn with_stale_if_error(mut self, stale_if_error: Duration) -> Self {
-        self.stale_if_error = Some(stale_if_error);
         self
     }
 
@@ -61,14 +54,6 @@ impl CacheControlMiddleware {
                 &mut header_value,
                 ", stale-while-revalidate={}",
                 stale_while_revalidate.as_secs()
-            )
-            .ok();
-        }
-        if let Some(stale_if_error) = self.stale_if_error {
-            write!(
-                &mut header_value,
-                ", stale-if-error={}",
-                stale_if_error.as_secs()
             )
             .ok();
         }
@@ -197,24 +182,6 @@ mod tests {
         assert_eq!(
             response.headers().get(CACHE_CONTROL).unwrap(),
             "public, max-age=60, stale-while-revalidate=60"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_stale_if_error() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(1))
-            .with_stale_if_error(Duration::from_mins(1));
-        let app = Router::new().route("/", get(test_handler)).layer(layer);
-
-        let response = app
-            .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(
-            response.headers().get(CACHE_CONTROL).unwrap(),
-            "public, max-age=60, stale-if-error=60"
         );
     }
 }

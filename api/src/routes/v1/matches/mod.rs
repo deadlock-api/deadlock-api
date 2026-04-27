@@ -37,10 +37,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             OpenApiRouter::new()
                 .routes(routes!(metadata::metadata))
                 .routes(routes!(metadata::metadata_raw))
-                .layer(
-                    CacheControlMiddleware::new(Duration::from_hours(168))
-                        .with_stale_if_error(Duration::from_hours(24)),
-                ),
+                .layer(CacheControlMiddleware::new(Duration::from_hours(168))),
         )
         .nest("/custom", custom::router())
 }

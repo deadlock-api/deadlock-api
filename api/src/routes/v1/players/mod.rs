@@ -192,7 +192,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .merge(steam::router())
         .layer(
             CacheControlMiddleware::new(Duration::from_mins(5))
-                .with_stale_while_revalidate(Duration::from_mins(5))
-                .with_stale_if_error(Duration::from_mins(5)),
+                .with_stale_while_revalidate(Duration::from_mins(5)),
         )
 }

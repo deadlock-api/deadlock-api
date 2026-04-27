@@ -32,8 +32,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(steam_list::steam_list))
         .layer(
             CacheControlMiddleware::new(Duration::from_secs(30))
-                .with_stale_while_revalidate(Duration::from_mins(1))
-                .with_stale_if_error(Duration::from_mins(10)),
+                .with_stale_while_revalidate(Duration::from_mins(1)),
         );
 
     OpenApiRouter::with_openapi(ApiDoc::openapi())
