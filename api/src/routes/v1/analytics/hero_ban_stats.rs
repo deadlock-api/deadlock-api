@@ -52,9 +52,9 @@ impl BucketQuery {
             Self::StartTimeHour
             | Self::StartTimeDay
             | Self::StartTimeWeek
-            | Self::StartTimeMonth => ", start_time",
+            | Self::StartTimeMonth => ", any(start_time) as start_time",
             Self::AvgBadge => {
-                ", assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)) as max_avg_badge"
+                ", assumeNotNull(coalesce(greatest(any(average_badge_team0), any(average_badge_team1)), 0)) as max_avg_badge"
             }
             Self::NoBucket => "",
         }
@@ -120,8 +120,9 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         "
     WITH t_matches AS (
         SELECT match_id {match_info_select}
-        FROM match_info
+        FROM match_player
         WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
+        GROUP BY match_id
     ),
     t_bans AS (
         SELECT dp.match_id, any(dp.banned_hero_ids) AS banned_hero_ids

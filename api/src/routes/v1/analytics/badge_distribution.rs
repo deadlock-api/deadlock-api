@@ -90,9 +90,15 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     SELECT
         coalesce(t_badge_level, 0) as badge_level,
         COUNT() as total_matches
-    FROM match_info
+    FROM (
+        SELECT any(average_badge_team0) AS average_badge_team0,
+               any(average_badge_team1) AS average_badge_team1
+        FROM match_player
+        WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {filters}
+        GROUP BY match_id
+    )
         ARRAY JOIN [average_badge_team0, average_badge_team1] AS t_badge_level
-    WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} AND badge_level > 0 {filters}
+    WHERE badge_level > 0
     GROUP BY badge_level
     ORDER BY badge_level
     SETTINGS log_comment = 'badge_distribution'

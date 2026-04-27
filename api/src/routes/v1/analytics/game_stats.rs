@@ -157,15 +157,20 @@ fn build_query(query: &GameStatsQuery) -> String {
     format!(
         "
     WITH t_matches AS (
-        SELECT match_id, duration_s, winning_team
-            , arrayMin(arrayFilter(x -> x > 0, `mid_boss.destroyed_time_s`)) AS first_mid_boss_time_s
-            , length(`mid_boss.destroyed_time_s`) > 0 AS has_mid_boss
-            , arrayAvg(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) AS avg_obj_destroyed_time_s
-            , length(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) > 0 AS has_objectives
-        FROM match_info
+        SELECT match_id
+            , any(duration_s) AS duration_s
+            , any(winning_team) AS winning_team
+            , any(`mid_boss.destroyed_time_s`) AS mid_boss_destroyed_time_s
+            , arrayFilter(x -> x > 0, any(`objectives.destroyed_time_s`)) AS obj_times
+            , arrayMin(arrayFilter(x -> x > 0, mid_boss_destroyed_time_s)) AS first_mid_boss_time_s
+            , length(mid_boss_destroyed_time_s) > 0 AS has_mid_boss
+            , arrayAvg(obj_times) AS avg_obj_destroyed_time_s
+            , length(obj_times) > 0 AS has_objectives
+        FROM match_player
         WHERE match_mode IN ('Ranked', 'Unranked')
             AND {game_mode_filter}
             {info_filters}
+        GROUP BY match_id
     )
     SELECT
         {bucket} AS bucket,
@@ -216,7 +221,6 @@ fn build_query(query: &GameStatsQuery) -> String {
         uniqIf(mp.match_id, tm.winning_team = 'Team1') AS team1_wins
     FROM match_player mp
     INNER JOIN t_matches tm ON mp.match_id = tm.match_id
-    WHERE mp.match_id IN (SELECT match_id FROM t_matches)
     GROUP BY bucket
     ORDER BY bucket
     SETTINGS log_comment = 'game_stats'

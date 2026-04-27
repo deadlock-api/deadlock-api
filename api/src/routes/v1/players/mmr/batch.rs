@@ -83,21 +83,17 @@ fn build_mmr_query_inner(
             SELECT
                 account_id,
                 match_id,
-                dictGet('match_info_dict', ('start_time', 'average_badge_team0', 'average_badge_team1'), match_id) AS info,
-                info.1 AS start_time,
-                assumeNotNull(if(player_team = 'Team1', info.3, info.2)) AS current_match_badge,
+                start_time,
+                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
                 (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-            FROM (
-                SELECT account_id, match_id, player_team
-                FROM player_match_history
-                WHERE account_id IN ({account_ids})
-                  AND game_mode = 'Normal'
-                  AND match_mode IN ('Ranked', 'Unranked')
-                  {hero_filter}
-                  {match_id_filter}
-                ORDER BY account_id, match_id DESC
-                LIMIT window_size BY account_id
-            )
+            FROM match_player
+            WHERE account_id IN ({account_ids})
+              AND game_mode = 'Normal'
+              AND match_mode IN ('Ranked', 'Unranked')
+              {hero_filter}
+              {match_id_filter}
+            ORDER BY account_id, match_id DESC
+            LIMIT window_size BY account_id
         )
         GROUP BY account_id
     )

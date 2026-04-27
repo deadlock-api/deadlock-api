@@ -46,10 +46,23 @@ pub(super) struct DistributionEntry {
     players: u64,
 }
 
-/// Filters that live on `match_info` columns and must be applied via a
-/// `match_id IN (...)` subquery against `match_info` (or in the original JOIN).
-fn build_info_only_filters(query: &MMRDistributionQuery) -> Vec<String> {
-    let mut filters = vec![];
+fn build_filters(query: &MMRDistributionQuery) -> Vec<String> {
+    let mut filters = vec![
+        "game_mode = 'Normal'".to_owned(),
+        "match_mode IN ('Ranked', 'Unranked')".to_owned(),
+    ];
+    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
+        filters.push(format!("start_time >= {min_unix_timestamp}"));
+    }
+    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
+        filters.push(format!("start_time <= {max_unix_timestamp}"));
+    }
+    if let Some(min_match_id) = query.min_match_id {
+        filters.push(format!("match_id >= {min_match_id}"));
+    }
+    if let Some(max_match_id) = query.max_match_id {
+        filters.push(format!("match_id <= {max_match_id}"));
+    }
     if let Some(max_duration_s) = query.max_duration_s {
         filters.push(format!("duration_s <= {max_duration_s}"));
     }
@@ -67,49 +80,12 @@ fn build_info_only_filters(query: &MMRDistributionQuery) -> Vec<String> {
     filters
 }
 
-/// Filters that exist on both tables (or on `player_match_history` directly)
-/// and can be applied to `player_match_history` for partition/PK pruning.
-fn build_history_filters(query: &MMRDistributionQuery) -> Vec<String> {
-    let mut filters = vec![
-        "game_mode = 'Normal'".to_owned(),
-        "match_mode IN ('Ranked', 'Unranked')".to_owned(),
-    ];
-    if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        filters.push(format!("start_time >= {min_unix_timestamp}"));
-    }
-    if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        filters.push(format!("start_time <= {max_unix_timestamp}"));
-    }
-    if let Some(min_match_id) = query.min_match_id {
-        filters.push(format!("match_id >= {min_match_id}"));
-    }
-    if let Some(max_match_id) = query.max_match_id {
-        filters.push(format!("match_id <= {max_match_id}"));
-    }
-    filters
-}
-
 fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuery) -> String {
-    let mut history_filters = build_history_filters(query);
+    let mut filters = build_filters(query);
     if let Some(id) = hero_id {
-        history_filters.push(format!("hero_id = {id}"));
+        filters.push(format!("hero_id = {id}"));
     }
-    let history_where = history_filters.join(" AND ");
-
-    let info_only_filters = build_info_only_filters(query);
-    let info_subfilter = if info_only_filters.is_empty() {
-        String::new()
-    } else {
-        // Pre-filter `match_id` via an `IN (...)` subquery against `match_info`.
-        // Re-apply the history filters here too (start_time/match_mode/match_id
-        // are present in both tables and partition-prune match_info as well).
-        let mut info_sq_filters = build_history_filters(query);
-        info_sq_filters.extend(info_only_filters);
-        format!(
-            "AND match_id IN (SELECT match_id FROM match_info WHERE {})",
-            info_sq_filters.join(" AND ")
-        )
-    };
+    let where_clause = filters.join(" AND ");
 
     let min_window = if hero_id.is_some() {
         "window_size"
@@ -155,16 +131,11 @@ fn build_mmr_distribution_query(hero_id: Option<u8>, query: &MMRDistributionQuer
                     SELECT
                         account_id,
                         match_id,
-                        dictGet('match_info_dict', ('start_time', 'average_badge_team0', 'average_badge_team1'), match_id) AS info,
-                        info.1 AS start_time,
-                        assumeNotNull(if(player_team = 'Team1', info.3, info.2)) AS current_match_badge,
+                        start_time,
+                        assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
                         (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-                    FROM (
-                        SELECT account_id, match_id, player_team
-                        FROM player_match_history
-                        WHERE {history_where}
-                          {info_subfilter}
-                    )
+                    FROM match_player
+                    WHERE {where_clause}
                 )
                 GROUP BY account_id
                 HAVING length(recent_matches) >= {min_window}

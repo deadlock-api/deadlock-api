@@ -66,11 +66,10 @@ fn build_mmr_history_query_inner(account_id: u32, hero_id: Option<u8>) -> String
             SELECT
                 account_id,
                 match_id,
-                dictGet('match_info_dict', ('start_time', 'average_badge_team0', 'average_badge_team1'), match_id) AS info,
-                info.1 AS start_time,
-                assumeNotNull(if(player_team = 'Team1', info.3, info.2)) AS current_match_badge,
+                start_time,
+                assumeNotNull(if(team = 'Team1', average_badge_team1, average_badge_team0)) AS current_match_badge,
                 (intDiv(current_match_badge, 10) - 1) * 6 + (current_match_badge % 10) AS mmr
-            FROM player_match_history
+            FROM match_player
             WHERE account_id = {account_id}
             {hero_filter}
             AND game_mode = 'Normal'

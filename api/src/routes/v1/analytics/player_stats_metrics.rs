@@ -466,11 +466,12 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     format!(
         "
     WITH t_matches AS (
-            SELECT match_id, greatest(1, duration_s) / 60 as duration_m
-            FROM match_info
+            SELECT match_id, greatest(1, any(duration_s)) / 60 as duration_m
+            FROM match_player
             WHERE match_mode IN ('Ranked', 'Unranked')
                 AND {game_mode_filter}
                 {info_filters}
+            GROUP BY match_id
             {match_limit_clause}
         ),
         t_data AS (
@@ -486,7 +487,7 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
                 duration_m
             FROM match_player
                 INNER JOIN t_matches USING (match_id)
-            WHERE match_id IN (SELECT match_id FROM t_matches) {player_filters}
+            WHERE 1=1 {player_filters}
         )
     SELECT {selects}
     FROM t_data
