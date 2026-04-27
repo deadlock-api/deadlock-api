@@ -32,7 +32,7 @@ pub(crate) fn assert_valid_and_fragment(fragment: &str) {
         fragment.is_empty() || fragment.starts_with(" AND "),
         "fragment must be empty or start with ' AND ': {fragment:?}"
     );
-    let wrapped = format!("SELECT * FROM match_info WHERE TRUE{fragment}");
+    let wrapped = format!("SELECT * FROM match_player WHERE TRUE{fragment}");
     assert_valid_sql(&wrapped);
 }
 
