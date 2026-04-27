@@ -55,10 +55,17 @@ WHERE created_at > now() - INTERVAL 2 DAY
 GROUP BY match_id
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
         ";
-        let match_ids_to_fetch = ch_client
-            .query(query)
-            .fetch_all::<MatchSalts>()
-            .await?
+        let all_recent = ch_client.query(query).fetch_all::<MatchSalts>().await?;
+
+        // Prune in-memory state for matches that have aged out of the 2-day SQL window.
+        // Without this, these sets grow unboundedly over the lifetime of the process.
+        let valid_ids: HashSet<u64> = all_recent.iter().map(|s| s.match_id).collect();
+        failed.retain(|id| valid_ids.contains(id));
+        uploaded.retain(|id| valid_ids.contains(id));
+        retried.retain(|id| valid_ids.contains(id));
+        retry_after.retain(|id, _| valid_ids.contains(id));
+
+        let match_ids_to_fetch = all_recent
             .into_iter()
             .filter(|salts| !failed.contains(&salts.match_id))
             .filter(|salts| !uploaded.contains(&salts.match_id))
@@ -136,13 +143,17 @@ async fn download_match(
     // Download metadata
     let bytes = fetch_metadata(salts).await?;
 
-    // Upload to S3
-    upload_object(bucket, &key, bytes.clone()).await?;
-    upload_object(cache_bucket, &cache_key, bytes).await?;
-
-    // Delete outdated HLTV metadata
-    delete_object(bucket, &outdated_hltv_meta_key).await?;
-    delete_object(cache_bucket, &outdated_hltv_meta_key).await?;
+    // Upload to both stores and delete outdated HLTV metadata in parallel
+    let (up_main, up_cache, del_main, del_cache) = tokio::join!(
+        upload_object(bucket, &key, bytes.clone()),
+        upload_object(cache_bucket, &cache_key, bytes),
+        delete_object(bucket, &outdated_hltv_meta_key),
+        delete_object(cache_bucket, &outdated_hltv_meta_key),
+    );
+    up_main?;
+    up_cache?;
+    del_main?;
+    del_cache?;
 
     info!("Match downloaded");
     Ok(())
@@ -151,9 +162,9 @@ async fn download_match(
 async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
     let metadata_url = format!(
         "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
-        salts.cluster_id.unwrap(),
+        salts.cluster_id.unwrap_or_default(),
         salts.match_id,
-        salts.metadata_salt.unwrap()
+        salts.metadata_salt.unwrap_or_default()
     );
     match reqwest::get(&metadata_url)
         .await
@@ -203,15 +214,13 @@ async fn upload_object(
 
 #[instrument(skip(store))]
 async fn delete_object(store: &impl ObjectStore, key: &Path) -> object_store::Result<()> {
-    if !key_exists(store, key).await {
-        return Ok(());
-    }
     match store.delete(key).await {
         Ok(()) => {
             counter!("matchdata_downloader.delete_object.successful").increment(1);
             debug!("Deleted object");
             Ok(())
         }
+        Err(object_store::Error::NotFound { .. }) => Ok(()),
         Err(e) => {
             counter!("matchdata_downloader.delete_object.failure").increment(1);
             error!("Failed to delete object: {e}");

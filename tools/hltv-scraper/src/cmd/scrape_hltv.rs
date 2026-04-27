@@ -24,14 +24,14 @@ use crate::cmd::download_single_hltv::download_single_hltv_meta;
 use crate::cmd::run_spectate_bot::{SpectatedMatchInfo, SpectatedMatchType};
 
 pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
-    let spec_client = reqwest::Client::new();
+    let spec_client = Arc::new(reqwest::Client::new());
     let base_url =
         Url::parse(&spectate_server_url).context("Parsing base url for spectate server")?;
 
     let currently_downloading: Arc<DashMap<u64, bool>> = Arc::new(DashMap::new());
 
     let mut already_downloaded: LruCache<u64, bool> =
-        LruCache::new(NonZeroUsize::new(100).unwrap());
+        LruCache::new(NonZeroUsize::new(100).unwrap_or(NonZeroUsize::MIN));
 
     let root_path = PathBuf::from("./localstore");
     fs::create_dir_all(&root_path)?;
@@ -94,6 +94,7 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
         info!("[{label} {match_id}] Starting to download match");
         download_task(
             base_url.clone(),
+            spec_client.clone(),
             store.clone(),
             cache_store.clone(),
             currently_downloading.clone(),
@@ -106,6 +107,7 @@ pub(crate) async fn run(spectate_server_url: String) -> anyhow::Result<()> {
 
 fn download_task(
     base_url: Url,
+    http_client: Arc<reqwest::Client>,
     store: Arc<impl ObjectStore>,
     cache_store: Arc<impl ObjectStore>,
     currently_downloading: Arc<DashMap<u64, bool>>,
@@ -122,23 +124,27 @@ fn download_task(
                     error!("[{label} {match_id}] Got error: {:?}", e);
                     None
                 });
-        let did_finish_match = match_metadata.is_some();
 
-        let c = reqwest::Client::new();
-        if let Err(e) = c
-            .post(base_url.join("match-ended").unwrap())
-            .json(&json!({"match_id": match_id}))
-            .send()
-            .await
-        {
-            error!("[{label} {match_id}] Error marking match ended: {:?}", e);
+        match base_url.join("match-ended") {
+            Ok(url) => {
+                if let Err(e) = http_client
+                    .post(url)
+                    .json(&json!({"match_id": match_id}))
+                    .send()
+                    .await
+                {
+                    error!("[{label} {match_id}] Error marking match ended: {:?}", e);
+                }
+            }
+            Err(e) => error!(
+                "[{label} {match_id}] Error building match-ended url: {:?}",
+                e
+            ),
         }
-        // info!("[{}] Finished and marked match as ended", match_id);
         currently_downloading.remove(&smi.match_id);
 
-        if did_finish_match {
-            let match_metadata = match_metadata.unwrap();
-            if let Err(e) = push_meta_to_object_store(
+        if let Some(match_metadata) = match_metadata
+            && let Err(e) = push_meta_to_object_store(
                 store,
                 cache_store,
                 &match_metadata,
@@ -146,26 +152,20 @@ fn download_task(
                 match_id,
             )
             .await
-            {
-                error!(
-                    "[{label} {match_id}] Got error writing meta to object store: {:?}",
-                    e
-                );
-                let root_path = PathBuf::from("/matches");
-                match store_meta_to_local_store(
-                    &root_path,
-                    &match_metadata,
-                    &smi.match_type,
-                    match_id,
-                )
+        {
+            error!(
+                "[{label} {match_id}] Got error writing meta to object store: {:?}",
+                e
+            );
+            let root_path = PathBuf::from("/matches");
+            match store_meta_to_local_store(&root_path, &match_metadata, &smi.match_type, match_id)
                 .await
-                {
-                    Ok(()) => info!("[{label} {match_id}] Wrote meta to local store instead"),
-                    Err(e) => error!(
-                        "[{label} {match_id}] Got error writing meta to local store: {:?}",
-                        e
-                    ),
-                }
+            {
+                Ok(()) => info!("[{label} {match_id}] Wrote meta to local store instead"),
+                Err(e) => error!(
+                    "[{label} {match_id}] Got error writing meta to local store: {:?}",
+                    e
+                ),
             }
         }
     });
@@ -198,21 +198,24 @@ async fn push_meta_to_object_store(
     let label = match_type.label();
     let output = compress_match_metadata(match_metadata).await?;
 
-    let p_str = format!("/ingest/metadata/{match_id}.meta_hltv.bz2");
-    let p = object_store::path::Path::from(p_str.clone());
-    store.put(&p, output.clone().into()).await?;
+    let ingest_path =
+        object_store::path::Path::from(format!("/ingest/metadata/{match_id}.meta_hltv.bz2"));
+    let cache_path_str = format!("{match_id}.meta_hltv.bz2");
+    let cache_path = object_store::path::Path::from(cache_path_str.clone());
 
-    // Push to cache
-    let p_str = format!("{match_id}.meta_hltv.bz2");
-    let p = object_store::path::Path::from(p_str.clone());
-    if let Err(e) = cache_store.put(&p, output.into()).await {
+    let (ingest_res, cache_res) = tokio::join!(
+        store.put(&ingest_path, output.clone().into()),
+        cache_store.put(&cache_path, output.into()),
+    );
+    ingest_res?;
+    if let Err(e) = cache_res {
         warn!(
             "[{label} {match_id}] Got error writing meta to cache store: {:?}",
             e
         );
     }
 
-    info!("[{label} {match_id}] Wrote meta to {p_str}!");
+    info!("[{label} {match_id}] Wrote meta to {cache_path_str}!");
     Ok(())
 }
 
@@ -231,7 +234,7 @@ async fn store_meta_to_local_store(
         match_id
     );
     let p = PathBuf::from(p_str.clone());
-    fs::write(&p, output)?;
+    tokio::fs::write(&p, output).await?;
 
     info!("[{label} {match_id}] Wrote meta to {p_str}!");
     Ok(())

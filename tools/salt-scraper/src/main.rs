@@ -34,24 +34,17 @@ mod models;
 /// `match_ids` fit in `u32`.
 const MAX_VALID_MATCH_ID: &str = "4294967295";
 
-static SALTS_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("SALTS_COOLDOWN_MILLIS").map_or(24 * 60 * 60 * 1000 / 100, |x| {
-        x.parse().expect("SALTS_COOLDOWN_MILLIS must be a number")
-    })
-});
+static SALTS_COOLDOWN_MILLIS: LazyLock<u64> =
+    LazyLock::new(|| common::env_or("SALTS_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 100));
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
-        .unwrap()
+        .unwrap_or_default()
 });
 /// Maximum retry attempts for prioritized match salt fetches (default: 5).
-static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_MAX_RETRIES").map_or(5, |x| {
-        x.parse()
-            .expect("PRIORITIZATION_MAX_RETRIES must be a number")
-    })
-});
+static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
+    LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 5));
 
 #[tokio::main]
 #[allow(clippy::too_many_lines)]

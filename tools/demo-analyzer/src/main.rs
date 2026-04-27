@@ -65,6 +65,10 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         let mut matches = fetch_pending_matches(&ch_client).await?;
+        // Prune failed_matches for ids that have aged out of the 30-day SQL window,
+        // otherwise the set grows unboundedly over the process lifetime.
+        let valid_ids: HashSet<u64> = matches.iter().map(|m| m.match_id).collect();
+        failed_matches.retain(|id| valid_ids.contains(id));
         matches.retain(|m| !failed_matches.contains(&m.match_id));
 
         if matches.is_empty() {

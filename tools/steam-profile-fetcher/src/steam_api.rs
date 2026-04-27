@@ -10,8 +10,9 @@ use crate::models::{SteamPlayerSummary, SteamPlayerSummaryResponse};
 
 static STEAM_API_KEYS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
     env::var("STEAM_API_KEYS")
-        .expect("STEAM_API_KEYS must be set")
+        .unwrap_or_default()
         .split(',')
+        .filter(|s| !s.is_empty())
         .map(std::string::ToString::to_string)
         .collect()
 });
@@ -32,14 +33,10 @@ pub(crate) async fn fetch_steam_profiles(
         .map(|i| i.to_string())
         .collect();
 
-    if steam_id64s.is_empty() {
-        return Ok(Vec::new());
-    }
-
     // Build the API URL
     let api_key = STEAM_API_KEYS
         .choose(&mut rng())
-        .ok_or_else(|| anyhow::anyhow!("no Steam API keys configured"))?;
+        .ok_or_else(|| anyhow::anyhow!("no Steam API keys configured (set STEAM_API_KEYS)"))?;
     let steam_ids = steam_id64s.join(",");
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"

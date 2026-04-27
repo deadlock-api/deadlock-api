@@ -17,7 +17,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 use core::time::Duration;
 use std::sync::Arc;
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use bytes::Bytes;
 use clap::Parser;
 use futures::StreamExt;
@@ -461,13 +461,16 @@ async fn ingest_object(
     };
 
     // Ingest to Clickhouse
+    let filename = key
+        .filename()
+        .with_context(|| format!("Missing filename for key {key}"))?;
     let match_info = parse_match_data(&data);
     let match_info = match match_info {
         Ok(m)
             if m.match_outcome
                 .is_some_and(|m| m == EMatchOutcome::KEOutcomeError as i32) =>
         {
-            let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
+            let new_path = Path::from(format!("failed/metadata/{filename}"));
             move_object(store, key, &new_path).await?;
             bail!(
                 "[{:?}] Match outcome is error moved to fail folder",
@@ -475,12 +478,9 @@ async fn ingest_object(
             );
         }
         Err(e) => {
-            let new_path = Path::from(format!("failed/metadata/{}", key.filename().unwrap()));
+            let new_path = Path::from(format!("failed/metadata/{filename}"));
             move_object(store, key, &new_path).await?;
-            bail!(
-                "[{:?}] Error parsing match data: {e}",
-                key.filename().unwrap()
-            );
+            bail!("[{filename}] Error parsing match data: {e}");
         }
         Ok(m) => m,
     };
@@ -496,13 +496,12 @@ async fn ingest_object(
     }
 
     // Move Object to processed folder
-    let new_path = Path::from(format!("processed/metadata/{}", key.filename().unwrap()));
+    let new_path = Path::from(format!("processed/metadata/{filename}"));
     move_object(store, key, &new_path).await?;
     Ok(key.to_string())
 }
 
 async fn list_ingest_objects(store: &impl ObjectStore) -> object_store::Result<Vec<Path>> {
-    let exts = [".meta", ".meta.bz2", ".meta_hltv.bz2"];
     let p = Path::from("ingest/metadata/");
 
     let mut metas = vec![];
@@ -510,7 +509,7 @@ async fn list_ingest_objects(store: &impl ObjectStore) -> object_store::Result<V
     while let Some(meta) = list_stream.next().await.transpose()? {
         debug!("Found object: {:?}", meta.location);
         let filename = meta.location.filename();
-        if filename.is_some_and(|name| exts.iter().any(|a| name.ends_with(a))) {
+        if filename.is_some_and(|name| MATCH_EXTENSIONS.iter().any(|a| name.ends_with(a))) {
             metas.push(meta.location);
         }
     }
@@ -543,7 +542,7 @@ async fn bzip_decompress(data: Bytes) -> std::io::Result<Vec<u8>> {
         Ok(decompressed)
     })
     .await
-    .expect("bzip2 decompress task panicked")
+    .map_err(std::io::Error::other)?
 }
 
 fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {

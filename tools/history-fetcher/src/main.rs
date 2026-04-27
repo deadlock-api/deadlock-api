@@ -30,40 +30,25 @@ use valveprotos::deadlock::{
 
 use crate::types::PlayerMatchHistoryEntry;
 
-static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("HISTORY_COOLDOWN_MILLIS").map_or(24 * 60 * 60 * 1000 / 100, |x| {
-        x.parse().expect("HISTORY_COOLDOWN_MILLIS must be a number")
-    })
-});
+static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> =
+    LazyLock::new(|| common::env_or("HISTORY_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 100));
 
 /// Interval in seconds to refresh the prioritized accounts list from the database.
 /// Default: 300 seconds (5 minutes).
-static PRIORITIZATION_REFRESH_SECS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_REFRESH_SECS").map_or(300, |x| {
-        x.parse()
-            .expect("PRIORITIZATION_REFRESH_SECS must be a number")
-    })
-});
+static PRIORITIZATION_REFRESH_SECS: LazyLock<u64> =
+    LazyLock::new(|| common::env_or("PRIORITIZATION_REFRESH_SECS", 300));
 
 /// Time window in seconds within which prioritized accounts should be fetched.
 /// Accounts not fetched within this window are considered due for fetching.
 /// Default: 1800 seconds (30 minutes).
-static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_WINDOW_SECS").map_or(1800, |x| {
-        x.parse()
-            .expect("PRIORITIZATION_WINDOW_SECS must be a number")
-    })
-});
+static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> =
+    LazyLock::new(|| common::env_or("PRIORITIZATION_WINDOW_SECS", 1800));
 
 /// Maximum number of retry attempts for prioritized account fetches.
 /// Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, etc.
 /// Default: 10 retries.
-static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> = LazyLock::new(|| {
-    std::env::var("PRIORITIZATION_MAX_RETRIES").map_or(10, |x| {
-        x.parse()
-            .expect("PRIORITIZATION_MAX_RETRIES must be a number")
-    })
-});
+static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
+    LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 10));
 
 /// Tracks prioritized Steam accounts, their bot username, and last fetch timestamps.
 /// Key: `steam_id3` (as i64), Value: (`bot_id`, `Option<Instant>` where None = never fetched).

@@ -36,7 +36,10 @@ pub(crate) async fn run_cli() {
         Commands::ScrapeHltvMatches {
             spectate_bot_url: spectate_server_url,
         } => {
-            common::init_metrics().expect("Failed to initialize metrics server");
+            if let Err(e) = common::init_metrics() {
+                error!("Failed to initialize metrics server: {:#?}", e);
+                return;
+            }
             if let Err(e) = crate::cmd::scrape_hltv::run(spectate_server_url).await {
                 error!("Command failed: {:#?}", e);
             }

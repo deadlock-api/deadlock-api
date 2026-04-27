@@ -82,6 +82,7 @@ pub(crate) struct ClickHouseActiveMatch {
 
 impl From<ActiveMatch> for ClickHouseActiveMatch {
     fn from(am: ActiveMatch) -> Self {
+        let team_stats = am.team_stats.as_deref().unwrap_or(&[]);
         Self {
             start_time: am.start_time,
             winning_team: am.winning_team.unwrap_or_default(),
@@ -94,34 +95,10 @@ impl From<ActiveMatch> for ClickHouseActiveMatch {
                 .map(|p| p.abandoned.unwrap_or_default())
                 .collect(),
             players_hero_id: am.players.iter().map(|p| p.hero_id).collect(),
-            team_stats_team: am
-                .team_stats
-                .clone()
-                .unwrap_or_default()
-                .iter()
-                .map(|t| t.team)
-                .collect(),
-            team_stats_net_worth: am
-                .team_stats
-                .clone()
-                .unwrap_or_default()
-                .iter()
-                .map(|t| t.net_worth)
-                .collect(),
-            team_stats_objectives_mask: am
-                .team_stats
-                .clone()
-                .unwrap_or_default()
-                .iter()
-                .map(|t| t.objectives_mask)
-                .collect(),
-            team_stats_brawl_score: am
-                .team_stats
-                .clone()
-                .unwrap_or_default()
-                .iter()
-                .map(|t| t.brawl_score)
-                .collect(),
+            team_stats_team: team_stats.iter().map(|t| t.team).collect(),
+            team_stats_net_worth: team_stats.iter().map(|t| t.net_worth).collect(),
+            team_stats_objectives_mask: team_stats.iter().map(|t| t.objectives_mask).collect(),
+            team_stats_brawl_score: team_stats.iter().map(|t| t.brawl_score).collect(),
             lobby_id: am.lobby_id,
             net_worth_team_0: am.net_worth_team_0,
             net_worth_team_1: am.net_worth_team_1,

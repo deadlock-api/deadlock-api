@@ -1,3 +1,4 @@
+use core::str::FromStr;
 use core::time::Duration;
 use std::sync::LazyLock;
 
@@ -7,13 +8,36 @@ use metrics::counter;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tracing::instrument;
+use tracing::{instrument, warn};
 use valveprotos::deadlock::EgcCitadelClientMessages;
 
-static STEAM_PROXY_URL: LazyLock<String> =
-    LazyLock::new(|| std::env::var("STEAM_PROXY_URL").unwrap());
-static STEAM_PROXY_API_KEY: LazyLock<String> =
-    LazyLock::new(|| std::env::var("STEAM_PROXY_API_KEY").unwrap());
+static STEAM_PROXY_URL: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("STEAM_PROXY_URL").unwrap_or_else(|_| {
+        warn!("STEAM_PROXY_URL not set");
+        String::new()
+    })
+});
+static STEAM_PROXY_API_KEY: LazyLock<String> = LazyLock::new(|| {
+    std::env::var("STEAM_PROXY_API_KEY").unwrap_or_else(|_| {
+        warn!("STEAM_PROXY_API_KEY not set");
+        String::new()
+    })
+});
+
+/// Reads an environment variable and parses it, falling back to `default` on missing or unparseable values.
+/// Logs a warning if the variable is set but cannot be parsed.
+pub fn env_or<T: FromStr>(name: &str, default: T) -> T
+where
+    T::Err: core::fmt::Display,
+{
+    match std::env::var(name) {
+        Ok(raw) => raw.parse().unwrap_or_else(|e| {
+            warn!("Failed to parse env {name}: {e}, using default");
+            default
+        }),
+        Err(_) => default,
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SteamProxyResponse {

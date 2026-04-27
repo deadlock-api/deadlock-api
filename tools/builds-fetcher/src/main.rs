@@ -128,17 +128,30 @@ async fn update_builds(
     }
 }
 
+fn ts_to_pg(unix_ts: u32) -> Option<PrimitiveDateTime> {
+    let offset = OffsetDateTime::from_unix_timestamp(i64::from(unix_ts)).ok()?;
+    Some(PrimitiveDateTime::new(offset.date(), offset.time()))
+}
+
 #[instrument(skip(pg_client, builds))]
 async fn insert_builds(
     pg_client: &Pool<Postgres>,
     builds: Vec<HeroBuildResult>,
 ) -> sqlx::Result<PgQueryResult> {
+    let rows: Vec<_> = builds
+        .into_iter()
+        .filter_map(|build| {
+            let data = serde_json::to_value(&build).ok()?;
+            let hero_build = build.hero_build.clone()?;
+            Some((build, hero_build, data))
+        })
+        .collect();
+
     let mut query = QueryBuilder::new(
         "INSERT INTO hero_builds(hero, build_id, version, author_id, weekly_favorites, favorites, \
          ignores, reports, rollup_category, language, updated_at, published_at, data)",
     );
-    query.push_values(builds.into_iter(), |mut b, build| {
-        let hero_build = build.hero_build.as_ref().unwrap();
+    query.push_values(rows, |mut b, (build, hero_build, data)| {
         b.push_bind(hero_build.hero_id.map(|x| x as i32).unwrap_or_default())
             .push_bind(
                 hero_build
@@ -159,15 +172,9 @@ async fn insert_builds(
             .push_bind(build.num_reports.map(|x| x as i32).unwrap_or_default())
             .push_bind(build.rollup_category.map(|x| x as i32))
             .push_bind(hero_build.language.map(|x| x as i32))
-            .push_bind(hero_build.last_updated_timestamp.map(|x| {
-                let offset = OffsetDateTime::from_unix_timestamp(i64::from(x)).unwrap();
-                PrimitiveDateTime::new(offset.date(), offset.time())
-            }))
-            .push_bind(hero_build.publish_timestamp.map(|x| {
-                let offset = OffsetDateTime::from_unix_timestamp(i64::from(x)).unwrap();
-                PrimitiveDateTime::new(offset.date(), offset.time())
-            }))
-            .push_bind(serde_json::to_value(build).unwrap());
+            .push_bind(hero_build.last_updated_timestamp.and_then(ts_to_pg))
+            .push_bind(hero_build.publish_timestamp.and_then(ts_to_pg))
+            .push_bind(data);
     });
     query.push(
         "ON CONFLICT(hero, build_id, version) DO UPDATE SET author_id = EXCLUDED.author_id, \

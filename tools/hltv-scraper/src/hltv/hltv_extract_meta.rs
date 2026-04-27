@@ -5,6 +5,7 @@ use anyhow::bail;
 use haste::broadcast::BroadcastFile;
 use haste::demostream::DemoStream;
 use prost::Message;
+use tracing::warn;
 use valveprotos::common::EDemoCommands;
 use valveprotos::deadlock::{CCitadelUserMsgPostMatchDetails, CitadelUserMessageIds};
 
@@ -74,7 +75,7 @@ fn analyze_fragment_sync(fragment_buf: Arc<[u8]>) -> anyhow::Result<FragmentAnal
                 if demo_file.is_at_eof().unwrap_or_default() {
                     break;
                 }
-                eprintln!("Got err: {err:?}");
+                warn!("Got err: {err:?}");
                 break;
             }
         }

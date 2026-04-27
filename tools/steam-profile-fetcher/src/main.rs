@@ -14,7 +14,6 @@
 
 use core::time::Duration;
 use std::collections::HashSet;
-use std::env;
 
 use anyhow::Result;
 use cached::proc_macro::cached;
@@ -27,14 +26,8 @@ use tracing::{error, info, instrument};
 mod models;
 mod steam_api;
 
-static FETCH_INTERVAL: std::sync::LazyLock<Duration> = std::sync::LazyLock::new(|| {
-    Duration::from_secs(
-        env::var("FETCH_INTERVAL_SECONDS")
-            .unwrap_or_else(|_| "120".to_string())
-            .parse()
-            .unwrap_or(2 * 60),
-    )
-});
+static FETCH_INTERVAL: std::sync::LazyLock<Duration> =
+    std::sync::LazyLock::new(|| Duration::from_secs(common::env_or("FETCH_INTERVAL_SECONDS", 120)));
 
 const OUTDATED_INTERVAL: &str = "INTERVAL 2 WEEK";
 

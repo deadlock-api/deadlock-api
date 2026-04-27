@@ -5,7 +5,7 @@ use std::env;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Instant;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use axum::extract::State;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -67,10 +67,10 @@ pub(crate) enum SpectatedMatchType {
 }
 
 impl SpectatedMatchType {
-    pub(crate) fn label(&self) -> String {
+    pub(crate) fn label(&self) -> &'static str {
         match self {
-            SpectatedMatchType::ActiveMatch => "ACT".to_string(),
-            SpectatedMatchType::GapMatch => "GAP".to_string(),
+            SpectatedMatchType::ActiveMatch => "ACT",
+            SpectatedMatchType::GapMatch => "GAP",
         }
     }
 }
@@ -122,7 +122,9 @@ impl SpectatorBot {
             redis,
             api_token,
             proxy_url: proxy_api_url,
-            failed_spectates: Mutex::new(LruCache::new(NonZeroUsize::new(1000).unwrap())),
+            failed_spectates: Mutex::new(LruCache::new(
+                NonZeroUsize::new(1000).unwrap_or(NonZeroUsize::MIN),
+            )),
             current_patch: Arc::new(Mutex::new(None)),
         })
     }
@@ -159,15 +161,11 @@ impl SpectatorBot {
         matches: &[SpectatedMatchInfo],
         expiry_seconds: i64,
     ) -> anyhow::Result<()> {
-        self.redis
-            .hset::<(), _, _>(
-                key,
-                matches
-                    .iter()
-                    .map(|x| (x.match_id, serde_json::to_string(&x).unwrap()))
-                    .collect_vec(),
-            )
-            .await?;
+        let payload: Vec<(u64, String)> = matches
+            .iter()
+            .filter_map(|x| serde_json::to_string(&x).ok().map(|s| (x.match_id, s)))
+            .collect();
+        self.redis.hset::<(), _, _>(key, payload).await?;
 
         self.redis
             .hexpire::<(), _, _>(
@@ -268,7 +266,7 @@ impl SpectatorBot {
         let current_patch = self
             .current_patch
             .lock()
-            .expect("Patch version should be set")
+            .map_err(|_| anyhow!("current_patch mutex poisoned"))?
             .context("No current patch version available")?;
 
         let spectate_message = CMsgClientToGcSpectateLobby {
@@ -305,13 +303,17 @@ impl SpectatorBot {
 
                 let Some(ref res) = spectate_response.result else {
                     warn!("[{label} {match_id}] No result in response");
-                    self.failed_spectates.lock().unwrap().put(match_id, true);
+                    if let Ok(mut guard) = self.failed_spectates.lock() {
+                        guard.put(match_id, true);
+                    }
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
                 let Some(broadcast_url) = res.client_broadcast_url.as_ref() else {
                     warn!("[{label} {match_id}] No broadcast URL");
-                    self.failed_spectates.lock().unwrap().put(match_id, true);
+                    if let Ok(mut guard) = self.failed_spectates.lock() {
+                        guard.put(match_id, true);
+                    }
                     sleep(SPECTATE_COOLDOWN).await;
                     return Ok(false);
                 };
@@ -377,8 +379,8 @@ impl SpectatorBot {
                     "[{label}] {match_id} Failed to spectate match: {:?}",
                     response.status()
                 );
-                {
-                    self.failed_spectates.lock().unwrap().put(match_id, true);
+                if let Ok(mut guard) = self.failed_spectates.lock() {
+                    guard.put(match_id, true);
                 }
                 sleep(ERROR_COOLDOWN).await;
                 Ok(false)
@@ -392,7 +394,7 @@ impl SpectatorBot {
         let (abort_handle, steam_inf) = start_polling_text(
             "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_string(),
             Duration::from_mins(5),
-        ).await;
+        ).await?;
 
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             let s = steam_inf.read().await.clone();
@@ -410,13 +412,11 @@ impl SpectatorBot {
             }
 
             let redis_failed_spectates = self.get_all_recently_spectated(REDIS_FAILED_KEY).await?;
-            let local_failed_spectates: Vec<u64> = self
+            let local_failed_spectates: std::collections::HashSet<u64> = self
                 .failed_spectates
                 .lock()
-                .unwrap()
-                .iter()
-                .map(|(k, _)| *k)
-                .collect();
+                .map(|guard| guard.iter().map(|(k, _)| *k).collect())
+                .unwrap_or_default();
 
             let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
             let next_match = live_matches

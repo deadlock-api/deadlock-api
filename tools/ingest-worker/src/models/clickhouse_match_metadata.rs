@@ -1,6 +1,9 @@
 use clickhouse::Row;
 use serde::Serialize;
-use valveprotos::deadlock::c_msg_match_meta_data_contents::{MatchInfo, Players, PowerUpBuff};
+use valveprotos::deadlock::c_msg_match_meta_data_contents::{
+    BookReward, Deaths, Items, MatchInfo, MidBoss, Objective as ProtoObjective, PlayerAccolade,
+    PlayerStats, Players, PowerUpBuff, StreetBrawlRound,
+};
 use valveprotos::deadlock::c_msg_match_player_paths_data::Path;
 
 use crate::models::enums::{BotDifficulty, GameMode, MatchMode, MatchOutcome, Objective, Team};
@@ -258,81 +261,111 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             objectives_destroyed_time_s: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::destroyed_time_s)
+                .map(ProtoObjective::destroyed_time_s)
                 .collect(),
-            objectives_creep_damage: match_info.objectives.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::creep_damage).collect(),
+            objectives_creep_damage: match_info
+                .objectives
+                .iter()
+                .map(ProtoObjective::creep_damage)
+                .collect(),
             objectives_creep_damage_mitigated: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::creep_damage_mitigated)
+                .map(ProtoObjective::creep_damage_mitigated)
                 .collect(),
-            objectives_player_damage: match_info.objectives.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_damage).collect(),
+            objectives_player_damage: match_info
+                .objectives
+                .iter()
+                .map(ProtoObjective::player_damage)
+                .collect(),
             objectives_player_damage_mitigated: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_damage_mitigated)
+                .map(ProtoObjective::player_damage_mitigated)
                 .collect(),
             objectives_first_damage_time_s: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::first_damage_time_s)
+                .map(ProtoObjective::first_damage_time_s)
                 .collect(),
             objectives_team_objective: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::team_objective_id)
+                .map(ProtoObjective::team_objective_id)
                 .map(Objective::from)
                 .collect(),
             objectives_team: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::team)
+                .map(ProtoObjective::team)
                 .map(Team::from)
                 .collect(),
             objectives_player_spirit_damage: match_info
                 .objectives
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_spirit_damage)
+                .map(ProtoObjective::player_spirit_damage)
                 .collect(),
             mid_boss_team_killed: match_info
                 .mid_boss
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::team_killed)
+                .map(MidBoss::team_killed)
                 .map(Team::from)
                 .collect(),
             mid_boss_team_claimed: match_info
                 .mid_boss
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::team_claimed)
+                .map(MidBoss::team_claimed)
                 .map(Team::from)
                 .collect(),
             mid_boss_destroyed_time_s: match_info
                 .mid_boss
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::destroyed_time_s)
+                .map(MidBoss::destroyed_time_s)
                 .collect(),
             street_brawl_round_duration_s: match_info
                 .street_brawl_rounds
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::StreetBrawlRound::round_duration_s)
+                .map(StreetBrawlRound::round_duration_s)
                 .collect(),
             street_brawl_rounds_winning_team: match_info
                 .street_brawl_rounds
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::StreetBrawlRound::winning_team)
+                .map(StreetBrawlRound::winning_team)
                 .map(Team::from)
                 .collect(),
             team_score: match_info.team_score.clone(),
-            match_tracked_stats: match_info.match_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect(),
-            team0_tracked_stats: match_info.teams.first().map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
-            team1_tracked_stats: match_info.teams.get(1).map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
+            match_tracked_stats: match_info
+                .match_tracked_stats
+                .iter()
+                .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
+                .collect(),
+            team0_tracked_stats: match_info
+                .teams
+                .first()
+                .map(|t| {
+                    t.team_tracked_stats
+                        .iter()
+                        .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            team1_tracked_stats: match_info
+                .teams
+                .get(1)
+                .map(|t| {
+                    t.team_tracked_stats
+                        .iter()
+                        .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
+                        .collect()
+                })
+                .unwrap_or_default(),
             account_id: value.account_id(),
             won,
             player_slot: value.player_slot(),
             death_details_game_time_s: value
                 .death_details
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Deaths::game_time_s)
+                .map(Deaths::game_time_s)
                 .collect(),
             death_details_time_to_kill_s: value
                 .death_details
@@ -342,7 +375,7 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             death_details_killer_player_slot: value
                 .death_details
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Deaths::killer_player_slot)
+                .map(Deaths::killer_player_slot)
                 .collect(),
             death_details_death_pos: value
                 .death_details
@@ -363,87 +396,164 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             death_details_death_duration_s: value
                 .death_details
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Deaths::death_duration_s)
+                .map(Deaths::death_duration_s)
                 .collect(),
-            items_game_time_s: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::game_time_s).collect(),
-            items_item_id: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::item_id).collect(),
-            items_upgrade_id: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::upgrade_id).collect(),
-            items_sold_time_s: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::sold_time_s).collect(),
-            items_flags: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::flags).collect(),
-            items_imbued_ability_id: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::imbued_ability_id).collect(),
-            items_upgrade_info: value.items.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Items::upgrade_info).collect(),
-            stats_time_stamp_s: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::time_stamp_s).collect(),
-            stats_net_worth: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::net_worth).collect(),
-            stats_gold_player: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_player).collect(),
-            stats_gold_player_orbs: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_player_orbs).collect(),
+            items_game_time_s: value.items.iter().map(Items::game_time_s).collect(),
+            items_item_id: value.items.iter().map(Items::item_id).collect(),
+            items_upgrade_id: value.items.iter().map(Items::upgrade_id).collect(),
+            items_sold_time_s: value.items.iter().map(Items::sold_time_s).collect(),
+            items_flags: value.items.iter().map(Items::flags).collect(),
+            items_imbued_ability_id: value.items.iter().map(Items::imbued_ability_id).collect(),
+            items_upgrade_info: value.items.iter().map(Items::upgrade_info).collect(),
+            stats_time_stamp_s: value.stats.iter().map(PlayerStats::time_stamp_s).collect(),
+            stats_net_worth: value.stats.iter().map(PlayerStats::net_worth).collect(),
+            stats_gold_player: value.stats.iter().map(PlayerStats::gold_player).collect(),
+            stats_gold_player_orbs: value
+                .stats
+                .iter()
+                .map(PlayerStats::gold_player_orbs)
+                .collect(),
             stats_gold_lane_creep_orbs: value
                 .stats
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_lane_creep_orbs)
+                .map(PlayerStats::gold_lane_creep_orbs)
                 .collect(),
             stats_gold_neutral_creep_orbs: value
                 .stats
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_neutral_creep_orbs)
+                .map(PlayerStats::gold_neutral_creep_orbs)
                 .collect(),
-            stats_gold_boss: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_boss).collect(),
-            stats_gold_boss_orb: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_boss_orb).collect(),
-            stats_gold_treasure: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_treasure).collect(),
-            stats_gold_denied: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_denied).collect(),
-            stats_gold_death_loss: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_death_loss).collect(),
-            stats_gold_lane_creep: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_lane_creep).collect(),
-            stats_gold_neutral_creep: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::gold_neutral_creep).collect(),
-            stats_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::kills).collect(),
-            stats_deaths: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::deaths).collect(),
-            stats_assists: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::assists).collect(),
-            stats_creep_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::creep_kills).collect(),
-            stats_neutral_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::neutral_kills).collect(),
-            stats_possible_creeps: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::possible_creeps).collect(),
-            stats_creep_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::creep_damage).collect(),
-            stats_player_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::player_damage).collect(),
-            stats_neutral_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::neutral_damage).collect(),
-            stats_boss_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::boss_damage).collect(),
-            stats_denies: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::denies).collect(),
-            stats_player_healing: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::player_healing).collect(),
-            stats_ability_points: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::ability_points).collect(),
-            stats_self_healing: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::self_healing).collect(),
+            stats_gold_boss: value.stats.iter().map(PlayerStats::gold_boss).collect(),
+            stats_gold_boss_orb: value.stats.iter().map(PlayerStats::gold_boss_orb).collect(),
+            stats_gold_treasure: value.stats.iter().map(PlayerStats::gold_treasure).collect(),
+            stats_gold_denied: value.stats.iter().map(PlayerStats::gold_denied).collect(),
+            stats_gold_death_loss: value
+                .stats
+                .iter()
+                .map(PlayerStats::gold_death_loss)
+                .collect(),
+            stats_gold_lane_creep: value
+                .stats
+                .iter()
+                .map(PlayerStats::gold_lane_creep)
+                .collect(),
+            stats_gold_neutral_creep: value
+                .stats
+                .iter()
+                .map(PlayerStats::gold_neutral_creep)
+                .collect(),
+            stats_kills: value.stats.iter().map(PlayerStats::kills).collect(),
+            stats_deaths: value.stats.iter().map(PlayerStats::deaths).collect(),
+            stats_assists: value.stats.iter().map(PlayerStats::assists).collect(),
+            stats_creep_kills: value.stats.iter().map(PlayerStats::creep_kills).collect(),
+            stats_neutral_kills: value.stats.iter().map(PlayerStats::neutral_kills).collect(),
+            stats_possible_creeps: value
+                .stats
+                .iter()
+                .map(PlayerStats::possible_creeps)
+                .collect(),
+            stats_creep_damage: value.stats.iter().map(PlayerStats::creep_damage).collect(),
+            stats_player_damage: value.stats.iter().map(PlayerStats::player_damage).collect(),
+            stats_neutral_damage: value
+                .stats
+                .iter()
+                .map(PlayerStats::neutral_damage)
+                .collect(),
+            stats_boss_damage: value.stats.iter().map(PlayerStats::boss_damage).collect(),
+            stats_denies: value.stats.iter().map(PlayerStats::denies).collect(),
+            stats_player_healing: value
+                .stats
+                .iter()
+                .map(PlayerStats::player_healing)
+                .collect(),
+            stats_ability_points: value
+                .stats
+                .iter()
+                .map(PlayerStats::ability_points)
+                .collect(),
+            stats_self_healing: value.stats.iter().map(PlayerStats::self_healing).collect(),
             stats_player_damage_taken: value
                 .stats
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::player_damage_taken)
+                .map(PlayerStats::player_damage_taken)
                 .collect(),
-            stats_max_health: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::max_health).collect(),
-            stats_weapon_power: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::weapon_power).collect(),
-            stats_tech_power: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::tech_power).collect(),
-            stats_shots_hit: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::shots_hit).collect(),
-            stats_shots_missed: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::shots_missed).collect(),
-            stats_damage_absorbed: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::damage_absorbed).collect(),
+            stats_max_health: value.stats.iter().map(PlayerStats::max_health).collect(),
+            stats_weapon_power: value.stats.iter().map(PlayerStats::weapon_power).collect(),
+            stats_tech_power: value.stats.iter().map(PlayerStats::tech_power).collect(),
+            stats_shots_hit: value.stats.iter().map(PlayerStats::shots_hit).collect(),
+            stats_shots_missed: value.stats.iter().map(PlayerStats::shots_missed).collect(),
+            stats_damage_absorbed: value
+                .stats
+                .iter()
+                .map(PlayerStats::damage_absorbed)
+                .collect(),
             stats_absorption_provided: value
                 .stats
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::absorption_provided)
+                .map(PlayerStats::absorption_provided)
                 .collect(),
-            stats_hero_bullets_hit: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::hero_bullets_hit).collect(),
+            stats_hero_bullets_hit: value
+                .stats
+                .iter()
+                .map(PlayerStats::hero_bullets_hit)
+                .collect(),
             stats_hero_bullets_hit_crit: value
                 .stats
                 .iter()
-                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::hero_bullets_hit_crit)
+                .map(PlayerStats::hero_bullets_hit_crit)
                 .collect(),
-            stats_heal_prevented: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::heal_prevented).collect(),
-            stats_heal_lost: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::heal_lost).collect(),
-            stats_damage_mitigated: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::damage_mitigated).collect(),
-            stats_level: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::level).collect(),
-            stats_player_barriering: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::player_barriering).collect(),
-            stats_teammate_healing: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::teammate_healing).collect(),
-            stats_teammate_barriering: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::teammate_barriering).collect(),
-            stats_self_damage: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::self_damage).collect(),
-            stats_bullet_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::bullet_kills).collect(),
-            stats_melee_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::melee_kills).collect(),
-            stats_ability_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::ability_kills).collect(),
-            stats_headshot_kills: value.stats.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerStats::headshot_kills).collect(),
-            power_up_buffs_type: value.power_up_buffs.iter().map(PowerUpBuff::r#type).map(std::string::ToString::to_string).collect(),
-            power_up_buffs_value: value.power_up_buffs.iter().map(PowerUpBuff::value).collect(),
-            power_up_buffs_is_permanent: value.power_up_buffs.iter().map(PowerUpBuff::is_permanent).collect(),
+            stats_heal_prevented: value
+                .stats
+                .iter()
+                .map(PlayerStats::heal_prevented)
+                .collect(),
+            stats_heal_lost: value.stats.iter().map(PlayerStats::heal_lost).collect(),
+            stats_damage_mitigated: value
+                .stats
+                .iter()
+                .map(PlayerStats::damage_mitigated)
+                .collect(),
+            stats_level: value.stats.iter().map(PlayerStats::level).collect(),
+            stats_player_barriering: value
+                .stats
+                .iter()
+                .map(PlayerStats::player_barriering)
+                .collect(),
+            stats_teammate_healing: value
+                .stats
+                .iter()
+                .map(PlayerStats::teammate_healing)
+                .collect(),
+            stats_teammate_barriering: value
+                .stats
+                .iter()
+                .map(PlayerStats::teammate_barriering)
+                .collect(),
+            stats_self_damage: value.stats.iter().map(PlayerStats::self_damage).collect(),
+            stats_bullet_kills: value.stats.iter().map(PlayerStats::bullet_kills).collect(),
+            stats_melee_kills: value.stats.iter().map(PlayerStats::melee_kills).collect(),
+            stats_ability_kills: value.stats.iter().map(PlayerStats::ability_kills).collect(),
+            stats_headshot_kills: value
+                .stats
+                .iter()
+                .map(PlayerStats::headshot_kills)
+                .collect(),
+            power_up_buffs_type: value
+                .power_up_buffs
+                .iter()
+                .map(PowerUpBuff::r#type)
+                .map(std::string::ToString::to_string)
+                .collect(),
+            power_up_buffs_value: value
+                .power_up_buffs
+                .iter()
+                .map(PowerUpBuff::value)
+                .collect(),
+            power_up_buffs_is_permanent: value
+                .power_up_buffs
+                .iter()
+                .map(PowerUpBuff::is_permanent)
+                .collect(),
             team: Team::from(value.team()),
             kills: value.kills(),
             deaths: value.deaths(),
@@ -461,28 +571,74 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
                 .map(|v| (i64::from(v.ability_id()), i64::from(v.ability_value())))
                 .collect(),
             stats_type_stat: value.stats_type_stat.clone(),
-            book_reward_starting_xp: value.book_rewards.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::BookReward::starting_xp).collect(),
-            book_reward_xp_amount: value.book_rewards.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::BookReward::xp_amount).collect(),
-            book_reward_book_id: value.book_rewards.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::BookReward::book_id).collect(),
+            book_reward_starting_xp: value
+                .book_rewards
+                .iter()
+                .map(BookReward::starting_xp)
+                .collect(),
+            book_reward_xp_amount: value
+                .book_rewards
+                .iter()
+                .map(BookReward::xp_amount)
+                .collect(),
+            book_reward_book_id: value.book_rewards.iter().map(BookReward::book_id).collect(),
             abandon_match_time_s: value.abandon_match_time_s(),
             rewards_eligible: value.rewards_eligible(),
             earned_holiday_award_2025: value.earned_holiday_award_2025(),
-            hero_xp: value.hero_data.as_ref().and_then(|h| h.hero_xp).unwrap_or_default(),
-            hero_equips: value.hero_data.as_ref().and_then(|h| h.hero_equips.as_ref().map(|e| e.items.iter().filter_map(|i| i.id).collect())).unwrap_or_default(),
+            hero_xp: value
+                .hero_data
+                .as_ref()
+                .and_then(|h| h.hero_xp)
+                .unwrap_or_default(),
+            hero_equips: value
+                .hero_data
+                .as_ref()
+                .and_then(|h| {
+                    h.hero_equips
+                        .as_ref()
+                        .map(|e| e.items.iter().filter_map(|i| i.id).collect())
+                })
+                .unwrap_or_default(),
             mvp_rank: value.mvp_rank,
-            player_tracked_stats: value.player_tracked_stats.iter().map(|v| (v.tracked_stat_id(), v.tracked_stat_value())).collect(),
-            accolades_accolade_id: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_id).collect(),
-            accolades_accolade_stat_value: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_stat_value).collect(),
-            accolades_accolade_threshold_achieved: value.accolades.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::PlayerAccolade::accolade_threshold_achieved).collect(),
+            player_tracked_stats: value
+                .player_tracked_stats
+                .iter()
+                .map(|v| (v.tracked_stat_id(), v.tracked_stat_value()))
+                .collect(),
+            accolades_accolade_id: value
+                .accolades
+                .iter()
+                .map(PlayerAccolade::accolade_id)
+                .collect(),
+            accolades_accolade_stat_value: value
+                .accolades
+                .iter()
+                .map(PlayerAccolade::accolade_stat_value)
+                .collect(),
+            accolades_accolade_threshold_achieved: value
+                .accolades
+                .iter()
+                .map(PlayerAccolade::accolade_threshold_achieved)
+                .collect(),
             x_min: match_path.as_ref().and_then(|p| p.x_min),
             y_min: match_path.as_ref().and_then(|p| p.y_min),
             x_max: match_path.as_ref().and_then(|p| p.x_max),
             y_max: match_path.as_ref().and_then(|p| p.y_max),
-            x_pos: match_path.map(|p| p.x_pos.iter().map(|&v| v as u16).collect()).unwrap_or_default(),
-            y_pos: match_path.map(|p| p.y_pos.iter().map(|&v| v as u16).collect()).unwrap_or_default(),
-            health: match_path.map(|p| p.health.iter().map(|&v| v as u8).collect()).unwrap_or_default(),
-            combat_type: match_path.map(|p| p.combat_type.iter().map(|&v| v as u8).collect()).unwrap_or_default(),
-            move_type: match_path.map(|p| p.move_type.iter().map(|&v| v as u8).collect()).unwrap_or_default(),
+            x_pos: match_path
+                .map(|p| p.x_pos.iter().map(|&v| v as u16).collect())
+                .unwrap_or_default(),
+            y_pos: match_path
+                .map(|p| p.y_pos.iter().map(|&v| v as u16).collect())
+                .unwrap_or_default(),
+            health: match_path
+                .map(|p| p.health.iter().map(|&v| v as u8).collect())
+                .unwrap_or_default(),
+            combat_type: match_path
+                .map(|p| p.combat_type.iter().map(|&v| v as u8).collect())
+                .unwrap_or_default(),
+            move_type: match_path
+                .map(|p| p.move_type.iter().map(|&v| v as u8).collect())
+                .unwrap_or_default(),
         }
     }
 }
