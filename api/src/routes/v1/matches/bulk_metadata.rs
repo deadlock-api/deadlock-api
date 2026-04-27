@@ -497,15 +497,20 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     };
     let order = format!(" ORDER BY {} {} ", inner_order_expr, query.order_direction);
     // Outer query has GROUP BY match_id, so non-group columns must be aggregated.
-    // Wrapping in any() avoids relying on a SELECT alias that may not exist when
-    // include_info is false.
+    // Columns are table-qualified to bypass ClickHouse alias substitution: when
+    // include_info=true the SELECT exposes aliases like `start_time` whose name
+    // collides with the underlying column, and an unqualified `any(start_time)`
+    // in ORDER BY would be re-expanded into `any(any(start_time))`.
     let outer_order = match query.order_by {
         SortKey::MatchId => format!(" ORDER BY match_id {} ", query.order_direction),
         SortKey::StartTime => {
-            format!(" ORDER BY any(start_time) {} ", query.order_direction)
+            format!(
+                " ORDER BY any(match_player.start_time) {} ",
+                query.order_direction
+            )
         }
         SortKey::AverageBadge => format!(
-            " ORDER BY (coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2 {} ",
+            " ORDER BY (coalesce(any(match_player.average_badge_team0), 0) + coalesce(any(match_player.average_badge_team1), 0)) / 2 {} ",
             query.order_direction
         ),
     };
