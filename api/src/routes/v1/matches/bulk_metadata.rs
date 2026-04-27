@@ -187,7 +187,7 @@ pub(super) struct BulkMatchMetadataQuery {
     /// Comma separated list of extra match-level columns to include in the response.
     /// Each column is aggregated with `any(...)`. Only alphanumeric characters, underscores, and
     /// dots (for nested field access) are allowed.
-    /// Example: `match_info.cluster_id,match_info.region_mode`.
+    /// Example: `objectives_mask_team0,team_score`.
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
     #[cfg_attr(
@@ -265,20 +265,20 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     let mut select_fields: Vec<String> = vec![];
     if query.include_info {
         select_fields.extend(vec![
-            "any(match_info.start_time) as start_time".to_owned(),
+            "any(start_time) as start_time".to_owned(),
             "any(winning_team) as winning_team".to_owned(),
-            "any(match_info.duration_s) as duration_s".to_owned(),
+            "any(duration_s) as duration_s".to_owned(),
             "any(match_outcome) as match_outcome".to_owned(),
-            "any(match_info.match_mode) as match_mode".to_owned(),
-            "any(match_info.game_mode) as game_mode".to_owned(),
-            "any(match_info.average_badge_team0) as average_badge_team0".to_owned(),
-            "any(match_info.average_badge_team1) as average_badge_team1".to_owned(),
+            "any(match_mode) as match_mode".to_owned(),
+            "any(game_mode) as game_mode".to_owned(),
+            "any(average_badge_team0) as average_badge_team0".to_owned(),
+            "any(average_badge_team1) as average_badge_team1".to_owned(),
             "any(not_scored) as not_scored".to_owned(),
         ]);
     }
     if query.include_more_info {
         select_fields.extend(vec![
-            "any(match_info.rewards_eligible) as rewards_eligible".to_owned(),
+            "any(rewards_eligible) as rewards_eligible".to_owned(),
             "any(is_high_skill_range_parties) as is_high_skill_range_parties".to_owned(),
             "any(low_pri_pool) as low_pri_pool".to_owned(),
             "any(new_player_pool) as new_player_pool".to_owned(),
@@ -313,7 +313,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         || has_extra_player_columns;
     if has_player_fields {
         let mut player_select_fields = vec![
-            "match_player.account_id as account_id",
+            "account_id",
             "hero_id",
             "player_slot",
             "team",
@@ -486,34 +486,26 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     } else {
         format!(" WHERE {} ", info_filters.join(" AND "))
     };
-    // Inner CTE has no GROUP BY — reference raw columns.
+    // Inner CTE groups by match_id — non-key columns must be aggregated.
     let inner_order_expr = match query.order_by {
+        SortKey::MatchId => "match_id".to_owned(),
+        SortKey::StartTime => "any(start_time)".to_owned(),
         SortKey::AverageBadge => {
-            "(coalesce(average_badge_team0, 0) + coalesce(average_badge_team1, 0)) / 2".to_owned()
+            "(coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2"
+                .to_owned()
         }
-        other => other.to_string(),
     };
     let order = format!(" ORDER BY {} {} ", inner_order_expr, query.order_direction);
     // Outer query has GROUP BY match_id, so non-group columns must be aggregated.
     // Wrapping in any() avoids relying on a SELECT alias that may not exist when
     // include_info is false.
     let outer_order = match query.order_by {
-        SortKey::MatchId => {
-            let match_id_col = if has_player_fields {
-                "match_player.match_id"
-            } else {
-                "match_info.match_id"
-            };
-            format!(" ORDER BY {match_id_col} {} ", query.order_direction)
-        }
+        SortKey::MatchId => format!(" ORDER BY match_id {} ", query.order_direction),
         SortKey::StartTime => {
-            format!(
-                " ORDER BY any(match_info.start_time) {} ",
-                query.order_direction
-            )
+            format!(" ORDER BY any(start_time) {} ", query.order_direction)
         }
         SortKey::AverageBadge => format!(
-            " ORDER BY (coalesce(any(match_info.average_badge_team0), 0) + coalesce(any(match_info.average_badge_team1), 0)) / 2 {} ",
+            " ORDER BY (coalesce(any(average_badge_team0), 0) + coalesce(any(average_badge_team1), 0)) / 2 {} ",
             query.order_direction
         ),
     };
@@ -524,18 +516,14 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     query.push_str("WITH ");
     write!(
         &mut query,
-        "t_matches AS (SELECT match_id FROM match_info FINAL {info_filters} {order} {limit})"
+        "t_matches AS (SELECT match_id FROM match_player {info_filters} GROUP BY match_id {order} {limit})"
     )?;
 
     select_fields.push("any(dp.banned_hero_ids) as banned_hero_ids".to_owned());
 
     // SELECT
     query.push_str("SELECT ");
-    if has_player_fields {
-        query.push_str("match_player.match_id as match_id");
-    } else {
-        query.push_str("match_info.match_id as match_id");
-    }
+    query.push_str("match_player.match_id as match_id");
     if !select_fields.is_empty() {
         query.push_str(", ");
         query.push_str(&select_fields.join(", "));
@@ -543,23 +531,18 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if has_player_fields {
         query.push_str(
             " FROM match_player \
-             INNER JOIN match_info ON match_player.match_id = match_info.match_id \
              LEFT JOIN demo_player AS dp ON match_player.match_id = dp.match_id AND match_player.account_id = dp.account_id \
              WHERE match_player.match_id IN t_matches",
         );
     } else {
         query.push_str(
-            " FROM match_info \
-             LEFT JOIN demo_player AS dp ON match_info.match_id = dp.match_id \
-             WHERE match_info.match_id IN t_matches ",
+            " FROM match_player \
+             LEFT JOIN demo_player AS dp ON match_player.match_id = dp.match_id \
+             WHERE match_player.match_id IN t_matches ",
         );
     }
     // GROUP By
-    if has_player_fields {
-        query.push_str(" GROUP BY match_player.match_id ");
-    } else {
-        query.push_str(" GROUP BY match_info.match_id ");
-    }
+    query.push_str(" GROUP BY match_player.match_id ");
     // Order By
     query.push_str(&outer_order);
     // Limit
