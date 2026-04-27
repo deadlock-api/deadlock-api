@@ -67,14 +67,26 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                 average_badge_team0,
                 average_badge_team1,
                 if(team = 'Team0', 1, 0) AS enemy_team
-            FROM match_player
-            WHERE account_id IN ({})
-              AND match_mode IN ('Ranked', 'Unranked')
-              AND game_mode = 'Normal'
-              AND average_badge_team0 > 0
-              AND average_badge_team1 > 0
+            FROM (
+                SELECT
+                    account_id,
+                    match_id,
+                    hero_id,
+                    team,
+                    kills,
+                    duration_s,
+                    average_badge_team0,
+                    average_badge_team1
+                FROM match_player
+                WHERE account_id IN ({})
+                  AND match_mode IN ('Ranked', 'Unranked')
+                  AND game_mode = 'Normal'
+                  AND average_badge_team0 > 0
+                  AND average_badge_team1 > 0
+                ORDER BY account_id, match_id DESC
+                LIMIT 1 BY account_id, match_id
+            )
             ORDER BY account_id, match_id DESC
-            LIMIT 1 BY account_id, match_id
             LIMIT {} BY account_id
             SETTINGS log_comment = 'rank_predict_matches'",
             in_clause(keys),
