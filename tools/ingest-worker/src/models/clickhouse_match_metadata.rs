@@ -164,6 +164,48 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub game_mode: GameMode,
     pub average_badge_team0: Option<u32>,
     pub average_badge_team1: Option<u32>,
+    pub winning_team: Team,
+    pub match_outcome: MatchOutcome,
+    pub bot_difficulty: BotDifficulty,
+    pub objectives_mask_team0: u16,
+    pub objectives_mask_team1: u16,
+    pub is_high_skill_range_parties: Option<bool>,
+    pub low_pri_pool: Option<bool>,
+    pub new_player_pool: Option<bool>,
+    pub not_scored: Option<bool>,
+    pub game_mode_version: Option<u32>,
+    #[serde(rename = "objectives.destroyed_time_s")]
+    pub objectives_destroyed_time_s: Vec<u32>,
+    #[serde(rename = "objectives.creep_damage")]
+    pub objectives_creep_damage: Vec<u32>,
+    #[serde(rename = "objectives.creep_damage_mitigated")]
+    pub objectives_creep_damage_mitigated: Vec<u32>,
+    #[serde(rename = "objectives.player_damage")]
+    pub objectives_player_damage: Vec<u32>,
+    #[serde(rename = "objectives.player_damage_mitigated")]
+    pub objectives_player_damage_mitigated: Vec<u32>,
+    #[serde(rename = "objectives.first_damage_time_s")]
+    pub objectives_first_damage_time_s: Vec<u32>,
+    #[serde(rename = "objectives.team_objective")]
+    pub objectives_team_objective: Vec<Objective>,
+    #[serde(rename = "objectives.team")]
+    pub objectives_team: Vec<Team>,
+    #[serde(rename = "objectives.player_spirit_damage")]
+    pub objectives_player_spirit_damage: Vec<u32>,
+    #[serde(rename = "mid_boss.team_killed")]
+    pub mid_boss_team_killed: Vec<Team>,
+    #[serde(rename = "mid_boss.team_claimed")]
+    pub mid_boss_team_claimed: Vec<Team>,
+    #[serde(rename = "mid_boss.destroyed_time_s")]
+    pub mid_boss_destroyed_time_s: Vec<u32>,
+    #[serde(rename = "street_brawl_rounds.round_duration_s")]
+    pub street_brawl_round_duration_s: Vec<u32>,
+    #[serde(rename = "street_brawl_rounds.winning_team")]
+    pub street_brawl_rounds_winning_team: Vec<Team>,
+    pub team_score: Vec<u32>,
+    pub match_tracked_stats: Vec<(u32, i32)>,
+    pub team0_tracked_stats: Vec<(u32, i32)>,
+    pub team1_tracked_stats: Vec<(u32, i32)>,
     pub account_id: u32,
     pub won: bool,
     pub player_slot: u32,
@@ -353,6 +395,87 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             game_mode: GameMode::from(match_info.game_mode()),
             average_badge_team0: match_info.average_badge_team0,
             average_badge_team1: match_info.average_badge_team1,
+            winning_team: Team::from(match_info.winning_team()),
+            match_outcome: MatchOutcome::from(match_info.match_outcome()),
+            bot_difficulty: BotDifficulty::from(match_info.bot_difficulty()),
+            objectives_mask_team0: match_info.objectives_mask_team0() as u16,
+            objectives_mask_team1: match_info.objectives_mask_team1() as u16,
+            is_high_skill_range_parties: match_info.is_high_skill_range_parties,
+            low_pri_pool: match_info.low_pri_pool,
+            new_player_pool: match_info.new_player_pool,
+            not_scored: match_info.not_scored,
+            game_mode_version: match_info.game_mode_version,
+            objectives_destroyed_time_s: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::destroyed_time_s)
+                .collect(),
+            objectives_creep_damage: match_info.objectives.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::creep_damage).collect(),
+            objectives_creep_damage_mitigated: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::creep_damage_mitigated)
+                .collect(),
+            objectives_player_damage: match_info.objectives.iter().map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_damage).collect(),
+            objectives_player_damage_mitigated: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_damage_mitigated)
+                .collect(),
+            objectives_first_damage_time_s: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::first_damage_time_s)
+                .collect(),
+            objectives_team_objective: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::team_objective_id)
+                .map(Objective::from)
+                .collect(),
+            objectives_team: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::team)
+                .map(Team::from)
+                .collect(),
+            objectives_player_spirit_damage: match_info
+                .objectives
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::Objective::player_spirit_damage)
+                .collect(),
+            mid_boss_team_killed: match_info
+                .mid_boss
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::team_killed)
+                .map(Team::from)
+                .collect(),
+            mid_boss_team_claimed: match_info
+                .mid_boss
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::team_claimed)
+                .map(Team::from)
+                .collect(),
+            mid_boss_destroyed_time_s: match_info
+                .mid_boss
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::MidBoss::destroyed_time_s)
+                .collect(),
+            street_brawl_round_duration_s: match_info
+                .street_brawl_rounds
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::StreetBrawlRound::round_duration_s)
+                .collect(),
+            street_brawl_rounds_winning_team: match_info
+                .street_brawl_rounds
+                .iter()
+                .map(valveprotos::deadlock::c_msg_match_meta_data_contents::StreetBrawlRound::winning_team)
+                .map(Team::from)
+                .collect(),
+            team_score: match_info.team_score.clone(),
+            match_tracked_stats: match_info.match_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect(),
+            team0_tracked_stats: match_info.teams.first().map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
+            team1_tracked_stats: match_info.teams.get(1).map(|t| t.team_tracked_stats.iter().map(|x| (x.tracked_stat_id(), x.tracked_stat_value())).collect()).unwrap_or_default(),
             account_id: value.account_id(),
             won,
             player_slot: value.player_slot(),
