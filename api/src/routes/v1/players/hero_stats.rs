@@ -116,9 +116,9 @@ fn build_query(query: &HeroStatsQuery) -> String {
         format!("account_id IN ({account_ids})"),
         MatchMode::sql_filter(None),
         GameMode::sql_filter(query.game_mode),
+        "net_worth > 0".to_string(),
+        "duration_s > 0".to_string(),
     ];
-    mp_filters.push("net_worth > 0".to_string());
-    mp_filters.push("duration_s > 0".to_string());
     if let Some(ref ids) = hero_ids_in {
         mp_filters.push(format!("hero_id IN ({ids})"));
     }
@@ -201,23 +201,27 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(max_creep_damage) AS total_creep_damage,
         sum(max_neutral_damage) AS total_neutral_damage,
         avg(denies) AS denies_per_match,
-        60 * sum(mp.kills) / nullIf(sum(duration_s), 0) AS kills_per_min,
-        60 * sum(mp.deaths) / nullIf(sum(duration_s), 0) AS deaths_per_min,
-        60 * sum(mp.assists) / nullIf(sum(duration_s), 0) AS assists_per_min,
-        60 * sum(denies) / nullIf(sum(duration_s), 0) AS denies_per_min,
-        60 * sum(net_worth) / nullIf(sum(duration_s), 0) AS networth_per_min,
-        60 * sum(last_hits) / nullIf(sum(duration_s), 0) AS last_hits_per_min,
-        60 * sum(max_player_damage) / nullIf(sum(duration_s), 0) AS damage_per_min,
-        sum(max_player_damage) / nullIf(sum(net_worth), 0) AS damage_per_soul,
-        60 * sum(max_player_damage) / nullIf(sum(duration_s), 0) AS damage_mitigated_per_min,
-        60 * sum(max_player_damage_taken) / nullIf(sum(duration_s), 0) AS damage_taken_per_min,
-        sum(max_player_damage_taken) / nullIf(sum(net_worth), 0) AS damage_taken_per_soul,
-        60 * sum(max_creep_kills) / nullIf(sum(duration_s), 0) AS creeps_per_min,
-        60 * sum(max_boss_damage) / nullIf(sum(duration_s), 0) AS obj_damage_per_min,
-        sum(max_boss_damage) / nullIf(sum(net_worth), 0) AS obj_damage_per_soul,
-        avg(max_shots_hit / greatest(1, max_shots_hit + max_shots_missed)) AS accuracy,
-        avg(max_hero_bullets_hit_crit / greatest(1, max_hero_bullets_hit_crit + \
-         max_hero_bullets_hit)) AS crit_shot_rate,
+        60 * sum(mp.kills) / sum(duration_s) AS kills_per_min,
+        60 * sum(mp.deaths) / sum(duration_s) AS deaths_per_min,
+        60 * sum(mp.assists) / sum(duration_s) AS assists_per_min,
+        60 * sum(denies) / sum(duration_s) AS denies_per_min,
+        60 * sum(net_worth) / sum(duration_s) AS networth_per_min,
+        60 * sum(last_hits) / sum(duration_s) AS last_hits_per_min,
+        60 * sum(max_player_damage) / sum(duration_s) AS damage_per_min,
+        sum(max_player_damage) / sum(net_worth) AS damage_per_soul,
+        60 * sum(max_player_damage) / sum(duration_s) AS damage_mitigated_per_min,
+        60 * sum(max_player_damage_taken) / sum(duration_s) AS damage_taken_per_min,
+        sum(max_player_damage_taken) / sum(net_worth) AS damage_taken_per_soul,
+        60 * sum(max_creep_kills) / sum(duration_s) AS creeps_per_min,
+        60 * sum(max_boss_damage) / sum(duration_s) AS obj_damage_per_min,
+        sum(max_boss_damage) / sum(net_worth) AS obj_damage_per_soul,
+        sumIf(max_shots_hit / (max_shots_hit + max_shots_missed), max_shots_hit + \
+         max_shots_missed > 0)
+            / greatest(1, countIf(max_shots_hit + max_shots_missed > 0)) AS accuracy,
+        sumIf(max_hero_bullets_hit_crit / (max_hero_bullets_hit_crit + max_hero_bullets_hit), \
+         max_hero_bullets_hit_crit + max_hero_bullets_hit > 0)
+            / greatest(1, countIf(max_hero_bullets_hit_crit + max_hero_bullets_hit > 0)) AS \
+         crit_shot_rate,
         groupUniqArray(match_id) as matches
     FROM mp
     {outer_where}
