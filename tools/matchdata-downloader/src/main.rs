@@ -14,7 +14,7 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
-use cached::UnboundCache;
+use cached::SizedCache;
 use cached::proc_macro::cached;
 use futures::StreamExt;
 use metrics::{counter, gauge};
@@ -221,8 +221,8 @@ async fn delete_object(store: &impl ObjectStore, key: &Path) -> object_store::Re
 }
 
 #[cached(
-    ty = "UnboundCache<String, bool>",
-    create = "{ UnboundCache::new() }",
+    ty = "SizedCache<String, bool>",
+    create = "{ SizedCache::with_size(10_000) }",
     convert = r#"{ format!("{file_path}") }"#
 )]
 #[instrument(skip(store))]

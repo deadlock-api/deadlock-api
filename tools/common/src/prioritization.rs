@@ -10,27 +10,9 @@ use sqlx::{Pool, Postgres};
 /// Returns `true` if the account is in the prioritization table, not deleted,
 /// and is either not linked to a patron or linked to an active one.
 pub async fn is_prioritized(pool: &Pool<Postgres>, steam_id3: i64) -> anyhow::Result<bool> {
-    let result = sqlx::query_scalar!(
-        r#"
-        SELECT EXISTS (
-            SELECT 1
-            FROM prioritized_steam_accounts psa
-            WHERE psa.steam_id3 = $1
-              AND psa.deleted_at IS NULL
-        ) AS "exists!"
-        "#,
-        steam_id3
-    )
-    .fetch_one(pool)
-    .await;
-
-    match result {
-        Ok(exists) => Ok(exists),
-        Err(e) => {
-            tracing::error!(steam_id3 = steam_id3, error = %e, "Failed to check prioritization status");
-            Err(e.into())
-        }
-    }
+    Ok(!get_prioritized_from_list(pool, &[steam_id3])
+        .await?
+        .is_empty())
 }
 
 /// Returns which `steam_id3` values from the input list are prioritized.

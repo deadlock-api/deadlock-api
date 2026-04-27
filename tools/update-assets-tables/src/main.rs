@@ -33,10 +33,14 @@ async fn main() -> anyhow::Result<()> {
         interval.tick().await;
 
         info!("Updating assets");
-        if let Err(e) = update_heroes(&ch_client, &http_client).await {
+        let (heroes_result, items_result) = tokio::join!(
+            update_heroes(&ch_client, &http_client),
+            update_items(&ch_client, &http_client),
+        );
+        if let Err(e) = heroes_result {
             error!("Failed to update heroes: {e}");
         }
-        if let Err(e) = update_items(&ch_client, &http_client).await {
+        if let Err(e) = items_result {
             error!("Failed to update items: {e}");
         }
         info!("Updated assets");

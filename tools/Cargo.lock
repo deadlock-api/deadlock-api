@@ -1750,7 +1750,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
- "tryhard",
  "valveprotos",
 ]
 

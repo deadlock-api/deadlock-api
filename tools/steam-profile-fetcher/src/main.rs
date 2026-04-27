@@ -13,6 +13,7 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
+use std::collections::HashSet;
 use std::env;
 
 use anyhow::Result;
@@ -93,9 +94,10 @@ async fn fetch_and_update_profiles(
         }
     };
 
+    let fetched_ids: HashSet<u32> = profiles.iter().map(|p| p.account_id).collect();
     let unavailable_profiles = batch
         .into_iter()
-        .filter(|id| !profiles.iter().any(|p| p.account_id == **id))
+        .filter(|id| !fetched_ids.contains(id))
         .copied()
         .collect_vec();
     if !unavailable_profiles.is_empty() {

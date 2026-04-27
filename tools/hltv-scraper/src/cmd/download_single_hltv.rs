@@ -1,4 +1,3 @@
-use core::fmt::Write;
 use std::time::Instant;
 
 use anyhow::Context;
@@ -91,17 +90,15 @@ fn format_duration(seconds: u64) -> String {
     let minutes = (seconds % 3600) / 60;
     let secs = seconds % 60;
 
-    let mut result = String::new();
-
+    let mut parts = Vec::with_capacity(3);
     if hours > 0 {
-        write!(result, "{hours}h").unwrap();
+        parts.push(format!("{hours}h"));
     }
     if minutes > 0 {
-        write!(result, "{minutes}m").unwrap();
+        parts.push(format!("{minutes}m"));
     }
-    if secs > 0 || result.is_empty() {
-        write!(result, "{secs}s").unwrap();
+    if secs > 0 || parts.is_empty() {
+        parts.push(format!("{secs}s"));
     }
-
-    result
+    parts.concat()
 }

@@ -19,5 +19,4 @@ serde_repr = { workspace = true }
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 tracing = { workspace = true }
-tryhard = { workspace = true }
 valveprotos = { workspace = true, features = ["gc-client"] }

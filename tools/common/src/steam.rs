@@ -1,4 +1,4 @@
-const STEAM_ID_IDENT: u64 = 76561197960265728;
+pub const STEAM_ID_IDENT: u64 = 76561197960265728;
 
 #[must_use]
 pub fn account_id_to_steam_id64(account_id: u32) -> u64 {

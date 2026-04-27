@@ -39,17 +39,6 @@ pub(crate) enum PersonaState {
     LookingToPlay = 6,
 }
 
-// Steam ID Parsing
-const STEAM_ID_64_IDENT: u64 = 76561197960265728;
-
-fn steamid64_to_steamid3(steam_id: u64) -> u32 {
-    // If steam id is smaller than the Steam ID 64 identifier, it's a Steam ID 3
-    if steam_id < STEAM_ID_64_IDENT {
-        return steam_id as u32;
-    }
-    (steam_id - STEAM_ID_64_IDENT) as u32
-}
-
 pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
@@ -58,5 +47,10 @@ where
     let steam_id64 = str_deserialized
         .parse::<u64>()
         .map_err(serde::de::Error::custom)?;
-    Ok(steamid64_to_steamid3(steam_id64))
+    // Defensive: if the field is already an account_id, return as-is.
+    Ok(if steam_id64 < common::STEAM_ID_IDENT {
+        steam_id64 as u32
+    } else {
+        common::steam_id64_to_account_id(steam_id64)
+    })
 }

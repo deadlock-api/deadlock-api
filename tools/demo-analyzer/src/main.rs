@@ -34,8 +34,6 @@ use models::{DemoPlayer, MatchWithReplay};
 use streaming_demo::StreamingDemoFile;
 use visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
-const STEAM_ID_64_IDENT: u64 = 76_561_197_960_265_728;
-
 #[derive(Parser)]
 #[command(about = "Analyze Deadlock demo files to extract player hero build data")]
 struct Cli {
@@ -278,13 +276,13 @@ fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayer> {
             continue;
         };
 
-        let account_id = if steam_id >= STEAM_ID_64_IDENT {
-            steam_id - STEAM_ID_64_IDENT
+        let account_id = if steam_id >= common::STEAM_ID_IDENT {
+            common::steam_id64_to_account_id(steam_id)
         } else {
-            steam_id
-        };
-        let Ok(account_id) = u32::try_from(account_id) else {
-            continue;
+            let Ok(id) = u32::try_from(steam_id) else {
+                continue;
+            };
+            id
         };
 
         rows.push(DemoPlayer {

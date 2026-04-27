@@ -389,17 +389,29 @@ async fn fetch_and_parse_match(
 
     let match_info = parse_match_data(&data)?;
 
-    let ch_players: Vec<ClickhouseMatchPlayer> = match_info
+    let players = build_ch_players(&match_info);
+    let history: Vec<PlayerMatchHistoryEntry> = match_info
+        .players
+        .iter()
+        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(&match_info, p))
+        .collect();
+
+    Ok(ParsedMatch { players, history })
+}
+
+/// Build the per-player Clickhouse rows for a parsed match.
+fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
+    match_info
         .players
         .iter()
         .cloned()
         .map(|p| {
             (
-                &match_info,
+                match_info,
                 match_info
                     .winning_team
                     .and_then(|t| p.team.map(|pt| pt == t))
-                    .unwrap(),
+                    .unwrap_or(false),
                 match_info
                     .match_paths
                     .as_ref()
@@ -408,17 +420,7 @@ async fn fetch_and_parse_match(
             )
                 .into()
         })
-        .collect();
-    let history: Vec<PlayerMatchHistoryEntry> = match_info
-        .players
-        .iter()
-        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(&match_info, p))
-        .collect();
-
-    Ok(ParsedMatch {
-        players: ch_players,
-        history,
-    })
+        .collect()
 }
 
 /// Try to find a match file in processed/ first, then failed/, across all known extensions.
@@ -572,26 +574,7 @@ fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
 }
 
 async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> anyhow::Result<()> {
-    let ch_players: Vec<ClickhouseMatchPlayer> = match_info
-        .players
-        .iter()
-        .cloned()
-        .map(|p| {
-            (
-                match_info,
-                match_info
-                    .winning_team
-                    .and_then(|t| p.team.map(|pt| pt == t))
-                    .unwrap(),
-                match_info
-                    .match_paths
-                    .as_ref()
-                    .and_then(|path| path.paths.iter().find(|pp| pp.player_slot == p.player_slot)),
-                p,
-            )
-                .into()
-        })
-        .collect();
+    let ch_players = build_ch_players(match_info);
 
     let history_entries: Vec<PlayerMatchHistoryEntry> = match_info
         .players
@@ -628,11 +611,7 @@ async fn move_object(
     if old_key == new_key {
         return Ok(());
     }
-    match tryhard::retry_fn(|| store.rename(old_key, new_key))
-        .retries(5)
-        .exponential_backoff(Duration::from_millis(10))
-        .await
-    {
+    match common::retry_fn_with_backoff("move_object", || store.rename(old_key, new_key)).await {
         Ok(()) => {
             counter!("ingest_worker.move_object.success").increment(1);
             debug!("Moved object");

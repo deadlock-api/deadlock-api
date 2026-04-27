@@ -348,22 +348,16 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
                 .death_details
                 .iter()
                 .map(|v| {
-                    (
-                        v.death_pos.unwrap().x(),
-                        v.death_pos.unwrap().y(),
-                        v.death_pos.unwrap().z(),
-                    )
+                    let p = v.death_pos.unwrap_or_default();
+                    (p.x(), p.y(), p.z())
                 })
                 .collect(),
             death_details_killer_pos: value
                 .death_details
                 .iter()
                 .map(|v| {
-                    (
-                        v.killer_pos.unwrap().x(),
-                        v.killer_pos.unwrap().y(),
-                        v.killer_pos.unwrap().z(),
-                    )
+                    let p = v.killer_pos.unwrap_or_default();
+                    (p.x(), p.y(), p.z())
                 })
                 .collect(),
             death_details_death_duration_s: value
@@ -484,11 +478,11 @@ impl From<(&MatchInfo, bool, Option<&Path>, Players)> for ClickhouseMatchPlayer 
             y_min: match_path.as_ref().and_then(|p| p.y_min),
             x_max: match_path.as_ref().and_then(|p| p.x_max),
             y_max: match_path.as_ref().and_then(|p| p.y_max),
-            x_pos: match_path.as_ref().map(|p| p.x_pos.clone()).unwrap_or_default().into_iter().map(|v| v as u16).collect(),
-            y_pos: match_path.as_ref().map(|p| p.y_pos.clone()).unwrap_or_default().into_iter().map(|v| v as u16).collect(),
-            health: match_path.as_ref().map(|p| p.health.clone()).unwrap_or_default().into_iter().map(|v| v as u8).collect(),
-            combat_type: match_path.as_ref().map(|p| p.combat_type.clone()).unwrap_or_default().into_iter().map(|v| v as u8).collect(),
-            move_type: match_path.as_ref().map(|p| p.move_type.clone()).unwrap_or_default().into_iter().map(|v| v as u8).collect(),
+            x_pos: match_path.map(|p| p.x_pos.iter().map(|&v| v as u16).collect()).unwrap_or_default(),
+            y_pos: match_path.map(|p| p.y_pos.iter().map(|&v| v as u16).collect()).unwrap_or_default(),
+            health: match_path.map(|p| p.health.iter().map(|&v| v as u8).collect()).unwrap_or_default(),
+            combat_type: match_path.map(|p| p.combat_type.iter().map(|&v| v as u8).collect()).unwrap_or_default(),
+            move_type: match_path.map(|p| p.move_type.iter().map(|&v| v as u8).collect()).unwrap_or_default(),
         }
     }
 }

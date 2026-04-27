@@ -171,6 +171,23 @@ fn download_task(
     });
 }
 
+async fn compress_match_metadata(match_metadata: &CMsgMatchMetaData) -> anyhow::Result<Vec<u8>> {
+    let mut buf_meta = Vec::new();
+    match_metadata.encode(&mut buf_meta)?;
+
+    let mut output = Vec::new();
+    let mut compressor = BzEncoder::with_quality(&mut output, async_compression::Level::Best);
+    compressor
+        .write_all(&buf_meta)
+        .await
+        .context("Error writing buf write")?;
+    compressor
+        .shutdown()
+        .await
+        .context("Error finishing buf write")?;
+    Ok(output)
+}
+
 async fn push_meta_to_object_store(
     store: Arc<impl ObjectStore>,
     cache_store: Arc<impl ObjectStore>,
@@ -179,22 +196,7 @@ async fn push_meta_to_object_store(
     match_id: u64,
 ) -> anyhow::Result<()> {
     let label = match_type.label();
-    let mut buf_meta = Vec::new();
-
-    match_metadata.encode(&mut buf_meta)?;
-
-    let mut output = Vec::new();
-    let mut compressor = BzEncoder::with_quality(&mut output, async_compression::Level::Best);
-
-    compressor
-        .write_all(&buf_meta)
-        .await
-        .context("Error writing buf write")?;
-
-    compressor
-        .shutdown()
-        .await
-        .context("Error finishing buf write")?;
+    let output = compress_match_metadata(match_metadata).await?;
 
     let p_str = format!("/ingest/metadata/{match_id}.meta_hltv.bz2");
     let p = object_store::path::Path::from(p_str.clone());
@@ -221,22 +223,7 @@ async fn store_meta_to_local_store(
     match_id: u64,
 ) -> anyhow::Result<()> {
     let label = match_type.label();
-    let mut buf_meta = Vec::new();
-
-    match_metadata.encode(&mut buf_meta)?;
-
-    let mut output = Vec::new();
-    let mut compressor = BzEncoder::with_quality(&mut output, async_compression::Level::Best);
-
-    compressor
-        .write_all(&buf_meta)
-        .await
-        .context("Error writing buf write")?;
-
-    compressor
-        .shutdown()
-        .await
-        .context("Error finishing buf write")?;
+    let output = compress_match_metadata(match_metadata).await?;
 
     let p_str = format!(
         "{}/metadata/{}.meta_hltv.bz2",

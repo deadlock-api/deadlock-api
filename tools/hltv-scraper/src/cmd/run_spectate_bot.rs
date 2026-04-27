@@ -205,24 +205,27 @@ impl SpectatorBot {
         recently_spectated: &HashMap<u64, SpectatedMatchInfo>,
         failed_spectating: &HashMap<u64, SpectatedMatchInfo>,
     ) -> Vec<u64> {
-        if active_match_ids.is_empty() {
+        let Some((&min_id, &max_id)) = active_match_ids
+            .iter()
+            .min()
+            .zip(active_match_ids.iter().max())
+        else {
             return vec![];
-        }
+        };
 
-        let min_id = active_match_ids.iter().min().unwrap();
-        let max_id = active_match_ids.iter().max().unwrap();
+        let span = max_id - min_id;
+        let start = min_id + ((span as f64) * *GAP_PERCENTILE) as u64;
+        assert!(start <= max_id);
 
-        let span = *max_id - *min_id;
-        let start = *min_id + ((span as f64) * *GAP_PERCENTILE) as u64;
-        assert!(start <= *max_id);
+        let active_set: std::collections::HashSet<u64> = active_match_ids.iter().copied().collect();
 
         // we prioritise from start to max first, then start to min
         // cause the very old matches might be already over and result in KENotInGame Errors
-        let potential_ids = (start..*max_id).chain(*min_id..start);
+        let potential_ids = (start..max_id).chain(min_id..start);
         potential_ids
             .filter(|x| !recently_spectated.contains_key(x))
             .filter(|x| !failed_spectating.contains_key(x))
-            .filter(|x| !active_match_ids.contains(x))
+            .filter(|x| !active_set.contains(x))
             .take(MAX_GAP_SIZE)
             .collect()
     }

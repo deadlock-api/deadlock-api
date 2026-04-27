@@ -37,7 +37,9 @@ pub(crate) async fn fetch_steam_profiles(
     }
 
     // Build the API URL
-    let api_key = STEAM_API_KEYS.choose(&mut rng()).unwrap();
+    let api_key = STEAM_API_KEYS
+        .choose(&mut rng())
+        .ok_or_else(|| anyhow::anyhow!("no Steam API keys configured"))?;
     let steam_ids = steam_id64s.join(",");
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"
