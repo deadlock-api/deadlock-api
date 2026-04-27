@@ -73,6 +73,11 @@ pub struct HeroStats {
     kills: u64,
     deaths: u64,
     assists: u64,
+    total_player_damage: u64,
+    total_player_damage_taken: u64,
+    total_boss_damage: u64,
+    total_creep_damage: u64,
+    total_neutral_damage: u64,
     denies_per_match: f64,
     kills_per_min: f64,
     deaths_per_min: f64,
@@ -105,38 +110,27 @@ fn build_query(query: &HeroStatsQuery) -> String {
         .as_ref()
         .map(|heroes| heroes.iter().map(ToString::to_string).join(","));
 
-    // Push time/mode/match_id filters into PMH: it's partitioned by them, so this prunes
-    // partitions before touching match_player/match_info.
-    let mut pmh_filters = vec![
+    // account_id/hero_id/net_worth are columns in the `hero_stats_by_account` projection,
+    // so ClickHouse can serve this read from the projection.
+    let mut mp_filters = vec![
         format!("account_id IN ({account_ids})"),
         MatchMode::sql_filter(None),
         GameMode::sql_filter(query.game_mode),
     ];
     if let Some(ref ids) = hero_ids_in {
-        pmh_filters.push(format!("hero_id IN ({ids})"));
+        mp_filters.push(format!("hero_id IN ({ids})"));
     }
     if let Some(min_unix_timestamp) = query.min_unix_timestamp {
-        pmh_filters.push(format!("start_time >= {min_unix_timestamp}"));
+        mp_filters.push(format!("start_time >= {min_unix_timestamp}"));
     }
     if let Some(max_unix_timestamp) = query.max_unix_timestamp {
-        pmh_filters.push(format!("start_time <= {max_unix_timestamp}"));
+        mp_filters.push(format!("start_time <= {max_unix_timestamp}"));
     }
     if let Some(min_match_id) = query.min_match_id {
-        pmh_filters.push(format!("match_id >= {min_match_id}"));
+        mp_filters.push(format!("match_id >= {min_match_id}"));
     }
     if let Some(max_match_id) = query.max_match_id {
-        pmh_filters.push(format!("match_id <= {max_match_id}"));
-    }
-    let pmh_where = pmh_filters.join(" AND ");
-
-    // account_id/hero_id/net_worth are columns in the `hero_stats_by_account` projection,
-    // so ClickHouse can serve this read from the projection.
-    let mut mp_filters = vec![
-        "match_id IN t_histories".to_owned(),
-        format!("account_id IN ({account_ids})"),
-    ];
-    if let Some(ref ids) = hero_ids_in {
-        mp_filters.push(format!("hero_id IN ({ids})"));
+        mp_filters.push(format!("match_id <= {max_match_id}"));
     }
     if let Some(min_networth) = query.min_networth {
         mp_filters.push(format!("net_worth >= {min_networth}"));
@@ -177,14 +171,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
 
     format!(
         "
-    WITH
-    t_histories AS (
-        SELECT match_id FROM player_match_history WHERE {pmh_where}
-    ),
-    mp AS (
+    WITH mp AS (
         SELECT account_id, match_id, hero_id, won, kills, deaths, assists, denies,
                net_worth, last_hits, max_level, max_player_damage, max_player_damage_taken,
-               max_creep_kills, max_boss_damage, max_shots_hit, max_shots_missed,
+               max_creep_kills, max_boss_damage, max_creep_damage, max_neutral_damage,
+               max_shots_hit, max_shots_missed,
                max_hero_bullets_hit, max_hero_bullets_hit_crit,
                duration_s, start_time, average_badge_team0, average_badge_team1
         FROM match_player
@@ -202,6 +193,11 @@ fn build_query(query: &HeroStatsQuery) -> String {
         sum(kills) AS kills,
         sum(deaths) AS deaths,
         sum(assists) AS assists,
+        sum(max_player_damage) AS total_player_damage,
+        sum(max_player_damage_taken) AS total_player_damage_taken,
+        sum(max_boss_damage) AS total_boss_damage,
+        sum(max_creep_damage) AS total_creep_damage,
+        sum(max_neutral_damage) AS total_neutral_damage,
         avg(denies) AS denies_per_match,
         60 * avg(mp.kills / duration_s) AS kills_per_min,
         60 * avg(mp.deaths / duration_s) AS deaths_per_min,
