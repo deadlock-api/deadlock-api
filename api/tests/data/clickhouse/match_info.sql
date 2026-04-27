@@ -10,6 +10,7 @@ CREATE TABLE match_info
     match_outcome                        Enum8('TeamWin' = 0, 'Error' = 1),
     match_mode                           Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7),
     game_mode                            Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3),
+    bot_difficulty                       Enum8('None' = 0, 'Easy' = 1, 'Medium' = 2, 'Hard' = 3, 'Nightmare' = 4, 'Guided' = 5) default 'None',
     objectives_mask_team0                UInt16,
     objectives_mask_team1                UInt16,
     `objectives.destroyed_time_s`        Array(UInt32),
@@ -1124,13 +1125,23 @@ VALUES (34000002, '2025-03-17 06:19:56', 'Team0', 1241, 'TeamWin', 'Unranked', '
 
 CREATE OR REPLACE DICTIONARY default.match_info_dict
 (
-    `match_id`            UInt64,
-    `start_time`          DateTime,
-    `average_badge_team0` Nullable(UInt32),
-    `average_badge_team1` Nullable(UInt32),
-    `match_mode`          UInt8,
-    `game_mode`           UInt8,
-    `duration_s`          UInt32
+    `match_id`                    UInt64,
+    `start_time`                  DateTime,
+    `average_badge_team0`         Nullable(UInt32),
+    `average_badge_team1`         Nullable(UInt32),
+    `match_mode`                  UInt8,
+    `game_mode`                   UInt8,
+    `duration_s`                  UInt32,
+    `winning_team`                UInt8,
+    `match_outcome`               UInt8,
+    `bot_difficulty`              UInt8,
+    `objectives_mask_team0`       UInt16,
+    `objectives_mask_team1`       UInt16,
+    `is_high_skill_range_parties` Nullable(UInt8),
+    `low_pri_pool`                Nullable(UInt8),
+    `new_player_pool`             Nullable(UInt8),
+    `not_scored`                  Nullable(UInt8),
+    `game_mode_version`           Nullable(UInt32)
 )
     PRIMARY KEY match_id
     SOURCE (CLICKHOUSE(TABLE 'match_info' DB 'default' USER 'default' PASSWORD 'ijojdmkasd'))
