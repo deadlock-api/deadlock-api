@@ -29,6 +29,31 @@ fn default_limit() -> u32 {
     1000
 }
 
+fn is_valid_extra_column(s: &str) -> bool {
+    if s.is_empty() {
+        return false;
+    }
+    let mut at_segment_start = true;
+    for c in s.chars() {
+        if c == '.' {
+            if at_segment_start {
+                return false;
+            }
+            at_segment_start = true;
+        } else if c == '_' || c.is_ascii_alphabetic() {
+            at_segment_start = false;
+        } else if c.is_ascii_digit() {
+            if at_segment_start {
+                return false;
+            }
+            at_segment_start = false;
+        } else {
+            return false;
+        }
+    }
+    !at_segment_start
+}
+
 #[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 #[serde(rename_all = "snake_case")]
@@ -159,6 +184,32 @@ pub(super) struct BulkMatchMetadataQuery {
         proptest(strategy = "crate::utils::proptest_utils::arb_small_u32_list()")
     )]
     exclude_item_ids: Option<Vec<u32>>,
+    /// Comma separated list of extra match-level columns to include in the response.
+    /// Each column is aggregated with `any(...)`. Only alphanumeric characters, underscores, and
+    /// dots (for nested field access) are allowed.
+    /// Example: `match_info.cluster_id,match_info.region_mode`.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(\"[a-z][a-z0-9_]{0,6}(\\\\.[a-z][a-z0-9_]{0,6}){0,2}\", 0..=3))"
+        )
+    )]
+    extra_match_columns: Option<Vec<String>>,
+    /// Comma separated list of extra player-level columns to include in the response.
+    /// Each column is added inside the player tuple. Only alphanumeric characters, underscores,
+    /// and dots (for nested field access) are allowed.
+    /// Example: `stats.player_damage,stats.player_healing`. Implicitly enables player fields.
+    #[param(value_type = Option<String>)]
+    #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
+    #[cfg_attr(
+        test,
+        proptest(
+            strategy = "proptest::option::of(proptest::collection::vec(\"[a-z][a-z0-9_]{0,6}(\\\\.[a-z][a-z0-9_]{0,6}){0,2}\", 0..=3))"
+        )
+    )]
+    extra_player_columns: Option<Vec<String>>,
     // Parameters that influence the ordering of the response (ORDER BY)
     /// The field to order the results by.
     #[serde(default)]
@@ -183,6 +234,32 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             StatusCode::BAD_REQUEST,
             "item_filter_hero_id is required when using include_item_ids or exclude_item_ids",
         ));
+    }
+
+    for (param_name, cols) in [
+        ("extra_match_columns", query.extra_match_columns.as_deref()),
+        (
+            "extra_player_columns",
+            query.extra_player_columns.as_deref(),
+        ),
+    ] {
+        let Some(cols) = cols else { continue };
+        if cols.len() > 50 {
+            return Err(APIError::status_msg(
+                StatusCode::BAD_REQUEST,
+                format!("{param_name} is limited to 50 entries"),
+            ));
+        }
+        for col in cols {
+            if !is_valid_extra_column(col) {
+                return Err(APIError::status_msg(
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "Invalid {param_name} entry '{col}'. Only letters, digits, underscores, and dots (between identifier segments) are allowed."
+                    ),
+                ));
+            }
+        }
     }
 
     let mut select_fields: Vec<String> = vec![];
@@ -217,12 +294,23 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if query.include_objectives {
         select_fields.push("any(objectives) as objectives".to_owned());
     }
+    if let Some(extra_match_columns) = &query.extra_match_columns {
+        for col in extra_match_columns {
+            let alias = col.replace('.', "_");
+            select_fields.push(format!("any({col}) as {alias}"));
+        }
+    }
     // Player Select Fields
+    let has_extra_player_columns = query
+        .extra_player_columns
+        .as_ref()
+        .is_some_and(|c| !c.is_empty());
     let has_player_fields = query.include_player_info
         || query.include_player_kda
         || query.include_player_items
         || query.include_player_stats
-        || query.include_player_death_details;
+        || query.include_player_death_details
+        || has_extra_player_columns;
     if has_player_fields {
         let mut player_select_fields = vec![
             "match_player.account_id as account_id",
@@ -257,10 +345,16 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         if query.include_player_death_details {
             player_select_fields.push("death_details");
         }
-        let player_select_fields = format!(
-            "groupUniqArray(12)(tuple({})::JSON) as players",
-            player_select_fields.join(", ")
-        );
+        let static_part = player_select_fields.join(", ");
+        let extras: String = query
+            .extra_player_columns
+            .as_deref()
+            .unwrap_or(&[])
+            .iter()
+            .map(|col| format!(", {col} AS {}", col.replace('.', "_")))
+            .collect();
+        let player_select_fields =
+            format!("groupUniqArray(12)(tuple({static_part}{extras})::JSON) as players");
         select_fields.push(player_select_fields);
     }
 
