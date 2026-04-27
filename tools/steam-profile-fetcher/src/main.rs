@@ -143,11 +143,11 @@ async fn get_account_ids_to_update(
 ) -> clickhouse::error::Result<Vec<u32>> {
     let query = format!(
         r"
-WITH recent_matches AS (SELECT match_id FROM match_info WHERE start_time > now() - {OUTDATED_INTERVAL}),
-    up_to_date_accounts AS (SELECT account_id FROM steam_profiles WHERE last_updated > now() - {OUTDATED_INTERVAL})
+WITH up_to_date_accounts AS (SELECT account_id FROM steam_profiles WHERE last_updated > now() - {OUTDATED_INTERVAL})
 SELECT DISTINCT account_id
 FROM match_player
-WHERE match_id IN recent_matches AND account_id NOT IN up_to_date_accounts
+WHERE start_time > now() - {OUTDATED_INTERVAL}
+AND account_id NOT IN up_to_date_accounts
 AND account_id > 0
 
 UNION DISTINCT

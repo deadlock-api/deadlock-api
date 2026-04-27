@@ -106,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
             LEFT ANTI JOIN (
                 SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
                 UNION DISTINCT
-                SELECT match_id FROM match_info WHERE match_id >= 31247321
+                SELECT match_id FROM match_player WHERE match_id >= 31247321
             ) ex ON ex.match_id = pmh.match_id
             WHERE pmh.account_id IN ?
               AND pmh.match_mode IN ('Ranked', 'Unranked')
@@ -129,7 +129,7 @@ async fn main() -> anyhow::Result<()> {
         // fall back to the full-range LEFT ANTI JOIN version below.
         let pmh_fast = format!(
             r"
-        WITH (SELECT max(match_id) - toUInt64(2000000) FROM match_info) AS mid_floor
+        WITH (SELECT max(match_id) - toUInt64(2000000) FROM match_player) AS mid_floor
         SELECT match_id, groupArray(account_id) AS participants
         FROM player_match_history
         WHERE match_mode IN ('Ranked', 'Unranked')
@@ -139,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
           AND match_id NOT IN (
             SELECT match_id FROM match_salts WHERE match_id >= mid_floor AND match_id < {MAX_VALID_MATCH_ID}
             UNION DISTINCT
-            SELECT match_id FROM match_info WHERE match_id >= mid_floor
+            SELECT match_id FROM match_player WHERE match_id >= mid_floor
           )
         GROUP BY match_id
         ORDER BY match_id DESC
@@ -160,7 +160,7 @@ async fn main() -> anyhow::Result<()> {
           AND match_id NOT IN (
             SELECT match_id FROM match_salts WHERE match_id >= mid_floor AND match_id < {MAX_VALID_MATCH_ID}
             UNION DISTINCT
-            SELECT match_id FROM match_info WHERE match_id >= mid_floor
+            SELECT match_id FROM match_player WHERE match_id >= mid_floor
           )
         ORDER BY match_id DESC
         LIMIT 100
@@ -214,7 +214,7 @@ async fn main() -> anyhow::Result<()> {
                 LEFT ANTI JOIN (
                     SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
                     UNION DISTINCT
-                    SELECT match_id FROM match_info WHERE match_id >= 31247321
+                    SELECT match_id FROM match_player WHERE match_id >= 31247321
                 ) ex ON ex.match_id = pmh.match_id
                 WHERE pmh.match_mode IN ('Ranked', 'Unranked')
                   AND pmh.start_time < now() - INTERVAL 2 HOUR
@@ -239,7 +239,7 @@ async fn main() -> anyhow::Result<()> {
                 LEFT ANTI JOIN (
                     SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
                     UNION DISTINCT
-                    SELECT match_id FROM match_info WHERE match_id >= 31247321
+                    SELECT match_id FROM match_player WHERE match_id >= 31247321
                 ) ex ON ex.match_id = am.match_id
                 WHERE am.match_mode IN ('Ranked', 'Unranked')
                   AND am.start_time < now() - INTERVAL 2 HOUR
