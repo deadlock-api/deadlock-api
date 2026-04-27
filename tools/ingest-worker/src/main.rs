@@ -34,7 +34,7 @@ use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
 };
 
-use crate::models::clickhouse_match_metadata::{ClickhouseMatchInfo, ClickhouseMatchPlayer};
+use crate::models::clickhouse_match_metadata::ClickhouseMatchPlayer;
 use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
 mod models;
@@ -62,7 +62,6 @@ struct Cli {
 
 /// Parsed match data ready for ``ClickHouse`` insertion.
 struct ParsedMatch {
-    match_info: ClickhouseMatchInfo,
     players: Vec<ClickhouseMatchPlayer>,
     history: Vec<PlayerMatchHistoryEntry>,
 }
@@ -256,16 +255,14 @@ async fn reingest_from_file(
     Ok(())
 }
 
-/// Open fresh insert handles for all three tables.
+/// Open fresh insert handles for both tables.
 async fn open_inserters(
     client: &clickhouse::Client,
 ) -> anyhow::Result<(
-    clickhouse::insert::Insert<ClickhouseMatchInfo>,
     clickhouse::insert::Insert<ClickhouseMatchPlayer>,
     clickhouse::insert::Insert<PlayerMatchHistoryEntry>,
 )> {
     Ok((
-        client.insert::<ClickhouseMatchInfo>("match_info").await?,
         client
             .insert::<ClickhouseMatchPlayer>("match_player")
             .await?,
@@ -280,10 +277,9 @@ async fn write_and_flush_batch(
     client: &clickhouse::Client,
     batch: &[ParsedMatch],
 ) -> anyhow::Result<()> {
-    let (mut mi, mut mp, mut hi) = open_inserters(client).await?;
+    let (mut mp, mut hi) = open_inserters(client).await?;
 
     for parsed in batch {
-        mi.write(&parsed.match_info).await?;
         for player in &parsed.players {
             mp.write(player).await?;
         }
@@ -292,7 +288,6 @@ async fn write_and_flush_batch(
         }
     }
 
-    mi.end().await?;
     mp.end().await?;
     hi.end().await?;
     Ok(())
@@ -394,7 +389,6 @@ async fn fetch_and_parse_match(
 
     let match_info = parse_match_data(&data)?;
 
-    let ch_match_info: ClickhouseMatchInfo = match_info.clone().into();
     let ch_players: Vec<ClickhouseMatchPlayer> = match_info
         .players
         .iter()
@@ -422,7 +416,6 @@ async fn fetch_and_parse_match(
         .collect();
 
     Ok(ParsedMatch {
-        match_info: ch_match_info,
         players: ch_players,
         history,
     })
@@ -579,7 +572,6 @@ fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
 }
 
 async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> anyhow::Result<()> {
-    let ch_match_metadata: ClickhouseMatchInfo = match_info.clone().into();
     let ch_players: Vec<ClickhouseMatchPlayer> = match_info
         .players
         .iter()
@@ -608,15 +600,12 @@ async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> an
         .collect();
 
     common::retry_fn_with_backoff("insert_match", || async {
-        let mut match_info_insert = client.insert::<ClickhouseMatchInfo>("match_info").await?;
         let mut match_player_insert = client
             .insert::<ClickhouseMatchPlayer>("match_player")
             .await?;
-        match_info_insert.write(&ch_match_metadata).await?;
         for player in &ch_players {
             match_player_insert.write(player).await?;
         }
-        match_info_insert.end().await?;
         match_player_insert.end().await?;
 
         let mut history_insert = client
