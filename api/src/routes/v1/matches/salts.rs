@@ -107,7 +107,7 @@ impl BatchQuery for MatchInfoExistsQuery {
 
     fn build_query(keys: &[u64]) -> String {
         format!(
-            "SELECT match_id FROM match_info WHERE match_id IN ({}) \
+            "SELECT DISTINCT match_id FROM match_player WHERE match_id IN ({}) \
              SETTINGS log_comment = 'salts_match_info_exists'",
             in_clause(keys)
         )

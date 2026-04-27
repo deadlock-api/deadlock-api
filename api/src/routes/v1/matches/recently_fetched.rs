@@ -37,15 +37,16 @@ async fn get_recently_fetched_match_ids(
 ) -> clickhouse::error::Result<Vec<ClickhouseMatchInfo>> {
     let query = "
     SELECT match_id,
-        start_time,
-        duration_s,
-        match_mode,
-        game_mode,
-        average_badge_team0,
-        average_badge_team1
-    FROM match_info FINAL
+        any(start_time) AS start_time,
+        any(duration_s) AS duration_s,
+        any(match_mode) AS match_mode,
+        any(game_mode) AS game_mode,
+        any(average_badge_team0) AS average_badge_team0,
+        any(average_badge_team1) AS average_badge_team1
+    FROM match_player
     WHERE created_at > now() - 600 AND match_mode IN ('Ranked', 'Unranked') AND (match_id > 70426318 OR now() >= '2026-03-31 00:00:00')
-    ORDER BY created_at DESC
+    GROUP BY match_id
+    ORDER BY max(created_at) DESC
     SETTINGS log_comment = 'recently_fetched'
     ";
     ch_client.query(query).fetch_all().await

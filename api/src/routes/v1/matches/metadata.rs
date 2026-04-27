@@ -81,7 +81,7 @@ static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
     MIN_MATCH_ID_IN_CACHE
         .get_or_init(|| async { ch_client
-            .query("SELECT min(match_id) FROM match_info WHERE start_time > now() - INTERVAL 2 WEEK SETTINGS log_comment = 'metadata_min_cache_match_id'")
+            .query("SELECT min(match_id) FROM match_player WHERE start_time > now() - INTERVAL 2 WEEK SETTINGS log_comment = 'metadata_min_cache_match_id'")
             .fetch_one()
             .await
             .unwrap_or_default() })
