@@ -11,7 +11,8 @@
 #![allow(clippy::cast_precision_loss)]
 
 use core::time::Duration;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use cached::UnboundCache;
 use cached::proc_macro::cached;
@@ -37,9 +38,12 @@ async fn main() -> anyhow::Result<()> {
 
     let mut failed = HashSet::new();
     let mut uploaded = HashSet::new();
+    let mut retry_after: HashMap<u64, Instant> = HashMap::new();
+    let mut retried: HashSet<u64> = HashSet::new();
 
     loop {
         info!("Fetching match ids to download");
+        let now = Instant::now();
         let query = "
 WITH t_salts AS (
     SELECT
@@ -67,6 +71,7 @@ SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
             .into_iter()
             .filter(|salts| !failed.contains(&salts.match_id))
             .filter(|salts| !uploaded.contains(&salts.match_id))
+            .filter(|salts| retry_after.get(&salts.match_id).is_none_or(|t| *t <= now))
             .filter(|salts| salts.cluster_id.is_some() && salts.metadata_salt.is_some())
             .collect::<Vec<_>>();
 
@@ -95,11 +100,26 @@ SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
             .collect::<Vec<_>>()
             .await;
         for (salts, result) in match_ids_to_fetch.iter().zip(results) {
-            if result.is_ok() {
-                uploaded.insert(salts.match_id)
-            } else {
-                failed.insert(salts.match_id)
-            };
+            match result {
+                Ok(()) => {
+                    uploaded.insert(salts.match_id);
+                    retry_after.remove(&salts.match_id);
+                }
+                Err(e) => {
+                    if is_502(&e) && !retried.contains(&salts.match_id) {
+                        info!(
+                            "Got 502 for match {}, will retry in 10 minutes",
+                            salts.match_id
+                        );
+                        retried.insert(salts.match_id);
+                        retry_after
+                            .insert(salts.match_id, Instant::now() + Duration::from_mins(10));
+                    } else {
+                        retry_after.remove(&salts.match_id);
+                        failed.insert(salts.match_id);
+                    }
+                }
+            }
         }
     }
 }
@@ -161,6 +181,12 @@ async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
             Err(e)
         }
     }
+}
+
+fn is_502(err: &anyhow::Error) -> bool {
+    err.downcast_ref::<reqwest::Error>()
+        .and_then(reqwest::Error::status)
+        == Some(reqwest::StatusCode::BAD_GATEWAY)
 }
 
 #[instrument(skip(store, bytes))]
