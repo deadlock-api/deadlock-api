@@ -151,35 +151,15 @@ fn build_query(query: &GameStatsQuery) -> String {
         min_duration_s: query.min_duration_s,
         max_duration_s: query.max_duration_s,
     }
-    .build_with_prefix("match_player.");
+    .build();
     let bucket = query.bucket.get_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    // Columns in WHERE are table-qualified to bypass ClickHouse alias substitution:
-    // the SELECT exposes `duration_s` as an alias for `any(duration_s)`, and an
-    // unqualified `duration_s` filter would be re-expanded into `any(duration_s)`,
-    // producing ILLEGAL_AGGREGATION.
     format!(
         "
-    WITH t_matches AS (
-        SELECT match_id
-            , any(duration_s) AS duration_s
-            , any(winning_team) AS winning_team
-            , any(`mid_boss.destroyed_time_s`) AS mid_boss_destroyed_time_s
-            , arrayFilter(x -> x > 0, any(`objectives.destroyed_time_s`)) AS obj_times
-            , arrayMin(arrayFilter(x -> x > 0, mid_boss_destroyed_time_s)) AS first_mid_boss_time_s
-            , length(mid_boss_destroyed_time_s) > 0 AS has_mid_boss
-            , arrayAvg(obj_times) AS avg_obj_destroyed_time_s
-            , length(obj_times) > 0 AS has_objectives
-        FROM match_player
-        WHERE match_player.match_mode IN ('Ranked', 'Unranked')
-            AND match_player.{game_mode_filter}
-            {info_filters}
-        GROUP BY match_id
-    )
     SELECT
         {bucket} AS bucket,
-        uniq(mp.match_id) AS total_matches,
-        avg(tm.duration_s) AS avg_duration_s,
+        uniq(match_id) AS total_matches,
+        avg(duration_s) AS avg_duration_s,
         avg(kills) AS avg_kills,
         avg(deaths) AS avg_deaths,
         avg(assists) AS avg_assists,
@@ -207,24 +187,32 @@ fn build_query(query: &GameStatsQuery) -> String {
         assumeNotNull(coalesce(avg(max_gold_death_loss), 0)) AS avg_gold_death_loss,
         assumeNotNull(coalesce(avg(max_creep_damage), 0)) AS avg_creep_damage,
         assumeNotNull(coalesce(avg(max_neutral_damage), 0)) AS avg_neutral_damage,
-        assumeNotNull(coalesce(avg(mp.max_self_healing), 0)) AS avg_self_healing,
-        assumeNotNull(coalesce(avg(mp.max_damage_mitigated), 0)) AS avg_damage_mitigated,
-        assumeNotNull(coalesce(avg(mp.max_absorption_provided), 0)) AS avg_damage_absorbed,
-        assumeNotNull(coalesce(avg(mp.max_heal_prevented), 0)) AS avg_heal_prevented,
+        assumeNotNull(coalesce(avg(max_self_healing), 0)) AS avg_self_healing,
+        assumeNotNull(coalesce(avg(max_damage_mitigated), 0)) AS avg_damage_mitigated,
+        assumeNotNull(coalesce(avg(max_absorption_provided), 0)) AS avg_damage_absorbed,
+        assumeNotNull(coalesce(avg(max_heal_prevented), 0)) AS avg_heal_prevented,
         assumeNotNull(coalesce(avg(max_creep_kills), 0)) AS avg_creep_kills,
         assumeNotNull(coalesce(avg(max_neutral_kills), 0)) AS avg_neutral_kills,
-        assumeNotNull(coalesce(avg(mp.max_possible_creeps), 0)) AS avg_possible_creeps,
+        assumeNotNull(coalesce(avg(max_possible_creeps), 0)) AS avg_possible_creeps,
         assumeNotNull(coalesce(avg(max_max_health), 0)) AS avg_max_health,
-        assumeNotNull(coalesce(avg(mp.max_weapon_power), 0)) AS avg_weapon_power,
-        assumeNotNull(coalesce(avg(mp.max_tech_power), 0)) AS avg_tech_power,
-        if(isNaN(avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)), 0, avgIf(tm.first_mid_boss_time_s, tm.has_mid_boss)) AS avg_first_mid_boss_time_s,
-        if(isNaN(avgIf(tm.avg_obj_destroyed_time_s, tm.has_objectives)), 0, avgIf(tm.avg_obj_destroyed_time_s, tm.has_objectives)) AS avg_objectives_destroyed_time_s,
-        uniqIf(mp.match_id, tm.has_mid_boss) / greatest(1, uniq(mp.match_id)) AS mid_boss_kill_rate,
+        assumeNotNull(coalesce(avg(max_weapon_power), 0)) AS avg_weapon_power,
+        assumeNotNull(coalesce(avg(max_tech_power), 0)) AS avg_tech_power,
+        if(isNaN(avgIf(arrayMin(arrayFilter(x -> x > 0, `mid_boss.destroyed_time_s`)), length(`mid_boss.destroyed_time_s`) > 0)),
+           0,
+           avgIf(arrayMin(arrayFilter(x -> x > 0, `mid_boss.destroyed_time_s`)), length(`mid_boss.destroyed_time_s`) > 0)
+        ) AS avg_first_mid_boss_time_s,
+        if(isNaN(avgIf(arrayAvg(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)), length(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) > 0)),
+           0,
+           avgIf(arrayAvg(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)), length(arrayFilter(x -> x > 0, `objectives.destroyed_time_s`)) > 0)
+        ) AS avg_objectives_destroyed_time_s,
+        uniqIf(match_id, length(`mid_boss.destroyed_time_s`) > 0) / greatest(1, uniq(match_id)) AS mid_boss_kill_rate,
         avg(abandon_match_time_s > 0) AS abandon_rate,
-        uniqIf(mp.match_id, tm.winning_team = 'Team0') AS team0_wins,
-        uniqIf(mp.match_id, tm.winning_team = 'Team1') AS team1_wins
-    FROM match_player mp
-    INNER JOIN t_matches tm ON mp.match_id = tm.match_id
+        uniqIf(match_id, winning_team = 'Team0') AS team0_wins,
+        uniqIf(match_id, winning_team = 'Team1') AS team1_wins
+    FROM match_player
+    WHERE match_mode IN ('Ranked', 'Unranked')
+        AND {game_mode_filter}
+        {info_filters}
     GROUP BY bucket
     ORDER BY bucket
     SETTINGS log_comment = 'game_stats'
