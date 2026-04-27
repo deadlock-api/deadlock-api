@@ -51,7 +51,12 @@ SELECT
     argMax(metadata_salt, created_at) AS metadata_salt
 FROM match_salts
 WHERE created_at > now() - INTERVAL 2 DAY
-  AND match_id NOT IN (SELECT match_id FROM match_player)
+  AND match_id NOT IN (
+      SELECT DISTINCT match_id FROM match_player
+      WHERE match_id IN (
+          SELECT match_id FROM match_salts WHERE created_at > now() - INTERVAL 2 DAY
+      )
+  )
 GROUP BY match_id
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
         ";
