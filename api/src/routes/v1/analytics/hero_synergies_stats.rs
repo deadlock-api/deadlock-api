@@ -128,67 +128,84 @@ pub struct HeroSynergyStats {
 
 #[allow(clippy::too_many_lines)]
 fn build_query(query: &HeroSynergyStatsQuery) -> String {
+    // Single-pass strategy: read each filtered match_player row once, group all
+    // teammates per (match_id, team[, assigned_lane]) into a tuple array, then
+    // enumerate ordered hero pairs via ARRAY JOIN. This avoids the self-JOIN's
+    // wide right-side scan and 4.6 GB hash table.
+    //
+    // Tuple layout for each player (positions used by the SELECT below):
+    //   1: hero_id, 2: won, 3: kills, 4: deaths, 5: assists, 6: denies,
+    //   7: last_hits, 8: net_worth, 9: max_boss_damage, 10: max_creep_kills,
+    //   11: account_id (used only for the asymmetric account filter on p1)
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    // Filters applied only to p1: match_id and account filters propagate to p2
-    // through the equi-join (match_id) and produce no extra rows, so duplicating
-    // them on p2 just forces a second wide scan of match_player.
-    let mut p1_filters = vec![
-        "p1.team IN ('Team0', 'Team1')".to_owned(),
-        "p1.match_mode IN ('Ranked', 'Unranked')".to_owned(),
-        game_mode_filter.replace("game_mode", "p1.game_mode"),
+    let mut where_filters = vec![
+        "team IN ('Team0', 'Team1')".to_owned(),
+        "match_mode IN ('Ranked', 'Unranked')".to_owned(),
+        game_mode_filter,
     ];
     if let Some(v) = query.min_unix_timestamp {
-        p1_filters.push(format!("p1.start_time >= {v}"));
+        where_filters.push(format!("start_time >= {v}"));
     }
     if let Some(v) = query.max_unix_timestamp {
-        p1_filters.push(format!("p1.start_time <= {v}"));
+        where_filters.push(format!("start_time <= {v}"));
     }
     if let Some(v) = query.min_match_id {
-        p1_filters.push(format!("p1.match_id >= {v}"));
+        where_filters.push(format!("match_id >= {v}"));
     }
     if let Some(v) = query.max_match_id {
-        p1_filters.push(format!("p1.match_id <= {v}"));
+        where_filters.push(format!("match_id <= {v}"));
     }
     if let Some(v) = query.min_average_badge
         && v > 11
     {
-        p1_filters.push(format!(
-            "p1.average_badge_team0 >= {v} AND p1.average_badge_team1 >= {v}"
+        where_filters.push(format!(
+            "average_badge_team0 >= {v} AND average_badge_team1 >= {v}"
         ));
     }
     if let Some(v) = query.max_average_badge
         && v < 116
     {
-        p1_filters.push(format!(
-            "p1.average_badge_team0 <= {v} AND p1.average_badge_team1 <= {v}"
+        where_filters.push(format!(
+            "average_badge_team0 <= {v} AND average_badge_team1 <= {v}"
         ));
     }
     if let Some(v) = query.min_duration_s {
-        p1_filters.push(format!("p1.duration_s >= {v}"));
+        where_filters.push(format!("duration_s >= {v}"));
     }
     if let Some(v) = query.max_duration_s {
-        p1_filters.push(format!("p1.duration_s <= {v}"));
+        where_filters.push(format!("duration_s <= {v}"));
     }
+    // net_worth is per-player; pre-filtering before the group has the same effect
+    // as the original symmetric (p1 AND p2) join filter.
+    if let Some(min_networth) = query.min_networth {
+        where_filters.push(format!("net_worth >= {min_networth}"));
+    }
+    if let Some(max_networth) = query.max_networth {
+        where_filters.push(format!("net_worth <= {max_networth}"));
+    }
+    let where_clause = where_filters.join(" AND ");
+
+    // The original query applied account filters only to p1 (the lower-hero-id
+    // side of the pair). Replicate that asymmetry on `pair.1` post-arrayJoin.
+    let mut pair_filters = vec!["(p.1).1 < (p.2).1".to_owned()];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
-        p1_filters.push(format!("p1.account_id = {account_id}"));
+        pair_filters.push(format!("(p.1).11 = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
-        p1_filters.push(format!(
-            "p1.account_id IN ({})",
+        pair_filters.push(format!(
+            "(p.1).11 IN ({})",
             account_ids.iter().map(ToString::to_string).join(",")
         ));
     }
-    // net_worth is a per-player filter, so it must apply to both sides.
-    if let Some(min_networth) = query.min_networth {
-        p1_filters.push(format!("p1.net_worth >= {min_networth}"));
-        p1_filters.push(format!("p2.net_worth >= {min_networth}"));
-    }
-    if let Some(max_networth) = query.max_networth {
-        p1_filters.push(format!("p1.net_worth <= {max_networth}"));
-        p1_filters.push(format!("p2.net_worth <= {max_networth}"));
-    }
-    let where_clause = p1_filters.join(" AND ");
+    let pair_predicate = pair_filters.join(" AND ");
+
+    let group_keys = if query.same_lane_filter.unwrap_or(true) {
+        "match_id, team, assigned_lane"
+    } else {
+        "match_id, team"
+    };
+
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
         having_filters.push(format!("matches_played >= {min_matches}"));
@@ -201,39 +218,43 @@ fn build_query(query: &HeroSynergyStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
-    let lane_join = if query.same_lane_filter.unwrap_or(true) {
-        " AND p1.assigned_lane = p2.assigned_lane"
-    } else {
-        ""
-    };
     format!(
         "
-    SELECT p1.hero_id AS hero_id1,
-           p2.hero_id AS hero_id2,
-           SUM(p1.won) AS wins,
+    SELECT (pair.1).1 AS hero_id1,
+           (pair.2).1 AS hero_id2,
+           SUM((pair.1).2) AS wins,
            COUNT() AS matches_played,
-           SUM(p1.kills) AS kills1,
-           SUM(p2.kills) AS kills2,
-           SUM(p1.deaths) AS deaths1,
-           SUM(p2.deaths) AS deaths2,
-           SUM(p1.assists) AS assists1,
-           SUM(p2.assists) AS assists2,
-           SUM(p1.denies) AS denies1,
-           SUM(p2.denies) AS denies2,
-           SUM(p1.last_hits) AS last_hits1,
-           SUM(p2.last_hits) AS last_hits2,
-           SUM(p1.net_worth) AS networth1,
-           SUM(p2.net_worth) AS networth2,
-           SUM(p1.max_boss_damage) AS obj_damage1,
-           SUM(p2.max_boss_damage) AS obj_damage2,
-           SUM(p1.max_creep_kills) AS creeps1,
-           SUM(p2.max_creep_kills) AS creeps2
-    FROM match_player p1
-    INNER JOIN match_player p2
-      ON p1.match_id = p2.match_id
-     AND p1.team = p2.team{lane_join}
-     AND p1.hero_id < p2.hero_id
-    WHERE {where_clause}
+           SUM((pair.1).3) AS kills1,
+           SUM((pair.2).3) AS kills2,
+           SUM((pair.1).4) AS deaths1,
+           SUM((pair.2).4) AS deaths2,
+           SUM((pair.1).5) AS assists1,
+           SUM((pair.2).5) AS assists2,
+           SUM((pair.1).6) AS denies1,
+           SUM((pair.2).6) AS denies2,
+           SUM((pair.1).7) AS last_hits1,
+           SUM((pair.2).7) AS last_hits2,
+           SUM((pair.1).8) AS networth1,
+           SUM((pair.2).8) AS networth2,
+           SUM((pair.1).9) AS obj_damage1,
+           SUM((pair.2).9) AS obj_damage2,
+           SUM((pair.1).10) AS creeps1,
+           SUM((pair.2).10) AS creeps2
+    FROM (
+        SELECT groupArray((
+                   hero_id, toUInt32(won), kills, deaths, assists, denies,
+                   last_hits, net_worth, max_boss_damage, max_creep_kills,
+                   account_id
+               )) AS arr
+        FROM match_player
+        WHERE {where_clause}
+        GROUP BY {group_keys}
+    )
+    ARRAY JOIN
+        arrayFilter(
+            p -> {pair_predicate},
+            arrayFlatten(arrayMap(x -> arrayMap(y -> (x, y), arr), arr))
+        ) AS pair
     GROUP BY hero_id1, hero_id2
     {having_clause}
     SETTINGS log_comment = 'hero_synergies_stats'
