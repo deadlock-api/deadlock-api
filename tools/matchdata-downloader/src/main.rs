@@ -45,23 +45,14 @@ async fn main() -> anyhow::Result<()> {
         info!("Fetching match ids to download");
         let now = Instant::now();
         let query = "
-WITH t_salts AS (
-    SELECT
-        match_id,
-        argMax(cluster_id,     created_at) AS cluster_id,
-        argMax(metadata_salt,  created_at) AS metadata_salt
-    FROM match_salts
-    WHERE created_at > now() - INTERVAL 2 DAY
-    GROUP BY match_id
-),
-t_matches AS (
-    SELECT match_id
-    FROM match_info
-    WHERE match_id IN (SELECT match_id FROM t_salts)
-)
-SELECT match_id, cluster_id, metadata_salt
-FROM t_salts
-WHERE match_id NOT IN t_matches
+SELECT
+    match_id,
+    argMax(cluster_id,    created_at) AS cluster_id,
+    argMax(metadata_salt, created_at) AS metadata_salt
+FROM match_salts
+WHERE created_at > now() - INTERVAL 2 DAY
+  AND match_id NOT IN (SELECT match_id FROM match_player)
+GROUP BY match_id
 SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
         ";
         let match_ids_to_fetch = ch_client

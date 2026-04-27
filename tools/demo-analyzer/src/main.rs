@@ -148,15 +148,16 @@ async fn fetch_pending_matches(
         .query(
             "SELECT ms.match_id, ms.cluster_id, ms.replay_salt \
              FROM match_salts ms FINAL \
-             INNER JOIN match_info mi ON ms.match_id = mi.match_id \
              WHERE ms.created_at > now() - INTERVAL 30 DAY \
                AND ms.replay_salt IS NOT NULL \
                AND ms.replay_salt > 0 \
                AND ms.cluster_id IS NOT NULL \
                AND ms.cluster_id > 0 \
-               AND mi.game_mode = 'Normal' \
+               AND ms.match_id IN ( \
+                 SELECT match_id FROM match_player WHERE game_mode = 'Normal' \
+               ) \
                AND ms.match_id NOT IN ( \
-                 SELECT DISTINCT match_id FROM demo_player \
+                 SELECT match_id FROM demo_player \
                ) \
              ORDER BY ms.match_id DESC \
              LIMIT 1000 \
