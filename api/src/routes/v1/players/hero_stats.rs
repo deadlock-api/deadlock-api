@@ -172,8 +172,8 @@ fn build_query(query: &HeroStatsQuery) -> String {
     WITH mp AS (
         SELECT account_id, match_id, hero_id, won, kills, deaths, assists, denies,
                net_worth, last_hits, max_level, max_player_damage, max_player_damage_taken,
-               max_creep_kills, max_boss_damage, max_creep_damage, max_neutral_damage,
-               max_shots_hit, max_shots_missed,
+               max_damage_mitigated, max_creep_kills, max_boss_damage, max_creep_damage,
+               max_neutral_damage, max_shots_hit, max_shots_missed,
                max_hero_bullets_hit, max_hero_bullets_hit_crit,
                duration_s, start_time, average_badge_team0, average_badge_team1
         FROM match_player

@@ -42,12 +42,12 @@ impl BucketQuery {
         match self {
             Self::NoBucket => "toUInt32(0)",
             Self::AvgBadge => {
-                "toUInt32(assumeNotNull(coalesce(greatest(mp.average_badge_team0, mp.average_badge_team1), 0)))"
+                "toUInt32(assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)))"
             }
-            Self::StartTimeHour => "toStartOfHour(mp.start_time)",
-            Self::StartTimeDay => "toStartOfDay(mp.start_time)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(mp.start_time))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(mp.start_time))",
+            Self::StartTimeHour => "toStartOfHour(start_time)",
+            Self::StartTimeDay => "toStartOfDay(start_time)",
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
         }
     }
 }
