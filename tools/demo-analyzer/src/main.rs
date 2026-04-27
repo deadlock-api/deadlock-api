@@ -149,18 +149,26 @@ async fn fetch_pending_matches(
     let matches = ch_client
         .query(
             "SELECT ms.match_id, ms.cluster_id, ms.replay_salt \
-             FROM match_salts ms FINAL \
-             WHERE ms.created_at > now() - INTERVAL 30 DAY \
-               AND ms.replay_salt IS NOT NULL \
-               AND ms.replay_salt > 0 \
-               AND ms.cluster_id IS NOT NULL \
-               AND ms.cluster_id > 0 \
-               AND ms.match_id IN ( \
-                 SELECT match_id FROM match_player WHERE game_mode = 'Normal' \
-               ) \
-               AND ms.match_id NOT IN ( \
+             FROM ( \
+                 SELECT match_id, cluster_id, replay_salt \
+                 FROM match_salts FINAL \
+                 WHERE created_at > now() - INTERVAL 30 DAY \
+                   AND replay_salt IS NOT NULL AND replay_salt > 0 \
+                   AND cluster_id IS NOT NULL AND cluster_id > 0 \
+             ) ms \
+             WHERE ms.match_id IN ( \
+                 SELECT match_id FROM match_player \
+                 WHERE match_id IN ( \
+                     SELECT match_id FROM match_salts FINAL \
+                     WHERE created_at > now() - INTERVAL 30 DAY \
+                       AND replay_salt IS NOT NULL AND replay_salt > 0 \
+                       AND cluster_id IS NOT NULL AND cluster_id > 0 \
+                 ) \
+                 AND game_mode = 'Normal' \
+             ) \
+             AND ms.match_id NOT IN ( \
                  SELECT match_id FROM demo_player \
-               ) \
+             ) \
              ORDER BY ms.match_id DESC \
              LIMIT 1000 \
              SETTINGS log_comment = 'demo_analyzer_fetch_pending_matches'",
