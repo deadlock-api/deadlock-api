@@ -87,10 +87,6 @@ pub struct HeroStats {
     last_hits_per_min: f64,
     damage_per_min: f64,
     damage_per_soul: f64,
-    #[deprecated(
-        note = "This field is deprecated and will be removed in the future. Use `damage_per_min` \
-                instead."
-    )]
     damage_mitigated_per_min: f64,
     damage_taken_per_min: f64,
     damage_taken_per_soul: f64,
@@ -209,7 +205,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
         60 * sum(last_hits) / sum(duration_s) AS last_hits_per_min,
         60 * sum(max_player_damage) / sum(duration_s) AS damage_per_min,
         sum(max_player_damage) / sum(net_worth) AS damage_per_soul,
-        60 * sum(max_player_damage) / sum(duration_s) AS damage_mitigated_per_min,
+        60 * sum(max_damage_mitigated) / sum(duration_s) AS damage_mitigated_per_min,
         60 * sum(max_player_damage_taken) / sum(duration_s) AS damage_taken_per_min,
         sum(max_player_damage_taken) / sum(net_worth) AS damage_taken_per_soul,
         60 * sum(max_creep_kills) / sum(duration_s) AS creeps_per_min,
