@@ -346,13 +346,15 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             player_select_fields.push("death_details");
         }
         let static_part = player_select_fields.join(", ");
-        let extras: String = query
+        let extras = query
             .extra_player_columns
             .as_deref()
             .unwrap_or(&[])
             .iter()
-            .map(|col| format!(", {col} AS {}", col.replace('.', "_")))
-            .collect();
+            .fold(String::new(), |mut acc, col| {
+                let _ = write!(acc, ", {col} AS {}", col.replace('.', "_"));
+                acc
+            });
         let player_select_fields =
             format!("groupUniqArray(12)(tuple({static_part}{extras})::JSON) as players");
         select_fields.push(player_select_fields);
