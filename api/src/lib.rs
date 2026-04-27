@@ -22,10 +22,10 @@ pub mod utils;
 
 use core::time::Duration;
 
-use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::middleware::{from_fn, from_fn_with_state};
-use axum::response::{IntoResponse, Redirect};
+use axum::extract::{Request, State};
+use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::middleware::{Next, from_fn, from_fn_with_state};
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
@@ -58,6 +58,16 @@ User-agent: *
 Disallow: /
 Allow: /docs
 ";
+
+async fn no_store_on_error(req: Request, next: Next) -> Response {
+    let mut response = next.run(req).await;
+    if !response.status().is_success() {
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    }
+    response
+}
 
 async fn favicon() -> impl IntoResponse {
     let favicon = include_bytes!("../public/favicon.ico");
@@ -129,6 +139,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(CompressionLayer::new().compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))))
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB limit
         .layer(ConcurrencyLimitLayer::new(1000))
+        .layer(from_fn(no_store_on_error))
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {
