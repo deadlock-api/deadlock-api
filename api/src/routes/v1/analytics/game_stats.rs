@@ -151,9 +151,13 @@ fn build_query(query: &GameStatsQuery) -> String {
         min_duration_s: query.min_duration_s,
         max_duration_s: query.max_duration_s,
     }
-    .build();
+    .build_with_prefix("match_player.");
     let bucket = query.bucket.get_select_clause();
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
+    // Columns in WHERE are table-qualified to bypass ClickHouse alias substitution:
+    // the SELECT exposes `duration_s` as an alias for `any(duration_s)`, and an
+    // unqualified `duration_s` filter would be re-expanded into `any(duration_s)`,
+    // producing ILLEGAL_AGGREGATION.
     format!(
         "
     WITH t_matches AS (
@@ -167,8 +171,8 @@ fn build_query(query: &GameStatsQuery) -> String {
             , arrayAvg(obj_times) AS avg_obj_destroyed_time_s
             , length(obj_times) > 0 AS has_objectives
         FROM match_player
-        WHERE match_mode IN ('Ranked', 'Unranked')
-            AND {game_mode_filter}
+        WHERE match_player.match_mode IN ('Ranked', 'Unranked')
+            AND match_player.{game_mode_filter}
             {info_filters}
         GROUP BY match_id
     )
