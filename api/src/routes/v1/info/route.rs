@@ -32,7 +32,7 @@ SETTINGS log_comment = 'info_table_sizes'
 const FETCHED_MATCHES_LAST_24H_QUERY: &str = "
 WITH fetched_matches AS (
     SELECT match_id
-    FROM match_info
+    FROM match_player
     WHERE created_at > now() - INTERVAL 1 DAY
     UNION
     ALL
