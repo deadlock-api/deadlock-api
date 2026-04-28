@@ -6,8 +6,9 @@ ENV SQLX_OFFLINE=true
 WORKDIR /app
 # Tune codegen for the deploy host (AMD EPYC 7502P, Zen 2). Includes the mold
 # linker flag from .cargo/config.toml because RUSTFLAGS replaces, not extends,
-# the target.cfg rustflags from cargo config.
-ENV RUSTFLAGS="-Clink-arg=-fuse-ld=/usr/bin/mold -Ctarget-cpu=znver2"
+# the target.cfg rustflags from cargo config. Use the short-name form so it
+# works for build scripts linked via gcc as well as the final target.
+ENV RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Ctarget-cpu=znver2"
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
