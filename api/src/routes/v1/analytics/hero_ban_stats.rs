@@ -213,11 +213,13 @@ Only matches with successfully extracted ban data are included. Matches where ba
 Results are cached for **1 hour** based on the combination of query parameters provided.
 
 ### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
     "
 )]
 pub(super) async fn hero_ban_stats(

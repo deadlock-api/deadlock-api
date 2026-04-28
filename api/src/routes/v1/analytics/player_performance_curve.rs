@@ -237,11 +237,13 @@ Retrieves player performance statistics (net worth, kills, deaths, assists) over
 Results are cached for **1 hour** based on the unique combination of query parameters provided.
 
 ### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
     "
 )]
 pub(crate) async fn player_performance_curve(

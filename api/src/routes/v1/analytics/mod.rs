@@ -20,12 +20,15 @@ pub mod scoreboard_types;
 
 use core::time::Duration;
 
+use axum::middleware::from_fn_with_state;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::rate_limit::{RateLimitState, rate_limit};
+use crate::services::rate_limiter::Quota;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Analytics", description = "
@@ -35,7 +38,17 @@ Features scoreboards for both heroes and players.
 ")))]
 struct ApiDoc;
 
-pub(super) fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
+    let rate_limit_state = RateLimitState::new(
+        state.rate_limit_client.clone(),
+        "analytics",
+        vec![
+            Quota::ip_limit(200, Duration::from_mins(1)),
+            Quota::key_limit(400, Duration::from_mins(1)),
+            Quota::global_limit(2000, Duration::from_mins(1)),
+        ],
+    );
+
     OpenApiRouter::with_openapi(ApiDoc::openapi()).merge(
         OpenApiRouter::new()
             .routes(routes!(ability_order_stats::ability_order_stats))
@@ -59,6 +72,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
                     .routes(routes!(player_scoreboard::player_scoreboard))
                     .routes(routes!(hero_scoreboard::hero_scoreboard)),
             )
+            .layer(from_fn_with_state(rate_limit_state, rate_limit))
             .layer(
                 CacheControlMiddleware::new(Duration::from_hours(1))
                     .with_stale_while_revalidate(Duration::from_hours(12)),

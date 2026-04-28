@@ -283,11 +283,13 @@ async fn get_kill_death_stats(
 This endpoint returns the kill-death statistics across a 128x128 pixel raster.
 
 ### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
     "
 )]
 pub(crate) async fn kill_death_stats(

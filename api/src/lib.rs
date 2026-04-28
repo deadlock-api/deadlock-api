@@ -109,7 +109,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Serve favicon
         .route("/favicon.ico", get(favicon))
         // Add application routes
-        .merge(routes::router())
+        .merge(routes::router(&state))
         // Add prometheus metrics route
         .route("/metrics", get(|rk: RateLimitKey, State(AppState{config, ..}): State<AppState>| async move {
             let internal_key = config.internal_api_key.strip_prefix("HEXE-").unwrap_or(&config.internal_api_key);

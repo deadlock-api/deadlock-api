@@ -211,11 +211,13 @@ The `hero_build_id` is the first build the player had selected when the game sta
 Results are cached for **1 hour** based on the combination of query parameters provided.
 
 ### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
     "
 )]
 pub(super) async fn hero_build_stats(

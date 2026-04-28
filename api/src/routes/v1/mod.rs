@@ -16,12 +16,12 @@ pub mod players;
 pub(crate) mod servers;
 pub mod sql;
 
-pub(super) fn router() -> OpenApiRouter<AppState> {
+pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .nest("/matches", matches::router())
         .nest("/players", players::router())
         .nest("/leaderboard", leaderboard::router())
-        .nest("/analytics", analytics::router())
+        .nest("/analytics", analytics::router(state))
         .nest("/builds", builds::router())
         .nest("/patches", patches::router())
         .nest("/commands", commands::router())

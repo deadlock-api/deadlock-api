@@ -336,11 +336,13 @@ async fn get_hero_stats(
 Retrieves performance statistics for each hero based on historical match data.
 
 ### Rate Limits:
+> The rate limits below are **shared across all analytics endpoints**.
+
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 200req/min |
+| Key | 400req/min |
+| Global | 2000req/min |
     "
 )]
 pub(crate) async fn hero_stats(
