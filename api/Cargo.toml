@@ -7,7 +7,7 @@ repository = "https://github.com/deadlock-api/deadlock-api"
 license = "MIT"
 
 [dependencies]
-reqwest = { version = "0.13.2", features = ["json", "http2", "zstd", "gzip", "form"] }
+reqwest = { version = "0.13.3", features = ["json", "http2", "zstd", "gzip", "form"] }
 tokio = { version = "1.52.1", features = ["macros", "rt-multi-thread", "signal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 redis = { version = "1.2.0", default-features = false, features = ["tokio-comp"] }
