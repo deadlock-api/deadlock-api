@@ -46,6 +46,7 @@ use crate::api_doc::ApiDoc;
 use crate::context::AppState;
 use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache_bust::reject_cache_busts;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
@@ -130,6 +131,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(write_api_key_to_header))
+        .layer(from_fn(reject_cache_busts))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(
             CacheControlMiddleware::new(Duration::from_secs(DEFAULT_CACHE_TIME))
