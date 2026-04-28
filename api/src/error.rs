@@ -4,7 +4,7 @@ use axum::response::IntoResponse;
 use reqwest::StatusCode;
 use serde_json::json;
 use thiserror::Error;
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::context::AppStateError;
 use crate::services::rate_limiter;
@@ -99,16 +99,47 @@ fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Res
 }
 
 impl IntoResponse for APIError {
+    #[allow(clippy::too_many_lines)]
     fn into_response(self) -> Response<Body> {
-        error!("API Error: {self}");
         match self {
-            Self::Status { status } => Response::builder()
-                .status(status)
-                .body(Body::empty())
-                .unwrap_or_else(|_| "Internal server error".to_owned().into_response()),
-            Self::StatusMsg { status, message } => build_error_response(status, message),
-            Self::StatusMsgJson { status, message } => build_error_response(status, message),
+            Self::Status { status } => {
+                match status {
+                    StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::FORBIDDEN => {
+                        warn!("API error with status {status}");
+                    }
+                    _ => {
+                        error!("Unexpected status code in StatusMsgJson: {status}");
+                    }
+                }
+                Response::builder()
+                    .status(status)
+                    .body(Body::empty())
+                    .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
+            }
+            Self::StatusMsg { status, message } => {
+                match status {
+                    StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::FORBIDDEN => {
+                        warn!("API error with status {status}: {message}");
+                    }
+                    _ => {
+                        error!("API error with status {status}: {message}");
+                    }
+                }
+                build_error_response(status, message)
+            }
+            Self::StatusMsgJson { status, message } => {
+                match status {
+                    StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND | StatusCode::FORBIDDEN => {
+                        warn!("API error with status {status}: {message}");
+                    }
+                    _ => {
+                        error!("Unexpected status code in StatusMsgJson: {status}");
+                    }
+                }
+                build_error_response(status, message)
+            }
             Self::RateLimitExceeded { status } => {
+                warn!("Rate limit exceeded: {status:?}");
                 let mut res = Response::builder();
                 for (key, value) in status.response_headers() {
                     if let Some(key) = key {
@@ -133,28 +164,34 @@ impl IntoResponse for APIError {
                     )
                     .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
             }
-            Self::InternalError { message } => build_error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Internal server error: {message}"),
-            ),
-            Self::SteamProxy(e) => match e {
-                SteamProxyError::Request(_) => Self::status_msg(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Failed to fetch data from Steam. Retry your request later.",
+            Self::InternalError { message } => {
+                error!("Internal Error: {message}");
+                build_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Internal server error: {message}"),
                 )
-                .into_response(),
-                SteamProxyError::Base64(_) => {
-                    Self::internal("Failed to decode base64 data from Steam. Retrying won't help.")
-                        .into_response()
+            }
+            Self::SteamProxy(e) => {
+                error!("Steam Proxy Error Error: {e}");
+                match e {
+                    SteamProxyError::Request(_) => Self::status_msg(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "Failed to fetch data from Steam. Retry your request later.",
+                    )
+                    .into_response(),
+                    SteamProxyError::Base64(_) => Self::internal(
+                        "Failed to decode base64 data from Steam. Retrying won't help.",
+                    )
+                    .into_response(),
+                    SteamProxyError::Protobuf(_) => Self::internal(
+                        "Failed to parse protobuf message from Steam. Retrying won't help.",
+                    )
+                    .into_response(),
+                    SteamProxyError::NoBaseUrl => {
+                        Self::internal("No Steam proxy URL configured.").into_response()
+                    }
                 }
-                SteamProxyError::Protobuf(_) => Self::internal(
-                    "Failed to parse protobuf message from Steam. Retrying won't help.",
-                )
-                .into_response(),
-                SteamProxyError::NoBaseUrl => {
-                    Self::internal("No Steam proxy URL configured.").into_response()
-                }
-            },
+            }
             Self::Protobuf(_) => {
                 Self::internal("Failed to parse protobuf message from Steam. Retrying won't help.")
                     .into_response()
