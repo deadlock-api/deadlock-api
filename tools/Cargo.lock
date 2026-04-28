@@ -11,7 +11,7 @@ dependencies = [
  "common",
  "delay_map",
  "metrics",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "serde_repr",
  "tokio",
@@ -297,7 +297,7 @@ dependencies = [
  "itertools",
  "metrics",
  "rand 0.10.1",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde_json",
  "sqlx",
  "time",
@@ -575,7 +575,7 @@ dependencies = [
  "metrics-exporter-prometheus",
  "object_store",
  "prost",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "serde_json",
  "sqlx",
@@ -809,7 +809,7 @@ dependencies = [
  "metrics",
  "os_pipe",
  "prost",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "snap",
  "thiserror 2.0.18",
@@ -1335,7 +1335,7 @@ dependencies = [
  "http",
  "log",
  "prost",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -1402,7 +1402,7 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "sqlx",
  "tokio",
@@ -1439,7 +1439,7 @@ dependencies = [
  "metrics",
  "object_store",
  "prost",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
@@ -1990,9 +1990,9 @@ checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "lru"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e0b564323a0fb6d54b864f625ae139de9612e27edb944dda37c109f05aac531"
+checksum = "8a860605968fce16869fd239cf4237a82f3ac470723415db603b0e8b6c8d4fb9"
 dependencies = [
  "hashbrown 0.17.0",
 ]
@@ -2036,7 +2036,7 @@ dependencies = [
  "futures",
  "metrics",
  "object_store",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "tokio",
  "tokio-util",
@@ -2876,9 +2876,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab3f43e3283ab1488b624b44b0e988d0acea0b3214e694730a055cb6b2efa801"
+checksum = "62e0021ea2c22aed41653bc7e1419abb2c97e038ff2c33d0e1309e49a97deec0"
 dependencies = [
  "base64",
  "bytes",
@@ -3067,7 +3067,7 @@ dependencies = [
  "common",
  "futures",
  "metrics",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "tokio",
  "tracing",
@@ -3544,7 +3544,7 @@ dependencies = [
  "itertools",
  "metrics",
  "rand 0.10.1",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "serde_repr",
  "sqlx",
@@ -4025,7 +4025,7 @@ dependencies = [
  "clickhouse",
  "common",
  "metrics",
- "reqwest 0.13.2",
+ "reqwest 0.13.3",
  "serde",
  "serde_repr",
  "tokio",
