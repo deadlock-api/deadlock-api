@@ -116,32 +116,50 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
     .build();
     let bucket = query.bucket.get_select_clause();
     let match_info_select = query.bucket.get_info_select_clause();
+    // demo_player.created_at is set on insert and is always >= the match's start_time, so
+    // filtering by created_at lets toStartOfMonth partition pruning shrink the demo_player
+    // scan. The 1-day cushion absorbs ingest clock skew.
+    let demo_lower = query
+        .min_unix_timestamp
+        .unwrap_or(MIN_DEMO_PLAYER_TIMESTAMP)
+        .saturating_sub(86400);
+    let outer = if query.bucket == BucketQuery::NoBucket {
+        format!(
+            "SELECT arrayJoin(banned_hero_ids) AS hero_id, {bucket} AS bucket, uniq(match_id) AS bans
+        FROM demo_player
+        WHERE notEmpty(banned_hero_ids)
+          AND created_at >= toDateTime({demo_lower})
+          AND match_id IN (SELECT match_id FROM valid_mids)"
+        )
+    } else {
+        format!(
+            "SELECT arrayJoin(banned_hero_ids) AS hero_id, {bucket} AS bucket, uniq(dp.match_id) AS bans
+        FROM demo_player dp
+        INNER JOIN valid_mids USING (match_id)
+        WHERE notEmpty(banned_hero_ids)
+          AND created_at >= toDateTime({demo_lower})"
+        )
+    };
     format!(
         "
-    WITH t_matches AS (
+    WITH ban_mids AS (
+        SELECT DISTINCT match_id
+        FROM demo_player
+        WHERE notEmpty(banned_hero_ids)
+          AND created_at >= toDateTime({demo_lower})
+    ),
+    valid_mids AS (
         SELECT match_id {match_info_select}
         FROM match_player
-        WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
+        WHERE match_id IN (SELECT match_id FROM ban_mids)
+          AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
         GROUP BY match_id
-    ),
-    t_bans AS (
-        SELECT dp.match_id, any(dp.banned_hero_ids) AS banned_hero_ids
-        FROM demo_player dp
-        WHERE dp.match_id IN (SELECT match_id FROM t_matches) AND notEmpty(dp.banned_hero_ids)
-        GROUP BY dp.match_id
     )
-    SELECT arrayJoin(banned_hero_ids) AS hero_id, {bucket} AS bucket, uniq(t_bans.match_id) AS bans
-    FROM t_bans
-    {join}
+    {outer}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     SETTINGS log_comment = 'hero_ban_stats'
-    ",
-        join = if query.bucket == BucketQuery::NoBucket {
-            ""
-        } else {
-            "INNER JOIN t_matches USING (match_id)"
-        },
+    "
     )
 }
 
