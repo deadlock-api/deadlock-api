@@ -297,7 +297,7 @@ impl GameMode {
         use serde::de::IntoDeserializer;
         let s = Option::<String>::deserialize(deserializer)?;
         match s.as_deref() {
-            None | Some("") => Ok(None),
+            None | Some("" | "null") => Ok(None),
             Some(v) => Self::deserialize(v.into_deserializer()).map(Some),
         }
     }
