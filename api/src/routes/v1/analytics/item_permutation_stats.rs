@@ -40,7 +40,10 @@ pub(super) struct ItemPermutationStatsQuery {
     #[param(minimum = 2, maximum = 12, default = 2)]
     comb_size: Option<u8>,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
-    #[serde(default = "GameMode::default_option")]
+    #[serde(
+        default = "GameMode::default_option",
+        deserialize_with = "GameMode::deserialize_option"
+    )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Filter matches based on the hero IDs. See more: <https://assets.deadlock-api.com/v2/heroes>

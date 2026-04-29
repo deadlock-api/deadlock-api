@@ -16,7 +16,10 @@ use crate::utils::parse::default_last_month_timestamp;
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct BadgeDistributionQuery {
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
-    #[serde(default = "GameMode::default_option")]
+    #[serde(
+        default = "GameMode::default_option",
+        deserialize_with = "GameMode::deserialize_option"
+    )]
     #[param(inline, default = "normal")]
     game_mode: Option<GameMode>,
     /// Filter matches based on their start time (Unix timestamp). **Default:** 30 days ago.

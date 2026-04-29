@@ -1,6 +1,6 @@
 use clickhouse::Row;
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use strum::{Display, EnumString, FromRepr};
 use utoipa::{IntoParams, ToSchema};
 use valveprotos::deadlock::c_msg_dev_match_info::MatchPlayer;
@@ -280,15 +280,25 @@ impl GameMode {
 
     /// Returns a SQL filter clause for `game_mode`.
     /// If a specific game mode is provided, returns `game_mode = {value}`.
-    /// If None, returns a filter for all valid game modes: `game_mode IN (1, 4)`.
+    /// If None, no filter is applied.
     pub fn sql_filter(game_mode: Option<Self>) -> String {
         match game_mode {
             Some(mode) => format!("game_mode = {}", mode as i32),
-            None => format!(
-                "game_mode IN ({}, {})",
-                Self::Normal as i32,
-                Self::StreetBrawl as i32
-            ),
+            None => "1=1".to_string(),
+        }
+    }
+
+    /// Deserializes an `Option<GameMode>` from a query parameter.
+    /// An empty string or missing value deserializes as `None` (no filter).
+    pub fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<Self>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use serde::de::IntoDeserializer;
+        let s = Option::<String>::deserialize(deserializer)?;
+        match s.as_deref() {
+            None | Some("") => Ok(None),
+            Some(v) => Self::deserialize(v.into_deserializer()).map(Some),
         }
     }
 }
