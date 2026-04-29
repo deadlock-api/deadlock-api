@@ -29,6 +29,17 @@ fn default_limit() -> u32 {
     1000
 }
 
+/// Wrap each dot-separated segment in backticks so reserved words like `on`
+/// (legal column names in CH but parser-reserved tokens) are accepted as
+/// identifiers. Input is assumed to have passed `is_valid_extra_column`, so
+/// it cannot contain backticks.
+fn quote_extra_column(col: &str) -> String {
+    col.split('.')
+        .map(|seg| format!("`{seg}`"))
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
 fn is_valid_extra_column(s: &str) -> bool {
     if s.is_empty() {
         return false;
@@ -297,7 +308,8 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
     if let Some(extra_match_columns) = &query.extra_match_columns {
         for col in extra_match_columns {
             let alias = col.replace('.', "_");
-            select_fields.push(format!("any({col}) as {alias}"));
+            let quoted = quote_extra_column(col);
+            select_fields.push(format!("any({quoted}) as `{alias}`"));
         }
     }
     // Player Select Fields
@@ -352,7 +364,12 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             .unwrap_or(&[])
             .iter()
             .fold(String::new(), |mut acc, col| {
-                let _ = write!(acc, ", {col} AS {}", col.replace('.', "_"));
+                let _ = write!(
+                    acc,
+                    ", {} AS `{}`",
+                    quote_extra_column(col),
+                    col.replace('.', "_")
+                );
                 acc
             });
         let player_select_fields =
