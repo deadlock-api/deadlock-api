@@ -36,25 +36,14 @@ pub enum BucketQuery {
 }
 
 impl BucketQuery {
-    fn get_select_clause(self) -> &'static str {
-        match self {
-            Self::NoBucket => "toUInt32(0)",
-            Self::AvgBadge => "toUInt32(max_avg_badge)",
-            Self::StartTimeHour => "toStartOfHour(start_time)",
-            Self::StartTimeDay => "toStartOfDay(start_time)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-        }
-    }
-
     fn get_info_select_clause(self) -> &'static str {
         match self {
-            Self::StartTimeHour
-            | Self::StartTimeDay
-            | Self::StartTimeWeek
-            | Self::StartTimeMonth => ", any(start_time) as start_time",
+            Self::StartTimeHour => ", toStartOfHour(any(start_time)) as bucket",
+            Self::StartTimeDay => ", toStartOfDay(any(start_time)) as bucket",
+            Self::StartTimeWeek => ", toDateTime(toStartOfWeek(any(start_time))) as bucket",
+            Self::StartTimeMonth => ", toDateTime(toStartOfMonth(any(start_time))) as bucket",
             Self::AvgBadge => {
-                ", assumeNotNull(coalesce(greatest(any(average_badge_team0), any(average_badge_team1)), 0)) as max_avg_badge"
+                ", toUInt32(assumeNotNull(coalesce(greatest(any(average_badge_team0), any(average_badge_team1)), 0))) as bucket"
             }
             Self::NoBucket => "",
         }
@@ -114,7 +103,6 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let bucket = query.bucket.get_select_clause();
     let match_info_select = query.bucket.get_info_select_clause();
     // demo_player.created_at is set on insert and is always >= the match's start_time, so
     // filtering by created_at lets toStartOfMonth partition pruning shrink the demo_player
@@ -125,7 +113,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         .saturating_sub(86400);
     let outer = if query.bucket == BucketQuery::NoBucket {
         format!(
-            "SELECT arrayJoin(banned_hero_ids) AS hero_id, {bucket} AS bucket, uniq(match_id) AS bans
+            "SELECT arrayJoin(banned_hero_ids) AS hero_id, toUInt32(0) AS bucket, uniq(match_id) AS bans
         FROM demo_player
         WHERE notEmpty(banned_hero_ids)
           AND created_at >= toDateTime({demo_lower})
@@ -133,7 +121,7 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         )
     } else {
         format!(
-            "SELECT arrayJoin(banned_hero_ids) AS hero_id, {bucket} AS bucket, uniq(dp.match_id) AS bans
+            "SELECT arrayJoin(banned_hero_ids) AS hero_id, bucket, uniq(dp.match_id) AS bans
         FROM demo_player dp
         INNER JOIN valid_mids USING (match_id)
         WHERE notEmpty(banned_hero_ids)
