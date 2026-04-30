@@ -32,6 +32,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(recently_fetched::recently_fetched))
         .routes(routes!(bulk_metadata::bulk_metadata))
         .routes(routes!(live_url::url))
+        .routes(routes!(live_url::urls))
         .routes(routes!(salts::salts))
         .merge(
             OpenApiRouter::new()

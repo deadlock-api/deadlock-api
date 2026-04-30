@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use cached::TimedCache;
 use cached::proc_macro::cached;
 use redis::{AsyncTypedCommands, ExpireOption};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
@@ -28,6 +28,20 @@ use crate::utils::types::MatchIdQuery;
 struct MatchSpectateResponse {
     broadcast_url: String,
     lobby_id: Option<u64>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+struct LiveUrl {
+    match_id: u64,
+    broadcast_url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    match_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    lobby_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    updated_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    started_at: Option<i64>,
 }
 
 #[cached(
@@ -198,4 +212,37 @@ pub(super) async fn url(
             )))
         }
     }
+}
+
+#[utoipa::path(
+    get,
+    path = "/live/urls",
+    responses(
+        (status = OK, body = [LiveUrl]),
+        (status = INTERNAL_SERVER_ERROR, description = "Fetching live URLs failed")
+    ),
+    tags = ["Matches"],
+    summary = "Live Broadcast URLs",
+    description = "
+Returns a list of all currently available live broadcast URLs.
+
+These can be used in any demofile broadcast parser:
+- [Demofile-Net](https://github.com/saul/demofile-net)
+- [Haste](https://github.com/blukai/haste/)
+
+### Rate Limits:
+| Type | Limit |
+| ---- | ----- |
+| IP | 100req/s |
+| Key | - |
+| Global | - |
+    "
+)]
+pub(super) async fn urls(State(mut state): State<AppState>) -> APIResult<impl IntoResponse> {
+    let values: Vec<String> = state.redis_client.hvals("spectated_matches").await?;
+    let urls: Vec<LiveUrl> = values
+        .iter()
+        .filter_map(|v| serde_json::from_str(v).ok())
+        .collect();
+    Ok(Json(urls))
 }
