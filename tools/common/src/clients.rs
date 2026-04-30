@@ -65,7 +65,7 @@ pub async fn get_pg_client() -> anyhow::Result<Pool<Postgres>> {
         .database(&env::var("POSTGRES_DBNAME").unwrap_or("postgres".to_string()))
         .log_slow_statements(LevelFilter::Warn, Duration::from_secs(5));
     Ok(PgPoolOptions::new()
-        .max_connections(10)
+        .max_connections(50)
         .connect_with(pg_options)
         .await?)
 }
