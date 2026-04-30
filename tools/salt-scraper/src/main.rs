@@ -199,26 +199,8 @@ async fn main() -> anyhow::Result<()> {
                 if !pmh_empty {
                     return Ok(Vec::new());
                 }
-                info!("pmh fast path empty; falling back to full range");
-                let q = format!(
-                    r"
-                SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
-                FROM player_match_history pmh
-                LEFT ANTI JOIN (
-                    SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
-                    UNION DISTINCT
-                    SELECT match_id FROM match_player WHERE match_id >= 31247321
-                ) ex ON ex.match_id = pmh.match_id
-                WHERE pmh.match_mode IN ('Ranked', 'Unranked')
-                  AND pmh.start_time < now() - INTERVAL 2 HOUR
-                  AND pmh.match_id >= 31247321
-                GROUP BY pmh.match_id
-                ORDER BY pmh.match_id DESC
-                LIMIT 100
-                SETTINGS log_comment = 'salt_scraper_pmh_full_pending_matches'
-                "
-                );
-                ch_client.query(&q).fetch_all::<PendingMatch>().await
+                info!("pmh fast path empty; entering progressive-widening fallback");
+                fetch_pmh_pending_widening(&ch_client).await
             };
             let active_full_fut = async {
                 if !active_empty {
@@ -329,6 +311,94 @@ async fn main() -> anyhow::Result<()> {
             );
         }
     }
+}
+
+/// Fallback query for unprocessed pmh matches with progressive window widening.
+///
+/// Starts from a tight `match_id` window (cheap, ~110 MB / ~2 s) and expands only
+/// when the tier returns fewer than the desired 100 rows, falling through to the
+/// unbounded full-range scan as the last resort. The full-range scan is what
+/// historically timed out at 20s+; widening keeps it as a true fallback rather
+/// than the default path.
+///
+/// `mid_floor` is computed once via a single `max(match_id)` query and embedded as
+/// a literal in each tier — inlining it as a `WITH` scalar subquery caused the
+/// `match_player` scan to repeat at every reference site, ~halving throughput.
+async fn fetch_pmh_pending_widening(
+    ch_client: &Client,
+) -> clickhouse::error::Result<Vec<PendingMatch>> {
+    const TARGET: usize = 100;
+    // Match-id windows in increasing size. `None` = unbounded (original full-range query).
+    // Wider intermediate tiers (e.g. 50M+) were dropped: at current data volume they
+    // already exceed the pmh range, so they cost as much as unbounded with no payoff.
+    let tiers: &[Option<u64>] = &[Some(5_000_000), Some(20_000_000), None];
+
+    let max_mid: u64 = ch_client
+        .query("SELECT max(match_id) FROM match_player")
+        .fetch_one::<u64>()
+        .await?;
+
+    let mut last: Vec<PendingMatch> = Vec::new();
+    for &window in tiers {
+        let q = match window {
+            Some(w) => {
+                let mid_floor = max_mid.saturating_sub(w);
+                format!(
+                    r"
+                SELECT match_id, groupArray(account_id) AS participants
+                FROM player_match_history
+                WHERE match_mode IN ('Ranked', 'Unranked')
+                  AND start_time < now() - INTERVAL 2 HOUR
+                  AND match_id >= {mid_floor}
+                  AND match_id NOT IN (
+                      SELECT match_id FROM match_salts WHERE match_id >= {mid_floor} AND match_id < {MAX_VALID_MATCH_ID}
+                      UNION ALL
+                      SELECT match_id FROM match_player WHERE match_id >= {mid_floor}
+                  )
+                GROUP BY match_id
+                ORDER BY match_id DESC
+                LIMIT 100
+                SETTINGS log_comment = 'salt_scraper_pmh_full_pending_matches'
+                "
+                )
+            }
+            None => format!(
+                r"
+                SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
+                FROM player_match_history pmh
+                LEFT ANTI JOIN (
+                    SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+                    UNION DISTINCT
+                    SELECT match_id FROM match_player WHERE match_id >= 31247321
+                ) ex ON ex.match_id = pmh.match_id
+                WHERE pmh.match_mode IN ('Ranked', 'Unranked')
+                  AND pmh.start_time < now() - INTERVAL 2 HOUR
+                  AND pmh.match_id >= 31247321
+                GROUP BY pmh.match_id
+                ORDER BY pmh.match_id DESC
+                LIMIT 100
+                SETTINGS log_comment = 'salt_scraper_pmh_full_pending_matches'
+                "
+            ),
+        };
+        last = ch_client.query(&q).fetch_all::<PendingMatch>().await?;
+        if last.len() >= TARGET {
+            return Ok(last);
+        }
+        if let Some(w) = window {
+            info!(
+                "pmh fallback tier window={}M returned {} matches; widening",
+                w / 1_000_000,
+                last.len()
+            );
+        } else {
+            info!(
+                "pmh fallback exhausted full range; returning {} matches",
+                last.len()
+            );
+        }
+    }
+    Ok(last)
 }
 
 /// Fetches a prioritized match with exponential backoff retry.
