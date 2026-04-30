@@ -31,7 +31,7 @@ use valveprotos::deadlock::{
 use crate::types::PlayerMatchHistoryEntry;
 
 static HISTORY_COOLDOWN_MILLIS: LazyLock<u64> =
-    LazyLock::new(|| common::env_or("HISTORY_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 100));
+    LazyLock::new(|| common::env_or("HISTORY_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));
 
 /// Interval in seconds to refresh the prioritized accounts list from the database.
 /// Default: 300 seconds (5 minutes).

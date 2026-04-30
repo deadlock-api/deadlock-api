@@ -35,7 +35,7 @@ mod models;
 const MAX_VALID_MATCH_ID: &str = "4294967295";
 
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> =
-    LazyLock::new(|| common::env_or("SALTS_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 100));
+    LazyLock::new(|| common::env_or("SALTS_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))

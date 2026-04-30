@@ -173,7 +173,7 @@ async fn fetch_match_history_raw(
             msg,
             in_all_groups: Some(vec!["GetMatchHistory".to_owned()]),
             in_any_groups: None,
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 100),
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
             request_timeout: Duration::from_secs(3),
             username: bot_username,
             soft_cooldown_millis: None,

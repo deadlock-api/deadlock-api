@@ -59,7 +59,7 @@ pub(super) async fn spectate_match(
                 "SpectateLobby".to_owned(),
                 "SpectateLobbyOnDemand".to_owned(),
             ]),
-            cooldown_time: Duration::from_secs(24 * 60 * 60 / 100),
+            cooldown_time: Duration::from_secs(24 * 60 * 60 / 50),
             request_timeout: Duration::from_secs(2),
             username: None,
             soft_cooldown_millis: None,
