@@ -20,6 +20,10 @@ updates:
         dependency-type: "production"
       development-dependencies:
         dependency-type: "development"
+    ignore:
+      # 0.24.4 and 0.24.5 broke counter aggregation (stuck at 1).
+      - dependency-name: "metrics"
+        versions: ["0.24.4", "0.24.5"]
 
   - package-ecosystem: docker
     directory: /api
@@ -41,6 +45,10 @@ updates:
         dependency-type: "production"
       development-dependencies:
         dependency-type: "development"
+    ignore:
+      # 0.24.4 and 0.24.5 broke counter aggregation (stuck at 1).
+      - dependency-name: "metrics"
+        versions: ["0.24.4", "0.24.5"]
 
   - package-ecosystem: docker
     directory: /tools
@@ -62,6 +70,10 @@ updates:
         dependency-type: "production"
       development-dependencies:
         dependency-type: "development"
+    ignore:
+      # 0.24.4 and 0.24.5 broke counter aggregation (stuck at 1).
+      - dependency-name: "metrics"
+        versions: ["0.24.4", "0.24.5"]
 
   - package-ecosystem: docker
     directory: /live-events
