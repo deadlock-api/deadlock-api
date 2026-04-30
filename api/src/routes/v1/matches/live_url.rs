@@ -35,8 +35,6 @@ struct LiveUrl {
     match_id: u64,
     broadcast_url: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    match_type: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     lobby_id: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     updated_at: Option<i64>,
