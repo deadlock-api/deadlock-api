@@ -13,13 +13,17 @@ use core::time::Duration;
 
 use metrics::counter;
 use models::{Hero, Item};
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info, instrument, warn};
 
 use crate::models::{ChHero, ChItem, ItemType};
 
 mod models;
 
 const UPDATE_INTERVAL_S: u64 = 60 * 60; // Run every hour
+const REQUEST_TIMEOUT_S: u64 = 60;
+const CONNECT_TIMEOUT_S: u64 = 10;
+const MAX_FETCH_ATTEMPTS: u32 = 4;
+const CACHE_BUST_AFTER_ATTEMPTS: u32 = 2;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -28,7 +32,10 @@ async fn main() -> anyhow::Result<()> {
 
     let mut interval = tokio::time::interval(Duration::from_secs(UPDATE_INTERVAL_S));
     let ch_client = common::get_ch_client()?;
-    let http_client = reqwest::Client::new();
+    let http_client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(REQUEST_TIMEOUT_S))
+        .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_S))
+        .build()?;
     loop {
         interval.tick().await;
 
@@ -47,19 +54,54 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+async fn fetch_with_retries<T: serde::de::DeserializeOwned>(
+    http_client: &reqwest::Client,
+    base_url: &str,
+) -> anyhow::Result<T> {
+    let mut last_err: Option<anyhow::Error> = None;
+    for attempt in 1..=MAX_FETCH_ATTEMPTS {
+        let url = if attempt > CACHE_BUST_AFTER_ATTEMPTS {
+            let bust = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |d| d.as_millis());
+            let sep = if base_url.contains('?') { '&' } else { '?' };
+            format!("{base_url}{sep}_cb={bust}")
+        } else {
+            base_url.to_owned()
+        };
+
+        let result: anyhow::Result<T> = async {
+            let resp = http_client.get(&url).send().await?.error_for_status()?;
+            Ok(resp.json::<T>().await?)
+        }
+        .await;
+
+        match result {
+            Ok(v) => return Ok(v),
+            Err(e) => {
+                warn!("Fetch attempt {attempt}/{MAX_FETCH_ATTEMPTS} for {base_url} failed: {e}");
+                last_err = Some(e);
+                if attempt < MAX_FETCH_ATTEMPTS {
+                    let backoff = Duration::from_secs(2u64.pow(attempt - 1));
+                    tokio::time::sleep(backoff).await;
+                }
+            }
+        }
+    }
+    Err(last_err.unwrap_or_else(|| anyhow::anyhow!("fetch failed with no error captured")))
+}
+
 #[instrument(skip_all)]
 async fn update_heroes(
     ch_client: &clickhouse::Client,
     http_client: &reqwest::Client,
 ) -> anyhow::Result<()> {
     info!("Updating heroes");
-    let heroes: Vec<Hero> = http_client
-        .get("https://assets.deadlock-api.com/v2/heroes?only_active=true")
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
+    let heroes: Vec<Hero> = fetch_with_retries(
+        http_client,
+        "https://assets.deadlock-api.com/v2/heroes?only_active=true",
+    )
+    .await?;
 
     // Truncate table
     ch_client
@@ -95,16 +137,12 @@ async fn update_items(
     http_client: &reqwest::Client,
 ) -> anyhow::Result<()> {
     info!("Updating items");
-    let items = http_client
-        .get("https://assets.deadlock-api.com/v2/items")
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Vec<Item>>()
-        .await?
-        .into_iter()
-        .filter(|i| i.shopable.is_none_or(|s| s))
-        .filter(|i| i.r#type != ItemType::Unknown);
+    let items =
+        fetch_with_retries::<Vec<Item>>(http_client, "https://assets.deadlock-api.com/v2/items")
+            .await?
+            .into_iter()
+            .filter(|i| i.shopable.is_none_or(|s| s))
+            .filter(|i| i.r#type != ItemType::Unknown);
 
     // Truncate table
     ch_client
