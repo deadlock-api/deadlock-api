@@ -13,7 +13,7 @@ common = { version = "0.1.0", path = "common" }
 fred = { version = "10.1.0", features = ["i-hexpire"] }
 futures = "0.3.32"
 itertools = "0.14.0"
-metrics = "0.24.5"
+metrics = "0.24.3"
 object_store = { version = "0.13.2", features = ["aws"] }
 prost = "0.14.3"
 rand = "0.10.1"
