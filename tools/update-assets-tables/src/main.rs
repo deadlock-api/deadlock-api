@@ -102,6 +102,8 @@ async fn update_heroes(
         "https://assets.deadlock-api.com/v2/heroes?only_active=true",
     )
     .await?;
+    let fetched = heroes.len();
+    info!("Fetched {fetched} heroes from upstream");
 
     // Truncate table
     ch_client
@@ -112,22 +114,38 @@ async fn update_heroes(
         .await?;
 
     let mut insert = ch_client.insert::<ChHero>("heroes").await?;
+    let mut inserted: u32 = 0;
+    let mut skipped_disabled: u32 = 0;
+    let mut skipped_in_dev: u32 = 0;
     for hero in heroes {
         if hero.disabled.is_some_and(|d| d) {
             debug!("Hero {} is disabled, skipping", hero.name);
+            skipped_disabled += 1;
             continue;
         }
         if hero.in_development.is_some_and(|d| d) {
             debug!("Hero {} is in development, skipping", hero.name);
+            skipped_in_dev += 1;
             continue;
         }
-        debug!("Inserting hero {}", hero.name);
+        debug!("Inserting hero {} (id={})", hero.name, hero.id);
         let ch_hero: ChHero = hero.into();
         insert.write(&ch_hero).await?;
+        inserted += 1;
         counter!("assets_updater.heroes.updated").increment(1);
     }
     insert.end().await?;
-    info!("Updated heroes");
+    if inserted == 0 {
+        warn!(
+            "Heroes table truncated but 0 rows inserted (fetched={fetched}, \
+             skipped_disabled={skipped_disabled}, skipped_in_dev={skipped_in_dev})"
+        );
+    } else {
+        info!(
+            "Updated heroes: inserted={inserted}, skipped_disabled={skipped_disabled}, \
+             skipped_in_dev={skipped_in_dev}, fetched={fetched}"
+        );
+    }
     Ok(())
 }
 
@@ -137,12 +155,32 @@ async fn update_items(
     http_client: &reqwest::Client,
 ) -> anyhow::Result<()> {
     info!("Updating items");
-    let items =
-        fetch_with_retries::<Vec<Item>>(http_client, "https://assets.deadlock-api.com/v2/items")
-            .await?
-            .into_iter()
-            .filter(|i| i.shopable.is_none_or(|s| s))
-            .filter(|i| i.r#type != ItemType::Unknown);
+    let raw_items: Vec<Item> =
+        fetch_with_retries(http_client, "https://assets.deadlock-api.com/v2/items").await?;
+    let fetched = raw_items.len();
+    info!("Fetched {fetched} items from upstream");
+
+    let mut skipped_not_shopable: u32 = 0;
+    let mut skipped_unknown_type: u32 = 0;
+    let items: Vec<Item> = raw_items
+        .into_iter()
+        .filter(|i| {
+            let keep = i.shopable.is_none_or(|s| s);
+            if !keep {
+                skipped_not_shopable += 1;
+                debug!("Item {} skipped: not shopable", i.name);
+            }
+            keep
+        })
+        .filter(|i| {
+            let keep = i.r#type != ItemType::Unknown;
+            if !keep {
+                skipped_unknown_type += 1;
+                debug!("Item {} skipped: unknown type", i.name);
+            }
+            keep
+        })
+        .collect();
 
     // Truncate table
     ch_client
@@ -151,12 +189,25 @@ async fn update_items(
         .await?;
 
     let mut insert = ch_client.insert::<ChItem>("items").await?;
+    let mut inserted: u32 = 0;
     for item in items {
-        debug!("Inserting item {}", item.name);
+        debug!("Inserting item {} (id={})", item.name, item.id);
         insert.write(&item.into()).await?;
+        inserted += 1;
         counter!("assets_updater.items.updated").increment(1);
     }
     insert.end().await?;
-    info!("Updated items");
+    if inserted == 0 {
+        warn!(
+            "Items table truncated but 0 rows inserted (fetched={fetched}, \
+             skipped_not_shopable={skipped_not_shopable}, \
+             skipped_unknown_type={skipped_unknown_type})"
+        );
+    } else {
+        info!(
+            "Updated items: inserted={inserted}, skipped_not_shopable={skipped_not_shopable}, \
+             skipped_unknown_type={skipped_unknown_type}, fetched={fetched}"
+        );
+    }
     Ok(())
 }
