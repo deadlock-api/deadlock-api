@@ -39,7 +39,7 @@ tryhard = "0.5.2"
 async-compression = { version = "0.4.42", features = ["bzip2", "zstd", "tokio"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-extra = { version = "0.12.6", features = ["query"] }
-metrics = "0.24.5"
+metrics = "0.24.3"
 bytes = { version = "1.11.1", features = ["serde"] }
 thiserror = "2.0.18"
 rand = "0.10.1"
