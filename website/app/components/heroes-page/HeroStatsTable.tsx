@@ -29,7 +29,13 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { BANS_PER_MATCH, computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
-import { Z_SCORE_PR_WEIGHT, Z_SCORE_WR_WEIGHT, computeResiduals, computeZScores } from "~/lib/hero-scoring";
+import {
+  Z_SCORE_BR_WEIGHT,
+  Z_SCORE_PR_WEIGHT,
+  Z_SCORE_WR_WEIGHT,
+  computeResiduals,
+  computeZScores,
+} from "~/lib/hero-scoring";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
@@ -78,6 +84,7 @@ export function HeroStatsTable({
 }) {
   const [activeSortKey, setActiveSortKey] = useState<SortKey>("winrate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [pickRateMode, setPickRateMode] = useState<"pickRate" | "presence">("pickRate");
 
   const handleSort = (key: SortKey) => {
     if (key === activeSortKey) {
@@ -190,43 +197,6 @@ export function HeroStatsTable({
     return map;
   }, [heroes]);
 
-  const prevStatsMap = useMemo(() => {
-    if (!prevHeroData) return undefined;
-    let prevSumMatches = 0;
-    let prevMaxMatches = 0;
-    for (const row of prevHeroData) {
-      prevSumMatches += row.matches;
-      if (row.matches > prevMaxMatches) prevMaxMatches = row.matches;
-    }
-    const heroInputs = prevHeroData.map((row) => ({
-      winrate: row.wins / row.matches,
-      pickrate: pickrateMultiplier * (row.matches / prevSumMatches),
-      matches: row.matches,
-    }));
-    const prevZScores = computeZScores(heroInputs);
-    const { residuals: prevResiduals } = computeResiduals(heroInputs);
-    const map = new Map<
-      number,
-      {
-        winrate: number;
-        pickrate: number;
-        normalizedPickrate: number;
-        zScore: number;
-        residual: number;
-      }
-    >();
-    for (let i = 0; i < prevHeroData.length; i++) {
-      map.set(prevHeroData[i].hero_id, {
-        winrate: heroInputs[i].winrate,
-        pickrate: heroInputs[i].pickrate,
-        normalizedPickrate: prevHeroData[i].matches / prevMaxMatches,
-        zScore: prevZScores[i],
-        residual: prevResiduals[i],
-      });
-    }
-    return map;
-  }, [prevHeroData, pickrateMultiplier]);
-
   const { banStatsMap, banCountMap, sumBans, minBanRate, maxBanRate } = useMemo(() => {
     if (!banData || banData.length === 0)
       return {
@@ -256,6 +226,49 @@ export function HeroStatsTable({
     if (!prevBanData) return undefined;
     return computeBanRates(prevBanData);
   }, [prevBanData]);
+
+  const prevStatsMap = useMemo(() => {
+    if (!prevHeroData) return undefined;
+    let prevSumMatches = 0;
+    let prevMaxMatches = 0;
+    for (const row of prevHeroData) {
+      prevSumMatches += row.matches;
+      if (row.matches > prevMaxMatches) prevMaxMatches = row.matches;
+    }
+    const heroInputs = prevHeroData.map((row) => ({
+      winrate: row.wins / row.matches,
+      pickrate: pickrateMultiplier * (row.matches / prevSumMatches),
+      banrate: prevBanStatsMap?.get(row.hero_id),
+      matches: row.matches,
+    }));
+    const prevZScores = computeZScores(heroInputs);
+    const { residuals: prevResiduals } = computeResiduals(heroInputs);
+    const map = new Map<
+      number,
+      {
+        winrate: number;
+        pickrate: number;
+        banrate: number;
+        presence: number;
+        normalizedPickrate: number;
+        zScore: number;
+        residual: number;
+      }
+    >();
+    for (let i = 0; i < prevHeroData.length; i++) {
+      const banrate = prevBanStatsMap?.get(prevHeroData[i].hero_id) ?? 0;
+      map.set(prevHeroData[i].hero_id, {
+        winrate: heroInputs[i].winrate,
+        pickrate: heroInputs[i].pickrate,
+        banrate,
+        presence: heroInputs[i].pickrate + banrate,
+        normalizedPickrate: prevHeroData[i].matches / prevMaxMatches,
+        zScore: prevZScores[i],
+        residual: prevResiduals[i],
+      });
+    }
+    return map;
+  }, [prevHeroData, pickrateMultiplier, prevBanStatsMap]);
 
   const { minWinrate, maxWinrate, minMatches, maxMatches, sumMatches } = useMemo(() => {
     if (!heroData || heroData.length === 0)
@@ -288,6 +301,7 @@ export function HeroStatsTable({
     const inputs = heroData.map((row) => ({
       winrate: row.wins / row.matches,
       pickrate: pickrateMultiplier * (row.matches / sumMatches),
+      banrate: banStatsMap.size > 0 ? (banStatsMap.get(row.hero_id) ?? 0) : undefined,
       matches: row.matches,
     }));
     const scores = computeZScores(inputs);
@@ -309,7 +323,30 @@ export function HeroStatsTable({
       minResidual: Math.min(...residuals),
       maxResidual: Math.max(...residuals),
     };
-  }, [heroData, sumMatches, pickrateMultiplier]);
+  }, [heroData, sumMatches, pickrateMultiplier, banStatsMap]);
+
+  const { presenceMap, minPresence, maxPresence } = useMemo(() => {
+    if (!heroData || !sumMatches || banStatsMap.size === 0)
+      return {
+        presenceMap: new Map<number, number>(),
+        minPresence: 0,
+        maxPresence: 0,
+      };
+    const map = new Map<number, number>();
+    let minP = Infinity;
+    let maxP = -Infinity;
+    for (const row of heroData) {
+      const pickRate = pickrateMultiplier * (row.matches / sumMatches);
+      const banRate = banStatsMap.get(row.hero_id) ?? 0;
+      const presence = pickRate + banRate;
+      map.set(row.hero_id, presence);
+      if (presence < minP) minP = presence;
+      if (presence > maxP) maxP = presence;
+    }
+    return { presenceMap: map, minPresence: minP, maxPresence: maxP };
+  }, [heroData, sumMatches, pickrateMultiplier, banStatsMap]);
+
+  const showPresence = pickRateMode === "presence" && showBanRate && banStatsMap.size > 0;
   const sortedData = useMemo(() => {
     if (!heroData) return heroData;
     const dir = sortDir === "desc" ? 1 : -1;
@@ -332,7 +369,11 @@ export function HeroStatsTable({
           diff = (residualMap.get(b.hero_id)?.residual ?? 0) - (residualMap.get(a.hero_id)?.residual ?? 0);
           break;
         case "pickRate":
-          diff = b.matches - a.matches;
+          if (showPresence) {
+            diff = (presenceMap.get(b.hero_id) ?? 0) - (presenceMap.get(a.hero_id) ?? 0);
+          } else {
+            diff = b.matches - a.matches;
+          }
           break;
         case "banRate":
           diff = (banStatsMap.get(b.hero_id) ?? 0) - (banStatsMap.get(a.hero_id) ?? 0);
@@ -340,7 +381,7 @@ export function HeroStatsTable({
       }
       return diff * dir;
     });
-  }, [heroData, activeSortKey, sortDir, heroNameMap, zScoreMap, residualMap, banStatsMap]);
+  }, [heroData, activeSortKey, sortDir, heroNameMap, zScoreMap, residualMap, banStatsMap, presenceMap, showPresence]);
   const limitedData = useMemo(() => (limit ? sortedData?.slice(0, limit) : sortedData), [sortedData, limit]);
 
   const groupedData = useMemo(() => {
@@ -480,16 +521,6 @@ export function HeroStatsTable({
             className="w-[17%] text-center"
           />
         )}
-        {columns.includes("pickRate") && (
-          <SortableHeader
-            label={minHeroMatchesTotal || minHeroMatches ? "Pick Rate (Normalized)" : "Pick Rate"}
-            sortKey="pickRate"
-            activeSortKey={activeSortKey}
-            sortDir={sortDir}
-            onSort={handleSort}
-            className="w-[17%] text-center"
-          />
-        )}
         {columns.includes("banRate") && (
           <SortableHeader
             label="Ban Rate"
@@ -499,6 +530,58 @@ export function HeroStatsTable({
             onSort={handleSort}
             className="w-[17%] text-center"
           />
+        )}
+        {columns.includes("pickRate") && (
+          <TableHead className="w-[17%] text-center">
+            <div className="inline-flex items-center justify-center gap-2">
+              {showBanRate ? (
+                <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 text-xs">
+                  <button
+                    type="button"
+                    className={cn(
+                      "cursor-pointer rounded-sm px-2 py-0.5 transition-colors",
+                      !showPresence
+                        ? "bg-muted font-semibold text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => setPickRateMode("pickRate")}
+                  >
+                    {minHeroMatchesTotal || minHeroMatches ? "Pick Rate (Norm.)" : "Pick Rate"}
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "cursor-pointer rounded-sm px-2 py-0.5 transition-colors",
+                      showPresence
+                        ? "bg-muted font-semibold text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => setPickRateMode("presence")}
+                  >
+                    Presence
+                  </button>
+                </div>
+              ) : (
+                <span>{minHeroMatchesTotal || minHeroMatches ? "Pick Rate (Normalized)" : "Pick Rate"}</span>
+              )}
+              <button
+                type="button"
+                className="inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground"
+                onClick={() => handleSort("pickRate")}
+                aria-label={`Sort by ${showPresence ? "presence" : "pick rate"}`}
+              >
+                {activeSortKey === "pickRate" ? (
+                  sortDir === "desc" ? (
+                    <ArrowDown className="size-3.5" />
+                  ) : (
+                    <ArrowUp className="size-3.5" />
+                  )
+                ) : (
+                  <ArrowUpDown className="size-3.5 text-muted-foreground/50" />
+                )}
+              </button>
+            </div>
+          </TableHead>
         )}
         {columns.includes("zScore") && (
           <SortableHeader
@@ -514,9 +597,9 @@ export function HeroStatsTable({
                 <Info className="size-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-64 border border-border bg-popover p-3 text-popover-foreground shadow-md [&>svg]:bg-popover [&>svg]:fill-popover">
-                Combines win rate and pick rate using z-scores (standard deviations from the mean). Weights:{" "}
-                {Z_SCORE_WR_WEIGHT * 100}% win rate, {Z_SCORE_PR_WEIGHT * 100}% pick rate. Positive = above average,
-                negative = below average.
+                Combines win rate, pick rate, and ban rate using z-scores (standard deviations from the mean). Weights:{" "}
+                {Z_SCORE_WR_WEIGHT * 100}% win rate, {Z_SCORE_PR_WEIGHT * 100}% pick rate, {Z_SCORE_BR_WEIGHT * 100}%
+                ban rate. Positive = above average, negative = below average.
               </TooltipContent>
             </Tooltip>
           </SortableHeader>
@@ -535,9 +618,10 @@ export function HeroStatsTable({
                 <Info className="size-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-64 border border-border bg-popover p-3 text-popover-foreground shadow-md [&>svg]:bg-popover [&>svg]:fill-popover">
-                How much a hero over- or underperforms relative to their popularity. Uses LOESS smoothing (locally
-                weighted regression) on log(pick rate) vs win rate, weighted by sample size. Positive = overperforming,
-                negative = underperforming for their pick rate.
+                How much a hero over- or underperforms relative to their draft prevalence. Uses LOESS smoothing (locally
+                weighted regression) on log(presence) vs win rate, where presence = pick rate + ban rate. Weighted by
+                sample size. Positive = overperforming, negative = underperforming for how often they appear in the
+                draft.
               </TooltipContent>
             </Tooltip>
           </SortableHeader>
@@ -594,59 +678,6 @@ export function HeroStatsTable({
           />
         </TableCell>
       )}
-      {columns.includes("pickRate") && (
-        <TableCell>
-          <ProgressBarWithLabel
-            min={minMatches}
-            max={maxMatches}
-            value={row.matches}
-            color={"#22d3ee"}
-            label={
-              minHeroMatchesTotal || minHeroMatches
-                ? `${Math.round((row.matches / maxMatches) * 100).toFixed(0)}% `
-                : `${Math.round(pickrateMultiplier * (row.matches / sumMatches) * 100).toFixed(0)}% `
-            }
-            delta={
-              prevStatsMap?.get(row.hero_id) !== undefined
-                ? minHeroMatchesTotal || minHeroMatches
-                  ? row.matches / maxMatches - prevStatsMap.get(row.hero_id)!.normalizedPickrate
-                  : pickrateMultiplier * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
-                : undefined
-            }
-            tooltip={
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Matches</span>
-                  <span className="font-medium">{row.matches.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Pick rate</span>
-                  <span className="font-medium">
-                    {(minHeroMatchesTotal || minHeroMatches
-                      ? (row.matches / maxMatches) * 100
-                      : pickrateMultiplier * (row.matches / sumMatches) * 100
-                    ).toFixed(2)}
-                    %
-                  </span>
-                </div>
-                {prevStatsMap?.get(row.hero_id) !== undefined && (
-                  <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                    <span className="text-muted-foreground">Previous</span>
-                    <span className="font-medium">
-                      {(
-                        (minHeroMatchesTotal || minHeroMatches
-                          ? prevStatsMap.get(row.hero_id)!.normalizedPickrate
-                          : prevStatsMap.get(row.hero_id)!.pickrate) * 100
-                      ).toFixed(2)}
-                      %
-                    </span>
-                  </div>
-                )}
-              </div>
-            }
-          />
-        </TableCell>
-      )}
       {columns.includes("banRate") && (
         <TableCell>
           <ProgressBarWithLabel
@@ -679,6 +710,100 @@ export function HeroStatsTable({
               </div>
             }
           />
+        </TableCell>
+      )}
+      {columns.includes("pickRate") && (
+        <TableCell>
+          {showPresence ? (
+            (() => {
+              const pickRate = pickrateMultiplier * (row.matches / sumMatches);
+              const banRate = banStatsMap.get(row.hero_id) ?? 0;
+              const presence = presenceMap.get(row.hero_id) ?? pickRate + banRate;
+              const prev = prevStatsMap?.get(row.hero_id);
+              return (
+                <ProgressBarWithLabel
+                  min={minPresence}
+                  max={maxPresence}
+                  value={presence}
+                  color={"#a78bfa"}
+                  label={`${(presence * 100).toFixed(1)}%`}
+                  delta={prev !== undefined ? presence - prev.presence : undefined}
+                  tooltip={
+                    <div className="flex flex-col gap-1 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Pick rate</span>
+                        <span className="font-medium">{(pickRate * 100).toFixed(2)}%</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Ban rate</span>
+                        <span className="font-medium">{(banRate * 100).toFixed(2)}%</span>
+                      </div>
+                      <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                        <span className="text-muted-foreground">Presence</span>
+                        <span className="font-medium">{(presence * 100).toFixed(2)}%</span>
+                      </div>
+                      {prev !== undefined && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Previous</span>
+                          <span className="font-medium">{(prev.presence * 100).toFixed(2)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })()
+          ) : (
+            <ProgressBarWithLabel
+              min={minMatches}
+              max={maxMatches}
+              value={row.matches}
+              color={"#22d3ee"}
+              label={
+                minHeroMatchesTotal || minHeroMatches
+                  ? `${Math.round((row.matches / maxMatches) * 100).toFixed(0)}% `
+                  : `${Math.round(pickrateMultiplier * (row.matches / sumMatches) * 100).toFixed(0)}% `
+              }
+              delta={
+                prevStatsMap?.get(row.hero_id) !== undefined
+                  ? minHeroMatchesTotal || minHeroMatches
+                    ? row.matches / maxMatches - prevStatsMap.get(row.hero_id)!.normalizedPickrate
+                    : pickrateMultiplier * (row.matches / sumMatches) - prevStatsMap.get(row.hero_id)!.pickrate
+                  : undefined
+              }
+              tooltip={
+                <div className="flex flex-col gap-1 text-xs">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Matches</span>
+                    <span className="font-medium">{row.matches.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Pick rate</span>
+                    <span className="font-medium">
+                      {(minHeroMatchesTotal || minHeroMatches
+                        ? (row.matches / maxMatches) * 100
+                        : pickrateMultiplier * (row.matches / sumMatches) * 100
+                      ).toFixed(2)}
+                      %
+                    </span>
+                  </div>
+                  {prevStatsMap?.get(row.hero_id) !== undefined && (
+                    <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                      <span className="text-muted-foreground">Previous</span>
+                      <span className="font-medium">
+                        {(
+                          (minHeroMatchesTotal || minHeroMatches
+                            ? prevStatsMap.get(row.hero_id)!.normalizedPickrate
+                            : prevStatsMap.get(row.hero_id)!.pickrate) * 100
+                        ).toFixed(2)}
+                        %
+                      </span>
+                    </div>
+                  )}
+                </div>
+              }
+            />
+          )}
         </TableCell>
       )}
       {columns.includes("zScore") && (
@@ -821,20 +946,6 @@ export function HeroStatsTable({
                       )}
                     </div>
                   )}
-                  {columns.includes("pickRate") && (
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-muted-foreground">Pick Share:</span>
-                      <span className="font-semibold">{(group.pickrate * 100).toFixed(1)}%</span>
-                      {pickrateDelta !== undefined && pickrateDelta !== 0 && (
-                        <span
-                          className={cn("text-xs font-medium", pickrateDelta > 0 ? "text-green-500" : "text-red-500")}
-                        >
-                          {pickrateDelta > 0 ? "+" : ""}
-                          {(pickrateDelta * 100).toFixed(1)}%
-                        </span>
-                      )}
-                    </div>
-                  )}
                   {columns.includes("banRate") && (
                     <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground">Ban Rate:</span>
@@ -849,6 +960,47 @@ export function HeroStatsTable({
                       )}
                     </div>
                   )}
+                  {columns.includes("pickRate") &&
+                    (showPresence ? (
+                      (() => {
+                        const presence = group.pickrate + group.banRate;
+                        const prevPresence =
+                          group.prevPickrate !== undefined && group.prevBanRate !== undefined
+                            ? group.prevPickrate + group.prevBanRate
+                            : undefined;
+                        const presenceDelta = prevPresence !== undefined ? presence - prevPresence : undefined;
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Presence:</span>
+                            <span className="font-semibold">{(presence * 100).toFixed(1)}%</span>
+                            {presenceDelta !== undefined && presenceDelta !== 0 && (
+                              <span
+                                className={cn(
+                                  "text-xs font-medium",
+                                  presenceDelta > 0 ? "text-green-500" : "text-red-500",
+                                )}
+                              >
+                                {presenceDelta > 0 ? "+" : ""}
+                                {(presenceDelta * 100).toFixed(1)}%
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Pick Share:</span>
+                        <span className="font-semibold">{(group.pickrate * 100).toFixed(1)}%</span>
+                        {pickrateDelta !== undefined && pickrateDelta !== 0 && (
+                          <span
+                            className={cn("text-xs font-medium", pickrateDelta > 0 ? "text-green-500" : "text-red-500")}
+                          >
+                            {pickrateDelta > 0 ? "+" : ""}
+                            {(pickrateDelta * 100).toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    ))}
                 </div>
               </div>
               <Table>
