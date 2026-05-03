@@ -235,7 +235,7 @@ export default function Index() {
       </section>
 
       {/* Patron CTA */}
-      <section>
+      <section className="mx-1 sm:mx-2">
         <ElectricBorder color="#fa4454" speed={0.5} chaos={0.1} borderRadius={12}>
           <div className="rounded-xl bg-card/80 px-6 py-7 backdrop-blur-sm sm:px-8">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
