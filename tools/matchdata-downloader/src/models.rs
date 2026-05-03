@@ -3,11 +3,26 @@ use core::fmt::Debug;
 use clickhouse::Row;
 use serde::Deserialize;
 
-#[derive(Row, Deserialize, PartialEq, Eq, Hash, Clone)]
+#[derive(Row, Deserialize, Clone)]
 pub(crate) struct MatchSalts {
     pub match_id: u64,
     pub cluster_id: Option<u32>,
     pub metadata_salt: Option<u32>,
+    pub force_retry_at: Option<String>,
+}
+
+impl PartialEq for MatchSalts {
+    fn eq(&self, other: &Self) -> bool {
+        self.match_id == other.match_id
+    }
+}
+
+impl Eq for MatchSalts {}
+
+impl core::hash::Hash for MatchSalts {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        self.match_id.hash(state);
+    }
 }
 
 #[allow(clippy::missing_fields_in_debug)]

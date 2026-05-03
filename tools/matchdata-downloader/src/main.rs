@@ -39,7 +39,8 @@ const PENDING_SALTS_QUERY: &str = "
 SELECT
     match_id,
     argMax(cluster_id,    created_at) AS cluster_id,
-    argMax(metadata_salt, created_at) AS metadata_salt
+    argMax(metadata_salt, created_at) AS metadata_salt,
+    argMax(force_retry_at, created_at) AS force_retry_at
 FROM match_salts
 WHERE created_at > now() - INTERVAL 2 DAY
   AND match_id NOT IN (
@@ -193,7 +194,10 @@ impl State {
         pending
             .into_iter()
             .filter(|s| {
-                !f.contains(&s.match_id) && !u.contains(&s.match_id) && !r.contains(&s.match_id)
+                let is_force_retry = s.force_retry_at.is_some();
+                !u.contains(&s.match_id)
+                    && !r.contains(&s.match_id)
+                    && (!f.contains(&s.match_id) || is_force_retry)
             })
             .collect()
     }

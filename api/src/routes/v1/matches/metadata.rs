@@ -189,10 +189,25 @@ async fn fetch_match_metadata_raw(
 
     // If not in S3, fetch from Steam
     let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom).await?;
-    Ok(state
+    let metadata = state
         .steam_client
         .fetch_metadata_file(match_id, salts)
-        .await?)
+        .await?;
+
+    // Signal the downloader to retry this match since we know it's fetchable now
+    set_force_retry(state, match_id).await;
+
+    Ok(metadata)
+}
+
+async fn set_force_retry(state: &AppState, match_id: u64) {
+    if let Err(e) = state.ch_client
+        .query(&format!("ALTER TABLE match_salts UPDATE force_retry_at = now() WHERE match_id = {match_id} SETTINGS log_comment = 'metadata_endpoint_force_retry'"))
+        .execute()
+        .await
+    {
+        error!(match_id, "Failed to set force_retry_at: {e}");
+    }
 }
 
 async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDataContents> {
