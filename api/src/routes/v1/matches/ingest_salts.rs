@@ -113,12 +113,15 @@ pub(super) async fn ingest_salts(
 
     if new_salts.is_empty() {
         debug!("No new salts to ingest");
-        return Ok(Json(json!({ "status": "success" })));
+        return Ok(Json(json!({ "status": "success", "salts_ingested": 0 })));
     }
 
-    if new_salts.len() > 1 {
-        debug!("Inserting salts: {}", new_salts.len());
+    let count = new_salts.len();
+    if count > 1 {
+        debug!("Inserting salts: {}", count);
     }
     state.batchers.match_salts_insert.insert(new_salts).await;
-    Ok(Json(json!({ "status": "success" })))
+    Ok(Json(
+        json!({ "status": "success", "salts_ingested": count }),
+    ))
 }
