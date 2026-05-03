@@ -202,36 +202,70 @@ export default function Index() {
   return (
     <div className="space-y-16">
       {/* Hero */}
-      <section className="relative pt-4 pb-2 text-center">
+      <section className="relative pt-4 pb-2">
         <div className="pointer-events-none absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/8 blur-[100px]" />
 
-        <div className="relative">
-          <h1 className="mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent lg:text-6xl">
-            Deadlock API
-          </h1>
-        </div>
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <h1 className="mb-5 bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-5xl font-bold tracking-tight text-transparent lg:text-6xl">
+              Deadlock API
+            </h1>
 
-        <div className="mb-6 flex flex-wrap justify-center gap-3">
-          {valueProps.map((prop) => (
+            <div className="mb-6 flex flex-wrap gap-3">
+              {valueProps.map((prop) => (
+                <a
+                  key={prop.label}
+                  href={prop.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={prop.title}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
+                >
+                  <prop.icon className="size-3.5" />
+                  {prop.label}
+                </a>
+              ))}
+            </div>
+
+            <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
+              A comprehensive set of endpoints to access Deadlock game data, match history, player statistics, hero
+              analytics, and more. Whether you're a developer integrating game data or a player analyzing performance,
+              the Deadlock API has you covered.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-start gap-3 lg:shrink-0 lg:items-end">
+            <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Our Sponsors</span>
+            <div className="flex flex-wrap items-center gap-6 lg:justify-end">
+              {sponsors.map((sponsor) => (
+                <a
+                  key={sponsor.href}
+                  href={sponsor.href}
+                  title={sponsor.title}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="opacity-70 transition-opacity hover:opacity-100"
+                >
+                  <img
+                    src={sponsor.logo}
+                    alt={`${sponsor.title} Logo`}
+                    loading="lazy"
+                    className="max-h-10 max-w-[120px]"
+                  />
+                </a>
+              ))}
+            </div>
             <a
-              key={prop.label}
-              href={prop.href}
+              href="https://www.patreon.com/c/manuelhexe"
               target="_blank"
               rel="noopener noreferrer"
-              title={prop.title}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
+              className="text-xs font-medium text-primary underline underline-offset-4"
+              title="Support on Patreon"
             >
-              <prop.icon className="size-3.5" />
-              {prop.label}
+              Become a sponsor
             </a>
-          ))}
+          </div>
         </div>
-
-        <p className="mx-auto max-w-2xl text-base leading-relaxed text-muted-foreground">
-          A comprehensive set of endpoints to access Deadlock game data, match history, player statistics, hero
-          analytics, and more. Whether you're a developer integrating game data or a player analyzing performance, the
-          Deadlock API has you covered.
-        </p>
       </section>
 
       {/* Patron CTA */}
@@ -396,37 +430,6 @@ export default function Index() {
               </Link>
             );
           })}
-        </div>
-      </section>
-
-      {/* Sponsors */}
-      <section className="text-center">
-        <h2 className="mb-1 text-lg font-semibold tracking-tight">Our Sponsors</h2>
-        <p className="mb-6 text-sm text-muted-foreground">
-          Grateful to our sponsors for their support.{" "}
-          <a
-            href="https://www.patreon.com/c/manuelhexe"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary underline underline-offset-4"
-            title="Support on Patreon"
-          >
-            Become a sponsor
-          </a>
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-10">
-          {sponsors.map((sponsor) => (
-            <a
-              key={sponsor.href}
-              href={sponsor.href}
-              title={sponsor.title}
-              target="_blank"
-              rel="noreferrer"
-              className="opacity-60 transition-opacity hover:opacity-100"
-            >
-              <img src={sponsor.logo} alt={`${sponsor.title} Logo`} loading="lazy" className="max-h-14 max-w-[160px]" />
-            </a>
-          ))}
         </div>
       </section>
 
