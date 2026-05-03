@@ -32,7 +32,7 @@ mod models;
 const CONCURRENCY: usize = 10;
 const POLL_INTERVAL: Duration = Duration::from_secs(10);
 const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
-const RETRY_INTERVAL: Duration = Duration::from_mins(1);
+const RETRY_INTERVAL: Duration = Duration::from_mins(3);
 const MAX_RETRIES: u8 = 30;
 
 const PENDING_SALTS_QUERY: &str = "
