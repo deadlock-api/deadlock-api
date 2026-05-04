@@ -2,13 +2,15 @@ use core::fmt::Debug;
 
 use clickhouse::Row;
 use serde::Deserialize;
+use time::OffsetDateTime;
 
 #[derive(Row, Deserialize, Clone)]
 pub(crate) struct MatchSalts {
     pub match_id: u64,
     pub cluster_id: Option<u32>,
     pub metadata_salt: Option<u32>,
-    pub force_retry_at: Option<String>,
+    #[serde(with = "clickhouse::serde::time::datetime::option")]
+    pub force_retry_at: Option<OffsetDateTime>,
 }
 
 impl PartialEq for MatchSalts {
