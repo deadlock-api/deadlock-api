@@ -11,6 +11,7 @@ pub(crate) enum MatchMode {
     ServerTest = 5,
     Tutorial = 6,
     HeroLabs = 7,
+    Calibration = 8,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
@@ -46,6 +47,7 @@ impl From<u8> for MatchMode {
             5 => MatchMode::ServerTest,
             6 => MatchMode::Tutorial,
             7 => MatchMode::HeroLabs,
+            8 => MatchMode::Calibration,
             _ => MatchMode::Invalid,
         }
     }

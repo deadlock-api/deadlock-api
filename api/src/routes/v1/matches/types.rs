@@ -33,6 +33,7 @@ enum ActiveMatchMode {
     ServerTest = 5,
     Tutorial = 6,
     HeroLabs = 7,
+    Calibration = 8,
 }
 impl From<i32> for ActiveMatchMode {
     fn from(value: i32) -> Self {
@@ -245,6 +246,8 @@ pub(crate) enum MatchMode {
     Tutorial = 6,
     #[strum(serialize = "hero_labs", to_string = "HeroLabs")]
     HeroLabs = 7,
+    #[strum(serialize = "calibration", to_string = "Calibration")]
+    Calibration = 8,
 }
 
 impl MatchMode {
