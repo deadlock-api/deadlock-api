@@ -5,6 +5,12 @@ const utcEndOfToday = () => day.utc().endOf("day");
 
 export const PATCHES = [
   {
+    id: "2026-04-30",
+    name: "Gameplay Update (2026-04-30)",
+    startDate: day.utc("2026-05-01T23:49:47Z").local(),
+    endDate: utcEndOfToday(),
+  },
+  {
     id: "2026-04-10",
     name: "Update (2026-04-10)",
     startDate: day.utc("2026-04-11T04:03:00Z").local(),
