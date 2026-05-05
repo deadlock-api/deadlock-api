@@ -205,7 +205,7 @@ export function parseSteamIdInput(input: string): { steamId3: number; format: "i
 export async function getPlayerCard(steamId3: number): Promise<PlayerCard> {
   try {
     const response = await api.players_api.card({ accountId: steamId3 });
-    const card = response.data[0];
+    const card = response.data;
     if (!card) throw new ApiError(404, "Player card not found");
     return card;
   } catch (error: unknown) {
