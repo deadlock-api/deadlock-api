@@ -25,6 +25,10 @@ pub(crate) struct SteamPlayerSummary {
     pub realname: Option<String>,
     #[serde(alias = "loccountrycode")]
     pub countrycode: Option<String>,
+    #[serde(default, rename = "friends.account_id")]
+    pub friends_account_id: Vec<u32>,
+    #[serde(default, rename = "friends.friend_since")]
+    pub friends_friend_since: Vec<u32>,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
@@ -37,6 +41,24 @@ pub(crate) enum PersonaState {
     Snooze = 4,
     LookingToTrade = 5,
     LookingToPlay = 6,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SteamFriendListResponse {
+    pub friendslist: SteamFriendList,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SteamFriendList {
+    #[serde(default)]
+    pub friends: Vec<SteamFriend>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SteamFriend {
+    #[serde(deserialize_with = "parse_steam_id")]
+    pub steamid: u32,
+    pub friend_since: u32,
 }
 
 pub(crate) fn parse_steam_id<'de, D>(deserializer: D) -> Result<u32, D::Error>

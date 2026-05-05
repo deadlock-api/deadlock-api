@@ -13,15 +13,18 @@
 #![allow(clippy::cast_possible_truncation)]
 
 use core::time::Duration;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
 use cached::proc_macro::cached;
 use cached::TimedCache;
+use futures::stream::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
-use models::SteamPlayerSummary;
-use tracing::{error, info, instrument};
+use models::{SteamFriend, SteamPlayerSummary};
+use tracing::{error, info, instrument, warn};
+
+const FRIENDS_FETCH_CONCURRENCY: usize = 10;
 
 mod models;
 mod steam_api;
@@ -72,7 +75,14 @@ async fn fetch_and_update_profiles(
     info!("Found {} account IDs to update", account_ids.len());
 
     let batch = account_ids.iter().take(100).collect_vec();
-    let profiles = match steam_api::fetch_steam_profiles(http_client, &batch).await {
+    let batch_ids: Vec<u32> = batch.iter().map(|&&id| id).collect();
+
+    let (profiles_result, mut friends_by_account) = tokio::join!(
+        steam_api::fetch_steam_profiles(http_client, &batch),
+        fetch_friends_for_accounts(http_client, &batch_ids),
+    );
+
+    let mut profiles = match profiles_result {
         Ok(profiles) => {
             info!("Fetched {} Steam profiles", profiles.len());
             counter!("steam_profile_fetcher.fetched_profiles.success")
@@ -86,6 +96,8 @@ async fn fetch_and_update_profiles(
             return Err(e);
         }
     };
+
+    attach_friends(&mut profiles, &mut friends_by_account);
 
     let fetched_ids: HashSet<u32> = profiles.iter().map(|p| p.account_id).collect();
     let unavailable_profiles = batch
@@ -131,6 +143,56 @@ async fn fetch_and_update_profiles(
     }
 
     Ok(())
+}
+
+#[instrument(skip_all, fields(accounts = account_ids.len()))]
+async fn fetch_friends_for_accounts(
+    http_client: &reqwest::Client,
+    account_ids: &[u32],
+) -> HashMap<u32, Vec<SteamFriend>> {
+    let results: Vec<_> = futures::stream::iter(account_ids.iter().copied())
+        .map(|account_id| async move {
+            (
+                account_id,
+                steam_api::fetch_steam_friends(http_client, account_id).await,
+            )
+        })
+        .buffer_unordered(FRIENDS_FETCH_CONCURRENCY)
+        .collect()
+        .await;
+
+    let success = results.iter().filter(|(_, r)| r.is_ok()).count() as u64;
+    let failure = results.len() as u64 - success;
+    counter!("steam_profile_fetcher.fetched_friends.success").increment(success);
+    counter!("steam_profile_fetcher.fetched_friends.failure").increment(failure);
+
+    results
+        .into_iter()
+        .filter_map(|(account_id, result)| match result {
+            Ok(friends) => Some((account_id, friends)),
+            Err(e) => {
+                warn!("Failed to fetch friends for {account_id}: {e}");
+                None
+            }
+        })
+        .collect()
+}
+
+fn attach_friends(
+    profiles: &mut [SteamPlayerSummary],
+    friends_by_account: &mut HashMap<u32, Vec<SteamFriend>>,
+) {
+    for profile in profiles.iter_mut() {
+        let Some(friends) = friends_by_account.remove(&profile.account_id) else {
+            continue;
+        };
+        let (ids, since): (Vec<_>, Vec<_>) = friends
+            .into_iter()
+            .map(|f| (f.steamid, f.friend_since))
+            .unzip();
+        profile.friends_account_id = ids;
+        profile.friends_friend_since = since;
+    }
 }
 
 async fn get_account_ids_to_update(

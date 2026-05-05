@@ -6,7 +6,9 @@ use rand::rng;
 use rand::seq::IndexedRandom;
 use tracing::instrument;
 
-use crate::models::{SteamPlayerSummary, SteamPlayerSummaryResponse};
+use crate::models::{
+    SteamFriend, SteamFriendListResponse, SteamPlayerSummary, SteamPlayerSummaryResponse,
+};
 
 static STEAM_API_KEYS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
     env::var("STEAM_API_KEYS")
@@ -16,6 +18,12 @@ static STEAM_API_KEYS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::n
         .map(std::string::ToString::to_string)
         .collect()
 });
+
+fn pick_api_key() -> Result<&'static String> {
+    STEAM_API_KEYS
+        .choose(&mut rng())
+        .ok_or_else(|| anyhow::anyhow!("no Steam API keys configured (set STEAM_API_KEYS)"))
+}
 
 #[instrument(skip(http_client), fields(account_ids = account_ids.len()))]
 pub(crate) async fn fetch_steam_profiles(
@@ -34,9 +42,7 @@ pub(crate) async fn fetch_steam_profiles(
         .collect();
 
     // Build the API URL
-    let api_key = STEAM_API_KEYS
-        .choose(&mut rng())
-        .ok_or_else(|| anyhow::anyhow!("no Steam API keys configured (set STEAM_API_KEYS)"))?;
+    let api_key = pick_api_key()?;
     let steam_ids = steam_id64s.join(",");
     let url = format!(
         "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={api_key}&steamids={steam_ids}"
@@ -52,4 +58,27 @@ pub(crate) async fn fetch_steam_profiles(
         .await?;
     let player_summaries = player_summaries.response.players;
     Ok(player_summaries.into_iter().map_into().collect_vec())
+}
+
+/// Returns an empty list for private profiles (Steam responds 401/403).
+#[instrument(skip(http_client))]
+pub(crate) async fn fetch_steam_friends(
+    http_client: &reqwest::Client,
+    account_id: u32,
+) -> Result<Vec<SteamFriend>> {
+    let api_key = pick_api_key()?;
+    let steam_id64 = common::account_id_to_steam_id64(account_id);
+    let url = format!(
+        "https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={api_key}&steamid={steam_id64}&relationship=friend"
+    );
+
+    let response = http_client.get(&url).send().await?;
+    if matches!(
+        response.status(),
+        reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN
+    ) {
+        return Ok(Vec::new());
+    }
+    let friends: SteamFriendListResponse = response.error_for_status()?.json().await?;
+    Ok(friends.friendslist.friends)
 }

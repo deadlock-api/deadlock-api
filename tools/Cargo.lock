@@ -3542,6 +3542,7 @@ dependencies = [
  "cached",
  "clickhouse",
  "common",
+ "futures",
  "itertools",
  "metrics",
  "rand 0.10.1",

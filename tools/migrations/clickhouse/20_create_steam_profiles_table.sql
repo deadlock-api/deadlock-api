@@ -9,7 +9,8 @@ create table steam_profiles
     countrycode  Nullable(String),
     last_updated DateTime default now() CODEC(Delta, ZSTD),
     avatarmedium String CODEC(ZSTD(1)),
-    avatarfull   String CODEC(ZSTD(1))
+    avatarfull   String CODEC(ZSTD(1)),
+    friends Nested(account_id UInt32, friend_since DateTime) DEFAULT []
 )
     engine = ReplacingMergeTree
         ORDER BY account_id
