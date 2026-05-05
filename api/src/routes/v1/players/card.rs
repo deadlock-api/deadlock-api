@@ -211,7 +211,7 @@ pub(crate) async fn get_player_card(
     path = "/{account_id}/card",
     params(AccountIdQuery),
     responses(
-        (status = OK, body = [PlayerCard]),
+        (status = OK, body = PlayerCard),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = FORBIDDEN, description = "Account is not a Patreon subscriber or not prioritized."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),

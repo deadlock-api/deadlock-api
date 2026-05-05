@@ -118,7 +118,7 @@ pub(crate) async fn get_player_account_stats(
     path = "/{account_id}/account-stats",
     params(AccountIdQuery),
     responses(
-        (status = OK, body = [PlayerAccountStats]),
+        (status = OK, body = PlayerAccountStats),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = FORBIDDEN, description = "Account is not a Patreon subscriber or not prioritized."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
