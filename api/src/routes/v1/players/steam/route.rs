@@ -29,7 +29,13 @@ pub(super) struct SteamSearchQuery {
     search_query: String,
 }
 
-#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub(crate) struct SteamFriend {
+    pub(crate) account_id: u32,
+    pub(crate) friend_since: chrono::DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct SteamProfile {
     pub(crate) account_id: u32,
     pub(crate) personaname: String,
@@ -39,15 +45,61 @@ pub(crate) struct SteamProfile {
     pub(super) avatarfull: String,
     pub(super) realname: Option<String>,
     pub(super) countrycode: Option<String>,
-    #[serde(with = "clickhouse::serde::chrono::datetime")]
     pub(super) last_updated: chrono::DateTime<Utc>,
+    pub(super) friends: Vec<SteamFriend>,
+}
+
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct SteamProfileRow {
+    pub(crate) account_id: u32,
+    pub(crate) personaname: String,
+    pub(crate) profileurl: String,
+    pub(crate) avatar: String,
+    pub(crate) avatarmedium: String,
+    pub(crate) avatarfull: String,
+    pub(crate) realname: Option<String>,
+    pub(crate) countrycode: Option<String>,
+    #[serde(with = "clickhouse::serde::chrono::datetime")]
+    pub(crate) last_updated: chrono::DateTime<Utc>,
+    #[serde(rename = "friends.account_id", default)]
+    pub(crate) friends_account_id: Vec<u32>,
+    #[serde(rename = "friends.friend_since", default)]
+    pub(crate) friends_friend_since: Vec<u32>,
+}
+
+impl From<SteamProfileRow> for SteamProfile {
+    fn from(row: SteamProfileRow) -> Self {
+        let friends = row
+            .friends_account_id
+            .into_iter()
+            .zip(row.friends_friend_since)
+            .filter_map(|(account_id, ts)| {
+                chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
+                    account_id,
+                    friend_since,
+                })
+            })
+            .collect();
+        Self {
+            account_id: row.account_id,
+            personaname: row.personaname,
+            profileurl: row.profileurl,
+            avatar: row.avatar,
+            avatarmedium: row.avatarmedium,
+            avatarfull: row.avatarfull,
+            realname: row.realname,
+            countrycode: row.countrycode,
+            last_updated: row.last_updated,
+            friends,
+        }
+    }
 }
 
 pub(crate) struct SteamProfileQuery;
 
 impl BatchQuery for SteamProfileQuery {
     type Key = u32;
-    type Value = SteamProfile;
+    type Value = SteamProfileRow;
 
     fn build_query(keys: &[u32]) -> String {
         format!(
@@ -63,7 +115,7 @@ impl BatchQuery for SteamProfileQuery {
         )
     }
 
-    fn key_of(value: &SteamProfile) -> u32 {
+    fn key_of(value: &SteamProfileRow) -> u32 {
         value.account_id
     }
 }
@@ -86,6 +138,7 @@ pub(crate) async fn steam_single(
         .steam_profile
         .load(account_id)
         .await
+        .map(SteamProfile::from)
         .map(Json)
 }
 
@@ -147,6 +200,7 @@ pub(super) async fn steam(
         .steam_profile
         .load_many(&account_ids)
         .await
+        .map(|rows| rows.into_iter().map(SteamProfile::from).collect::<Vec<_>>())
         .map(Json)
 }
 
@@ -166,8 +220,15 @@ async fn search_steam(
         SETTINGS log_comment = 'steam_search'
     ";
     debug!(?query);
-    match ch_client.query(query).bind(&search_query).fetch_all().await {
-        Ok(profiles) if !profiles.is_empty() => Ok(profiles),
+    match ch_client
+        .query(query)
+        .bind(&search_query)
+        .fetch_all::<SteamProfileRow>()
+        .await
+    {
+        Ok(profiles) if !profiles.is_empty() => {
+            Ok(profiles.into_iter().map(SteamProfile::from).collect())
+        }
         Ok(_) => Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             "No Steam profiles found.",
