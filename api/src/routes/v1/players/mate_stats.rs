@@ -10,6 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::GameMode;
+use crate::services::clickhouse_batcher::in_clause;
 use crate::utils::types::AccountIdQuery;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
@@ -42,6 +43,12 @@ pub(super) struct MateStatsQuery {
     /// Filter based on the number of matches played.
     #[serde(default)]
     max_matches_played: Option<u64>,
+    /// Filter based on whether the mates were on the same party.
+    /// Two players are considered to be in the same party if they were on the same team and are
+    /// Steam friends as of the match start time (per the `steam_profiles` friends list).
+    #[serde(default)]
+    #[param(default = false)]
+    same_party: bool,
 }
 
 #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
@@ -52,8 +59,7 @@ pub struct MateStats {
     matches: Vec<u64>,
 }
 
-#[allow(clippy::too_many_lines)]
-fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
+fn build_query(account_id: u32, query: &MateStatsQuery, friend_ids: Option<&[u32]>) -> String {
     let mut history_filters = vec![];
     history_filters.push(format!("account_id = {account_id}"));
     history_filters.push("match_mode IN ('Ranked', 'Unranked')".to_owned());
@@ -94,22 +100,45 @@ fn build_query(account_id: u32, query: &MateStatsQuery) -> String {
     } else {
         format!("HAVING {}", having_filters.join(" AND "))
     };
+
+    let friend_filter = match friend_ids {
+        Some(ids) => format!(" AND account_id IN ({})", in_clause(ids)),
+        None => String::new(),
+    };
+
     format!(
+        "
+        WITH t_histories AS (SELECT match_id, player_team FROM player_match_history WHERE {history_filters})
+        SELECT
+            account_id as mate_id,
+            countIf(won) as wins,
+            uniq(match_id) as matches_played,
+            groupUniqArray(match_id) as matches
+        FROM player_match_by_match FINAL
+        WHERE (match_id, player_team) IN t_histories AND account_id != {account_id}{friend_filter}
+        GROUP BY account_id
+        {having_clause}
+        ORDER BY matches_played DESC
+        SETTINGS log_comment = 'mate_stats'
             "
-            WITH t_histories AS (SELECT match_id, player_team FROM player_match_history WHERE {history_filters})
-            SELECT
-                account_id as mate_id,
-                countIf(won) as wins,
-                uniq(match_id) as matches_played,
-                groupUniqArray(match_id) as matches
-            FROM player_match_by_match FINAL
-            WHERE (match_id, player_team) IN t_histories AND account_id != {account_id}
-            GROUP BY account_id
-            {having_clause}
-            ORDER BY matches_played DESC
-            SETTINGS log_comment = 'mate_stats'
-            "
-        )
+    )
+}
+
+async fn fetch_friend_account_ids(
+    ch_client: &clickhouse::Client,
+    account_id: u32,
+) -> APIResult<Vec<u32>> {
+    let query = format!(
+        "
+        SELECT friends.account_id
+        FROM steam_profiles FINAL
+        WHERE account_id = {account_id}
+        SETTINGS log_comment = 'mate_stats_friends'
+        "
+    );
+    debug!(?query);
+    let rows: Vec<Vec<u32>> = ch_client.query(&query).fetch_all().await?;
+    Ok(rows.into_iter().next().unwrap_or_default())
 }
 
 async fn get_mate_stats(
@@ -117,9 +146,18 @@ async fn get_mate_stats(
     account_id: u32,
     query: MateStatsQuery,
 ) -> APIResult<Vec<MateStats>> {
-    let query = build_query(account_id, &query);
-    debug!(?query);
-    Ok(ch_client.query(&query).fetch_all().await?)
+    let friend_ids = if query.same_party {
+        let ids = fetch_friend_account_ids(ch_client, account_id).await?;
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        Some(ids)
+    } else {
+        None
+    };
+    let sql = build_query(account_id, &query, friend_ids.as_deref());
+    debug!(?sql);
+    Ok(ch_client.query(&sql).fetch_all().await?)
 }
 
 #[utoipa::path(
@@ -176,7 +214,8 @@ mod proptests {
             account_id in any::<u32>(),
             query: MateStatsQuery,
         ) {
-            assert_valid_sql(&build_query(account_id, &query));
+            assert_valid_sql(&build_query(account_id, &query, None));
+            assert_valid_sql(&build_query(account_id, &query, Some(&[1, 2, 3])));
         }
     }
 }
