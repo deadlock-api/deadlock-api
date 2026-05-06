@@ -128,12 +128,12 @@ const jsxPosts: JsxBlogPost[] = [
 // Combined post list
 // ---------------------------------------------------------------------------
 
-let _cache: BlogPost[] | null = null;
+let cache: BlogPost[] | null = null;
 
 function allPosts(): BlogPost[] {
-  if (_cache) return _cache;
-  _cache = [...loadMarkdownPosts(), ...jsxPosts];
-  return _cache;
+  if (cache) return cache;
+  cache = [...loadMarkdownPosts(), ...jsxPosts];
+  return cache;
 }
 
 export function getBlogPost(slug: string): BlogPost | undefined {

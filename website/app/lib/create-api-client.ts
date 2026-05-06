@@ -1,7 +1,7 @@
-import axios, { type AxiosInstance } from "axios";
+import { type AxiosInstance, create } from "axios";
 
 export function createApiClient(timeout: number): AxiosInstance {
-  return axios.create({
+  return create({
     timeout,
     headers: {
       Accept: "application/json",

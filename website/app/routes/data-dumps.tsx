@@ -124,8 +124,10 @@ async function fetchAllKeys(): Promise<{ parquet: string[]; sql: string[] }> {
       prefix: ROOT_PREFIX,
     });
     if (token) params.set("continuation-token", token);
+    // oxlint-disable-next-line no-await-in-loop -- pagination requires sequential fetches
     const res = await fetch(`${BUCKET_URL}/?${params.toString()}`);
     if (!res.ok) throw new Error(`S3 list failed: ${res.status}`);
+    // oxlint-disable-next-line no-await-in-loop -- pagination requires sequential fetches
     const text = await res.text();
     const doc = new DOMParser().parseFromString(text, "application/xml");
     for (const el of Array.from(doc.querySelectorAll("Contents"))) {
