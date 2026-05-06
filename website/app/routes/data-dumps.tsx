@@ -718,15 +718,11 @@ const table = tableFromIPC(readParquet(buf).intoIPCStream());
 console.table(table.toArray().slice(0, 5));`;
 
 const DUCKLAKE_EXAMPLE = `# pip install duckdb
-# The snapshot is published as a DuckLake catalog backed by Parquet.
-# Attaching the catalog gives you every table by name (no manual view setup).
 import duckdb
 
 DUCKLAKE_URL = "ducklake:${BUCKET_BASE}/${BUCKET_NAME}/${ROOT_PREFIX}db_snapshot.ducklake"
 
 with duckdb.connect() as con:
-    # The bucket is public, but DuckLake stores S3 paths internally,
-    # so we redirect S3 reads to the public HTTPS endpoint.
     con.execute("""
         INSTALL ducklake; LOAD ducklake;
         INSTALL httpfs; LOAD httpfs;
@@ -743,8 +739,6 @@ with duckdb.connect() as con:
     con.sql("SELECT count(*) FROM heroes").show()`;
 
 const DUCKDB_EXAMPLE = `# pip install boto3 duckdb
-# Alternative: list every parquet file in the bucket, group sharded files
-# by table name, and create a DuckDB view for each table.
 import re
 from collections import defaultdict
 from typing import Generator, Iterable
