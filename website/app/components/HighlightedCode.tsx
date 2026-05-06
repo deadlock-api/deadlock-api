@@ -31,12 +31,7 @@ export function HighlightedCode({
     }
   }, [code, language]);
   return (
-    <pre
-      className={cn(
-        "overflow-x-auto rounded-md border border-white/[0.06] bg-black/30 p-4 font-mono text-xs leading-relaxed",
-        className,
-      )}
-    >
+    <pre className={cn("overflow-x-auto font-mono text-xs leading-relaxed", className)}>
       {html ? (
         <code
           className={`hljs language-${language}`}
