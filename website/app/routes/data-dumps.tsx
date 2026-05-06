@@ -717,9 +717,34 @@ const buf = new Uint8Array(await fetch(URL).then((r) => r.arrayBuffer()));
 const table = tableFromIPC(readParquet(buf).intoIPCStream());
 console.table(table.toArray().slice(0, 5));`;
 
+const DUCKLAKE_EXAMPLE = `# pip install duckdb
+# The snapshot is published as a DuckLake catalog backed by Parquet.
+# Attaching the catalog gives you every table by name (no manual view setup).
+import duckdb
+
+DUCKLAKE_URL = "ducklake:${BUCKET_BASE}/${BUCKET_NAME}/${ROOT_PREFIX}db_snapshot.ducklake"
+
+with duckdb.connect() as con:
+    # The bucket is public, but DuckLake stores S3 paths internally,
+    # so we redirect S3 reads to the public HTTPS endpoint.
+    con.execute("""
+        INSTALL ducklake; LOAD ducklake;
+        INSTALL httpfs; LOAD httpfs;
+        CREATE OR REPLACE SECRET deadlock_s3 (
+            TYPE S3, KEY_ID '', SECRET '',
+            ENDPOINT 's3-cache.deadlock-api.com', URL_STYLE 'path', USE_SSL true
+        );
+    """)
+    con.execute(f"ATTACH '{DUCKLAKE_URL}' AS db (READ_ONLY)")
+    con.execute("USE db.main")
+
+    # Tables are now queryable directly:
+    con.sql("SHOW TABLES").show()
+    con.sql("SELECT count(*) FROM heroes").show()`;
+
 const DUCKDB_EXAMPLE = `# pip install boto3 duckdb
-# Lists every parquet file in the bucket, groups sharded files by table name,
-# and creates a DuckDB view for each table so you can query them by name.
+# Alternative: list every parquet file in the bucket, group sharded files
+# by table name, and create a DuckDB view for each table.
 import re
 from collections import defaultdict
 from typing import Generator, Iterable
@@ -783,11 +808,12 @@ if __name__ == "__main__":
         # e.g. con.sql("SELECT count(*) FROM heroes").show()`;
 
 const STATIC_TABS = [
+  { id: "ducklake", label: "DuckLake (recommended)", language: "python", code: DUCKLAKE_EXAMPLE },
   { id: "aws-cli", label: "AWS CLI", language: "bash", code: AWS_CLI_EXAMPLE },
   { id: "mc", label: "MinIO Client (mc)", language: "bash", code: MC_CLI_EXAMPLE },
   { id: "python", label: "Python", language: "python", code: PYTHON_EXAMPLE },
   { id: "js", label: "JavaScript", language: "javascript", code: JS_EXAMPLE },
-  { id: "duckdb", label: "DuckDB Setup", language: "python", code: DUCKDB_EXAMPLE },
+  { id: "duckdb", label: "DuckDB (raw parquet)", language: "python", code: DUCKDB_EXAMPLE },
 ] as const;
 
 function UsageInstructions() {
