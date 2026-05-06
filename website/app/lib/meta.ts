@@ -47,6 +47,7 @@ const OG_IMAGES: Record<string, string> = {
   "/streamkit": "/og/streamkit.png",
   "/chat": "/og/chat.png",
   "/data-privacy": "/og/default.png",
+  "/data-dumps": "/og/default.png",
   "/ingest-cache": "/og/ingest-cache.png",
   "/blog": "/og/blog.png",
   "/deadlockdle": "/og/default.png",

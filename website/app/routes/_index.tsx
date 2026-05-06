@@ -26,6 +26,7 @@ import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
 
 import { ElectricBorder } from "~/components/ElectricBorder";
+import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
@@ -46,18 +47,21 @@ const valueProps = [
     href: "https://github.com/deadlock-api/",
     icon: Code,
     title: "Visit our GitHub Organization",
+    external: true,
   },
   {
     label: "Open Data",
-    href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
+    href: "/data-dumps",
     icon: Database,
     title: "Daily Data Dumps provided",
+    external: false,
   },
   {
     label: "Free to Use",
     href: "https://www.patreon.com/c/manuelhexe",
     icon: Heart,
     title: "Based on Sponsoring",
+    external: true,
   },
 ];
 
@@ -105,9 +109,9 @@ const services = [
   {
     title: "Database Dumps",
     description: "Download up-to-date database snapshots for offline analysis or research.",
-    href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
+    href: "/data-dumps",
     icon: HardDrive,
-    external: true,
+    external: false,
     cta: "Access Database Dumps",
   },
 ];
@@ -213,17 +217,16 @@ export default function Index() {
 
             <div className="mb-6 flex flex-wrap gap-3">
               {valueProps.map((prop) => (
-                <a
+                <SmartLink
                   key={prop.label}
                   href={prop.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  external={prop.external}
                   title={prop.title}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-2 text-sm font-medium text-foreground/80 transition-colors hover:border-primary/40 hover:text-primary"
                 >
                   <prop.icon className="size-3.5" />
                   {prop.label}
-                </a>
+                </SmartLink>
               ))}
             </div>
 
@@ -364,18 +367,10 @@ export default function Index() {
               </div>
             );
 
-            if (isExternal) {
-              return (
-                <a key={item.title} href={item.href} target="_blank" rel="noopener noreferrer">
-                  {card}
-                </a>
-              );
-            }
-
             return (
-              <Link key={item.title} to={item.href} prefetch="intent">
+              <SmartLink key={item.title} href={item.href} external={isExternal}>
                 {card}
-              </Link>
+              </SmartLink>
             );
           })}
         </div>
@@ -416,18 +411,10 @@ export default function Index() {
               </div>
             );
 
-            if (service.external) {
-              return (
-                <a key={service.title} href={service.href} target="_blank" rel="noopener noreferrer">
-                  {card}
-                </a>
-              );
-            }
-
             return (
-              <Link key={service.title} to={service.href} prefetch="intent">
+              <SmartLink key={service.title} href={service.href} external={service.external}>
                 {card}
-              </Link>
+              </SmartLink>
             );
           })}
         </div>

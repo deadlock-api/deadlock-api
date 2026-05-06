@@ -27,6 +27,7 @@ import { VisuallyHidden } from "radix-ui";
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
 
+import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
 import { API_ORIGIN, ASSETS_ORIGIN } from "~/lib/constants";
@@ -75,6 +76,7 @@ const navGroups: NavGroup[] = [
     links: [
       { to: "/chat", label: "AI Chat", icon: MessageSquare },
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
+      { to: "/data-dumps", label: "Data Dumps", icon: HardDrive },
       { to: "/blog", label: "Blog", icon: BookOpen },
     ],
   },
@@ -267,31 +269,28 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </p>
         <div className="grid grid-cols-2 gap-1">
           {[
-            { href: ASSETS_ORIGIN, label: "Assets API", icon: ImageIcon },
-            { href: API_ORIGIN, label: "Game Data", icon: BarChart3 },
-            {
-              href: "https://files.deadlock-api.com/Default/buckets/db-snapshot/public/",
-              label: "DB Dumps",
-              icon: HardDrive,
-            },
+            { href: ASSETS_ORIGIN, label: "Assets API", icon: ImageIcon, external: true },
+            { href: API_ORIGIN, label: "Game Data", icon: BarChart3, external: true },
+            { href: "/data-dumps", label: "DB Dumps", icon: HardDrive, external: false },
             {
               href: "https://github.com/deadlock-api/deadlock-api/tree/master/live-events",
               label: "Live Events",
               icon: Radio,
+              external: true,
             },
           ].map((link) => {
             const Icon = link.icon;
             return (
-              <a
+              <SmartLink
                 key={link.href}
                 href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
+                external={link.external}
+                onClick={link.external ? undefined : onNavigate}
                 className="group flex items-center justify-center gap-1.5 rounded-md border border-sidebar-border/50 px-2 py-1.5 text-xs font-medium text-sidebar-foreground/50 transition-colors duration-150 hover:border-sidebar-border hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
               >
                 <Icon className="h-3 w-3 shrink-0 opacity-60" />
                 {link.label}
-              </a>
+              </SmartLink>
             );
           })}
         </div>
