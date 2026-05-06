@@ -114,8 +114,9 @@ async function listOneLevel(prefix: string): Promise<{ files: S3File[]; folders:
   return { files, folders };
 }
 
-async function fetchAllParquetUrls(): Promise<{ key: string }[]> {
-  const out: { key: string }[] = [];
+async function fetchAllKeys(): Promise<{ parquet: string[]; sql: string[] }> {
+  const parquet: string[] = [];
+  const sql: string[] = [];
   let token: string | undefined;
   do {
     const params = new URLSearchParams({
@@ -130,12 +131,14 @@ async function fetchAllParquetUrls(): Promise<{ key: string }[]> {
     for (const el of Array.from(doc.querySelectorAll("Contents"))) {
       const key = el.querySelector("Key")?.textContent ?? "";
       if (key.endsWith(".parquet") && !key.includes(".parquet/")) {
-        out.push({ key });
+        parquet.push(key);
+      } else if (key.endsWith(".sql")) {
+        sql.push(key);
       }
     }
     token = doc.querySelector("NextContinuationToken")?.textContent ?? undefined;
   } while (token);
-  return out;
+  return { parquet, sql };
 }
 
 async function fetchSqlContent(key: string): Promise<string> {
@@ -256,17 +259,18 @@ export default function DataDumps() {
     staleTime: 30_000,
   });
 
-  const allParquet = useQuery({
-    queryKey: ["s3-all-parquet"],
-    queryFn: fetchAllParquetUrls,
+  const allKeys = useQuery({
+    queryKey: ["s3-all-keys"],
+    queryFn: fetchAllKeys,
     staleTime: 5 * 60_000,
     enabled: playgroundOpen,
   });
 
-  const sqlKeys = useMemo(
-    () => (listing.data?.files ?? []).filter((f) => f.key.endsWith(".sql")).map((f) => f.key),
-    [listing.data?.files],
-  );
+  const sqlKeys = useMemo(() => {
+    const current = (listing.data?.files ?? []).filter((f) => f.key.endsWith(".sql")).map((f) => f.key);
+    const all = allKeys.data?.sql ?? [];
+    return [...new Set([...current, ...all])];
+  }, [listing.data?.files, allKeys.data?.sql]);
 
   const sqlContents = useQueries({
     queries: sqlKeys.map((key) => ({
@@ -297,9 +301,9 @@ export default function DataDumps() {
   }, [sqlContentByKey]);
 
   const playgroundTables: PlaygroundTable[] = useMemo(() => {
-    if (!allParquet.data) return [];
+    if (!allKeys.data) return [];
     const grouped = new Map<string, string[]>();
-    for (const { key } of allParquet.data) {
+    for (const key of allKeys.data.parquet) {
       const t = tableNameFromKey(key);
       const arr = grouped.get(t) ?? [];
       arr.push(`${BUCKET_URL}/${key}`);
@@ -308,7 +312,7 @@ export default function DataDumps() {
     return [...grouped.entries()]
       .map(([name, urls]) => ({ name, urls: urls.sort(naturalCompare) }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [allParquet.data]);
+  }, [allKeys.data]);
 
   const breadcrumbs = useMemo(() => {
     const trimmed = path.replace(/\/$/, "");
