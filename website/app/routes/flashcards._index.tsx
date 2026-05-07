@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ArrowRight, ShoppingBag, Swords } from "lucide-react";
+import { ArrowRight, GitBranch, ShoppingBag, Swords } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { MetaFunction } from "react-router";
 import { Link } from "react-router";
@@ -9,7 +9,7 @@ import { createPageMeta } from "~/lib/meta";
 export const meta: MetaFunction = () => {
   return createPageMeta({
     title: "Flashcards - Learn Deadlock Heroes and Items | Deadlock API",
-    description: "Practice identifying Deadlock heroes and items by icon with multiple-choice flashcards.",
+    description: "Practice identifying Deadlock heroes, items, and item upgrade paths with multiple-choice flashcards.",
     path: "/flashcards",
   });
 };
@@ -31,6 +31,12 @@ const GAMES: {
     description: "Identify shop items by their icon. Pick the correct name from four choices.",
     icon: ShoppingBag,
     path: "/flashcards/items",
+  },
+  {
+    title: "Item Upgrade Paths",
+    description: "Match upgraded items to the component items they build from.",
+    icon: GitBranch,
+    path: "/flashcards/item-upgrades",
   },
 ];
 
@@ -70,16 +76,16 @@ export default function FlashcardsHub() {
           transition={{ delay: 0.15, duration: 0.4 }}
           className="mx-auto mt-3 max-w-lg text-sm text-muted-foreground"
         >
-          Drill Deadlock heroes and items until you know every icon by heart.
+          Drill Deadlock heroes, items, and upgrade paths until the shop clicks.
         </motion.p>
       </section>
 
-      <section className="mx-auto max-w-3xl">
+      <section className="mx-auto max-w-5xl">
         <motion.div
           variants={stagger}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
           {GAMES.map((game) => {
             const Icon = game.icon;
