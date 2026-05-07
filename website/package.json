@@ -70,7 +70,7 @@
     "@types/three": "^0.184.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "oxfmt": "^0.47.0",
+    "oxfmt": "^0.48.0",
     "oxlint": "^1.63.0",
     "postcss": "^8.5.14",
     "satori": "^0.26.0",
