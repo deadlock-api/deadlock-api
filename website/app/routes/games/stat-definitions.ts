@@ -19,6 +19,7 @@ export const GAME_STAT_CATEGORIES: StatCategory[] = [
     label: "Match Flow",
     stats: [
       { key: "total_matches", label: "Total Matches", format: "integer" },
+      { key: "total_players", label: "Total Players", format: "integer" },
       { key: "avg_duration_s", label: "Avg Duration", format: "duration" },
       { key: "abandon_rate", label: "Abandon Rate", format: "percent" },
       { key: "mid_boss_kill_rate", label: "Mid Boss Kill Rate", format: "percent" },
