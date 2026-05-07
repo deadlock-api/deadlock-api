@@ -96,6 +96,7 @@ pub(crate) struct GameStatsQuery {
 pub struct AnalyticsGameStats {
     pub bucket: u32,
     pub total_matches: u64,
+    pub total_players: u64,
     pub avg_duration_s: f64,
     pub avg_kills: f64,
     pub avg_deaths: f64,
@@ -162,6 +163,7 @@ fn build_query(query: &GameStatsQuery) -> String {
     SELECT
         {bucket} AS bucket,
         uniq(match_id) AS total_matches,
+        uniq(account_id) AS total_players,
         avg(duration_s) AS avg_duration_s,
         avg(kills) AS avg_kills,
         avg(deaths) AS avg_deaths,
