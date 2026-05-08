@@ -301,7 +301,7 @@ Relevant Protobuf Messages:
 ### Rate Limits (only applies to bot friends):
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s<br>Bot-Friend: 3req/h<br>With `force_refetch=true`: 1req/h |
+| IP | 100req/s<br>Bot-Friend: 10req/h<br>With `force_refetch=true`: 1req/h |
 | Key | -<br>Bot-Friend: 300req/h<br>With `force_refetch=true`: 5req/h |
 | Global | -<br>Bot-Friend: 1500req/h<br>With `force_refetch=true`: 10req/h |
     "
@@ -353,7 +353,7 @@ pub(super) async fn match_history(
                 &rate_limit_key,
                 "match_history",
                 &[
-                    Quota::ip_limit(3, Duration::from_hours(1)),
+                    Quota::ip_limit(10, Duration::from_hours(1)),
                     Quota::key_limit(300, Duration::from_hours(1)),
                     Quota::global_limit(1500, Duration::from_hours(1)),
                 ],
