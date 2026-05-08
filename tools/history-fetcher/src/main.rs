@@ -20,7 +20,7 @@ use std::sync::{Arc, LazyLock};
 use futures::StreamExt;
 use metrics::{counter, gauge};
 use sqlx::{Pool, Postgres};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock, mpsc, oneshot};
 use tokio::time::Instant;
 use tracing::{debug, error, info, instrument, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_get_match_history_response::EResult;
@@ -50,9 +50,31 @@ static PRIORITIZATION_WINDOW_SECS: LazyLock<u64> =
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| common::env_or("PRIORITIZATION_MAX_RETRIES", 10));
 
+/// Number of `PlayerMatchHistoryEntry` rows to accumulate before flushing a
+/// batched ``ClickHouse`` insert. Default: 500.
+static HISTORY_BATCH_SIZE: LazyLock<usize> =
+    LazyLock::new(|| common::env_or("HISTORY_BATCH_SIZE", 500));
+
+/// Maximum time (in milliseconds) to wait before flushing a partial batch
+/// when the size threshold has not been reached. Default: 5000 ms.
+static HISTORY_FLUSH_INTERVAL_MS: LazyLock<u64> =
+    LazyLock::new(|| common::env_or("HISTORY_FLUSH_INTERVAL_MS", 5000));
+
+/// Number of concurrent batch inserter tasks. Default: 1.
+static HISTORY_INSERTERS: LazyLock<usize> =
+    LazyLock::new(|| common::env_or("HISTORY_INSERTERS", 1));
+
 /// Tracks prioritized Steam accounts, their bot username, and last fetch timestamps.
 /// Key: `steam_id3` (as i64), Value: (`bot_id`, `Option<Instant>` where None = never fetched).
 type PrioritizedAccountsMap = Arc<RwLock<HashMap<i64, (String, Option<Instant>)>>>;
+
+/// A request for the batch inserter to persist one account's match history.
+/// On flush, the inserter signals success/failure through `ack` so the caller
+/// can update its bookkeeping (e.g. `last_fetched_at`).
+struct InsertRequest {
+    entries: Vec<PlayerMatchHistoryEntry>,
+    ack: oneshot::Sender<bool>,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -80,6 +102,29 @@ async fn main() -> anyhow::Result<()> {
     // Spawn background task to periodically refresh prioritized accounts
     spawn_prioritization_refresh_task(pg_pool.clone(), prioritized_accounts.clone());
 
+    // Spawn batch inserter task(s). All fetchers send InsertRequests through
+    // this channel; the inserter accumulates entries up to HISTORY_BATCH_SIZE
+    // (or HISTORY_FLUSH_INTERVAL_MS elapsed) and flushes them in one CH insert.
+    let batch_size = *HISTORY_BATCH_SIZE;
+    let flush_interval = Duration::from_millis(*HISTORY_FLUSH_INTERVAL_MS);
+    let num_inserters = (*HISTORY_INSERTERS).max(1);
+    let (insert_tx, insert_rx) =
+        mpsc::channel::<InsertRequest>(batch_size.max(1).saturating_mul(2));
+    let insert_rx = Arc::new(Mutex::new(insert_rx));
+    info!(
+        batch_size,
+        flush_interval_ms = flush_interval.as_millis() as u64,
+        inserters = num_inserters,
+        "Starting history-fetcher batch inserter(s)"
+    );
+    for i in 0..num_inserters {
+        let client = ch_client.clone();
+        let rx = Arc::clone(&insert_rx);
+        tokio::spawn(async move {
+            history_batch_inserter(client, rx, batch_size, flush_interval, i).await;
+        });
+    }
+
     let mut interval = tokio::time::interval(Duration::from_secs(20));
 
     loop {
@@ -97,12 +142,12 @@ async fn main() -> anyhow::Result<()> {
 
         futures::stream::iter(due)
             .map(|(account, bot_id)| {
-                let ch_client = ch_client.clone();
+                let insert_tx = insert_tx.clone();
                 let http_client = http_client.clone();
                 let prioritized_accounts = prioritized_accounts.clone();
                 async move {
                     update_prioritized_account(
-                        &ch_client,
+                        &insert_tx,
                         &http_client,
                         account,
                         &bot_id,
@@ -117,12 +162,121 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+/// Long-running batch inserter for `player_match_history`.
+///
+/// Pulls `InsertRequest`s off the shared receiver, accumulates entries up to
+/// `batch_size` rows (or until `flush_interval` elapses with a non-empty batch),
+/// then flushes them in a single ``ClickHouse`` insert. After the flush, every
+/// pending request's `ack` is signalled with the result so callers can update
+/// their `last_fetched_at` accordingly.
+async fn history_batch_inserter(
+    client: clickhouse::Client,
+    rx: Arc<Mutex<mpsc::Receiver<InsertRequest>>>,
+    batch_size: usize,
+    flush_interval: Duration,
+    inserter_id: usize,
+) {
+    let mut pending: Vec<InsertRequest> = Vec::new();
+    let mut total_entries: usize = 0;
+    let mut flush_timer = tokio::time::interval(flush_interval);
+    flush_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    flush_timer.tick().await;
+
+    loop {
+        let recv_fut = async {
+            let mut guard = rx.lock().await;
+            guard.recv().await
+        };
+
+        tokio::select! {
+            biased;
+            _ = flush_timer.tick(), if !pending.is_empty() => {
+                flush_history_batch(&client, &mut pending, inserter_id).await;
+                total_entries = 0;
+            }
+            opt = recv_fut => {
+                let Some(req) = opt else {
+                    if !pending.is_empty() {
+                        flush_history_batch(&client, &mut pending, inserter_id).await;
+                    }
+                    return;
+                };
+                total_entries += req.entries.len();
+                pending.push(req);
+                {
+                    let mut guard = rx.lock().await;
+                    while total_entries < batch_size {
+                        match guard.try_recv() {
+                            Ok(req) => {
+                                total_entries += req.entries.len();
+                                pending.push(req);
+                            }
+                            Err(_) => break,
+                        }
+                    }
+                }
+                if total_entries >= batch_size {
+                    flush_history_batch(&client, &mut pending, inserter_id).await;
+                    total_entries = 0;
+                }
+            }
+        }
+    }
+}
+
+/// Flush all pending requests with retry. Acks every request with the result.
+async fn flush_history_batch(
+    client: &clickhouse::Client,
+    pending: &mut Vec<InsertRequest>,
+    inserter_id: usize,
+) {
+    if pending.is_empty() {
+        return;
+    }
+    let n_req = pending.len();
+    let n_entries: usize = pending.iter().map(|r| r.entries.len()).sum();
+
+    let result = common::retry_fn_with_backoff("history batch flush", || async {
+        let mut inserter = client
+            .insert::<PlayerMatchHistoryEntry>("player_match_history")
+            .await?;
+        for req in pending.iter() {
+            for entry in &req.entries {
+                inserter.write(entry).await?;
+            }
+        }
+        inserter.end().await
+    })
+    .await;
+
+    let success = result.is_ok();
+    match &result {
+        Ok(()) => {
+            counter!("history_fetcher.batch_flush.success").increment(1);
+            counter!("history_fetcher.batch_flush.entries").increment(n_entries as u64);
+            info!(
+                "[inserter {inserter_id}] Flushed {n_entries} history entries from {n_req} requests"
+            );
+        }
+        Err(e) => {
+            counter!("history_fetcher.batch_flush.failure").increment(1);
+            error!(
+                "[inserter {inserter_id}] History batch flush failed permanently \
+                 ({n_entries} entries from {n_req} requests): {e}"
+            );
+        }
+    }
+    for req in pending.drain(..) {
+        let _ = req.ack.send(success);
+    }
+}
+
 /// Updates a prioritized account's match history with retry logic.
 /// Uses exponential backoff for retries. On success, updates `last_fetched_at`.
 /// If all retries fail, sets `last_fetched_at` to 30 minutes ago to re-queue for next cycle.
-#[instrument(skip(http_client, ch_client, prioritized_accounts))]
+#[instrument(skip(http_client, insert_tx, prioritized_accounts))]
 async fn update_prioritized_account(
-    ch_client: &clickhouse::Client,
+    insert_tx: &mpsc::Sender<InsertRequest>,
     http_client: &reqwest::Client,
     account: u32,
     bot_id: &str,
@@ -143,7 +297,7 @@ async fn update_prioritized_account(
             counter!("history_fetcher.prioritized_fetch.retry").increment(1);
         }
         async {
-            if update_account(ch_client, http_client, account, Some(bot_id)).await {
+            if update_account(insert_tx, http_client, account, Some(bot_id)).await {
                 Ok(())
             } else {
                 Err(format!("Failed to fetch prioritized account {account}"))
@@ -173,9 +327,9 @@ async fn update_prioritized_account(
     }
 }
 
-#[instrument(skip(http_client, ch_client))]
+#[instrument(skip(http_client, insert_tx))]
 async fn update_account(
-    ch_client: &clickhouse::Client,
+    insert_tx: &mpsc::Sender<InsertRequest>,
     http_client: &reqwest::Client,
     account: u32,
     bot_username: Option<&str>,
@@ -201,23 +355,44 @@ async fn update_account(
         );
         return false;
     }
-    let match_history = match_history.matches;
-    if match_history.is_empty() {
+    let matches = match_history.matches;
+    if matches.is_empty() {
         debug!("No new matches {account}");
         return true;
     }
-    let match_history = match_history
+    let entries: Vec<PlayerMatchHistoryEntry> = matches
         .into_iter()
-        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r));
-    match insert_match_history(ch_client, match_history).await {
-        Ok(()) => {
+        .filter_map(|r| PlayerMatchHistoryEntry::from_protobuf(account, r))
+        .collect();
+    if entries.is_empty() {
+        return true;
+    }
+
+    let n_entries = entries.len();
+    let (ack_tx, ack_rx) = oneshot::channel();
+    let req = InsertRequest {
+        entries,
+        ack: ack_tx,
+    };
+    if insert_tx.send(req).await.is_err() {
+        counter!("history_fetcher.insert_match_history.failure").increment(1);
+        error!("Insert channel closed; cannot insert history for account {account}");
+        return false;
+    }
+    match ack_rx.await {
+        Ok(true) => {
             counter!("history_fetcher.insert_match_history.success").increment(1);
-            info!("Inserted new matches");
+            info!(account, count = n_entries, "Inserted new matches via batch");
             true
+        }
+        Ok(false) => {
+            counter!("history_fetcher.insert_match_history.failure").increment(1);
+            error!("Batch insert reported failure for account {account}");
+            false
         }
         Err(e) => {
             counter!("history_fetcher.insert_match_history.failure").increment(1);
-            error!("Failed to insert match history: {e:?}");
+            error!("Insert ack channel closed for account {account}: {e}");
             false
         }
     }
@@ -245,19 +420,6 @@ async fn fetch_account_match_history(
         bot_username,
     )
     .await
-}
-
-async fn insert_match_history(
-    ch_client: &clickhouse::Client,
-    match_history: impl IntoIterator<Item = PlayerMatchHistoryEntry>,
-) -> clickhouse::error::Result<()> {
-    let mut inserter = ch_client
-        .insert::<PlayerMatchHistoryEntry>("player_match_history")
-        .await?;
-    for entry in match_history {
-        inserter.write(&entry).await?;
-    }
-    inserter.end().await
 }
 
 /// Initializes the prioritized accounts map by fetching all prioritized accounts

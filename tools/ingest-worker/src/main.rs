@@ -28,7 +28,7 @@ use prost::Message;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, warn};
 use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
 use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
@@ -47,7 +47,7 @@ struct Cli {
     #[arg(long)]
     reingest_file: Option<String>,
 
-    /// Number of concurrent S3 fetch / parse tasks (default: 50)
+    /// Number of concurrent S3 fetch / parse tasks for re-ingestion (default: 50)
     #[arg(long, default_value_t = 50)]
     reingest_parallelism: usize,
 
@@ -55,9 +55,25 @@ struct Cli {
     #[arg(long, default_value_t = 500)]
     reingest_batch_size: usize,
 
-    /// Number of concurrent ``ClickHouse`` inserter tasks (default: 2)
+    /// Number of concurrent ``ClickHouse`` inserter tasks for re-ingestion (default: 2)
     #[arg(long, default_value_t = 2)]
     reingest_inserters: usize,
+
+    /// Number of concurrent S3 fetch / parse tasks for the live ingest loop (default: 10)
+    #[arg(long, default_value_t = 10, env = "INGEST_PARALLELISM")]
+    ingest_parallelism: usize,
+
+    /// Number of matches to batch per ``ClickHouse`` insert during live ingestion (default: 500)
+    #[arg(long, default_value_t = 500, env = "INGEST_BATCH_SIZE")]
+    ingest_batch_size: usize,
+
+    /// Number of concurrent ``ClickHouse`` inserter tasks for live ingestion (default: 2)
+    #[arg(long, default_value_t = 2, env = "INGEST_INSERTERS")]
+    ingest_inserters: usize,
+
+    /// Maximum time (in milliseconds) to wait before flushing a partial batch (default: 5000)
+    #[arg(long, default_value_t = 5000, env = "INGEST_FLUSH_INTERVAL_MS")]
+    ingest_flush_interval_ms: u64,
 }
 
 /// Parsed match data ready for ``ClickHouse`` insertion.
@@ -74,11 +90,11 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let ch_client = common::get_ch_client()?;
-    let store = common::get_store()?;
+    let store = Arc::new(common::get_store()?);
 
     if let Some(ref file_path) = cli.reingest_file {
         return reingest_from_file(
-            &store,
+            &*store,
             &ch_client,
             file_path,
             cli.reingest_parallelism,
@@ -88,18 +104,51 @@ async fn main() -> anyhow::Result<()> {
         .await;
     }
 
-    run_ingest_loop(&store, &ch_client).await
+    run_ingest_loop(
+        store,
+        &ch_client,
+        cli.ingest_parallelism,
+        cli.ingest_batch_size,
+        cli.ingest_inserters,
+        Duration::from_millis(cli.ingest_flush_interval_ms),
+    )
+    .await
 }
 
-async fn run_ingest_loop(
-    store: &impl ObjectStore,
+async fn run_ingest_loop<S>(
+    store: Arc<S>,
     ch_client: &clickhouse::Client,
-) -> anyhow::Result<()> {
+    parallelism: usize,
+    batch_size: usize,
+    num_inserters: usize,
+    flush_interval: Duration,
+) -> anyhow::Result<()>
+where
+    S: ObjectStore + 'static,
+{
+    info!(
+        "Starting live ingest loop: parallelism={parallelism}, batch_size={batch_size}, \
+         inserters={num_inserters}, flush_interval_ms={}",
+        flush_interval.as_millis()
+    );
+
+    let (tx, rx) = mpsc::channel::<(Path, ParsedMatch)>(batch_size.max(1).saturating_mul(2));
+    let rx = Arc::new(tokio::sync::Mutex::new(rx));
+
+    for i in 0..num_inserters {
+        let client = ch_client.clone();
+        let rx = Arc::clone(&rx);
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            live_batch_inserter(client, store, rx, batch_size, flush_interval, i).await;
+        });
+    }
+
     let mut interval = tokio::time::interval(Duration::from_secs(10));
 
     loop {
         interval.tick().await;
-        let objs_to_ingest = match list_ingest_objects(store).await {
+        let objs_to_ingest = match list_ingest_objects(&*store).await {
             Ok(value) => {
                 counter!("ingest_worker.list_ingest_objects.success").increment(1);
                 debug!("Listed {} objects", value.len());
@@ -120,38 +169,220 @@ async fn run_ingest_loop(
             continue;
         }
 
-        futures::stream::iter(&objs_to_ingest)
-            .map(|key| async {
-                match timeout(
-                    Duration::from_secs(30),
-                    ingest_object(store, ch_client, key),
-                )
-                .await
-                {
-                    Ok(Ok(key)) => {
-                        counter!("ingest_worker.ingest_object.success").increment(1);
-                        info!("Ingested object: {key}");
-                        gauge!("ingest_worker.objs_to_ingest").decrement(1);
-                    }
-                    Ok(Err(e)) => {
-                        counter!("ingest_worker.ingest_object.failure").increment(1);
-                        error!("Error ingesting object: {e}");
-                    }
-                    Err(_) => {
-                        counter!("ingest_worker.ingest_object.timeout").increment(1);
-                        error!("Ingest object timed out");
+        futures::stream::iter(objs_to_ingest)
+            .map(|key| {
+                let store = Arc::clone(&store);
+                let tx = tx.clone();
+                async move {
+                    match timeout(
+                        Duration::from_secs(30),
+                        fetch_parse_and_send(&*store, &key, &tx),
+                    )
+                    .await
+                    {
+                        Ok(Ok(())) => {
+                            counter!("ingest_worker.fetch_parse.success").increment(1);
+                        }
+                        Ok(Err(e)) => {
+                            counter!("ingest_worker.fetch_parse.failure").increment(1);
+                            error!("Error fetching/parsing object {key}: {e:#}");
+                        }
+                        Err(_) => {
+                            counter!("ingest_worker.fetch_parse.timeout").increment(1);
+                            error!("Fetch+parse timed out for {key}");
+                        }
                     }
                 }
             })
-            .buffer_unordered(10)
+            .buffer_unordered(parallelism)
             .collect::<Vec<_>>()
             .await;
-        info!("Ingested all objects");
+        info!("Producer drained current listing");
     }
+}
+
+/// Long-running batch inserter for the live ingest loop.
+///
+/// Pulls `(key, ParsedMatch)` items off the shared receiver, accumulates up to
+/// `batch_size` items (or until `flush_interval` elapses with a non-empty batch),
+/// and flushes them in a single `ClickHouse` insert per table. On flush success,
+/// the corresponding S3 keys are moved to `processed/`. On persistent failure,
+/// the batch is dropped (objects stay in `ingest/` and will be re-listed next tick).
+async fn live_batch_inserter<S>(
+    client: clickhouse::Client,
+    store: Arc<S>,
+    rx: Arc<tokio::sync::Mutex<mpsc::Receiver<(Path, ParsedMatch)>>>,
+    batch_size: usize,
+    flush_interval: Duration,
+    inserter_id: usize,
+) where
+    S: ObjectStore + 'static,
+{
+    let mut batch: Vec<(Path, ParsedMatch)> = Vec::with_capacity(batch_size);
+    let mut flush_timer = tokio::time::interval(flush_interval);
+    flush_timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    flush_timer.tick().await;
+
+    loop {
+        let recv_fut = async {
+            let mut guard = rx.lock().await;
+            guard.recv().await
+        };
+
+        tokio::select! {
+            biased;
+            _ = flush_timer.tick(), if !batch.is_empty() => {
+                flush_live_batch(&client, &*store, &mut batch, inserter_id).await;
+            }
+            opt = recv_fut => {
+                let Some(item) = opt else {
+                    if !batch.is_empty() {
+                        flush_live_batch(&client, &*store, &mut batch, inserter_id).await;
+                    }
+                    return;
+                };
+                batch.push(item);
+                {
+                    let mut guard = rx.lock().await;
+                    while batch.len() < batch_size {
+                        match guard.try_recv() {
+                            Ok(item) => batch.push(item),
+                            Err(_) => break,
+                        }
+                    }
+                }
+                if batch.len() >= batch_size {
+                    flush_live_batch(&client, &*store, &mut batch, inserter_id).await;
+                }
+            }
+        }
+    }
+}
+
+/// Flush a live-loop batch to ``ClickHouse`` (with retry); on success move
+/// the underlying S3 keys to `processed/`. On persistent failure, drop the
+/// batch — objects remain in `ingest/` and will be re-listed next tick.
+async fn flush_live_batch<S: ObjectStore>(
+    client: &clickhouse::Client,
+    store: &S,
+    batch: &mut Vec<(Path, ParsedMatch)>,
+    inserter_id: usize,
+) {
+    if batch.is_empty() {
+        return;
+    }
+    let n = batch.len();
+    let parsed: Vec<&ParsedMatch> = batch.iter().map(|(_, p)| p).collect();
+    let result =
+        common::retry_fn_with_backoff("Live batch flush", || write_parsed_refs(client, &parsed))
+            .await;
+
+    match result {
+        Ok(()) => {
+            counter!("ingest_worker.batch_flush.success").increment(1);
+            counter!("ingest_worker.batch_flush.matches").increment(n as u64);
+            info!("[inserter {inserter_id}] Flushed batch of {n} matches");
+            let keys: Vec<Path> = batch.drain(..).map(|(k, _)| k).collect();
+            futures::stream::iter(keys)
+                .map(|key| async move {
+                    let Some(filename) = key.filename().map(str::to_owned) else {
+                        warn!("Missing filename for key {key}, leaving in ingest/");
+                        return;
+                    };
+                    let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
+                    if let Err(e) = move_object(store, &key, &new_path).await {
+                        error!("Failed to move {key} to processed/: {e}");
+                    } else {
+                        gauge!("ingest_worker.objs_to_ingest").decrement(1);
+                    }
+                })
+                .buffer_unordered(POST_FLUSH_MOVE_CONCURRENCY)
+                .collect::<Vec<_>>()
+                .await;
+        }
+        Err(e) => {
+            counter!("ingest_worker.batch_flush.failure").increment(1);
+            error!(
+                "[inserter {inserter_id}] Batch flush of {n} matches failed permanently, \
+                 leaving objects in ingest/ for retry: {e:#}"
+            );
+            batch.clear();
+        }
+    }
+}
+
+/// Fetch + decompress + parse a single object, then either:
+/// - move it to `failed/` if it can't be parsed or has an error outcome, or
+/// - send the parsed result through `tx` for batched insertion downstream.
+async fn fetch_parse_and_send<S: ObjectStore>(
+    store: &S,
+    key: &Path,
+    tx: &mpsc::Sender<(Path, ParsedMatch)>,
+) -> anyhow::Result<()> {
+    let obj = get_object(store, key).await?;
+
+    let data = obj.bytes().await?;
+    let data = if key
+        .extension()
+        .is_some_and(|f| f.eq_ignore_ascii_case("bz2"))
+    {
+        bzip_decompress(data).await?
+    } else {
+        data.to_vec()
+    };
+
+    let filename = key
+        .filename()
+        .with_context(|| format!("Missing filename for key {key}"))?
+        .to_owned();
+
+    let match_info = match parse_match_data(&data) {
+        Ok(m)
+            if m.match_outcome
+                .is_some_and(|o| o == EMatchOutcome::KEOutcomeError as i32) =>
+        {
+            let new_path = Path::from(format!("{FAILED_PREFIX}/{filename}"));
+            move_object(store, key, &new_path).await?;
+            counter!("ingest_worker.match_outcome_error").increment(1);
+            warn!(
+                "[{:?}] Match outcome is error, moved to failed/",
+                m.match_id
+            );
+            gauge!("ingest_worker.objs_to_ingest").decrement(1);
+            return Ok(());
+        }
+        Err(e) => {
+            let new_path = Path::from(format!("{FAILED_PREFIX}/{filename}"));
+            move_object(store, key, &new_path).await?;
+            warn!("[{filename}] Error parsing match data: {e}");
+            gauge!("ingest_worker.objs_to_ingest").decrement(1);
+            return Ok(());
+        }
+        Ok(m) => m,
+    };
+
+    let players = build_ch_players(&match_info);
+    let history: Vec<PlayerMatchHistoryEntry> = match_info
+        .players
+        .iter()
+        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(&match_info, p))
+        .collect();
+
+    let parsed = ParsedMatch { players, history };
+    if tx.send((key.clone(), parsed)).await.is_err() {
+        bail!("Insert channel closed; inserter tasks have exited");
+    }
+    Ok(())
 }
 
 /// Known file extensions for match metadata files.
 const MATCH_EXTENSIONS: &[&str] = &[".meta", ".meta.bz2", ".meta_hltv.bz2"];
+
+const PROCESSED_PREFIX: &str = "processed/metadata";
+const FAILED_PREFIX: &str = "failed/metadata";
+
+/// Concurrency for S3 moves after a successful batch flush.
+const POST_FLUSH_MOVE_CONCURRENCY: usize = 16;
 
 async fn reingest_from_file(
     store: &impl ObjectStore,
@@ -277,17 +508,24 @@ async fn write_and_flush_batch(
     client: &clickhouse::Client,
     batch: &[ParsedMatch],
 ) -> anyhow::Result<()> {
-    let (mut mp, mut hi) = open_inserters(client).await?;
+    let refs: Vec<&ParsedMatch> = batch.iter().collect();
+    write_parsed_refs(client, &refs).await
+}
 
-    for parsed in batch {
-        for player in &parsed.players {
+/// Open fresh inserters, write each parsed match, and flush.
+async fn write_parsed_refs(
+    client: &clickhouse::Client,
+    parsed: &[&ParsedMatch],
+) -> anyhow::Result<()> {
+    let (mut mp, mut hi) = open_inserters(client).await?;
+    for p in parsed {
+        for player in &p.players {
             mp.write(player).await?;
         }
-        for entry in &parsed.history {
+        for entry in &p.history {
             hi.write(entry).await?;
         }
     }
-
     mp.end().await?;
     hi.end().await?;
     Ok(())
@@ -440,67 +678,6 @@ async fn find_match_object(
     bail!("Match {match_id} not found in processed or failed folders")
 }
 
-#[instrument(skip(store, ch_client))]
-async fn ingest_object(
-    store: &impl ObjectStore,
-    ch_client: &clickhouse::Client,
-    key: &Path,
-) -> anyhow::Result<String> {
-    // Fetch Data
-    let obj = get_object(store, key).await?;
-
-    // Decompress Data
-    let data = obj.bytes().await?;
-    let data = if key
-        .extension()
-        .is_some_and(|f| f.eq_ignore_ascii_case("bz2"))
-    {
-        bzip_decompress(data).await?
-    } else {
-        data.to_vec()
-    };
-
-    // Ingest to Clickhouse
-    let filename = key
-        .filename()
-        .with_context(|| format!("Missing filename for key {key}"))?;
-    let match_info = parse_match_data(&data);
-    let match_info = match match_info {
-        Ok(m)
-            if m.match_outcome
-                .is_some_and(|m| m == EMatchOutcome::KEOutcomeError as i32) =>
-        {
-            let new_path = Path::from(format!("failed/metadata/{filename}"));
-            move_object(store, key, &new_path).await?;
-            bail!(
-                "[{:?}] Match outcome is error moved to fail folder",
-                m.match_id
-            );
-        }
-        Err(e) => {
-            let new_path = Path::from(format!("failed/metadata/{filename}"));
-            move_object(store, key, &new_path).await?;
-            bail!("[{filename}] Error parsing match data: {e}");
-        }
-        Ok(m) => m,
-    };
-    match insert_match(ch_client, &match_info).await {
-        Ok(()) => {
-            counter!("ingest_worker.insert_match.success").increment(1);
-            debug!("Inserted match data");
-        }
-        Err(e) => {
-            counter!("ingest_worker.insert_match.failure").increment(1);
-            bail!("Error inserting match data: {e}");
-        }
-    }
-
-    // Move Object to processed folder
-    let new_path = Path::from(format!("processed/metadata/{filename}"));
-    move_object(store, key, &new_path).await?;
-    Ok(key.to_string())
-}
-
 async fn list_ingest_objects(store: &impl ObjectStore) -> object_store::Result<Vec<Path>> {
     let p = Path::from("ingest/metadata/");
 
@@ -570,36 +747,6 @@ fn parse_match_data(buf: &[u8]) -> anyhow::Result<MatchInfo> {
         error!("Error parsing match data");
         Err(anyhow::anyhow!("Error parsing match data"))
     }
-}
-
-async fn insert_match(client: &clickhouse::Client, match_info: &MatchInfo) -> anyhow::Result<()> {
-    let ch_players = build_ch_players(match_info);
-
-    let history_entries: Vec<PlayerMatchHistoryEntry> = match_info
-        .players
-        .iter()
-        .filter_map(|p| PlayerMatchHistoryEntry::from_info_and_player(match_info, p))
-        .collect();
-
-    common::retry_fn_with_backoff("insert_match", || async {
-        let mut match_player_insert = client
-            .insert::<ClickhouseMatchPlayer>("match_player")
-            .await?;
-        for player in &ch_players {
-            match_player_insert.write(player).await?;
-        }
-        match_player_insert.end().await?;
-
-        let mut history_insert = client
-            .insert::<PlayerMatchHistoryEntry>("player_match_history")
-            .await?;
-        for entry in &history_entries {
-            history_insert.write(entry).await?;
-        }
-        history_insert.end().await?;
-        Ok(())
-    })
-    .await
 }
 
 async fn move_object(
