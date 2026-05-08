@@ -15,7 +15,8 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 use core::time::Duration;
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, bail};
 use bytes::Bytes;
@@ -82,6 +83,14 @@ struct ParsedMatch {
     history: Vec<PlayerMatchHistoryEntry>,
 }
 
+type InflightSet = Arc<Mutex<HashSet<Path>>>;
+
+fn lock_inflight(inflight: &InflightSet) -> std::sync::MutexGuard<'_, HashSet<Path>> {
+    inflight
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     common::init_tracing();
@@ -134,13 +143,15 @@ where
 
     let (tx, rx) = mpsc::channel::<(Path, ParsedMatch)>(batch_size.max(1).saturating_mul(2));
     let rx = Arc::new(tokio::sync::Mutex::new(rx));
+    let inflight: InflightSet = Arc::new(Mutex::new(HashSet::new()));
 
     for i in 0..num_inserters {
         let client = ch_client.clone();
         let rx = Arc::clone(&rx);
         let store = Arc::clone(&store);
+        let inflight = Arc::clone(&inflight);
         tokio::spawn(async move {
-            live_batch_inserter(client, store, rx, batch_size, flush_interval, i).await;
+            live_batch_inserter(client, store, rx, inflight, batch_size, flush_interval, i).await;
         });
     }
 
@@ -169,10 +180,24 @@ where
             continue;
         }
 
-        futures::stream::iter(objs_to_ingest)
+        let new_keys: Vec<Path> = {
+            let mut guard = lock_inflight(&inflight);
+            objs_to_ingest
+                .into_iter()
+                .filter(|k| guard.insert(k.clone()))
+                .collect()
+        };
+
+        if new_keys.is_empty() {
+            debug!("All listed objects are already in flight; skipping");
+            continue;
+        }
+
+        futures::stream::iter(new_keys)
             .map(|key| {
                 let store = Arc::clone(&store);
                 let tx = tx.clone();
+                let inflight = Arc::clone(&inflight);
                 async move {
                     match timeout(
                         Duration::from_secs(30),
@@ -180,16 +205,22 @@ where
                     )
                     .await
                     {
-                        Ok(Ok(())) => {
+                        Ok(Ok(true)) => {
                             counter!("ingest_worker.fetch_parse.success").increment(1);
+                        }
+                        Ok(Ok(false)) => {
+                            counter!("ingest_worker.fetch_parse.success").increment(1);
+                            lock_inflight(&inflight).remove(&key);
                         }
                         Ok(Err(e)) => {
                             counter!("ingest_worker.fetch_parse.failure").increment(1);
                             error!("Error fetching/parsing object {key}: {e:#}");
+                            lock_inflight(&inflight).remove(&key);
                         }
                         Err(_) => {
                             counter!("ingest_worker.fetch_parse.timeout").increment(1);
                             error!("Fetch+parse timed out for {key}");
+                            lock_inflight(&inflight).remove(&key);
                         }
                     }
                 }
@@ -212,6 +243,7 @@ async fn live_batch_inserter<S>(
     client: clickhouse::Client,
     store: Arc<S>,
     rx: Arc<tokio::sync::Mutex<mpsc::Receiver<(Path, ParsedMatch)>>>,
+    inflight: InflightSet,
     batch_size: usize,
     flush_interval: Duration,
     inserter_id: usize,
@@ -232,12 +264,12 @@ async fn live_batch_inserter<S>(
         tokio::select! {
             biased;
             _ = flush_timer.tick(), if !batch.is_empty() => {
-                flush_live_batch(&client, &*store, &mut batch, inserter_id).await;
+                flush_live_batch(&client, &*store, &inflight, &mut batch, inserter_id).await;
             }
             opt = recv_fut => {
                 let Some(item) = opt else {
                     if !batch.is_empty() {
-                        flush_live_batch(&client, &*store, &mut batch, inserter_id).await;
+                        flush_live_batch(&client, &*store, &inflight, &mut batch, inserter_id).await;
                     }
                     return;
                 };
@@ -252,7 +284,7 @@ async fn live_batch_inserter<S>(
                     }
                 }
                 if batch.len() >= batch_size {
-                    flush_live_batch(&client, &*store, &mut batch, inserter_id).await;
+                    flush_live_batch(&client, &*store, &inflight, &mut batch, inserter_id).await;
                 }
             }
         }
@@ -265,6 +297,7 @@ async fn live_batch_inserter<S>(
 async fn flush_live_batch<S: ObjectStore>(
     client: &clickhouse::Client,
     store: &S,
+    inflight: &InflightSet,
     batch: &mut Vec<(Path, ParsedMatch)>,
     inserter_id: usize,
 ) {
@@ -284,16 +317,21 @@ async fn flush_live_batch<S: ObjectStore>(
             info!("[inserter {inserter_id}] Flushed batch of {n} matches");
             let keys: Vec<Path> = batch.drain(..).map(|(k, _)| k).collect();
             futures::stream::iter(keys)
-                .map(|key| async move {
-                    let Some(filename) = key.filename().map(str::to_owned) else {
-                        warn!("Missing filename for key {key}, leaving in ingest/");
-                        return;
-                    };
-                    let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
-                    if let Err(e) = move_object(store, &key, &new_path).await {
-                        error!("Failed to move {key} to processed/: {e}");
-                    } else {
-                        gauge!("ingest_worker.objs_to_ingest").decrement(1);
+                .map(|key| {
+                    let inflight = Arc::clone(inflight);
+                    async move {
+                        let Some(filename) = key.filename().map(str::to_owned) else {
+                            warn!("Missing filename for key {key}, leaving in ingest/");
+                            lock_inflight(&inflight).remove(&key);
+                            return;
+                        };
+                        let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
+                        if let Err(e) = move_object(store, &key, &new_path).await {
+                            error!("Failed to move {key} to processed/: {e}");
+                        } else {
+                            gauge!("ingest_worker.objs_to_ingest").decrement(1);
+                        }
+                        lock_inflight(&inflight).remove(&key);
                     }
                 })
                 .buffer_unordered(POST_FLUSH_MOVE_CONCURRENCY)
@@ -306,7 +344,12 @@ async fn flush_live_batch<S: ObjectStore>(
                 "[inserter {inserter_id}] Batch flush of {n} matches failed permanently, \
                  leaving objects in ingest/ for retry: {e:#}"
             );
-            batch.clear();
+            {
+                let mut guard = lock_inflight(inflight);
+                for (k, _) in batch.drain(..) {
+                    guard.remove(&k);
+                }
+            }
         }
     }
 }
@@ -318,7 +361,7 @@ async fn fetch_parse_and_send<S: ObjectStore>(
     store: &S,
     key: &Path,
     tx: &mpsc::Sender<(Path, ParsedMatch)>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let obj = get_object(store, key).await?;
 
     let data = obj.bytes().await?;
@@ -349,14 +392,14 @@ async fn fetch_parse_and_send<S: ObjectStore>(
                 m.match_id
             );
             gauge!("ingest_worker.objs_to_ingest").decrement(1);
-            return Ok(());
+            return Ok(false);
         }
         Err(e) => {
             let new_path = Path::from(format!("{FAILED_PREFIX}/{filename}"));
             move_object(store, key, &new_path).await?;
             warn!("[{filename}] Error parsing match data: {e}");
             gauge!("ingest_worker.objs_to_ingest").decrement(1);
-            return Ok(());
+            return Ok(false);
         }
         Ok(m) => m,
     };
@@ -372,7 +415,7 @@ async fn fetch_parse_and_send<S: ObjectStore>(
     if tx.send((key.clone(), parsed)).await.is_err() {
         bail!("Insert channel closed; inserter tasks have exited");
     }
-    Ok(())
+    Ok(true)
 }
 
 /// Known file extensions for match metadata files.
