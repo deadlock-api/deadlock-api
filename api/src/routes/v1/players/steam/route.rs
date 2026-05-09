@@ -212,10 +212,10 @@ async fn search_steam(
         WITH ? as query
         SELECT ?fields
         FROM steam_profiles FINAL
-        WHERE personaname IS NOT NULL AND not empty(personaname)
+        WHERE personaname_lc IS NOT NULL AND not empty(personaname_lc)
         ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
                  if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
-                 jaroWinklerSimilarity(lower(personaname), lower(query)) DESC
+                 jaroWinklerSimilarity(personaname_lc, lower(query)) DESC
         LIMIT 100
         SETTINGS log_comment = 'steam_search'
     ";
