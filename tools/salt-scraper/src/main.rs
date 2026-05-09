@@ -346,7 +346,7 @@ async fn fetch_pmh_pending_widening(
                 format!(
                     r"
                 SELECT match_id, groupArray(account_id) AS participants
-                FROM player_match_history
+                FROM player_match_by_match
                 WHERE match_mode IN ('Ranked', 'Unranked')
                   AND start_time < now() - INTERVAL 2 HOUR
                   AND match_id >= {mid_floor}
@@ -364,18 +364,18 @@ async fn fetch_pmh_pending_widening(
             }
             None => format!(
                 r"
-                SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
-                FROM player_match_history pmh
+                SELECT pmbm.match_id, groupArray(pmbm.account_id) AS participants
+                FROM player_match_by_match pmbm
                 LEFT ANTI JOIN (
                     SELECT match_id FROM match_salts WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
                     UNION DISTINCT
                     SELECT match_id FROM match_player WHERE match_id >= 31247321
-                ) ex ON ex.match_id = pmh.match_id
-                WHERE pmh.match_mode IN ('Ranked', 'Unranked')
-                  AND pmh.start_time < now() - INTERVAL 2 HOUR
-                  AND pmh.match_id >= 31247321
-                GROUP BY pmh.match_id
-                ORDER BY pmh.match_id DESC
+                ) ex ON ex.match_id = pmbm.match_id
+                WHERE pmbm.match_mode IN ('Ranked', 'Unranked')
+                  AND pmbm.start_time < now() - INTERVAL 2 HOUR
+                  AND pmbm.match_id >= 31247321
+                GROUP BY pmbm.match_id
+                ORDER BY pmbm.match_id DESC
                 LIMIT 100
                 SETTINGS log_comment = 'salt_scraper_pmh_full_pending_matches'
                 "
