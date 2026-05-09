@@ -64,16 +64,16 @@ struct Cli {
     #[arg(long, default_value_t = 10, env = "INGEST_PARALLELISM")]
     ingest_parallelism: usize,
 
-    /// Number of matches to batch per ``ClickHouse`` insert during live ingestion (default: 500)
-    #[arg(long, default_value_t = 500, env = "INGEST_BATCH_SIZE")]
+    /// Number of matches to batch per ``ClickHouse`` insert during live ingestion (default: 10000)
+    #[arg(long, default_value_t = 10_000, env = "INGEST_BATCH_SIZE")]
     ingest_batch_size: usize,
 
-    /// Number of concurrent ``ClickHouse`` inserter tasks for live ingestion (default: 2)
-    #[arg(long, default_value_t = 2, env = "INGEST_INSERTERS")]
+    /// Number of concurrent ``ClickHouse`` inserter tasks for live ingestion (default: 1)
+    #[arg(long, default_value_t = 1, env = "INGEST_INSERTERS")]
     ingest_inserters: usize,
 
-    /// Maximum time (in milliseconds) to wait before flushing a partial batch (default: 5000)
-    #[arg(long, default_value_t = 5000, env = "INGEST_FLUSH_INTERVAL_MS")]
+    /// Maximum time (in milliseconds) to wait before flushing a partial batch (default: 60000)
+    #[arg(long, default_value_t = 60_000, env = "INGEST_FLUSH_INTERVAL_MS")]
     ingest_flush_interval_ms: u64,
 }
 
