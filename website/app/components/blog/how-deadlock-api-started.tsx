@@ -160,7 +160,7 @@ export default function HowDeadlockApiStarted() {
         <a href="https://www.patreon.com/c/manuelhexe" target="_blank" rel="noopener noreferrer">
           Patreon
         </a>{" "}
-        where supporters get prioritized data fetching for their Steam accounts, starting at $3 a month. That covers
+        where supporters get prioritized data fetching for their Steam accounts, starting at $1.50 a month. That covers
         infrastructure (currently around $200 a month, up from $20 at the start). We've always tried to optimize our way
         out of scaling problems before spending more money.
       </p>
