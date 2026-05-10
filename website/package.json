@@ -14,9 +14,6 @@
     "cf-typegen": "wrangler types",
     "typecheck": "react-router typegen && wrangler types && tsc"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["sharp", "workerd", "esbuild"]
-  },
   "dependencies": {
     "@codemirror/lang-sql": "^6.10.0",
     "@duckdb/duckdb-wasm": "1.33.1-dev45.0",
@@ -90,5 +87,12 @@
   },
   "engines": {
     "node": ">=24.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sharp",
+      "workerd",
+      "esbuild"
+    ]
   }
 }

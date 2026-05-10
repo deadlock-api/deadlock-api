@@ -9,7 +9,6 @@ node_modules
 worker-configuration.d.ts
 .idea
 .react-router/
-pnpm-workspace.yaml
 *.tsbuildinfo
 
 # Generated OG images (built at build time)

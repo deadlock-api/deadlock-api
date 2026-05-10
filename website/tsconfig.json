@@ -1,11 +1,5 @@
 {
-  "include": [
-    "env.d.ts",
-    "worker-configuration.d.ts",
-    ".react-router/types/**/*",
-    "**/*.ts",
-    "**/*.tsx"
-  ],
+  "include": ["env.d.ts", "worker-configuration.d.ts", ".react-router/types/**/*", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "lib": ["DOM", "ES2025"],
     "types": ["@cloudflare/workers-types", "vite/client"],

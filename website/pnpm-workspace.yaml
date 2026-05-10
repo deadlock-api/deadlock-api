@@ -1,9 +1,14 @@
-allowBuilds:
-  deadlock_api_client: true
-  assets_deadlock_api_client: true
-  esbuild: true
-  core-js: true
-  protobufjs: true
+packages:
+  - "."
+
+onlyBuiltDependencies:
+  - sharp
+  - workerd
+  - esbuild
+  - core-js
+  - protobufjs
+  - deadlock_api_client
+  - assets_deadlock_api_client
 
 overrides:
   typescript: ^6.0.3
