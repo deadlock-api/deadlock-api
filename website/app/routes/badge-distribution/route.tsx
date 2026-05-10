@@ -18,8 +18,9 @@ const BadgeDistributionChart = lazy(() => import("./BadgeDistributionChart"));
 
 export function meta() {
   return createPageMeta({
-    title: "Rank Distribution | Deadlock API",
-    description: "See the distribution of average match ranks across the Deadlock competitive ladder.",
+    title: "Deadlock Rank Distribution: Badge Stats & Rank Percentiles",
+    description:
+      "See the Deadlock rank distribution across all badges and subtiers. Find out what percentage of players are at each rank on the competitive ladder.",
     path: "/badge-distribution",
   });
 }

@@ -15,8 +15,9 @@ import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderbo
 
 export function meta() {
   return createPageMeta({
-    title: "Ranked Leaderboard | Deadlock API",
-    description: "Browse the ranked Deadlock leaderboard with region filters, hero filters, and player search.",
+    title: "Deadlock Leaderboard: Top Ranked Players by Region",
+    description:
+      "Browse the Deadlock ranked leaderboard across all regions. Filter by hero, rank badge, and search for any player.",
     path: "/leaderboard",
   });
 }

@@ -16,8 +16,9 @@ import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
-    title: "Ability Stats & Upgrade Paths | Deadlock API",
-    description: "Ability upgrade paths and win rates for every Deadlock hero. Analyze optimal skill orders by rank.",
+    title: "Deadlock Ability Stats: Skill Build Win Rates & Upgrade Paths",
+    description:
+      "Deadlock ability upgrade path analytics: which skill orders win the most? Win rates by ability level order for every hero, filtered by rank and patch.",
     path: "/abilities",
   });
 };

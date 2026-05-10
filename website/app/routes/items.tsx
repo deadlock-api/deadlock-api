@@ -24,8 +24,9 @@ const ItemCombsExplore = lazy(() =>
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
-    title: "Item Stats & Build Analytics | Deadlock API",
-    description: "Item win rates, purchase timing, confidence intervals, and combo analytics for Deadlock.",
+    title: "Deadlock Item Stats: Win Rates, Build Timing & Combos",
+    description:
+      "Deadlock item win rates with statistical confidence intervals, optimal purchase timing, and item combo analytics. Filter by hero, rank, and patch.",
     path: "/items",
   });
 };

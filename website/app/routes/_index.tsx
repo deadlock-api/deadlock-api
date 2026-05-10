@@ -34,9 +34,9 @@ import { cn } from "~/lib/utils";
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
-    title: "Deadlock API - Game Stats, Hero Analytics & Leaderboards",
+    title: "Deadlock Stats & Analytics: Hero Win Rates, Tracker & Leaderboards",
     description:
-      "Game statistics, hero analytics, item data, and leaderboards for Deadlock by Valve. Open source and open data.",
+      "Deadlock stats tracker with hero win rates, pick rates, item analytics, rank distribution, and leaderboards. Free community tool with live data from Valve's servers.",
     path: "/",
   });
 };

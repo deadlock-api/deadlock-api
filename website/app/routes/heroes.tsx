@@ -55,8 +55,9 @@ const HeroMatchupDetailsStatsTable = lazy(() =>
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
-    title: "Hero Stats & Analytics | Deadlock API",
-    description: "View win rates, pick rates, matchups, and performance analytics for all Deadlock heroes.",
+    title: "Deadlock Hero Stats: Win Rates, Pick Rates & Matchups",
+    description:
+      "Deadlock hero win rates, pick rates, matchups, and synergies for every hero. Filter by rank and patch. Updated daily from live match data.",
     path: "/heroes",
   });
 };
