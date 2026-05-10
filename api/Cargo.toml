@@ -59,6 +59,7 @@ md5 = { package = "md-5", version = "0.11" }
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "load-dynamic", "ndarray", "tracing", "copy-dylibs", "api-24", "tls-native"] }
 ndarray = "0.17.2"
+async-trait = "0.1.89"
 
 [dev-dependencies]
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }

@@ -6,11 +6,12 @@ use async_graphql::{
     Context, EmptyMutation, EmptySubscription, Enum, Object, Result as GqlResult, Schema,
 };
 use tokio::io::AsyncBufReadExt as _;
-use tracing::debug;
+use tracing::{Instrument as _, debug, info_span};
 
 use crate::context::AppState;
 use crate::routes::v1::graphql::cost::{COMPLEXITY_LIMIT, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::MatchPlayerWhere;
+use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
 use crate::routes::v1::graphql::projection::{project_match_players, project_matches};
 use crate::routes::v1::graphql::sql::{
     BuildArgs, OrderDir, OrderKey, build_match_players_query, build_matches_query,
@@ -28,6 +29,7 @@ pub(crate) fn build_schema() -> GraphQLSchema {
     Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .limit_depth(DEPTH_LIMIT)
         .limit_complexity(COMPLEXITY_LIMIT)
+        .extension(MetricsExtension)
         .finish()
 }
 
@@ -108,7 +110,11 @@ impl QueryRoot {
         })
         .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
         debug!(?sql, "graphql.matches built sql");
-        let rows = run_query::<Match>(&state.ch_client_ro, &sql).await?;
+        let rows = run_query::<Match>(&state.ch_client_ro, &sql)
+            .instrument(info_span!("graphql.clickhouse", operation = "matches", sql = %sql))
+            .await?;
+        metrics::histogram!("graphql_rows_returned", "operation" => "matches")
+            .record(rows.len() as f64);
         Ok(rows)
     }
 
@@ -135,7 +141,11 @@ impl QueryRoot {
         })
         .map_err(|e| async_graphql::Error::new(format!("SQL build error: {e}")))?;
         debug!(?sql, "graphql.match_players built sql");
-        let rows = run_query::<MatchPlayer>(&state.ch_client_ro, &sql).await?;
+        let rows = run_query::<MatchPlayer>(&state.ch_client_ro, &sql)
+            .instrument(info_span!("graphql.clickhouse", operation = "match_players", sql = %sql))
+            .await?;
+        metrics::histogram!("graphql_rows_returned", "operation" => "match_players")
+            .record(rows.len() as f64);
         Ok(rows)
     }
 }

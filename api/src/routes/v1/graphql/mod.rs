@@ -1,5 +1,6 @@
 mod cost;
 mod filters;
+mod metrics_ext;
 mod projection;
 mod schema;
 mod sql;

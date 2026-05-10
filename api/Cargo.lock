@@ -1162,6 +1162,7 @@ dependencies = [
  "async-compression",
  "async-graphql",
  "async-graphql-axum",
+ "async-trait",
  "axum",
  "axum-extra",
  "axum-prometheus",
