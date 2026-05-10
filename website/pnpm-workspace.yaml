@@ -7,8 +7,10 @@ onlyBuiltDependencies:
   - esbuild
   - core-js
   - protobufjs
+  - deadlock_api_client
+  - assets_deadlock_api_client
 
-# git-hosted packages with prepare scripts need an explicit allowlist
+# Older pnpm versions read this key for git-hosted prepare scripts
 allowBuilds:
   deadlock_api_client: true
   assets_deadlock_api_client: true
