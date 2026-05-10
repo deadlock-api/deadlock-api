@@ -7,6 +7,7 @@ mod auth;
 pub mod builds;
 mod commands;
 pub(crate) mod data_privacy;
+mod graphql;
 pub mod info;
 mod leaderboard;
 pub mod matches;
@@ -30,4 +31,5 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/auth", auth::router())
         .nest("/patron", patron::router())
         .nest("/servers", servers::router())
+        .merge(graphql::router())
 }
