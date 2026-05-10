@@ -7,8 +7,11 @@ onlyBuiltDependencies:
   - esbuild
   - core-js
   - protobufjs
-  - deadlock_api_client
-  - assets_deadlock_api_client
+
+# git-hosted packages with prepare scripts need an explicit allowlist
+allowBuilds:
+  deadlock_api_client: true
+  assets_deadlock_api_client: true
 
 overrides:
   typescript: ^6.0.3
