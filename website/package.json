@@ -3,7 +3,6 @@
   "private": true,
   "type": "module",
   "sideEffects": false,
-  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
@@ -88,5 +87,6 @@
   },
   "engines": {
     "node": ">=24.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }
