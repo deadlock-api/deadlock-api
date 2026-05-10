@@ -144,9 +144,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   description:
                     "Deadlock is a team-based multiplayer shooter and MOBA hybrid game developed and published by Valve.",
                   url: "https://store.steampowered.com/app/1422450/Deadlock/",
-                  gamePlatform: "PC",
-                  applicationCategory: "Game",
-                  operatingSystem: "Windows",
+                  gamePlatform: ["PC", "Windows", "macOS", "Linux"],
                   genre: ["MOBA", "Third-Person Shooter"],
                   author: {
                     "@type": "Organization",
