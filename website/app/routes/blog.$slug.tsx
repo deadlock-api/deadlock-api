@@ -115,11 +115,12 @@ export default function BlogPostPage() {
               "@type": "BlogPosting",
               headline: post.title,
               description: post.description,
+              image: `https://deadlock-api.com${getBlogOGImage(post.slug)}`,
               datePublished: post.date,
+              dateModified: post.date,
               author: {
-                "@type": "Organization",
+                "@type": "Person",
                 name: post.author,
-                url: "https://deadlock-api.com",
               },
               publisher: {
                 "@type": "Organization",
