@@ -59,7 +59,7 @@ export function ResponsiveTabsList({
           </SelectContent>
         </Select>
       ) : (
-        <TabsList variant={variant} className={cn("scrollbar-none w-full overflow-x-auto", className)}>
+        <TabsList variant={variant} className={cn("w-full scrollbar-none overflow-x-auto", className)}>
           {options.map((opt) => (
             <TabsTrigger key={opt.value} value={opt.value}>
               {opt.label}
@@ -77,7 +77,7 @@ export function ResponsiveTabsList({
         aria-hidden
         inert
         className={cn(
-          "scrollbar-none pointer-events-none invisible absolute top-0 left-0 w-full overflow-x-auto",
+          "pointer-events-none invisible absolute top-0 left-0 w-full scrollbar-none overflow-x-auto",
           className,
         )}
       >
