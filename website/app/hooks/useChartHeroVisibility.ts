@@ -14,7 +14,7 @@ export function useHeroColorMap() {
   const heroIdMap = useMemo(() => {
     const map: Record<number, { name: string; color: string }> = {};
     for (const hero of assetsHeroes || []) {
-      const uiColor = hero.colors?.ui;
+      const uiColor = hero.colors?.style ?? hero.colors?.ui;
       map[hero.id] = { name: hero.name, color: uiColor ? `rgb(${uiColor.join(",")})` : "#ffffff" };
     }
     return map;
