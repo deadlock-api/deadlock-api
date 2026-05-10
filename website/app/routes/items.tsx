@@ -112,6 +112,7 @@ export default function Items(
           ]}
         />
         <TabsContent value="stats">
+          <h2 className="sr-only">Overall Item Stats</h2>
           <ItemStatsTable
             columns={["itemsTier", "winRate", "matches", "confidence"]}
             initialSort={{ field: "winRate", direction: "desc" }}
@@ -129,6 +130,7 @@ export default function Items(
           />
         </TabsContent>
         <TabsContent value="item-purchase-analysis">
+          <h2 className="sr-only">Item Purchase Analysis</h2>
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <ItemPurchaseAnalysis
@@ -146,6 +148,7 @@ export default function Items(
           </ChunkErrorBoundary>
         </TabsContent>
         <TabsContent value="item-combs">
+          <h2 className="sr-only">Item Combos</h2>
           <ChunkErrorBoundary>
             <Suspense fallback={<LoadingLogo />}>
               <ItemCombsExplore

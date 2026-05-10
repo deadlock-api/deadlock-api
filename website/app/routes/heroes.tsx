@@ -107,6 +107,7 @@ export default function Heroes(
 
         <TabsContent value="stats">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Overall Hero Stats</h2>
             <div className="flex items-center justify-end gap-2">
               <Label htmlFor={groupByTypeId} className="text-sm font-semibold text-nowrap text-foreground">
                 Group by Type
@@ -131,6 +132,7 @@ export default function Heroes(
 
         <TabsContent value="stats-over-time">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats Over Time</h2>
             <div className="flex flex-wrap items-start justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
@@ -169,6 +171,7 @@ export default function Heroes(
 
         <TabsContent value="stats-by-duration">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats by Game Duration</h2>
             <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
@@ -198,6 +201,7 @@ export default function Heroes(
 
         <TabsContent value="stats-by-rank">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats by Rank</h2>
             <div className="flex flex-col items-center gap-3">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">X Axis</span>
@@ -234,6 +238,7 @@ export default function Heroes(
 
         <TabsContent value="stats-by-experience">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Stats by Experience</h2>
             <div className="flex flex-wrap justify-center gap-2 sm:flex-nowrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm text-muted-foreground">Stat</span>
@@ -262,6 +267,7 @@ export default function Heroes(
 
         <TabsContent value="matchups">
           <div className="mt-4 flex flex-col gap-4">
+            <h2 className="sr-only">Hero Matchups</h2>
             <div className="flex flex-wrap items-center justify-center gap-8 sm:flex-nowrap">
               <div className="flex items-center gap-2">
                 <Label htmlFor={sameLaneFilterId1} className="text-sm font-semibold text-nowrap text-foreground">
@@ -296,6 +302,7 @@ export default function Heroes(
 
         <TabsContent value="hero-combs">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Combos</h2>
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingLogo />}>
                 <HeroCombStatsTable
@@ -316,6 +323,7 @@ export default function Heroes(
 
         <TabsContent value="hero-matchup-details">
           <div className="flex flex-col gap-4">
+            <h2 className="sr-only">Hero Matchup Details</h2>
             <div className="flex flex-wrap items-center justify-center gap-8 sm:flex-nowrap">
               <HeroSelector
                 selectedHero={filters.heroId}
