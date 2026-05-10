@@ -1,8 +1,14 @@
 {
-  "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": [
+    "env.d.ts",
+    "worker-configuration.d.ts",
+    ".react-router/types/**/*",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "compilerOptions": {
     "lib": ["DOM", "ES2025"],
-    "types": ["@react-router/node", "vite/client"],
+    "types": ["@cloudflare/workers-types", "vite/client"],
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",

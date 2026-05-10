@@ -1,6 +1,8 @@
+import { HydrationBoundary } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense, useMemo, useState } from "react";
 import type { MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
@@ -10,9 +12,19 @@ const AbilityOrderTree = lazy(() => import("~/components/abilities/AbilityOrderT
 
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
-import { DEFAULT_DATE_RANGE } from "~/lib/constants";
+import { getDefaultDateRange } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { ANALYTICS_CACHE_HEADERS, assetPrefetches, prefetchAndDehydrate } from "~/lib/query-ssr";
+
+export async function loader() {
+  const dehydratedState = await prefetchAndDehydrate([assetPrefetches.heroes, assetPrefetches.abilities]);
+  return { dehydratedState };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -24,14 +36,21 @@ export const meta: MetaFunction = () => {
 };
 
 export default function AbilityOrder() {
+  const { dehydratedState } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <AbilityOrderContent />
+    </HydrationBoundary>
+  );
+}
+
+function AbilityOrderContent() {
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
+  const [defaultRange] = useState(getDefaultDateRange);
+  const [[startDate, endDate], setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault(defaultRange));
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(20));
   const [itemSelections, setItemSelections] = useState<Map<number, TriState>>(new Map());
 

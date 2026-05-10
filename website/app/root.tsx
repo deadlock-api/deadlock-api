@@ -228,19 +228,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 3,
-      throwOnError: (error) => {
-        if (error instanceof AxiosError && error.response?.status) {
-          return error.response.status >= 500;
-        }
-        return false;
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 3,
+        // Skip fetching during SSR — let queries kick off client-side after hydration.
+        enabled: typeof window !== "undefined",
+        throwOnError: (error) => {
+          if (error instanceof AxiosError && error.response?.status) {
+            return error.response.status >= 500;
+          }
+          return false;
+        },
       },
     },
-  },
-});
+  });
+}
 interface QueryErrorBoundaryProps {
   onReset: () => void;
   fallbackRender: (props: { resetErrorBoundary: () => void }) => ReactNode;
@@ -327,6 +331,7 @@ function AnimatedOutlet() {
 }
 
 export default function App() {
+  const [queryClient] = useState(makeQueryClient);
   const { pathname, search, hash } = useLocation();
 
   if (pathname !== "/" && pathname.endsWith("/")) {

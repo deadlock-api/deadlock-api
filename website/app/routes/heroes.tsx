@@ -1,6 +1,8 @@
+import { HydrationBoundary } from "@tanstack/react-query";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { lazy, Suspense, useId } from "react";
 import type { MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection";
@@ -15,7 +17,17 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { createPageMeta } from "~/lib/meta";
+import { ANALYTICS_CACHE_HEADERS, assetPrefetches, prefetchAndDehydrate } from "~/lib/query-ssr";
 import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
+
+export async function loader() {
+  const dehydratedState = await prefetchAndDehydrate([assetPrefetches.heroes]);
+  return { dehydratedState };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 
 const HeroStatsOverTimeChart = lazy(() =>
   import("~/components/heroes-page/HeroStatsOverTimeChart").then((m) => ({
@@ -66,6 +78,15 @@ export default function Heroes(
     initialTab: "stats",
   },
 ) {
+  const { dehydratedState } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <HeroesContent initialTab={initialTab} />
+    </HydrationBoundary>
+  );
+}
+
+function HeroesContent({ initialTab }: { initialTab?: HeroTab }) {
   const filters = useHeroFilters(initialTab);
   const [groupByType, setGroupByType] = useQueryState("group_by_type", parseAsBoolean.withDefault(false));
   const groupByTypeId = useId();

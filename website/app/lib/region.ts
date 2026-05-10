@@ -1,10 +1,12 @@
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 
-export function getDefaultRegion(): LeaderboardRegionEnum {
-  if (typeof navigator === "undefined") return LeaderboardRegionEnum.Europe;
-  const lang = navigator.language?.toLowerCase() ?? "";
-  const langPrefix = lang.split("-")[0];
-  const region = lang.split("-")[1];
+/** Detect the user's default leaderboard region from a language string (e.g. browser navigator.language or HTTP Accept-Language header). */
+export function getDefaultRegion(languageInput?: string | null): LeaderboardRegionEnum {
+  const lang = (languageInput ?? (typeof navigator !== "undefined" ? navigator.language : ""))?.toLowerCase() ?? "";
+  // Accept-Language can be a comma-separated list with quality values; grab the first locale.
+  const primary = lang.split(",")[0]?.split(";")[0]?.trim() ?? "";
+  const langPrefix = primary.split("-")[0];
+  const region = primary.split("-")[1];
 
   // South American country codes
   const saCountries = ["br", "ar", "cl", "co", "pe", "ve", "uy", "py", "bo", "ec", "gf", "sr", "gy"];

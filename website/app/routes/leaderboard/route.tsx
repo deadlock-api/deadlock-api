@@ -1,17 +1,46 @@
-import { useQueries } from "@tanstack/react-query";
+import { HydrationBoundary, useQueries } from "@tanstack/react-query";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback, useRef } from "react";
+import type { LoaderFunctionArgs } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import { createPageMeta } from "~/lib/meta";
+import { ANALYTICS_CACHE_HEADERS, prefetchAndDehydrate } from "~/lib/query-ssr";
 import { getDefaultRegion } from "~/lib/region";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { LeaderboardSummary } from "~/routes/leaderboard/LeaderboardSummary";
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/routes/leaderboard/LeaderboardTable";
+
+const REGION_VALUES = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
+
+function isRegion(value: string | null): value is LeaderboardRegionEnum {
+  return value !== null && (REGION_VALUES as readonly string[]).includes(value);
+}
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const regionParam = url.searchParams.get("region");
+  const region: LeaderboardRegionEnum = isRegion(regionParam)
+    ? regionParam
+    : getDefaultRegion(request.headers.get("accept-language"));
+  const heroIdParam = url.searchParams.get("hero_id");
+  const heroId = heroIdParam ? Number.parseInt(heroIdParam, 10) || null : null;
+
+  const dehydratedState = await prefetchAndDehydrate([
+    (qc) => qc.prefetchQuery(ranksQueryOptions),
+    (qc) => qc.prefetchQuery(leaderboardQueryOptions(region, heroId)),
+  ]);
+  return { dehydratedState, initialRegion: region };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 
 export function meta() {
   return createPageMeta({
@@ -22,13 +51,17 @@ export function meta() {
   });
 }
 
-const REGION_VALUES = Object.values(LeaderboardRegionEnum) as [LeaderboardRegionEnum, ...LeaderboardRegionEnum[]];
-
 export default function Leaderboard() {
-  const [region, setRegion] = useQueryState(
-    "region",
-    parseAsStringLiteral(REGION_VALUES).withDefault(getDefaultRegion()),
+  const { dehydratedState, initialRegion } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <LeaderboardContent initialRegion={initialRegion} />
+    </HydrationBoundary>
   );
+}
+
+function LeaderboardContent({ initialRegion }: { initialRegion: LeaderboardRegionEnum }) {
+  const [region, setRegion] = useQueryState("region", parseAsStringLiteral(REGION_VALUES).withDefault(initialRegion));
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger);
 
   const [ranks, leaderboardQuery] = useQueries({

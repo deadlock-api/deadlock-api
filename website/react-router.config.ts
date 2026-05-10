@@ -3,23 +3,20 @@ import type { Config } from "@react-router/dev/config";
 import { getAllSlugs } from "./app/lib/blog";
 
 export default {
-  ssr: false,
+  ssr: true,
+  future: {
+    v8_viteEnvironmentApi: true,
+  },
   async prerender() {
     const blogSlugs = getAllSlugs();
+    // Analytics routes (heroes, items, abilities, leaderboard, badge-distribution, games, heatmap,
+    // player-scoreboard, servers) are SSRed per request so loader-prefetched data stays fresh.
     return [
       "/",
-      "/heroes",
-      "/items",
-      "/abilities",
-      "/leaderboard",
-      "/badge-distribution",
       "/chat",
       "/streamkit",
       "/data-privacy",
       "/ingest-cache",
-      "/games",
-      "/heatmap",
-      "/player-scoreboard",
       "/blog",
       ...blogSlugs.map((slug) => `/blog/${slug}`),
     ];

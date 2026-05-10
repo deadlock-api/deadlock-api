@@ -45,15 +45,16 @@ export const PATCHES = [
 const MIN_PATCH_AGE_DAYS = 7;
 const FALLBACK_RANGE_DAYS = 14;
 
-/** Fresh patches lack enough data for meaningful stats, so fall back to a rolling window. */
-export const DEFAULT_DATE_RANGE: [Dayjs, Dayjs] = (() => {
+/** Fresh patches lack enough data for meaningful stats, so fall back to a rolling window.
+ *  Evaluated lazily so server and client don't capture different "now" timestamps and trigger hydration mismatches. */
+export function getDefaultDateRange(): [Dayjs, Dayjs] {
   const latestPatch = PATCHES[0];
   const daysSincePatch = day.utc().diff(latestPatch.startDate, "day");
   if (daysSincePatch < MIN_PATCH_AGE_DAYS) {
     return [day.utc().subtract(FALLBACK_RANGE_DAYS, "day").startOf("day"), day.utc().endOf("day")];
   }
   return [latestPatch.startDate, latestPatch.endDate];
-})();
+}
 
 export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;

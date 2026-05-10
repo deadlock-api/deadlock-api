@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { HydrationBoundary, useQuery } from "@tanstack/react-query";
 import type { GameServerInfo, SteamServer } from "deadlock_api_client";
 import { ChevronDown, ChevronUp, ExternalLink, Plug, Search, Server, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { parseAsBoolean, parseAsString, useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
+import { useLoaderData } from "react-router";
 
 import { StringSelector } from "~/components/selectors/StringSelector";
 import { Badge } from "~/components/ui/badge";
@@ -12,7 +13,17 @@ import { Input } from "~/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { day } from "~/dayjs";
 import { createPageMeta } from "~/lib/meta";
+import { ANALYTICS_CACHE_HEADERS, prefetchAndDehydrate } from "~/lib/query-ssr";
 import { serversQueryOptions, steamServersQueryOptions } from "~/queries/servers-query";
+
+export async function loader() {
+  const dehydratedState = await prefetchAndDehydrate([(qc) => qc.prefetchQuery(serversQueryOptions)]);
+  return { dehydratedState };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 
 export function meta() {
   return createPageMeta({
@@ -74,6 +85,15 @@ function formatSince(timestamp: string | number | Date, now: number) {
 }
 
 export default function Servers() {
+  const { dehydratedState } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <ServersContent />
+    </HydrationBoundary>
+  );
+}
+
+function ServersContent() {
   const { data, isPending, isError, error, dataUpdatedAt } = useQuery(serversQueryOptions);
   const showEmptyState = !isPending && !isError;
 

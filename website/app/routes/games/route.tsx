@@ -1,8 +1,10 @@
+import { HydrationBoundary } from "@tanstack/react-query";
 import type { GameStatsBucketEnum } from "deadlock_api_client";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client/api";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Suspense, lazy, useState } from "react";
 import type { MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
@@ -12,10 +14,20 @@ import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
+import { getDefaultDateRange, PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { ANALYTICS_CACHE_HEADERS, assetPrefetches, prefetchAndDehydrate } from "~/lib/query-ssr";
+
+export async function loader() {
+  const dehydratedState = await prefetchAndDehydrate([assetPrefetches.heroes]);
+  return { dehydratedState };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 
 import { ALL_STAT_KEYS } from "./stat-definitions";
 
@@ -32,6 +44,15 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Games() {
+  const { dehydratedState } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <GamesContent />
+    </HydrationBoundary>
+  );
+}
+
+function GamesContent() {
   const [tab, setTab] = useQueryState(
     "tab",
     parseAsStringLiteral(["overview", "over-time", "by-rank"] as const).withDefault("overview"),
@@ -39,13 +60,9 @@ export default function Games() {
   const [gameMode, setGameMode] = useQueryState("game_mode", parseAsGameMode);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
-  const [prevDates, setPrevDates] = useState(() =>
-    computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES),
-  );
+  const [defaultRange] = useState(getDefaultDateRange);
+  const [[startDate, endDate], setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault(defaultRange));
+  const [prevDates, setPrevDates] = useState(() => computePreviousPeriod(defaultRange[0], defaultRange[1], PATCHES));
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [stat, setStat] = useQueryState(

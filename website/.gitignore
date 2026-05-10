@@ -4,6 +4,9 @@ node_modules
 /build
 /public/build
 .env
+.dev.vars
+.wrangler/
+worker-configuration.d.ts
 .idea
 .react-router/
 pnpm-workspace.yaml

@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { HydrationBoundary, useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import type { MetaFunction } from "react-router";
+import { useLoaderData } from "react-router";
 
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -12,12 +13,22 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { ANALYTICS_CACHE_HEADERS, assetPrefetches, prefetchAndDehydrate } from "~/lib/query-ssr";
 import { roundedNow } from "~/lib/time-normalize";
 import { queryKeys } from "~/queries/query-keys";
 
 import { ScoreboardTable } from "./ScoreboardTable";
 import { ALL_SORT_BY_VALUES, getSortByLabel } from "./sort-options";
 import { SortBySelector } from "./SortBySelector";
+
+export async function loader() {
+  const dehydratedState = await prefetchAndDehydrate([assetPrefetches.heroes]);
+  return { dehydratedState };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 
 export const meta: MetaFunction = () => {
   return createPageMeta({
@@ -28,6 +39,15 @@ export const meta: MetaFunction = () => {
 };
 
 export default function PlayerScoreboard() {
+  const { dehydratedState } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <PlayerScoreboardContent />
+    </HydrationBoundary>
+  );
+}
+
+function PlayerScoreboardContent() {
   const [sortBy, setSortBy] = useQueryState(
     "sort_by",
     parseAsStringLiteral(ALL_SORT_BY_VALUES as [string, ...string[]]).withDefault("kills"),

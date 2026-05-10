@@ -1,3 +1,4 @@
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
@@ -14,6 +15,7 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   plugins: [
+    cloudflare({ viteEnvironment: { name: "ssr" } }),
     ogImages(),
     reactRouter(),
     // React Compiler via Babel is slow — only run it for production builds

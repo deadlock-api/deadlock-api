@@ -1,7 +1,8 @@
-import { useQueries } from "@tanstack/react-query";
+import { HydrationBoundary, useQueries } from "@tanstack/react-query";
 import type { AnalyticsApiKillDeathStatsRequest } from "deadlock_api_client/api";
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
+import { useLoaderData } from "react-router";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
@@ -10,9 +11,19 @@ import { combineQueryStates } from "~/components/QueryRenderer";
 import { type GameMode, parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE } from "~/lib/constants";
+import { getDefaultDateRange } from "~/lib/constants";
 import { createPageMeta } from "~/lib/meta";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { ANALYTICS_CACHE_HEADERS, assetPrefetches, prefetchAndDehydrate } from "~/lib/query-ssr";
+
+export async function loader() {
+  const dehydratedState = await prefetchAndDehydrate([assetPrefetches.heroes]);
+  return { dehydratedState };
+}
+
+export function headers() {
+  return ANALYTICS_CACHE_HEADERS;
+}
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
 import HeatmapCanvas from "./HeatmapCanvas";
@@ -30,6 +41,15 @@ export function meta() {
 }
 
 export default function Heatmap() {
+  const { dehydratedState } = useLoaderData<typeof loader>();
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <HeatmapContent />
+    </HydrationBoundary>
+  );
+}
+
+function HeatmapContent() {
   const [viewMode, setViewMode] = useQueryState("view", parseAsStringLiteral(VIEW_MODES).withDefault("kills"));
   const [team, setTeam] = useQueryState("team", parseAsInteger.withDefault(0));
   const [is3D, setIs3D] = useQueryState("3d", parseAsBoolean.withDefault(false));
@@ -40,10 +60,8 @@ export default function Heatmap() {
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(3600));
   const [sensitivity, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
-  const [[startDate, endDate], setDateRange] = useQueryState(
-    "date_range",
-    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
-  );
+  const [defaultRange] = useState(getDefaultDateRange);
+  const [[startDate, endDate], setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault(defaultRange));
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
