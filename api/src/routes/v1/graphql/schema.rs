@@ -113,6 +113,7 @@ impl QueryRoot {
         let rows = run_query::<Match>(&state.ch_client_ro, &sql)
             .instrument(info_span!("graphql.clickhouse", operation = "matches", sql = %sql))
             .await?;
+        #[allow(clippy::cast_precision_loss)]
         metrics::histogram!("graphql_rows_returned", "operation" => "matches")
             .record(rows.len() as f64);
         Ok(rows)
@@ -144,6 +145,7 @@ impl QueryRoot {
         let rows = run_query::<MatchPlayer>(&state.ch_client_ro, &sql)
             .instrument(info_span!("graphql.clickhouse", operation = "match_players", sql = %sql))
             .await?;
+        #[allow(clippy::cast_precision_loss)]
         metrics::histogram!("graphql_rows_returned", "operation" => "match_players")
             .record(rows.len() as f64);
         Ok(rows)

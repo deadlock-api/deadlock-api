@@ -45,7 +45,9 @@ impl Extension for MetricsExtensionInner {
         metrics::histogram!("graphql_request_duration_seconds").record(elapsed);
 
         if let Some(vr) = self.validation_result.lock().await.take() {
+            #[allow(clippy::cast_precision_loss)]
             metrics::histogram!("graphql_query_complexity").record(vr.complexity as f64);
+            #[allow(clippy::cast_precision_loss)]
             metrics::histogram!("graphql_query_depth").record(vr.depth as f64);
         }
 
