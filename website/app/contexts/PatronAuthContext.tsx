@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useMemo, useState } from "react";
 
@@ -52,7 +51,6 @@ function deriveAuthState(
 }
 
 export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
-  const posthog = usePostHog();
   const queryClient = useQueryClient();
   const { data, isLoading: isQueryLoading } = usePatronStatus();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -67,9 +65,8 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
 
   const login = useCallback(() => {
     sessionStorage.setItem("patron_redirect_path", window.location.pathname);
-    posthog?.capture("patron_login_initiated");
     window.location.href = `${API_ORIGIN}/v1/auth/patreon`;
-  }, [posthog]);
+  }, []);
 
   const logout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -78,15 +75,13 @@ export function PatronAuthProvider({ children }: PatronAuthProviderProps) {
         method: "POST",
         credentials: "include",
       });
-      posthog?.capture("patron_logged_out");
-      posthog?.reset();
     } catch (error) {
       console.error("Failed to logout:", error);
     } finally {
       setIsLoggingOut(false);
       queryClient.setQueryData(queryKeys.patron.status(), null);
     }
-  }, [posthog, queryClient]);
+  }, [queryClient]);
 
   const refreshStatus = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.patron.status() });

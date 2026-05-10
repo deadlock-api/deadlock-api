@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import { ChevronDown, HelpCircle, Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -73,7 +72,6 @@ export function AddSteamAccountForm() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const query = usePatronStatus();
   const addSteamAccountMutation = useAddSteamAccount();
-  const posthog = usePostHog();
 
   const status = query.data;
   const availableSlots = status?.steam_accounts_summary.available_slots ?? 0;
@@ -105,7 +103,6 @@ export function AddSteamAccountForm() {
     addSteamAccountMutation.mutate(result.steamId3, {
       onSuccess: () => {
         toast.success("Steam account added successfully");
-        posthog?.capture("steam_account_added", { steam_id3: result.steamId3 });
         setSteamIdInput("");
         setValidationError(null);
       },

@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import type { AbilityV2 } from "assets_deadlock_api_client/api";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
@@ -72,7 +71,6 @@ export default function Trivia() {
   const { data: rawAbilities, isLoading: abilitiesLoading } = useAbilities();
 
   const today = getTodayDate();
-  const posthog = usePostHog();
   const countdown = useCountdown();
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -132,20 +130,6 @@ export default function Trivia() {
 
       const isLastQuestion = state.currentQuestion >= QUESTION_COUNT - 1;
 
-      if (state.currentQuestion === 0 && state.answers[0] === null) {
-        posthog?.capture("deadlockdle_game_started", { mode: "trivia", date: today });
-      }
-
-      if (isLastQuestion) {
-        posthog?.capture("deadlockdle_game_finished", {
-          mode: "trivia",
-          date: today,
-          result: "completed",
-          score: newScore,
-          total_questions: QUESTION_COUNT,
-        });
-      }
-
       const newState: TriviaState = {
         ...state,
         answers: newAnswers,
@@ -171,7 +155,7 @@ export default function Trivia() {
         }
       }, ADVANCE_DELAY_MS);
     },
-    [state, isRevealed, currentQ, posthog, today],
+    [state, isRevealed, currentQ],
   );
 
   const shareText = useMemo(() => {

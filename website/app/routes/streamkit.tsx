@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle, Layers, Loader2, Terminal } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
@@ -37,21 +36,19 @@ export default function StreamKit() {
   const [region, setRegion] = useQueryState("region", parseAsString.withDefault(""));
   const { steamId64 } = useSteamAuthCallback();
   const navigate = useNavigate();
-  const posthog = usePostHog();
 
   useEffect(() => {
     if (!steamId64) return;
 
     const id3 = steamId64ToSteamId3(steamId64);
     setSteamId(id3.toString());
-    posthog?.capture("streamkit_steam_connected", { steam_id3: id3 });
 
     // Clean openid params from URL, keep steamid and region
     const newParams = new URLSearchParams();
     newParams.set("steamid", id3.toString());
     if (region) newParams.set("region", region);
     navigate(`/streamkit?${newParams.toString()}`, { replace: true });
-  }, [steamId64, setSteamId, region, navigate, posthog]);
+  }, [steamId64, setSteamId, region, navigate]);
 
   const fetchSteamName = async (r: string, id: string) => {
     if (!id) return null;

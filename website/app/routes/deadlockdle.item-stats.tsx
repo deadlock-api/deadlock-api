@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import { useCallback, useMemo, useState, type RefCallback } from "react";
@@ -103,7 +102,6 @@ function getSlotColor(slot: SlotType): {
 export default function ItemStatsQuiz() {
   const { data: items, isLoading } = useItems();
   const today = getTodayDate();
-  const posthog = usePostHog();
   const countdown = useCountdown();
 
   const [copied, setCopied] = useState(false);
@@ -138,11 +136,6 @@ export default function ItemStatsQuiz() {
     (itemId: number, field: keyof ItemAnswer, value: number | string | boolean) => {
       if (state.submitted) return;
       setState((prev) => {
-        const isFirstInteraction = Object.keys(prev.answers).length === 0;
-        if (isFirstInteraction) {
-          posthog?.capture("deadlockdle_game_started", { mode: "item-stats", date: today });
-        }
-
         const next: ItemStatsState = {
           ...prev,
           answers: {
@@ -157,7 +150,7 @@ export default function ItemStatsQuiz() {
         return next;
       });
     },
-    [state.submitted, posthog, today],
+    [state.submitted],
   );
 
   const allFieldsFilled = useMemo(() => {
@@ -192,14 +185,6 @@ export default function ItemStatsQuiz() {
       if (answer?.slot === item.item_slot_type) score++;
     }
 
-    posthog?.capture("deadlockdle_game_finished", {
-      mode: "item-stats",
-      date: today,
-      result: "completed",
-      score,
-      total_fields: TOTAL_FIELDS,
-    });
-
     setState((prev) => {
       const next: ItemStatsState = {
         ...prev,
@@ -210,7 +195,7 @@ export default function ItemStatsQuiz() {
       saveState(next);
       return next;
     });
-  }, [allFieldsFilled, state.submitted, state.answers, dailyItems, posthog, today]);
+  }, [allFieldsFilled, state.submitted, state.answers, dailyItems]);
 
   const scoreScrollRef = useCallback<RefCallback<HTMLDivElement>>((node) => {
     if (node) {

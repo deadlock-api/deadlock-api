@@ -1,5 +1,4 @@
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
-import { usePostHog } from "@posthog/react";
 
 import "./tailwind.css";
 import "./dayjs";
@@ -24,7 +23,6 @@ import {
 import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";
-import { CookieConsentBanner } from "~/components/CookieConsentBanner";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
@@ -391,7 +389,6 @@ export default function App() {
               </Suspense>
             )}
             <Toaster />
-            <CookieConsentBanner />
           </TooltipProvider>
         </NuqsAdapter>
       </PatronAuthProvider>
@@ -409,9 +406,6 @@ export function HydrateFallback() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const posthog = usePostHog();
-  posthog?.captureException(error);
-
   let message = "Oops!";
   let details = "An unexpected error occurred.";
 

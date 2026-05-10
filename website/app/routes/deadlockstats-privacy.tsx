@@ -134,28 +134,6 @@ export default function PrivacyPolicy() {
         </section>
 
         <section>
-          <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">
-            Analytics with PostHog EU Cloud
-          </h2>
-          <p>
-            For usage analytics and to enhance our product, we use{" "}
-            <a href="https://posthog.com/" target="_blank" rel="noopener noreferrer">
-              PostHog EU Cloud
-            </a>
-            . All analytics data—including events, session information, and behavioral metrics—is securely processed and
-            stored on servers located in Frankfurt, Germany. This helps us comply with GDPR and ensures that your data
-            does not leave the European Union. We have a data processing agreement in place with PostHog, and analytics
-            are conducted using anonymized and/or pseudonymized data where possible. You may opt out of analytics at any
-            time in your preferences. For more details about the data PostHog processes and your data protection rights,
-            see our{" "}
-            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </a>
-            .
-          </p>
-        </section>
-
-        <section>
           <h2 className="mt-8 mb-3 border-b border-border pb-2 text-2xl font-bold text-foreground">Legal Compliance</h2>
           <p className="mb-4 leading-relaxed">This Privacy Policy has been designed to comply with:</p>
           <ul className="list-inside list-disc space-y-2 pl-4">

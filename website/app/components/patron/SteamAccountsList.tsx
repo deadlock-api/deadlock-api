@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import { useQuery } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { AlertCircle, AlertTriangle, CheckCircle, Clock, RefreshCw, XCircle } from "lucide-react";
@@ -126,7 +125,6 @@ function PlayerCardRankCell({ cardQuery }: { cardQuery: CardQuery }) {
 
 function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isActive: boolean }) {
   const refetchMutation = useRefetchMatchHistory();
-  const posthog = usePostHog();
 
   if (!isActive) {
     return <span className="text-muted-foreground">—</span>;
@@ -137,7 +135,6 @@ function RefetchMatchHistoryCell({ steamId3, isActive }: { steamId3: number; isA
       onSuccess: (response) => {
         const count = response.data.length;
         toast.success(`Fetched ${count} match${count !== 1 ? "es" : ""}`);
-        posthog?.capture("match_history_refetched", { steam_id3: steamId3, match_count: count });
       },
       onError: (error) => {
         if (isAxiosError(error) && error.response?.status === 429) {
@@ -266,7 +263,6 @@ export function SteamAccountsList() {
   const deleteSteamAccountMutation = useDeleteSteamAccount();
   const replaceSteamAccountMutation = useReplaceSteamAccount();
   const reactivateSteamAccountMutation = useReactivateSteamAccount();
-  const posthog = usePostHog();
 
   const data = query.data;
   const isLoading = query.isLoading;
@@ -277,7 +273,6 @@ export function SteamAccountsList() {
     deleteSteamAccountMutation.mutate(accountId, {
       onSuccess: () => {
         toast.success("Steam account removed successfully");
-        posthog?.capture("steam_account_deleted");
       },
       onError: () => {
         toast.error("Failed to remove Steam account");
@@ -291,7 +286,6 @@ export function SteamAccountsList() {
       {
         onSuccess: () => {
           toast.success("Steam account replaced successfully");
-          posthog?.capture("steam_account_replaced", { new_steam_id3: steamId3 });
         },
         onError: () => {
           toast.error("Failed to replace Steam account");
@@ -304,7 +298,6 @@ export function SteamAccountsList() {
     reactivateSteamAccountMutation.mutate(accountId, {
       onSuccess: () => {
         toast.success("Steam account reactivated successfully");
-        posthog?.capture("steam_account_reactivated");
       },
       onError: () => {
         toast.error("Failed to reactivate Steam account");

@@ -1,4 +1,3 @@
-import { usePostHog } from "@posthog/react";
 import { useCallback, useState } from "react";
 
 import { day } from "~/dayjs";
@@ -45,7 +44,6 @@ function dayDiff(a: string, b: string): number {
 
 export function useDailyGame(mode: GameMode, maxAttempts: number) {
   const today = getTodayDate();
-  const posthog = usePostHog();
   const gameKey = getStorageKey(mode, "game");
   const streakKey = getStorageKey(mode, "streak");
 
@@ -98,20 +96,6 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
           status = "lost";
         }
 
-        if (prev.guesses.length === 0) {
-          posthog?.capture("deadlockdle_game_started", { mode, date: today });
-        }
-
-        if (status !== "playing") {
-          posthog?.capture("deadlockdle_game_finished", {
-            mode,
-            date: today,
-            result: status,
-            attempts: guesses.length,
-            max_attempts: maxAttempts,
-          });
-        }
-
         const next: DailyGameState = {
           ...prev,
           guesses,
@@ -127,7 +111,7 @@ export function useDailyGame(mode: GameMode, maxAttempts: number) {
         return next;
       });
     },
-    [gameKey, maxAttempts, isFinished, updateStreak, posthog, mode, today],
+    [gameKey, maxAttempts, isFinished, updateStreak],
   );
 
   return {
