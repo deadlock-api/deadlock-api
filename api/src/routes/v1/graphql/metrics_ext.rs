@@ -8,6 +8,7 @@ use async_graphql::extensions::{
 use async_graphql::parser::types::ExecutableDocument;
 use async_graphql::{Response, ServerError, ValidationResult, Variables};
 use tokio::sync::Mutex;
+use tracing::Instrument as _;
 
 /// Emits Prometheus metrics and a tracing span for every GraphQL request.
 ///
@@ -34,10 +35,7 @@ impl Extension for MetricsExtensionInner {
     async fn request(&self, ctx: &ExtensionContext<'_>, next: NextRequest<'_>) -> Response {
         let start = Instant::now();
         let span = tracing::info_span!("graphql.request");
-        let resp = {
-            let _enter = span.enter();
-            next.run(ctx).await
-        };
+        let resp = next.run(ctx).instrument(span).await;
         let elapsed = start.elapsed().as_secs_f64();
         let status = if resp.is_err() { "error" } else { "ok" };
 
