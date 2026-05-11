@@ -685,6 +685,7 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
     match_info
         .players
         .iter()
+        .filter(|p| p.hero_id.is_some_and(|h| h > 0))
         .cloned()
         .map(|p| {
             (
