@@ -1,6 +1,7 @@
-import { AlertCircle, CheckCircle2, FolderOpen, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, ExternalLink, FolderOpen, Terminal, Upload } from "lucide-react";
 import type { MetaFunction } from "react-router";
 
+import { HighlightedCode } from "~/components/HighlightedCode";
 import { DirectoryGuide } from "~/components/ingest-cache/DirectoryGuide";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { PatronCTA } from "~/components/PatronCTA";
@@ -8,6 +9,7 @@ import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useIngestUpload } from "~/hooks/useIngestUpload";
 import { createPageMeta } from "~/lib/meta";
 import { cn } from "~/lib/utils";
@@ -33,6 +35,86 @@ export default function IngestCache() {
       <div>
         <PatronCTA />
       </div>
+
+      {/* Auto Ingest */}
+      <Card className="pt-0 shadow-lg">
+        <CardHeader className="rounded-t-2xl border-b border-border bg-linear-to-r from-primary/10 to-transparent py-4">
+          <CardTitle className="flex items-center gap-2">
+            <Terminal className="h-5 w-5" />
+            Automatic Ingestion (Recommended)
+          </CardTitle>
+          <CardDescription>
+            Install the background service and it will automatically submit your match data whenever you play
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <Tabs defaultValue="windows">
+            <TabsList className="w-full">
+              <TabsTrigger value="windows" className="flex-1">
+                🪟 Windows
+              </TabsTrigger>
+              <TabsTrigger value="linux" className="flex-1">
+                🐧 Linux
+              </TabsTrigger>
+              <TabsTrigger value="docker" className="flex-1">
+                🐳 Docker
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="windows" className="mt-3">
+              <p className="mb-2 text-sm text-muted-foreground">Run in PowerShell:</p>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <HighlightedCode
+                  language="bash"
+                  code="irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex"
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="linux" className="mt-3">
+              <p className="mb-2 text-sm text-muted-foreground">Run in a terminal:</p>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <HighlightedCode
+                  language="bash"
+                  code="curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash"
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="docker" className="mt-3">
+              <p className="mb-2 text-sm text-muted-foreground">Run the pre-built image:</p>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <HighlightedCode
+                  language="bash"
+                  code={`docker run -d --restart unless-stopped \\
+  -v ~/.steam/steam/appcache/httpcache:/root/.steam/steam/appcache/httpcache \\
+  ghcr.io/deadlock-api/deadlock-api-ingest:latest`}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+              Privacy-focused — only match IDs are submitted
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+              Lightweight background service
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+              No admin rights required
+            </div>
+          </div>
+          <a
+            href="https://github.com/deadlock-api/deadlock-api-ingest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+          >
+            View on GitHub
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </CardContent>
+      </Card>
 
       <Card className="pt-0 shadow-lg">
         <CardHeader className="rounded-t-2xl border-b border-border bg-linear-to-r from-primary/10 to-transparent py-4">

@@ -19,6 +19,7 @@ import {
   Swords,
   Trophy,
   Tv,
+  Upload,
   Users,
   Zap,
 } from "lucide-react";
@@ -182,6 +183,13 @@ const analyticsLinks = [
     description: "Enhance your livestreams with real-time game data overlays and widgets.",
     href: "/streamkit",
     icon: Tv,
+  },
+  {
+    title: "Contribute Match Data",
+    description:
+      "Help grow the database by automatically submitting match data from your Steam cache with a one-line install.",
+    href: "/ingest-cache",
+    icon: Upload,
   },
   {
     title: "Missing a Feature?",
