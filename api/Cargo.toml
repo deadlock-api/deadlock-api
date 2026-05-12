@@ -46,7 +46,7 @@ metrics = "=0.24.3"
 bytes = { version = "1.11.1", features = ["serde"] }
 thiserror = "2.0.18"
 rand = "0.10.1"
-quick-xml = { version = "0.39.4", features = ["serde", "serialize"] }
+quick-xml = { version = "0.40.0", features = ["serde", "serialize"] }
 serde-env = "0.3.0"
 regex = "1.12.3"
 mimalloc = "0.1.50"
