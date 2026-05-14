@@ -1,6 +1,8 @@
+use std::collections::HashSet;
+
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use chrono::Utc;
@@ -11,7 +13,11 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::steam::update::{
+    MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
+};
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
@@ -21,6 +27,11 @@ pub(crate) struct AccountIdsQuery {
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u64>,
+    /// If `true`, refresh the listed profiles from the Steam Web API before
+    /// returning. Rate limited and capped at 100 ids per request.
+    #[serde(default)]
+    #[param(default = false)]
+    pub(crate) refresh: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -95,6 +106,34 @@ impl From<SteamProfileRow> for SteamProfile {
     }
 }
 
+impl From<SteamProfileInsertRow> for SteamProfile {
+    fn from(row: SteamProfileInsertRow) -> Self {
+        let friends = row
+            .friends_account_id
+            .into_iter()
+            .zip(row.friends_friend_since)
+            .filter_map(|(account_id, ts)| {
+                chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
+                    account_id,
+                    friend_since,
+                })
+            })
+            .collect();
+        Self {
+            account_id: row.account_id,
+            personaname: row.personaname,
+            profileurl: row.profileurl,
+            avatar: row.avatar,
+            avatarmedium: row.avatarmedium,
+            avatarfull: row.avatarfull,
+            realname: row.realname,
+            countrycode: row.countrycode,
+            last_updated: Utc::now(),
+            friends,
+        }
+    }
+}
+
 pub(crate) struct SteamProfileQuery;
 
 impl BatchQuery for SteamProfileQuery {
@@ -150,6 +189,8 @@ pub(crate) async fn steam_single(
         (status = OK, description = "Steam Profiles", body = [SteamProfile]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = NOT_FOUND, description = "No Steam profile found."),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded (only enforced when refresh=true)."),
+        (status = BAD_GATEWAY, description = "Steam Web API call failed (only when refresh=true)."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profiles.")
     ),
     tags = ["Steam"],
@@ -157,18 +198,29 @@ pub(crate) async fn steam_single(
     description = "
 This endpoint returns Steam profiles of players.
 
+Pass `refresh=true` to force a live refresh of the listed accounts from the
+Steam Web API (`GetPlayerSummaries` + `GetFriendList`) before returning. The
+refreshed rows are persisted to the `steam_profiles` table and returned in the
+response with `last_updated` set to the current time. Refresh requests are
+rate limited and capped at 100 account ids per call to stay inside the
+shared Steam Web API key budget.
+
 See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
 
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 100req/s (read path), 3req/min + 15req/h (refresh) |
+| Key | - (read path), 10req/min + 60req/h (refresh) |
+| Global | - (read path), 30req/min + 200req/h (refresh) |
     "
 )]
 pub(super) async fn steam(
-    Query(AccountIdsQuery { account_ids }): Query<AccountIdsQuery>,
+    rate_limit_key: RateLimitKey,
+    Query(AccountIdsQuery {
+        account_ids,
+        refresh,
+    }): Query<AccountIdsQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let account_ids = account_ids
@@ -181,10 +233,18 @@ pub(super) async fn steam(
             "No valid account ids provided.",
         ));
     }
-    if account_ids.len() > 1_000 {
+    let max_ids = if refresh {
+        MAX_REFRESH_ACCOUNT_IDS
+    } else {
+        1_000
+    };
+    if account_ids.len() > max_ids {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
-            "Too many account ids provided.",
+            format!(
+                "Too many account ids provided (max {max_ids}, got {})",
+                account_ids.len()
+            ),
         ));
     }
     let protected_users = state
@@ -195,13 +255,35 @@ pub(super) async fn steam(
         .into_iter()
         .filter(|id| !protected_users.contains(id))
         .collect::<Vec<_>>();
-    state
-        .batchers
-        .steam_profile
-        .load_many(&account_ids)
-        .await
-        .map(|rows| rows.into_iter().map(SteamProfile::from).collect::<Vec<_>>())
-        .map(Json)
+
+    if !refresh {
+        let profiles = state
+            .batchers
+            .steam_profile
+            .load_many(&account_ids)
+            .await?
+            .into_iter()
+            .map(SteamProfile::from)
+            .collect::<Vec<_>>();
+        return Ok((HeaderMap::new(), Json(profiles)));
+    }
+
+    let refreshed = refresh_steam_profiles(&state, &rate_limit_key, account_ids.clone()).await?;
+    let fetched_ids: HashSet<u32> = refreshed.iter().map(|r| r.account_id).collect();
+    let mut profiles: Vec<SteamProfile> = refreshed.into_iter().map(SteamProfile::from).collect();
+
+    let missing: Vec<u32> = account_ids
+        .into_iter()
+        .filter(|id| !fetched_ids.contains(id))
+        .collect();
+    if !missing.is_empty() {
+        let fallback = state.batchers.steam_profile.load_many(&missing).await?;
+        profiles.extend(fallback.into_iter().map(SteamProfile::from));
+    }
+
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok((headers, Json(profiles)))
 }
 
 async fn search_steam(
