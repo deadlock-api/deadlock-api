@@ -227,31 +227,7 @@ pub(super) async fn steam_update(
         )
     })?;
 
-    let mut rows = Vec::with_capacity(summaries.len());
-    let mut fetched_ids = Vec::with_capacity(summaries.len());
-    for player in summaries {
-        fetched_ids.push(player.steamid);
-        let friends = friends_by_account
-            .remove(&player.steamid)
-            .unwrap_or_default();
-        let (friends_account_id, friends_friend_since): (Vec<u32>, Vec<u32>) = friends
-            .into_iter()
-            .map(|f| (f.steamid, f.friend_since))
-            .unzip();
-        rows.push(SteamProfileInsertRow {
-            account_id: player.steamid,
-            personaname: player.personaname,
-            profileurl: player.profileurl,
-            avatar: player.avatar,
-            avatarmedium: player.avatarmedium,
-            avatarfull: player.avatarfull,
-            personastate: player.personastate,
-            realname: player.realname,
-            countrycode: player.loccountrycode,
-            friends_account_id,
-            friends_friend_since,
-        });
-    }
+    let (rows, fetched_ids) = build_insert_rows(summaries, &mut friends_by_account);
 
     let updated = if rows.is_empty() {
         0
@@ -356,6 +332,38 @@ async fn fetch_friends_for_account(
     }
     let body: SteamFriendListResponse = response.error_for_status()?.json().await?;
     Ok(body.friendslist.friends)
+}
+
+fn build_insert_rows(
+    summaries: Vec<SteamPlayer>,
+    friends_by_account: &mut std::collections::HashMap<u32, Vec<SteamFriend>>,
+) -> (Vec<SteamProfileInsertRow>, Vec<u32>) {
+    let mut rows = Vec::with_capacity(summaries.len());
+    let mut fetched_ids = Vec::with_capacity(summaries.len());
+    for player in summaries {
+        fetched_ids.push(player.steamid);
+        let friends = friends_by_account
+            .remove(&player.steamid)
+            .unwrap_or_default();
+        let (friends_account_id, friends_friend_since): (Vec<u32>, Vec<u32>) = friends
+            .into_iter()
+            .map(|f| (f.steamid, f.friend_since))
+            .unzip();
+        rows.push(SteamProfileInsertRow {
+            account_id: player.steamid,
+            personaname: player.personaname,
+            profileurl: player.profileurl,
+            avatar: player.avatar,
+            avatarmedium: player.avatarmedium,
+            avatarfull: player.avatarfull,
+            personastate: player.personastate,
+            realname: player.realname,
+            countrycode: player.loccountrycode,
+            friends_account_id,
+            friends_friend_since,
+        });
+    }
+    (rows, fetched_ids)
 }
 
 #[instrument(skip_all, fields(rows = rows.len()))]
