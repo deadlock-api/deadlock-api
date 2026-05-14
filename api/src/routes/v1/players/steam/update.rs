@@ -14,14 +14,11 @@ use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::{parse_steam_id, steamid3_to_steamid64};
 
-/// Maximum number of account IDs that can be refreshed in a single call.
-/// Matches the `GetPlayerSummaries` upstream batch size so the whole request
-/// is covered by one summary call.
+/// Matches the `GetPlayerSummaries` upstream batch size so a single summary
+/// call covers the whole request.
 pub(super) const MAX_REFRESH_ACCOUNT_IDS: usize = 100;
 
-/// Concurrency cap for the per-account `GetFriendList` calls. Matches the
-/// background `steam-profile-fetcher` tool to keep the shared API-key
-/// budget predictable.
+/// Matches the background `steam-profile-fetcher` tool.
 const FRIENDS_FETCH_CONCURRENCY: usize = 10;
 
 #[derive(Debug, Deserialize)]
@@ -73,10 +70,7 @@ struct SteamFriend {
     friend_since: u32,
 }
 
-/// Row written to the `steam_profiles` table. The column list mirrors the
-/// background steam-profile-fetcher tool so the two writers stay consistent.
-/// `last_updated` is intentionally omitted; `ClickHouse` fills it via the
-/// column default (`now()`).
+/// `last_updated` is omitted so `ClickHouse` fills it via the column default.
 #[derive(Debug, Serialize, Row)]
 pub(super) struct SteamProfileInsertRow {
     pub(super) account_id: u32,
@@ -94,17 +88,10 @@ pub(super) struct SteamProfileInsertRow {
     pub(super) friends_friend_since: Vec<u32>,
 }
 
-/// Apply tight rate limits, fetch the given accounts from the Steam Web API
-/// (summaries + friend lists), and insert the result into `steam_profiles`.
-/// Returns the freshly-fetched rows so the caller can serve them without
-/// hitting the (possibly cached) read path.
-///
-/// Protected users are filtered out before any upstream call. Caller is
-/// expected to have deduped + bounded the input.
 pub(super) async fn refresh_steam_profiles(
     state: &AppState,
     rate_limit_key: &RateLimitKey,
-    account_ids: Vec<u32>,
+    account_ids: &[u32],
 ) -> APIResult<Vec<SteamProfileInsertRow>> {
     state
         .rate_limit_client
@@ -130,8 +117,8 @@ pub(super) async fn refresh_steam_profiles(
     let http = state.steam_client.http_client();
 
     let (summaries_result, mut friends_by_account) = tokio::join!(
-        fetch_steam_summaries(http, api_key, &account_ids),
-        fetch_friends_for_accounts(http, api_key, &account_ids),
+        fetch_steam_summaries(http, api_key, account_ids),
+        fetch_friends_for_accounts(http, api_key, account_ids),
     );
 
     let summaries = summaries_result.map_err(|e| {
@@ -187,7 +174,7 @@ async fn fetch_friends_for_accounts(
     api_key: &str,
     account_ids: &[u32],
 ) -> HashMap<u32, Vec<SteamFriend>> {
-    let results: Vec<_> = futures::stream::iter(account_ids.iter().copied())
+    futures::stream::iter(account_ids.iter().copied())
         .map(|account_id| async move {
             (
                 account_id,
@@ -195,19 +182,17 @@ async fn fetch_friends_for_accounts(
             )
         })
         .buffer_unordered(FRIENDS_FETCH_CONCURRENCY)
-        .collect()
-        .await;
-
-    results
-        .into_iter()
-        .filter_map(|(account_id, result)| match result {
-            Ok(friends) => Some((account_id, friends)),
-            Err(e) => {
-                warn!("Failed to fetch friends for {account_id}: {e}");
-                None
+        .filter_map(|(account_id, result)| async move {
+            match result {
+                Ok(friends) => Some((account_id, friends)),
+                Err(e) => {
+                    warn!("Failed to fetch friends for {account_id}: {e}");
+                    None
+                }
             }
         })
         .collect()
+        .await
 }
 
 /// Returns an empty list for private profiles (Steam responds 401/403).
@@ -245,10 +230,9 @@ fn build_insert_rows(
         if !seen.insert(player.steamid) {
             continue;
         }
-        let friends = friends_by_account
+        let (friends_account_id, friends_friend_since): (Vec<u32>, Vec<u32>) = friends_by_account
             .remove(&player.steamid)
-            .unwrap_or_default();
-        let (friends_account_id, friends_friend_since): (Vec<u32>, Vec<u32>) = friends
+            .unwrap_or_default()
             .into_iter()
             .map(|f| (f.steamid, f.friend_since))
             .unzip();
