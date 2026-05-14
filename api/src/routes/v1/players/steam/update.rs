@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::collections::{HashMap, HashSet};
 
 use axum::Json;
 use axum::extract::State;
@@ -24,10 +25,10 @@ const MAX_ACCOUNT_IDS_PER_REQUEST: usize = 100;
 
 /// Concurrency cap for the per-account `GetFriendList` calls. Each id costs one
 /// Steam Web API request, so we keep this conservative to avoid spiking the
-/// shared API-key budget.
-const FRIENDS_FETCH_CONCURRENCY: usize = 5;
+/// shared API-key budget. Matches the background `steam-profile-fetcher` tool.
+const FRIENDS_FETCH_CONCURRENCY: usize = 10;
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub(super) struct SteamUpdateRequest {
     /// List of account IDs (`SteamID3`) to refresh from the Steam Web API.
     /// Each id costs roughly two upstream calls (one shared summary call plus
@@ -37,7 +38,7 @@ pub(super) struct SteamUpdateRequest {
     pub(super) account_ids: Vec<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub(super) struct SteamUpdateResponse {
     /// Number of profiles that were fetched from Steam and persisted.
     pub(super) updated: usize,
@@ -279,7 +280,7 @@ async fn fetch_friends_for_accounts(
     http_client: &reqwest::Client,
     api_key: &str,
     account_ids: &[u32],
-) -> std::collections::HashMap<u32, Vec<SteamFriend>> {
+) -> HashMap<u32, Vec<SteamFriend>> {
     let results: Vec<_> = futures::stream::iter(account_ids.iter().copied())
         .map(|account_id| async move {
             (
@@ -330,12 +331,12 @@ async fn fetch_friends_for_account(
 
 fn build_insert_rows(
     summaries: Vec<SteamPlayer>,
-    friends_by_account: &mut std::collections::HashMap<u32, Vec<SteamFriend>>,
-) -> (Vec<SteamProfileInsertRow>, Vec<u32>) {
+    friends_by_account: &mut HashMap<u32, Vec<SteamFriend>>,
+) -> (Vec<SteamProfileInsertRow>, HashSet<u32>) {
     let mut rows = Vec::with_capacity(summaries.len());
-    let mut fetched_ids = Vec::with_capacity(summaries.len());
+    let mut fetched_ids = HashSet::with_capacity(summaries.len());
     for player in summaries {
-        fetched_ids.push(player.steamid);
+        fetched_ids.insert(player.steamid);
         let friends = friends_by_account
             .remove(&player.steamid)
             .unwrap_or_default();
