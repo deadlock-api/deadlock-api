@@ -1,4 +1,5 @@
 pub(crate) mod route;
+mod update;
 
 use core::time::Duration;
 
@@ -14,11 +15,19 @@ use crate::middleware::cache::CacheControlMiddleware;
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
-    OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let read_routes = OpenApiRouter::new()
         .routes(routes!(route::steam_search))
         .routes(routes!(route::steam))
         .layer(
             CacheControlMiddleware::new(Duration::from_hours(1))
                 .with_stale_while_revalidate(Duration::from_hours(1)),
-        )
+        );
+
+    let write_routes = OpenApiRouter::new()
+        .routes(routes!(update::steam_update))
+        .layer(CacheControlMiddleware::new(Duration::from_secs(0)).private());
+
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .merge(read_routes)
+        .merge(write_routes)
 }

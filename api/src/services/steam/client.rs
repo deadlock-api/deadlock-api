@@ -121,6 +121,14 @@ impl SteamClient {
         get_current_client_version(&self.http_client).await
     }
 
+    pub(crate) fn http_client(&self) -> &reqwest::Client {
+        &self.http_client
+    }
+
+    pub(crate) fn steam_api_key(&self) -> &str {
+        &self.steam_api_key
+    }
+
     /// Is the given Steam ID in the protected users list
     pub(crate) async fn is_user_protected(
         &self,
