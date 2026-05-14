@@ -1,16 +1,12 @@
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 
-use axum::Json;
-use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use clickhouse::Row;
 use futures::StreamExt;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, warn};
-use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -18,34 +14,15 @@ use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::{parse_steam_id, steamid3_to_steamid64};
 
-/// Maximum number of account IDs accepted in a single request. Matches the
-/// `GetPlayerSummaries` upstream batch size so that a single call to Steam
-/// covers the whole request.
-const MAX_ACCOUNT_IDS_PER_REQUEST: usize = 100;
+/// Maximum number of account IDs that can be refreshed in a single call.
+/// Matches the `GetPlayerSummaries` upstream batch size so the whole request
+/// is covered by one summary call.
+pub(super) const MAX_REFRESH_ACCOUNT_IDS: usize = 100;
 
-/// Concurrency cap for the per-account `GetFriendList` calls. Each id costs one
-/// Steam Web API request, so we keep this conservative to avoid spiking the
-/// shared API-key budget. Matches the background `steam-profile-fetcher` tool.
+/// Concurrency cap for the per-account `GetFriendList` calls. Matches the
+/// background `steam-profile-fetcher` tool to keep the shared API-key
+/// budget predictable.
 const FRIENDS_FETCH_CONCURRENCY: usize = 10;
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub(super) struct SteamUpdateRequest {
-    /// List of account IDs (`SteamID3`) to refresh from the Steam Web API.
-    /// Each id costs roughly two upstream calls (one shared summary call plus
-    /// one friend-list call), so requests are capped at
-    /// `MAX_ACCOUNT_IDS_PER_REQUEST`.
-    #[schema(min_items = 1, max_items = 100)]
-    pub(super) account_ids: Vec<u32>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub(super) struct SteamUpdateResponse {
-    /// Number of profiles that were fetched from Steam and persisted.
-    pub(super) updated: usize,
-    /// Account IDs that Steam did not return a summary for. These are likely
-    /// deleted, renamed (different `SteamID3`), or otherwise unavailable.
-    pub(super) not_found: Vec<u32>,
-}
 
 #[derive(Debug, Deserialize)]
 struct SteamPlayerSummariesResponse {
@@ -101,67 +78,39 @@ struct SteamFriend {
 /// `last_updated` is intentionally omitted; `ClickHouse` fills it via the
 /// column default (`now()`).
 #[derive(Debug, Serialize, Row)]
-struct SteamProfileInsertRow {
-    account_id: u32,
-    personaname: String,
-    profileurl: String,
-    avatar: String,
-    avatarmedium: String,
-    avatarfull: String,
-    personastate: i8,
-    realname: Option<String>,
-    countrycode: Option<String>,
+pub(super) struct SteamProfileInsertRow {
+    pub(super) account_id: u32,
+    pub(super) personaname: String,
+    pub(super) profileurl: String,
+    pub(super) avatar: String,
+    pub(super) avatarmedium: String,
+    pub(super) avatarfull: String,
+    pub(super) personastate: i8,
+    pub(super) realname: Option<String>,
+    pub(super) countrycode: Option<String>,
     #[serde(rename = "friends.account_id")]
-    friends_account_id: Vec<u32>,
+    pub(super) friends_account_id: Vec<u32>,
     #[serde(rename = "friends.friend_since")]
-    friends_friend_since: Vec<u32>,
+    pub(super) friends_friend_since: Vec<u32>,
 }
 
-#[utoipa::path(
-    post,
-    path = "/steam/update",
-    request_body = SteamUpdateRequest,
-    responses(
-        (status = OK, description = "Steam profiles refreshed.", body = SteamUpdateResponse),
-        (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded."),
-        (status = BAD_GATEWAY, description = "Steam Web API call failed."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to persist Steam profiles.")
-    ),
-    tags = ["Steam"],
-    summary = "Refresh Steam Profiles",
-    description = "
-Triggers an immediate refresh of the given Steam profiles from the Steam Web API and
-persists the result. New rows are inserted into the `steam_profiles` table; the
-table is a `ReplacingMergeTree` and read queries already pick the latest row per
-account, so the next read will see the fresh data without any explicit cache bust.
-
-Protected users are silently skipped.
-
-Because each id translates into roughly two upstream Steam Web API calls (one
-shared `GetPlayerSummaries` batch plus one `GetFriendList` call per account),
-this endpoint is rate limited tightly to stay inside the shared API key budget.
-
-See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
-
-### Rate Limits:
-| Type | Limit |
-| ---- | ----- |
-| IP | 3req/min, 15req/h |
-| Key | 10req/min, 60req/h |
-| Global | 30req/min, 200req/h |
-    "
-)]
-pub(super) async fn steam_update(
-    rate_limit_key: RateLimitKey,
-    State(state): State<AppState>,
-    Json(SteamUpdateRequest { account_ids }): Json<SteamUpdateRequest>,
-) -> APIResult<impl IntoResponse> {
+/// Apply tight rate limits, fetch the given accounts from the Steam Web API
+/// (summaries + friend lists), and insert the result into `steam_profiles`.
+/// Returns the freshly-fetched rows so the caller can serve them without
+/// hitting the (possibly cached) read path.
+///
+/// Protected users are filtered out before any upstream call. Caller is
+/// expected to have deduped + bounded the input.
+pub(super) async fn refresh_steam_profiles(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+    account_ids: Vec<u32>,
+) -> APIResult<Vec<SteamProfileInsertRow>> {
     state
         .rate_limit_client
         .apply_limits(
-            &rate_limit_key,
-            "steam_update",
+            rate_limit_key,
+            "steam_refresh",
             &[
                 Quota::ip_limit(3, Duration::from_mins(1)),
                 Quota::ip_limit(15, Duration::from_hours(1)),
@@ -173,41 +122,8 @@ pub(super) async fn steam_update(
         )
         .await?;
 
-    let account_ids: Vec<u32> = account_ids
-        .into_iter()
-        .filter(|&id| id != 0)
-        .unique()
-        .collect();
     if account_ids.is_empty() {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            "No valid account ids provided.",
-        ));
-    }
-    if account_ids.len() > MAX_ACCOUNT_IDS_PER_REQUEST {
-        return Err(APIError::status_msg(
-            StatusCode::BAD_REQUEST,
-            format!(
-                "Too many account ids provided (max {MAX_ACCOUNT_IDS_PER_REQUEST}, got {})",
-                account_ids.len()
-            ),
-        ));
-    }
-
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
-    let account_ids: Vec<u32> = account_ids
-        .into_iter()
-        .filter(|id| !protected_users.contains(id))
-        .collect();
-
-    if account_ids.is_empty() {
-        return Ok(Json(SteamUpdateResponse {
-            updated: 0,
-            not_found: vec![],
-        }));
+        return Ok(Vec::new());
     }
 
     let api_key = state.steam_client.steam_api_key();
@@ -226,26 +142,16 @@ pub(super) async fn steam_update(
         )
     })?;
 
-    let (rows, fetched_ids) = build_insert_rows(summaries, &mut friends_by_account);
-
-    let updated = if rows.is_empty() {
-        0
-    } else {
+    let rows = build_insert_rows(summaries, &mut friends_by_account);
+    if !rows.is_empty() {
         insert_profiles(&state.ch_client, &rows)
             .await
             .map_err(|e| {
                 warn!("Failed to insert steam profiles: {e}");
                 APIError::internal("Failed to persist Steam profiles.")
             })?;
-        rows.len()
-    };
-
-    let not_found: Vec<u32> = account_ids
-        .into_iter()
-        .filter(|id| !fetched_ids.contains(id))
-        .collect();
-
-    Ok(Json(SteamUpdateResponse { updated, not_found }))
+    }
+    Ok(rows)
 }
 
 #[instrument(skip_all, fields(accounts = account_ids.len()))]
@@ -332,11 +238,13 @@ async fn fetch_friends_for_account(
 fn build_insert_rows(
     summaries: Vec<SteamPlayer>,
     friends_by_account: &mut HashMap<u32, Vec<SteamFriend>>,
-) -> (Vec<SteamProfileInsertRow>, HashSet<u32>) {
+) -> Vec<SteamProfileInsertRow> {
     let mut rows = Vec::with_capacity(summaries.len());
-    let mut fetched_ids = HashSet::with_capacity(summaries.len());
+    let mut seen = HashSet::with_capacity(summaries.len());
     for player in summaries {
-        fetched_ids.insert(player.steamid);
+        if !seen.insert(player.steamid) {
+            continue;
+        }
         let friends = friends_by_account
             .remove(&player.steamid)
             .unwrap_or_default();
@@ -358,7 +266,7 @@ fn build_insert_rows(
             friends_friend_since,
         });
     }
-    (rows, fetched_ids)
+    rows
 }
 
 #[instrument(skip_all, fields(rows = rows.len()))]
