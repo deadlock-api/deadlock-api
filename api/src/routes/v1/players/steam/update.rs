@@ -44,8 +44,6 @@ pub(super) struct SteamUpdateResponse {
     /// Account IDs that Steam did not return a summary for. These are likely
     /// deleted, renamed (different `SteamID3`), or otherwise unavailable.
     pub(super) not_found: Vec<u32>,
-    /// Account IDs that were excluded because they are in the protected list.
-    pub(super) protected: Vec<u32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -137,7 +135,7 @@ persists the result. New rows are inserted into the `steam_profiles` table; the
 table is a `ReplacingMergeTree` and read queries already pick the latest row per
 account, so the next read will see the fresh data without any explicit cache bust.
 
-Protected users are silently skipped and reported back in the response.
+Protected users are silently skipped.
 
 Because each id translates into roughly two upstream Steam Web API calls (one
 shared `GetPlayerSummaries` batch plus one `GetFriendList` call per account),
@@ -199,15 +197,15 @@ pub(super) async fn steam_update(
         .steam_client
         .get_protected_users(&state.pg_client)
         .await?;
-    let (protected, account_ids): (Vec<u32>, Vec<u32>) = account_ids
+    let account_ids: Vec<u32> = account_ids
         .into_iter()
-        .partition(|id| protected_users.contains(id));
+        .filter(|id| !protected_users.contains(id))
+        .collect();
 
     if account_ids.is_empty() {
         return Ok(Json(SteamUpdateResponse {
             updated: 0,
             not_found: vec![],
-            protected,
         }));
     }
 
@@ -246,11 +244,7 @@ pub(super) async fn steam_update(
         .filter(|id| !fetched_ids.contains(id))
         .collect();
 
-    Ok(Json(SteamUpdateResponse {
-        updated,
-        not_found,
-        protected,
-    }))
+    Ok(Json(SteamUpdateResponse { updated, not_found }))
 }
 
 #[instrument(skip_all, fields(accounts = account_ids.len()))]
