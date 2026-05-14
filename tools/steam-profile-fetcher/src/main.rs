@@ -32,7 +32,7 @@ mod steam_api;
 static FETCH_INTERVAL: std::sync::LazyLock<Duration> =
     std::sync::LazyLock::new(|| Duration::from_secs(common::env_or("FETCH_INTERVAL_SECONDS", 120)));
 
-const OUTDATED_INTERVAL: &str = "INTERVAL 2 WEEK";
+const OUTDATED_INTERVAL: &str = "INTERVAL 1 WEEK";
 
 #[tokio::main]
 async fn main() -> Result<()> {
