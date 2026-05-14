@@ -27,10 +27,8 @@ pub(crate) struct AccountIdsQuery {
     #[param(inline, min_items = 1, max_items = 1_000)]
     #[serde(deserialize_with = "comma_separated_deserialize")]
     pub(crate) account_ids: Vec<u64>,
-    /// If `true`, refresh the listed profiles from the Steam Web API before
-    /// returning. Rate limited and capped at 100 ids per request.
+    /// Refresh the listed profiles from the Steam Web API before returning.
     #[serde(default)]
-    #[param(default = false)]
     pub(crate) refresh: bool,
 }
 
@@ -268,7 +266,7 @@ pub(super) async fn steam(
         return Ok((HeaderMap::new(), Json(profiles)));
     }
 
-    let refreshed = refresh_steam_profiles(&state, &rate_limit_key, account_ids.clone()).await?;
+    let refreshed = refresh_steam_profiles(&state, &rate_limit_key, &account_ids).await?;
     let fetched_ids: HashSet<u32> = refreshed.iter().map(|r| r.account_id).collect();
     let mut profiles: Vec<SteamProfile> = refreshed.into_iter().map(SteamProfile::from).collect();
 
