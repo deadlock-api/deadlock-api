@@ -13,7 +13,9 @@ use utoipa::ToSchema;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
-use crate::services::rank_predictor::{RankPrediction, RankPredictorError, badge_to_idx};
+use crate::services::rank_predictor::{
+    N_FEATURES, RankPrediction, RankPredictorError, badge_to_idx,
+};
 use crate::utils::types::AccountIdQuery;
 
 const N_MATCHES: usize = 30;
@@ -43,6 +45,13 @@ pub(crate) struct MatchRow {
     hero_id: u32,
     player_team: i8,
     player_kills: u32,
+    player_deaths: u32,
+    player_assists: u32,
+    player_denies: u32,
+    player_net_worth: u32,
+    player_won: bool,
+    max_shots_hit: u32,
+    max_shots_missed: u32,
     match_duration_s: u32,
     average_badge_team0: Option<u32>,
     average_badge_team1: Option<u32>,
@@ -63,6 +72,13 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                 hero_id,
                 team AS player_team,
                 kills AS player_kills,
+                deaths AS player_deaths,
+                assists AS player_assists,
+                denies AS player_denies,
+                net_worth AS player_net_worth,
+                won AS player_won,
+                max_shots_hit,
+                max_shots_missed,
                 duration_s AS match_duration_s,
                 average_badge_team0,
                 average_badge_team1,
@@ -74,6 +90,13 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
                     hero_id,
                     team,
                     kills,
+                    deaths,
+                    assists,
+                    denies,
+                    net_worth,
+                    won,
+                    max_shots_hit,
+                    max_shots_missed,
                     duration_s,
                     average_badge_team0,
                     average_badge_team1
@@ -120,12 +143,18 @@ struct PlayerCreepRow {
 struct Match {
     hero_id: u32,
     player_kills: u32,
+    player_deaths: u32,
+    player_assists: u32,
+    player_denies: u32,
+    player_net_worth: f64,
+    won: bool,
     duration_s: u32,
     own_team_badge: f64,
     enemy_team_badge: f64,
     enemy_nw_avg: f64,
     enemy_dmg_avg: f64,
     cs_efficiency: Option<f64>,
+    shot_accuracy: Option<f64>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -212,18 +241,30 @@ async fn fetch_matches(
             let (enemy_nw, enemy_dmg) = enemy_map
                 .get(&(r.match_id, r.enemy_team.cast_signed()))
                 .map_or((0.0, 0.0), |e| (e.nw_avg, e.dmg_avg));
+            let shots_total = r.max_shots_hit + r.max_shots_missed;
+            let shot_accuracy = if shots_total == 0 {
+                None
+            } else {
+                Some(f64::from(r.max_shots_hit) / f64::from(shots_total))
+            };
             let cs_efficiency = creep_map
                 .get(&r.match_id)
                 .map(|c| f64::from(c.max_creep_kills) / f64::from(c.max_possible_creeps.max(1)));
             Match {
                 hero_id: r.hero_id,
                 player_kills: r.player_kills,
+                player_deaths: r.player_deaths,
+                player_assists: r.player_assists,
+                player_denies: r.player_denies,
+                player_net_worth: f64::from(r.player_net_worth),
+                won: r.player_won,
                 duration_s: r.match_duration_s,
                 own_team_badge: f64::from(badge_to_idx(own_raw)),
                 enemy_team_badge: f64::from(badge_to_idx(enemy_raw)),
                 enemy_nw_avg: enemy_nw,
                 enemy_dmg_avg: enemy_dmg,
                 cs_efficiency,
+                shot_accuracy,
             }
         })
         .collect())
@@ -238,9 +279,10 @@ fn kills_per_min(m: &Match) -> f64 {
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines
 )]
-fn aggregate_features(matches: &[Match]) -> Option<[f64; 17]> {
+fn aggregate_features(matches: &[Match]) -> Option<[f64; N_FEATURES]> {
     if matches.len() < N_MATCHES {
         return None;
     }
@@ -292,6 +334,17 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 17]> {
     };
     let r10mean = |vals: &[f64]| vals[..10].iter().sum::<f64>() / 10.0;
 
+    // Weighted mean over a subset of indices with weights re-normalized over
+    // the surviving rows. Matches the Python pipeline's NaN-skipping behavior
+    // for shot_accuracy_wmean and nw_ratio_wmean.
+    let wmean_masked = |vals: &[(usize, f64)], ws: &[f64], default: f64| -> f64 {
+        let wsum: f64 = vals.iter().map(|&(i, _)| ws[i]).sum();
+        if wsum <= 0.0 {
+            return default;
+        }
+        vals.iter().map(|&(i, v)| v * (ws[i] / wsum)).sum()
+    };
+
     let own_badge_mean = own_b.iter().sum::<f64>() / N_MATCHES as f64;
     let enemy_badge_mean = enemy_b.iter().sum::<f64>() / N_MATCHES as f64;
 
@@ -313,6 +366,44 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 17]> {
         cs_x_hero_vals.iter().sum::<f64>() / cs_x_hero_vals.len() as f64
     };
 
+    // New per-match per-game-context scalars.
+    let per_match: Vec<(f64, f64, f64, f64)> = window
+        .iter()
+        .map(|m| {
+            let dur_min = (f64::from(m.duration_s) / 60.0).max(1.0);
+            let kda =
+                f64::from(m.player_kills + m.player_assists) / f64::from(m.player_deaths.max(1));
+            let denies_pm = f64::from(m.player_denies) / dur_min;
+            let nw_pm = m.player_net_worth / dur_min;
+            let win = if m.won { 1.0 } else { 0.0 };
+            (kda, denies_pm, nw_pm, win)
+        })
+        .collect();
+    let kdas: Vec<f64> = per_match.iter().map(|t| t.0).collect();
+    let denies_pms: Vec<f64> = per_match.iter().map(|t| t.1).collect();
+    let nw_pms: Vec<f64> = per_match.iter().map(|t| t.2).collect();
+    let wins: Vec<f64> = per_match.iter().map(|t| t.3).collect();
+
+    let shot_acc_vals: Vec<(usize, f64)> = window
+        .iter()
+        .enumerate()
+        .filter_map(|(i, m)| m.shot_accuracy.map(|v| (i, v)))
+        .collect();
+    let shot_accuracy_wmean = wmean_masked(&shot_acc_vals, w_norm, 0.0);
+
+    let nw_ratio_vals: Vec<(usize, f64)> = window
+        .iter()
+        .enumerate()
+        .filter_map(|(i, m)| {
+            if m.enemy_nw_avg > 0.0 {
+                Some((i, m.player_net_worth / m.enemy_nw_avg))
+            } else {
+                None
+            }
+        })
+        .collect();
+    let nw_ratio_wmean = wmean_masked(&nw_ratio_vals, w_norm, 1.0);
+
     Some([
         wmean(&own_b, w_norm),
         wmean(&enemy_b, w_norm),
@@ -331,6 +422,12 @@ fn aggregate_features(matches: &[Match]) -> Option<[f64; 17]> {
         r10mean(&kills_pm),
         cs_efficiency_mean,
         cs_x_hero_badge,
+        shot_accuracy_wmean,
+        wmean(&wins, w_norm),
+        wmean(&nw_pms, w_norm),
+        wmean(&kdas, w_norm),
+        wmean(&denies_pms, w_norm),
+        nw_ratio_wmean,
     ])
 }
 
@@ -360,22 +457,22 @@ Requires at least 30 eligible matches (Ranked or Unranked, Normal game mode) wit
 
 | Metric | Value |
 |--------|-------|
-| R²     | 0.912 |
-| MAE    | 1.32 sub-ranks |
-| RMSE   | 2.24 sub-ranks |
-| Within ±1 sub-rank | 71.7% |
-| Within ±3 sub-rank | 92.0% |
-| Within ±5 sub-rank | 96.8% |
-| Within ±6 sub-rank | 97.8% |
-| Within ±10 sub-rank | 99.3% |
+| R²     | 0.949 |
+| MAE    | 1.08 sub-ranks |
+| RMSE   | 1.89 sub-ranks |
+| Within ±1 sub-rank | 77.6% |
+| Within ±3 sub-rank | 93.9% |
+| Within ±5 sub-rank | 97.7% |
+| Within ±6 sub-rank | 98.6% |
+| Within ±10 sub-rank | 99.6% |
 
 Accuracy by tier:
 
 | Tier range | n | MAE |
 |------------|---|-----|
-| Low (1-4)  | 755 | 5.55 sub-ranks |
-| Mid (5-7)  | 2030 | 3.56 sub-ranks |
-| High (8-11)| 70620 | 1.21 sub-ranks |
+| Low (1-4)  | 404 | 3.68 sub-ranks |
+| Mid (5-7)  | 777 | 2.91 sub-ranks |
+| High (8-11)| 25,556 | 0.98 sub-ranks |
 
 ### Rate Limits:
 | Type | Limit |
