@@ -329,7 +329,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
             "hero_id",
             "player_slot",
             "team",
-            "dp.hero_build_id as hero_build_id",
+            "hero_build_id",
         ];
         if query.include_player_info || query.include_player_kda {
             player_select_fields.extend(vec!["kills", "deaths", "assists"]);
@@ -541,7 +541,7 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         "t_matches AS (SELECT match_id FROM match_player {info_filters} GROUP BY match_id {order} {limit})"
     )?;
 
-    select_fields.push("any(dp.banned_hero_ids) as banned_hero_ids".to_owned());
+    select_fields.push("any(banned_hero_ids) as banned_hero_ids".to_owned());
 
     // SELECT
     query.push_str("SELECT ");
@@ -550,19 +550,10 @@ fn build_query(query: BulkMatchMetadataQuery) -> APIResult<String> {
         query.push_str(", ");
         query.push_str(&select_fields.join(", "));
     }
-    if has_player_fields {
-        query.push_str(
-            " FROM match_player \
-             LEFT JOIN demo_player AS dp ON match_player.match_id = dp.match_id AND match_player.account_id = dp.account_id \
-             WHERE match_player.match_id IN t_matches",
-        );
-    } else {
-        query.push_str(
-            " FROM match_player \
-             LEFT JOIN demo_player AS dp ON match_player.match_id = dp.match_id \
-             WHERE match_player.match_id IN t_matches ",
-        );
-    }
+    query.push_str(
+        " FROM match_player \
+         WHERE match_player.match_id IN t_matches ",
+    );
     // GROUP By
     query.push_str(" GROUP BY match_player.match_id ");
     // Order By

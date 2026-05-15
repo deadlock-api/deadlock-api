@@ -1,5 +1,5 @@
 use clickhouse::Row;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Row, Deserialize, Debug, Clone)]
 pub(crate) struct MatchWithReplay {
@@ -8,10 +8,9 @@ pub(crate) struct MatchWithReplay {
     pub replay_salt: Option<u32>,
 }
 
-#[derive(Row, Serialize, Debug)]
-pub(crate) struct DemoPlayer {
+#[derive(Debug)]
+pub(crate) struct MatchUpdate {
     pub match_id: u64,
-    pub account_id: u32,
-    pub hero_build_id: u64,
     pub banned_hero_ids: Vec<u32>,
+    pub players: Vec<(u32, u64)>,
 }

@@ -50,7 +50,7 @@ impl BatchQueryMulti for DemoPlayerQuery {
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT match_id, account_id, hero_build_id, banned_hero_ids \
-             FROM demo_player WHERE match_id IN ({}) \
+             FROM match_player WHERE match_id IN ({}) AND demo_processed = 1 \
              SETTINGS log_comment = 'metadata_demo_player'",
             in_clause(keys)
         )

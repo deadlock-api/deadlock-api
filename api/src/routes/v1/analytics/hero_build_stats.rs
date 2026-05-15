@@ -107,20 +107,20 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
     let mut player_filters = vec![format!("mp.hero_id = {hero_id}")];
     #[allow(deprecated)]
     if let Some(account_id) = query.account_id {
-        player_filters.push(format!("dp.account_id = {account_id}"));
+        player_filters.push(format!("mp.account_id = {account_id}"));
     }
     if let Some(account_ids) = &query.account_ids {
         player_filters.push(format!(
-            "dp.account_id IN ({})",
+            "mp.account_id IN ({})",
             account_ids.iter().map(ToString::to_string).join(",")
         ));
     }
     if let Some(hero_build_id) = query.hero_build_id {
-        player_filters.push(format!("dp.hero_build_id = {hero_build_id}"));
+        player_filters.push(format!("mp.hero_build_id = {hero_build_id}"));
     }
     if !valid_build_ids.is_empty() {
         player_filters.push(format!(
-            "dp.hero_build_id IN ({})",
+            "mp.hero_build_id IN ({})",
             valid_build_ids.iter().map(ToString::to_string).join(",")
         ));
     }
@@ -130,14 +130,15 @@ fn build_query(hero_id: u32, valid_build_ids: &[i32], query: &HeroBuildStatsQuer
         "
     SELECT
         mp.hero_id AS hero_id,
-        dp.hero_build_id AS hero_build_id,
+        mp.hero_build_id AS hero_build_id,
         countIf(mp.won) AS wins,
         countIf(NOT mp.won) AS losses,
         wins + losses AS matches,
-        uniq(dp.account_id) AS players
-    FROM demo_player dp
-        INNER JOIN match_player mp ON dp.match_id = mp.match_id AND dp.account_id = mp.account_id
-    WHERE mp.match_mode IN ('Ranked', 'Unranked') AND mp.game_mode = 1 AND dp.hero_build_id != 0 {info_filters} {player_filters}
+        uniq(mp.account_id) AS players
+    FROM match_player mp
+    WHERE mp.match_mode IN ('Ranked', 'Unranked') AND mp.game_mode = 1
+      AND mp.demo_processed = 1 AND mp.hero_build_id != 0
+      {info_filters} {player_filters}
     GROUP BY hero_id, hero_build_id
     HAVING matches >= {min_matches}
     ORDER BY matches DESC

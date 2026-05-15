@@ -2,7 +2,7 @@
 
 use core::fmt::Write;
 
-use crate::routes::v1::graphql::projection::{Column, ColumnSource, Projection};
+use crate::routes::v1::graphql::projection::{Column, Projection};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum OrderKey {
@@ -36,10 +36,6 @@ fn where_clause(filters: &[String]) -> String {
     }
 }
 
-const DEMO_PLAYER_JOIN: &str = "LEFT JOIN demo_player AS dp \
-     ON match_player.match_id = dp.match_id \
-     AND match_player.account_id = dp.account_id ";
-
 /// Emit a `Nested` parent column projection limited to the requested subfields.
 /// Relies on `enable_named_columns_in_function_tuple = 1` (set on the client)
 /// so the tuple inherits its field names from the lambda variable names.
@@ -55,14 +51,10 @@ fn nested_array_expr(parent: &str, subfields: &[&str]) -> String {
 }
 
 fn column_expr(col: &Column, aggregated: bool) -> String {
-    let prefix = match col.source {
-        ColumnSource::DemoPlayer => "dp.",
-        ColumnSource::MatchPlayer => "",
-    };
     if aggregated {
-        format!("any({prefix}{}) AS {}", col.ch_expr, col.gql)
+        format!("any({}) AS {}", col.ch_expr, col.gql)
     } else {
-        format!("{prefix}{} AS {}", col.ch_expr, col.gql)
+        format!("{} AS {}", col.ch_expr, col.gql)
     }
 }
 
@@ -82,7 +74,7 @@ pub(super) struct BuildArgs<'a> {
 ///
 /// Mirrors the CTE-based shape from `bulk_metadata.rs` so we benefit from
 /// the same query plan: filter & order in `t_matches`, then re-fetch the
-/// minimal set of columns from `match_player` (and optionally `demo_player`).
+/// minimal set of columns from `match_player`.
 pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::fmt::Error> {
     let where_clause = where_clause(args.filters);
     // AccountId is unreachable here (OrderByMatch doesn't expose it) — fall back to match_id.
@@ -123,9 +115,6 @@ pub(super) fn build_matches_query(args: &BuildArgs<'_>) -> Result<String, core::
     }
 
     sql.push_str(" FROM match_player ");
-    if args.projection.needs_demo_player() {
-        sql.push_str(DEMO_PLAYER_JOIN);
-    }
     sql.push_str("WHERE match_player.match_id IN t_matches ");
     sql.push_str("GROUP BY match_player.match_id ");
     write!(
@@ -169,9 +158,6 @@ pub(super) fn build_match_players_query(args: &BuildArgs<'_>) -> Result<String, 
     sql.push_str("SELECT ");
     sql.push_str(&parts.join(", "));
     sql.push_str(" FROM match_player ");
-    if args.projection.needs_demo_player() {
-        sql.push_str(DEMO_PLAYER_JOIN);
-    }
     sql.push_str(&where_clause);
     write!(
         &mut sql,
@@ -302,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn demo_player_join_appears_when_needed() {
+    fn banned_hero_ids_reads_from_match_player() {
         let mut projection = match_id_only();
         for col in MATCH_COLUMNS {
             if col.gql == "banned_hero_ids" {
@@ -318,7 +304,8 @@ mod tests {
             offset: 0,
         })
         .unwrap();
-        assert!(sql.contains("LEFT JOIN demo_player"));
+        assert!(!sql.contains("demo_player"));
+        assert!(sql.contains("any(banned_hero_ids)"));
     }
 }
 

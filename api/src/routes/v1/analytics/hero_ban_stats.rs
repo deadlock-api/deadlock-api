@@ -35,21 +35,6 @@ pub enum BucketQuery {
     StartTimeMonth,
 }
 
-impl BucketQuery {
-    fn get_info_select_clause(self) -> &'static str {
-        match self {
-            Self::StartTimeHour => ", toStartOfHour(any(start_time)) as bucket",
-            Self::StartTimeDay => ", toStartOfDay(any(start_time)) as bucket",
-            Self::StartTimeWeek => ", toDateTime(toStartOfWeek(any(start_time))) as bucket",
-            Self::StartTimeMonth => ", toDateTime(toStartOfMonth(any(start_time))) as bucket",
-            Self::AvgBadge => {
-                ", toUInt32(assumeNotNull(coalesce(greatest(any(average_badge_team0), any(average_badge_team1)), 0))) as bucket"
-            }
-            Self::NoBucket => "",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(super) struct HeroBanStatsQuery {
@@ -103,47 +88,24 @@ fn build_query(query: &HeroBanStatsQuery) -> String {
         max_duration_s: query.max_duration_s,
     }
     .build();
-    let match_info_select = query.bucket.get_info_select_clause();
-    // demo_player.created_at is set on insert and is always >= the match's start_time, so
-    // filtering by created_at lets toStartOfMonth partition pruning shrink the demo_player
-    // scan. The 1-day cushion absorbs ingest clock skew.
-    let demo_lower = query
-        .min_unix_timestamp
-        .unwrap_or(MIN_DEMO_PLAYER_TIMESTAMP)
-        .saturating_sub(86400);
-    let outer = if query.bucket == BucketQuery::NoBucket {
-        format!(
-            "SELECT arrayJoin(banned_hero_ids) AS hero_id, toUInt32(0) AS bucket, uniq(match_id) AS bans
-        FROM demo_player
-        WHERE notEmpty(banned_hero_ids)
-          AND created_at >= toDateTime({demo_lower})
-          AND match_id IN (SELECT match_id FROM valid_mids)"
-        )
-    } else {
-        format!(
-            "SELECT arrayJoin(banned_hero_ids) AS hero_id, bucket, uniq(dp.match_id) AS bans
-        FROM demo_player dp
-        INNER JOIN valid_mids USING (match_id)
-        WHERE notEmpty(banned_hero_ids)
-          AND created_at >= toDateTime({demo_lower})"
-        )
+    let bucket_expr = match query.bucket {
+        BucketQuery::NoBucket => "toUInt32(0)",
+        BucketQuery::StartTimeHour => "toStartOfHour(start_time)",
+        BucketQuery::StartTimeDay => "toStartOfDay(start_time)",
+        BucketQuery::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
+        BucketQuery::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
+        BucketQuery::AvgBadge => {
+            "toUInt32(assumeNotNull(coalesce(greatest(average_badge_team0, average_badge_team1), 0)))"
+        }
     };
     format!(
         "
-    WITH ban_mids AS (
-        SELECT DISTINCT match_id
-        FROM demo_player
-        WHERE notEmpty(banned_hero_ids)
-          AND created_at >= toDateTime({demo_lower})
-    ),
-    valid_mids AS (
-        SELECT match_id {match_info_select}
-        FROM match_player
-        WHERE match_id IN (SELECT match_id FROM ban_mids)
-          AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
-        GROUP BY match_id
-    )
-    {outer}
+    SELECT arrayJoin(banned_hero_ids) AS hero_id,
+           {bucket_expr} AS bucket,
+           uniq(match_id) AS bans
+    FROM match_player
+    WHERE notEmpty(banned_hero_ids)
+      AND match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 {info_filters}
     GROUP BY hero_id, bucket
     ORDER BY hero_id, bucket
     SETTINGS log_comment = 'hero_ban_stats'

@@ -30,7 +30,7 @@ mod models;
 mod streaming_demo;
 mod visitor;
 
-use models::{DemoPlayer, MatchWithReplay};
+use models::{MatchUpdate, MatchWithReplay};
 use streaming_demo::StreamingDemoFile;
 use visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
@@ -88,16 +88,16 @@ async fn main() -> anyhow::Result<()> {
         gauge!("demo_analyzer.pending_matches").set(matches.len() as f64);
         gauge!("demo_analyzer.failed_matches").set(failed_matches.len() as f64);
 
-        let mut pending_rows: Vec<DemoPlayer> = Vec::new();
+        let mut pending_updates: Vec<MatchUpdate> = Vec::new();
         let mut stream = futures::stream::iter(matches)
             .map(|m| {
                 let http = &http_client;
                 async move {
                     let match_id = m.match_id;
                     match process_demo(http, &m).await {
-                        Ok(rows) => {
+                        Ok(update) => {
                             counter!("demo_analyzer.demo_processed.success").increment(1);
-                            Ok(rows)
+                            Ok(update)
                         }
                         Err(e) => {
                             counter!("demo_analyzer.demo_processed.failure").increment(1);
@@ -111,28 +111,27 @@ async fn main() -> anyhow::Result<()> {
 
         while let Some(result) = stream.next().await {
             match result {
-                Ok(rows) => pending_rows.extend(rows),
+                Ok(update) => pending_updates.push(update),
                 Err(match_id) => {
                     failed_matches.insert(match_id);
                 }
             }
-            if pending_rows.len() >= cli.batch_size {
-                info!("Inserting {} rows into ClickHouse", pending_rows.len());
-                if let Err(e) = insert_batch(&ch_client, &pending_rows).await {
-                    error!("Failed to insert batch: {e}");
-                }
-                pending_rows.clear();
+            if pending_updates.len() >= cli.batch_size {
+                info!(
+                    "Applying {} match updates to ClickHouse",
+                    pending_updates.len()
+                );
+                apply_updates(&ch_client, &pending_updates).await;
+                pending_updates.clear();
             }
         }
 
-        if !pending_rows.is_empty() {
+        if !pending_updates.is_empty() {
             info!(
-                "Inserting {} remaining rows into ClickHouse",
-                pending_rows.len()
+                "Applying {} remaining match updates to ClickHouse",
+                pending_updates.len()
             );
-            if let Err(e) = insert_batch(&ch_client, &pending_rows).await {
-                error!("Failed to insert batch: {e}");
-            }
+            apply_updates(&ch_client, &pending_updates).await;
         }
 
         if cli.once {
@@ -167,7 +166,7 @@ async fn fetch_pending_matches(
                  AND game_mode = 'Normal' \
              ) \
              AND ms.match_id NOT IN ( \
-                 SELECT match_id FROM demo_player \
+                 SELECT match_id FROM match_player WHERE demo_processed = 1 \
              ) \
              ORDER BY ms.match_id DESC \
              LIMIT 1000 \
@@ -181,7 +180,7 @@ async fn fetch_pending_matches(
 async fn process_demo(
     http_client: &reqwest::Client,
     match_info: &MatchWithReplay,
-) -> anyhow::Result<Vec<DemoPlayer>> {
+) -> anyhow::Result<MatchUpdate> {
     let cluster_id = match_info
         .cluster_id
         .ok_or_else(|| anyhow::anyhow!("missing cluster_id for match {}", match_info.match_id))?;
@@ -265,18 +264,18 @@ async fn process_demo(
     }
 
     let state = state.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
-    let rows = correlate(match_id, &state);
+    let update = correlate(match_id, &state);
 
     info!(
-        "Match {match_id}: extracted {} player rows, {} bans",
-        rows.len(),
-        state.banned_hero_ids.len()
+        "Match {match_id}: extracted {} players, {} bans",
+        update.players.len(),
+        update.banned_hero_ids.len()
     );
-    Ok(rows)
+    Ok(update)
 }
 
-fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayer> {
-    let mut rows = Vec::new();
+fn correlate(match_id: u64, state: &SharedState) -> MatchUpdate {
+    let mut players = Vec::new();
     for pawn in state.pawns.values() {
         let Some(ctrl_idx) = pawn.controller_index else {
             continue;
@@ -297,25 +296,63 @@ fn correlate(match_id: u64, state: &SharedState) -> Vec<DemoPlayer> {
             id
         };
 
-        rows.push(DemoPlayer {
-            match_id,
-            account_id,
-            hero_build_id,
-            banned_hero_ids: state.banned_hero_ids.clone(),
-        });
+        players.push((account_id, hero_build_id));
     }
-    rows
+    MatchUpdate {
+        match_id,
+        banned_hero_ids: state.banned_hero_ids.clone(),
+        players,
+    }
 }
 
-async fn insert_batch(ch_client: &clickhouse::Client, rows: &[DemoPlayer]) -> anyhow::Result<()> {
-    common::retry_fn_with_backoff("insert_batch", || async {
-        let mut inserter = ch_client.insert::<DemoPlayer>("demo_player").await?;
-        for row in rows {
-            inserter.write(row).await?;
+async fn apply_updates(ch_client: &clickhouse::Client, updates: &[MatchUpdate]) {
+    for update in updates {
+        if let Err(e) = apply_update(ch_client, update).await {
+            error!("Failed to apply update for match {}: {e}", update.match_id);
+            counter!("demo_analyzer.update.failure").increment(1);
+        } else {
+            counter!("demo_analyzer.update.success").increment(1);
         }
-        inserter.end().await?;
-        Ok::<_, clickhouse::error::Error>(())
+    }
+}
+
+async fn apply_update(ch_client: &clickhouse::Client, update: &MatchUpdate) -> anyhow::Result<()> {
+    let bans = format_array(update.banned_hero_ids.iter().copied());
+    let accounts = format_array(update.players.iter().map(|(a, _)| *a));
+    let builds = format_array(update.players.iter().map(|(_, b)| *b));
+    let match_id = update.match_id;
+
+    // transform(account_id, [accounts], [builds], 0) maps each player's
+    // account_id to its build_id; rows with no match (or empty input) get 0.
+    let query = format!(
+        "UPDATE match_player \
+         SET banned_hero_ids = {bans}, \
+             hero_build_id = transform(account_id, {accounts}, {builds}, toUInt64(0)), \
+             demo_processed = 1 \
+         WHERE match_id = {match_id}"
+    );
+
+    common::retry_fn_with_backoff("apply_update", || {
+        let q = query.clone();
+        async move {
+            ch_client.query(&q).execute().await?;
+            Ok::<_, clickhouse::error::Error>(())
+        }
     })
     .await?;
     Ok(())
+}
+
+fn format_array<T: core::fmt::Display>(values: impl IntoIterator<Item = T>) -> String {
+    let mut out = String::from("[");
+    let mut first = true;
+    for v in values {
+        if !first {
+            out.push(',');
+        }
+        first = false;
+        out.push_str(&v.to_string());
+    }
+    out.push(']');
+    out
 }

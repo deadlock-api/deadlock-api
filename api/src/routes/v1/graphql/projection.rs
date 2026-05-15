@@ -8,29 +8,10 @@ use async_graphql::Lookahead;
 pub(super) struct Column {
     pub(super) gql: &'static str,
     pub(super) ch_expr: &'static str,
-    pub(super) source: ColumnSource,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum ColumnSource {
-    MatchPlayer,
-    DemoPlayer,
 }
 
 const fn mp(gql: &'static str, ch_expr: &'static str) -> Column {
-    Column {
-        gql,
-        ch_expr,
-        source: ColumnSource::MatchPlayer,
-    }
-}
-
-const fn dp(gql: &'static str, ch_expr: &'static str) -> Column {
-    Column {
-        gql,
-        ch_expr,
-        source: ColumnSource::DemoPlayer,
-    }
+    Column { gql, ch_expr }
 }
 
 /// Shared SQL expressions referenced by both the projection registries and the
@@ -39,8 +20,7 @@ pub(super) const SQL_START_TIME_UNIX: &str = "toUnixTimestamp(start_time)";
 pub(super) const SQL_AVG_BADGE_T0: &str = "average_badge_team0";
 pub(super) const SQL_AVG_BADGE_T1: &str = "average_badge_team1";
 
-/// Match-level columns. All live on `match_player` (denormalized) except
-/// `banned_hero_ids` which comes from `demo_player`.
+/// Match-level columns. All live on `match_player` (denormalized).
 pub(super) const MATCH_COLUMNS: &[Column] = &[
     mp("match_id", "match_id"),
     mp("start_time", SQL_START_TIME_UNIX),
@@ -73,11 +53,10 @@ pub(super) const MATCH_COLUMNS: &[Column] = &[
         "first_objective_destroyed_time_s",
         "first_objective_destroyed_time_s",
     ),
-    dp("banned_hero_ids", "banned_hero_ids"),
+    mp("banned_hero_ids", "banned_hero_ids"),
 ];
 
-/// Player-level columns. Most live on `match_player`; `hero_build_id` is from
-/// `demo_player`.
+/// Player-level columns. All live on `match_player`.
 pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("match_id", "match_player.match_id"),
     mp("account_id", "account_id"),
@@ -126,7 +105,7 @@ pub(super) const PLAYER_COLUMNS: &[Column] = &[
     mp("ability_stats", "ability_stats"),
     mp("player_tracked_stats", "player_tracked_stats"),
     mp("stats_type_stat", "stats_type_stat"),
-    dp("hero_build_id", "hero_build_id"),
+    mp("hero_build_id", "hero_build_id"),
 ];
 
 /// Sub-fields of the `items` Nested column. All `UInt32`.
@@ -200,13 +179,6 @@ pub(super) struct Projection {
 }
 
 impl Projection {
-    pub(super) fn needs_demo_player(&self) -> bool {
-        self.match_columns
-            .iter()
-            .chain(self.player_columns.iter())
-            .any(|c| c.source == ColumnSource::DemoPlayer)
-    }
-
     pub(super) fn include_players(&self) -> bool {
         !self.player_columns.is_empty()
     }
