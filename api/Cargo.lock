@@ -824,7 +824,7 @@ dependencies = [
 [[package]]
 name = "clickhouse-sql-parser"
 version = "0.1.0"
-source = "git+https://github.com/raimannma/clickhouse-antlr4#51c55d90887c0c10432a4c55435453e66eaa453d"
+source = "git+https://github.com/raimannma/clickhouse-antlr4#4c863f3f5db679aa4ba0cb8e0a11336a616dbf19"
 dependencies = [
  "antlr4rust",
 ]
@@ -1186,7 +1186,7 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "prost",
- "quick-xml 0.40.0",
+ "quick-xml 0.40.1",
  "rand 0.10.1",
  "redis",
  "regex",
@@ -3487,9 +3487,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.40.0"
+version = "0.40.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b7315c86b26aaef0321fba33c9dcc160da659c6a9d278f0f6a5656d6561c03b"
+checksum = "2474bd2e5029e7ccb6abb2ba48cf2383a333851dedf495901544281590c7da7f"
 dependencies = [
  "memchr",
  "serde",
@@ -4807,7 +4807,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.2",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
