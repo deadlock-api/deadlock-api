@@ -21,6 +21,7 @@ use crate::routes::v1::players::match_history::{
 };
 use crate::routes::v1::players::mmr;
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
+use crate::routes::v1::players::rank_predict::predict_rank_for_account;
 use crate::services::assets::client::AssetsClient;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
@@ -97,6 +98,8 @@ pub(super) enum Variable {
     MostPlayedHero,
     MostPlayedHeroCount,
     SteamAccountName,
+    PredictedRank,
+    PredictedRankImg,
     Rank,
     RankImg,
     TotalKd,
@@ -239,6 +242,8 @@ impl Variable {
             | Self::SteamAccountName
             | Self::MMRHistoryRank
             | Self::MMRHistoryRankImg
+            | Self::PredictedRank
+            | Self::PredictedRankImg
             | Self::Rank
             | Self::RankImg => VariableCategory::General,
 
@@ -288,6 +293,9 @@ impl Variable {
     pub(super) fn get_description(self) -> &'static str {
         match self {
             Self::Rank | Self::RankImg => "Get the rank",
+            Self::PredictedRank | Self::PredictedRankImg => {
+                "Get the predicted rank from the last 30 ranked/unranked matches"
+            }
             Self::HeroHoursPlayed => {
                 "Get the total hours played in all matches for a specific hero"
             }
@@ -785,6 +793,35 @@ impl Variable {
                     .await
                     .map(|r| r.to_string())
                     .map_err(Into::into)
+            }
+            Self::PredictedRank => {
+                let prediction = predict_rank_for_account(state, steam_id).await?;
+                let rank = prediction.badge / 10;
+                let subrank = prediction.badge % 10;
+                let ranks = state.assets_client.fetch_ranks().await?;
+                let rank = ranks
+                    .iter()
+                    .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
+                    .ok_or(VariableResolveError::NoData("predicted rank"))?;
+                Ok(format!("{} {subrank}", rank.name))
+            }
+            Self::PredictedRankImg => {
+                let prediction = predict_rank_for_account(state, steam_id).await?;
+                let rank = prediction.badge / 10;
+                let subrank = prediction.badge % 10;
+                state
+                    .assets_client
+                    .fetch_ranks()
+                    .await?
+                    .iter()
+                    .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
+                    .and_then(|r| {
+                        r.images
+                            .get(&format!("large_subrank{subrank}"))
+                            .or(r.images.get(&format!("small_subrank{subrank}")))
+                    })
+                    .cloned()
+                    .ok_or(VariableResolveError::NoData("predicted rank img"))
             }
             Self::MMRHistoryRank => {
                 let mmr = get_last_mmr_history(&state.ch_client_ro, steam_id)

@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use axum::Json;
+use axum::body::Bytes;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::IntoResponse;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -486,13 +488,6 @@ pub(super) async fn rank_predict(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<Json<RankPredictResponse>> {
-    let predictor = state.rank_predictor.as_ref().ok_or_else(|| {
-        APIError::status_msg(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Rank prediction model is not loaded.",
-        )
-    })?;
-
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)
@@ -500,6 +495,25 @@ pub(super) async fn rank_predict(
     {
         return Err(APIError::protected_user());
     }
+
+    let prediction = predict_rank_for_account(&state, account_id).await?;
+
+    Ok(Json(RankPredictResponse {
+        prediction,
+        matches_used: N_MATCHES,
+    }))
+}
+
+pub(crate) async fn predict_rank_for_account(
+    state: &AppState,
+    account_id: u32,
+) -> APIResult<RankPrediction> {
+    let predictor = state.rank_predictor.as_ref().ok_or_else(|| {
+        APIError::status_msg(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Rank prediction model is not loaded.",
+        )
+    })?;
 
     let matches = fetch_matches(
         &state.batchers.rank_predict_matches,
@@ -518,12 +532,91 @@ pub(super) async fn rank_predict(
         )
     })?;
 
-    let prediction = predictor
+    predictor
         .predict(features)
-        .map_err(|e: RankPredictorError| APIError::internal(format!("Inference failed: {e}")))?;
+        .map_err(|e: RankPredictorError| APIError::internal(format!("Inference failed: {e}")))
+}
 
-    Ok(Json(RankPredictResponse {
-        prediction,
-        matches_used: N_MATCHES,
-    }))
+#[utoipa::path(
+    get,
+    path = "/{account_id}/rank-predict/image",
+    params(AccountIdQuery),
+    responses(
+        (status = OK, description = "Predicted rank badge image", content_type = "image/png", body = [u8]),
+        (status = BAD_REQUEST, description = "Invalid account ID"),
+        (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
+        (status = NOT_FOUND, description = "No image available for the predicted rank"),
+        (status = UNPROCESSABLE_ENTITY, description = "Not enough recent ranked matches (need 30)"),
+        (status = SERVICE_UNAVAILABLE, description = "Rank prediction model not loaded"),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = INTERNAL_SERVER_ERROR, description = "Prediction failed"),
+    ),
+    tags = ["Players"],
+    summary = "Rank Predict Image",
+    description = "Returns the predicted rank badge image directly (binary), not a URL."
+)]
+pub(super) async fn rank_predict_image(
+    Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    if state
+        .steam_client
+        .is_user_protected(&state.pg_client, account_id)
+        .await?
+    {
+        return Err(APIError::protected_user());
+    }
+
+    let prediction = predict_rank_for_account(&state, account_id).await?;
+    let rank = prediction.badge / 10;
+    let subrank = prediction.badge % 10;
+
+    let image_url = state
+        .assets_client
+        .fetch_ranks()
+        .await
+        .map_err(|e| APIError::internal(format!("Failed to fetch ranks: {e}")))?
+        .iter()
+        .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
+        .and_then(|r| {
+            r.images
+                .get(&format!("large_subrank{subrank}"))
+                .or(r.images.get(&format!("small_subrank{subrank}")))
+                .cloned()
+        })
+        .ok_or_else(|| {
+            APIError::status_msg(
+                StatusCode::NOT_FOUND,
+                "No image available for the predicted rank.",
+            )
+        })?;
+
+    let response = reqwest::get(&image_url)
+        .await
+        .map_err(|e| APIError::internal(format!("Failed to fetch rank image: {e}")))?;
+
+    if !response.status().is_success() {
+        return Err(APIError::internal(format!(
+            "Rank image request failed with status {}",
+            response.status()
+        )));
+    }
+
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("image/png")
+        .to_owned();
+
+    let bytes: Bytes = response
+        .bytes()
+        .await
+        .map_err(|e| APIError::internal(format!("Failed to read rank image bytes: {e}")))?;
+
+    let mut headers = HeaderMap::new();
+    if let Ok(value) = content_type.parse() {
+        headers.insert(header::CONTENT_TYPE, value);
+    }
+    Ok((headers, bytes))
 }
