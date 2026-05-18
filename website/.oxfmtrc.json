@@ -8,8 +8,17 @@
   "trailingComma": "all",
   "sortImports": {},
   "sortTailwindcss": {
-    "stylesheet": "app/tailwind.css",
+    "stylesheet": "src/styles/tailwind.css",
     "functions": ["clsx", "cn", "cva"]
   },
-  "ignorePatterns": ["node_modules", "build", ".react-router", "app/components/ui"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    ".output",
+    ".tanstack",
+    ".vinxi",
+    ".wrangler",
+    "src/routeTree.gen.ts",
+    "src/components/ui"
+  ]
 }

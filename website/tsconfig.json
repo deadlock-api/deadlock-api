@@ -1,19 +1,22 @@
 {
-  "include": ["env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "public/script*.js"],
   "compilerOptions": {
-    "lib": ["DOM", "ES2025"],
-    "types": ["@react-router/node", "vite/client"],
+    "strict": true,
+    "esModuleInterop": true,
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "lib": ["DOM", "DOM.Iterable", "ES2025"],
+    "types": ["vite/client"],
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
     "target": "ES2025",
     "allowJs": true,
-    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["./src/*"]
     },
-    "noEmit": true,
-    "rootDirs": [".", "./.react-router/types"]
-  },
-  "exclude": ["opensrc"]
+    "noEmit": true
+  }
 }

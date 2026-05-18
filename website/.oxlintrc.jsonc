@@ -44,19 +44,15 @@
 
     // Recommended-latest rules (from LintRulePreset.RecommendedLatest)
     "react-hooks-js/void-use-memo": "error",
-
-    // Off rules (LintRulePreset.Off) - not enabled by default
-    // "react-hooks-js/automatic-effect-dependencies": "error",
-    // "react-hooks-js/capitalized-calls": "error",
-    // "react-hooks-js/fbt": "error",
-    // "react-hooks-js/fire": "error",
-    // "react-hooks-js/hooks": "error",
-    // "react-hooks-js/invariant": "error",
-    // "react-hooks-js/memoized-effect-dependencies": "error",
-    // "react-hooks-js/no-deriving-state-in-effects": "error",
-    // "react-hooks-js/rule-suppression": "error",
-    // "react-hooks-js/syntax": "error",
-    // "react-hooks-js/todo": "error",
   },
-  "ignorePatterns": ["node_modules", "build", ".react-router", "app/components/ui"],
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    ".output",
+    ".tanstack",
+    ".vinxi",
+    ".wrangler",
+    "src/routeTree.gen.ts",
+    "src/components/ui",
+  ],
 }

@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deadlock-api-website",
+  "main": "./dist/server/server.js",
+  "compatibility_date": "2025-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+  },
+  "routes": [
+    { "pattern": "deadlock-api.com", "custom_domain": true },
+    { "pattern": "www.deadlock-api.com", "custom_domain": true },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}
