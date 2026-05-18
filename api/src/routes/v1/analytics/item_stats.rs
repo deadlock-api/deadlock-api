@@ -75,44 +75,37 @@ pub enum BucketQuery {
     NetWorthBy10000,
 }
 
-impl BucketQuery {
-    fn get_select_clause(self) -> &'static str {
-        match self {
-            Self::NoBucket => "toUInt32(0)",
-            Self::Hero => "hero_id",
-            Self::Team => "toUInt32(if(team = 'Team0', 0, 1))",
-            Self::StartTimeHour => "toStartOfHour(start_time)",
-            Self::StartTimeDay => "toStartOfDay(start_time)",
-            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))",
-            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))",
-            Self::GameTimeMin => "toUInt32(floor(buy_time / 60))",
-            Self::GameTimeNormalizedPercentage => {
-                "toUInt32(floor((buy_time - 1) / duration_s * 100))"
-            }
-            Self::NetWorthBy1000 => "toUInt32(floor(net_worth_at_buy / 1000) * 1000)",
-            Self::NetWorthBy2000 => "toUInt32(floor(net_worth_at_buy / 2000) * 2000)",
-            Self::NetWorthBy3000 => "toUInt32(floor(net_worth_at_buy / 3000) * 3000)",
-            Self::NetWorthBy5000 => "toUInt32(floor(net_worth_at_buy / 5000) * 5000)",
-            Self::NetWorthBy10000 => "toUInt32(floor(net_worth_at_buy / 10000) * 10000)",
-        }
-    }
+const NET_WORTH_AT_BUY_EXPR: &str = "coalesce(arrayElementOrNull(stats.net_worth, arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1), net_worth)";
 
-    fn get_extra_col_clause(self) -> &'static str {
+impl BucketQuery {
+    fn get_select_clause(self) -> String {
         match self {
-            Self::Hero => ", hero_id",
-            Self::Team => ", team",
-            Self::StartTimeHour
-            | Self::StartTimeDay
-            | Self::StartTimeWeek
-            | Self::StartTimeMonth => ", start_time",
-            Self::NoBucket
-            | Self::GameTimeMin
-            | Self::GameTimeNormalizedPercentage
-            | Self::NetWorthBy1000
-            | Self::NetWorthBy2000
-            | Self::NetWorthBy3000
-            | Self::NetWorthBy5000
-            | Self::NetWorthBy10000 => "",
+            Self::NoBucket => "toUInt32(0)".to_owned(),
+            Self::Hero => "hero_id".to_owned(),
+            Self::Team => "toUInt32(if(team = 'Team0', 0, 1))".to_owned(),
+            Self::StartTimeHour => "toStartOfHour(start_time)".to_owned(),
+            Self::StartTimeDay => "toStartOfDay(start_time)".to_owned(),
+            Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))".to_owned(),
+            Self::StartTimeMonth => "toDateTime(toStartOfMonth(start_time))".to_owned(),
+            Self::GameTimeMin => "toUInt32(floor(buy_time / 60))".to_owned(),
+            Self::GameTimeNormalizedPercentage => {
+                "toUInt32(floor((buy_time - 1) / duration_s * 100))".to_owned()
+            }
+            Self::NetWorthBy1000 => {
+                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 1000) * 1000)")
+            }
+            Self::NetWorthBy2000 => {
+                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 2000) * 2000)")
+            }
+            Self::NetWorthBy3000 => {
+                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 3000) * 3000)")
+            }
+            Self::NetWorthBy5000 => {
+                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 5000) * 5000)")
+            }
+            Self::NetWorthBy10000 => {
+                format!("toUInt32(floor(({NET_WORTH_AT_BUY_EXPR}) / 10000) * 10000)")
+            }
         }
     }
 }
@@ -281,37 +274,15 @@ fn build_query(query: &ItemStatsQuery) -> String {
     }
     .build();
     if let Some(min_bought_at_s) = query.min_bought_at_s {
-        player_filters.push(format!("tpl.2 >= {min_bought_at_s}"));
+        player_filters.push(format!("buy_time >= {min_bought_at_s}"));
     }
     if let Some(max_bought_at_s) = query.max_bought_at_s {
-        player_filters.push(format!("tpl.2 <= {max_bought_at_s}"));
+        player_filters.push(format!("buy_time <= {max_bought_at_s}"));
     }
     let player_filters = join_filters(&player_filters);
 
     /* ---------- misc ---------- */
     let bucket_expr = query.bucket.get_select_clause();
-    let bucket_extra_col = query.bucket.get_extra_col_clause();
-
-    let net_worth_expr = if [
-        BucketQuery::NetWorthBy1000,
-        BucketQuery::NetWorthBy2000,
-        BucketQuery::NetWorthBy3000,
-        BucketQuery::NetWorthBy5000,
-        BucketQuery::NetWorthBy10000,
-    ]
-    .contains(&query.bucket)
-    {
-        "
-        , coalesce(
-            arrayElementOrNull(
-                stats.net_worth,
-                arrayFirstIndex(ts -> ts >= buy_time, stats.time_stamp_s) - 1
-            ), net_worth
-        ) AS net_worth_at_buy
-        "
-    } else {
-        ""
-    };
 
     let mut having_filters = vec![];
     if let Some(min_matches) = query.min_matches {
@@ -350,7 +321,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             format!("\n        HAVING {}", enemy_having.join(" AND "))
         };
         let cte = format!(
-            "
+            ",
     t_enemy_teams AS (
         SELECT
             match_id,
@@ -361,7 +332,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             AND team IN ('Team0', 'Team1')
             AND hero_id IN ({})
         GROUP BY match_id, team{enemy_having_clause}
-    ),",
+    )",
             unique_ids.iter().map(ToString::to_string).join(", ")
         );
         let lane_filter = if query.same_lane_filter == Some(true) {
@@ -369,38 +340,28 @@ fn build_query(query: &ItemStatsQuery) -> String {
         } else {
             ""
         };
-        let join = "\n        INNER JOIN t_enemy_teams et USING (match_id)".to_owned();
-        let where_extra = format!("\n            AND et.enemy_team != team{lane_filter}");
+        let join = "\n    INNER JOIN t_enemy_teams et USING (match_id)".to_owned();
+        let where_extra = format!("\n        AND et.enemy_team != team{lane_filter}");
         (cte, join, where_extra)
     } else {
         (String::new(), String::new(), String::new())
     };
 
-    /* ---------- final query ---------- */
+    /* ---------- final query ----------
+     *
+     * Flat parallel ARRAY JOIN avoids the per-row temporary tuple array that
+     * `arrayZip(...) AS tpl` allocates. The `items.item_id`, `items.game_time_s`
+     * and `items.sold_time_s` arrays are joined in lockstep; the alias names
+     * (`item_id`, `buy_time`, `sold_time`) shadow but do not consume the
+     * originals, so `hasAll(items.item_id, ...)` / `not hasAny(items.item_id, ...)`
+     * (emitted by PlayerFilters for include/exclude_item_ids) still see the
+     * full per-row arrays.
+     */
     let match_filters =
         format!("match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}");
     format!(
         "
-WITH
-    t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'),{enemy_cte}
-    exploded_players AS (
-        SELECT
-            account_id,
-            duration_s,
-            tpl.1 AS item_id,
-            won,
-            tpl.2 AS buy_time,
-            tpl.3 AS sold_time
-            {bucket_extra_col}
-            {net_worth_expr}
-        FROM match_player{enemy_join}
-        ARRAY JOIN arrayFilter(
-            t -> t.1 IN t_upgrades AND t.2 > 0,
-            arrayZip(items.item_id, items.game_time_s, items.sold_time_s)
-        ) AS tpl
-        WHERE {match_filters}{enemy_where}
-            {player_filters}
-    )
+WITH t_upgrades AS (SELECT id FROM items WHERE type = 'upgrade'){enemy_cte}
 SELECT
     item_id,
     {bucket_expr}    AS bucket,
@@ -412,7 +373,14 @@ SELECT
     coalesce(avgIf(sold_time, sold_time > 0), 0) AS avg_sell_time_s,
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
     coalesce(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative
-FROM exploded_players
+FROM match_player{enemy_join}
+ARRAY JOIN
+    items.item_id      AS item_id,
+    items.game_time_s  AS buy_time,
+    items.sold_time_s  AS sold_time
+WHERE {match_filters}{enemy_where}
+    AND item_id IN t_upgrades AND buy_time > 0
+    {player_filters}
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
