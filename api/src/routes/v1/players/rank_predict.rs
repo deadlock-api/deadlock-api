@@ -3,7 +3,7 @@ use std::sync::LazyLock;
 
 use axum::Json;
 use axum::body::Bytes;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::IntoResponse;
 use clickhouse::Row;
@@ -537,10 +537,34 @@ pub(crate) async fn predict_rank_for_account(
         .map_err(|e: RankPredictorError| APIError::internal(format!("Inference failed: {e}")))
 }
 
+#[derive(Debug, Default, Clone, Copy, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum RankPredictImageFormat {
+    #[default]
+    Png,
+    Webp,
+}
+
+impl RankPredictImageFormat {
+    fn suffix(self) -> &'static str {
+        match self {
+            Self::Png => "",
+            Self::Webp => "_webp",
+        }
+    }
+}
+
+#[derive(Debug, Default, Deserialize, utoipa::IntoParams)]
+pub(crate) struct RankPredictImageQuery {
+    /// Image format. Defaults to `png`. Supported: `png`, `webp`.
+    #[serde(default)]
+    format: RankPredictImageFormat,
+}
+
 #[utoipa::path(
     get,
     path = "/{account_id}/rank-predict/image",
-    params(AccountIdQuery),
+    params(AccountIdQuery, RankPredictImageQuery),
     responses(
         (status = OK, description = "Predicted rank badge image", content_type = "image/png", body = [u8]),
         (status = BAD_REQUEST, description = "Invalid account ID"),
@@ -553,10 +577,11 @@ pub(crate) async fn predict_rank_for_account(
     ),
     tags = ["Players"],
     summary = "Rank Predict Image",
-    description = "Returns the predicted rank badge image directly (binary), not a URL."
+    description = "Returns the predicted rank badge image directly (binary), not a URL. Use `?format=webp` for WebP."
 )]
 pub(super) async fn rank_predict_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
+    Query(RankPredictImageQuery { format }): Query<RankPredictImageQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     if state
@@ -570,6 +595,7 @@ pub(super) async fn rank_predict_image(
     let prediction = predict_rank_for_account(&state, account_id).await?;
     let rank = prediction.badge / 10;
     let subrank = prediction.badge % 10;
+    let suffix = format.suffix();
 
     let image_url = state
         .assets_client
@@ -580,8 +606,8 @@ pub(super) async fn rank_predict_image(
         .find(|r| r.tier == u32::try_from(rank).unwrap_or_default())
         .and_then(|r| {
             r.images
-                .get(&format!("large_subrank{subrank}"))
-                .or(r.images.get(&format!("small_subrank{subrank}")))
+                .get(&format!("large_subrank{subrank}{suffix}"))
+                .or(r.images.get(&format!("small_subrank{subrank}{suffix}")))
                 .cloned()
         })
         .ok_or_else(|| {
