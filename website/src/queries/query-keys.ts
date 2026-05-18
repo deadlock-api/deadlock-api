@@ -1,0 +1,68 @@
+import type {
+  AnalyticsApiAbilityOrderStatsRequest,
+  AnalyticsApiBadgeDistributionRequest,
+  AnalyticsApiGameStatsRequest,
+  AnalyticsApiHeroBanStatsRequest,
+  AnalyticsApiHeroCombStatsRequest,
+  AnalyticsApiHeroCountersStatsRequest,
+  AnalyticsApiHeroStatsRequest,
+  AnalyticsApiHeroSynergiesStatsRequest,
+  AnalyticsApiItemStatsRequest,
+  AnalyticsApiKillDeathStatsRequest,
+  AnalyticsApiPlayerScoreboardRequest,
+  MatchesApiBulkMetadataRequest,
+} from "deadlock_api_client";
+
+export const queryKeys = {
+  assets: {
+    ranks: () => ["assets-ranks"] as const,
+    heroes: () => ["assets-heroes"] as const,
+    abilities: () => ["assets-items-abilities"] as const,
+    itemUpgrades: () => ["assets-items-upgrades"] as const,
+    hero: (heroId: number) => ["assets-hero", heroId] as const,
+  },
+  leaderboard: {
+    data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,
+  },
+  analytics: {
+    badgeDistribution: (filter: AnalyticsApiBadgeDistributionRequest) => ["api-badge-distribution", filter] as const,
+    abilityOrderStats: (params: AnalyticsApiAbilityOrderStatsRequest) => ["api-ability-order-stats", params] as const,
+    killDeathStats: (filter: AnalyticsApiKillDeathStatsRequest) => ["api-kill-death-stats", filter] as const,
+    itemStats: (filter: AnalyticsApiItemStatsRequest) => ["api-item-stats", filter] as const,
+    heroStats: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats", params] as const,
+    heroBanStats: (params: AnalyticsApiHeroBanStatsRequest) => ["api-hero-ban-stats", params] as const,
+    heroSynergyStats: (params: AnalyticsApiHeroSynergiesStatsRequest) => ["api-hero-synergy-stats", params] as const,
+    heroCounterStats: (params: AnalyticsApiHeroCountersStatsRequest) => ["api-hero-counter-stats", params] as const,
+    heroCombStats: (params: AnalyticsApiHeroCombStatsRequest) => ["api-hero-comb-stats", params] as const,
+    heroStatsByRank: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-rank", params] as const,
+    heroStatsOverTime: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-over-time", params] as const,
+    heroStatsByDuration: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-duration", params] as const,
+    heroStatsByExperience: (params: AnalyticsApiHeroStatsRequest) => ["api-hero-stats-by-experience", params] as const,
+    gameStats: (params: AnalyticsApiGameStatsRequest) => ["api-game-stats", params] as const,
+    playerScoreboard: (params: AnalyticsApiPlayerScoreboardRequest) => ["api-player-scoreboard", params] as const,
+    topBuilds: (params: MatchesApiBulkMetadataRequest) => ["api-top-builds", params] as const,
+  },
+  servers: {
+    list: () => ["api-servers-list"] as const,
+    steamList: () => ["api-servers-steam-list"] as const,
+  },
+  steam: {
+    profiles: (batch: number[]) => ["steam-profiles", batch] as const,
+    profile: (accountId: number | undefined) => ["steam-profile", accountId] as const,
+    name: (region: string, accountId: string) => ["steam-name", region, accountId] as const,
+  },
+  streamkit: {
+    availableVariables: () => ["streamkit-available-variables"] as const,
+    preview: (url: string) => ["streamkit-preview", url] as const,
+    stats: (...parts: unknown[]) => ["streamkit-stats", ...parts] as const,
+    matchHistory: (accountId: string) => ["streamkit-match-history", accountId] as const,
+    version: (widgetType: string | undefined) => ["streamkit-version", widgetType] as const,
+  },
+  map: () => ["assets-map"] as const,
+  patron: {
+    all: ["patron"] as const,
+    status: () => [...queryKeys.patron.all, "status"] as const,
+    steamAccounts: () => [...queryKeys.patron.all, "steam-accounts"] as const,
+    playerCard: (steamId3: number) => [...queryKeys.patron.all, "player-card", steamId3] as const,
+  },
+} as const;

@@ -1,26 +1,34 @@
-import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 
-import { ogImages } from "./plugins/vite-plugin-og-images";
-
 const ReactCompilerConfig = {};
-
 const isDev = process.env.NODE_ENV !== "production";
 
 export default defineConfig({
+  server: {
+    port: 3000,
+  },
   resolve: {
     tsconfigPaths: true,
   },
   plugins: [
-    ogImages(),
-    reactRouter(),
-    // React Compiler via Babel is slow — only run it for production builds
+    tanstackStart({
+      prerender: {
+        enabled: true,
+        crawlLinks: true,
+        filter: ({ path }) => !path.startsWith("/auth/"),
+      },
+      pages: [{ path: "/" }, { path: "/blog" }],
+    }),
+    viteReact(),
+    // React Compiler via Babel — only run for production builds (slow in dev)
     ...(!isDev
       ? [
           babel({
-            include: ["./app/**/*"],
+            include: ["./src/**/*"],
             filter: /\.[jt]sx?$/,
             babelConfig: {
               presets: ["@babel/preset-typescript"],
@@ -32,25 +40,4 @@ export default defineConfig({
       : []),
     tailwindcss(),
   ],
-  optimizeDeps: {
-    include: [
-      "react",
-      "react-dom",
-      "react-router",
-      "react/jsx-runtime",
-      "react/jsx-dev-runtime",
-      "react-dom/client",
-      "@tanstack/react-query",
-      "recharts",
-      "three",
-      "@react-three/fiber",
-      "@react-three/drei",
-      "framer-motion",
-      "nuqs",
-      "fuse.js",
-      "react-markdown",
-      "dayjs",
-      "axios",
-    ],
-  },
 });
