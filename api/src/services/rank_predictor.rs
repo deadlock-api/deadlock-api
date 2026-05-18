@@ -161,8 +161,8 @@ impl RankPredictor {
         &self,
         features: [f64; N_FEATURES],
     ) -> Result<RankPrediction, RankPredictorError> {
-        let xgb_score = run_session(&self.xgb, &features)?;
-        let lgbm_score = run_session(&self.lgbm, &features)?;
+        let xgb_score = run_session_f64(&self.xgb, &features)?;
+        let lgbm_score = run_session_f32(&self.lgbm, &features)?;
 
         let blend = self.calib.blend_lgbm_weight;
         let blended = (1.0 - blend) * xgb_score + blend * lgbm_score;
@@ -188,12 +188,26 @@ fn build_session(bytes: &[u8]) -> Result<Session, RankPredictorError> {
         .map_err(RankPredictorError::Ort)
 }
 
-fn run_session(
+fn run_session_f32(
     session: &Mutex<Session>,
     features: &[f64; N_FEATURES],
 ) -> Result<f32, RankPredictorError> {
     #[allow(clippy::cast_possible_truncation)]
     let input = Array2::from_shape_fn((1, N_FEATURES), |(_, j)| features[j] as f32);
+    let tensor = Tensor::from_array(input)?;
+    let mut guard = session
+        .lock()
+        .map_err(|_| RankPredictorError::MutexPoisoned)?;
+    let outputs = guard.run(ort::inputs!["X" => tensor])?;
+    let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+    Ok(*data.first().ok_or(RankPredictorError::EmptyOutput)?)
+}
+
+fn run_session_f64(
+    session: &Mutex<Session>,
+    features: &[f64; N_FEATURES],
+) -> Result<f32, RankPredictorError> {
+    let input = Array2::from_shape_fn((1, N_FEATURES), |(_, j)| features[j]);
     let tensor = Tensor::from_array(input)?;
     let mut guard = session
         .lock()
