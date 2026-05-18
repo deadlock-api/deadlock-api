@@ -192,6 +192,7 @@ fn run_session(
     session: &Mutex<Session>,
     features: &[f64; N_FEATURES],
 ) -> Result<f32, RankPredictorError> {
+    #[allow(clippy::cast_possible_truncation)]
     let input = Array2::from_shape_fn((1, N_FEATURES), |(_, j)| features[j] as f32);
     let tensor = Tensor::from_array(input)?;
     let mut guard = session
