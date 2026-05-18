@@ -3,44 +3,20 @@ import { type Dayjs, day } from "~/dayjs";
 // UTC end-of-day so all users share one Cloudflare cache key regardless of TZ.
 const utcEndOfToday = () => day.utc().endOf("day");
 
-export const PATCHES = [
-  {
-    id: "2026-04-30",
-    name: "Gameplay Update (2026-04-30)",
-    startDate: day.utc("2026-05-01T23:49:47Z").local(),
-    endDate: utcEndOfToday(),
-  },
-  {
-    id: "2026-04-10",
-    name: "Update (2026-04-10)",
-    startDate: day.utc("2026-04-11T04:03:00Z").local(),
-    endDate: utcEndOfToday(),
-  },
-  {
-    id: "2026-01-21",
-    name: "Old Gods, New Blood (2026-01-21)",
-    startDate: day.utc("2026-01-21T02:10:58Z").local(),
-    endDate: utcEndOfToday(),
-  },
-  {
-    id: "2025-09-06",
-    name: "Six New Heroes (2025-09-06)",
-    startDate: day.utc("2025-09-06T20:00:00Z").local(),
-    endDate: utcEndOfToday(),
-  },
-  {
-    id: "2025-05-08",
-    name: "Major Item Rework (2025-05-08)",
-    startDate: day.utc("2025-05-08T19:43:20Z").local(),
-    endDate: utcEndOfToday(),
-  },
-  {
-    id: "2025-02-25",
-    name: "Major Map Rework (2025-02-25)",
-    startDate: day.utc("2025-02-25T21:51:13Z").local(),
-    endDate: day.utc("2025-05-08T19:43:20Z").local(),
-  },
+// Ordered newest-first. Each patch ends when the next-newer patch starts; the latest patch ends "today".
+const PATCH_STARTS = [
+  { id: "2026-04-30", name: "Gameplay Update (2026-04-30)", startDate: day.utc("2026-05-01T23:49:47Z").local() },
+  { id: "2026-04-10", name: "Update (2026-04-10)", startDate: day.utc("2026-04-11T04:03:00Z").local() },
+  { id: "2026-01-21", name: "Old Gods, New Blood (2026-01-21)", startDate: day.utc("2026-01-21T02:10:58Z").local() },
+  { id: "2025-09-06", name: "Six New Heroes (2025-09-06)", startDate: day.utc("2025-09-06T20:00:00Z").local() },
+  { id: "2025-05-08", name: "Major Item Rework (2025-05-08)", startDate: day.utc("2025-05-08T19:43:20Z").local() },
+  { id: "2025-02-25", name: "Major Map Rework (2025-02-25)", startDate: day.utc("2025-02-25T21:51:13Z").local() },
 ];
+
+export const PATCHES = PATCH_STARTS.map((patch, i) => ({
+  ...patch,
+  endDate: i === 0 ? utcEndOfToday() : PATCH_STARTS[i - 1].startDate,
+}));
 
 const MIN_PATCH_AGE_DAYS = 7;
 const FALLBACK_RANGE_DAYS = 14;
