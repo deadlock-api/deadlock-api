@@ -41,4 +41,6 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /usr/local/bin/${EXE_NAME} /usr/local/bin/
 COPY model/xgb.onnx.zst /app/model/xgb.onnx.zst
+COPY model/lgbm.onnx.zst /app/model/lgbm.onnx.zst
+COPY model/calibration.json /app/model/calibration.json
 ENTRYPOINT ["/usr/local/bin/deadlock-api-rust"]
