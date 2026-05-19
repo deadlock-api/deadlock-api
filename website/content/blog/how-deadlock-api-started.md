@@ -14,7 +14,7 @@ sitting in meetings debating architectures and frameworks instead of actually wr
 
 I got impatient, so I just started building. Eighteen months later, we've tracked over 18 million matches.
 
-### Matches tracked per month since August 2024
+## Matches tracked per month since August 2024
 
 | Month    | Matches   |
 | -------- | --------- |

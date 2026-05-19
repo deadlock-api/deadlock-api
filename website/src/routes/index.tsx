@@ -378,7 +378,7 @@ function IndexRoute() {
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">{item.description}</p>
                 <div className="mt-auto pt-2">
-                  <span className="flex items-center gap-1 text-xs font-medium text-primary/80 transition-colors group-hover:text-primary">
+                  <span className="flex items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
                     {isExternal ? "Join" : "View"}
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                   </span>
@@ -422,7 +422,7 @@ function IndexRoute() {
                   </div>
                 </div>
                 <div className="mt-auto pt-3">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-primary/80 transition-colors group-hover:text-primary">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors group-hover:text-primary">
                     {service.cta}
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>

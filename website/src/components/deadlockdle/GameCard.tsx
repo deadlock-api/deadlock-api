@@ -100,7 +100,7 @@ export function GameCard({ mode, title, description, icon: Icon, path }: GameCar
         </div>
         <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
         <div className="mt-auto flex items-center justify-between pt-2">
-          <span className="flex items-center gap-1 text-xs font-medium text-primary/80 transition-colors group-hover:text-primary">
+          <span className="flex items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
             Play
             <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
           </span>

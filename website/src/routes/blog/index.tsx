@@ -85,7 +85,7 @@ function BlogIndex() {
                     </span>
                   ))}
                 </div>
-                <span className="flex items-center gap-1 text-xs font-medium text-primary/80 transition-colors group-hover:text-primary">
+                <span className="flex items-center gap-1 text-xs font-medium text-primary transition-colors group-hover:text-primary">
                   Read more
                   <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                 </span>
