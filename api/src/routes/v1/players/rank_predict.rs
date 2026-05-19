@@ -558,6 +558,7 @@ impl RankPredictImageFormat {
 pub(crate) struct RankPredictImageQuery {
     /// Image format. Defaults to `png`. Supported: `png`, `webp`.
     #[serde(default)]
+    #[param(inline)]
     format: RankPredictImageFormat,
 }
 
@@ -566,7 +567,10 @@ pub(crate) struct RankPredictImageQuery {
     path = "/{account_id}/rank-predict/image",
     params(AccountIdQuery, RankPredictImageQuery),
     responses(
-        (status = OK, description = "Predicted rank badge image", content_type = "image/png", body = [u8]),
+        (status = OK, description = "Predicted rank badge image", content(
+            ([u8] = "image/png"),
+            ([u8] = "image/webp"),
+        )),
         (status = BAD_REQUEST, description = "Invalid account ID"),
         (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
         (status = NOT_FOUND, description = "No image available for the predicted rank"),
