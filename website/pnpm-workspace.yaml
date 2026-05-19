@@ -2,7 +2,7 @@ packages:
   - website
 
 allowBuilds:
-  '@tailwindcss/oxide': true
+  "@tailwindcss/oxide": true
   assets_deadlock_api_client: true
   core-js: true
   deadlock_api_client: true

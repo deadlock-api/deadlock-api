@@ -19,6 +19,7 @@
     ".vinxi",
     ".wrangler",
     "src/routeTree.gen.ts",
-    "src/components/ui"
+    "src/components/ui",
+    "wrangler.jsonc"
   ]
 }
