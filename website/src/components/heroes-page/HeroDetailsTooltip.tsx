@@ -62,7 +62,11 @@ export function HeroDetailsTooltip({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" className="inline-flex cursor-pointer items-center justify-center">
+        <button
+          type="button"
+          aria-label="Show hero details"
+          className="inline-flex cursor-pointer items-center justify-center"
+        >
           <Info className="size-4 text-muted-foreground transition-colors hover:text-foreground" />
         </button>
       </PopoverTrigger>

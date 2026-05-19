@@ -7,7 +7,8 @@
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    "html_handling": "drop-trailing-slash"
   },
   "routes": [
     { "pattern": "deadlock-api.com", "custom_domain": true },

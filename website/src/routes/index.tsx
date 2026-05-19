@@ -213,8 +213,10 @@ const sponsors = [
     href: "https://statlocker.gg/",
     title: "Statlocker.GG",
     logo: "/logo/statlocker.png",
+    width: 414,
+    height: 114,
   },
-  { href: "https://blast.tv/", title: "Blast.TV", logo: "/logo/blast.svg" },
+  { href: "https://blast.tv/", title: "Blast.TV", logo: "/logo/blast.svg", width: 996, height: 188 },
 ];
 
 function IndexRoute() {
@@ -267,6 +269,8 @@ function IndexRoute() {
                   <img
                     src={sponsor.logo}
                     alt={`${sponsor.title} Logo`}
+                    width={sponsor.width}
+                    height={sponsor.height}
                     loading="lazy"
                     className="max-h-10 max-w-[120px]"
                   />
