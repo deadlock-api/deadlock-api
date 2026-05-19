@@ -17,7 +17,7 @@ I got impatient, so I just started building. Eighteen months later, we've tracke
 ### Matches tracked per month since August 2024
 
 | Month    | Matches   |
-|----------|-----------|
+| -------- | --------- |
 | Aug 2024 | 3,882     |
 | Sep 2024 | 69,824    |
 | Oct 2024 | 1,421,450 |
@@ -122,7 +122,7 @@ roughly **23 million requests per day**, with daily peaks above 50 million and a
 day**. A few highlights from that window:
 
 | Date   | Requests   | Unique visitors |
-|--------|------------|-----------------|
+| ------ | ---------- | --------------- |
 | Feb 14 | 50,552,301 | 90,799          |
 | Feb 23 | 28,273,267 | 130,302         |
 | Mar 7  | 26,760,830 | 129,252         |
