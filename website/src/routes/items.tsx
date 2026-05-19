@@ -35,8 +35,8 @@ export const Route = createFileRoute("/items")({
       heroId: null,
       minAverageBadge: 91,
       maxAverageBadge: 116,
-      minBoughtAtS: null,
-      maxBoughtAtS: null,
+      minBoughtAtS: undefined,
+      maxBoughtAtS: undefined,
       gameMode: "normal" as const,
     };
     await Promise.all([
