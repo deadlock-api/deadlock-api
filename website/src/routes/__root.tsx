@@ -60,10 +60,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: "icon", type: "image/webp", href: "https://deadlock-api.com/favicon.webp" },
       { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "preconnect", href: "https://api.deadlock-api.com", crossOrigin: "anonymous" },
-      { rel: "preconnect", href: "https://assets.deadlock-api.com", crossOrigin: "anonymous" },
-      { rel: "dns-prefetch", href: "https://api.deadlock-api.com" },
-      { rel: "dns-prefetch", href: "https://assets.deadlock-api.com" },
       {
         rel: "preload",
         href: interWoff2,
