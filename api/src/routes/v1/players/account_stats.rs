@@ -8,11 +8,12 @@ use cached::proc_macro::cached;
 use serde::Serialize;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
-    CMsgAccountHeroStats, CMsgAccountStats, CMsgClientToGcGetAccountStats, EgcCitadelClientMessages,
+    CMsgAccountHeroStats, CMsgAccountStats, CMsgClientToGcGetAccountStats,
+    CMsgClientToGcGetAccountStatsResponse, EgcCitadelClientMessages,
 };
 
 use crate::context::AppState;
-use crate::error::APIResult;
+use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam::types::{
@@ -109,8 +110,13 @@ pub(crate) async fn get_player_account_stats(
     .retries(3)
     .fixed_backoff(Duration::from_millis(10))
     .await?;
-    let proto_player_account_stats: SteamProxyResponse<CMsgAccountStats> = raw_data.try_into()?;
-    Ok(proto_player_account_stats.msg.into())
+    let proto_player_account_stats: SteamProxyResponse<CMsgClientToGcGetAccountStatsResponse> =
+        raw_data.try_into()?;
+    let stats = proto_player_account_stats
+        .msg
+        .stats
+        .ok_or_else(|| APIError::internal("Account stats response missing stats".to_string()))?;
+    Ok(stats.into())
 }
 
 #[utoipa::path(
