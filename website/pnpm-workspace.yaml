@@ -8,7 +8,9 @@ allowBuilds:
   deadlock_api_client: true
   esbuild: true
   protobufjs: true
+  sharp: set this to true or false
   unrs-resolver: true
+  workerd: set this to true or false
 
 minimumReleaseAge: 1440
 
