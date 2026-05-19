@@ -6,13 +6,13 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist/client",
-    "binding": "ASSETS",
+    "binding": "ASSETS"
   },
   "routes": [
     { "pattern": "deadlock-api.com", "custom_domain": true },
-    { "pattern": "www.deadlock-api.com", "custom_domain": true },
+    { "pattern": "www.deadlock-api.com", "custom_domain": true }
   ],
   "observability": {
-    "enabled": true,
-  },
+    "enabled": true
+  }
 }
