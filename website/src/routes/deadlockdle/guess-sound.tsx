@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { AbilityV2 } from "assets_deadlock_api_client/api";
+import type { AbilityV2 } from "assets_deadlock_api_client";
 import { motion } from "framer-motion";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

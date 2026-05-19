@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { AbilityV2 } from "assets_deadlock_api_client/api";
+import type { AbilityV2 } from "assets_deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type RefCallback } from "react";

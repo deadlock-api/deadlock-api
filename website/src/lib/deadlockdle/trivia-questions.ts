@@ -1,4 +1,4 @@
-import type { AbilityV2, HeroV2, UpgradeV2 } from "assets_deadlock_api_client/api";
+import type { AbilityV2, HeroV2, UpgradeV2 } from "assets_deadlock_api_client";
 
 import { filterPlayableHeroes, filterShopableItems } from "~/queries/asset-queries";
 

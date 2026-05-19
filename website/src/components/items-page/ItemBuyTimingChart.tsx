@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, XAxis, YAxis } from "recharts";
 

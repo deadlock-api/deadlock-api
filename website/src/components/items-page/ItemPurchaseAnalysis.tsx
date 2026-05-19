@@ -1,4 +1,4 @@
-import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client/api";
+import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo } from "react";
 

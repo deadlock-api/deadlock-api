@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { RankV2 } from "assets_deadlock_api_client/api";
+import type { RankV2 } from "assets_deadlock_api_client";
 import { ChevronDown } from "lucide-react";
 
 import { BadgeImage } from "~/components/BadgeImage";

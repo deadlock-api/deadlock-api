@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsHeroStats } from "deadlock_api_client";
-import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client/api";
+import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
 import {
   ArrowDown,
   ArrowUp,

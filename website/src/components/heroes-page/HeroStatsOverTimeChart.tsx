@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HeroBanStatsBucketEnum, HeroStatsBucketEnum } from "deadlock_api_client/api";
+import type { HeroBanStatsBucketEnum, HeroStatsBucketEnum } from "deadlock_api_client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 

@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { RankV2 } from "assets_deadlock_api_client/api";
+import type { RankV2 } from "assets_deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { assetsApi } from "~/lib/assets-api";

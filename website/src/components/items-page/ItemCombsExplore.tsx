@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client/api";
+import type { AbilityV2, HeroV2 } from "assets_deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
-import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client/api";
+import type { AnalyticsApiItemStatsRequest, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo } from "react";
 

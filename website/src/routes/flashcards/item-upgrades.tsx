@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { UpgradeV2 } from "assets_deadlock_api_client/api";
+import type { UpgradeV2 } from "assets_deadlock_api_client";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, RotateCcw, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

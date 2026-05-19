@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client/api";
+import type { AnalyticsApiHeroBanStatsRequest } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
