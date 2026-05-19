@@ -2,13 +2,15 @@ packages:
   - website
 
 allowBuilds:
-  deadlock_api_client: true
+  '@tailwindcss/oxide': true
   assets_deadlock_api_client: true
-  esbuild: true
   core-js: true
+  deadlock_api_client: true
+  esbuild: true
   protobufjs: true
-  "@tailwindcss/oxide": true
   unrs-resolver: true
+
+minimumReleaseAge: 1440
 
 overrides:
   typescript: ^6.0.3
