@@ -11,7 +11,7 @@ base64 = { workspace = true }
 cached = { workspace = true, features = ["async", "async_tokio_rt_multi_thread"] }
 clap = { workspace = true, features = ["env"] }
 common = { workspace = true }
-dashmap = "6.1.0"
+dashmap = "6.2.1"
 fred = { workspace = true }
 haste = { workspace = true }
 itertools = { workspace = true }
