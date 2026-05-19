@@ -1,42 +1,58 @@
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  type RefObject,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 // --- Context for automatic filter description assembly ---
 
 interface FilterDescriptionContextValue {
-  register: (key: string, value: string | null) => void;
+  registerSync: (key: string, value: string | null) => void;
+  registerEffect: (key: string, value: string | null) => void;
 }
 
 const FilterDescCtx = createContext<FilterDescriptionContextValue | null>(null);
 
 /**
  * Call from inside a Filter.* sub-component to register a description fragment.
- * When the value is null, the segment is removed from the description.
+ * Writes to a render-phase mutable Map (for SSR) and updates state via effect
+ * (for client-side change tracking and cleanup).
  */
 export function useRegisterFilterPart(key: string, value: string | null | undefined) {
   const ctx = useContext(FilterDescCtx);
+  ctx?.registerSync(key, value ?? null);
   useLayoutEffect(() => {
-    ctx?.register(key, value ?? null);
+    ctx?.registerEffect(key, value ?? null);
     return () => {
-      ctx?.register(key, null);
+      ctx?.registerEffect(key, null);
     };
   }, [ctx, key, value]);
 }
 
 /**
  * Register multiple description fragments at once.
- * Avoids hooks-in-loop issues when a single filter contributes multiple keys.
  */
 export function useRegisterFilterParts(parts: Record<string, string | null | undefined>) {
   const ctx = useContext(FilterDescCtx);
+  if (ctx) {
+    for (const [k, v] of Object.entries(parts)) {
+      ctx.registerSync(k, v ?? null);
+    }
+  }
   const serialized = JSON.stringify(parts);
   useLayoutEffect(() => {
     const parsed = JSON.parse(serialized) as Record<string, string | null>;
-    for (const [key, value] of Object.entries(parsed)) {
-      ctx?.register(key, value ?? null);
+    for (const [k, v] of Object.entries(parsed)) {
+      ctx?.registerEffect(k, v ?? null);
     }
     return () => {
-      for (const key of Object.keys(parsed)) {
-        ctx?.register(key, null);
+      for (const k of Object.keys(parsed)) {
+        ctx?.registerEffect(k, null);
       }
     };
   }, [ctx, serialized]);
@@ -48,11 +64,6 @@ function Hl({ children }: { children: React.ReactNode }) {
   return <span className="font-medium text-foreground/80">{children}</span>;
 }
 
-/**
- * Ordered segment definitions. Each entry defines a key (or key prefix for
- * dynamic keys like "minMatches:*"), a prefix phrase, and whether the value
- * itself is highlighted.
- */
 const SEGMENT_DEFS: {
   key: string;
   prefix: string;
@@ -130,10 +141,46 @@ function buildSentence(parts: Map<string, string>): Segment[] | null {
   return segments;
 }
 
+function FilterDescriptionDisplay({
+  parts,
+  partsRef,
+}: {
+  parts: Map<string, string>;
+  partsRef: RefObject<Map<string, string>>;
+}) {
+  // On SSR/first paint, effect-driven `parts` is empty but `partsRef` is populated
+  // by render-phase writes from filter children. Once effects fire on the client,
+  // `parts` mirrors `partsRef` and becomes the source of re-render reactivity.
+  // oxlint-disable-next-line react-hooks-js/refs -- intentional: render-phase fallback for SSR
+  const source = parts.size > 0 ? parts : partsRef.current;
+  const sentence = useMemo(() => buildSentence(source), [source]);
+  if (!sentence) return null;
+  return (
+    <p className="w-full text-center text-xs text-muted-foreground">
+      {sentence.map((segment, i) => (
+        <span key={segment.key}>
+          {i > 0 ? " " : ""}
+          {segment.node}
+        </span>
+      ))}
+      .
+    </p>
+  );
+}
+
 export function FilterDescriptionProvider({ children }: { children: React.ReactNode }) {
+  const partsRef = useRef<Map<string, string>>(new Map());
   const [parts, setParts] = useState(() => new Map<string, string>());
 
-  const register = useCallback((key: string, value: string | null) => {
+  const registerSync = useCallback((key: string, value: string | null) => {
+    if (value != null) {
+      partsRef.current.set(key, value);
+    } else {
+      partsRef.current.delete(key);
+    }
+  }, []);
+
+  const registerEffect = useCallback((key: string, value: string | null) => {
     setParts((prev) => {
       if (value != null) {
         if (prev.get(key) === value) return prev;
@@ -148,24 +195,15 @@ export function FilterDescriptionProvider({ children }: { children: React.ReactN
     });
   }, []);
 
-  const ctxValue = useMemo(() => ({ register }), [register]);
-
-  const sentence = useMemo(() => buildSentence(parts), [parts]);
+  const ctxValue = useMemo<FilterDescriptionContextValue>(
+    () => ({ registerSync, registerEffect }),
+    [registerSync, registerEffect],
+  );
 
   return (
     <FilterDescCtx.Provider value={ctxValue}>
       {children}
-      {sentence && (
-        <p className="w-full text-center text-xs text-muted-foreground">
-          {sentence.map((segment, i) => (
-            <span key={segment.key}>
-              {i > 0 ? " " : ""}
-              {segment.node}
-            </span>
-          ))}
-          .
-        </p>
-      )}
+      <FilterDescriptionDisplay parts={parts} partsRef={partsRef} />
     </FilterDescCtx.Provider>
   );
 }

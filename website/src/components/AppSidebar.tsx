@@ -1,4 +1,4 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -26,6 +26,7 @@ import {
 import { VisuallyHidden } from "radix-ui";
 import { useState } from "react";
 
+import { PrefetchAnchor } from "~/components/PrefetchAnchor";
 import { SmartLink } from "~/components/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "~/components/ui/sheet";
@@ -166,7 +167,7 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
 
   if (link.special) {
     return (
-      <Link
+      <PrefetchAnchor
         to={link.to}
         onClick={onNavigate}
         className={cn(
@@ -177,12 +178,12 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
       >
         <Icon className="h-4 w-4 shrink-0" />
         {link.label}
-      </Link>
+      </PrefetchAnchor>
     );
   }
 
   return (
-    <Link
+    <PrefetchAnchor
       to={link.to}
       onClick={onNavigate}
       className={cn(
@@ -194,7 +195,7 @@ function NavItem({ link, onNavigate }: { link: NavLink; onNavigate?: () => void 
     >
       <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-sidebar-foreground/40")} />
       <span className="truncate">{link.label}</span>
-    </Link>
+    </PrefetchAnchor>
   );
 }
 
@@ -203,7 +204,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col text-sidebar-foreground">
       {/* Logo */}
       <div className="border-b border-sidebar-border px-4 py-3">
-        <Link to="/" onClick={onNavigate} className="flex items-center gap-3">
+        <PrefetchAnchor to="/" onClick={onNavigate} className="flex items-center gap-3">
           <img
             src="https://deadlock-api.com/favicon.webp"
             alt="Deadlock API Logo"
@@ -212,7 +213,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             className="aspect-square object-contain"
           />
           <span className="text-lg font-semibold">Deadlock API</span>
-        </Link>
+        </PrefetchAnchor>
       </div>
 
       {/* Navigation */}
@@ -279,7 +280,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           {bottomNavLinks.map((link) => {
             const Icon = link.icon;
             return (
-              <Link
+              <PrefetchAnchor
                 key={link.to}
                 to={link.to}
                 onClick={onNavigate}
@@ -287,7 +288,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               >
                 <Icon className="h-3 w-3 shrink-0 opacity-60" />
                 {link.label}
-              </Link>
+              </PrefetchAnchor>
             );
           })}
         </div>

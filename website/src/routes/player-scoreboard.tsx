@@ -10,14 +10,69 @@ import { ALL_SORT_BY_VALUES, getSortByLabel } from "~/components/player-scoreboa
 import { SortBySelector } from "~/components/player-scoreboard/SortBySelector";
 import { QueryRenderer } from "~/components/QueryRenderer";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
+import { CACHE_DURATIONS } from "~/constants/cache";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { api } from "~/lib/api";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
-import { roundedNow } from "~/lib/time-normalize";
+import { normalizeUnixCeil, normalizeUnixFloor, roundedNow } from "~/lib/time-normalize";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
+import { queryKeys } from "~/queries/query-keys";
+
+const STEAM_BATCH_SIZE = 500;
+
+function chunkIds(ids: number[], size: number): number[][] {
+  const chunks: number[][] = [];
+  for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
+  return chunks;
+}
+
+const MAX_ENTRIES = 1000;
+
+function defaultScoreboardRange() {
+  return [roundedNow("day").subtract(30, "day"), roundedNow("day").endOf("day")] as const;
+}
 
 export const Route = createFileRoute("/player-scoreboard")({
   component: PlayerScoreboardPage,
+  loader: async ({ context: { queryClient } }) => {
+    const [start, end] = defaultScoreboardRange();
+    const scoreboard = await queryClient.ensureQueryData(
+      playerScoreboardQueryOptions({
+        sortBy: "kills" as PlayerScoreboardSortByEnum,
+        sortDirection: "desc",
+        gameMode: "normal",
+        minMatches: 0,
+        minAverageBadge: 0,
+        maxAverageBadge: 116,
+        minUnixTimestamp: normalizeUnixFloor(start) ?? 0,
+        maxUnixTimestamp: normalizeUnixCeil(end),
+        start: 0,
+        limit: MAX_ENTRIES,
+      }),
+    );
+    const accountIds = scoreboard.map((e) => e.account_id).filter((id): id is number => id != null);
+    await Promise.all(
+      chunkIds(accountIds, STEAM_BATCH_SIZE).map((batch) =>
+        queryClient.ensureQueryData({
+          queryKey: queryKeys.steam.profiles(batch),
+          queryFn: async () => {
+            const response = await api.steam_api.steam({ accountIds: batch });
+            const map: Record<number, { personaname: string; avatar: string; profileurl: string }> = {};
+            for (const profile of response.data) {
+              map[profile.account_id] = {
+                personaname: profile.personaname,
+                avatar: profile.avatar,
+                profileurl: profile.profileurl,
+              };
+            }
+            return map;
+          },
+          staleTime: CACHE_DURATIONS.ONE_DAY,
+        }),
+      ),
+    );
+  },
   head: () =>
     seo({
       title: "Deadlock Player Scoreboard: Top Players by Kills, Damage & Souls",
@@ -25,8 +80,6 @@ export const Route = createFileRoute("/player-scoreboard")({
       path: "/player-scoreboard",
     }),
 });
-
-const MAX_ENTRIES = 1000;
 
 function PlayerScoreboardPage() {
   const [sortBy, setSortBy] = useQueryState(

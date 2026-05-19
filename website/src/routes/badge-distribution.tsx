@@ -1,8 +1,9 @@
 import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 
+import BadgeDistributionChart from "~/components/badge-distribution/BadgeDistributionChart";
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { LoadingLogo } from "~/components/LoadingLogo";
@@ -11,14 +12,25 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
-import { roundedNow } from "~/lib/time-normalize";
+import { normalizeUnixCeil, normalizeUnixFloor, roundedNow } from "~/lib/time-normalize";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-const BadgeDistributionChart = lazy(() => import("~/components/badge-distribution/BadgeDistributionChart"));
+const defaultDateRange: [Dayjs | undefined, Dayjs | undefined] = [
+  roundedNow("day").subtract(30, "day"),
+  roundedNow("day").endOf("day"),
+];
 
 export const Route = createFileRoute("/badge-distribution")({
   component: BadgeDistributionPage,
+  loader: async ({ context: { queryClient } }) => {
+    await queryClient.ensureQueryData(
+      badgeDistributionQueryOptions({
+        minUnixTimestamp: normalizeUnixFloor(defaultDateRange[0]) ?? 0,
+        maxUnixTimestamp: normalizeUnixCeil(defaultDateRange[1]),
+      }),
+    );
+  },
   head: () =>
     seo({
       title: "Deadlock Rank Distribution: Badge Stats & Rank Percentiles",
@@ -27,11 +39,6 @@ export const Route = createFileRoute("/badge-distribution")({
       path: "/badge-distribution",
     }),
 });
-
-const defaultDateRange: [Dayjs | undefined, Dayjs | undefined] = [
-  roundedNow("day").subtract(30, "day"),
-  roundedNow("day").endOf("day"),
-];
 
 function BadgeDistributionPage() {
   const [[startDate, endDate], setDateRange] = useQueryState(

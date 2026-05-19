@@ -16,6 +16,9 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 
 export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
+  loader: async ({ context: { queryClient } }) => {
+    await queryClient.ensureQueryData(leaderboardQueryOptions(getDefaultRegion(), null));
+  },
   head: () =>
     seo({
       title: "Deadlock Leaderboard: Top Ranked Players by Region",

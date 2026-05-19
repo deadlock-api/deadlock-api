@@ -15,6 +15,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
 
 const Heatmap3D = lazy(() => import("~/components/heatmap/Heatmap3D"));
@@ -23,6 +24,18 @@ const VIEW_MODES = ["kills", "deaths", "kd"] as const;
 
 export const Route = createFileRoute("/heatmap")({
   component: HeatmapPage,
+  loader: async ({ context: { queryClient } }) => {
+    const defaultKdParams: AnalyticsApiKillDeathStatsRequest = {
+      team: 0,
+      gameMode: "normal",
+      minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+      maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+    };
+    await Promise.all([
+      queryClient.ensureQueryData(mapQueryOptions),
+      queryClient.ensureQueryData(killDeathStatsQueryOptions(defaultKdParams)),
+    ]);
+  },
   head: () =>
     seo({
       title: "Deadlock Map Heatmaps: Player Position & Kill Density",

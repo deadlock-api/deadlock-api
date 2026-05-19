@@ -19,9 +19,9 @@ export default defineConfig({
       prerender: {
         enabled: true,
         crawlLinks: true,
-        filter: ({ path }) => !path.startsWith("/auth/"),
+        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon",
       },
-      pages: [{ path: "/" }, { path: "/blog" }],
+      pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
     viteReact(),
     // React Compiler via Babel — only run for production builds (slow in dev)

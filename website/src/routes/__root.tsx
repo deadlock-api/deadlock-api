@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import newRockerWoff2 from "@fontsource/new-rocker/files/new-rocker-latin-400-normal.woff2?url";
-import { QueryClient, QueryClientProvider, QueryErrorResetBoundary } from "@tanstack/react-query";
-import { HeadContent, Outlet, Scripts, createRootRoute, useRouterState } from "@tanstack/react-router";
+import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
@@ -19,6 +19,9 @@ import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
 import { seo } from "~/lib/seo";
+import { heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
+import { ranksQueryOptions } from "~/queries/ranks-query";
+import type { RouterContext } from "~/router";
 
 import appCss from "~/styles/tailwind.css?url";
 
@@ -28,7 +31,14 @@ const defaultSeo = seo({
   path: "/",
 });
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
+  loader: async ({ context: { queryClient } }) => {
+    await Promise.all([
+      queryClient.ensureQueryData(heroesQueryOptions),
+      queryClient.ensureQueryData(ranksQueryOptions),
+      queryClient.ensureQueryData(itemUpgradesQueryOptions),
+    ]);
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -107,27 +117,14 @@ class QueryErrorBoundary extends Component<QueryErrorBoundaryProps, QueryErrorBo
   }
 }
 
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 3,
-      },
-    },
-  });
-}
-
 function RootComponent() {
-  const [queryClient] = React.useState(makeQueryClient);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isWidgetEmbed = pathname.startsWith("/streamkit/widgets/");
 
   if (isWidgetEmbed) {
     return (
       <RootDocument bare>
-        <QueryClientProvider client={queryClient}>
-          <Outlet />
-        </QueryClientProvider>
+        <Outlet />
       </RootDocument>
     );
   }
@@ -135,49 +132,47 @@ function RootComponent() {
   return (
     <RootDocument>
       <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <PatronAuthProvider>
-            <NuqsAdapter>
-              <TooltipProvider>
-                <div className="flex min-h-screen">
-                  <AppSidebar />
-                  <main className="min-w-0 flex-1 md:ml-64">
-                    <MobileMenuButton />
-                    <div className="relative flex min-h-full items-start justify-center">
-                      <img
-                        src="/logo/hexe.svg"
-                        alt=""
-                        aria-hidden="true"
-                        className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
-                        style={{
-                          transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
-                          maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                          WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
-                        }}
-                      />
-                      <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
-                        <Breadcrumbs />
-                        <QueryErrorResetBoundary>
-                          {({ reset }) => (
-                            <QueryErrorBoundary
-                              onReset={reset}
-                              fallbackRender={({ resetErrorBoundary }) => (
-                                <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
-                              )}
-                            >
-                              <Outlet />
-                            </QueryErrorBoundary>
-                          )}
-                        </QueryErrorResetBoundary>
-                      </div>
+        <PatronAuthProvider>
+          <NuqsAdapter>
+            <TooltipProvider>
+              <div className="flex min-h-screen">
+                <AppSidebar />
+                <main className="min-w-0 flex-1 md:ml-64">
+                  <MobileMenuButton />
+                  <div className="relative flex min-h-full items-start justify-center">
+                    <img
+                      src="/logo/hexe.svg"
+                      alt=""
+                      aria-hidden="true"
+                      className="pointer-events-none fixed right-0 bottom-0 h-[36rem] w-[36rem] opacity-[0.10] select-none"
+                      style={{
+                        transform: "perspective(900px) rotateX(12deg) rotateY(-8deg) rotateZ(-14deg)",
+                        maskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                        WebkitMaskImage: "linear-gradient(to top left, rgba(0,0,0,1) 10%, rgba(0,0,0,0.15) 80%)",
+                      }}
+                    />
+                    <div className="relative m-2 w-full rounded-xl border border-white/10 bg-background/60 p-4 shadow-xl backdrop-blur-md sm:p-6 xl:w-[92%]">
+                      <Breadcrumbs />
+                      <QueryErrorResetBoundary>
+                        {({ reset }) => (
+                          <QueryErrorBoundary
+                            onReset={reset}
+                            fallbackRender={({ resetErrorBoundary }) => (
+                              <ApiErrorFallback resetErrorBoundary={resetErrorBoundary} />
+                            )}
+                          >
+                            <Outlet />
+                          </QueryErrorBoundary>
+                        )}
+                      </QueryErrorResetBoundary>
                     </div>
-                  </main>
-                </div>
-                <Toaster />
-              </TooltipProvider>
-            </NuqsAdapter>
-          </PatronAuthProvider>
-        </QueryClientProvider>
+                  </div>
+                </main>
+              </div>
+              <Toaster />
+            </TooltipProvider>
+          </NuqsAdapter>
+        </PatronAuthProvider>
       </ThemeProvider>
     </RootDocument>
   );

@@ -7,6 +7,7 @@ import { HeroFiltersSection } from "~/components/heroes-page/HeroFiltersSection"
 import { BY_RANK_STATS, HeroStatSelector, HeroTimeIntervalSelector } from "~/components/heroes-page/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/heroes-page/HeroStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
+import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { HeroSelector } from "~/components/selectors/HeroSelector";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -14,7 +15,11 @@ import { Label } from "~/components/ui/label";
 import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
+import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { seo } from "~/lib/seo";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { HERO_STATS, HERO_STATS_WITH_BAN_RATE } from "~/types/api_hero_stats";
 
 const HeroStatsOverTimeChart = lazy(() =>
@@ -53,8 +58,65 @@ const HeroMatchupDetailsStatsTable = lazy(() =>
   })),
 );
 
+const DEFAULT_MIN_RANK = 91;
+const DEFAULT_MAX_RANK = 116;
+
+function defaultHeroStatsRanges() {
+  const minUnixTimestamp = normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0;
+  const maxUnixTimestamp = normalizeUnixCeil(DEFAULT_DATE_RANGE[1]);
+  const { prevStartDate, prevEndDate } = computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES);
+  return {
+    minUnixTimestamp,
+    maxUnixTimestamp,
+    prevMinUnixTimestamp: normalizeUnixFloor(prevStartDate) ?? 0,
+    prevMaxUnixTimestamp: normalizeUnixCeil(prevEndDate),
+  };
+}
+
 export const Route = createFileRoute("/heroes")({
   component: HeroesPage,
+  loader: async ({ context: { queryClient } }) => {
+    const r = defaultHeroStatsRanges();
+    const common = {
+      minHeroMatches: 0,
+      minHeroMatchesTotal: 0,
+      minAverageBadge: DEFAULT_MIN_RANK,
+      maxAverageBadge: DEFAULT_MAX_RANK,
+      gameMode: "normal" as const,
+    };
+    await Promise.all([
+      queryClient.ensureQueryData(
+        heroStatsQueryOptions({
+          ...common,
+          minUnixTimestamp: r.minUnixTimestamp,
+          maxUnixTimestamp: r.maxUnixTimestamp,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        heroStatsQueryOptions({
+          ...common,
+          minUnixTimestamp: r.prevMinUnixTimestamp,
+          maxUnixTimestamp: r.prevMaxUnixTimestamp,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        heroBanStatsQueryOptions({
+          minAverageBadge: DEFAULT_MIN_RANK,
+          maxAverageBadge: DEFAULT_MAX_RANK,
+          minUnixTimestamp: r.minUnixTimestamp,
+          maxUnixTimestamp: r.maxUnixTimestamp,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        heroBanStatsQueryOptions({
+          minAverageBadge: DEFAULT_MIN_RANK,
+          maxAverageBadge: DEFAULT_MAX_RANK,
+          minUnixTimestamp: r.prevMinUnixTimestamp,
+          maxUnixTimestamp: r.prevMaxUnixTimestamp,
+        }),
+      ),
+    ]);
+  },
   head: () =>
     seo({
       title: "Deadlock Hero Stats: Win Rates, Pick Rates & Matchups",

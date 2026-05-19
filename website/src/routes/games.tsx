@@ -5,6 +5,7 @@ import { lazy, Suspense, useState } from "react";
 
 import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
+import GamesOverview from "~/components/games-page/GamesOverview";
 import { ALL_STAT_KEYS } from "~/components/games-page/stat-definitions";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
@@ -16,13 +17,37 @@ import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { gameStatsQueryOptions } from "~/queries/games-query";
 
-const GamesOverview = lazy(() => import("~/components/games-page/GamesOverview"));
 const GamesOverTimeChart = lazy(() => import("~/components/games-page/GamesOverTimeChart"));
 const GamesByRankChart = lazy(() => import("~/components/games-page/GamesByRankChart"));
 
 export const Route = createFileRoute("/games")({
   component: Games,
+  loader: async ({ context: { queryClient } }) => {
+    const minUnixTimestamp = normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0;
+    const maxUnixTimestamp = normalizeUnixCeil(DEFAULT_DATE_RANGE[1]);
+    const { prevStartDate, prevEndDate } = computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES);
+    const baseParams: AnalyticsApiGameStatsRequest = {
+      gameMode: "normal",
+      minUnixTimestamp,
+      maxUnixTimestamp,
+      minAverageBadge: 0,
+      maxAverageBadge: 116,
+    };
+    await Promise.all([
+      queryClient.ensureQueryData(gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" })),
+      queryClient.ensureQueryData(
+        gameStatsQueryOptions({
+          ...baseParams,
+          minUnixTimestamp: normalizeUnixFloor(prevStartDate) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(prevEndDate),
+          bucket: "no_bucket",
+        }),
+      ),
+    ]);
+  },
   head: () =>
     seo({
       title: "Deadlock Game Stats: Match Trends, Avg Kills & Souls by Rank",

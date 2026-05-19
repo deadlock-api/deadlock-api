@@ -14,6 +14,8 @@ import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
+import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const ItemPurchaseAnalysis = lazy(() =>
   import("~/components/items-page/ItemPurchaseAnalysis").then((m) => ({ default: m.ItemPurchaseAnalysis })),
@@ -24,6 +26,30 @@ const ItemCombsExplore = lazy(() =>
 
 export const Route = createFileRoute("/items")({
   component: ItemsPage,
+  loader: async ({ context: { queryClient } }) => {
+    const minUnixTimestamp = normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0;
+    const maxUnixTimestamp = normalizeUnixCeil(DEFAULT_DATE_RANGE[1]);
+    const { prevStartDate, prevEndDate } = computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES);
+    const common = {
+      minMatches: 10,
+      heroId: null,
+      minAverageBadge: 91,
+      maxAverageBadge: 116,
+      minBoughtAtS: null,
+      maxBoughtAtS: null,
+      gameMode: "normal" as const,
+    };
+    await Promise.all([
+      queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp })),
+      queryClient.ensureQueryData(
+        itemStatsQueryOptions({
+          ...common,
+          minUnixTimestamp: normalizeUnixFloor(prevStartDate) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(prevEndDate),
+        }),
+      ),
+    ]);
+  },
   head: () =>
     seo({
       title: "Deadlock Item Stats: Build Win Rates, Buy Timings & Combos",
