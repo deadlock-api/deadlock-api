@@ -3,11 +3,14 @@ import type { UpgradeV2 } from "assets_deadlock_api_client";
 import type { ItemStats } from "deadlock_api_client";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { parseAsArrayOf, parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { type ReactNode, useId, useMemo, useState } from "react";
+import { type ReactNode, lazy, Suspense, useId, useMemo, useState } from "react";
 
 import { ItemImage } from "~/components/ItemImage";
 import { ItemName } from "~/components/ItemName";
-import { ItemBuyTimingChart } from "~/components/items-page/ItemBuyTimingChart";
+
+const ItemBuyTimingChart = lazy(() =>
+  import("~/components/items-page/ItemBuyTimingChart").then((m) => ({ default: m.ItemBuyTimingChart })),
+);
 import { ItemTier } from "~/components/ItemTier";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { ProgressBarWithLabel } from "~/components/primitives/ProgressBar";
@@ -732,7 +735,9 @@ export function ItemStatsTable({
       customDropdownContent={
         !hideDropdown
           ? ({ itemId, rowTotal }) => (
-              <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+              <Suspense fallback={<LoadingLogo />}>
+                <ItemBuyTimingChart itemIds={[itemId]} baseQueryOptions={queryStatOptions} rowTotalMatches={rowTotal} />
+              </Suspense>
             )
           : undefined
       }
