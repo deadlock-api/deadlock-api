@@ -8,12 +8,12 @@ import { Filter } from "~/components/Filter";
 import GamesOverview from "~/components/games-page/GamesOverview";
 import { ALL_STAT_KEYS } from "~/components/games-page/stat-definitions";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
+import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
+import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
@@ -26,13 +26,10 @@ const GamesByRankChart = lazy(() => import("~/components/games-page/GamesByRankC
 export const Route = createFileRoute("/games")({
   component: Games,
   loader: async ({ context: { queryClient } }) => {
-    const minUnixTimestamp = normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0;
-    const maxUnixTimestamp = normalizeUnixCeil(DEFAULT_DATE_RANGE[1]);
-    const { prevStartDate, prevEndDate } = computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES);
     const baseParams: AnalyticsApiGameStatsRequest = {
       gameMode: "normal",
-      minUnixTimestamp,
-      maxUnixTimestamp,
+      minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+      maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
       minAverageBadge: 0,
       maxAverageBadge: 116,
     };
@@ -41,8 +38,8 @@ export const Route = createFileRoute("/games")({
       queryClient.ensureQueryData(
         gameStatsQueryOptions({
           ...baseParams,
-          minUnixTimestamp: normalizeUnixFloor(prevStartDate) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(prevEndDate),
+          minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
           bucket: "no_bucket",
         }),
       ),
@@ -68,9 +65,10 @@ function Games() {
     "date_range",
     parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
-  const [prevDates, setPrevDates] = useState(() =>
-    computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES),
-  );
+  const [prevDates, setPrevDates] = useState<{ prevStartDate?: Dayjs; prevEndDate?: Dayjs }>(() => ({
+    prevStartDate: DEFAULT_PREV_DATE_RANGE[0],
+    prevEndDate: DEFAULT_PREV_DATE_RANGE[1],
+  }));
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [stat, setStat] = useQueryState(

@@ -10,24 +10,20 @@ import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor, roundedNow } from "~/lib/time-normalize";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-
-const defaultDateRange: [Dayjs | undefined, Dayjs | undefined] = [
-  roundedNow("day").subtract(30, "day"),
-  roundedNow("day").endOf("day"),
-];
 
 export const Route = createFileRoute("/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient } }) => {
     await queryClient.ensureQueryData(
       badgeDistributionQueryOptions({
-        minUnixTimestamp: normalizeUnixFloor(defaultDateRange[0]) ?? 0,
-        maxUnixTimestamp: normalizeUnixCeil(defaultDateRange[1]),
+        minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+        maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
       }),
     );
   },
@@ -43,7 +39,7 @@ export const Route = createFileRoute("/badge-distribution")({
 function BadgeDistributionPage() {
   const [[startDate, endDate], setDateRange] = useQueryState(
     "date_range",
-    parseAsDayjsRange.withDefault(defaultDateRange),
+    parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);

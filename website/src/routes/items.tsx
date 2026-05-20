@@ -6,11 +6,11 @@ import { ChunkErrorBoundary } from "~/components/ChunkErrorBoundary";
 import { Filter } from "~/components/Filter";
 import { ItemStatsTable } from "~/components/items-page/ItemStatsTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
-import { computePreviousPeriod } from "~/components/PatchOrDatePicker";
 import { ResponsiveTabsList } from "~/components/ResponsiveTabsList";
 import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
-import { DEFAULT_DATE_RANGE, PATCHES } from "~/lib/constants";
+import type { Dayjs } from "~/dayjs";
+import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
@@ -29,7 +29,6 @@ export const Route = createFileRoute("/items")({
   loader: async ({ context: { queryClient } }) => {
     const minUnixTimestamp = normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0;
     const maxUnixTimestamp = normalizeUnixCeil(DEFAULT_DATE_RANGE[1]);
-    const { prevStartDate, prevEndDate } = computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES);
     const common = {
       minMatches: 10,
       heroId: null,
@@ -44,8 +43,8 @@ export const Route = createFileRoute("/items")({
       queryClient.ensureQueryData(
         itemStatsQueryOptions({
           ...common,
-          minUnixTimestamp: normalizeUnixFloor(prevStartDate) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(prevEndDate),
+          minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
         }),
       ),
     ]);
@@ -71,9 +70,10 @@ function ItemsPage() {
     "date_range",
     parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE),
   );
-  const [prevDates, setPrevDates] = useState(() =>
-    computePreviousPeriod(DEFAULT_DATE_RANGE[0], DEFAULT_DATE_RANGE[1], PATCHES),
-  );
+  const [prevDates, setPrevDates] = useState<{ prevStartDate?: Dayjs; prevEndDate?: Dayjs }>(() => ({
+    prevStartDate: DEFAULT_PREV_DATE_RANGE[0],
+    prevEndDate: DEFAULT_PREV_DATE_RANGE[1],
+  }));
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(gameMode, minRankId, maxRankId);
 
   const [tab, setTab] = useQueryState(

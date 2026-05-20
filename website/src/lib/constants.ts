@@ -11,38 +11,45 @@ export const AI_ASSISTANT_API_URL =
   import.meta.env.VITE_AI_ASSISTANT_API_URL || "https://ai-assistant.deadlock-api.com";
 export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAABs5lyUV9iomsdK2";
 
-const utcEndOfToday = () => day.utc().endOf("day");
+export interface PatchInfo {
+  id: string;
+  name: string;
+  startDate: Dayjs;
+  // Undefined = patch is currently active (open-ended). Keeping this stable
+  // (no `day.utc()` at module load) is what lets SSR-prerendered HTML match
+  // client-side hydration — otherwise the "now" used at build time drifts.
+  endDate?: Dayjs;
+}
 
-export const PATCHES = [
+export const PATCHES: readonly PatchInfo[] = [
   {
     id: "2026-04-30",
     name: "Gameplay Update (2026-04-30)",
     startDate: day.utc("2026-05-01T23:49:47Z").local(),
-    endDate: utcEndOfToday(),
   },
   {
     id: "2026-04-10",
     name: "Update (2026-04-10)",
     startDate: day.utc("2026-04-11T04:03:00Z").local(),
-    endDate: utcEndOfToday(),
+    endDate: day.utc("2026-05-01T23:49:47Z").local(),
   },
   {
     id: "2026-01-21",
     name: "Old Gods, New Blood (2026-01-21)",
     startDate: day.utc("2026-01-21T02:10:58Z").local(),
-    endDate: utcEndOfToday(),
+    endDate: day.utc("2026-04-11T04:03:00Z").local(),
   },
   {
     id: "2025-09-06",
     name: "Six New Heroes (2025-09-06)",
     startDate: day.utc("2025-09-06T20:00:00Z").local(),
-    endDate: utcEndOfToday(),
+    endDate: day.utc("2026-01-21T02:10:58Z").local(),
   },
   {
     id: "2025-05-08",
     name: "Major Item Rework (2025-05-08)",
     startDate: day.utc("2025-05-08T19:43:20Z").local(),
-    endDate: utcEndOfToday(),
+    endDate: day.utc("2025-09-06T20:00:00Z").local(),
   },
   {
     id: "2025-02-25",
@@ -52,17 +59,13 @@ export const PATCHES = [
   },
 ];
 
-const MIN_PATCH_AGE_DAYS = 7;
-const FALLBACK_RANGE_DAYS = 14;
+// Default = current patch, open-ended. `undefined` upper bound keeps the
+// query key stable between build-time SSR and client-side hydration.
+export const DEFAULT_DATE_RANGE: [Dayjs | undefined, Dayjs | undefined] = [PATCHES[0].startDate, PATCHES[0].endDate];
 
-export const DEFAULT_DATE_RANGE: [Dayjs, Dayjs] = (() => {
-  const latestPatch = PATCHES[0];
-  const daysSincePatch = day.utc().diff(latestPatch.startDate, "day");
-  if (daysSincePatch < MIN_PATCH_AGE_DAYS) {
-    return [day.utc().subtract(FALLBACK_RANGE_DAYS, "day").startOf("day"), day.utc().endOf("day")];
-  }
-  return [latestPatch.startDate, latestPatch.endDate];
-})();
+// Previous-period default = the patch before the current one. Used by routes
+// that pre-fetch a comparison range during SSR.
+export const DEFAULT_PREV_DATE_RANGE: [Dayjs, Dayjs] = [PATCHES[1].startDate, PATCHES[0].startDate];
 
 export const MIN_GAME_DURATION_S = 0;
 export const MAX_GAME_DURATION_S = 60 * 60;

@@ -5,7 +5,7 @@ import { useId } from "react";
 import { FilterPill } from "~/components/FilterPill";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { type Dayjs, day } from "~/dayjs";
+import type { Dayjs } from "~/dayjs";
 
 import { DateRangePicker } from "./primitives/DateRangePicker";
 
@@ -13,7 +13,8 @@ export interface PatchInfo {
   id: string;
   name: string;
   startDate: Dayjs;
-  endDate: Dayjs | "NOW";
+  // Undefined = active patch (open-ended).
+  endDate?: Dayjs;
 }
 
 export interface PatchOrDatePickerValue {
@@ -24,27 +25,28 @@ export interface PatchOrDatePickerValue {
 }
 
 export interface PatchOrDatePickerProps {
-  patchDates: PatchInfo[];
+  patchDates: readonly PatchInfo[];
   value: { startDate?: Dayjs; endDate?: Dayjs };
   onValueChange: (value: PatchOrDatePickerValue) => void;
   className?: string;
   defaultTab?: "patch" | "custom";
 }
 
+function patchMatches(patch: PatchInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
+  if (!patch.startDate.isSame(startDate, "day")) return false;
+  if (patch.endDate === undefined) return endDate === undefined;
+  return endDate !== undefined && patch.endDate.isSame(endDate, "day");
+}
+
 export function computePreviousPeriod(
   startDate?: Dayjs,
   endDate?: Dayjs,
-  patches?: PatchInfo[],
+  patches?: readonly PatchInfo[],
 ): { prevStartDate?: Dayjs; prevEndDate?: Dayjs } {
-  if (!startDate || !endDate) return {};
+  if (!startDate) return {};
 
   if (patches) {
-    const patchIndex = patches.findIndex((p) => {
-      const resolvedStart = p.startDate.startOf("day");
-      const resolvedEnd = resolveEndDate(p.endDate).endOf("day");
-      return resolvedStart.isSame(startDate, "day") && resolvedEnd.isSame(endDate, "day");
-    });
-
+    const patchIndex = patches.findIndex((p) => patchMatches(p, startDate, endDate));
     if (patchIndex >= 0 && patchIndex + 1 < patches.length) {
       const prevPatch = patches[patchIndex + 1];
       return {
@@ -54,17 +56,14 @@ export function computePreviousPeriod(
     }
   }
 
-  // Duration shift fallback
+  if (!endDate) return {};
+  // Duration shift fallback for custom ranges.
   const durationSeconds = endDate.unix() - startDate.unix();
   return {
     prevStartDate: startDate.subtract(durationSeconds, "second"),
     prevEndDate: startDate,
   };
 }
-
-const resolveEndDate = (endDate: Dayjs | "NOW"): Dayjs => {
-  return endDate === "NOW" ? day().endOf("day") : endDate;
-};
 
 function inferTabFromValue({
   matchingPatch,
@@ -85,12 +84,8 @@ function inferTabFromValue({
 export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab = "patch" }: PatchOrDatePickerProps) {
   const patchSelectId = useId();
 
-  const matchingPatch = patchDates.find((patch) => {
-    if (!value.startDate || !value.endDate) return false;
-    const resolvedPatchStartDate = patch.startDate.startOf("day");
-    const resolvedPatchEndDate = resolveEndDate(patch.endDate).endOf("day");
-    return resolvedPatchStartDate.isSame(value.startDate, "day") && resolvedPatchEndDate.isSame(value.endDate, "day");
-  });
+  const { startDate: valueStart, endDate: valueEnd } = value;
+  const matchingPatch = valueStart ? patchDates.find((patch) => patchMatches(patch, valueStart, valueEnd)) : undefined;
 
   const [queryTab, setQueryTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(["patch", "custom"] as const));
   const tab =
@@ -105,8 +100,7 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
   const handlePatchSelect = (patchId: string) => {
     const selectedPatch = patchDates.find((p) => p.id === patchId);
     if (selectedPatch) {
-      const startDate = selectedPatch.startDate;
-      const endDate = resolveEndDate(selectedPatch.endDate);
+      const { startDate, endDate } = selectedPatch;
       const prev = computePreviousPeriod(startDate, endDate, patchDates);
       onValueChange({ startDate, endDate, ...prev });
     } else {
@@ -122,11 +116,13 @@ export function PatchOrDatePicker({ patchDates, value, onValueChange, defaultTab
   };
 
   const getDisplayValue = () => {
-    if (!value.startDate && !value.endDate) return "All Time";
     if (matchingPatch) return matchingPatch.name;
+    if (!value.startDate && !value.endDate) return "All Time";
     if (value.startDate && value.endDate) {
       return `${value.startDate.format("MMM D")} - ${value.endDate.format("MMM D")}`;
     }
+    if (value.startDate) return `since ${value.startDate.format("MMM D")}`;
+    if (value.endDate) return `until ${value.endDate.format("MMM D")}`;
     return "Custom";
   };
 

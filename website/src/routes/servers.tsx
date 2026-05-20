@@ -256,8 +256,11 @@ function ServersPage() {
 
         {dataUpdatedAt > 0 && (
           <p className="text-center text-xs text-muted-foreground tabular-nums">
-            Last refreshed <span className="inline-block w-20 text-left">{formatSince(dataUpdatedAt, now)}</span> ·
-            auto-refreshes every 30s
+            Last refreshed{" "}
+            <span suppressHydrationWarning className="inline-block w-20 text-left">
+              {formatSince(dataUpdatedAt, now)}
+            </span>{" "}
+            · auto-refreshes every 30s
           </p>
         )}
 

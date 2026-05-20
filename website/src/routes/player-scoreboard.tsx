@@ -13,9 +13,10 @@ import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
+import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { seo } from "~/lib/seo";
-import { normalizeUnixCeil, normalizeUnixFloor, roundedNow } from "~/lib/time-normalize";
+import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -29,14 +30,9 @@ function chunkIds(ids: number[], size: number): number[][] {
 
 const MAX_ENTRIES = 1000;
 
-function defaultScoreboardRange() {
-  return [roundedNow("day").subtract(30, "day"), roundedNow("day").endOf("day")] as const;
-}
-
 export const Route = createFileRoute("/player-scoreboard")({
   component: PlayerScoreboardPage,
   loader: async ({ context: { queryClient } }) => {
-    const [start, end] = defaultScoreboardRange();
     const scoreboard = await queryClient.ensureQueryData(
       playerScoreboardQueryOptions({
         sortBy: "kills" as PlayerScoreboardSortByEnum,
@@ -45,8 +41,8 @@ export const Route = createFileRoute("/player-scoreboard")({
         minMatches: 0,
         minAverageBadge: 0,
         maxAverageBadge: 116,
-        minUnixTimestamp: normalizeUnixFloor(start) ?? 0,
-        maxUnixTimestamp: normalizeUnixCeil(end),
+        minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+        maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
         start: 0,
         limit: MAX_ENTRIES,
       }),
@@ -95,10 +91,9 @@ function PlayerScoreboardPage() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(0));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(116));
-  const defaultDateRange = [roundedNow("day").subtract(30, "day"), roundedNow("day").endOf("day")] as const;
-  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault([...defaultDateRange]));
-  const startDate = dateRange[0] ?? defaultDateRange[0];
-  const endDate = dateRange[1] ?? defaultDateRange[1];
+  const [dateRange, setDateRange] = useQueryState("date_range", parseAsDayjsRange.withDefault(DEFAULT_DATE_RANGE));
+  const startDate = dateRange[0] ?? DEFAULT_DATE_RANGE[0];
+  const endDate = dateRange[1] ?? DEFAULT_DATE_RANGE[1];
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const playerScoreboardQuery = {

@@ -2,7 +2,6 @@
   "name": "tanstack-start",
   "private": true,
   "type": "module",
-  "sideEffects": false,
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && node scripts/preserve-old-assets.mjs",
