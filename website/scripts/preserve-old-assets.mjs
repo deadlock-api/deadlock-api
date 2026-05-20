@@ -124,7 +124,9 @@ async function main() {
         return true;
       }),
     );
-    for (const ok of results) if (ok) saved += 1; else failed += 1;
+    for (const ok of results)
+      if (ok) saved += 1;
+      else failed += 1;
   }
   console.log(`[preserve-old-assets] saved=${saved} failed=${failed}`);
 }
