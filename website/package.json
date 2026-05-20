@@ -5,7 +5,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/preserve-old-assets.mjs",
     "preview": "vite preview",
     "wrangler:dev": "wrangler dev",
     "deploy": "pnpm build && wrangler deploy",

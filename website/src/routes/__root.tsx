@@ -15,6 +15,7 @@ import { ThemeProvider } from "~/components/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
+import { installChunkReloadHandlers, isChunkLoadError, reloadOnceForStaleChunk } from "~/lib/chunk-reload";
 import { seo } from "~/lib/seo";
 import { heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -94,6 +95,10 @@ class QueryErrorBoundary extends Component<QueryErrorBoundaryProps, QueryErrorBo
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    if (isChunkLoadError(error)) {
+      reloadOnceForStaleChunk();
+      return;
+    }
     console.error("QueryErrorBoundary caught:", error, info);
   }
 
@@ -108,6 +113,10 @@ class QueryErrorBoundary extends Component<QueryErrorBoundaryProps, QueryErrorBo
     }
     return this.props.children;
   }
+}
+
+if (typeof window !== "undefined") {
+  installChunkReloadHandlers();
 }
 
 function RootComponent() {
