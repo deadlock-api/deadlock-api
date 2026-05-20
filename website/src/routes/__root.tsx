@@ -8,9 +8,6 @@ import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import "@fontsource-variable/inter/index.css";
-import "@fontsource/new-rocker/index.css";
-
 import { ApiErrorFallback } from "~/components/ApiErrorFallback";
 import { AppSidebar, MobileMenuButton } from "~/components/AppSidebar";
 import { Breadcrumbs } from "~/components/Breadcrumbs";

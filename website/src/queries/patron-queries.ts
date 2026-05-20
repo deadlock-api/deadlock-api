@@ -28,6 +28,11 @@ export function patronStatusQueryOptions() {
     queryKey: queryKeys.patron.status(),
     queryFn: getPatronStatus,
     refetchOnWindowFocus: true,
+    // Avoids isLoading: true → false transition on every mount (which re-renders the
+    // entire PatronAuthProvider subtree). The fetch still fires; once resolved the
+    // auth state updates normally.
+    initialData: null as null,
+    initialDataUpdatedAt: 0,
   });
 }
 

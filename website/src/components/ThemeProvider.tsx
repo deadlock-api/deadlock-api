@@ -2,7 +2,7 @@ import { ThemeProvider as NextThemesProvider, type ThemeProviderProps } from "ne
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
-    <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange {...props}>
+    <NextThemesProvider attribute="class" defaultTheme="dark" disableTransitionOnChange {...props}>
       {children}
     </NextThemesProvider>
   );
