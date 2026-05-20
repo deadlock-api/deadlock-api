@@ -413,6 +413,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     maxRankId={filters.effectiveMaxRankId}
                     minDate={filters.startDate || undefined}
                     maxDate={filters.endDate || undefined}
+                    prevMinDate={filters.prevDates.prevStartDate}
+                    prevMaxDate={filters.prevDates.prevEndDate}
                     onHeroSelected={(selectedHeroId) => {
                       if (!selectedHeroId) return;
                       filters.setHeroId(selectedHeroId);
@@ -428,6 +430,8 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
                     maxRankId={filters.effectiveMaxRankId}
                     minDate={filters.startDate || undefined}
                     maxDate={filters.endDate || undefined}
+                    prevMinDate={filters.prevDates.prevStartDate}
+                    prevMaxDate={filters.prevDates.prevEndDate}
                     onHeroSelected={(selectedHeroId) => {
                       if (!selectedHeroId) return;
                       filters.setHeroId(selectedHeroId);

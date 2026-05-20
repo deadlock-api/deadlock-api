@@ -20,6 +20,14 @@ export enum HeroMatchupDetailsStatsTableStat {
   COUNTER = 1,
 }
 
+function buildHeroStatsMap(data: AnalyticsHeroStats[] | undefined): Record<number, AnalyticsHeroStats> {
+  const map: Record<number, AnalyticsHeroStats> = {};
+  for (const hero of data || []) {
+    map[hero.hero_id] = hero;
+  }
+  return map;
+}
+
 export function HeroMatchupDetailsStatsTable({
   heroId,
   stat,
@@ -27,6 +35,8 @@ export function HeroMatchupDetailsStatsTable({
   maxRankId,
   minDate,
   maxDate,
+  prevMinDate,
+  prevMaxDate,
   onHeroSelected,
   sameLaneFilter,
   minHeroMatches,
@@ -38,12 +48,18 @@ export function HeroMatchupDetailsStatsTable({
   maxRankId?: number;
   minDate?: Dayjs;
   maxDate?: Dayjs;
+  prevMinDate?: Dayjs;
+  prevMaxDate?: Dayjs;
   onHeroSelected?: (heroId: number) => void;
   sameLaneFilter?: boolean;
   minHeroMatches?: number;
   gameMode?: GameMode;
 }) {
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
+  const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
+    prevMinDate,
+    prevMaxDate,
+  );
 
   const heroStatsQuery = {
     minHeroMatches: minHeroMatches ?? 0,
@@ -98,22 +114,108 @@ export function HeroMatchupDetailsStatsTable({
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 
+  const hasPreviousInterval = prevMinDate != null && prevMaxDate != null;
+
+  const prevHeroStatsQuery = {
+    minHeroMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
+    maxUnixTimestamp: prevMaxTimestamp,
+    gameMode: gameMode,
+  };
+  const { data: prevHeroData } = useQuery({
+    queryKey: queryKeys.analytics.heroStats(prevHeroStatsQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroStats(prevHeroStatsQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_DAY,
+    enabled: hasPreviousInterval,
+  });
+
+  const prevSynergyStatsQuery = {
+    sameLaneFilter: sameLaneFilter,
+    minMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
+    maxUnixTimestamp: prevMaxTimestamp,
+    gameMode: gameMode,
+  };
+  const { data: prevSynergyData } = useQuery({
+    queryKey: queryKeys.analytics.heroSynergyStats(prevSynergyStatsQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroSynergiesStats(prevSynergyStatsQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    enabled: hasPreviousInterval,
+  });
+
+  const prevCounterStatsQuery = {
+    sameLaneFilter: sameLaneFilter,
+    minMatches: minHeroMatches ?? 0,
+    minAverageBadge: minRankId,
+    maxAverageBadge: maxRankId,
+    minUnixTimestamp: prevMinTimestamp ?? 0,
+    maxUnixTimestamp: prevMaxTimestamp,
+    gameMode: gameMode,
+  };
+  const { data: prevCounterData } = useQuery({
+    queryKey: queryKeys.analytics.heroCounterStats(prevCounterStatsQuery),
+    queryFn: async () => {
+      const response = await api.analytics_api.heroCountersStats(prevCounterStatsQuery);
+      return response.data;
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
+    enabled: hasPreviousInterval,
+  });
+
   const isLoading = useMemo(
     () => isLoadingSynergy || isLoadingCounter || isLoadingHero,
     [isLoadingSynergy, isLoadingCounter, isLoadingHero],
   );
 
-  const heroStatsMap = useMemo(() => {
-    const map: Record<number, AnalyticsHeroStats> = {};
-    for (const hero of heroData || []) {
-      map[hero.hero_id] = hero;
+  const heroStatsMap = useMemo(() => buildHeroStatsMap(heroData), [heroData]);
+  const prevHeroStatsMap = useMemo(() => buildHeroStatsMap(prevHeroData), [prevHeroData]);
+
+  const prevSynergyRelWinrateMap = useMemo(() => {
+    const map: Record<number, Record<number, number>> = {};
+    for (const synergy of prevSynergyData || []) {
+      if (!synergy?.matches_played || !synergy?.wins) continue;
+      if (!prevHeroStatsMap[synergy.hero_id1]?.matches || !prevHeroStatsMap[synergy.hero_id2]?.matches) continue;
+      const relWinrate =
+        synergy.wins / synergy.matches_played -
+        (prevHeroStatsMap[synergy.hero_id1].wins / prevHeroStatsMap[synergy.hero_id1].matches +
+          prevHeroStatsMap[synergy.hero_id2].wins / prevHeroStatsMap[synergy.hero_id2].matches) /
+          2;
+      if (!map[synergy.hero_id1]) map[synergy.hero_id1] = {};
+      if (!map[synergy.hero_id2]) map[synergy.hero_id2] = {};
+      map[synergy.hero_id1][synergy.hero_id2] = relWinrate;
+      map[synergy.hero_id2][synergy.hero_id1] = relWinrate;
     }
     return map;
-  }, [heroData]);
+  }, [prevSynergyData, prevHeroStatsMap]);
+
+  const prevCounterRelWinrateMap = useMemo(() => {
+    const map: Record<number, Record<number, number>> = {};
+    for (const counter of prevCounterData || []) {
+      if (!counter?.matches_played || !counter?.wins) continue;
+      if (!prevHeroStatsMap[counter.hero_id]?.matches) continue;
+      const relWinrate =
+        counter.wins / counter.matches_played -
+        prevHeroStatsMap[counter.hero_id].wins / prevHeroStatsMap[counter.hero_id].matches;
+      if (!map[counter.hero_id]) map[counter.hero_id] = {};
+      map[counter.hero_id][counter.enemy_hero_id] = relWinrate;
+    }
+    return map;
+  }, [prevCounterData, prevHeroStatsMap]);
 
   const heroSynergies = useMemo(() => {
     const synergies: (Pick<HeroSynergyStats, "hero_id1" | "hero_id2" | "wins" | "matches_played"> & {
       rel_winrate: number;
+      prev_rel_winrate: number | undefined;
     })[] = [];
     for (const synergy of synergyData || []) {
       if (synergy.hero_id1 === heroId) {
@@ -124,6 +226,7 @@ export function HeroMatchupDetailsStatsTable({
             (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
               heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
               2,
+          prev_rel_winrate: prevSynergyRelWinrateMap[synergy.hero_id1]?.[synergy.hero_id2],
         });
       }
       if (synergy.hero_id2 === heroId) {
@@ -137,12 +240,13 @@ export function HeroMatchupDetailsStatsTable({
             (heroStatsMap[synergy.hero_id1]?.wins / heroStatsMap[synergy.hero_id1]?.matches +
               heroStatsMap[synergy.hero_id2]?.wins / heroStatsMap[synergy.hero_id2]?.matches) /
               2,
+          prev_rel_winrate: prevSynergyRelWinrateMap[synergy.hero_id2]?.[synergy.hero_id1],
         });
       }
     }
     synergies.sort((a, b) => b.rel_winrate - a.rel_winrate);
     return synergies;
-  }, [heroId, synergyData, heroStatsMap]);
+  }, [heroId, synergyData, heroStatsMap, prevSynergyRelWinrateMap]);
 
   const minSynergyWinrate = useMemo(() => {
     if (heroSynergies.length === 0) return 0;
@@ -155,7 +259,7 @@ export function HeroMatchupDetailsStatsTable({
   }, [heroSynergies]);
 
   const heroCounters = useMemo(() => {
-    const counters: (HeroCounterStats & { rel_winrate: number })[] = [];
+    const counters: (HeroCounterStats & { rel_winrate: number; prev_rel_winrate: number | undefined })[] = [];
     for (const counter of counterData || []) {
       if (counter.hero_id === heroId) {
         counters.push({
@@ -163,12 +267,13 @@ export function HeroMatchupDetailsStatsTable({
           rel_winrate:
             counter?.wins / counter?.matches_played -
             heroStatsMap[counter.hero_id]?.wins / heroStatsMap[counter.hero_id]?.matches,
+          prev_rel_winrate: prevCounterRelWinrateMap[counter.hero_id]?.[counter.enemy_hero_id],
         });
       }
     }
     counters.sort((a, b) => b.wins / b.matches_played - a.wins / a.matches_played);
     return counters;
-  }, [heroId, counterData, heroStatsMap]);
+  }, [heroId, counterData, heroStatsMap, prevCounterRelWinrateMap]);
 
   const minCounterWinrate = useMemo(() => {
     if (heroCounters.length === 0) return 0;
@@ -243,6 +348,9 @@ export function HeroMatchupDetailsStatsTable({
                   value={synergy.rel_winrate}
                   color={"#fa4454"}
                   label={`${synergy?.rel_winrate > 0 ? "+" : ""}${Math.round(synergy?.rel_winrate * 100).toFixed(0)}% `}
+                  delta={
+                    synergy.prev_rel_winrate !== undefined ? synergy.rel_winrate - synergy.prev_rel_winrate : undefined
+                  }
                   tooltip={
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">
@@ -260,6 +368,15 @@ export function HeroMatchupDetailsStatsTable({
                           {(synergy?.rel_winrate * 100).toFixed(2)}%
                         </span>
                       </div>
+                      {synergy.prev_rel_winrate !== undefined && (
+                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                          <span className="text-muted-foreground">Previous</span>
+                          <span className="font-medium">
+                            {synergy.prev_rel_winrate > 0 ? "+" : ""}
+                            {(synergy.prev_rel_winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      )}
                     </div>
                   }
                 />
@@ -273,6 +390,9 @@ export function HeroMatchupDetailsStatsTable({
                   value={counter.rel_winrate}
                   color={"#22d3ee"}
                   label={`${counter?.rel_winrate > 0 ? "+" : ""}${Math.round(counter?.rel_winrate * 100).toFixed(0)}% `}
+                  delta={
+                    counter.prev_rel_winrate !== undefined ? counter.rel_winrate - counter.prev_rel_winrate : undefined
+                  }
                   tooltip={
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">
@@ -290,6 +410,15 @@ export function HeroMatchupDetailsStatsTable({
                           {(counter?.rel_winrate * 100).toFixed(2)}%
                         </span>
                       </div>
+                      {counter.prev_rel_winrate !== undefined && (
+                        <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
+                          <span className="text-muted-foreground">Previous</span>
+                          <span className="font-medium">
+                            {counter.prev_rel_winrate > 0 ? "+" : ""}
+                            {(counter.prev_rel_winrate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      )}
                     </div>
                   }
                 />
