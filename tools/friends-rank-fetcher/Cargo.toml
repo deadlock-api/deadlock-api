@@ -5,9 +5,12 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+clickhouse = { workspace = true }
 common = { workspace = true }
 metrics = { workspace = true }
 reqwest = { workspace = true }
+serde = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
 tokio = { workspace = true }
 tracing = { workspace = true }
+valveprotos = { workspace = true, features = ["gc-client", "serde"] }

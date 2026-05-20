@@ -1,20 +1,26 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT friend_id FROM bot_friends",
+  "query": "SELECT friend_id, bot_id FROM bot_friends",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
         "name": "friend_id",
         "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "bot_id",
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
       "Left": []
     },
     "nullable": [
+      false,
       false
     ]
   },
-  "hash": "6aaa1e82f92e15782193c87a3f15387243fa72a11db412373fca3d45430dcb02"
+  "hash": "1b1a7bf64654ed9a4d008cae3eeaca60b71fa8b6af6261ee8c84dd841232ca17"
 }

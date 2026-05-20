@@ -1091,12 +1091,15 @@ name = "friends-rank-fetcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clickhouse",
  "common",
  "metrics",
  "reqwest 0.13.3",
+ "serde",
  "sqlx",
  "tokio",
  "tracing",
+ "valveprotos",
 ]
 
 [[package]]
