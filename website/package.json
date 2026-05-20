@@ -81,5 +81,21 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.27.0"
+  "packageManager": "pnpm@10.27.0",
+  "pnpm": {
+    "overrides": {
+      "typescript": "^6.0.3"
+    },
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "assets_deadlock_api_client",
+      "core-js",
+      "deadlock_api_client",
+      "esbuild",
+      "protobufjs",
+      "sharp",
+      "unrs-resolver",
+      "workerd"
+    ]
+  }
 }

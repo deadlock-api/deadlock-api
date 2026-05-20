@@ -177,7 +177,7 @@ function HeroesPage({ initialTab = "stats" }: { initialTab?: HeroTab } = {}) {
               <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
             </div>
             <HeroStatsTable
-              columns={["winRate", "pickRate", "banRate", "zScore", "residual", "details"]}
+              columns={["winRate", "pickRate", "zScore", "residual", "details"]}
               groupByType={groupByType}
               minRankId={filters.effectiveMinRankId}
               maxRankId={filters.effectiveMaxRankId}

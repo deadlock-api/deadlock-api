@@ -84,7 +84,7 @@ export function HeroStatsTable({
 }) {
   const [activeSortKey, setActiveSortKey] = useState<SortKey>("winrate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [pickRateMode, setPickRateMode] = useState<"pickRate" | "presence">("pickRate");
+  const [pickRateMode, setPickRateMode] = useState<"pickRate" | "presence">("presence");
 
   const handleSort = (key: SortKey) => {
     if (key === activeSortKey) {
@@ -140,8 +140,6 @@ export function HeroStatsTable({
     enabled: hasPreviousInterval,
   });
 
-  const showBanRate = columns.includes("banRate");
-
   const banStatsQuery: AnalyticsApiHeroBanStatsRequest = {
     minAverageBadge: minRankId,
     maxAverageBadge: maxRankId,
@@ -155,7 +153,6 @@ export function HeroStatsTable({
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: showBanRate,
   });
 
   const prevBanStatsQuery: AnalyticsApiHeroBanStatsRequest = {
@@ -171,7 +168,7 @@ export function HeroStatsTable({
       return response.data;
     },
     staleTime: CACHE_DURATIONS.ONE_DAY,
-    enabled: showBanRate && hasPreviousInterval,
+    enabled: hasPreviousInterval,
   });
 
   const pickrateMultiplier = getPickrateMultiplier(gameMode);
@@ -197,29 +194,18 @@ export function HeroStatsTable({
     return map;
   }, [heroes]);
 
-  const { banStatsMap, banCountMap, sumBans, minBanRate, maxBanRate } = useMemo(() => {
+  const { banStatsMap, sumBans } = useMemo(() => {
     if (!banData || banData.length === 0)
       return {
         banStatsMap: new Map<number, number>(),
-        banCountMap: new Map<number, number>(),
         sumBans: 0,
-        minBanRate: 0,
-        maxBanRate: 0,
       };
     const rateMap = computeBanRates(banData);
     let sumB = 0;
-    const countMap = new Map<number, number>();
     for (const row of banData) {
       sumB += row.bans;
-      countMap.set(row.hero_id, row.bans);
     }
-    let minBR = Infinity;
-    let maxBR = -Infinity;
-    for (const rate of rateMap.values()) {
-      if (rate < minBR) minBR = rate;
-      if (rate > maxBR) maxBR = rate;
-    }
-    return { banStatsMap: rateMap, banCountMap: countMap, sumBans: sumB, minBanRate: minBR, maxBanRate: maxBR };
+    return { banStatsMap: rateMap, sumBans: sumB };
   }, [banData]);
 
   const prevBanStatsMap = useMemo(() => {
@@ -346,7 +332,7 @@ export function HeroStatsTable({
     return { presenceMap: map, minPresence: minP, maxPresence: maxP };
   }, [heroData, sumMatches, pickrateMultiplier, banStatsMap]);
 
-  const showPresence = pickRateMode === "presence" && showBanRate && banStatsMap.size > 0;
+  const showPresence = pickRateMode === "presence" && banStatsMap.size > 0;
   const sortedData = useMemo(() => {
     if (!heroData) return heroData;
     const dir = sortDir === "desc" ? 1 : -1;
@@ -518,23 +504,13 @@ export function HeroStatsTable({
             activeSortKey={activeSortKey}
             sortDir={sortDir}
             onSort={handleSort}
-            className="w-[17%] text-center"
-          />
-        )}
-        {columns.includes("banRate") && (
-          <SortableHeader
-            label="Ban Rate"
-            sortKey="banRate"
-            activeSortKey={activeSortKey}
-            sortDir={sortDir}
-            onSort={handleSort}
-            className="w-[17%] text-center"
+            className="w-[19%] text-center"
           />
         )}
         {columns.includes("pickRate") && (
-          <TableHead className="w-[17%] text-center">
+          <TableHead className="w-[19%] text-center">
             <div className="inline-flex items-center justify-center gap-2">
-              {showBanRate ? (
+              {banStatsMap.size > 0 ? (
                 <div className="inline-flex items-center rounded-md border border-border bg-background p-0.5 text-xs">
                   <button
                     type="button"
@@ -590,7 +566,7 @@ export function HeroStatsTable({
             activeSortKey={activeSortKey}
             sortDir={sortDir}
             onSort={handleSort}
-            className="w-[17%] text-center"
+            className="w-[19%] text-center"
           >
             <Tooltip>
               <TooltipTrigger asChild>
@@ -611,7 +587,7 @@ export function HeroStatsTable({
             activeSortKey={activeSortKey}
             sortDir={sortDir}
             onSort={handleSort}
-            className="w-[17%] text-center"
+            className="w-[19%] text-center"
           >
             <Tooltip>
               <TooltipTrigger asChild>
@@ -626,7 +602,7 @@ export function HeroStatsTable({
             </Tooltip>
           </SortableHeader>
         )}
-        {columns.includes("details") && <TableHead className="text-center">Details</TableHead>}
+        {columns.includes("details") && <TableHead className="w-[5%] text-center">Details</TableHead>}
       </TableRow>
     </TableHeader>
   );
@@ -678,40 +654,6 @@ export function HeroStatsTable({
           />
         </TableCell>
       )}
-      {columns.includes("banRate") && (
-        <TableCell>
-          <ProgressBarWithLabel
-            min={minBanRate}
-            max={maxBanRate}
-            value={banStatsMap.get(row.hero_id) ?? 0}
-            color={"#f97316"}
-            label={`${((banStatsMap.get(row.hero_id) ?? 0) * 100).toFixed(1)}%`}
-            delta={
-              prevBanStatsMap?.get(row.hero_id) !== undefined
-                ? (banStatsMap.get(row.hero_id) ?? 0) - prevBanStatsMap.get(row.hero_id)!
-                : undefined
-            }
-            tooltip={
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Bans</span>
-                  <span className="font-medium">{(banCountMap.get(row.hero_id) ?? 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Ban Rate</span>
-                  <span className="font-medium">{((banStatsMap.get(row.hero_id) ?? 0) * 100).toFixed(2)}%</span>
-                </div>
-                {prevBanStatsMap?.get(row.hero_id) !== undefined && (
-                  <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">
-                    <span className="text-muted-foreground">Previous</span>
-                    <span className="font-medium">{(prevBanStatsMap.get(row.hero_id)! * 100).toFixed(2)}%</span>
-                  </div>
-                )}
-              </div>
-            }
-          />
-        </TableCell>
-      )}
       {columns.includes("pickRate") && (
         <TableCell>
           {showPresence ? (
@@ -725,17 +667,52 @@ export function HeroStatsTable({
                   min={minPresence}
                   max={maxPresence}
                   value={presence}
-                  color={"#a78bfa"}
-                  label={`${(presence * 100).toFixed(1)}%`}
-                  delta={prev !== undefined ? presence - prev.presence : undefined}
+                  segments={[
+                    { value: pickRate, color: "#22d3ee" },
+                    { value: banRate, color: "#f97316" },
+                  ]}
+                  label={
+                    <span className="flex flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                      <span className="flex items-baseline gap-1">
+                        <span style={{ color: "#22d3ee" }}>{(pickRate * 100).toFixed(1)}%</span>
+                        {prev !== undefined && prev.pickrate !== pickRate && (
+                          <span
+                            className={`text-xs font-medium ${pickRate > prev.pickrate ? "text-green-500" : "text-red-500"}`}
+                          >
+                            {pickRate > prev.pickrate ? "+" : ""}
+                            {((pickRate - prev.pickrate) * 100).toFixed(1)}%
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground/40">+</span>
+                      <span className="flex items-baseline gap-1">
+                        <span style={{ color: "#f97316" }}>{(banRate * 100).toFixed(1)}%</span>
+                        {prev !== undefined && prev.banrate !== banRate && (
+                          <span
+                            className={`text-xs font-medium ${banRate > prev.banrate ? "text-green-500" : "text-red-500"}`}
+                          >
+                            {banRate > prev.banrate ? "+" : ""}
+                            {((banRate - prev.banrate) * 100).toFixed(1)}%
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                  }
+                  delta={undefined}
                   tooltip={
                     <div className="flex flex-col gap-1 text-xs">
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Pick rate</span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <span className="inline-block size-2 rounded-sm" style={{ backgroundColor: "#22d3ee" }} />
+                          Pick rate
+                        </span>
                         <span className="font-medium">{(pickRate * 100).toFixed(2)}%</span>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <span className="text-muted-foreground">Ban rate</span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <span className="inline-block size-2 rounded-sm" style={{ backgroundColor: "#f97316" }} />
+                          Ban rate
+                        </span>
                         <span className="font-medium">{(banRate * 100).toFixed(2)}%</span>
                       </div>
                       <div className="mt-0.5 flex justify-between gap-4 border-t border-border pt-1">

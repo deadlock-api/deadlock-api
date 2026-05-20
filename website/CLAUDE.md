@@ -66,4 +66,4 @@ Requires `wrangler login` (or `CLOUDFLARE_API_TOKEN`) and a Cloudflare account c
 - React Compiler runs only in production builds (slow in dev) via `vite-plugin-babel`.
 - shadcn primitives live in `src/components/ui/`. Add new ones with `pnpm dlx shadcn@latest add <component>` against the existing `components.json`.
 - Tailwind v4: `@plugin` directives in `tailwind.css` for typography/iconify/animations (no JS plugin array).
-- TypeScript override `^6.0.3` is enforced via root `pnpm-workspace.yaml > overrides`.
+- TypeScript override `^6.0.3` is enforced via `package.json > pnpm.overrides`.
