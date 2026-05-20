@@ -1,5 +1,5 @@
 [workspace]
-members = ["salt-scraper", "hltv-scraper", "ingest-worker", "matchdata-downloader", "active-matches-scraper", "builds-fetcher", "common", "history-fetcher", "steam-profile-fetcher", "update-assets-tables", "demo-analyzer"]
+members = ["salt-scraper", "hltv-scraper", "ingest-worker", "matchdata-downloader", "active-matches-scraper", "builds-fetcher", "common", "history-fetcher", "steam-profile-fetcher", "update-assets-tables", "demo-analyzer", "friends-rank-fetcher"]
 resolver = "2"
 
 [workspace.dependencies]
