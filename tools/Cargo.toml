@@ -6,7 +6,7 @@ resolver = "2"
 anyhow = "1.0.102"
 async-compression = "0.4.42"
 base64 = "0.22.1"
-cached = "0.59.0"
+cached = "1.0.0"
 clap = { version = "4.6.1", features = ["derive", "env"] }
 clickhouse = "0.15.0"
 common = { version = "0.1.0", path = "common" }
@@ -20,9 +20,9 @@ prost = "0.14.3"
 rand = "0.10.1"
 reqwest = "0.13.3"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
+serde_json = "1.0.150"
 serde_repr = "0.1.20"
-sqlx = "0.8.6"
+sqlx = "0.9.0"
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros"] }
 tokio-util = "0.7.18"
