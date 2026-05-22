@@ -7,18 +7,6 @@ import babel from "vite-plugin-babel";
 const ReactCompilerConfig = {};
 const isDev = process.env.NODE_ENV !== "production";
 
-const DYNAMIC_ROUTES = new Set([
-  "/heroes",
-  "/items",
-  "/abilities",
-  "/badge-distribution",
-  "/leaderboard",
-  "/games",
-  "/servers",
-  "/heatmap",
-  "/player-scoreboard",
-]);
-
 export default defineConfig({
   server: {
     port: 3000,
@@ -31,10 +19,7 @@ export default defineConfig({
       prerender: {
         enabled: true,
         crawlLinks: true,
-        // Skip routes whose loaders fetch live analytics data — they would force
-        // the build to depend on the API and break when data is missing (e.g.
-        // immediately after a patch ships). These render via SSR at request time.
-        filter: ({ path }) => !DYNAMIC_ROUTES.has(path) && path !== "/auth" && path !== "/auth/patreon",
+        filter: ({ path }) => path !== "/auth" && path !== "/auth/patreon",
       },
       pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
