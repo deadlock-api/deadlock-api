@@ -80,7 +80,7 @@ async fn setup() -> &'static TestEnv {
                 for path in &sorted_sql_files("tests/data/postgres") {
                     let sql = std::fs::read_to_string(path)
                         .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
-                    sqlx::raw_sql(&sql)
+                    sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
                         .execute(&pg_pool)
                         .await
                         .unwrap_or_else(|e| panic!("failed to execute {}: {e}", path.display()));

@@ -17,7 +17,7 @@ async fn fetch_builds(
 ) -> sqlx::Result<Vec<Build>> {
     let query = query::sql_query(query);
     debug!(query);
-    Ok(sqlx::query(&query)
+    Ok(sqlx::query(sqlx::AssertSqlSafe(query))
         .fetch_all(pg_client)
         .await?
         .iter()

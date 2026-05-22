@@ -55,7 +55,7 @@ fn build_query(query: &BuildItemStatsQuery) -> String {
         query_builder.push(max_last_updated_unix_timestamp.to_string());
     }
     query_builder.push(" GROUP BY item_id ORDER BY num_builds DESC");
-    query_builder.build().sql().into()
+    query_builder.build().sql().as_ref().to_owned()
 }
 
 async fn get_build_item_stats(
@@ -64,14 +64,17 @@ async fn get_build_item_stats(
 ) -> APIResult<Vec<BuildItemStats>> {
     let query = build_query(&query);
     debug!(?query);
-    Ok(sqlx::query(&query).fetch_all(pg_client).await.map(|rows| {
-        rows.into_iter()
-            .map(|row| BuildItemStats {
-                item_id: row.get(0),
-                builds: row.get(1),
-            })
-            .collect::<Vec<_>>()
-    })?)
+    Ok(sqlx::query(sqlx::AssertSqlSafe(query))
+        .fetch_all(pg_client)
+        .await
+        .map(|rows| {
+            rows.into_iter()
+                .map(|row| BuildItemStats {
+                    item_id: row.get(0),
+                    builds: row.get(1),
+                })
+                .collect::<Vec<_>>()
+        })?)
 }
 
 #[utoipa::path(

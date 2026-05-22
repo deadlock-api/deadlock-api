@@ -230,7 +230,7 @@ pub(super) fn sql_query(params: &BuildsSearchQuery) -> String {
         query_builder.push(" OFFSET ");
         query_builder.push(start.to_string());
     }
-    query_builder.build().sql().into()
+    query_builder.build().sql().as_ref().to_owned()
 }
 #[cfg(test)]
 mod tests {
