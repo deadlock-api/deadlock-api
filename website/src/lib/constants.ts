@@ -7,10 +7,6 @@ export const ASSETS_ORIGIN = (import.meta.env.VITE_ASSETS_BASE_URL || "https://a
   /\/+$/,
   "",
 );
-export const AI_ASSISTANT_API_URL =
-  import.meta.env.VITE_AI_ASSISTANT_API_URL || "https://ai-assistant.deadlock-api.com";
-export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAABs5lyUV9iomsdK2";
-
 export interface PatchInfo {
   id: string;
   name: string;
