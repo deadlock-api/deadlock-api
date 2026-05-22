@@ -6,8 +6,8 @@ use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use itertools::Itertools;
 use prost::Message;
 use serde::Deserialize;
@@ -36,8 +36,8 @@ pub(super) struct ActiveMatchesQuery {
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<u8>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u8, Vec<u8>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

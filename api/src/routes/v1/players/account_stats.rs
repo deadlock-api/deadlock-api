@@ -3,8 +3,8 @@ use core::time::Duration;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use serde::Serialize;
 use utoipa::ToSchema;
 use valveprotos::deadlock::{
@@ -60,8 +60,8 @@ impl From<CMsgAccountStats> for PlayerAccountStats {
 }
 
 #[cached(
-    ty = "TimedCache<u32, SteamProxyRawResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u32, SteamProxyRawResponse>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",
@@ -92,8 +92,8 @@ pub(crate) async fn fetch_player_account_stats_raw(
 }
 
 #[cached(
-    ty = "TimedCache<u32, PlayerAccountStats>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5*60)) }",
+    ty = "TtlCache<u32, PlayerAccountStats>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(5*60)) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",

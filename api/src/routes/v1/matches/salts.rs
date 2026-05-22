@@ -4,8 +4,8 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
@@ -154,8 +154,8 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
 }
 
 #[cached(
-    ty = "TimedCache<u64, CMsgClientToGcGetMatchMetaDataResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u64, CMsgClientToGcGetMatchMetaDataResponse>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ match_id }",
     sync_writes = "by_key",

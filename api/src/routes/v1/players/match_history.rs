@@ -5,8 +5,8 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum_extra::extract::Query;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::Row;
 use itertools::{Itertools, chain};
 use serde::{Deserialize, Serialize};
@@ -206,8 +206,8 @@ async fn fetch_match_history_raw(
 }
 
 #[cached(
-    ty = "TimedCache<(u32, bool), PlayerMatchHistory>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(8 * 60)) }",
+    ty = "TtlCache<(u32, bool), PlayerMatchHistory>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(8 * 60)) }",
     result = true,
     convert = "{ (account_id, force_refetch) }",
     sync_writes = "by_key",

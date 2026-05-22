@@ -3,8 +3,8 @@ use std::collections::HashSet;
 
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use metrics::counter;
 use prost::Message;
 use rand::prelude::IndexedRandom;
@@ -236,8 +236,8 @@ impl SteamClient {
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<Patch>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(30 * 60)) }",
+    ty = "TtlCache<u8, Vec<Patch>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -266,8 +266,8 @@ async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<SteamServer>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(30)) }",
+    ty = "TtlCache<u8, Vec<SteamServer>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -292,8 +292,8 @@ async fn fetch_steam_server_list(
 }
 
 #[cached(
-    ty = "TimedCache<u8, HashSet<u32>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
+    ty = "TtlCache<u8, HashSet<u32>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -323,8 +323,8 @@ struct SteamClientVersionResult {
 }
 
 #[cached(
-    ty = "TimedCache<u8, u32>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(5 * 60)) }",
+    ty = "TtlCache<u8, u32>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(5 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -391,8 +391,8 @@ async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIRes
 }
 
 #[cached(
-    ty = "TimedCache<u32, String>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
+    ty = "TtlCache<u32, String>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ steam_id }",
     sync_writes = "by_key",

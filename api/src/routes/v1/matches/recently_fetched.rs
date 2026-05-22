@@ -1,8 +1,8 @@
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -63,8 +63,8 @@ impl From<ClickhouseMatchInfoRow> for ClickhouseMatchInfo {
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<ClickhouseMatchInfo>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u8, Vec<ClickhouseMatchInfo>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

@@ -6,7 +6,7 @@ resolver = "2"
 anyhow = "1.0.102"
 async-compression = "0.4.42"
 base64 = "0.22.1"
-cached = "0.59.0"
+cached = "1.0"
 clap = { version = "4.6.1", features = ["derive", "env"] }
 clickhouse = "0.15.0"
 common = { version = "0.1.0", path = "common" }

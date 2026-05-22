@@ -16,8 +16,8 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
-use cached::proc_macro::cached;
-use cached::TimedCache;
+use cached::macros::cached;
+use cached::TtlCache;
 use futures::stream::StreamExt;
 use itertools::Itertools;
 use metrics::{counter, gauge};
@@ -238,8 +238,8 @@ async fn delete_profiles(
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<u32>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
+    ty = "TtlCache<u8, Vec<u32>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

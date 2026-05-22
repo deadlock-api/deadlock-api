@@ -3,8 +3,8 @@ use core::time::Duration;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use redis::{AsyncTypedCommands, ExpireOption};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -43,8 +43,8 @@ struct LiveUrl {
 }
 
 #[cached(
-    ty = "TimedCache<u64, CMsgClientToGcSpectateLobbyResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u64, CMsgClientToGcSpectateLobbyResponse>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ match_id }",
     sync_writes = "by_key",

@@ -2,8 +2,8 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::Row;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -256,8 +256,8 @@ fn build_query(query: &HeroCounterStatsQuery) -> String {
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<HeroCounterStats>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60*60)) }",
+    ty = "TtlCache<String, Vec<HeroCounterStats>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60*60)) }",
     result = true,
     convert = "{ query_str.to_string() }",
     sync_writes = "by_key",

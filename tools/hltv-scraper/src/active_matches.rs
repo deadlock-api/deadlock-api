@@ -1,5 +1,5 @@
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use valveprotos::deadlock::ECitadelTeamObjective;
@@ -58,8 +58,8 @@ fn has_objective(mask: u32, objective: ECitadelTeamObjective) -> bool {
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<ActiveMatch>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u8, Vec<ActiveMatch>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

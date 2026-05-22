@@ -6,8 +6,8 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::query::BytesCursor;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -236,8 +236,8 @@ pub(super) async fn list_tables(
 }
 
 #[cached(
-    ty = "TimedCache<u8, Vec<String>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    ty = "TtlCache<u8, Vec<String>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"
@@ -318,8 +318,8 @@ pub(super) async fn table_schema(
 }
 
 #[cached(
-    ty = "TimedCache<String, Vec<TableSchemaRow>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60 * 60)) }",
+    ty = "TtlCache<String, Vec<TableSchemaRow>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60 * 60)) }",
     result = true,
     convert = r#"{ format!("{table}") }"#,
     sync_writes = "by_key",

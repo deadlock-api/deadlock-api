@@ -8,13 +8,13 @@ pub(crate) mod types;
 pub(crate) mod verification_job;
 pub(crate) mod webhook_types;
 
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use sqlx::{Pool, Postgres};
 
 #[cached(
-    ty = "TimedCache<i64, bool>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_hours(1)) }",
+    ty = "TtlCache<i64, bool>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_hours(1)) }",
     result = true,
     convert = "{ steam_id3 }",
     sync_writes = "by_key",

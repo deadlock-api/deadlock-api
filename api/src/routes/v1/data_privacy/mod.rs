@@ -38,7 +38,7 @@ async fn protect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32) 
     .execute(pg_client)
     .await?;
 
-    GET_PROTECTED_USERS_CACHED.lock().await.cache_clear();
+    GET_PROTECTED_USERS_CACHED.write().await.cache_clear();
 
     Ok(())
 }
@@ -60,7 +60,7 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     .execute(pg_client)
     .await?;
 
-    GET_PROTECTED_USERS_CACHED.lock().await.cache_clear();
+    GET_PROTECTED_USERS_CACHED.write().await.cache_clear();
 
     Ok(())
 }

@@ -3,8 +3,8 @@ use core::time::Duration;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::Row;
 use serde::Serialize;
 use tracing::warn;
@@ -145,8 +145,8 @@ impl From<&PlayerCard> for PlayerCardClickhouse {
 }
 
 #[cached(
-    ty = "TimedCache<u32, SteamProxyRawResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_mins(5)) }",
+    ty = "TtlCache<u32, SteamProxyRawResponse>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_mins(5)) }",
     result = true,
     convert = "{ account_id }",
     sync_writes = "by_key",

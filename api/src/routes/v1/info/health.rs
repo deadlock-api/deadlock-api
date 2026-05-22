@@ -1,8 +1,8 @@
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -36,8 +36,8 @@ pub struct Status {
 }
 
 #[cached(
-    ty = "TimedCache<u8, Status>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(60)) }",
+    ty = "TtlCache<u8, Status>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

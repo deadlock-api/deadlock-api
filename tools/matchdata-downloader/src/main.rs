@@ -15,8 +15,8 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use anyhow::Context;
-use cached::SizedCache;
-use cached::proc_macro::cached;
+use cached::LruCache;
+use cached::macros::cached;
 use clickhouse::Client;
 use futures::StreamExt;
 use metrics::{counter, gauge};
@@ -387,8 +387,8 @@ async fn delete_object<S: ObjectStore + ?Sized>(store: &S, key: &Path) -> object
 }
 
 #[cached(
-    ty = "SizedCache<String, bool>",
-    create = "{ SizedCache::with_size(10_000) }",
+    ty = "LruCache<String, bool>",
+    create = "{ LruCache::with_size(10_000) }",
     convert = r#"{ format!("{file_path}") }"#
 )]
 #[instrument(skip(store))]

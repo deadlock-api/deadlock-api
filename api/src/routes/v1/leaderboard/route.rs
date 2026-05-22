@@ -8,8 +8,8 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use cached::TimedCache;
-use cached::proc_macro::cached;
+use cached::TtlCache;
+use cached::macros::cached;
 use clickhouse::Row;
 use futures::join;
 use prost::Message;
@@ -50,8 +50,8 @@ pub(super) struct LeaderboardHeroQuery {
 }
 
 #[cached(
-    ty = "TimedCache<(LeaderboardRegion, Option<u32>), SteamProxyRawResponse>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(10 * 60)) }",
+    ty = "TtlCache<(LeaderboardRegion, Option<u32>), SteamProxyRawResponse>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(10 * 60)) }",
     result = true,
     convert = "{ (region, hero_id) }",
     sync_writes = "by_key",
@@ -81,8 +81,8 @@ pub(crate) async fn fetch_leaderboard_raw(
 }
 
 #[cached(
-    ty = "TimedCache<u8, HashMap<String, Vec<u32>>>",
-    create = "{ TimedCache::with_lifespan(std::time::Duration::from_secs(24 * 60 * 60)) }",
+    ty = "TtlCache<u8, HashMap<String, Vec<u32>>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(24 * 60 * 60)) }",
     result = true,
     convert = "{ 0 }",
     sync_writes = "default"

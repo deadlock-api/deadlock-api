@@ -241,7 +241,11 @@ impl SteamAccountsRepository {
         .fetch_one(&self.pg_client)
         .await?;
 
-        IS_ACCOUNT_PRIORITIZED.lock().await.cache_remove(&steam_id3);
+        IS_ACCOUNT_PRIORITIZED
+            .0
+            .write()
+            .await
+            .cache_remove(&steam_id3);
 
         Ok(SteamAccount {
             id: row.id,
@@ -279,7 +283,8 @@ impl SteamAccountsRepository {
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
             Some(row) => {
                 IS_ACCOUNT_PRIORITIZED
-                    .lock()
+                    .0
+                    .write()
                     .await
                     .cache_remove(&row.steam_id3);
                 Ok(())
@@ -311,7 +316,8 @@ impl SteamAccountsRepository {
             None => Err(SteamAccountsRepositoryError::AccountNotFound),
             Some(row) => {
                 IS_ACCOUNT_PRIORITIZED
-                    .lock()
+                    .0
+                    .write()
                     .await
                     .cache_remove(&row.steam_id3);
                 Ok(())
@@ -344,7 +350,8 @@ impl SteamAccountsRepository {
         match row {
             Some(row) => {
                 IS_ACCOUNT_PRIORITIZED
-                    .lock()
+                    .0
+                    .write()
                     .await
                     .cache_remove(&row.steam_id3);
                 Ok(SteamAccount {
@@ -465,7 +472,8 @@ impl SteamAccountsRepository {
 
         for row in &result {
             IS_ACCOUNT_PRIORITIZED
-                .lock()
+                .0
+                .write()
                 .await
                 .cache_remove(&row.steam_id3);
         }
@@ -489,7 +497,8 @@ impl SteamAccountsRepository {
 
         for row in &result {
             IS_ACCOUNT_PRIORITIZED
-                .lock()
+                .0
+                .write()
                 .await
                 .cache_remove(&row.steam_id3);
         }
@@ -526,7 +535,8 @@ impl SteamAccountsRepository {
 
         for row in &result {
             IS_ACCOUNT_PRIORITIZED
-                .lock()
+                .0
+                .write()
                 .await
                 .cache_remove(&row.steam_id3);
         }
