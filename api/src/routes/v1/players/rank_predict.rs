@@ -21,7 +21,6 @@ use crate::services::rank_predictor::{
 use crate::utils::types::AccountIdQuery;
 
 const N_MATCHES: usize = 30;
-const FETCH_LIMIT: usize = N_MATCHES;
 const RECENCY_ALPHA: f64 = 0.85;
 
 static W_NORM: LazyLock<[f64; N_MATCHES]> = LazyLock::new(|| {
@@ -115,7 +114,7 @@ impl BatchQueryMulti for RankPredictMatchesQuery {
             LIMIT {} BY account_id
             SETTINGS log_comment = 'rank_predict_matches'",
             in_clause(keys),
-            FETCH_LIMIT,
+            N_MATCHES,
         )
     }
 
