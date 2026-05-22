@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -56,6 +56,7 @@ pub(crate) struct SteamProfile {
     pub(super) countrycode: Option<String>,
     pub(super) last_updated: chrono::DateTime<Utc>,
     pub(super) friends: Vec<SteamFriend>,
+    pub(super) matches_played_last_30d: u64,
 }
 
 #[derive(Debug, Clone, Row, Deserialize)]
@@ -74,6 +75,8 @@ pub(crate) struct SteamProfileRow {
     pub(crate) friends_account_id: Vec<u32>,
     #[serde(rename = "friends.friend_since", default)]
     pub(crate) friends_friend_since: Vec<u32>,
+    #[serde(default)]
+    pub(crate) matches_played_last_30d: u64,
 }
 
 impl From<SteamProfileRow> for SteamProfile {
@@ -100,6 +103,7 @@ impl From<SteamProfileRow> for SteamProfile {
             countrycode: row.countrycode,
             last_updated: row.last_updated,
             friends,
+            matches_played_last_30d: row.matches_played_last_30d,
         }
     }
 }
@@ -128,6 +132,7 @@ impl From<SteamProfileInsertRow> for SteamProfile {
             countrycode: row.countrycode,
             last_updated: Utc::now(),
             friends,
+            matches_played_last_30d: 0,
         }
     }
 }
@@ -141,7 +146,19 @@ impl BatchQuery for SteamProfileQuery {
     fn build_query(keys: &[u32]) -> String {
         format!(
             "
-            SELECT ?fields
+            SELECT
+                account_id,
+                personaname,
+                profileurl,
+                avatar,
+                avatarmedium,
+                avatarfull,
+                realname,
+                countrycode,
+                last_updated,
+                friends.account_id,
+                friends.friend_since,
+                dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d
             FROM steam_profiles
             WHERE account_id IN ({})
             ORDER BY last_updated DESC
@@ -270,6 +287,17 @@ pub(super) async fn steam(
     let fetched_ids: HashSet<u32> = refreshed.iter().map(|r| r.account_id).collect();
     let mut profiles: Vec<SteamProfile> = refreshed.into_iter().map(SteamProfile::from).collect();
 
+    let refreshed_ids: Vec<u32> = profiles.iter().map(|p| p.account_id).collect();
+    if !refreshed_ids.is_empty() {
+        let matches_map =
+            fetch_matches_played_last_30d(&state.ch_client_ro, &refreshed_ids).await?;
+        for profile in &mut profiles {
+            if let Some(&count) = matches_map.get(&profile.account_id) {
+                profile.matches_played_last_30d = count;
+            }
+        }
+    }
+
     let missing: Vec<u32> = account_ids
         .into_iter()
         .filter(|id| !fetched_ids.contains(id))
@@ -284,18 +312,68 @@ pub(super) async fn steam(
     Ok((headers, Json(profiles)))
 }
 
+#[derive(Debug, Clone, Row, Deserialize)]
+struct MatchesPlayed30dRow {
+    account_id: u32,
+    matches_played: u64,
+}
+
+async fn fetch_matches_played_last_30d(
+    ch_client: &clickhouse::Client,
+    account_ids: &[u32],
+) -> APIResult<HashMap<u32, u64>> {
+    let query = format!(
+        "
+        SELECT
+            account_id,
+            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played
+        FROM (SELECT arrayJoin([{}]) AS account_id)
+        SETTINGS log_comment = 'steam_matches_played_last_30d'
+        ",
+        in_clause(account_ids)
+    );
+    match ch_client
+        .query(&query)
+        .fetch_all::<MatchesPlayed30dRow>()
+        .await
+    {
+        Ok(rows) => Ok(rows
+            .into_iter()
+            .map(|r| (r.account_id, r.matches_played))
+            .collect()),
+        Err(e) => {
+            warn!("Failed to fetch matches_played_last_30d: {e}");
+            Err(APIError::InternalError {
+                message: "Failed to fetch matches_played_last_30d".to_string(),
+            })
+        }
+    }
+}
+
 async fn search_steam(
     ch_client: &clickhouse::Client,
     search_query: String,
 ) -> APIResult<Vec<SteamProfile>> {
     let query = "
         WITH ? as query
-        SELECT ?fields
+        SELECT
+            account_id,
+            personaname,
+            profileurl,
+            avatar,
+            avatarmedium,
+            avatarfull,
+            realname,
+            countrycode,
+            last_updated,
+            friends.account_id,
+            friends.friend_since,
+            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d
         FROM steam_profiles FINAL
         WHERE personaname_lc IS NOT NULL AND not empty(personaname_lc)
         ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
                  if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
-                 jaroWinklerSimilarity(personaname_lc, lower(query)) DESC
+                 jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(matches_played_last_30d) DESC
         LIMIT 100
         SETTINGS log_comment = 'steam_search'
     ";
