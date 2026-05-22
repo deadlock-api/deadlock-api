@@ -14,6 +14,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
@@ -32,8 +33,8 @@ export const Route = createFileRoute("/heatmap")({
       maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
     };
     await Promise.all([
-      queryClient.ensureQueryData(mapQueryOptions),
-      queryClient.ensureQueryData(killDeathStatsQueryOptions(defaultKdParams)),
+      prefetchSafe(queryClient.ensureQueryData(mapQueryOptions)),
+      prefetchSafe(queryClient.ensureQueryData(killDeathStatsQueryOptions(defaultKdParams))),
     ]);
   },
   head: () =>

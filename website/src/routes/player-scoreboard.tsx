@@ -15,6 +15,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { api } from "~/lib/api";
 import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { playerScoreboardQueryOptions } from "~/queries/player-scoreboard-query";
@@ -33,39 +34,43 @@ const MAX_ENTRIES = 1000;
 export const Route = createFileRoute("/player-scoreboard")({
   component: PlayerScoreboardPage,
   loader: async ({ context: { queryClient } }) => {
-    const scoreboard = await queryClient.ensureQueryData(
-      playerScoreboardQueryOptions({
-        sortBy: "kills" as PlayerScoreboardSortByEnum,
-        sortDirection: "desc",
-        gameMode: "normal",
-        minMatches: 0,
-        minAverageBadge: 0,
-        maxAverageBadge: 116,
-        minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-        maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
-        start: 0,
-        limit: MAX_ENTRIES,
-      }),
+    const scoreboard = await prefetchSafe(
+      queryClient.ensureQueryData(
+        playerScoreboardQueryOptions({
+          sortBy: "kills" as PlayerScoreboardSortByEnum,
+          sortDirection: "desc",
+          gameMode: "normal",
+          minMatches: 0,
+          minAverageBadge: 0,
+          maxAverageBadge: 116,
+          minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+          start: 0,
+          limit: MAX_ENTRIES,
+        }),
+      ),
     );
-    const accountIds = scoreboard.map((e) => e.account_id).filter((id): id is number => id != null);
+    const accountIds = (scoreboard ?? []).map((e) => e.account_id).filter((id): id is number => id != null);
     await Promise.all(
       chunkIds(accountIds, STEAM_BATCH_SIZE).map((batch) =>
-        queryClient.ensureQueryData({
-          queryKey: queryKeys.steam.profiles(batch),
-          queryFn: async () => {
-            const response = await api.steam_api.steam({ accountIds: batch });
-            const map: Record<number, { personaname: string; avatar: string; profileurl: string }> = {};
-            for (const profile of response.data) {
-              map[profile.account_id] = {
-                personaname: profile.personaname,
-                avatar: profile.avatar,
-                profileurl: profile.profileurl,
-              };
-            }
-            return map;
-          },
-          staleTime: CACHE_DURATIONS.ONE_DAY,
-        }),
+        prefetchSafe(
+          queryClient.ensureQueryData({
+            queryKey: queryKeys.steam.profiles(batch),
+            queryFn: async () => {
+              const response = await api.steam_api.steam({ accountIds: batch });
+              const map: Record<number, { personaname: string; avatar: string; profileurl: string }> = {};
+              for (const profile of response.data) {
+                map[profile.account_id] = {
+                  personaname: profile.personaname,
+                  avatar: profile.avatar,
+                  profileurl: profile.profileurl,
+                };
+              }
+              return map;
+            },
+            staleTime: CACHE_DURATIONS.ONE_DAY,
+          }),
+        ),
       ),
     );
   },

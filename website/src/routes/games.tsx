@@ -16,6 +16,7 @@ import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { isStreetBrawlMode } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { gameStatsQueryOptions } from "~/queries/games-query";
@@ -34,14 +35,16 @@ export const Route = createFileRoute("/games")({
       maxAverageBadge: 116,
     };
     await Promise.all([
-      queryClient.ensureQueryData(gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" })),
-      queryClient.ensureQueryData(
-        gameStatsQueryOptions({
-          ...baseParams,
-          minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
-          bucket: "no_bucket",
-        }),
+      prefetchSafe(queryClient.ensureQueryData(gameStatsQueryOptions({ ...baseParams, bucket: "no_bucket" }))),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          gameStatsQueryOptions({
+            ...baseParams,
+            minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
+            maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
+            bucket: "no_bucket",
+          }),
+        ),
       ),
     ]);
   },

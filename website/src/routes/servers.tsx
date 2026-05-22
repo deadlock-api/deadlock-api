@@ -26,8 +26,12 @@ export const Route = createFileRoute("/servers")({
       path: "/servers",
     }),
   loader: async () => {
-    const response = await api.servers_api.list();
-    return { servers: response.data.servers };
+    try {
+      const response = await api.servers_api.list();
+      return { servers: response.data.servers };
+    } catch {
+      return { servers: [] };
+    }
   },
 });
 

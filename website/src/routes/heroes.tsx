@@ -15,6 +15,7 @@ import { Switch } from "~/components/ui/switch";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { type HeroTab, useHeroFilters } from "~/hooks/useHeroFilters";
 import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
@@ -81,35 +82,43 @@ export const Route = createFileRoute("/heroes")({
       gameMode: "normal" as const,
     };
     await Promise.all([
-      queryClient.ensureQueryData(
-        heroStatsQueryOptions({
-          ...common,
-          minUnixTimestamp: r.minUnixTimestamp,
-          maxUnixTimestamp: r.maxUnixTimestamp,
-        }),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroStatsQueryOptions({
+            ...common,
+            minUnixTimestamp: r.minUnixTimestamp,
+            maxUnixTimestamp: r.maxUnixTimestamp,
+          }),
+        ),
       ),
-      queryClient.ensureQueryData(
-        heroStatsQueryOptions({
-          ...common,
-          minUnixTimestamp: r.prevMinUnixTimestamp,
-          maxUnixTimestamp: r.prevMaxUnixTimestamp,
-        }),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroStatsQueryOptions({
+            ...common,
+            minUnixTimestamp: r.prevMinUnixTimestamp,
+            maxUnixTimestamp: r.prevMaxUnixTimestamp,
+          }),
+        ),
       ),
-      queryClient.ensureQueryData(
-        heroBanStatsQueryOptions({
-          minAverageBadge: DEFAULT_MIN_RANK,
-          maxAverageBadge: DEFAULT_MAX_RANK,
-          minUnixTimestamp: r.minUnixTimestamp,
-          maxUnixTimestamp: r.maxUnixTimestamp,
-        }),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroBanStatsQueryOptions({
+            minAverageBadge: DEFAULT_MIN_RANK,
+            maxAverageBadge: DEFAULT_MAX_RANK,
+            minUnixTimestamp: r.minUnixTimestamp,
+            maxUnixTimestamp: r.maxUnixTimestamp,
+          }),
+        ),
       ),
-      queryClient.ensureQueryData(
-        heroBanStatsQueryOptions({
-          minAverageBadge: DEFAULT_MIN_RANK,
-          maxAverageBadge: DEFAULT_MAX_RANK,
-          minUnixTimestamp: r.prevMinUnixTimestamp,
-          maxUnixTimestamp: r.prevMaxUnixTimestamp,
-        }),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          heroBanStatsQueryOptions({
+            minAverageBadge: DEFAULT_MIN_RANK,
+            maxAverageBadge: DEFAULT_MAX_RANK,
+            minUnixTimestamp: r.prevMinUnixTimestamp,
+            maxUnixTimestamp: r.prevMaxUnixTimestamp,
+          }),
+        ),
       ),
     ]);
   },

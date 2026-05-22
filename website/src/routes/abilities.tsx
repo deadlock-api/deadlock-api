@@ -10,6 +10,7 @@ import { parseAsGameMode } from "~/components/selectors/GameModeSelector";
 import type { TriState } from "~/components/selectors/TriStateSelector";
 import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
@@ -17,16 +18,18 @@ import { abilityOrderQueryOptions } from "~/queries/ability-order-query";
 export const Route = createFileRoute("/abilities")({
   component: AbilitiesPage,
   loader: async ({ context: { queryClient } }) => {
-    await queryClient.ensureQueryData(
-      abilityOrderQueryOptions({
-        heroId: 2,
-        gameMode: "normal",
-        minAverageBadge: 0,
-        maxAverageBadge: 116,
-        minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-        maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
-        minMatches: 20,
-      }),
+    await prefetchSafe(
+      queryClient.ensureQueryData(
+        abilityOrderQueryOptions({
+          heroId: 2,
+          gameMode: "normal",
+          minAverageBadge: 0,
+          maxAverageBadge: 116,
+          minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+          minMatches: 20,
+        }),
+      ),
     );
   },
   head: () =>

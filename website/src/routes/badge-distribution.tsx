@@ -12,6 +12,7 @@ import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { DEFAULT_DATE_RANGE } from "~/lib/constants";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
@@ -20,11 +21,13 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 export const Route = createFileRoute("/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient } }) => {
-    await queryClient.ensureQueryData(
-      badgeDistributionQueryOptions({
-        minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
-        maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
-      }),
+    await prefetchSafe(
+      queryClient.ensureQueryData(
+        badgeDistributionQueryOptions({
+          minUnixTimestamp: normalizeUnixFloor(DEFAULT_DATE_RANGE[0]) ?? 0,
+          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_DATE_RANGE[1]),
+        }),
+      ),
     );
   },
   head: () =>

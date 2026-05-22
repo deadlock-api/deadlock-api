@@ -13,6 +13,7 @@ import type { Dayjs } from "~/dayjs";
 import { DEFAULT_DATE_RANGE, DEFAULT_PREV_DATE_RANGE } from "~/lib/constants";
 import { getEffectiveRankRange } from "~/lib/game-mode";
 import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { seo } from "~/lib/seo";
 import { normalizeUnixCeil, normalizeUnixFloor } from "~/lib/time-normalize";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -39,13 +40,17 @@ export const Route = createFileRoute("/items")({
       gameMode: "normal" as const,
     };
     await Promise.all([
-      queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp })),
-      queryClient.ensureQueryData(
-        itemStatsQueryOptions({
-          ...common,
-          minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
-          maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
-        }),
+      prefetchSafe(
+        queryClient.ensureQueryData(itemStatsQueryOptions({ ...common, minUnixTimestamp, maxUnixTimestamp })),
+      ),
+      prefetchSafe(
+        queryClient.ensureQueryData(
+          itemStatsQueryOptions({
+            ...common,
+            minUnixTimestamp: normalizeUnixFloor(DEFAULT_PREV_DATE_RANGE[0]) ?? 0,
+            maxUnixTimestamp: normalizeUnixCeil(DEFAULT_PREV_DATE_RANGE[1]),
+          }),
+        ),
       ),
     ]);
   },

@@ -9,6 +9,7 @@ import { LeaderboardSummary } from "~/components/leaderboard/LeaderboardSummary"
 import { LeaderboardTable, type LeaderboardTableHandle } from "~/components/leaderboard/LeaderboardTable";
 import { LoadingLogo } from "~/components/LoadingLogo";
 import { combineQueryStates } from "~/components/QueryRenderer";
+import { prefetchSafe } from "~/lib/prefetch-safe";
 import { getDefaultRegion } from "~/lib/region";
 import { seo } from "~/lib/seo";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
@@ -17,7 +18,7 @@ import { ranksQueryOptions } from "~/queries/ranks-query";
 export const Route = createFileRoute("/leaderboard")({
   component: LeaderboardPage,
   loader: async ({ context: { queryClient } }) => {
-    await queryClient.ensureQueryData(leaderboardQueryOptions(getDefaultRegion(), null));
+    await prefetchSafe(queryClient.ensureQueryData(leaderboardQueryOptions(getDefaultRegion(), null)));
   },
   head: () =>
     seo({
