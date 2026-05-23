@@ -16,7 +16,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::clickhouse_batcher::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use crate::services::rank_predictor::{
-    N_FEATURES, RankPrediction, RankPredictorError, badge_to_idx,
+    N_FEATURES, RankPrediction, RankPredictorError, badge_to_idx, idx_to_badge,
 };
 use crate::utils::types::AccountIdQuery;
 
@@ -596,8 +596,16 @@ pub(super) async fn rank_predict_image(
     }
 
     let prediction = predict_rank_for_account(&state, account_id).await?;
-    let rank = prediction.badge / 10;
-    let subrank = prediction.badge % 10;
+    serve_rank_image(&state, prediction.badge, format).await
+}
+
+async fn serve_rank_image(
+    state: &AppState,
+    badge: i32,
+    format: RankPredictImageFormat,
+) -> APIResult<(HeaderMap, Bytes)> {
+    let rank = badge / 10;
+    let subrank = badge % 10;
     let suffix = format.suffix();
 
     let image_url = state
@@ -648,4 +656,99 @@ pub(super) async fn rank_predict_image(
         headers.insert(header::CONTENT_TYPE, value);
     }
     Ok((headers, bytes))
+}
+
+const MAX_AVG_ACCOUNT_IDS: usize = 12;
+
+fn deserialize_account_ids<'de, D>(deserializer: D) -> Result<Vec<u32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let raw = String::deserialize(deserializer)?;
+    raw.split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.parse::<u32>().map_err(serde::de::Error::custom))
+        .collect()
+}
+
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub(crate) struct RankPredictAvgImageQuery {
+    /// Comma-separated list of account IDs (max 12).
+    #[serde(deserialize_with = "deserialize_account_ids")]
+    account_ids: Vec<u32>,
+    /// Image format. Defaults to `png`. Supported: `png`, `webp`.
+    #[serde(default)]
+    #[param(inline)]
+    format: RankPredictImageFormat,
+}
+
+#[utoipa::path(
+    get,
+    path = "/rank-predict/image",
+    params(RankPredictAvgImageQuery),
+    responses(
+        (status = OK, description = "Average predicted rank badge image", content(
+            ([u8] = "image/png"),
+            ([u8] = "image/webp"),
+        )),
+        (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
+        (status = FORBIDDEN, description = "One of the users is protected"),
+        (status = NOT_FOUND, description = "No image available for the predicted rank"),
+        (status = UNPROCESSABLE_ENTITY, description = "Not enough recent ranked matches for one or more accounts"),
+        (status = SERVICE_UNAVAILABLE, description = "Rank prediction model not loaded"),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
+        (status = INTERNAL_SERVER_ERROR, description = "Prediction failed"),
+    ),
+    tags = ["Players"],
+    summary = "Rank Predict Avg Image",
+    description = "Returns the average predicted rank badge image (binary) for a comma-separated list of account IDs. Use `?format=webp` for WebP."
+)]
+pub(super) async fn rank_predict_avg_image(
+    Query(RankPredictAvgImageQuery {
+        account_ids,
+        format,
+    }): Query<RankPredictAvgImageQuery>,
+    State(state): State<AppState>,
+) -> APIResult<impl IntoResponse> {
+    if account_ids.is_empty() {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "At least one account ID is required.",
+        ));
+    }
+    if account_ids.len() > MAX_AVG_ACCOUNT_IDS {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!("Too many account IDs (max {MAX_AVG_ACCOUNT_IDS})."),
+        ));
+    }
+
+    let unique_ids: Vec<u32> = account_ids.into_iter().unique().collect();
+
+    for &account_id in &unique_ids {
+        if state
+            .steam_client
+            .is_user_protected(&state.pg_client, account_id)
+            .await?
+        {
+            return Err(APIError::protected_user());
+        }
+    }
+
+    let predictions = futures::future::try_join_all(
+        unique_ids
+            .iter()
+            .map(|&account_id| predict_rank_for_account(&state, account_id)),
+    )
+    .await?;
+
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+    let avg_idx = {
+        let sum: f32 = predictions.iter().map(|p| p.raw_score).sum();
+        (sum / predictions.len() as f32).round() as i32
+    };
+    let avg_badge = idx_to_badge(avg_idx);
+
+    serve_rank_image(&state, avg_badge, format).await
 }

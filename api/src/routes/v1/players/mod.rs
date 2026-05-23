@@ -189,6 +189,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(hero_stats::player_hero_stats))
         .routes(routes!(rank_predict::rank_predict))
         .routes(routes!(rank_predict::rank_predict_image))
+        .routes(routes!(rank_predict::rank_predict_avg_image))
         .merge(mmr::router())
         .merge(steam::router())
         .layer(
