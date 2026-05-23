@@ -20,7 +20,7 @@ import { queryKeys } from "~/queries/query-keys";
 
 const regions = ["Europe", "Asia", "NAmerica", "SAmerica", "Oceania"] as const;
 
-export const Route = createFileRoute("/streamkit")({
+export const Route = createFileRoute("/streamkit/")({
   head: () =>
     seo({
       title: "Stream Toolkit & OBS Widgets | Deadlock API",

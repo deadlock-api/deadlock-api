@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as StreamkitRouteImport } from './routes/streamkit'
 import { Route as Sitemap_indexDotxmlRouteImport } from './routes/sitemap_index[.]xml'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServersRouteImport } from './routes/servers'
@@ -29,6 +28,7 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as BadgeDistributionRouteImport } from './routes/badge-distribution'
 import { Route as AbilitiesRouteImport } from './routes/abilities'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as FlashcardsIndexRouteImport } from './routes/flashcards/index'
 import { Route as DeadlockdleIndexRouteImport } from './routes/deadlockdle/index'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
@@ -45,11 +45,6 @@ import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as AuthPatreonCallbackRouteImport } from './routes/auth/patreon/callback'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
 
-const StreamkitRoute = StreamkitRouteImport.update({
-  id: '/streamkit',
-  path: '/streamkit',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const Sitemap_indexDotxmlRoute = Sitemap_indexDotxmlRouteImport.update({
   id: '/sitemap_index.xml',
   path: '/sitemap_index.xml',
@@ -145,6 +140,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StreamkitIndexRoute = StreamkitIndexRouteImport.update({
+  id: '/streamkit/',
+  path: '/streamkit/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FlashcardsIndexRoute = FlashcardsIndexRouteImport.update({
   id: '/flashcards/',
   path: '/flashcards/',
@@ -217,9 +217,9 @@ const AuthPatreonCallbackRoute = AuthPatreonCallbackRouteImport.update({
 } as any)
 const StreamkitWidgetsRegionAccountIdWidgetTypeRoute =
   StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport.update({
-    id: '/widgets/$region/$accountId/$widgetType',
-    path: '/widgets/$region/$accountId/$widgetType',
-    getParentRoute: () => StreamkitRoute,
+    id: '/streamkit/widgets/$region/$accountId/$widgetType',
+    path: '/streamkit/widgets/$region/$accountId/$widgetType',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -242,7 +242,6 @@ export interface FileRoutesByFullPath {
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
-  '/streamkit': typeof StreamkitRouteWithChildren
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -256,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
+  '/streamkit/': typeof StreamkitIndexRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
@@ -278,7 +278,6 @@ export interface FileRoutesByTo {
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
-  '/streamkit': typeof StreamkitRouteWithChildren
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -292,6 +291,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/deadlockdle': typeof DeadlockdleIndexRoute
   '/flashcards': typeof FlashcardsIndexRoute
+  '/streamkit': typeof StreamkitIndexRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
@@ -316,7 +316,6 @@ export interface FileRoutesById {
   '/servers': typeof ServersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sitemap_index.xml': typeof Sitemap_indexDotxmlRoute
-  '/streamkit': typeof StreamkitRouteWithChildren
   '/blog/$slug': typeof BlogSlugRoute
   '/deadlockdle/guess-ability': typeof DeadlockdleGuessAbilityRoute
   '/deadlockdle/guess-hero': typeof DeadlockdleGuessHeroRoute
@@ -330,6 +329,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/deadlockdle/': typeof DeadlockdleIndexRoute
   '/flashcards/': typeof FlashcardsIndexRoute
+  '/streamkit/': typeof StreamkitIndexRoute
   '/auth/patreon/callback': typeof AuthPatreonCallbackRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
@@ -355,7 +355,6 @@ export interface FileRouteTypes {
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
-    | '/streamkit'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -369,6 +368,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/deadlockdle/'
     | '/flashcards/'
+    | '/streamkit/'
     | '/auth/patreon/callback'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesByTo: FileRoutesByTo
@@ -391,7 +391,6 @@ export interface FileRouteTypes {
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
-    | '/streamkit'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -405,6 +404,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/deadlockdle'
     | '/flashcards'
+    | '/streamkit'
     | '/auth/patreon/callback'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   id:
@@ -428,7 +428,6 @@ export interface FileRouteTypes {
     | '/servers'
     | '/sitemap.xml'
     | '/sitemap_index.xml'
-    | '/streamkit'
     | '/blog/$slug'
     | '/deadlockdle/guess-ability'
     | '/deadlockdle/guess-hero'
@@ -442,6 +441,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/deadlockdle/'
     | '/flashcards/'
+    | '/streamkit/'
     | '/auth/patreon/callback'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesById: FileRoutesById
@@ -466,25 +466,19 @@ export interface RootRouteChildren {
   ServersRoute: typeof ServersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Sitemap_indexDotxmlRoute: typeof Sitemap_indexDotxmlRoute
-  StreamkitRoute: typeof StreamkitRouteWithChildren
   BlogSlugRoute: typeof BlogSlugRoute
   FlashcardsHeroesRoute: typeof FlashcardsHeroesRoute
   FlashcardsItemUpgradesRoute: typeof FlashcardsItemUpgradesRoute
   FlashcardsItemsRoute: typeof FlashcardsItemsRoute
   BlogIndexRoute: typeof BlogIndexRoute
   FlashcardsIndexRoute: typeof FlashcardsIndexRoute
+  StreamkitIndexRoute: typeof StreamkitIndexRoute
   AuthPatreonCallbackRoute: typeof AuthPatreonCallbackRoute
+  StreamkitWidgetsRegionAccountIdWidgetTypeRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/streamkit': {
-      id: '/streamkit'
-      path: '/streamkit'
-      fullPath: '/streamkit'
-      preLoaderRoute: typeof StreamkitRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sitemap_index.xml': {
       id: '/sitemap_index.xml'
       path: '/sitemap_index.xml'
@@ -618,6 +612,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/streamkit/': {
+      id: '/streamkit/'
+      path: '/streamkit'
+      fullPath: '/streamkit/'
+      preLoaderRoute: typeof StreamkitIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/flashcards/': {
       id: '/flashcards/'
       path: '/flashcards'
@@ -718,10 +719,10 @@ declare module '@tanstack/react-router' {
     }
     '/streamkit/widgets/$region/$accountId/$widgetType': {
       id: '/streamkit/widgets/$region/$accountId/$widgetType'
-      path: '/widgets/$region/$accountId/$widgetType'
+      path: '/streamkit/widgets/$region/$accountId/$widgetType'
       fullPath: '/streamkit/widgets/$region/$accountId/$widgetType'
       preLoaderRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport
-      parentRoute: typeof StreamkitRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -750,19 +751,6 @@ const DeadlockdleRouteWithChildren = DeadlockdleRoute._addFileChildren(
   DeadlockdleRouteChildren,
 )
 
-interface StreamkitRouteChildren {
-  StreamkitWidgetsRegionAccountIdWidgetTypeRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
-}
-
-const StreamkitRouteChildren: StreamkitRouteChildren = {
-  StreamkitWidgetsRegionAccountIdWidgetTypeRoute:
-    StreamkitWidgetsRegionAccountIdWidgetTypeRoute,
-}
-
-const StreamkitRouteWithChildren = StreamkitRoute._addFileChildren(
-  StreamkitRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbilitiesRoute: AbilitiesRoute,
@@ -783,14 +771,16 @@ const rootRouteChildren: RootRouteChildren = {
   ServersRoute: ServersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   Sitemap_indexDotxmlRoute: Sitemap_indexDotxmlRoute,
-  StreamkitRoute: StreamkitRouteWithChildren,
   BlogSlugRoute: BlogSlugRoute,
   FlashcardsHeroesRoute: FlashcardsHeroesRoute,
   FlashcardsItemUpgradesRoute: FlashcardsItemUpgradesRoute,
   FlashcardsItemsRoute: FlashcardsItemsRoute,
   BlogIndexRoute: BlogIndexRoute,
   FlashcardsIndexRoute: FlashcardsIndexRoute,
+  StreamkitIndexRoute: StreamkitIndexRoute,
   AuthPatreonCallbackRoute: AuthPatreonCallbackRoute,
+  StreamkitWidgetsRegionAccountIdWidgetTypeRoute:
+    StreamkitWidgetsRegionAccountIdWidgetTypeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
