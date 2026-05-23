@@ -39,6 +39,26 @@ pub(super) struct S3Config {
     pub(super) endpoint: String,
 }
 
+fn default_r2_region() -> String {
+    "auto".to_owned()
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub(super) struct R2Config {
+    pub(super) account_id: String,
+    pub(super) bucket: String,
+    pub(super) access_key_id: String,
+    pub(super) secret_access_key: String,
+    #[serde(default = "default_r2_region")]
+    pub(super) region: String,
+}
+
+impl R2Config {
+    pub(super) fn endpoint(&self) -> String {
+        format!("https://{}.r2.cloudflarestorage.com", self.account_id)
+    }
+}
+
 fn default_clickhouse_host() -> String {
     "localhost".to_owned()
 }
@@ -121,6 +141,7 @@ pub(crate) struct Config {
     pub(super) redis: RedisConfig,
     pub(super) s3: S3Config,
     pub(super) s3_cache: S3Config,
+    pub(super) r2: R2Config,
     pub(crate) clickhouse: ClickhouseConfig,
     pub(super) postgres: PostgresConfig,
     pub(crate) patreon: PatreonConfig,

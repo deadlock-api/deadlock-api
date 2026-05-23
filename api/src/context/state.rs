@@ -49,6 +49,7 @@ pub(crate) struct AppState {
     pub(crate) config: Config,
     pub(crate) s3_client: AmazonS3,
     pub(crate) s3_cache_client: AmazonS3,
+    pub(crate) r2_client: AmazonS3,
     pub(crate) redis_client: redis::aio::MultiplexedConnection,
     pub(crate) ch_client: clickhouse::Client,
     pub(crate) ch_client_ro: clickhouse::Client,
@@ -105,6 +106,25 @@ impl AppState {
             .with_retry(RetryConfig {
                 max_retries: 0,
                 ..Default::default()
+            })
+            .build()?;
+
+        // Create a Cloudflare R2 client (S3-compatible)
+        debug!("Creating Cloudflare R2 client");
+        let r2_client = AmazonS3Builder::new()
+            .with_region(&config.r2.region)
+            .with_bucket_name(&config.r2.bucket)
+            .with_access_key_id(&config.r2.access_key_id)
+            .with_secret_access_key(&config.r2.secret_access_key)
+            .with_endpoint(config.r2.endpoint())
+            .with_retry(RetryConfig {
+                backoff: BackoffConfig {
+                    init_backoff: Duration::from_millis(200),
+                    max_backoff: Duration::from_secs(3),
+                    base: 2.,
+                },
+                max_retries: 3,
+                retry_timeout: Duration::from_secs(5),
             })
             .build()?;
 
@@ -302,6 +322,7 @@ impl AppState {
             config,
             s3_client,
             s3_cache_client,
+            r2_client,
             redis_client,
             ch_client,
             ch_client_ro,
