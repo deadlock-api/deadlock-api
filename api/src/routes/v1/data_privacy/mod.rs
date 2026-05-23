@@ -77,8 +77,13 @@ async fn update_row_policy(
         .collect();
 
     if protected_accounts.is_empty() {
-        let query = "DROP ROW POLICY IF EXISTS gdpr_protection ON default.* SETTINGS log_comment = 'data_privacy_drop_policy'";
-        ch_client.query(query).execute().await?;
+        let drop_queries = [
+            "DROP ROW POLICY IF EXISTS gdpr_protection_mp ON match_player",
+            "DROP ROW POLICY IF EXISTS gdpr_protection_sp ON steam_profiles",
+        ];
+        for query in drop_queries {
+            ch_client.query(query).execute().await?;
+        }
         return Ok(());
     }
 
@@ -89,10 +94,10 @@ async fn update_row_policy(
         .join(", ");
     let policy_queries = [
         format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user SETTINGS log_comment = 'data_privacy_create_policy'"
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_mp ON match_player AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
         ),
         format!(
-            "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user SETTINGS log_comment = 'data_privacy_create_policy'"
+            "CREATE ROW POLICY OR REPLACE gdpr_protection_sp ON steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user"
         ),
     ];
     for policy_query in &policy_queries {
