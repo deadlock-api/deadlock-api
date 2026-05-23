@@ -320,13 +320,18 @@ fn build_query(query: &ItemStatsQuery) -> String {
         } else {
             format!("\n        HAVING {}", enemy_having.join(" AND "))
         };
+        let same_lane = query.same_lane_filter == Some(true);
+        let lanes_col = if same_lane {
+            ",\n            groupUniqArray(assigned_lane) AS enemy_lanes"
+        } else {
+            ""
+        };
         let cte = format!(
             ",
     t_enemy_teams AS (
         SELECT
             match_id,
-            team AS enemy_team,
-            groupUniqArray(assigned_lane) AS enemy_lanes
+            team AS enemy_team{lanes_col}
         FROM match_player
         WHERE match_mode IN ('Ranked', 'Unranked') AND {game_mode_filter} {info_filters}
             AND team IN ('Team0', 'Team1')
@@ -335,7 +340,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     )",
             unique_ids.iter().map(ToString::to_string).join(", ")
         );
-        let lane_filter = if query.same_lane_filter == Some(true) {
+        let lane_filter = if same_lane {
             "\n            AND has(et.enemy_lanes, assigned_lane)"
         } else {
             ""
