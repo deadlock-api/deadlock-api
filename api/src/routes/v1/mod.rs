@@ -3,6 +3,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::context::AppState;
 
 pub mod analytics;
+mod assets;
 mod auth;
 pub mod builds;
 mod commands;
@@ -31,5 +32,6 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .nest("/auth", auth::router())
         .nest("/patron", patron::router())
         .nest("/servers", servers::router())
+        .nest("/assets", assets::router())
         .merge(graphql::router())
 }

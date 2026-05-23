@@ -15,6 +15,7 @@ use tracing::{debug, warn};
 use crate::context::batchers::Batchers;
 use crate::context::config::Config;
 use crate::services::assets::client::AssetsClient;
+use crate::services::assets::versions::store::VersionStore;
 use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
@@ -63,6 +64,7 @@ pub(crate) struct AppState {
     pub(crate) batchers: Batchers,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
     pub(crate) steam_search_index: SteamSearchIndex,
+    pub(crate) version_store: VersionStore,
 }
 
 impl AppState {
@@ -318,6 +320,16 @@ impl AppState {
         let steam_search_index = SteamSearchIndex::new(steam_search_index_path);
         steam_search_index.spawn_refresh_loop(ch_client_ro.clone());
 
+        // Build the versioned-assets store (R2-backed). Best-effort initial
+        // load so /v2/heroes works on the first request post-boot; the
+        // background loop keeps it fresh.
+        debug!("Initializing versioned assets store");
+        let version_store = VersionStore::new();
+        if let Err(e) = version_store.ensure_loaded(&r2_client).await {
+            warn!("Initial version listing failed (will retry in background): {e}");
+        }
+        version_store.spawn_refresh_loop(r2_client.clone());
+
         Ok(Self {
             config,
             s3_client,
@@ -336,6 +348,7 @@ impl AppState {
             batchers,
             rank_predictor,
             steam_search_index,
+            version_store,
         })
     }
 }
