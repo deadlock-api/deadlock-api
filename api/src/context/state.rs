@@ -19,6 +19,7 @@ use crate::services::rank_predictor::RankPredictor;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
+use crate::services::steam_search_index::SteamSearchIndex;
 
 #[derive(Debug, Error)]
 pub enum AppStateError {
@@ -60,6 +61,7 @@ pub(crate) struct AppState {
     pub(crate) request_logger: Arc<RequestLogger>,
     pub(crate) batchers: Batchers,
     pub(crate) rank_predictor: Option<Arc<RankPredictor>>,
+    pub(crate) steam_search_index: SteamSearchIndex,
 }
 
 impl AppState {
@@ -278,6 +280,24 @@ impl AppState {
         debug!("Creating batchers");
         let batchers = Batchers::new(&ch_client, &ch_client_ro);
 
+        // Start the steam search index. The on-disk index is loaded
+        // synchronously (cheap) so search is live immediately after restart;
+        // the rebuild loop refreshes every 30 minutes. Path is overridable via
+        // the STEAM_SEARCH_INDEX_PATH env var.
+        debug!("Starting steam search index");
+        let steam_search_index_path: std::path::PathBuf =
+            std::env::var_os("STEAM_SEARCH_INDEX_PATH").map_or_else(
+                || std::path::PathBuf::from("./data/steam_search_index"),
+                std::path::PathBuf::from,
+            );
+        if let Err(e) = std::fs::create_dir_all(&steam_search_index_path) {
+            warn!(
+                "could not create steam search index dir {steam_search_index_path:?}: {e} (will retry on first rebuild)"
+            );
+        }
+        let steam_search_index = SteamSearchIndex::new(steam_search_index_path);
+        steam_search_index.spawn_refresh_loop(ch_client_ro.clone());
+
         Ok(Self {
             config,
             s3_client,
@@ -294,6 +314,7 @@ impl AppState {
             request_logger,
             batchers,
             rank_predictor,
+            steam_search_index,
         })
     }
 }

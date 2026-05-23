@@ -18,6 +18,7 @@ use crate::routes::v1::players::steam::update::{
 };
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::steam_search_index::IndexedProfile;
 use crate::utils::parse::{comma_separated_deserialize, steamid64_to_steamid3};
 use crate::utils::types::AccountIdQuery;
 
@@ -32,7 +33,7 @@ pub(crate) struct AccountIdsQuery {
     pub(crate) refresh: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Deserialize, IntoParams)]
 pub(super) struct SteamSearchQuery {
     /// Search query for Steam profiles.
     search_query: String,
@@ -44,6 +45,18 @@ pub(super) struct SteamSearchQuery {
     /// keep search responsive.
     #[param(inline, default = "5", minimum = 0)]
     min_matches_played_last_30d: Option<u32>,
+    /// Only return profiles whose `last_team_avg_badge` is at least this
+    /// value. Defaults to 0 (no filter). Profiles with no recorded badge are
+    /// stored as 0 and are excluded when this is set above 0.
+    #[param(inline, default = "0", minimum = 0)]
+    min_last_team_avg_badge: Option<u32>,
+    /// Weight applied to `log1p(matches_played_last_30d)` when reranking
+    /// candidates. The final score per profile is
+    /// `jaro_winkler(personaname_lc, query) + weight * log1p(matches_played)`.
+    /// Set to 0 to rank purely by string similarity; raise it to bias toward
+    /// active/popular players.
+    #[param(inline, default = "0.02", minimum = 0.0)]
+    matches_played_weight: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -115,6 +128,35 @@ impl From<SteamProfileRow> for SteamProfile {
             last_updated: row.last_updated,
             friends,
             matches_played_last_30d: row.matches_played_last_30d,
+            last_team_avg_badge: row.last_team_avg_badge,
+        }
+    }
+}
+
+impl From<IndexedProfile> for SteamProfile {
+    fn from(row: IndexedProfile) -> Self {
+        let friends = row
+            .friends
+            .into_iter()
+            .filter_map(|(account_id, ts)| {
+                chrono::DateTime::from_timestamp(ts.into(), 0).map(|friend_since| SteamFriend {
+                    account_id,
+                    friend_since,
+                })
+            })
+            .collect();
+        Self {
+            account_id: row.account_id,
+            personaname: row.personaname,
+            profileurl: row.profileurl,
+            avatar: row.avatar,
+            avatarmedium: row.avatarmedium,
+            avatarfull: row.avatarfull,
+            realname: row.realname,
+            countrycode: row.countrycode,
+            last_updated: row.last_updated,
+            friends,
+            matches_played_last_30d: row.matches_played,
             last_team_avg_badge: row.last_team_avg_badge,
         }
     }
@@ -366,70 +408,53 @@ async fn fetch_matches_played_last_30d(
     }
 }
 
-async fn search_steam(
-    ch_client: &clickhouse::Client,
-    search_query: String,
+fn search_steam(
+    state: &AppState,
+    search_query: &str,
     limit: u32,
     min_matches_played_last_30d: u32,
+    min_last_team_avg_badge: u32,
+    matches_played_weight: f64,
 ) -> APIResult<Vec<SteamProfile>> {
-    let query = "
-        WITH ? as query, ? as min_matches
-        SELECT
-            sp.account_id AS account_id,
-            personaname,
-            profileurl,
-            avatar,
-            avatarmedium,
-            avatarfull,
-            realname,
-            countrycode,
-            last_updated,
-            friends.account_id,
-            friends.friend_since,
-            mp.matches_played AS matches_played_last_30d,
-            mp.last_team_avg_badge AS last_team_avg_badge
-        FROM steam_profiles sp
-        INNER JOIN player_match_counts30d mp ON sp.account_id = mp.account_id
-        WHERE sp.account_id IN (
-            SELECT sp2.account_id
-            FROM steam_profiles sp2
-            INNER JOIN player_match_counts30d mp2 ON sp2.account_id = mp2.account_id
-            WHERE mp2.matches_played >= min_matches
-              AND personaname_lc IS NOT NULL AND not empty(personaname_lc)
-            ORDER BY if(sp2.account_id == toUInt32OrDefault(query), -1, 0),
-                     if(toUInt64(sp2.account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
-                     jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(mp2.matches_played) DESC
-            LIMIT 1 BY sp2.account_id
-            LIMIT ?
-        )
-        ORDER BY if(sp.account_id == toUInt32OrDefault(query), -1, 0),
-                 if(toUInt64(sp.account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
-                 jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(matches_played_last_30d) DESC
-        SETTINGS log_comment = 'steam_search'
-    ";
-    debug!(?query);
-    match ch_client
-        .query(query)
-        .bind(&search_query)
-        .bind(min_matches_played_last_30d)
-        .bind(limit)
-        .fetch_all::<SteamProfileRow>()
-        .await
-    {
-        Ok(profiles) if !profiles.is_empty() => {
-            Ok(profiles.into_iter().map(SteamProfile::from).collect())
+    let t0 = std::time::Instant::now();
+    let hits = match state.steam_search_index.search(
+        search_query,
+        u64::from(min_matches_played_last_30d),
+        min_last_team_avg_badge,
+        limit as usize,
+        matches_played_weight,
+    ) {
+        Ok(Some(hits)) => hits,
+        Ok(None) => {
+            return Err(APIError::status_msg(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Steam search index is still building, try again shortly.",
+            ));
         }
-        Ok(_) => Err(APIError::status_msg(
+        Err(e) => {
+            warn!("Steam search index query failed: {e}");
+            return Err(APIError::InternalError {
+                message: "Failed to query steam search index".to_string(),
+            });
+        }
+    };
+
+    if hits.is_empty() {
+        return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
             "No Steam profiles found.",
-        )),
-        Err(e) => {
-            warn!("Failed to fetch steam profiles for search query {search_query}: {e}");
-            Err(APIError::InternalError {
-                message: "Failed to fetch steam profiles".to_string(),
-            })
-        }
+        ));
     }
+
+    let tantivy_ms = t0.elapsed().as_millis();
+    let profiles: Vec<SteamProfile> = hits.into_iter().map(SteamProfile::from).collect();
+    debug!(
+        target: "steam_search",
+        tantivy_ms,
+        hits = profiles.len(),
+        "steam search timings"
+    );
+    Ok(profiles)
 }
 
 #[utoipa::path(
@@ -462,17 +487,22 @@ pub(super) async fn steam_search(
         search_query,
         limit,
         min_matches_played_last_30d,
+        min_last_team_avg_badge,
+        matches_played_weight,
     }): Query<SteamSearchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let limit = limit.unwrap_or(100).clamp(1, 1000);
     let min_matches_played_last_30d = min_matches_played_last_30d.unwrap_or(5);
+    let min_last_team_avg_badge = min_last_team_avg_badge.unwrap_or(0);
+    let matches_played_weight = matches_played_weight.unwrap_or(0.02).max(0.0);
     search_steam(
-        &state.ch_client_ro,
-        search_query,
+        &state,
+        &search_query,
         limit,
         min_matches_played_last_30d,
+        min_last_team_avg_badge,
+        matches_played_weight,
     )
-    .await
     .map(Json)
 }
