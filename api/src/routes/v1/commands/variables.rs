@@ -695,14 +695,14 @@ impl Variable {
                 .fetch_patch_notes()
                 .await?
                 .first()
-                .map(|patch_notes| patch_notes.title.clone())
+                .map(|patch_notes| patch_notes.title().to_owned())
                 .ok_or(VariableResolveError::NoData("patch notes")),
             Self::LatestPatchnotesLink => state
                 .steam_client
                 .fetch_patch_notes()
                 .await?
                 .first()
-                .map(|patch_notes| patch_notes.link.clone())
+                .map(|patch_notes| patch_notes.link().to_owned())
                 .ok_or(VariableResolveError::NoData("patch notes")),
             Self::HeroHoursPlayed => {
                 let hero_id = Self::resolve_hero_id(&state.assets_client, extra_args).await?;

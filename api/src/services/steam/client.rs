@@ -18,12 +18,13 @@ use crate::error::{APIError, APIResult};
 use crate::services::rate_limiter::Quota;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::types::{
-    GetPlayerSummariesResponse, GetSteamServerListResponse, Patch, Rss, SteamAccountNameError,
-    SteamAccountVerifyError, SteamProxyError, SteamProxyQuery, SteamProxyRawResponse,
-    SteamProxyResponse, SteamProxyResult, SteamServer,
+    FeedItem, ForumRss, GetPlayerSummariesResponse, GetSteamServerListResponse,
+    SteamAccountNameError, SteamAccountVerifyError, SteamProxyError, SteamProxyQuery,
+    SteamProxyRawResponse, SteamProxyResponse, SteamProxyResult, SteamRss, SteamServer,
 };
 
-const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
+const FORUM_RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
+const STEAM_NEWS_ENDPOINT: &str = "https://store.steampowered.com/feeds/news/app/1422450/";
 
 /// Client for interacting with the Steam API and proxy
 #[derive(Clone)]
@@ -207,7 +208,7 @@ impl SteamClient {
         .await
     }
 
-    pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Vec<Patch>> {
+    pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Vec<FeedItem>> {
         fetch_patch_notes(&self.http_client).await
     }
 
@@ -235,34 +236,58 @@ impl SteamClient {
     }
 }
 
-#[cached(
-    ty = "TtlCache<u8, Vec<Patch>>",
-    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30 * 60)) }",
-    result = true,
-    convert = "{ 0 }",
-    sync_writes = "default"
-)]
-async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<Patch>> {
-    let response = http_client.get(RSS_ENDPOINT).send().await.map_err(|e| {
+async fn fetch_rss_text(http_client: &reqwest::Client, url: &str) -> APIResult<String> {
+    let response = http_client.get(url).send().await.map_err(|e| {
         APIError::status_msg(
             reqwest::StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to fetch patch notes: {e}"),
         )
     })?;
-    let rss = response.text().await.map_err(|e| {
+    response.text().await.map_err(|e| {
         APIError::status_msg(
             reqwest::StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to read patch notes: {e}"),
         )
-    })?;
-    quick_xml::de::from_str::<Rss>(&rss)
+    })
+}
+
+#[cached(
+    ty = "TtlCache<u8, Vec<FeedItem>>",
+    create = "{ TtlCache::with_ttl(std::time::Duration::from_secs(30 * 60)) }",
+    result = true,
+    convert = "{ 0 }",
+    sync_writes = "default"
+)]
+async fn fetch_patch_notes(http_client: &reqwest::Client) -> APIResult<Vec<FeedItem>> {
+    let (forum_rss, steam_rss) = tokio::try_join!(
+        fetch_rss_text(http_client, FORUM_RSS_ENDPOINT),
+        fetch_rss_text(http_client, STEAM_NEWS_ENDPOINT),
+    )?;
+
+    let forum_items = quick_xml::de::from_str::<ForumRss>(&forum_rss)
         .map(|rss| rss.channel.patch_notes)
         .map_err(|e| {
             APIError::status_msg(
                 reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to parse patch notes: {e}"),
+                format!("Failed to parse forum patch notes: {e}"),
             )
-        })
+        })?;
+    let steam_items = quick_xml::de::from_str::<SteamRss>(&steam_rss)
+        .map(|rss| rss.channel.patch_notes)
+        .map_err(|e| {
+            APIError::status_msg(
+                reqwest::StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to parse steam patch notes: {e}"),
+            )
+        })?;
+
+    let mut items: Vec<FeedItem> = forum_items
+        .into_iter()
+        .map(FeedItem::Forum)
+        .chain(steam_items.into_iter().map(FeedItem::Steam))
+        .collect();
+    items.sort_by_key(|i| core::cmp::Reverse(i.pub_date()));
+    Ok(items)
 }
 
 #[cached(
@@ -449,6 +474,21 @@ mod tests {
         let patches = fetch_patch_notes(&reqwest::Client::new())
             .await
             .expect("Failed to fetch patch notes");
-        assert!(patches.len() > 7);
+        let forum_count = patches
+            .iter()
+            .filter(|p| matches!(p, FeedItem::Forum(_)))
+            .count();
+        let steam_count = patches
+            .iter()
+            .filter(|p| matches!(p, FeedItem::Steam(_)))
+            .count();
+        assert!(
+            forum_count >= 2,
+            "expected at least 2 forum entries, got {forum_count}",
+        );
+        assert!(
+            steam_count >= 2,
+            "expected at least 2 steam entries, got {steam_count}",
+        );
     }
 }
