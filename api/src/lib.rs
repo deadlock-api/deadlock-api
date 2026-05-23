@@ -18,6 +18,8 @@ mod error;
 mod middleware;
 pub mod routes;
 mod services;
+#[doc(hidden)]
+pub mod test_helpers;
 pub mod utils;
 
 use core::time::Duration;

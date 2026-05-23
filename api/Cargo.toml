@@ -63,6 +63,8 @@ ndarray = "0.17.2"
 async-trait = "0.1.89"
 tantivy = { version = "0.26.1", features = ["zstd-compression"] }
 arc-swap = "1.9.1"
+cssparser = "0.37"
+indexmap = { version = "2", features = ["serde"] }
 
 [dev-dependencies]
 clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4", version = "0.1.0" }

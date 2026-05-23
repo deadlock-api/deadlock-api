@@ -4,4 +4,5 @@ extend-exclude = [
     "src/utils/kv3_snapshots/",
     "src/utils/localization_fixtures/",
     "src/utils/localization_snapshots/",
+    "tests/heroes_snapshots/",
 ]
