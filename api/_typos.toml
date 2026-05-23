@@ -2,4 +2,6 @@
 extend-exclude = [
     "src/utils/kv3_fixtures/",
     "src/utils/kv3_snapshots/",
+    "src/utils/localization_fixtures/",
+    "src/utils/localization_snapshots/",
 ]
