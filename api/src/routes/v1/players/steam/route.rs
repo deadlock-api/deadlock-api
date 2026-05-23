@@ -160,7 +160,7 @@ impl BatchQuery for SteamProfileQuery {
         format!(
             "
             SELECT
-                account_id,
+                sp.account_id AS account_id,
                 personaname,
                 profileurl,
                 avatar,
@@ -171,12 +171,13 @@ impl BatchQuery for SteamProfileQuery {
                 last_updated,
                 friends.account_id,
                 friends.friend_since,
-                dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d,
-                dictGetOrDefault('player_match_counts30d_dict', 'last_team_avg_badge', toUInt64(account_id), toUInt64(0)) AS last_team_avg_badge
-            FROM steam_profiles
-            WHERE account_id IN ({})
+                ifNull(mp.matches_played, toUInt64(0)) AS matches_played_last_30d,
+                mp.last_team_avg_badge AS last_team_avg_badge
+            FROM steam_profiles sp
+            LEFT JOIN player_match_counts30d mp ON sp.account_id = mp.account_id
+            WHERE sp.account_id IN ({})
             ORDER BY last_updated DESC
-            LIMIT 1 BY account_id
+            LIMIT 1 BY sp.account_id
             SETTINGS log_comment = 'steam_profile'
              ",
             in_clause(keys)
@@ -340,11 +341,9 @@ async fn fetch_matches_played_last_30d(
 ) -> APIResult<HashMap<u32, (u64, Option<u32>)>> {
     let query = format!(
         "
-        SELECT
-            account_id,
-            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played,
-            dictGetOrDefault('player_match_counts30d_dict', 'last_team_avg_badge', toUInt64(account_id), toUInt64(0)) AS last_team_avg_badge
-        FROM (SELECT arrayJoin([{}]) AS account_id)
+        SELECT account_id, matches_played, last_team_avg_badge
+        FROM player_match_counts30d
+        WHERE account_id IN ({})
         SETTINGS log_comment = 'steam_matches_played_last_30d'
         ",
         in_clause(account_ids)
@@ -373,11 +372,10 @@ async fn search_steam(
     limit: u32,
     min_matches_played_last_30d: u32,
 ) -> APIResult<Vec<SteamProfile>> {
-    let like_pattern = format!("%{}%", search_query.to_lowercase());
     let query = "
-        WITH ? as query, ? as like_pattern, ? as min_matches
+        WITH ? as query, ? as min_matches
         SELECT
-            account_id,
+            sp.account_id AS account_id,
             personaname,
             profileurl,
             avatar,
@@ -388,24 +386,24 @@ async fn search_steam(
             last_updated,
             friends.account_id,
             friends.friend_since,
-            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d,
-            dictGetOrDefault('player_match_counts30d_dict', 'last_team_avg_badge', toUInt64(account_id), toUInt64(0)) AS last_team_avg_badge
-        FROM steam_profiles FINAL
-        WHERE account_id IN (
-            SELECT account_id
-            FROM steam_profiles FINAL
-            WHERE personaname_lc IS NOT NULL
-              AND not empty(personaname_lc)
-              AND personaname_lc LIKE like_pattern
-              AND dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) >= min_matches
-            ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
-                     if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
-                     jaroWinklerSimilarity(personaname_lc, lower(query))
-                       + 0.02 * log1p(dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0))) DESC
+            mp.matches_played AS matches_played_last_30d,
+            mp.last_team_avg_badge AS last_team_avg_badge
+        FROM steam_profiles sp
+        INNER JOIN player_match_counts30d mp ON sp.account_id = mp.account_id
+        WHERE sp.account_id IN (
+            SELECT sp2.account_id
+            FROM steam_profiles sp2
+            INNER JOIN player_match_counts30d mp2 ON sp2.account_id = mp2.account_id
+            WHERE mp2.matches_played >= min_matches
+              AND personaname_lc IS NOT NULL AND not empty(personaname_lc)
+            ORDER BY if(sp2.account_id == toUInt32OrDefault(query), -1, 0),
+                     if(toUInt64(sp2.account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
+                     jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(mp2.matches_played) DESC
+            LIMIT 1 BY sp2.account_id
             LIMIT ?
         )
-        ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
-                 if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
+        ORDER BY if(sp.account_id == toUInt32OrDefault(query), -1, 0),
+                 if(toUInt64(sp.account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
                  jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(matches_played_last_30d) DESC
         SETTINGS log_comment = 'steam_search'
     ";
@@ -413,7 +411,6 @@ async fn search_steam(
     match ch_client
         .query(query)
         .bind(&search_query)
-        .bind(&like_pattern)
         .bind(min_matches_played_last_30d)
         .bind(limit)
         .fetch_all::<SteamProfileRow>()
