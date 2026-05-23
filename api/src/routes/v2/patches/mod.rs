@@ -1,4 +1,3 @@
-mod big_patch_days;
 pub(super) mod feed;
 
 use core::time::Duration;
@@ -17,10 +16,8 @@ use crate::middleware::cache::CacheControlMiddleware;
 )))]
 struct ApiDoc;
 
-#[allow(deprecated)]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(big_patch_days::big_patch_days))
         .routes(routes!(feed::feed))
         .layer(
             CacheControlMiddleware::new(Duration::from_hours(1))

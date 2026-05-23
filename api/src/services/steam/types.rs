@@ -192,3 +192,66 @@ pub(crate) struct PatchCategory {
     #[serde(rename(deserialize = "$text"))]
     pub(crate) text: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub(super) struct ForumRssV2 {
+    pub(crate) channel: ForumChannelV2,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct ForumChannelV2 {
+    #[serde(default, rename = "item")]
+    pub(crate) patch_notes: Vec<ForumPatch>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct ForumPatch {
+    pub(crate) title: String,
+    #[serde(deserialize_with = "parse_rfc2822_datetime")]
+    pub(crate) pub_date: DateTime<FixedOffset>,
+    pub(crate) link: String,
+    pub(crate) guid: PatchGuid,
+    pub(crate) category: PatchCategory,
+    #[serde(rename(deserialize = "encoded"))]
+    pub(crate) content: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct SteamRss {
+    pub(crate) channel: SteamChannel,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct SteamChannel {
+    #[serde(default, rename = "item")]
+    pub(crate) patch_notes: Vec<SteamNews>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all(deserialize = "camelCase"))]
+pub(crate) struct SteamNews {
+    pub(crate) title: String,
+    #[serde(deserialize_with = "parse_rfc2822_datetime")]
+    pub(crate) pub_date: DateTime<FixedOffset>,
+    pub(crate) link: String,
+    pub(crate) guid: PatchGuid,
+    #[serde(rename(deserialize = "description"))]
+    pub(crate) content: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(tag = "source", rename_all = "lowercase")]
+pub(crate) enum FeedItem {
+    Forum(ForumPatch),
+    Steam(SteamNews),
+}
+
+impl FeedItem {
+    pub(crate) fn pub_date(&self) -> DateTime<FixedOffset> {
+        match self {
+            Self::Forum(p) => p.pub_date,
+            Self::Steam(p) => p.pub_date,
+        }
+    }
+}

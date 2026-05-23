@@ -16,6 +16,8 @@ use crate::services::steam::types::Patch;
     tags = ["Patches"],
     summary = "Notes",
     description = "
+**Deprecated:** Use `/v2/patches` instead, which returns a unified feed combining the Forum changelog and the Steam news feed.
+
 Returns the parsed result of the RSS Feed from the official Forum.
 
 RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
@@ -28,6 +30,7 @@ RSS-Feed: https://forums.playdeadlock.com/forums/changelog.10/index.rss
 | Global | - |
     "
 )]
+#[deprecated(note = "Use /v2/patches instead")]
 pub(super) async fn feed(State(state): State<AppState>) -> APIResult<impl IntoResponse> {
     state.steam_client.fetch_patch_notes().await.map(Json)
 }

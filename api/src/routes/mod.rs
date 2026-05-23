@@ -14,6 +14,7 @@ use crate::routes::v1::{data_privacy, players};
 use crate::utils::parse;
 
 pub mod v1;
+pub mod v2;
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
@@ -54,6 +55,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
             get(player_scoreboard::player_scoreboard),
         )
         .nest("/v1", v1::router(state))
+        .nest("/v2", v2::router())
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &Request<_>| {
