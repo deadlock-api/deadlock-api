@@ -149,7 +149,7 @@ function DataPrivacy() {
         const actionText = action === "deletion" ? "Data deletion request" : "Tracking re-enablement";
         setMessage({
           type: "success",
-          text: `${actionText} submitted successfully. You will receive confirmation via Steam.`,
+          text: `${actionText} submitted successfully.`,
         });
       } catch (error) {
         console.error("Error processing Steam callback:", error);
