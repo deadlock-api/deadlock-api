@@ -36,6 +36,9 @@ pub(crate) struct AccountIdsQuery {
 pub(super) struct SteamSearchQuery {
     /// Search query for Steam profiles.
     search_query: String,
+    /// Maximum number of profiles to return.
+    #[param(inline, default = "100", maximum = 1000, minimum = 1)]
+    limit: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -353,6 +356,7 @@ async fn fetch_matches_played_last_30d(
 async fn search_steam(
     ch_client: &clickhouse::Client,
     search_query: String,
+    limit: u32,
 ) -> APIResult<Vec<SteamProfile>> {
     let query = "
         WITH ? as query
@@ -374,13 +378,14 @@ async fn search_steam(
         ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
                  if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
                  jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(matches_played_last_30d) DESC
-        LIMIT 100
+        LIMIT ?
         SETTINGS log_comment = 'steam_search'
     ";
     debug!(?query);
     match ch_client
         .query(query)
         .bind(&search_query)
+        .bind(limit)
         .fetch_all::<SteamProfileRow>()
         .await
     {
@@ -426,10 +431,14 @@ See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(
     "
 )]
 pub(super) async fn steam_search(
-    Query(SteamSearchQuery { search_query }): Query<SteamSearchQuery>,
+    Query(SteamSearchQuery {
+        search_query,
+        limit,
+    }): Query<SteamSearchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    search_steam(&state.ch_client_ro, search_query)
+    let limit = limit.unwrap_or(100).clamp(1, 1000);
+    search_steam(&state.ch_client_ro, search_query, limit)
         .await
         .map(Json)
 }
