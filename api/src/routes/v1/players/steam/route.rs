@@ -39,6 +39,11 @@ pub(super) struct SteamSearchQuery {
     /// Maximum number of profiles to return.
     #[param(inline, default = "100", maximum = 1000, minimum = 1)]
     limit: Option<u32>,
+    /// Only return profiles that have played at least this many matches in the
+    /// last 30 days. Defaults to 5 to filter out inactive/empty profiles and
+    /// keep search responsive.
+    #[param(inline, default = "5", minimum = 0)]
+    min_matches_played_last_30d: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -60,6 +65,7 @@ pub(crate) struct SteamProfile {
     pub(super) last_updated: chrono::DateTime<Utc>,
     pub(super) friends: Vec<SteamFriend>,
     pub(super) matches_played_last_30d: u64,
+    pub(super) last_team_avg_badge: Option<u32>,
 }
 
 #[derive(Debug, Clone, Row, Deserialize)]
@@ -80,6 +86,8 @@ pub(crate) struct SteamProfileRow {
     pub(crate) friends_friend_since: Vec<u32>,
     #[serde(default)]
     pub(crate) matches_played_last_30d: u64,
+    #[serde(default)]
+    pub(crate) last_team_avg_badge: Option<u32>,
 }
 
 impl From<SteamProfileRow> for SteamProfile {
@@ -107,6 +115,7 @@ impl From<SteamProfileRow> for SteamProfile {
             last_updated: row.last_updated,
             friends,
             matches_played_last_30d: row.matches_played_last_30d,
+            last_team_avg_badge: row.last_team_avg_badge,
         }
     }
 }
@@ -136,6 +145,7 @@ impl From<SteamProfileInsertRow> for SteamProfile {
             last_updated: Utc::now(),
             friends,
             matches_played_last_30d: 0,
+            last_team_avg_badge: None,
         }
     }
 }
@@ -161,7 +171,8 @@ impl BatchQuery for SteamProfileQuery {
                 last_updated,
                 friends.account_id,
                 friends.friend_since,
-                dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d
+                dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d,
+                dictGetOrDefault('player_match_counts30d_dict', 'last_team_avg_badge', toUInt64(account_id), toUInt64(0)) AS last_team_avg_badge
             FROM steam_profiles
             WHERE account_id IN ({})
             ORDER BY last_updated DESC
@@ -295,8 +306,9 @@ pub(super) async fn steam(
         let matches_map =
             fetch_matches_played_last_30d(&state.ch_client_ro, &refreshed_ids).await?;
         for profile in &mut profiles {
-            if let Some(&count) = matches_map.get(&profile.account_id) {
+            if let Some(&(count, last_team_avg_badge)) = matches_map.get(&profile.account_id) {
                 profile.matches_played_last_30d = count;
+                profile.last_team_avg_badge = last_team_avg_badge;
             }
         }
     }
@@ -319,17 +331,19 @@ pub(super) async fn steam(
 struct MatchesPlayed30dRow {
     account_id: u32,
     matches_played: u64,
+    last_team_avg_badge: Option<u32>,
 }
 
 async fn fetch_matches_played_last_30d(
     ch_client: &clickhouse::Client,
     account_ids: &[u32],
-) -> APIResult<HashMap<u32, u64>> {
+) -> APIResult<HashMap<u32, (u64, Option<u32>)>> {
     let query = format!(
         "
         SELECT
             account_id,
-            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played
+            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played,
+            dictGetOrDefault('player_match_counts30d_dict', 'last_team_avg_badge', toUInt64(account_id), toUInt64(0)) AS last_team_avg_badge
         FROM (SELECT arrayJoin([{}]) AS account_id)
         SETTINGS log_comment = 'steam_matches_played_last_30d'
         ",
@@ -342,7 +356,7 @@ async fn fetch_matches_played_last_30d(
     {
         Ok(rows) => Ok(rows
             .into_iter()
-            .map(|r| (r.account_id, r.matches_played))
+            .map(|r| (r.account_id, (r.matches_played, r.last_team_avg_badge)))
             .collect()),
         Err(e) => {
             warn!("Failed to fetch matches_played_last_30d: {e}");
@@ -357,9 +371,11 @@ async fn search_steam(
     ch_client: &clickhouse::Client,
     search_query: String,
     limit: u32,
+    min_matches_played_last_30d: u32,
 ) -> APIResult<Vec<SteamProfile>> {
+    let like_pattern = format!("%{}%", search_query.to_lowercase());
     let query = "
-        WITH ? as query
+        WITH ? as query, ? as like_pattern, ? as min_matches
         SELECT
             account_id,
             personaname,
@@ -372,19 +388,33 @@ async fn search_steam(
             last_updated,
             friends.account_id,
             friends.friend_since,
-            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d
+            dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) AS matches_played_last_30d,
+            dictGetOrDefault('player_match_counts30d_dict', 'last_team_avg_badge', toUInt64(account_id), toUInt64(0)) AS last_team_avg_badge
         FROM steam_profiles FINAL
-        WHERE personaname_lc IS NOT NULL AND not empty(personaname_lc)
+        WHERE account_id IN (
+            SELECT account_id
+            FROM steam_profiles FINAL
+            WHERE personaname_lc IS NOT NULL
+              AND not empty(personaname_lc)
+              AND personaname_lc LIKE like_pattern
+              AND dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0)) >= min_matches
+            ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
+                     if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
+                     jaroWinklerSimilarity(personaname_lc, lower(query))
+                       + 0.02 * log1p(dictGetOrDefault('player_match_counts30d_dict', 'matches_played', toUInt64(account_id), toUInt64(0))) DESC
+            LIMIT ?
+        )
         ORDER BY if(account_id == toUInt32OrDefault(query), -1, 0),
                  if(toUInt64(account_id) + 76561197960265728 == toUInt64OrDefault(query), -1, 0),
                  jaroWinklerSimilarity(personaname_lc, lower(query)) + 0.02 * log1p(matches_played_last_30d) DESC
-        LIMIT ?
         SETTINGS log_comment = 'steam_search'
     ";
     debug!(?query);
     match ch_client
         .query(query)
         .bind(&search_query)
+        .bind(&like_pattern)
+        .bind(min_matches_played_last_30d)
         .bind(limit)
         .fetch_all::<SteamProfileRow>()
         .await
@@ -434,11 +464,18 @@ pub(super) async fn steam_search(
     Query(SteamSearchQuery {
         search_query,
         limit,
+        min_matches_played_last_30d,
     }): Query<SteamSearchQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     let limit = limit.unwrap_or(100).clamp(1, 1000);
-    search_steam(&state.ch_client_ro, search_query, limit)
-        .await
-        .map(Json)
+    let min_matches_played_last_30d = min_matches_played_last_30d.unwrap_or(5);
+    search_steam(
+        &state.ch_client_ro,
+        search_query,
+        limit,
+        min_matches_played_last_30d,
+    )
+    .await
+    .map(Json)
 }
