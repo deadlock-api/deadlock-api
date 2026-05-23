@@ -1,0 +1,4086 @@
+<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
+{
+	generic_data_type = "CEntitySubclassVDataBase"
+	_include = 
+	[
+		"scripts/misc/breakable_props.vdata_inc",
+		"scripts/misc/breakable_prop_pickups.vdata_inc",
+		"scripts/misc/xp_orbs.vdata_inc",
+		"scripts/misc/neutral_camps.vdata_inc",
+		"scripts/misc/capture_points.vdata_inc",
+	]
+	citadel_item_powerup_spawner = 
+	{
+		m_flInitialSpawnTime = 300
+		m_flSpawnInterval = 300
+		m_flInitialSpawnTimeTest = 1.000000
+		m_flRespawnTimeTest = 10.000000
+		m_hModel = resource_name:"models/npc/sewer_beast/sewer.vmdl"
+		m_flModelScale = 1.500000
+		m_InactiveParticle = resource_name:"particles/environment/powerup_spawner_inactive_ambient.vpcf"
+		m_ActiveParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "gun_powerup_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "survival_powerup_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "casting_powerup_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "movement_powerup_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+	}
+	citadel_refresh_spawner = 
+	{
+		_class = "citadel_item_powerup_spawner"
+		m_flInitialSpawnTime = 5.000000
+		m_flRespawnTime = 1
+		m_flInitialSpawnTimeTest = 5.000000
+		m_flRespawnTimeTest = 1
+		m_bRespawnTimerStartsAfterPickup = true
+		m_hModel = resource_name:""
+		m_flModelScale = 0.500000
+		m_InactiveParticle = resource_name:"particles/environment/powerup_spawner_inactive_ambient.vpcf"
+		m_ActiveParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_sSinglePickupOverride = "refresh_powerup_pickup"
+	}
+	citadel_change_team_spawner = 
+	{
+		_class = "citadel_item_powerup_spawner"
+		m_flInitialSpawnTime = -1
+		m_flRespawnTime = 1
+		m_flInitialSpawnTimeTest = -1
+		m_flRespawnTimeTest = 1
+		m_bRespawnTimerStartsAfterPickup = true
+		m_hModel = resource_name:""
+		m_flModelScale = 0.500000
+		m_InactiveParticle = resource_name:"particles/environment/powerup_spawner_inactive_ambient.vpcf"
+		m_ActiveParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_sSinglePickupOverride = "change_team_powerup_pickup"
+	}
+	citadel_breakable_prop_base = 
+	{
+		_class = "citadel_breakable_prop"
+		_not_pickable = 2
+		m_flRespawnTime = 5.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0.000000
+		m_flPrimaryDropChance = 0.000000
+	}
+	citadel_breakable_prop_drop_powerups = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 50.000000
+		_base = "citadel_breakable_prop_base"
+		_not_pickable = 2
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "spirit_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "firerate_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "ammo_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "hp_permanent_pickup"
+				m_flPickupWeight = 2.000000
+			},
+			
+			{
+				m_sPickup = "cd_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "wp_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_vecPickups_lv2 = 
+		[
+			
+			{
+				m_sPickup = "spirit_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "firerate_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "ammo_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "hp_permanent_pickup_lv2"
+				m_flPickupWeight = 2.000000
+			},
+			
+			{
+				m_sPickup = "cd_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "wp_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_vecPickups_lv3 = 
+		[
+			
+			{
+				m_sPickup = "spirit_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "firerate_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "ammo_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "hp_permanent_pickup_lv3"
+				m_flPickupWeight = 2.000000
+			},
+			
+			{
+				m_sPickup = "cd_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "wp_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_iMatchTimeMinsForLevel2Pickups = 10
+		m_iMatchTimeMinsForLevel3Pickups = 30
+		m_flInitialSpawnTimeTest = 1.000000
+		m_flRespawnTimeTest = 5.000000
+		m_eRollType = "ECitadelRandomRoll_BreakablePowerupPickup"
+		m_iLootListDeckSize = 5
+	}
+	citadel_breakable_prop_drop_gold = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_base"
+		_not_pickable = 2
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+	}
+	citadel_breakable_item_container = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 50.000000
+		_base = "citadel_breakable_prop_drop_powerups"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "spirit_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "firerate_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "ammo_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "hp_permanent_pickup"
+				m_flPickupWeight = 2.000000
+			},
+			
+			{
+				m_sPickup = "cd_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "wp_permanent_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_vecPickups_lv2 = 
+		[
+			
+			{
+				m_sPickup = "spirit_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "firerate_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "ammo_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "hp_permanent_pickup_lv2"
+				m_flPickupWeight = 2.000000
+			},
+			
+			{
+				m_sPickup = "cd_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "wp_permanent_pickup_lv2"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_vecPickups_lv3 = 
+		[
+			
+			{
+				m_sPickup = "spirit_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "firerate_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "ammo_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "hp_permanent_pickup_lv3"
+				m_flPickupWeight = 2.000000
+			},
+			
+			{
+				m_sPickup = "cd_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+			
+			{
+				m_sPickup = "wp_permanent_pickup_lv3"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_iMatchTimeMinsForLevel2Pickups = 10
+		m_iMatchTimeMinsForLevel3Pickups = 30
+		m_flInitialSpawnTimeTest = 1.000000
+		m_flRespawnTimeTest = 5.000000
+		m_eRollType = "ECitadelRandomRoll_BreakablePowerupPickup"
+		m_iLootListDeckSize = 5
+		m_hModel = resource_name:"models/props_gameplay/item_container_breakable/item_container.vmdl"
+		m_sBreakSound = soundevent:"glass.break"
+	}
+	citadel_breakable_prop_vase = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/vase_large/vase_large.vmdl"
+		m_sBreakSound = soundevent:"Pottery.Large.Break"
+	}
+	citadel_breakable_prop_box_multi = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/test/physics/break_box_multi.vmdl"
+	}
+	citadel_breakable_prop_wooden_crate = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/items/item_crate.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Wood.Crate.Break"
+		m_sSpawnSound = soundevent:"Wood.Crate.Spawn"
+	}
+	citadel_breakable_lion_statue = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/lion_statue_02/lion_statue_02.vmdl"
+		m_sBreakSound = soundevent:"Pottery.Break"
+	}
+	citadel_breakable_sake_barrel = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/sake_barrel_01/sake_barrel_01.vmdl"
+		m_sBreakSound = soundevent:"Wood.Crate.Break"
+		m_bIsMantleable = true
+	}
+	citadel_breakable_wooden_crate_02 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/wooden_crate_02/wooden_crate_02.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Wood.Crate.Break"
+	}
+	citadel_breakable_wooden_crate_03 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/wooden_crate_03/wooden_crate_03.vmdl"
+		m_sBreakSound = soundevent:"Wood.Crate.Break"
+		m_bIsMantleable = true
+	}
+	citadel_breakable_jar_01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/jar_01/jar_01.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Pottery.Break"
+		m_sDamageSound = soundevent:"Pottery.BulletImpact"
+	}
+	citadel_breakable_prop_car = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/car_04_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_car_01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/car_01_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_car_04 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/car_04_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_car_05 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/car_05_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_large_truck_01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/large_truck_01_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_large_truck_02 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/large_truck_02_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_mini_truck_03 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/mini_truck_03_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_bike_flying = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/bike_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	vehicle_ground_ship_03 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_vehicles/ground_ship_03_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = true
+	}
+	citadel_base_glass_vert_01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 60.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = true
+		m_bRenderAfterDeath = true
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_structures/caldera_base_glass_vert_01_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = false
+	}
+	citadel_base_glass_horiz_01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 60.000000
+		m_iHealth = 100000000
+		m_bBreakOnDodgeTouch = false
+		m_bSolidAfterDeath = true
+		m_bRenderAfterDeath = true
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 0
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_car"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_structures/caldera_base_glass_horiz_01_breakable.vmdl"
+		m_sAnimgraphParamOnHit = "b_Hit_Trigger"
+		m_flDropChance = 0.000000
+		m_sAnimgraphParamDamageReceived = ""
+		m_sDamageSound = soundevent:""
+		m_bIsPermanent = true
+		m_bIsMantleable = false
+	}
+	citadel_breakable_prop_pumpkin01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props/pumpkin_a.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Pumpkin.Smash_Large"
+	}
+	citadel_breakable_prop_pumpkin02 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props/pumpkin_b.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Pumpkin.Smash_Large"
+	}
+	citadel_breakable_prop_pumpkin03 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props/pumpkin_c.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Pumpkin.Smash_Small"
+	}
+	citadel_breakable_prop_pumpkin04 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props/pumpkin_d.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Pumpkin.Smash_Small"
+	}
+	citadel_breakable_prop_xmaspresent01 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/item_container_breakable/xmas_giftbox.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Present.Smash_Large"
+	}
+	citadel_breakable_prop_xmaspresent02 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/item_container_breakable/xmas_giftbox02.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Present.Smash_Large"
+	}
+	citadel_breakable_prop_xmaspresent03 = 
+	{
+		_class = "citadel_breakable_prop"
+		m_flRespawnTime = 180.000000
+		m_iHealth = 1
+		m_bBreakOnDodgeTouch = true
+		m_bSolidAfterDeath = false
+		m_bRenderAfterDeath = false
+		m_bDamagedByAbilities = true
+		m_bDamagedByMelee = true
+		m_bDamagedByBullets = true
+		m_flInitialSpawnTime = 120.000000
+		m_flPrimaryDropChance = 60.000000
+		_base = "citadel_breakable_prop_drop_gold"
+		m_vecPrimaryPickups = 
+		[
+			
+			{
+				m_sPickup = "small_gold_pickup"
+				m_flPickupWeight = 1.000000
+			},
+		]
+		m_eRollType = "ECitadelRandomRoll_BreakableGoldPickup"
+		m_hModel = resource_name:"models/props_gameplay/item_container_breakable/xmas_giftbox03.vmdl"
+		m_bIsMantleable = true
+		m_sBreakSound = soundevent:"Present.Smash_Large"
+	}
+	citadel_breakable_prop_pickup_base = 
+	{
+		_class = "citadel_breakable_prop_pickup"
+		_not_pickable = 2
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = true
+		m_sNameLocString = ""
+		m_sPickupSound = soundevent:"Powerup.Pickup.Gold"
+		m_nNameOffset = 150
+	}
+	citadel_punchable_powerup_base = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = true
+		m_sNameLocString = ""
+		m_sPickupSound = soundevent:"Powerup.Pickup.Gold"
+		m_nNameOffset = 150
+		_base = "citadel_breakable_prop_pickup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_rejuv"
+			m_bIsHidden = true
+			m_flAuraRadius = 300.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_HEAVY_PUNCHABLE_ITEM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+	}
+	small_gold_pickup = 
+	{
+		_class = "citadel_breakable_prop_gold_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "small_gold_pickup_label:p"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Souls"
+		m_nNameOffset = 60
+		_base = "citadel_breakable_prop_pickup_base"
+		m_flGoldAmount = 23
+		m_flGoldPerMinuteAmount = 2.000000
+		m_Color = 
+		[
+			0,
+			255,
+			204,
+		]
+		m_sDefaultMaterialGroupName = "gold"
+		m_bIsPermanentPickup = true
+	}
+	gun_powerup_pickup = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = true
+		m_sNameLocString = "gun_powerup_pickup"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Generic"
+		m_nNameOffset = 150
+		_base = "citadel_punchable_powerup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_rejuv"
+			m_bIsHidden = true
+			m_flAuraRadius = 300.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_HEAVY_PUNCHABLE_ITEM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+		m_sModifer = subclass:
+		{
+			_class = "modifier_citadel_powerup_gun"
+			_my_subclass_name = "gun_powerup_pickup"
+			m_flDuration = 160.000000
+			m_flTimeMin = 5
+			m_flTimeMax = 40
+			m_vecModifierValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_FIRE_RATE"
+					m_valueMin = 12.000000
+					m_valueMax = 35.000000
+				},
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT"
+					m_valueMin = 35.000000
+					m_valueMax = 70.000000
+				},
+			]
+			m_sLocalizationName = "gun_powerup_pickup"
+			m_vecAlwaysShowInStatModifierUI = 
+			[
+				"MODIFIER_VALUE_FIRE_RATE",
+				"MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT",
+			]
+			m_strHudIcon = panorama:"file://{images}/hud/modifiers/icon_powerup.svg"
+			m_strSmallIconCssClass = "gunpower_pickup"
+			m_eModifierDisplayLocaiton = "MODIFIER_DISPLAY_BOTTOM_LEFT"
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+			m_eDrawOverheadStatus = "OVERHEAD_DRAW_FOR_EVERYONE"
+		}
+		m_Color = 
+		[
+			218,
+			148,
+			65,
+		]
+		m_iTempParticleSheetIndex = 9
+		m_sMiniMapCssClass = "powerup_gun"
+		m_sAmbientSound = soundevent:"Powerup.Gun_Lp"
+	}
+	survival_powerup_pickup = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = true
+		m_sNameLocString = "survival_powerup_pickup"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Generic"
+		m_nNameOffset = 150
+		_base = "citadel_punchable_powerup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_rejuv"
+			m_bIsHidden = true
+			m_flAuraRadius = 300.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_HEAVY_PUNCHABLE_ITEM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+		m_sModifer = subclass:
+		{
+			_class = "modifier_citadel_powerup_survival"
+			_my_subclass_name = "survival_powerup_pickup"
+			m_flDuration = 160.000000
+			m_flTimeMin = 5
+			m_flTimeMax = 40
+			m_vecModifierValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_HEALTH_MAX"
+					m_valueMin = 200.000000
+					m_valueMax = 750.000000
+				},
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_HEALTH_REGEN_PER_SECOND"
+					m_valueMin = 4
+					m_valueMax = 40
+				},
+			]
+			m_sLocalizationName = "survival_powerup_pickup"
+			m_vecAlwaysShowInStatModifierUI = 
+			[
+				"MODIFIER_VALUE_HEALTH_MAX",
+				"MODIFIER_VALUE_HEALTH_REGEN_PER_SECOND",
+			]
+			m_strHudIcon = panorama:"file://{images}/hud/modifiers/icon_powerup.svg"
+			m_strSmallIconCssClass = "survival_pickup"
+			m_eModifierDisplayLocaiton = "MODIFIER_DISPLAY_BOTTOM_LEFT"
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+			m_eDrawOverheadStatus = "OVERHEAD_DRAW_FOR_EVERYONE"
+		}
+		m_iTempParticleSheetIndex = 6
+		m_Color = 
+		[
+			122,
+			184,
+			29,
+		]
+		m_sMiniMapCssClass = "powerup_survival"
+		m_sAmbientSound = soundevent:"Powerup.Survival_Lp"
+	}
+	casting_powerup_pickup = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = true
+		m_sNameLocString = "casting_powerup_pickup"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Generic"
+		m_nNameOffset = 150
+		_base = "citadel_punchable_powerup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_rejuv"
+			m_bIsHidden = true
+			m_flAuraRadius = 300.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_HEAVY_PUNCHABLE_ITEM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+		m_sModifer = subclass:
+		{
+			_class = "modifier_citadel_powerup_casting"
+			_my_subclass_name = "casting_powerup_pickup"
+			m_flDuration = 160.000000
+			m_flTimeMin = 5
+			m_flTimeMax = 40
+			m_vecModifierValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_TECH_POWER"
+					m_valueMin = 15.000000
+					m_valueMax = 65.000000
+				},
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE"
+					m_valueMin = 12.000000
+					m_valueMax = 20.000000
+				},
+			]
+			m_sLocalizationName = "casting_powerup_pickup"
+			m_vecAlwaysShowInStatModifierUI = 
+			[
+				"MODIFIER_VALUE_TECH_POWER",
+				"MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE",
+			]
+			m_strHudIcon = panorama:"file://{images}/hud/modifiers/icon_powerup.svg"
+			m_strSmallIconCssClass = "casting_pickup"
+			m_eModifierDisplayLocaiton = "MODIFIER_DISPLAY_BOTTOM_LEFT"
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+			m_eDrawOverheadStatus = "OVERHEAD_DRAW_FOR_EVERYONE"
+		}
+		m_Color = 
+		[
+			203,
+			143,
+			252,
+		]
+		m_iTempParticleSheetIndex = 7
+		m_sMiniMapCssClass = "powerup_casting"
+		m_sAmbientSound = soundevent:"Powerup.Casting_Lp"
+	}
+	movement_powerup_pickup = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = true
+		m_sNameLocString = "movement_powerup_pickup"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Generic"
+		m_nNameOffset = 150
+		_base = "citadel_punchable_powerup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_rejuv"
+			m_bIsHidden = true
+			m_flAuraRadius = 300.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_HEAVY_PUNCHABLE_ITEM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+		m_sModifer = subclass:
+		{
+			_class = "modifier_citadel_powerup_movement"
+			_my_subclass_name = "movement_powerup_pickup"
+			m_flDuration = 160.000000
+			m_flTimeMin = 5
+			m_flTimeMax = 40
+			m_vecModifierValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_STAMINA"
+					m_valueMin = 2
+					m_valueMax = 4
+				},
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_SPRINT_SPEED_BONUS"
+					m_valueMin = 59.055100
+					m_valueMax = 157.480000
+				},
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_ZIP_LINE_SPEED_PERCENTAGE"
+					m_valueMin = 40
+					m_valueMax = 80
+				},
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_STAMINA_REGEN_PER_SECOND_PERCENTAGE"
+					m_valueMin = 20
+					m_valueMax = 50
+				},
+			]
+			m_vecAlwaysShowInStatModifierUI = 
+			[
+				"MODIFIER_VALUE_SPRINT_SPEED_BONUS",
+				"MODIFIER_VALUE_SPRINT_SPEED_BONUS",
+				"MODIFIER_VALUE_ZIP_LINE_SPEED_PERCENTAGE",
+			]
+			m_sLocalizationName = "movement_powerup_pickup"
+			m_strHudIcon = panorama:"file://{images}/hud/modifiers/icon_powerup.svg"
+			m_strSmallIconCssClass = "movement_pickup"
+			m_eModifierDisplayLocaiton = "MODIFIER_DISPLAY_BOTTOM_LEFT"
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+			m_eDrawOverheadStatus = "OVERHEAD_DRAW_FOR_EVERYONE"
+		}
+		m_iTempParticleSheetIndex = 8
+		m_Color = 
+		[
+			50,
+			50,
+			255,
+		]
+		m_sMiniMapCssClass = "powerup_movement"
+		m_sAmbientSound = soundevent:"Powerup.Movement_Lp"
+	}
+	refresh_powerup_pickup = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1
+		m_bShowOnMinimap = true
+		m_sNameLocString = "refresh_powerup_pickup"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Generic"
+		m_nNameOffset = 150
+		_base = "citadel_punchable_powerup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_rejuv"
+			m_bIsHidden = true
+			m_flAuraRadius = 300.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_HEAVY_PUNCHABLE_ITEM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+		m_sModifer = subclass:
+		{
+			_class = "citadel_hero_refresh"
+			_my_subclass_name = "citadel_hero_refresh"
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+		}
+		m_iTempParticleSheetIndex = 10
+		m_Color = 
+		[
+			203,
+			143,
+			252,
+		]
+		m_sMiniMapCssClass = "powerup_refresh"
+		m_sAmbientSound = soundevent:"Powerup.Survival_Lp"
+	}
+	change_team_powerup_pickup = 
+	{
+		_class = "citadel_punchable_powerup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/powerup_spawner_ambient_simple.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/powerup_spawner_ambient_simple.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/bridge_buff.vpcf"
+		m_hModel = resource_name:"models/null.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.BridgeBuff.Spawn"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 300
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1
+		m_bShowOnMinimap = true
+		m_sNameLocString = "change_team_powerup_pickup"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Generic"
+		m_nNameOffset = 120
+		_base = "citadel_punchable_powerup_base"
+		m_AuraModifier = subclass:
+		{
+			_class = "modifier_base_aura"
+			_my_subclass_name = "near_change_team"
+			m_bIsHidden = true
+			m_flAuraRadius = 150.000000
+			m_modifierProvidedByAura = subclass:
+			{
+				_class = "modifier_base"
+				_my_subclass_name = "target_near_item"
+				m_bIsHidden = true
+				m_nEnabledStateMask = "MODIFIER_STATE_NEAR_PUNCHABLE_CHANGE_TEAM"
+			}
+			m_iAuraSearchType = "CITADEL_UNIT_TARGET_HERO"
+		}
+		m_iHitsRequired = 1
+		m_sHitSound = soundevent:"Powerup.Pickup.Punch"
+		m_DamagedParticle = resource_name:"particles/environment/powerup_spawner_ambient_damaged.vpcf"
+		m_flCollisionRadius = 40.000000
+		m_sModifer = subclass:
+		{
+			_class = "citadel_change_team"
+			_my_subclass_name = "citadel_change_team"
+			m_eHudDisplayLocation = "DISPLAY_HUD_NONE"
+		}
+		m_iTempParticleSheetIndex = 11
+		m_Color = 
+		[
+			195,
+			82,
+			26,
+		]
+		m_sMiniMapCssClass = "powerup_survival"
+		m_sAmbientSound = soundevent:"Powerup.Survival_Lp"
+	}
+	permanent_pickup_base = 
+	{
+		_class = "citadel_breakable_prop_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = ""
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "citadel_breakable_prop_pickup_base"
+		_not_pickable = 2
+		m_bIsPermanentPickup = true
+	}
+	spirit_permanent_pickup = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "spirit_permanent_pickup_label"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "permanent_pickup_base"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_TECH_POWER"
+					m_value = 2.000000
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "purple"
+		m_Color = 
+		[
+			88,
+			20,
+			180,
+		]
+	}
+	spirit_permanent_pickup_lv2 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "spirit_permanent_pickup_label_lv2"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "spirit_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_TECH_POWER"
+					m_value = 3.000000
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "purple"
+		m_Color = 
+		[
+			88,
+			20,
+			180,
+		]
+	}
+	spirit_permanent_pickup_lv3 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "spirit_permanent_pickup_label_lv3"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "spirit_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_TECH_POWER"
+					m_value = 4.000000
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "purple"
+		m_Color = 
+		[
+			88,
+			20,
+			180,
+		]
+	}
+	firerate_permanent_pickup = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "firerate_permanent_pickup_label"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Weapon"
+		m_nNameOffset = 60
+		_base = "permanent_pickup_base"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_FIRE_RATE"
+					m_value = 1.500000
+				},
+			]
+			m_strSmallIconCssClass = "fire_rate"
+		}
+		m_sDefaultMaterialGroupName = "red"
+		m_Color = 
+		[
+			200,
+			0,
+			0,
+		]
+	}
+	firerate_permanent_pickup_lv2 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "firerate_permanent_pickup_label_lv2"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Weapon"
+		m_nNameOffset = 60
+		_base = "firerate_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_FIRE_RATE"
+					m_value = 2.000000
+				},
+			]
+			m_strSmallIconCssClass = "fire_rate"
+		}
+		m_sDefaultMaterialGroupName = "red"
+		m_Color = 
+		[
+			200,
+			0,
+			0,
+		]
+	}
+	firerate_permanent_pickup_lv3 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "firerate_permanent_pickup_label_lv3"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Weapon"
+		m_nNameOffset = 60
+		_base = "firerate_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_FIRE_RATE"
+					m_value = 2.500000
+				},
+			]
+			m_strSmallIconCssClass = "fire_rate"
+		}
+		m_sDefaultMaterialGroupName = "red"
+		m_Color = 
+		[
+			200,
+			0,
+			0,
+		]
+	}
+	ammo_permanent_pickup = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "ammo_permanent_pickup_label"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Ammo"
+		m_nNameOffset = 60
+		_base = "permanent_pickup_base"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT"
+					m_value = 3
+				},
+			]
+			m_strSmallIconCssClass = "ammoIncrease"
+		}
+		m_sDefaultMaterialGroupName = "orange"
+		m_Color = 
+		[
+			255,
+			165,
+			0,
+		]
+	}
+	ammo_permanent_pickup_lv2 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "ammo_permanent_pickup_label_lv2"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Ammo"
+		m_nNameOffset = 60
+		_base = "ammo_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT"
+					m_value = 5
+				},
+			]
+			m_strSmallIconCssClass = "ammoIncrease"
+		}
+		m_sDefaultMaterialGroupName = "orange"
+		m_Color = 
+		[
+			255,
+			165,
+			0,
+		]
+	}
+	ammo_permanent_pickup_lv3 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "ammo_permanent_pickup_label_lv3"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Ammo"
+		m_nNameOffset = 60
+		_base = "ammo_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_AMMO_CLIP_SIZE_PERCENT"
+					m_value = 7
+				},
+			]
+			m_strSmallIconCssClass = "ammoIncrease"
+		}
+		m_sDefaultMaterialGroupName = "orange"
+		m_Color = 
+		[
+			255,
+			165,
+			0,
+		]
+	}
+	hp_permanent_pickup = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "hp_permanent_pickup_label"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Health"
+		m_nNameOffset = 60
+		_base = "permanent_pickup_base"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_HEALTH_MAX"
+					m_value = 15
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "green"
+		m_Color = 
+		[
+			50,
+			205,
+			50,
+		]
+	}
+	hp_permanent_pickup_lv2 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "hp_permanent_pickup_label_lv2"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Health"
+		m_nNameOffset = 60
+		_base = "hp_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_HEALTH_MAX"
+					m_value = 25
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "green"
+		m_Color = 
+		[
+			50,
+			205,
+			50,
+		]
+	}
+	hp_permanent_pickup_lv3 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "hp_permanent_pickup_label_lv3"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Health"
+		m_nNameOffset = 60
+		_base = "hp_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_HEALTH_MAX"
+					m_value = 35
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "green"
+		m_Color = 
+		[
+			50,
+			205,
+			50,
+		]
+	}
+	cd_permanent_pickup = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "cd_permanent_pickup_label"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "permanent_pickup_base"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE"
+					m_value = 0.500000
+				},
+			]
+			m_strSmallIconCssClass = "cooldownReduction"
+		}
+		m_sDefaultMaterialGroupName = "blue"
+		m_Color = 
+		[
+			0,
+			0,
+			200,
+		]
+	}
+	cd_permanent_pickup_lv2 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "cd_permanent_pickup_label_lv2"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "cd_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE"
+					m_value = 0.750000
+				},
+			]
+			m_strSmallIconCssClass = "cooldownReduction"
+		}
+		m_sDefaultMaterialGroupName = "blue"
+		m_Color = 
+		[
+			0,
+			0,
+			200,
+		]
+	}
+	cd_permanent_pickup_lv3 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "cd_permanent_pickup_label_lv3"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Spirit"
+		m_nNameOffset = 60
+		_base = "cd_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_COOLDOWN_REDUCTION_PERCENTAGE"
+					m_value = 1.000000
+				},
+			]
+			m_strSmallIconCssClass = "cooldownReduction"
+		}
+		m_sDefaultMaterialGroupName = "blue"
+		m_Color = 
+		[
+			0,
+			0,
+			200,
+		]
+	}
+	wp_permanent_pickup = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "wp_permanent_pickup_label"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Weapon"
+		m_nNameOffset = 60
+		_base = "permanent_pickup_base"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT"
+					m_value = 3
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "orange"
+		m_Color = 
+		[
+			200,
+			85,
+			0,
+		]
+	}
+	wp_permanent_pickup_lv2 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "wp_permanent_pickup_label_lv2"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Weapon"
+		m_nNameOffset = 60
+		_base = "wp_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT"
+					m_value = 4
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "orange"
+		m_Color = 
+		[
+			200,
+			85,
+			0,
+		]
+	}
+	wp_permanent_pickup_lv3 = 
+	{
+		_class = "citadel_breakable_prop_modifier_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 85.000000
+			m_flPerMinuteAfterStart = 0
+		}
+		m_friendlyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/breakable_item_drop.vpcf"
+		m_gainedParticle = resource_name:"particles/generic/powerup_spawner_gained.vpcf"
+		m_hModel = resource_name:"models/props_gameplay/powerup_idol/powerup_idol.vmdl"
+		m_sSpawnSound = soundevent:"Powerup.Spawn.Generic"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 30
+			m_flPerMinuteAfterStart = 0
+		}
+		m_flParticleRadius = 1.500000
+		m_bShowOnMinimap = false
+		m_sNameLocString = "wp_permanent_pickup_label_lv3"
+		m_sPickupSound = soundevent:"Powerup.Pickup.Weapon"
+		m_nNameOffset = 60
+		_base = "wp_permanent_pickup"
+		m_bIsPermanentPickup = true
+		m_sModifer = subclass:
+		{
+			_class = "modifier_permanent_pickup"
+			_my_subclass_name = "modifier_permanent_pickup"
+			m_vecScriptValues = 
+			[
+				
+				{
+					m_eModifierValue = "MODIFIER_VALUE_BASEATTACK_DAMAGE_PERCENT"
+					m_value = 6
+				},
+			]
+		}
+		m_sDefaultMaterialGroupName = "orange"
+		m_Color = 
+		[
+			200,
+			85,
+			0,
+		]
+	}
+	dropped_soul_orb = 
+	{
+		_class = "citadel_breakable_prop_dropped_gold_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 709
+			m_flPerMinuteAfterStart = 0
+			m_flStartMinute = 0.000000
+		}
+		m_sPickupSound = soundevent:"Pickup.XpOrb"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 18.000000
+			m_flPerMinuteAfterStart = 4.000000
+			m_flMaxValue = 40.000000
+			m_flStartMinute = 10.000000
+		}
+		m_hModel = resource_name:""
+		m_gainedParticle = resource_name:"particles/environment/spirit_orb_dropped_gained.vpcf"
+		m_friendlyParticle = resource_name:"particles/environment/spirit_orb_dropped_ambient.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/spirit_orb_dropped_ambient_enemy.vpcf"
+		m_Color = 
+		[
+			0,
+			0,
+			0,
+			0,
+		]
+		m_bSameTeamOnly = true
+		m_bPicupIsVacuum = true
+		m_VacuumToPlayerSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = -16.041637
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = -4004.629639
+				},
+				
+				{
+					x = 0.105087
+					y = -436.874969
+					m_flSlopeIncoming = -4004.629639
+					m_flSlopeOutgoing = 4603.734863
+				},
+				
+				{
+					x = 0.634412
+					y = 2000.000000
+					m_flSlopeIncoming = 4603.734863
+					m_flSlopeOutgoing = 0.000000
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				-500.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				1.000000,
+				2000.000000,
+			]
+		}
+		m_flInitialVacuumUpSpeed = 
+		[
+			100.000000,
+			100.000000,
+		]
+		m_VacuumInitialVelSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = 0.000000
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = 3.105128
+				},
+				
+				{
+					x = 0.037948
+					y = 0.117833
+					m_flSlopeIncoming = 7.669573
+					m_flSlopeOutgoing = 7.669573
+				},
+				
+				{
+					x = 0.130385
+					y = 1.000000
+					m_flSlopeIncoming = 0.423242
+					m_flSlopeOutgoing = 0.423242
+				},
+				
+				{
+					x = 0.356127
+					y = 0.252500
+					m_flSlopeIncoming = -2.705520
+					m_flSlopeOutgoing = -2.705520
+				},
+				
+				{
+					x = 0.500000
+					y = 0.000000
+					m_flSlopeIncoming = -1.755022
+					m_flSlopeOutgoing = 0.000000
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				0.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				0.500000,
+				1.000000,
+			]
+		}
+		m_flInitialVacuumSideSpeed = 
+		[
+			200.000000,
+			200.000000,
+		]
+		m_vacuumStartParticle = resource_name:"particles/environment/spirit_orb_dropped_claim.vpcf"
+		bPhysicallyDropToTheGroundOnSpawn = true
+		m_flFallGravity = 0.400000
+		m_flHoverOffset = 20.000000
+		m_fInitialSpawnXYSpeed = 
+		[
+			85.000000,
+			125.000000,
+		]
+		m_fInitialSpawnZSpeed = 
+		[
+			50.000000,
+			50.000000,
+		]
+		m_flOutlineRange = 2000.000000
+		m_OutlineColor = 
+		[
+			112,
+			248,
+			193,
+			255,
+		]
+	}
+	medic_trooper_aoe_health_pickup_amber = 
+	{
+		_class = "citadel_breakable_prop_health_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 709
+			m_flPerMinuteAfterStart = 59.012500
+			m_flMaxValue = 1181.100000
+			m_flStartMinute = 10.000000
+		}
+		m_sPickupSound = soundevent:"Powerup.HealthPack.Pickup"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 18.000000
+			m_flPerMinuteAfterStart = 2.000000
+			m_flMaxValue = 40.000000
+			m_flStartMinute = 10.000000
+		}
+		m_hModel = resource_name:""
+		m_gainedParticle = resource_name:"particles/environment/health_pack_projectile_endcap.vpcf"
+		m_friendlyParticle = resource_name:"particles/environment/health_pack_dropped_ambient_amber.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/health_pack_dropped_ambient_amber_enemy.vpcf"
+		m_Color = 
+		[
+			0,
+			0,
+			0,
+			0,
+		]
+		m_bSameTeamOnly = true
+		m_flHealFixed = 
+		{
+			m_flBase = 0.000000
+			m_flPerMinuteAfterStart = 0.000000
+		}
+		m_bUseFixedDuration = true
+		m_flRegenDuration = 2.000000
+		m_flRegenDurationTroopers = 8.000000
+		m_flRegenTrooperMulti = 1.300000
+		m_flMissingPctRegen = 
+		{
+			m_flBase = 16.000000
+		}
+		m_flRegenHPS = 0.000000
+		m_RegenModifier = subclass:
+		{
+			_class = "modifier_citadel_basic_health_regen"
+			m_bIsHidden = true
+			_my_subclass_name = "regen"
+			m_nAttributes = "MODIFIER_ATTRIBUTE_MULTIPLE"
+			m_HealingLoopSoundOverride = 
+			{
+				m_sLoopSound = soundevent:""
+				m_sStartSound = soundevent:"Player.Heal.OverTime.LowPriority.Start"
+				m_sEndSound = soundevent:""
+			}
+		}
+		m_bPicupIsVacuum = true
+		m_VacuumToPlayerSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = -16.041656
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = -15303.386719
+				},
+				
+				{
+					x = 0.031624
+					y = -500.000000
+					m_flSlopeIncoming = -483.901276
+					m_flSlopeOutgoing = -483.901276
+				},
+				
+				{
+					x = 0.086967
+					y = -58.124969
+					m_flSlopeIncoming = 7392.940430
+					m_flSlopeOutgoing = 7392.940430
+				},
+				
+				{
+					x = 0.173933
+					y = 552.083374
+					m_flSlopeIncoming = 3395.157715
+					m_flSlopeOutgoing = 4762.609375
+				},
+				
+				{
+					x = 0.452622
+					y = 1183.333374
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = 2265.070801
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_FREE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_FREE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				-500.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				1.000000,
+				2000.000000,
+			]
+		}
+		m_flInitialVacuumUpSpeed = 
+		[
+			400.000000,
+			400.000000,
+		]
+		m_VacuumInitialVelSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = 0.000000
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = 3.105128
+				},
+				
+				{
+					x = 0.037948
+					y = 0.117833
+					m_flSlopeIncoming = 7.669573
+					m_flSlopeOutgoing = 7.669573
+				},
+				
+				{
+					x = 0.130385
+					y = 1.000000
+					m_flSlopeIncoming = 0.423242
+					m_flSlopeOutgoing = 0.423242
+				},
+				
+				{
+					x = 0.356127
+					y = 0.252500
+					m_flSlopeIncoming = -2.705520
+					m_flSlopeOutgoing = -2.705520
+				},
+				
+				{
+					x = 0.500000
+					y = 0.000000
+					m_flSlopeIncoming = -1.755022
+					m_flSlopeOutgoing = 0.000000
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				0.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				0.500000,
+				1.000000,
+			]
+		}
+		m_flInitialVacuumSideSpeed = 
+		[
+			0.000000,
+			0.000000,
+		]
+		m_EffectDistanceToRadiusRemap = 
+		[
+			250.000000,
+			20.000000,
+			1.000000,
+			0.000000,
+		]
+		m_flAOERadius = 1377.950000
+		m_AOETargetTypes = "CITADEL_UNIT_TARGET_HERO_FRIENDLY | CITADEL_UNIT_TARGET_TROOPER_FRIENDLY"
+		m_AOETargetFlags = ""
+		m_ParticleAOEHeal = resource_name:"particles/environment/health_pack_aoe_heal.vpcf"
+		bPhysicallyDropToTheGroundOnSpawn = true
+		m_fInitialSpawnXYSpeed = 
+		[
+			0.000000,
+			0.000000,
+		]
+		m_friendlyModelParticle = resource_name:"particles/environment/health_pack_dropped_ambient_amber_entity.vpcf"
+		m_enemyModelParticle = resource_name:"particles/environment/health_pack_dropped_ambient_amber_entity_enemy.vpcf"
+		m_friendlyInteractiveParticle = resource_name:"particles/environment/health_pack_dropped_ambient_amber_otg.vpcf"
+		m_enemyInteractiveParticle = resource_name:"particles/environment/health_pack_dropped_ambient_amber_otg_enemy.vpcf"
+		m_fInitialSpawnZSpeed = 
+		[
+			50.000000,
+			200.000000,
+		]
+		m_flHoverOffset = 0.000000
+		m_vacuumStartParticle = resource_name:"particles/environment/spirit_orb_dropped_claim.vpcf"
+		m_strVacuumStartSound = soundevent:"Powerup.HealthPack.Vacuum"
+		m_flSolidRadius = 10.000000
+		m_flRegenFixed = 
+		{
+			m_flBase = 150.000000
+			m_flPerMinuteAfterStart = 4.000000
+		}
+	}
+	medic_trooper_aoe_health_pickup_sapphire = 
+	{
+		_class = "citadel_breakable_prop_health_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 709
+			m_flPerMinuteAfterStart = 59.012500
+			m_flMaxValue = 1181.100000
+			m_flStartMinute = 10.000000
+		}
+		m_sPickupSound = soundevent:"Powerup.HealthPack.Pickup"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 18.000000
+			m_flPerMinuteAfterStart = 2.000000
+			m_flMaxValue = 40.000000
+			m_flStartMinute = 10.000000
+		}
+		m_hModel = resource_name:""
+		m_gainedParticle = resource_name:"particles/environment/health_pack_projectile_endcap.vpcf"
+		m_friendlyParticle = resource_name:"particles/environment/health_pack_dropped_ambient_sapphire.vpcf"
+		m_enemyParticle = resource_name:"particles/environment/health_pack_dropped_ambient_sapphire_enemy.vpcf"
+		m_Color = 
+		[
+			0,
+			0,
+			0,
+			0,
+		]
+		m_bSameTeamOnly = true
+		m_flHealFixed = 
+		{
+			m_flBase = 0.000000
+			m_flPerMinuteAfterStart = 0.000000
+		}
+		m_bUseFixedDuration = true
+		m_flRegenDuration = 2.000000
+		m_flRegenDurationTroopers = 8.000000
+		m_flRegenTrooperMulti = 1.300000
+		m_flMissingPctRegen = 
+		{
+			m_flBase = 16.000000
+		}
+		m_flRegenHPS = 0.000000
+		m_RegenModifier = subclass:
+		{
+			_class = "modifier_citadel_basic_health_regen"
+			m_bIsHidden = true
+			_my_subclass_name = "regen"
+			m_nAttributes = "MODIFIER_ATTRIBUTE_MULTIPLE"
+			m_HealingLoopSoundOverride = 
+			{
+				m_sLoopSound = soundevent:""
+				m_sStartSound = soundevent:"Player.Heal.OverTime.LowPriority.Start"
+				m_sEndSound = soundevent:""
+			}
+		}
+		m_bPicupIsVacuum = true
+		m_VacuumToPlayerSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = -16.041656
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = -15303.386719
+				},
+				
+				{
+					x = 0.031624
+					y = -500.000000
+					m_flSlopeIncoming = -483.901276
+					m_flSlopeOutgoing = -483.901276
+				},
+				
+				{
+					x = 0.086967
+					y = -58.124969
+					m_flSlopeIncoming = 7392.940430
+					m_flSlopeOutgoing = 7392.940430
+				},
+				
+				{
+					x = 0.173933
+					y = 552.083374
+					m_flSlopeIncoming = 3395.157715
+					m_flSlopeOutgoing = 4762.609375
+				},
+				
+				{
+					x = 0.452622
+					y = 1183.333374
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = 2265.070801
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_FREE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_FREE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				-500.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				1.000000,
+				2000.000000,
+			]
+		}
+		m_flInitialVacuumUpSpeed = 
+		[
+			400.000000,
+			400.000000,
+		]
+		m_VacuumInitialVelSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = 0.000000
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = 3.105128
+				},
+				
+				{
+					x = 0.037948
+					y = 0.117833
+					m_flSlopeIncoming = 7.669573
+					m_flSlopeOutgoing = 7.669573
+				},
+				
+				{
+					x = 0.130385
+					y = 1.000000
+					m_flSlopeIncoming = 0.423242
+					m_flSlopeOutgoing = 0.423242
+				},
+				
+				{
+					x = 0.356127
+					y = 0.252500
+					m_flSlopeIncoming = -2.705520
+					m_flSlopeOutgoing = -2.705520
+				},
+				
+				{
+					x = 0.500000
+					y = 0.000000
+					m_flSlopeIncoming = -1.755022
+					m_flSlopeOutgoing = 0.000000
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				0.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				0.500000,
+				1.000000,
+			]
+		}
+		m_flInitialVacuumSideSpeed = 
+		[
+			0.000000,
+			0.000000,
+		]
+		m_EffectDistanceToRadiusRemap = 
+		[
+			250.000000,
+			20.000000,
+			1.000000,
+			0.000000,
+		]
+		m_flAOERadius = 1377.950000
+		m_AOETargetTypes = "CITADEL_UNIT_TARGET_HERO_FRIENDLY | CITADEL_UNIT_TARGET_TROOPER_FRIENDLY"
+		m_AOETargetFlags = ""
+		m_ParticleAOEHeal = resource_name:"particles/environment/health_pack_aoe_heal.vpcf"
+		bPhysicallyDropToTheGroundOnSpawn = true
+		m_fInitialSpawnXYSpeed = 
+		[
+			0.000000,
+			0.000000,
+		]
+		m_friendlyModelParticle = resource_name:"particles/environment/health_pack_dropped_ambient_sapphire_entity.vpcf"
+		m_enemyModelParticle = resource_name:"particles/environment/health_pack_dropped_ambient_sapphire_entity_enemy.vpcf"
+		m_friendlyInteractiveParticle = resource_name:"particles/environment/health_pack_dropped_ambient_sapphire_otg.vpcf"
+		m_enemyInteractiveParticle = resource_name:"particles/environment/health_pack_dropped_ambient_sapphire_otg_enemy.vpcf"
+		m_fInitialSpawnZSpeed = 
+		[
+			50.000000,
+			200.000000,
+		]
+		m_flHoverOffset = 0.000000
+		m_vacuumStartParticle = resource_name:"particles/environment/spirit_orb_dropped_claim.vpcf"
+		m_strVacuumStartSound = soundevent:"Powerup.HealthPack.Vacuum"
+		m_flSolidRadius = 10.000000
+		m_flRegenFixed = 
+		{
+			m_flBase = 150.000000
+			m_flPerMinuteAfterStart = 4.000000
+		}
+		_base = "medic_trooper_aoe_health_pickup_amber"
+	}
+	dropped_necro_pickup = 
+	{
+		_class = "citadel_breakable_prop_dropped_necro_pickup"
+		m_flPickupRadius = 
+		{
+			m_flBase = 708.000000
+			m_flPerMinuteAfterStart = 0
+			m_flStartMinute = 0.000000
+		}
+		m_sPickupSound = soundevent:"Necro.HauntingDead.Pickup"
+		m_flPickupExpirationDuration = 
+		{
+			m_flBase = 10.000000
+			m_flPerMinuteAfterStart = 0.000000
+			m_flMaxValue = 0.000000
+			m_flStartMinute = 0.000000
+		}
+		m_hModel = resource_name:""
+		m_gainedParticle = resource_name:"particles/abilities/necro/necro_pickup_gained.vpcf"
+		m_friendlyParticle = resource_name:"particles/abilities/necro/necro_pickup.vpcf"
+		m_enemyParticle = resource_name:"particles/abilities/necro/necro_pickup_enemy.vpcf"
+		m_Color = 
+		[
+			0,
+			0,
+			0,
+			0,
+		]
+		m_bSameTeamOnly = true
+		m_bPicupIsVacuum = true
+		m_VacuumToPlayerSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = 467.916687
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = -8609.929688
+				},
+				
+				{
+					x = 0.105087
+					y = -436.874969
+					m_flSlopeIncoming = -8609.929688
+					m_flSlopeOutgoing = 9633.584961
+				},
+				
+				{
+					x = 0.275455
+					y = 1204.375000
+					m_flSlopeIncoming = 9633.584961
+					m_flSlopeOutgoing = 4603.740723
+				},
+				
+				{
+					x = 0.634412
+					y = 2000.000000
+					m_flSlopeIncoming = 2216.488281
+					m_flSlopeOutgoing = 0.000000
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				-500.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				1.000000,
+				2000.000000,
+			]
+		}
+		m_flInitialVacuumUpSpeed = 
+		[
+			120.000000,
+			350.000000,
+		]
+		m_VacuumInitialVelSpeedCurve = 
+		{
+			m_spline = 
+			[
+				
+				{
+					x = 0.000000
+					y = 0.538667
+					m_flSlopeIncoming = 0.000000
+					m_flSlopeOutgoing = 6.372550
+				},
+				
+				{
+					x = 0.033019
+					y = 0.749083
+					m_flSlopeIncoming = 3.153351
+					m_flSlopeOutgoing = 3.153351
+				},
+				
+				{
+					x = 0.088081
+					y = 0.816417
+					m_flSlopeIncoming = 0.399116
+					m_flSlopeOutgoing = 0.399116
+				},
+				
+				{
+					x = 0.433696
+					y = 0.909000
+					m_flSlopeIncoming = 0.267879
+					m_flSlopeOutgoing = 0.267879
+				},
+			]
+			m_tangents = 
+			[
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_LINEAR"
+					m_nOutgoingTangent = "CURVE_TANGENT_LINEAR"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+				
+				{
+					m_nIncomingTangent = "CURVE_TANGENT_SPLINE"
+					m_nOutgoingTangent = "CURVE_TANGENT_SPLINE"
+				},
+			]
+			m_vDomainMins = 
+			[
+				0.000000,
+				0.000000,
+			]
+			m_vDomainMaxs = 
+			[
+				0.500000,
+				1.000000,
+			]
+		}
+		m_flInitialVacuumSideSpeed = 
+		[
+			100.000000,
+			-400.000000,
+		]
+		m_vacuumStartParticle = resource_name:"particles/abilities/necro/necro_pickup_splat.vpcf"
+		bPhysicallyDropToTheGroundOnSpawn = true
+		m_flFallGravity = 0.600000
+		m_flHoverOffset = 15.000000
+		m_fInitialSpawnXYSpeed = 
+		[
+			85.000000,
+			125.000000,
+		]
+		m_fInitialSpawnZSpeed = 
+		[
+			30.000000,
+			110.000000,
+		]
+		m_flOutlineRange = 2000.000000
+		m_OutlineColor = 
+		[
+			193,
+			245,
+			81,
+			255,
+		]
+		m_friendlyModelParticle = resource_name:""
+	}
+	xp_orb = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.300000
+		m_flOrbSpawnDelayMax = 0.300000
+		m_flOrbSpawnOffsetZ = 24
+		m_flOrbSpawnOffsetRandomXYZ = 0
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 40.000000
+		m_flLateralSpeedMax = 40.000000
+		m_flUpSpeedMin = 65.000000
+		m_flUpSpeedMax = 65.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 1.000000
+		m_flLifeTime = 3.000000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.100000
+		m_flInvulDuration = 0.120000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = false
+		m_flKillerPlaneOffset = 0
+		m_flOrbClaimWindow = 0
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+	}
+	xp_orb_trooper = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.400000
+		m_flOrbSpawnDelayMax = 0.700000
+		m_flOrbSpawnOffsetZ = 30
+		m_flOrbSpawnOffsetRandomXYZ = 64.000000
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 40.000000
+		m_flLateralSpeedMax = 40.000000
+		m_flUpSpeedMin = 65.000000
+		m_flUpSpeedMax = 65.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 0.010000
+		m_flLifeTime = 0.700000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.200000
+		m_flInvulDuration = 0.200000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = true
+		m_flKillerPlaneOffset = 15.000000
+		m_flOrbClaimWindow = 0.060000
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb"
+		m_flKillerPlaneHorizontalDecayRate = 15.000000
+		m_flLateralMoveDuration = 0.300000
+		m_flKillerPlaneHorizontalSpeedX = 40.000000
+		m_flKillerPlaneHorizontalSpeedY = 55.000000
+		m_flKillerPlaneVerticalSpeed = 115.000000
+		m_flKillerPlaneSpeedNoise = 10.000000
+		m_flKillerPlaneLaunchOffset = 15.000000
+		m_flKillerPlaneLaunchDelay = 0.100000
+		m_flRadius = 1.200000
+	}
+	xp_orb_idol_dropoff = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.300000
+		m_flOrbSpawnDelayMax = 0.300000
+		m_flOrbSpawnOffsetZ = 10.000000
+		m_flOrbSpawnOffsetRandomXYZ = 10.000000
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 10.000000
+		m_flLateralSpeedMax = 60.000000
+		m_flUpSpeedMin = 10.000000
+		m_flUpSpeedMax = 60.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 1.000000
+		m_flLifeTime = 3.000000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.100000
+		m_flInvulDuration = 0.120000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = false
+		m_flKillerPlaneOffset = 0
+		m_flOrbClaimWindow = 0
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb"
+	}
+	xp_orb_player_kill = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.300000
+		m_flOrbSpawnDelayMax = 0.300000
+		m_flOrbSpawnOffsetZ = 24
+		m_flOrbSpawnOffsetRandomXYZ = 0
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 40.000000
+		m_flLateralSpeedMax = 40.000000
+		m_flUpSpeedMin = 65.000000
+		m_flUpSpeedMax = 65.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 1.000000
+		m_flLifeTime = 3.000000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.100000
+		m_flInvulDuration = 0.120000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = false
+		m_flKillerPlaneOffset = 0
+		m_flOrbClaimWindow = 0
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb"
+	}
+	xp_orb_objective = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.300000
+		m_flOrbSpawnDelayMax = 0.300000
+		m_flOrbSpawnOffsetZ = 0
+		m_flOrbSpawnOffsetRandomXYZ = 64
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 40.000000
+		m_flLateralSpeedMax = 60.000000
+		m_flUpSpeedMin = 65.000000
+		m_flUpSpeedMax = 65.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 1.000000
+		m_flLifeTime = 3.000000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.100000
+		m_flInvulDuration = 0.120000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = false
+		m_flKillerPlaneOffset = 0
+		m_flOrbClaimWindow = 0
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb"
+		m_bIsObjective = true
+	}
+	xp_orb_vault = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.300000
+		m_flOrbSpawnDelayMax = 0.300000
+		m_flOrbSpawnOffsetZ = 24
+		m_flOrbSpawnOffsetRandomXYZ = 0
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 0.000000
+		m_flLateralSpeedMax = 0.000000
+		m_flUpSpeedMin = 85.000000
+		m_flUpSpeedMax = 105.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 1.000000
+		m_flLifeTime = 0.300000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.100000
+		m_flInvulDuration = 0.120000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = false
+		m_flKillerPlaneOffset = 0
+		m_flOrbClaimWindow = 0
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb"
+	}
+	xp_orb_spawner = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.400000
+		m_flOrbSpawnDelayMax = 0.700000
+		m_flOrbSpawnOffsetZ = 30
+		m_flOrbSpawnOffsetRandomXYZ = 64.000000
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 40.000000
+		m_flLateralSpeedMax = 40.000000
+		m_flUpSpeedMin = 65.000000
+		m_flUpSpeedMax = 65.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 0.010000
+		m_flLifeTime = 0.700000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.200000
+		m_flInvulDuration = 0.200000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = true
+		m_flKillerPlaneOffset = 15.000000
+		m_flOrbClaimWindow = 0.060000
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb_trooper"
+		m_flKillerPlaneHorizontalDecayRate = 15.000000
+		m_flLateralMoveDuration = 0.300000
+		m_flKillerPlaneHorizontalSpeedX = 40.000000
+		m_flKillerPlaneHorizontalSpeedY = 55.000000
+		m_flKillerPlaneVerticalSpeed = 115.000000
+		m_flKillerPlaneSpeedNoise = 10.000000
+		m_flKillerPlaneLaunchOffset = 15.000000
+		m_flKillerPlaneLaunchDelay = 0.100000
+		m_flRadius = 1.200000
+	}
+	xp_orb_neutral = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.400000
+		m_flOrbSpawnDelayMax = 0.700000
+		m_flOrbSpawnOffsetZ = 30
+		m_flOrbSpawnOffsetRandomXYZ = 64.000000
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 40.000000
+		m_flLateralSpeedMax = 40.000000
+		m_flUpSpeedMin = 30.000000
+		m_flUpSpeedMax = 40.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 0.010000
+		m_flLifeTime = 1.700000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.500000
+		m_flBurstSpeedDuration = 0.200000
+		m_flInvulDuration = 0.200000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = true
+		m_flKillerPlaneOffset = 15.000000
+		m_flOrbClaimWindow = 0.060000
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb_trooper"
+		m_flKillerPlaneHorizontalDecayRate = 15.000000
+		m_flLateralMoveDuration = 0.300000
+		m_flKillerPlaneHorizontalSpeedX = 40.000000
+		m_flKillerPlaneHorizontalSpeedY = 55.000000
+		m_flKillerPlaneVerticalSpeed = 70.000000
+		m_flKillerPlaneSpeedNoise = 10.000000
+		m_flKillerPlaneLaunchOffset = 15.000000
+		m_flKillerPlaneLaunchDelay = 0.100000
+		m_flRadius = 1.200000
+	}
+	citadel_herotest_orbspawner = 
+	{
+		m_hModel = resource_name:"models/npc/sewer_beast/sewer.vmdl"
+		m_flModelScale = 1.500000
+		m_AmbientParticle = resource_name:"particles/environment/powerup_spawner_inactive_ambient.vpcf"
+		m_SpawnParticle = resource_name:"particles/trooper/trooper_death_sn.vpcf"
+		m_iGoldValue = 10
+		m_flSpawnRate = 2.000000
+		m_flFirstSpawnTime = 180.000000
+	}
+	xp_orb_siege_trooper = 
+	{
+		_class = "item_xp"
+		m_sOrbModel = resource_name:""
+		m_sFriendlyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient.vpcf"
+		m_sEnemyGlowParticle = resource_name:"particles/generic/spirit_orb_ambient_enemy.vpcf"
+		m_sGoldReceivedParticle = resource_name:""
+		m_sFriendlyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied_enemy.vpcf"
+		m_sEnemyOrbDeniedParticle = resource_name:"particles/generic/spirit_xp_denied.vpcf"
+		m_sFriendlyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned.vpcf"
+		m_sEnemyOrbEarnedParticle = resource_name:"particles/generic/spirit_xp_earned_enemy.vpcf"
+		m_flOrbSpawnDelayMin = 0.300000
+		m_flOrbSpawnDelayMax = 0.300000
+		m_flOrbSpawnOffsetZ = 30
+		m_flOrbSpawnOffsetRandomXYZ = 64.000000
+		m_flGravityScale = 0.000000
+		m_flLateralSpeedMin = 20.000000
+		m_flLateralSpeedMax = 20.000000
+		m_flUpSpeedMin = 25.000000
+		m_flUpSpeedMax = 25.000000
+		m_flDownSpeed = 20.000000
+		m_flOscillateFrequency = 0.010000
+		m_flLifeTime = 3.000000
+		m_flCollisionRadius = 12.000000
+		m_flBurstSpeedMultiplier = 1.200000
+		m_flBurstSpeedDuration = 0.200000
+		m_flInvulDuration = 0.200000
+		m_strOrbClaimed = soundevent:"Player.ClaimOrb"
+		m_strOrbClaimedTeammate = soundevent:"Teammate.ClaimOrb"
+		m_strOrbDenied = soundevent:"Player.Deny"
+		m_strOrbDeniedPlayer = soundevent:"Player.Denied"
+		m_bUseKillerPlaneOffsets = true
+		m_flKillerPlaneOffset = 15.000000
+		m_flOrbClaimWindow = 0.060000
+		m_sPredictedHitLimboGlowParticle = resource_name:"particles/generic/spirit_orb_processing.vpcf"
+		m_strOrbHitConfirm = soundevent:"Player.ClaimOrb.Hit"
+		m_sFriendlyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit.vpcf"
+		m_sEnemyHitConfirmParticle = resource_name:"particles/generic/spirit_orb_ambient_hit_enemy.vpcf"
+		m_strOrbHitPredicted = soundevent:"Player.ClaimOrb.Hit"
+		m_flInvulDurationMin = 0.350000
+		m_flInvulDurationMax = 0.650000
+		_base = "xp_orb"
+		m_flKillerPlaneHorizontalDecayRate = 15.000000
+		m_flKillerPlaneHorizontalSpeedX = 65.000000
+		m_flKillerPlaneHorizontalSpeedY = 55.000000
+		m_flKillerPlaneVerticalSpeed = 115.000000
+		m_flKillerPlaneSpeedNoise = 10.000000
+		m_flKillerPlaneLaunchOffset = 15.000000
+		m_flKillerPlaneLaunchDelay = 0.100000
+		m_flRadius = 2.000000
+	}
+	info_neutral_trooper_camp = 
+	{
+		_class = "info_neutral_trooper_camp"
+		_not_pickable = 2
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+	}
+	neutral_camp_vaults = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 480
+		m_iSpawnIntervalInSeconds = 300
+		m_eNeutralType = "NEUTRAL_VAULT"
+	}
+	neutral_camp_vaults_herotest = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "neutral_camp_vaults"
+		m_iInitialSpawnDelayInSeconds = 0
+		m_iSpawnIntervalInSeconds = 30
+		m_eNeutralType = "NEUTRAL_VAULT"
+	}
+	neutral_camp_weak = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 120
+		m_iSpawnIntervalInSeconds = 85
+		m_eNeutralType = "NEUTRAL_TROOPER_WEAK"
+	}
+	neutral_camp_weak_herotest = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "neutral_camp_weak"
+		m_iInitialSpawnDelayInSeconds = 0
+		m_iSpawnIntervalInSeconds = 30
+		m_eNeutralType = "NEUTRAL_TROOPER_WEAK"
+	}
+	neutral_camp_medium = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 360
+		m_iSpawnIntervalInSeconds = 290
+		m_eNeutralType = "NEUTRAL_TROOPER_NORMAL"
+	}
+	neutral_camp_medium_herotest = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "neutral_camp_medium"
+		m_iInitialSpawnDelayInSeconds = 0
+		m_iSpawnIntervalInSeconds = 30
+		m_eNeutralType = "NEUTRAL_TROOPER_NORMAL"
+	}
+	neutral_camp_strong = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 480
+		m_iSpawnIntervalInSeconds = 335
+		m_eNeutralType = "NEUTRAL_TROOPER_STRONG"
+	}
+	neutral_camp_strong_herotest = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "neutral_camp_strong"
+		m_iInitialSpawnDelayInSeconds = 0
+		m_iSpawnIntervalInSeconds = 30
+		m_eNeutralType = "NEUTRAL_TROOPER_STRONG"
+	}
+	neutral_camp_midboss = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = -60
+		m_iSpawnIntervalMin = 300
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 600
+		m_iSpawnIntervalInSeconds = 420
+		m_eNeutralType = "NEUTRAL_SUPER"
+	}
+	neutral_camp_bug = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 120
+		m_iSpawnIntervalInSeconds = 120
+	}
+	neutral_camp_bug_herotest = 
+	{
+		_class = "info_neutral_trooper_camp"
+		m_iSpawnIntervalChange = 0
+		m_iSpawnIntervalMin = 0
+		m_sIdleAmbient = soundevent:""
+		m_sAlertAmbient = soundevent:""
+		_base = "info_neutral_trooper_camp"
+		m_iInitialSpawnDelayInSeconds = 0
+		m_iSpawnIntervalInSeconds = 10
+	}
+	capture_point_escort = 
+	{
+		_class = "citadel_capture_point"
+		m_modifierCapturer = subclass:
+		{
+			_class = "modifier_cp_capturer"
+			_my_subclass_name = "capturing_escort"
+			m_strParticleEffect = resource_name:"particles/npc/escort/escort_summon_debuff.vpcf"
+			m_eHudDisplayLocation = "DISPLAY_HUD_CENTER"
+		}
+		m_flInitialEnableTimeInSeconds = 
+		[
+			840.000000,
+			960.000000,
+		]
+		m_flPreEnableWindowInSeconds = 10.000000
+		m_flRespawnRangeInSeconds = 
+		[
+			60.000000,
+			180.000000,
+		]
+		m_EnabledLoopSounds = 
+		{
+			CITADEL_AUDIO_LOOP_LOOP_SOUND = soundevent:"Ability.A1.SiphonLife.Loop"
+		}
+		m_EnemyCapturingLoopSounds = 
+		{
+			CITADEL_AUDIO_LOOP_LOOP_SOUND = soundevent:"Ability.Bebop.StickyBomb.Loop"
+		}
+		m_FriendlyCapturingLoopSounds = 
+		{
+			CITADEL_AUDIO_LOOP_LOOP_SOUND = soundevent:"Dynamo.A3.Heal.Loop"
+		}
+		m_strPreEnableParticle = resource_name:"particles/npc/escort/escort_arriving.vpcf"
+		m_strEnabledParticle = resource_name:"particles/npc/escort/escort_arrived.vpcf"
+		m_strOnFullyCapturedParticle = resource_name:"particles/npc/escort/escort_spawn.vpcf"
+		m_strOnBecomeEnableParticle = resource_name:"particles/npc/escort/escort_spawn.vpcf"
+		m_flDecaySpeed = 0.010000
+		m_remapCapturersToCaptureTime = 
+		[
+			1.000000,
+			6.000000,
+			12.000000,
+			2.000000,
+		]
+		m_flTotalHealthToCapture = 0.000000
+	}
+}

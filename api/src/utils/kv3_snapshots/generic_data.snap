@@ -1,0 +1,1205 @@
+---
+source: src/utils/kv3.rs
+expression: value
+---
+{
+  "generic_data_type": "CitadelGenericData_t",
+  "m_mapDamageFlash": {
+    "EFlashType_BulletDamage": {
+      "m_flDuration": 0.1,
+      "m_flCoverage": 1.0,
+      "m_flHardness": 1.0,
+      "m_flBrightness": 0.2,
+      "m_Color": [
+        255,
+        128,
+        0
+      ],
+      "m_flBrightnessInLightSensitivityMode": 0.0
+    },
+    "EFlashType_TechDamage": {
+      "m_flDuration": 0.1,
+      "m_flCoverage": 1.0,
+      "m_flHardness": 1.0,
+      "m_flBrightness": 0.2,
+      "m_Color": [
+        165,
+        51,
+        255
+      ]
+    },
+    "EFlashType_Healing": {
+      "m_flDuration": 1.0,
+      "m_flCoverage": 0.5,
+      "m_flHardness": 0.0,
+      "m_flBrightness": 1.2,
+      "m_Color": [
+        0,
+        195,
+        45
+      ],
+      "m_flBrightnessInLightSensitivityMode": 0.6
+    },
+    "EFlashType_CritDamage": {
+      "m_flDuration": 0.33,
+      "m_flCoverage": 0.8,
+      "m_flHardness": 0.9,
+      "m_flBrightness": 0.5,
+      "m_Color": [
+        255,
+        255,
+        0
+      ],
+      "m_bHeadOnly": true
+    },
+    "EFlashType_MeleeActivate": {
+      "m_flDuration": 0.1,
+      "m_flCoverage": 1.0,
+      "m_Color": [
+        49,
+        169,
+        250
+      ],
+      "m_flBrightness": 0.8,
+      "m_flHardness": 0.0
+    },
+    "EFlashType_PatronHit": {
+      "m_flDuration": 0.05,
+      "m_flCoverage": 0.99,
+      "m_Color": [
+        255,
+        134,
+        5
+      ],
+      "m_flBrightness": 0.3,
+      "m_flHardness": 1.0
+    }
+  },
+  "m_mapDamageFlashLowViolence": {
+    "EFlashType_BulletDamage": {
+      "m_flDuration": 0.25,
+      "m_flCoverage": 0.5,
+      "m_flHardness": 0.7,
+      "m_flBrightness": 3.5,
+      "m_Color": [
+        12,
+        0,
+        15
+      ]
+    }
+  },
+  "m_GlitchSettings": {
+    "m_flStrength": 1.0,
+    "m_nQuantizeType": 2.0,
+    "m_flQuantizeScale": 0.5,
+    "m_flQuantizeStrength": 0.2,
+    "m_flFrameRate": 5.0,
+    "m_flSpeed": 10.0,
+    "m_flJumpStrength": 1.0,
+    "m_flDistortStrength": 1.25,
+    "m_flWhiteNoiseStrength": 3.0,
+    "m_flScanlineStrength": 1.5,
+    "m_flBreakupStrength": 0.0
+  },
+  "m_LaneInfo": [
+    {
+      "m_strLaneName": "White",
+      "m_strCSSClass": "whiteLane",
+      "m_Color": [
+        200,
+        200,
+        200
+      ],
+      "m_MinimapZiplineColorOverride": [
+        200,
+        200,
+        200
+      ],
+      "m_ObjectiveColor": [
+        200,
+        200,
+        200
+      ]
+    },
+    {
+      "m_strLaneName": "Yellow",
+      "m_strCSSClass": "yellowLane",
+      "m_Color": [
+        241,
+        204,
+        48
+      ],
+      "m_MinimapZiplineColorOverride": [
+        190,
+        169,
+        78
+      ],
+      "m_ObjectiveColor": [
+        249,
+        212,
+        5
+      ]
+    },
+    {
+      "m_strLaneName": "Yellow + Orange",
+      "m_Color": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "m_strLaneName": "Green",
+      "m_strCSSClass": "greenLane",
+      "m_Color": [
+        255,
+        20,
+        147
+      ],
+      "m_MinimapZiplineColorOverride": [
+        255,
+        20,
+        147
+      ],
+      "m_ObjectiveColor": [
+        255,
+        20,
+        147
+      ]
+    },
+    {
+      "m_strLaneName": "Blue",
+      "m_strCSSClass": "blueLane",
+      "m_Color": [
+        41,
+        177,
+        204
+      ],
+      "m_MinimapZiplineColorOverride": [
+        85,
+        155,
+        190
+      ],
+      "m_ObjectiveColor": [
+        67,
+        125,
+        220
+      ]
+    },
+    {
+      "m_strLaneName": " + Purple",
+      "m_Color": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "m_strLaneName": "Purple",
+      "m_strCSSClass": "purpleLane",
+      "m_Color": [
+        89,
+        178,
+        71
+      ],
+      "m_MinimapZiplineColorOverride": [
+        102,
+        153,
+        92
+      ],
+      "m_ObjectiveColor": [
+        89,
+        178,
+        71
+      ]
+    }
+  ],
+  "m_NoLaneZip": {
+    "m_strLaneName": "NoLane",
+    "m_strCSSClass": "noLane",
+    "m_Color": [
+      0,
+      0,
+      0
+    ]
+  },
+  "m_DamageReceivedSounds": {
+    "m_strDamageReceiveDefault": "soundevent:\"Damage.Receive.Default\"",
+    "m_strDamageReceiveNPC": "soundevent:\"Damage.Receive.NPC\"",
+    "m_strDamageReceiveDOT": "soundevent:\"Damage.Receive.DOT\"",
+    "m_strDamageReceiveMeleeNPC": "soundevent:\"Damage.Receive.Melee.NPC\"",
+    "m_strDamageReceiveMelee": "soundevent:\"Damage.Receive.Melee\"",
+    "m_strDamageReceiveShield": "soundevent:\"Damage.Receive.Shield\""
+  },
+  "m_DefaultDOF": {
+    "m_flDofNearBlurry": 0.0,
+    "m_flDofNearCrisp": 0.0,
+    "m_flDofFarBlurry": 0.0,
+    "m_flDofFarCrisp": 0.0
+  },
+  "m_NewPlayerMetrics": [
+    {
+      "m_strSkillTierName": "Bronze",
+      "m_NetWorth": 1000,
+      "m_DamageTaken": 6600,
+      "m_BossDamage": 300,
+      "m_PlayerDamage": 900,
+      "m_LastHits": 1,
+      "m_OrbsSecured": 1,
+      "m_OrbsDenied": 1,
+      "m_AbilitiesUpgraded": 1,
+      "m_ModsPurchased": 1
+    },
+    {
+      "m_strSkillTierName": "Silver",
+      "m_NetWorth": 1000,
+      "m_DamageTaken": 5800,
+      "m_BossDamage": 400,
+      "m_PlayerDamage": 1400,
+      "m_LastHits": 1,
+      "m_OrbsSecured": 1,
+      "m_OrbsDenied": 1,
+      "m_AbilitiesUpgraded": 1,
+      "m_ModsPurchased": 1
+    },
+    {
+      "m_strSkillTierName": "Gold",
+      "m_NetWorth": 1000,
+      "m_DamageTaken": 5000,
+      "m_BossDamage": 600,
+      "m_PlayerDamage": 1800,
+      "m_LastHits": 1,
+      "m_OrbsSecured": 1,
+      "m_OrbsDenied": 1,
+      "m_AbilitiesUpgraded": 1,
+      "m_ModsPurchased": 1
+    },
+    {
+      "m_strSkillTierName": "Platinum",
+      "m_NetWorth": 1000,
+      "m_DamageTaken": 4600,
+      "m_BossDamage": 700,
+      "m_PlayerDamage": 2300,
+      "m_LastHits": 1,
+      "m_OrbsSecured": 1,
+      "m_OrbsDenied": 1,
+      "m_AbilitiesUpgraded": 1,
+      "m_ModsPurchased": 1
+    }
+  ],
+  "m_MinimapTeamRebelsColor": [
+    58,
+    91,
+    66
+  ],
+  "m_MinimapTeamCombineColor": [
+    83,
+    51,
+    51
+  ],
+  "m_HeroTestingTargetDummyUpgrades": [
+    "upgrade_toughness_2",
+    "upgrade_health_regen_1",
+    "upgrade_toughness_3",
+    "upgrade_health_percent_large",
+    "upgrade_out_of_combat_health_regen",
+    "upgrade_zipine_mastery"
+  ],
+  "m_mapStatTypeImages": {
+    "EBaseHealthRegen": "file://{images}/upgrades/mods_armor/health_regen.psd",
+    "EBulletArmorDamageReduction": "file://{images}/upgrades/mods_armor/bullet_armor.psd",
+    "ETechArmorDamageReduction": "file://{images}/upgrades/mods_armor/tech_armor.psd"
+  },
+  "m_nItemPricePerTier": [
+    0,
+    800,
+    1600,
+    3200,
+    6400,
+    9999
+  ],
+  "m_flTrooperKillGoldShareFrac": [
+    1.0,
+    0.54,
+    0.36,
+    0.25,
+    0.2,
+    0.16
+  ],
+  "m_flHeroKillGoldShareFrac": [
+    1.25,
+    0.575,
+    0.283,
+    0.175,
+    0.11,
+    0.083
+  ],
+  "m_AimSpringStrength": [
+    0.0,
+    2.0,
+    10.0,
+    300.0
+  ],
+  "m_TargetingSpringStrength": [
+    0.0,
+    2.0,
+    10.0,
+    30.0
+  ],
+  "m_IdolParams": {
+    "m_IdolModel": "resource_name:\"models/props_gameplay/idol_urn/idol_urn.vmdl\"",
+    "m_strLoopingSequenceName": "golden_idol_idle",
+    "m_ParachuteModel": "resource_name:\"models/props_gameplay/gold_crate_parachute.vmdl\"",
+    "m_CrateModel": "resource_name:\"models/props_gameplay/gold_crate.vmdl\"",
+    "m_IdolReturnLocationParticle": "resource_name:\"particles/environment/soul_jar_return_location.vpcf\"",
+    "m_flIdolReturnLocationParticleScale": 2.0,
+    "m_IdolSpawnLocationParticle": "resource_name:\"particles/environment/soul_jar_summon.vpcf\"",
+    "m_IdolDroppingParticle": "resource_name:\"particles/environment/soul_jar_drop.vpcf\"",
+    "m_flIdolDropHeight": 1400.0,
+    "m_flIdolDropDuration": 12.5
+  },
+  "m_ObjectiveParams": {
+    "m_GoldPerOrb": 0,
+    "m_NearPlayerSplitPct": 40.0,
+    "m_nTier1GoldKill": 1500,
+    "m_nTier1GoldOrbs": 0,
+    "m_nTier2GoldKill": 4000,
+    "m_nTier2GoldOrbs": 0,
+    "m_nBaseGuardiansGoldKill": 1000,
+    "m_nBaseGuardiansGoldOrbs": 0,
+    "m_nShrinesGoldKill": 2000,
+    "m_nShrinesGoldOrbs": 0,
+    "m_nPatronPhase1GoldKill": 0,
+    "m_nPatronPhase1GoldOrbs": 0
+  },
+  "m_TeleporterParams": {
+    "m_StartEffect": "resource_name:\"particles/environment/teleporter_pad_start.vpcf\"",
+    "m_EndEffect": "resource_name:\"particles/environment/teleporter_pad_end.vpcf\"",
+    "m_strEnterSound": "soundevent:\"Teleport.Enter\"",
+    "m_strStartSound": "soundevent:\"Teleport.Buildup\"",
+    "m_strTeleportedSound": "soundevent:\"Teleport.Appear\""
+  },
+  "m_CurrencyTypeSounds": {
+    "EAbilityPoints": {
+      "m_mapSourceSounds": {
+        "EBossKill": "soundevent:\"Player.AcquireAp\"",
+        "ECheats": "soundevent:\"Player.AcquireAp\"",
+        "ELevelUp": "soundevent:\"Player.AcquireAp\""
+      }
+    },
+    "EGold": {
+      "m_mapSourceSounds": {
+        "EItemSale": "soundevent:\"\"",
+        "ETreasureChest": "soundevent:\"\"",
+        "EOrbPlayer": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbDeny": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbLaneTrooper": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbNeutralTrooper": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbTier1TrooperBoss": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbTier2TrooperBoss": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbTier3TrooperBoss": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbBaseSentry": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbDeployable": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbTrophyKill": "soundevent:\"Player.ClaimOrb\"",
+        "EOrbTreasureChest": "soundevent:\"Player.ClaimOrb\"",
+        "ENeutralWorldPickup": "soundevent:\"Neutral.Bounty.Pickup\"",
+        "EItemPurchase": "soundevent:\"Player.PurchaseUpgrade\"",
+        "EItemUpgrade": "soundevent:\"Player.PurchaseUpgrade\""
+      }
+    }
+  },
+  "m_mapResourceTypes": {
+    "EResourceType_Rage": {
+      "m_strHUDSnippetName": "rage",
+      "m_strCantCastOutOfResourceToken": "#CITADEL_ABILITY_INVALID_NOT_RAGE"
+    }
+  },
+  "m_HealingReceivedSounds": {
+    "m_HOTLoopSounds": {
+      "CITADEL_AUDIO_LOOP_LOOP_SOUND": "soundevent:\"Player.Heal.OverTime.Lp\"",
+      "CITADEL_AUDIO_LOOP_STOP_SOUND": "soundevent:\"Player.Heal.OverTime.Stop\"",
+      "CITADEL_AUDIO_LOOP_START_SOUND": "soundevent:\"Player.Heal.OverTime.Start\""
+    },
+    "m_nPriority": 1,
+    "m_strHOTToppedOff": "soundevent:\"Player.Heal.OverTime.TopOff\"",
+    "m_strDirectHealingSmall": "soundevent:\"Player.Heal.Burst.Small\"",
+    "m_strDirectHealingMedium": "soundevent:\"Player.Heal.Burst.Medium\""
+  },
+  "m_DamageIndicatorSounds": {
+    "m_strDamageDefault": "soundevent:\"Damage.Send\"",
+    "m_strDamageCrit": "soundevent:\"Damage.Send.Crit\"",
+    "m_strDamageLethal": "soundevent:\"Damage.Send.Lethal\"",
+    "m_strDamageInvulnerable": "soundevent:\"Damage.Send.Invulnerable\"",
+    "m_strDamageDOT": "soundevent:\"Damage.Send.DOT\"",
+    "m_strDamageHealthTransfer": "soundevent:\"Player.Heal.SiphonTick\""
+  },
+  "m_RejuvParams": {
+    "m_flRejuvinatorExpirationWarningTiming": 30,
+    "m_flRejuvinatorBuffDuration": 240,
+    "m_flRejuvinatorDropHeight": 500,
+    "m_flRejuvinatorDropDuration": 6,
+    "m_strRejuvPickupSound": "soundevent:\"Rejuv.Pickup\"",
+    "m_TrooperHealthMult": [
+      1.7,
+      2.0,
+      2.3
+    ],
+    "m_PlayerRespawnMult": [
+      0.5,
+      0.4,
+      0.3
+    ],
+    "m_flRejuvinatorRebirthDuration": [
+      240,
+      240,
+      240
+    ]
+  },
+  "m_ShoppingEffect": "resource_name:\"particles/generic/hero_shopping_status.vpcf\"",
+  "m_MinimapZiplinesParticle": "resource_name:\"particles/ui/ui_minimap.vpcf\"",
+  "m_KillStreakFireParticle": "resource_name:\"particles/ui/ui_topbar_killstreak.vpcf\"",
+  "m_MidbossIndicatorRespawningParticle": "resource_name:\"particles/environment/rejuv_indicator_timer.vpcf\"",
+  "m_MidbossIndicatorSpawnedParticle": "resource_name:\"particles/environment/rejuv_indicator.vpcf\"",
+  "m_enemyObjectivesColor": [
+    220,
+    76,
+    47
+  ],
+  "m_enemyZiplineColor": [
+    140,
+    55,
+    38
+  ],
+  "m_vecWeaponGroups": [
+    {
+      "m_vecUpgrades": [
+        "upgrade_clip_size",
+        "upgrade_active_reload",
+        "upgrade_intensifying_clip",
+        "upgrade_titan_round",
+        "upgrade_infinitemagazine",
+        "upgrade_reinforcing_casings"
+      ],
+      "m_eShopGroup": "EMagazines"
+    },
+    {
+      "m_eShopGroup": "ERateOfFire",
+      "m_vecUpgrades": [
+        "upgrade_rapid_rounds",
+        "upgrade_blitz_bullets",
+        "upgrade_burst_fire",
+        "upgrade_ricochet"
+      ]
+    },
+    {
+      "m_eShopGroup": "EBulletVelocity",
+      "m_vecUpgrades": [
+        "upgrade_weighted_shots",
+        "upgrade_high_velocity_mag",
+        "upgrade_long_range",
+        "upgrade_split_shot",
+        "upgrade_pristine_emblem",
+        "upgrade_sharpshooter",
+        "upgrade_aprounds"
+      ]
+    },
+    {
+      "m_eShopGroup": "EHeadshotEnthusiasts",
+      "m_vecUpgrades": [
+        "upgrade_headshot_booster",
+        "upgrade_headshot_booster2",
+        "upgrade_headhunter",
+        "upgrade_banshee_slugs"
+      ]
+    },
+    {
+      "m_eShopGroup": "EWeaponRange",
+      "m_vecUpgrades": [
+        "upgrade_close_range",
+        "upgrade_close_quarter_combat",
+        "upgrade_bullet_armor_reduction_aura",
+        "upgrade_cloaking_device_active",
+        "upgrade_proc_silence"
+      ]
+    },
+    {
+      "m_eShopGroup": "ETankingBullets",
+      "m_vecUpgrades": [
+        "upgrade_melee_charge",
+        "upgrade_berserker",
+        "upgrade_fervor"
+      ]
+    },
+    {
+      "m_eShopGroup": "ESpiritSlinger",
+      "m_vecUpgrades": [
+        "upgrade_crackshot",
+        "upgrade_tech_defense_shredders",
+        "upgrade_spellslinger_headshots",
+        "upgrade_chain_lightning",
+        "upgrade_tech_overflow"
+      ]
+    },
+    {
+      "m_eShopGroup": "EActives",
+      "m_vecUpgrades": [
+        "upgrade_fleetfoot_boots",
+        "upgrade_thermal_detonator",
+        "upgrade_dps_aura",
+        "upgrade_warp_stone"
+      ]
+    },
+    {
+      "m_eShopGroup": "EMisc",
+      "m_vecUpgrades": [
+        "upgrade_hollow_point_rounds",
+        "upgrade_non_player_bonus",
+        "upgrade_kinetic_sash",
+        "upgrade_toxic_bullets",
+        "upgrade_critshot"
+      ]
+    },
+    {
+      "m_eShopGroup": "ESlowingBullets",
+      "m_vecUpgrades": [
+        "upgrade_slowing_bullets",
+        "upgrade_glass_cannon"
+      ]
+    }
+  ],
+  "m_vecArmorGroups": [
+    {
+      "m_eShopGroup": "EMoreHealth",
+      "m_vecUpgrades": [
+        "upgrade_health",
+        "upgrade_health_2",
+        "upgrade_chonky",
+        "upgrade_colossus",
+        "upgrade_unstoppable"
+      ]
+    },
+    {
+      "m_eShopGroup": "EHealing",
+      "m_vecUpgrades": [
+        "upgrade_medic_bullets",
+        "upgrade_health_stimpak",
+        "upgrade_health_nova",
+        "upgrade_rescue_beam"
+      ]
+    },
+    {
+      "m_eShopGroup": "ERevitalization",
+      "m_vecUpgrades": [
+        "upgrade_endurance",
+        "upgrade_restorative_locket",
+        "upgrade_vex_barrier",
+        "upgrade_healing_booster",
+        "upgrade_healbuff"
+      ]
+    },
+    {
+      "m_eShopGroup": "EDebuffs",
+      "m_vecUpgrades": [
+        "upgrade_debuff_reducer",
+        "upgrade_reduce_debuff_duration",
+        "upgrade_inhibitor"
+      ]
+    },
+    {
+      "m_eShopGroup": "ESpiritProtection",
+      "m_vecUpgrades": [
+        "upgrade_tech_armor",
+        "upgrade_magic_shield",
+        "upgrade_tech_purge",
+        "upgrade_cheat_death",
+        "upgrade_absorbing_armor",
+        "upgrade_phantom_strike",
+        "upgrade_spellbreaker"
+      ]
+    },
+    {
+      "m_eShopGroup": "EBulletProtection",
+      "m_vecUpgrades": [
+        "upgrade_return_fire",
+        "upgrade_regenerating_bullet_shield",
+        "upgrade_bullet_armor",
+        "upgrade_improved_bullet_armor",
+        "upgrade_deflecting_armor"
+      ]
+    },
+    {
+      "m_eShopGroup": "ELifesteal",
+      "m_vecUpgrades": [
+        "upgrade_vampire",
+        "upgrade_surging_power",
+        "upgrade_health_stealing_magic",
+        "upgrade_infuser",
+        "upgrade_damage_recycler"
+      ]
+    },
+    {
+      "m_eShopGroup": "EMelee",
+      "m_vecUpgrades": [
+        "upgrade_lifestrike_gauntlets",
+        "upgrade_melee_rebuttal",
+        "upgrade_boxing_glove"
+      ]
+    },
+    {
+      "m_eShopGroup": "EMovementAndAgility",
+      "m_vecUpgrades": [
+        "upgrade_improved_stamina",
+        "upgrade_sprint_booster",
+        "upgrade_cardio_calibrator",
+        "upgrade_superior_stamina",
+        "upgrade_rocket_booster",
+        "upgrade_juggernaut"
+      ]
+    },
+    {
+      "m_eShopGroup": "EAntiHealing",
+      "m_vecUpgrades": [
+        "upgrade_healbane"
+      ]
+    },
+    {
+      "m_eShopGroup": "EAdditionalProtection",
+      "m_vecUpgrades": [
+        "upgrade_weapon_shielding",
+        "upgrade_spirit_bubble",
+        "upgrade_savior",
+        "upgrade_metal_skin",
+        "upgrade_veil_walker",
+        "upgrade_siphon_bullets",
+        "upgrade_diviners_kevlar"
+      ]
+    }
+  ],
+  "m_vecSpiritGroups": [
+    {
+      "m_eShopGroup": "EMoreSpirit",
+      "m_vecUpgrades": [
+        "upgrade_improved_spirit",
+        "upgrade_magic_storm",
+        "upgrade_soaring_spirit",
+        "upgrade_boundless_spirit"
+      ]
+    },
+    {
+      "m_eShopGroup": "EBurstDamage",
+      "m_vecUpgrades": [
+        "upgrade_magic_burst",
+        "upgrade_quick_silver",
+        "upgrade_magic_shock",
+        "upgrade_ultimate_burst"
+      ]
+    },
+    {
+      "m_eShopGroup": "ESpiritRange",
+      "m_vecUpgrades": [
+        "upgrade_magic_reach",
+        "upgrade_arcane_surge",
+        "upgrade_tech_range"
+      ]
+    },
+    {
+      "m_eShopGroup": "EDuration",
+      "m_vecUpgrades": [
+        "upgrade_arcane_extension",
+        "upgrade_imbued_duration_extender",
+        "upgrade_magic_carpet",
+        "upgrade_spirit_burn"
+      ]
+    },
+    {
+      "m_eShopGroup": "ECharges",
+      "m_vecUpgrades": [
+        "upgrade_extra_charge",
+        "upgrade_rapid_recharge"
+      ]
+    },
+    {
+      "m_eShopGroup": "ECooldown",
+      "m_vecUpgrades": [
+        "upgrade_magic_tempo",
+        "upgrade_cooldown_reduction",
+        "upgrade_ability_power_shard"
+      ]
+    },
+    {
+      "m_eShopGroup": "EMeleeSpirit",
+      "m_vecUpgrades": [
+        "upgrade_acolytes_glove",
+        "upgrade_spirit_snatch"
+      ]
+    },
+    {
+      "m_eShopGroup": "ESlowingMagic",
+      "m_vecUpgrades": [
+        "upgrade_suppressor",
+        "upgrade_magic_slow",
+        "upgrade_mystic_reverb"
+      ]
+    },
+    {
+      "m_eShopGroup": "EMagicVulnerability",
+      "m_vecUpgrades": [
+        "upgrade_magic_vulnerability",
+        "upgrade_escalating_exposure"
+      ]
+    },
+    {
+      "m_eShopGroup": "ECrownControl",
+      "m_vecUpgrades": [
+        "upgrade_containment",
+        "upgrade_target_stun",
+        "upgrade_aoe_root"
+      ]
+    },
+    {
+      "m_eShopGroup": "EAntiGun",
+      "m_vecUpgrades": [
+        "upgrade_withering_whip",
+        "upgrade_greater_withering_whip"
+      ]
+    },
+    {
+      "m_eShopGroup": "EMiscSpirit",
+      "m_vecUpgrades": [
+        "upgrade_mystic_regeneration",
+        "upgrade_bullet_resist_shredder",
+        "upgrade_tech_damage_pulse"
+      ]
+    },
+    {
+      "m_eShopGroup": "EActives",
+      "m_vecUpgrades": [
+        "upgrade_spirit_sap",
+        "upgrade_rupture",
+        "upgrade_cold_front",
+        "upgrade_self_bubble",
+        "upgrade_targeted_silence",
+        "upgrade_glitch",
+        "upgrade_discord",
+        "upgrade_focus_lens",
+        "upgrade_ability_refresher"
+      ]
+    }
+  ],
+  "m_MiniMapOffsets": [
+    {
+      "eEntityClass": "CLASS_BOSS_TIER_3",
+      "vOffset2D": [
+        0.0,
+        1000.0
+      ],
+      "iLane": 0
+    },
+    {
+      "eEntityClass": "CLASS_BOSS_BARRACKS",
+      "iLane": 1,
+      "vOffset2D": [
+        500.0,
+        0.0
+      ]
+    },
+    {
+      "eEntityClass": "CLASS_BOSS_BARRACKS",
+      "iLane": 6,
+      "vOffset2D": [
+        500.0,
+        0.0
+      ]
+    },
+    {
+      "eEntityClass": "CLASS_DESTROYABLE_BUILDING",
+      "vOffset2D": [
+        0.0,
+        400.0
+      ]
+    }
+  ],
+  "m_StreetBrawl": {
+    "m_vecRespawnTimes": [
+      25,
+      25,
+      30,
+      30,
+      30
+    ],
+    "m_vecGoldPerRound": [
+      5600,
+      7400,
+      9400,
+      11600,
+      14000
+    ],
+    "m_vecAPPerRound": [
+      6,
+      6,
+      5,
+      5,
+      10
+    ],
+    "m_vecItemDraftRerollsPerRound": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "m_vecRoundLengthMinutes": [
+      3,
+      3,
+      3,
+      3,
+      3
+    ],
+    "m_vecRoundLengthMinutesUrgent": [
+      4.5,
+      4.5,
+      4.5,
+      4.5,
+      4.5
+    ],
+    "m_flOvertimeRespawnTimeIncrease": [
+      25,
+      25,
+      25,
+      25,
+      30
+    ],
+    "m_flOvertimeRespawnTimeIncreaseUrgent": [
+      40,
+      40,
+      40,
+      40,
+      45
+    ],
+    "m_flOvertimeTrooperHealthScale": [
+      1.75,
+      1.75,
+      1.75,
+      2.0,
+      2.5
+    ],
+    "m_flOvertimeTrooperDamageScale": [
+      1.44,
+      1.44,
+      1.44,
+      1.44,
+      1.56
+    ],
+    "m_vecBuyTime": [
+      50,
+      50,
+      50,
+      50,
+      50
+    ],
+    "m_vecPreBuyTime": [
+      6.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "m_iScoreToWin": 3,
+    "m_flScoringTime": 6,
+    "m_iLaneNumber": 4,
+    "m_vecObjectiveMaxHealth": [
+      1800,
+      3200,
+      4600,
+      6000,
+      7400
+    ],
+    "m_nTier2BonusHealth": 4000,
+    "m_nComebackBonusHealth": 1200,
+    "m_nComebackBonusHealthCritical": 2800,
+    "m_flTrooperSpawnTimer": [
+      18,
+      18,
+      15,
+      15,
+      15
+    ],
+    "m_flTrooperSpawnBeforeRoundStartTimer": 5.0,
+    "m_flZipBoostCooldownOnStart": 20.0,
+    "m_flBuyTimeGracePeriod": 60.0,
+    "m_flTier1MaxResistTime": 2.2,
+    "m_flTier2MaxResistTime": 2.2,
+    "m_iUltimateUnlockRound": 1,
+    "m_vecItemDraftRoundsPerGameRound": [
+      {
+        "m_chanceRare": {
+          "m_mapOutcomesToWeights": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 10.0,
+            "3": 60.0,
+            "4": 40.0,
+            "5": 20.0,
+            "6": 0.0
+          }
+        },
+        "m_chanceEnhanced": {
+          "m_mapOutcomesToWeights": {
+            "0": 10.0,
+            "1": 20.0,
+            "2": 20.0,
+            "3": 35.0,
+            "4": 15.0,
+            "5": 0.0,
+            "6": 0.0
+          }
+        },
+        "m_vecItemDraftRounds": [
+          {
+            "m_eNormalModTier": "EModTier_1",
+            "m_eRareModTier": "EModTier_2"
+          },
+          {
+            "m_eNormalModTier": "EModTier_2",
+            "m_eRareModTier": "EModTier_3"
+          },
+          {
+            "m_eNormalModTier": "EModTier_3",
+            "m_eRareModTier": "EModTier_4"
+          }
+        ]
+      },
+      {
+        "m_chanceRare": {
+          "m_mapOutcomesToWeights": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 10.0,
+            "3": 60.0,
+            "4": 40.0,
+            "5": 20.0,
+            "6": 0.0
+          }
+        },
+        "m_chanceEnhanced": {
+          "m_mapOutcomesToWeights": {
+            "0": 10.0,
+            "1": 20.0,
+            "2": 20.0,
+            "3": 35.0,
+            "4": 15.0,
+            "5": 0.0,
+            "6": 0.0
+          }
+        },
+        "m_vecItemDraftRounds": [
+          {
+            "m_eNormalModTier": "EModTier_2",
+            "m_eRareModTier": "EModTier_3"
+          },
+          {
+            "m_eNormalModTier": "EModTier_3",
+            "m_eRareModTier": "EModTier_4"
+          },
+          {
+            "m_eNormalModTier": "EModTier_3",
+            "m_eRareModTier": "EModTier_4"
+          }
+        ]
+      },
+      {
+        "m_chanceRare": {
+          "m_mapOutcomesToWeights": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 10.0,
+            "3": 60.0,
+            "4": 40.0,
+            "5": 20.0,
+            "6": 0.0
+          }
+        },
+        "m_chanceEnhanced": {
+          "m_mapOutcomesToWeights": {
+            "0": 10.0,
+            "1": 20.0,
+            "2": 20.0,
+            "3": 35.0,
+            "4": 15.0,
+            "5": 0.0,
+            "6": 0.0
+          }
+        },
+        "m_vecItemDraftRounds": [
+          {
+            "m_eNormalModTier": "EModTier_2",
+            "m_eRareModTier": "EModTier_3",
+            "m_flRareWeight": 50
+          },
+          {
+            "m_eNormalModTier": "EModTier_3",
+            "m_eRareModTier": "EModTier_4",
+            "m_flRareWeight": 50
+          },
+          {
+            "m_eNormalModTier": "EModTier_4",
+            "m_eRareModTier": "EModTier_5",
+            "m_flRareWeight": 0
+          }
+        ]
+      },
+      {
+        "m_chanceRare": {
+          "m_mapOutcomesToWeights": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 10.0,
+            "3": 60.0,
+            "4": 40.0,
+            "5": 20.0,
+            "6": 0.0
+          }
+        },
+        "m_chanceEnhanced": {
+          "m_mapOutcomesToWeights": {
+            "0": 10.0,
+            "1": 20.0,
+            "2": 20.0,
+            "3": 35.0,
+            "4": 15.0,
+            "5": 0.0,
+            "6": 0.0
+          }
+        },
+        "m_vecItemDraftRounds": [
+          {
+            "m_eNormalModTier": "EModTier_3",
+            "m_eRareModTier": "EModTier_4",
+            "m_flRareWeight": 40
+          },
+          {
+            "m_eNormalModTier": "EModTier_3",
+            "m_eRareModTier": "EModTier_4",
+            "m_flRareWeight": 40
+          },
+          {
+            "m_eNormalModTier": "EModTier_4",
+            "m_eRareModTier": "EModTier_5",
+            "m_flRareWeight": 20
+          }
+        ]
+      },
+      {
+        "m_chanceRare": {
+          "m_mapOutcomesToWeights": {
+            "0": 5.0,
+            "1": 10.0,
+            "2": 40.0,
+            "3": 10.0,
+            "4": 0.0,
+            "5": 0.0
+          }
+        },
+        "m_chanceEnhanced": {
+          "m_mapOutcomesToWeights": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 5.0,
+            "3": 35.0,
+            "4": 15.0,
+            "5": 0.0,
+            "6": 0.0
+          }
+        },
+        "m_vecItemDraftRounds": [
+          {
+            "m_eNormalModTier": "EModTier_4",
+            "m_eRareModTier": "EModTier_5"
+          },
+          {
+            "m_eNormalModTier": "EModTier_4",
+            "m_eRareModTier": "EModTier_5"
+          },
+          {
+            "m_eNormalModTier": "EModTier_4",
+            "m_eRareModTier": "EModTier_5"
+          }
+        ]
+      }
+    ],
+    "m_strTrooperModifier": "modifier_streetbrawl_trooper",
+    "m_mapItemTierToItemDraftBuckets": {
+      "EModTier_1": {
+        "m_mapBuckets": {
+          "Normal": 30.0,
+          "Good": 70.0
+        },
+        "m_strBucketName": "Tier 1"
+      },
+      "EModTier_2": {
+        "m_mapBuckets": {
+          "Normal": 40.0,
+          "Good": 60.0
+        },
+        "m_strBucketName": "Tier 2"
+      },
+      "EModTier_3": {
+        "m_mapBuckets": {
+          "Normal": 40.0,
+          "Good": 60.0
+        },
+        "m_strBucketName": "Tier 3"
+      },
+      "EModTier_4": {
+        "m_mapBuckets": {
+          "Normal": 45.0,
+          "Good": 55.0
+        },
+        "m_strBucketName": "Tier 4"
+      },
+      "EModTier_5": {
+        "m_mapBuckets": {
+          "Normal": 80.0,
+          "Good": 20.0
+        },
+        "m_strBucketName": "Tier 5"
+      }
+    }
+  },
+  "m_OutlineColorFriend": [
+    215,
+    201,
+    175,
+    255
+  ],
+  "m_OutlineColorEnemy": [
+    230,
+    25,
+    25,
+    255
+  ],
+  "m_OutlineColorTeam1": [
+    231,
+    182,
+    89,
+    255
+  ],
+  "m_OutlineColorTeam2": [
+    91,
+    121,
+    230,
+    255
+  ],
+  "m_OutlineColorNeutral": [
+    0,
+    125,
+    125,
+    255
+  ],
+  "m_OutlineColorEnemyHero": [
+    162,
+    34,
+    34,
+    255
+  ]
+}

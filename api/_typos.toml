@@ -1,0 +1,5 @@
+[files]
+extend-exclude = [
+    "src/utils/kv3_fixtures/",
+    "src/utils/kv3_snapshots/",
+]
