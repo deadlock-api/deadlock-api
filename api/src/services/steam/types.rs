@@ -147,55 +147,14 @@ pub(crate) enum SteamAccountVerifyError {
 }
 
 #[derive(Debug, Deserialize)]
-pub(super) struct ForumRss {
-    pub(crate) channel: ForumChannel,
+pub(super) struct Rss {
+    pub(crate) channel: Channel,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct ForumChannel {
-    #[serde(default, rename = "item")]
+pub(crate) struct Channel {
+    #[serde(rename = "item")]
     pub(crate) patch_notes: Vec<Patch>,
-}
-
-#[derive(Debug, Deserialize)]
-pub(super) struct SteamRss {
-    pub(crate) channel: SteamChannel,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct SteamChannel {
-    #[serde(default, rename = "item")]
-    pub(crate) patch_notes: Vec<SteamNews>,
-}
-
-#[derive(Debug, Clone, Serialize, ToSchema)]
-#[serde(tag = "source", rename_all = "lowercase")]
-pub(crate) enum FeedItem {
-    Forum(Patch),
-    Steam(SteamNews),
-}
-
-impl FeedItem {
-    pub(crate) fn title(&self) -> &str {
-        match self {
-            Self::Forum(p) => &p.title,
-            Self::Steam(p) => &p.title,
-        }
-    }
-
-    pub(crate) fn link(&self) -> &str {
-        match self {
-            Self::Forum(p) => &p.link,
-            Self::Steam(p) => &p.link,
-        }
-    }
-
-    pub(crate) fn pub_date(&self) -> DateTime<FixedOffset> {
-        match self {
-            Self::Forum(p) => p.pub_date,
-            Self::Steam(p) => p.pub_date,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -214,18 +173,6 @@ pub(crate) struct Patch {
     pub(crate) content_encoded: String,
     #[serde(rename(deserialize = "comments"))]
     pub(crate) slash_comments: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all(deserialize = "camelCase"))]
-pub(crate) struct SteamNews {
-    pub(crate) title: String,
-    #[serde(deserialize_with = "parse_rfc2822_datetime")]
-    pub(crate) pub_date: DateTime<FixedOffset>,
-    pub(crate) link: String,
-    pub(crate) guid: PatchGuid,
-    #[serde(rename(deserialize = "description"))]
-    pub(crate) content_encoded: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

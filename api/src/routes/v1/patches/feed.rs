@@ -4,13 +4,13 @@ use axum::response::IntoResponse;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::services::steam::types::FeedItem;
+use crate::services::steam::types::Patch;
 
 #[utoipa::path(
     get,
     path = "/",
     responses(
-        (status = OK, body = [FeedItem]),
+        (status = OK, body = [Patch]),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing the RSS-Feed failed")
     ),
     tags = ["Patches"],
