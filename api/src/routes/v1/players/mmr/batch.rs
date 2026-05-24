@@ -11,7 +11,9 @@ use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::mmr_history::{MMRHistory, SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::comma_separated_deserialize;
 
 #[derive(Deserialize, IntoParams, Clone)]
@@ -142,7 +144,9 @@ pub(super) async fn mmr(
         max_match_id,
     }): Query<MMRBatchQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     let protected_users = state
         .steam_client
         .get_protected_users(&state.pg_client)
@@ -184,7 +188,9 @@ pub(super) async fn hero_mmr(
         max_match_id,
     }): Query<MMRBatchQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     let protected_users = state
         .steam_client
         .get_protected_users(&state.pg_client)

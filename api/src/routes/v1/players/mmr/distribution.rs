@@ -9,8 +9,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
 use crate::routes::v1::players::mmr::mmr_history::{SMOOTHING_FACTOR, WINDOW_SIZE};
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::default_last_month_timestamp;
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
@@ -167,8 +169,10 @@ Player MMR Distribution
 )]
 pub(super) async fn mmr_distribution(
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
     Query(query): Query<MMRDistributionQuery>,
 ) -> APIResult<impl IntoResponse> {
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     let query = build_mmr_distribution_query(None, &query);
     debug!(?query);
     Ok(state
@@ -198,7 +202,9 @@ pub(super) async fn hero_mmr_distribution(
     Path(HeroMMRPath { hero_id }): Path<HeroMMRPath>,
     Query(query): Query<MMRDistributionQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     let query = build_mmr_distribution_query(Some(hero_id), &query);
     debug!(?query);
     Ok(state

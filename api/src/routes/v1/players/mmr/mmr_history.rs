@@ -8,6 +8,8 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::mmr::apply_mmr_rate_limits;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::parse::parse_steam_id;
 use crate::utils::types::AccountIdQuery;
 
@@ -136,7 +138,9 @@ async fn get_hero_mmr_history(
 pub(super) async fn mmr_history(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)
@@ -168,7 +172,9 @@ pub(super) async fn hero_mmr_history(
         hero_id,
     }): Path<HeroMMRHistoryPath>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
+    apply_mmr_rate_limits(&state, &rate_limit_key).await?;
     if state
         .steam_client
         .is_user_protected(&state.pg_client, account_id)

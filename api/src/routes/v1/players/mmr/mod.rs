@@ -2,11 +2,16 @@ pub(crate) mod batch;
 mod distribution;
 pub mod mmr_history;
 
+use core::time::Duration;
+
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
+use crate::error::APIResult;
+use crate::services::rate_limiter::Quota;
+use crate::services::rate_limiter::extractor::RateLimitKey;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "MMR", description = "
@@ -24,12 +29,33 @@ This is how we calculate a player MMR.
 ### Rate Limits:
 | Type | Limit |
 | ---- | ----- |
-| IP | 100req/s |
-| Key | - |
-| Global | - |
+| IP | 5req/min |
+| Key | 25req/min |
+| Global | 50req/min |
+
+Rate limits are shared across all MMR endpoints (single bucket).
     "
 )))]
 struct ApiDoc;
+
+pub(super) async fn apply_mmr_rate_limits(
+    state: &AppState,
+    rate_limit_key: &RateLimitKey,
+) -> APIResult<()> {
+    state
+        .rate_limit_client
+        .apply_limits(
+            rate_limit_key,
+            "mmr",
+            &[
+                Quota::ip_limit(5, Duration::from_mins(1)),
+                Quota::key_limit(25, Duration::from_mins(1)),
+                Quota::global_limit(50, Duration::from_mins(1)),
+            ],
+        )
+        .await?;
+    Ok(())
+}
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
