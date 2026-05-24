@@ -1,0 +1,967 @@
+---
+source: src/services/assets/versions/colors.rs
+assertion_line: 52
+expression: colors
+---
+{
+  "abrams_color": {
+    "red": 32,
+    "green": 146,
+    "blue": 174,
+    "alpha": 255
+  },
+  "akimbo_color": {
+    "red": 199,
+    "green": 180,
+    "blue": 171,
+    "alpha": 255
+  },
+  "alternate_progress_bar_yellow": {
+    "red": 157,
+    "green": 207,
+    "blue": 64,
+    "alpha": 255
+  },
+  "ap_currency_color": {
+    "red": 216,
+    "green": 184,
+    "blue": 255,
+    "alpha": 255
+  },
+  "armor_color": {
+    "red": 0,
+    "green": 255,
+    "blue": 153,
+    "alpha": 255
+  },
+  "armor_color_bright": {
+    "red": 0,
+    "green": 247,
+    "blue": 148,
+    "alpha": 255
+  },
+  "armor_color_dark": {
+    "red": 39,
+    "green": 76,
+    "blue": 61,
+    "alpha": 255
+  },
+  "armor_color_faded": {
+    "red": 0,
+    "green": 255,
+    "blue": 153,
+    "alpha": 34
+  },
+  "armor_color_medium": {
+    "red": 0,
+    "green": 166,
+    "blue": 100,
+    "alpha": 255
+  },
+  "astro_color": {
+    "red": 163,
+    "green": 90,
+    "blue": 27,
+    "alpha": 255
+  },
+  "atlas_color": {
+    "red": 32,
+    "green": 146,
+    "blue": 174,
+    "alpha": 255
+  },
+  "ballista_color": {
+    "red": 189,
+    "green": 99,
+    "blue": 164,
+    "alpha": 255
+  },
+  "base_border": {
+    "red": 68,
+    "green": 68,
+    "blue": 68,
+    "alpha": 255
+  },
+  "base_text": {
+    "red": 255,
+    "green": 239,
+    "blue": 215,
+    "alpha": 255
+  },
+  "bebop_color": {
+    "red": 159,
+    "green": 71,
+    "blue": 52,
+    "alpha": 255
+  },
+  "blue_a_p_text_color": {
+    "red": 128,
+    "green": 238,
+    "blue": 255,
+    "alpha": 255
+  },
+  "bookworm_color": {
+    "red": 37,
+    "green": 143,
+    "blue": 99,
+    "alpha": 255
+  },
+  "brand_green": {
+    "red": 95,
+    "green": 230,
+    "blue": 158,
+    "alpha": 255
+  },
+  "builds_color": {
+    "red": 77,
+    "green": 126,
+    "blue": 200,
+    "alpha": 255
+  },
+  "builds_dark_color": {
+    "red": 54,
+    "green": 91,
+    "blue": 146,
+    "alpha": 255
+  },
+  "builds_darker_color": {
+    "red": 36,
+    "green": 54,
+    "blue": 80,
+    "alpha": 255
+  },
+  "builds_light_color": {
+    "red": 133,
+    "green": 181,
+    "blue": 255,
+    "alpha": 255
+  },
+  "chrono_color": {
+    "red": 152,
+    "green": 57,
+    "blue": 82,
+    "alpha": 255
+  },
+  "color_common_dark_gray": {
+    "red": 46,
+    "green": 44,
+    "blue": 39,
+    "alpha": 255
+  },
+  "color_common_darkest_gray": {
+    "red": 26,
+    "green": 26,
+    "blue": 26,
+    "alpha": 255
+  },
+  "color_enemy": {
+    "red": 255,
+    "green": 65,
+    "blue": 13,
+    "alpha": 255
+  },
+  "color_gold": {
+    "red": 255,
+    "green": 237,
+    "blue": 121,
+    "alpha": 255
+  },
+  "color_upgrades": {
+    "red": 0,
+    "green": 255,
+    "blue": 255,
+    "alpha": 255
+  },
+  "copper_flat": {
+    "red": 174,
+    "green": 170,
+    "blue": 148,
+    "alpha": 255
+  },
+  "courage_bright_color": {
+    "red": 236,
+    "green": 151,
+    "blue": 25,
+    "alpha": 255
+  },
+  "courage_color": {
+    "red": 157,
+    "green": 98,
+    "blue": 11,
+    "alpha": 255
+  },
+  "courage_dark_color": {
+    "red": 127,
+    "green": 84,
+    "blue": 14,
+    "alpha": 255
+  },
+  "courage_darker_color": {
+    "red": 48,
+    "green": 35,
+    "blue": 6,
+    "alpha": 255
+  },
+  "courage_light_color": {
+    "red": 255,
+    "green": 209,
+    "blue": 141,
+    "alpha": 255
+  },
+  "debuff_color": {
+    "red": 215,
+    "green": 73,
+    "blue": 73,
+    "alpha": 255
+  },
+  "deeply_ominous_green": {
+    "red": 71,
+    "green": 163,
+    "blue": 108,
+    "alpha": 255
+  },
+  "default_b_g_color1": {
+    "red": 51,
+    "green": 51,
+    "blue": 51,
+    "alpha": 255
+  },
+  "default_b_g_color2": {
+    "red": 64,
+    "green": 64,
+    "blue": 64,
+    "alpha": 255
+  },
+  "default_b_g_color3": {
+    "red": 77,
+    "green": 77,
+    "blue": 77,
+    "alpha": 255
+  },
+  "default_b_g_color4": {
+    "red": 89,
+    "green": 89,
+    "blue": 89,
+    "alpha": 255
+  },
+  "doorman_color": {
+    "red": 183,
+    "green": 117,
+    "blue": 40,
+    "alpha": 255
+  },
+  "drifter_color": {
+    "red": 157,
+    "green": 44,
+    "blue": 43,
+    "alpha": 255
+  },
+  "dynamo_color": {
+    "red": 208,
+    "green": 185,
+    "blue": 69,
+    "alpha": 255
+  },
+  "eggshell": {
+    "red": 222,
+    "green": 197,
+    "blue": 160,
+    "alpha": 255
+  },
+  "electric_yellow": {
+    "red": 222,
+    "green": 212,
+    "blue": 76,
+    "alpha": 255
+  },
+  "enhanced_color_bright": {
+    "red": 63,
+    "green": 220,
+    "blue": 255,
+    "alpha": 255
+  },
+  "enhanced_color_dark": {
+    "red": 14,
+    "green": 143,
+    "blue": 172,
+    "alpha": 255
+  },
+  "enhanced_color_darker": {
+    "red": 17,
+    "green": 33,
+    "blue": 121,
+    "alpha": 255
+  },
+  "enhanced_color_light": {
+    "red": 148,
+    "green": 244,
+    "blue": 255,
+    "alpha": 255
+  },
+  "familiar_color": {
+    "red": 83,
+    "green": 131,
+    "blue": 209,
+    "alpha": 255
+  },
+  "fav_color": {
+    "red": 255,
+    "green": 219,
+    "blue": 76,
+    "alpha": 255
+  },
+  "fencer_color": {
+    "red": 255,
+    "green": 51,
+    "blue": 51,
+    "alpha": 255
+  },
+  "forge_color": {
+    "red": 35,
+    "green": 84,
+    "blue": 157,
+    "alpha": 255
+  },
+  "fortitude_bright_color": {
+    "red": 123,
+    "green": 186,
+    "blue": 29,
+    "alpha": 255
+  },
+  "fortitude_color": {
+    "red": 100,
+    "green": 151,
+    "blue": 23,
+    "alpha": 255
+  },
+  "fortitude_dark_color": {
+    "red": 76,
+    "green": 113,
+    "blue": 19,
+    "alpha": 255
+  },
+  "fortitude_darker_color": {
+    "red": 31,
+    "green": 52,
+    "blue": 0,
+    "alpha": 255
+  },
+  "fortitude_light_color": {
+    "red": 211,
+    "green": 252,
+    "blue": 150,
+    "alpha": 255
+  },
+  "frank_color": {
+    "red": 101,
+    "green": 139,
+    "blue": 111,
+    "alpha": 255
+  },
+  "geist_book_color": {
+    "red": 51,
+    "green": 163,
+    "blue": 87,
+    "alpha": 255
+  },
+  "geist_book_dark_color": {
+    "red": 14,
+    "green": 56,
+    "blue": 27,
+    "alpha": 255
+  },
+  "ghost_color": {
+    "red": 33,
+    "green": 132,
+    "blue": 64,
+    "alpha": 255
+  },
+  "gigawatt_color": {
+    "red": 204,
+    "green": 134,
+    "blue": 30,
+    "alpha": 255
+  },
+  "gold_color": {
+    "red": 255,
+    "green": 237,
+    "blue": 121,
+    "alpha": 255
+  },
+  "golden_dark": {
+    "red": 146,
+    "green": 112,
+    "blue": 60,
+    "alpha": 255
+  },
+  "golden_light": {
+    "red": 198,
+    "green": 162,
+    "blue": 105,
+    "alpha": 255
+  },
+  "green_flat": {
+    "red": 118,
+    "green": 158,
+    "blue": 95,
+    "alpha": 255
+  },
+  "haze_color": {
+    "red": 172,
+    "green": 97,
+    "blue": 51,
+    "alpha": 255
+  },
+  "haze_color_dk": {
+    "red": 32,
+    "green": 19,
+    "blue": 10,
+    "alpha": 255
+  },
+  "hornet_color": {
+    "red": 162,
+    "green": 199,
+    "blue": 229,
+    "alpha": 255
+  },
+  "inferno_color": {
+    "red": 201,
+    "green": 60,
+    "blue": 38,
+    "alpha": 255
+  },
+  "kali_color": {
+    "red": 215,
+    "green": 174,
+    "blue": 97,
+    "alpha": 255
+  },
+  "kelvin_color": {
+    "red": 116,
+    "green": 171,
+    "blue": 188,
+    "alpha": 255
+  },
+  "keybind_b_g_color": {
+    "red": 232,
+    "green": 228,
+    "blue": 234,
+    "alpha": 255
+  },
+  "keybind_housing_b_g_color": {
+    "red": 172,
+    "green": 163,
+    "blue": 149,
+    "alpha": 255
+  },
+  "krill_color": {
+    "red": 197,
+    "green": 132,
+    "blue": 40,
+    "alpha": 255
+  },
+  "lane_blue_color": {
+    "red": 67,
+    "green": 124,
+    "blue": 220,
+    "alpha": 255
+  },
+  "lane_green_color": {
+    "red": 48,
+    "green": 151,
+    "blue": 70,
+    "alpha": 255
+  },
+  "lane_purple_color": {
+    "red": 194,
+    "green": 65,
+    "blue": 168,
+    "alpha": 255
+  },
+  "lane_yellow_color": {
+    "red": 249,
+    "green": 213,
+    "blue": 6,
+    "alpha": 255
+  },
+  "lash_color": {
+    "red": 65,
+    "green": 116,
+    "blue": 187,
+    "alpha": 255
+  },
+  "light_red_flat": {
+    "red": 204,
+    "green": 91,
+    "blue": 59,
+    "alpha": 255
+  },
+  "magician_color": {
+    "red": 107,
+    "green": 107,
+    "blue": 107,
+    "alpha": 255
+  },
+  "mirage_color": {
+    "red": 106,
+    "green": 46,
+    "blue": 104,
+    "alpha": 255
+  },
+  "nano_color": {
+    "red": 87,
+    "green": 39,
+    "blue": 152,
+    "alpha": 255
+  },
+  "necro_color": {
+    "red": 217,
+    "green": 243,
+    "blue": 52,
+    "alpha": 255
+  },
+  "off_black": {
+    "red": 16,
+    "green": 19,
+    "blue": 13,
+    "alpha": 255
+  },
+  "off_white": {
+    "red": 255,
+    "green": 239,
+    "blue": 215,
+    "alpha": 255
+  },
+  "ominous_green": {
+    "red": 105,
+    "green": 231,
+    "blue": 153,
+    "alpha": 255
+  },
+  "orion_color": {
+    "red": 94,
+    "green": 176,
+    "blue": 131,
+    "alpha": 255
+  },
+  "priest_color": {
+    "red": 189,
+    "green": 53,
+    "blue": 153,
+    "alpha": 255
+  },
+  "punkgoat_color": {
+    "red": 212,
+    "green": 173,
+    "blue": 14,
+    "alpha": 255
+  },
+  "rank0_color": {
+    "red": 51,
+    "green": 51,
+    "blue": 51,
+    "alpha": 255
+  },
+  "rank10_color": {
+    "red": 195,
+    "green": 151,
+    "blue": 81,
+    "alpha": 255
+  },
+  "rank11_color": {
+    "red": 92,
+    "green": 233,
+    "blue": 169,
+    "alpha": 255
+  },
+  "rank1_color": {
+    "red": 106,
+    "green": 62,
+    "blue": 30,
+    "alpha": 255
+  },
+  "rank2_color": {
+    "red": 136,
+    "green": 35,
+    "blue": 85,
+    "alpha": 255
+  },
+  "rank3_color": {
+    "red": 92,
+    "green": 109,
+    "blue": 171,
+    "alpha": 255
+  },
+  "rank4_color": {
+    "red": 113,
+    "green": 156,
+    "blue": 71,
+    "alpha": 255
+  },
+  "rank5_color": {
+    "red": 221,
+    "green": 163,
+    "blue": 38,
+    "alpha": 255
+  },
+  "rank6_color": {
+    "red": 238,
+    "green": 79,
+    "blue": 87,
+    "alpha": 255
+  },
+  "rank7_color": {
+    "red": 180,
+    "green": 127,
+    "blue": 235,
+    "alpha": 255
+  },
+  "rank8_color": {
+    "red": 149,
+    "green": 81,
+    "blue": 56,
+    "alpha": 255
+  },
+  "rank9_color": {
+    "red": 124,
+    "green": 124,
+    "blue": 124,
+    "alpha": 255
+  },
+  "red_flat": {
+    "red": 204,
+    "green": 84,
+    "blue": 78,
+    "alpha": 255
+  },
+  "ritual_green": {
+    "red": 101,
+    "green": 149,
+    "blue": 29,
+    "alpha": 255
+  },
+  "ritual_green_light": {
+    "red": 124,
+    "green": 188,
+    "blue": 29,
+    "alpha": 255
+  },
+  "selected_text_background_color": {
+    "red": 102,
+    "green": 102,
+    "blue": 102,
+    "alpha": 51
+  },
+  "shard_color": {
+    "red": 153,
+    "green": 255,
+    "blue": 214,
+    "alpha": 255
+  },
+  "shiv_color": {
+    "red": 229,
+    "green": 42,
+    "blue": 104,
+    "alpha": 255
+  },
+  "silenced_debuff_color": {
+    "red": 188,
+    "green": 29,
+    "blue": 202,
+    "alpha": 255
+  },
+  "silvered": {
+    "red": 198,
+    "green": 198,
+    "blue": 198,
+    "alpha": 255
+  },
+  "soul_color": {
+    "red": 112,
+    "green": 248,
+    "blue": 193,
+    "alpha": 255
+  },
+  "soul_flat": {
+    "red": 95,
+    "green": 158,
+    "blue": 133,
+    "alpha": 255
+  },
+  "spirit_bright_color": {
+    "red": 206,
+    "green": 144,
+    "blue": 255,
+    "alpha": 255
+  },
+  "spirit_color": {
+    "red": 138,
+    "green": 85,
+    "blue": 179,
+    "alpha": 255
+  },
+  "spirit_dark_color": {
+    "red": 97,
+    "green": 52,
+    "blue": 132,
+    "alpha": 255
+  },
+  "spirit_darker_color": {
+    "red": 54,
+    "green": 33,
+    "blue": 71,
+    "alpha": 255
+  },
+  "spirit_light_color": {
+    "red": 231,
+    "green": 200,
+    "blue": 255,
+    "alpha": 255
+  },
+  "steam_blue": {
+    "red": 26,
+    "green": 159,
+    "blue": 255,
+    "alpha": 255
+  },
+  "steel_flat": {
+    "red": 146,
+    "green": 170,
+    "blue": 173,
+    "alpha": 255
+  },
+  "stunned_color": {
+    "red": 94,
+    "green": 58,
+    "blue": 58,
+    "alpha": 255
+  },
+  "stunned_debuff_color": {
+    "red": 255,
+    "green": 0,
+    "blue": 0,
+    "alpha": 255
+  },
+  "synth_color": {
+    "red": 133,
+    "green": 134,
+    "blue": 23,
+    "alpha": 255
+  },
+  "team1_color": {
+    "red": 212,
+    "green": 134,
+    "blue": 11,
+    "alpha": 255
+  },
+  "team1_color_bright": {
+    "red": 251,
+    "green": 220,
+    "blue": 160,
+    "alpha": 255
+  },
+  "team1_color_dark": {
+    "red": 147,
+    "green": 118,
+    "blue": 0,
+    "alpha": 255
+  },
+  "team1_color_darker": {
+    "red": 111,
+    "green": 56,
+    "blue": 6,
+    "alpha": 255
+  },
+  "team1_color_neutral": {
+    "red": 85,
+    "green": 80,
+    "blue": 62,
+    "alpha": 255
+  },
+  "team1_foreground": {
+    "red": 32,
+    "green": 21,
+    "blue": 0,
+    "alpha": 255
+  },
+  "team2_color": {
+    "red": 77,
+    "green": 117,
+    "blue": 195,
+    "alpha": 255
+  },
+  "team2_color_alt": {
+    "red": 3,
+    "green": 102,
+    "blue": 123,
+    "alpha": 255
+  },
+  "team2_color_bright": {
+    "red": 189,
+    "green": 203,
+    "blue": 255,
+    "alpha": 255
+  },
+  "team2_color_dark": {
+    "red": 65,
+    "green": 86,
+    "blue": 160,
+    "alpha": 255
+  },
+  "team2_color_darker": {
+    "red": 36,
+    "green": 50,
+    "blue": 101,
+    "alpha": 255
+  },
+  "team2_color_neutral": {
+    "red": 84,
+    "green": 89,
+    "blue": 108,
+    "alpha": 255
+  },
+  "team2_foreground": {
+    "red": 255,
+    "green": 255,
+    "blue": 255,
+    "alpha": 255
+  },
+  "tech_color": {
+    "red": 0,
+    "green": 221,
+    "blue": 255,
+    "alpha": 255
+  },
+  "tech_color_bright": {
+    "red": 0,
+    "green": 221,
+    "blue": 255,
+    "alpha": 255
+  },
+  "tech_color_dark": {
+    "red": 36,
+    "green": 83,
+    "blue": 89,
+    "alpha": 255
+  },
+  "tech_color_faded": {
+    "red": 36,
+    "green": 83,
+    "blue": 89,
+    "alpha": 255
+  },
+  "tech_color_medium": {
+    "red": 0,
+    "green": 155,
+    "blue": 178,
+    "alpha": 255
+  },
+  "tengu_color": {
+    "red": 157,
+    "green": 140,
+    "blue": 169,
+    "alpha": 255
+  },
+  "unicorn_color": {
+    "red": 187,
+    "green": 169,
+    "blue": 225,
+    "alpha": 255
+  },
+  "vampirebat_color": {
+    "red": 169,
+    "green": 23,
+    "blue": 30,
+    "alpha": 255
+  },
+  "vampirebat_color_dk": {
+    "red": 32,
+    "green": 11,
+    "blue": 11,
+    "alpha": 255
+  },
+  "viper_color": {
+    "red": 167,
+    "green": 173,
+    "blue": 0,
+    "alpha": 255
+  },
+  "viscous_color": {
+    "red": 49,
+    "green": 152,
+    "blue": 38,
+    "alpha": 255
+  },
+  "vivacious_green": {
+    "red": 20,
+    "green": 35,
+    "blue": 4,
+    "alpha": 255
+  },
+  "warden_color": {
+    "red": 77,
+    "green": 104,
+    "blue": 163,
+    "alpha": 255
+  },
+  "warning_red": {
+    "red": 238,
+    "green": 89,
+    "blue": 69,
+    "alpha": 255
+  },
+  "weapon_color": {
+    "red": 229,
+    "green": 138,
+    "blue": 0,
+    "alpha": 255
+  },
+  "weapon_color_bright": {
+    "red": 229,
+    "green": 138,
+    "blue": 0,
+    "alpha": 255
+  },
+  "weapon_color_dark": {
+    "red": 127,
+    "green": 79,
+    "blue": 5,
+    "alpha": 255
+  },
+  "weapon_color_faded": {
+    "red": 255,
+    "green": 168,
+    "blue": 38,
+    "alpha": 34
+  },
+  "weapon_color_medium": {
+    "red": 200,
+    "green": 121,
+    "blue": 3,
+    "alpha": 255
+  },
+  "werewolf_color": {
+    "red": 191,
+    "green": 188,
+    "blue": 159,
+    "alpha": 255
+  },
+  "wraith_color": {
+    "red": 148,
+    "green": 77,
+    "blue": 120,
+    "alpha": 255
+  },
+  "wrecker_color": {
+    "red": 127,
+    "green": 45,
+    "blue": 177,
+    "alpha": 255
+  },
+  "yamato_color": {
+    "red": 98,
+    "green": 87,
+    "blue": 137,
+    "alpha": 255
+  }
+}

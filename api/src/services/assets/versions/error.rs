@@ -9,4 +9,6 @@ pub(crate) enum AssetsError {
     Json(#[from] serde_json::Error),
     #[error("Asset fetch error: {0}")]
     Store(#[from] store::VersionStoreError),
+    #[error("steam.inf parse error: {0}")]
+    SteamInfo(String),
 }

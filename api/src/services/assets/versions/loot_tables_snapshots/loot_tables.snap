@@ -1,0 +1,1043 @@
+---
+source: src/services/assets/versions/loot_tables.rs
+expression: out
+---
+{
+  "weapon_t1": {
+    "entries": [
+      {
+        "item": "upgrade_close_range"
+      },
+      {
+        "item": "upgrade_clip_size"
+      },
+      {
+        "item": "upgrade_headshot_booster"
+      },
+      {
+        "item": "upgrade_high_velocity_mag"
+      },
+      {
+        "item": "upgrade_non_player_bonus"
+      },
+      {
+        "item": "upgrade_rapid_rounds"
+      },
+      {
+        "item": "upgrade_medic_bullets"
+      }
+    ]
+  },
+  "weapon_t2": {
+    "entries": [
+      {
+        "item": "upgrade_active_reload"
+      },
+      {
+        "item": "upgrade_weapon_backstabber"
+      },
+      {
+        "item": "upgrade_fleetfoot_boots"
+      },
+      {
+        "item": "upgrade_intensifying_clip"
+      },
+      {
+        "item": "upgrade_kinetic_sash"
+      },
+      {
+        "item": "upgrade_long_range"
+      },
+      {
+        "item": "upgrade_melee_charge"
+      },
+      {
+        "item": "upgrade_crackshot"
+      },
+      {
+        "item": "upgrade_pristine_emblem"
+      },
+      {
+        "item": "upgrade_slowing_bullets"
+      },
+      {
+        "item": "upgrade_tech_defense_shredders"
+      },
+      {
+        "item": "upgrade_split_shot"
+      },
+      {
+        "item": "upgrade_blitz_bullets"
+      },
+      {
+        "item": "upgrade_titan_round"
+      },
+      {
+        "item": "upgrade_headshot_booster2"
+      },
+      {
+        "item": "upgrade_rechargingbullets"
+      }
+    ]
+  },
+  "weapon_t3": {
+    "entries": [
+      {
+        "item": "upgrade_thermal_detonator"
+      },
+      {
+        "item": "upgrade_berserker"
+      },
+      {
+        "item": "upgrade_blood_tribute"
+      },
+      {
+        "item": "upgrade_burst_fire"
+      },
+      {
+        "item": "upgrade_non_player_bonus_sacrifice"
+      },
+      {
+        "item": "upgrade_reinforcing_casings"
+      },
+      {
+        "item": "upgrade_express_shot"
+      },
+      {
+        "item": "upgrade_headhunter"
+      },
+      {
+        "item": "upgrade_dps_aura"
+      },
+      {
+        "item": "upgrade_hollow_point_rounds"
+      },
+      {
+        "item": "upgrade_bullet_armor_reduction_aura"
+      },
+      {
+        "item": "upgrade_close_quarter_combat"
+      },
+      {
+        "item": "upgrade_sharpshooter"
+      },
+      {
+        "item": "upgrade_spellslinger_headshots"
+      },
+      {
+        "item": "upgrade_chain_lightning"
+      },
+      {
+        "item": "upgrade_toxic_bullets"
+      },
+      {
+        "item": "upgrade_weighted_shots"
+      },
+      {
+        "item": "upgrade_bulletshredimbue"
+      }
+    ]
+  },
+  "weapon_t4": {
+    "entries": [
+      {
+        "item": "upgrade_aprounds"
+      },
+      {
+        "item": "upgrade_capacitor"
+      },
+      {
+        "item": "upgrade_banshee_slugs"
+      },
+      {
+        "item": "upgrade_crushing_fists"
+      },
+      {
+        "item": "upgrade_fervor"
+      },
+      {
+        "item": "upgrade_glass_cannon"
+      },
+      {
+        "item": "upgrade_critshot"
+      },
+      {
+        "item": "upgrade_ricochet"
+      },
+      {
+        "item": "upgrade_cloaking_device_active"
+      },
+      {
+        "item": "upgrade_proc_silence"
+      },
+      {
+        "item": "upgrade_enchanted_holsters"
+      },
+      {
+        "item": "upgrade_tech_overflow"
+      }
+    ]
+  },
+  "vitality_t1": {
+    "entries": [
+      {
+        "item": "upgrade_health"
+      },
+      {
+        "item": "upgrade_endurance"
+      },
+      {
+        "item": "upgrade_improved_stamina"
+      },
+      {
+        "item": "upgrade_health_stimpak"
+      },
+      {
+        "item": "upgrade_lifestrike_gauntlets"
+      },
+      {
+        "item": "upgrade_melee_rebuttal"
+      },
+      {
+        "item": "upgrade_sprint_booster"
+      }
+    ]
+  },
+  "vitality_t2": {
+    "entries": [
+      {
+        "item": "upgrade_regenerating_bullet_shield"
+      },
+      {
+        "item": "upgrade_vampire"
+      },
+      {
+        "item": "upgrade_debuff_reducer"
+      },
+      {
+        "item": "upgrade_magic_shield"
+      },
+      {
+        "item": "upgrade_cardio_calibrator"
+      },
+      {
+        "item": "upgrade_guardian_ward"
+      },
+      {
+        "item": "upgrade_healbane"
+      },
+      {
+        "item": "upgrade_healing_booster"
+      },
+      {
+        "item": "upgrade_vex_barrier"
+      },
+      {
+        "item": "upgrade_restorative_locket"
+      },
+      {
+        "item": "upgrade_return_fire"
+      },
+      {
+        "item": "upgrade_health_stealing_magic"
+      },
+      {
+        "item": "upgrade_spirit_bubble"
+      },
+      {
+        "item": "upgrade_weapon_shielding"
+      }
+    ]
+  },
+  "vitality_t3": {
+    "entries": [
+      {
+        "item": "upgrade_improved_bullet_armor"
+      },
+      {
+        "item": "upgrade_counterspell"
+      },
+      {
+        "item": "upgrade_reduce_debuff_duration"
+      },
+      {
+        "item": "upgrade_chonky"
+      },
+      {
+        "item": "upgrade_fury_trance"
+      },
+      {
+        "item": "upgrade_health_nova"
+      },
+      {
+        "item": "upgrade_boxing_glove"
+      },
+      {
+        "item": "upgrade_rocket_booster"
+      },
+      {
+        "item": "upgrade_metal_skin"
+      },
+      {
+        "item": "upgrade_rescue_beam"
+      },
+      {
+        "item": "upgrade_tech_purge"
+      },
+      {
+        "item": "upgrade_superior_stamina"
+      },
+      {
+        "item": "upgrade_trophy_collector"
+      },
+      {
+        "item": "upgrade_veil_walker"
+      },
+      {
+        "item": "upgrade_warp_stone"
+      }
+    ]
+  },
+  "vitality_t4": {
+    "entries": [
+      {
+        "item": "upgrade_cheat_death"
+      },
+      {
+        "item": "upgrade_colossus"
+      },
+      {
+        "item": "upgrade_divine_barrier"
+      },
+      {
+        "item": "upgrade_diviners_kevlar"
+      },
+      {
+        "item": "upgrade_healbuff"
+      },
+      {
+        "item": "upgrade_infuser"
+      },
+      {
+        "item": "upgrade_inhibitor"
+      },
+      {
+        "item": "upgrade_juggernaut"
+      },
+      {
+        "item": "upgrade_damage_recycler"
+      },
+      {
+        "item": "upgrade_phantom_strike"
+      },
+      {
+        "item": "upgrade_deflecting_armor"
+      },
+      {
+        "item": "upgrade_siphon_bullets"
+      },
+      {
+        "item": "upgrade_spellbreaker"
+      },
+      {
+        "item": "upgrade_unstoppable"
+      },
+      {
+        "item": "upgrade_surging_power"
+      },
+      {
+        "item": "upgrade_absorbing_armor"
+      }
+    ]
+  },
+  "spirit_t1": {
+    "entries": [
+      {
+        "item": "upgrade_extra_charge"
+      },
+      {
+        "item": "upgrade_improved_spirit"
+      },
+      {
+        "item": "upgrade_magic_burst"
+      },
+      {
+        "item": "upgrade_magic_reach"
+      },
+      {
+        "item": "upgrade_mystic_regeneration"
+      },
+      {
+        "item": "upgrade_withering_whip"
+      },
+      {
+        "item": "upgrade_acolytes_glove"
+      }
+    ]
+  },
+  "spirit_t2": {
+    "entries": [
+      {
+        "item": "upgrade_arcane_surge"
+      },
+      {
+        "item": "upgrade_bullet_resist_shredder"
+      },
+      {
+        "item": "upgrade_cold_front"
+      },
+      {
+        "item": "upgrade_magic_tempo"
+      },
+      {
+        "item": "upgrade_arcane_extension"
+      },
+      {
+        "item": "upgrade_soaring_spirit"
+      },
+      {
+        "item": "upgrade_magic_slow"
+      },
+      {
+        "item": "upgrade_magic_vulnerability"
+      },
+      {
+        "item": "upgrade_quick_silver"
+      },
+      {
+        "item": "upgrade_containment"
+      },
+      {
+        "item": "upgrade_spirit_sap"
+      },
+      {
+        "item": "upgrade_suppressor"
+      }
+    ]
+  },
+  "spirit_t3": {
+    "entries": [
+      {
+        "item": "upgrade_rupture"
+      },
+      {
+        "item": "upgrade_greater_withering_whip"
+      },
+      {
+        "item": "upgrade_tech_range"
+      },
+      {
+        "item": "upgrade_target_stun"
+      },
+      {
+        "item": "upgrade_resonant_healing"
+      },
+      {
+        "item": "upgrade_rapid_recharge"
+      },
+      {
+        "item": "upgrade_targeted_silence"
+      },
+      {
+        "item": "upgrade_spirit_snatch"
+      },
+      {
+        "item": "upgrade_cooldown_reduction"
+      },
+      {
+        "item": "upgrade_imbued_duration_extender"
+      },
+      {
+        "item": "upgrade_magic_storm"
+      },
+      {
+        "item": "upgrade_magic_shock"
+      },
+      {
+        "item": "upgrade_tech_damage_pulse"
+      }
+    ]
+  },
+  "spirit_t4": {
+    "entries": [
+      {
+        "item": "upgrade_arctic_blast"
+      },
+      {
+        "item": "upgrade_boundless_spirit"
+      },
+      {
+        "item": "upgrade_glitch"
+      },
+      {
+        "item": "upgrade_ability_power_shard"
+      },
+      {
+        "item": "upgrade_escalating_exposure"
+      },
+      {
+        "item": "upgrade_self_bubble"
+      },
+      {
+        "item": "upgrade_focus_lens"
+      },
+      {
+        "item": "upgrade_ultimate_burst"
+      },
+      {
+        "item": "upgrade_magic_carpet"
+      },
+      {
+        "item": "upgrade_ethereal_bullets"
+      },
+      {
+        "item": "upgrade_mystic_reverb"
+      },
+      {
+        "item": "upgrade_ability_refresher"
+      },
+      {
+        "item": "upgrade_discord"
+      },
+      {
+        "item": "upgrade_spirit_burn"
+      },
+      {
+        "item": "upgrade_transcendent_cooldown"
+      },
+      {
+        "item": "upgrade_aoe_root"
+      }
+    ]
+  },
+  "full_t1": {
+    "entries": [
+      {
+        "item": "upgrade_close_range"
+      },
+      {
+        "item": "upgrade_clip_size"
+      },
+      {
+        "item": "upgrade_headshot_booster"
+      },
+      {
+        "item": "upgrade_high_velocity_mag"
+      },
+      {
+        "item": "upgrade_non_player_bonus"
+      },
+      {
+        "item": "upgrade_rapid_rounds"
+      },
+      {
+        "item": "upgrade_medic_bullets"
+      },
+      {
+        "item": "upgrade_health"
+      },
+      {
+        "item": "upgrade_endurance"
+      },
+      {
+        "item": "upgrade_improved_stamina"
+      },
+      {
+        "item": "upgrade_health_stimpak"
+      },
+      {
+        "item": "upgrade_lifestrike_gauntlets"
+      },
+      {
+        "item": "upgrade_melee_rebuttal"
+      },
+      {
+        "item": "upgrade_sprint_booster"
+      },
+      {
+        "item": "upgrade_extra_charge"
+      },
+      {
+        "item": "upgrade_improved_spirit"
+      },
+      {
+        "item": "upgrade_magic_burst"
+      },
+      {
+        "item": "upgrade_magic_reach"
+      },
+      {
+        "item": "upgrade_mystic_regeneration"
+      },
+      {
+        "item": "upgrade_withering_whip"
+      },
+      {
+        "item": "upgrade_acolytes_glove"
+      }
+    ]
+  },
+  "full_t2": {
+    "entries": [
+      {
+        "item": "upgrade_active_reload"
+      },
+      {
+        "item": "upgrade_weapon_backstabber"
+      },
+      {
+        "item": "upgrade_fleetfoot_boots"
+      },
+      {
+        "item": "upgrade_intensifying_clip"
+      },
+      {
+        "item": "upgrade_kinetic_sash"
+      },
+      {
+        "item": "upgrade_long_range"
+      },
+      {
+        "item": "upgrade_melee_charge"
+      },
+      {
+        "item": "upgrade_crackshot"
+      },
+      {
+        "item": "upgrade_pristine_emblem"
+      },
+      {
+        "item": "upgrade_slowing_bullets"
+      },
+      {
+        "item": "upgrade_tech_defense_shredders"
+      },
+      {
+        "item": "upgrade_split_shot"
+      },
+      {
+        "item": "upgrade_blitz_bullets"
+      },
+      {
+        "item": "upgrade_titan_round"
+      },
+      {
+        "item": "upgrade_headshot_booster2"
+      },
+      {
+        "item": "upgrade_regenerating_bullet_shield"
+      },
+      {
+        "item": "upgrade_vampire"
+      },
+      {
+        "item": "upgrade_debuff_reducer"
+      },
+      {
+        "item": "upgrade_magic_shield"
+      },
+      {
+        "item": "upgrade_cardio_calibrator"
+      },
+      {
+        "item": "upgrade_guardian_ward"
+      },
+      {
+        "item": "upgrade_healbane"
+      },
+      {
+        "item": "upgrade_healing_booster"
+      },
+      {
+        "item": "upgrade_vex_barrier"
+      },
+      {
+        "item": "upgrade_restorative_locket"
+      },
+      {
+        "item": "upgrade_return_fire"
+      },
+      {
+        "item": "upgrade_health_stealing_magic"
+      },
+      {
+        "item": "upgrade_spirit_bubble"
+      },
+      {
+        "item": "upgrade_weapon_shielding"
+      },
+      {
+        "item": "upgrade_arcane_surge"
+      },
+      {
+        "item": "upgrade_bullet_resist_shredder"
+      },
+      {
+        "item": "upgrade_cold_front"
+      },
+      {
+        "item": "upgrade_magic_tempo"
+      },
+      {
+        "item": "upgrade_arcane_extension"
+      },
+      {
+        "item": "upgrade_soaring_spirit"
+      },
+      {
+        "item": "upgrade_magic_slow"
+      },
+      {
+        "item": "upgrade_magic_vulnerability"
+      },
+      {
+        "item": "upgrade_quick_silver"
+      },
+      {
+        "item": "upgrade_containment"
+      },
+      {
+        "item": "upgrade_spirit_sap"
+      },
+      {
+        "item": "upgrade_suppressor"
+      },
+      {
+        "item": "upgrade_rechargingbullets"
+      }
+    ]
+  },
+  "full_t3": {
+    "entries": [
+      {
+        "item": "upgrade_thermal_detonator"
+      },
+      {
+        "item": "upgrade_berserker"
+      },
+      {
+        "item": "upgrade_blood_tribute"
+      },
+      {
+        "item": "upgrade_burst_fire"
+      },
+      {
+        "item": "upgrade_non_player_bonus_sacrifice"
+      },
+      {
+        "item": "upgrade_reinforcing_casings"
+      },
+      {
+        "item": "upgrade_express_shot"
+      },
+      {
+        "item": "upgrade_headhunter"
+      },
+      {
+        "item": "upgrade_dps_aura"
+      },
+      {
+        "item": "upgrade_hollow_point_rounds"
+      },
+      {
+        "item": "upgrade_bullet_armor_reduction_aura"
+      },
+      {
+        "item": "upgrade_close_quarter_combat"
+      },
+      {
+        "item": "upgrade_sharpshooter"
+      },
+      {
+        "item": "upgrade_spellslinger_headshots"
+      },
+      {
+        "item": "upgrade_chain_lightning"
+      },
+      {
+        "item": "upgrade_toxic_bullets"
+      },
+      {
+        "item": "upgrade_weighted_shots"
+      },
+      {
+        "item": "upgrade_improved_bullet_armor"
+      },
+      {
+        "item": "upgrade_counterspell"
+      },
+      {
+        "item": "upgrade_reduce_debuff_duration"
+      },
+      {
+        "item": "upgrade_chonky"
+      },
+      {
+        "item": "upgrade_fury_trance"
+      },
+      {
+        "item": "upgrade_health_nova"
+      },
+      {
+        "item": "upgrade_boxing_glove"
+      },
+      {
+        "item": "upgrade_rocket_booster"
+      },
+      {
+        "item": "upgrade_metal_skin"
+      },
+      {
+        "item": "upgrade_rescue_beam"
+      },
+      {
+        "item": "upgrade_tech_purge"
+      },
+      {
+        "item": "upgrade_superior_stamina"
+      },
+      {
+        "item": "upgrade_trophy_collector"
+      },
+      {
+        "item": "upgrade_veil_walker"
+      },
+      {
+        "item": "upgrade_warp_stone"
+      },
+      {
+        "item": "upgrade_rupture"
+      },
+      {
+        "item": "upgrade_greater_withering_whip"
+      },
+      {
+        "item": "upgrade_tech_range"
+      },
+      {
+        "item": "upgrade_target_stun"
+      },
+      {
+        "item": "upgrade_resonant_healing"
+      },
+      {
+        "item": "upgrade_rapid_recharge"
+      },
+      {
+        "item": "upgrade_targeted_silence"
+      },
+      {
+        "item": "upgrade_spirit_snatch"
+      },
+      {
+        "item": "upgrade_cooldown_reduction"
+      },
+      {
+        "item": "upgrade_imbued_duration_extender"
+      },
+      {
+        "item": "upgrade_magic_storm"
+      },
+      {
+        "item": "upgrade_magic_shock"
+      },
+      {
+        "item": "upgrade_tech_damage_pulse"
+      },
+      {
+        "item": "upgrade_bulletshredimbue"
+      }
+    ]
+  },
+  "full_t4": {
+    "entries": [
+      {
+        "item": "upgrade_aprounds"
+      },
+      {
+        "item": "upgrade_capacitor"
+      },
+      {
+        "item": "upgrade_banshee_slugs"
+      },
+      {
+        "item": "upgrade_crushing_fists"
+      },
+      {
+        "item": "upgrade_fervor"
+      },
+      {
+        "item": "upgrade_glass_cannon"
+      },
+      {
+        "item": "upgrade_critshot"
+      },
+      {
+        "item": "upgrade_ricochet"
+      },
+      {
+        "item": "upgrade_cloaking_device_active"
+      },
+      {
+        "item": "upgrade_proc_silence"
+      },
+      {
+        "item": "upgrade_enchanted_holsters"
+      },
+      {
+        "item": "upgrade_tech_overflow"
+      },
+      {
+        "item": "upgrade_cheat_death"
+      },
+      {
+        "item": "upgrade_colossus"
+      },
+      {
+        "item": "upgrade_divine_barrier"
+      },
+      {
+        "item": "upgrade_diviners_kevlar"
+      },
+      {
+        "item": "upgrade_healbuff"
+      },
+      {
+        "item": "upgrade_infuser"
+      },
+      {
+        "item": "upgrade_inhibitor"
+      },
+      {
+        "item": "upgrade_juggernaut"
+      },
+      {
+        "item": "upgrade_damage_recycler"
+      },
+      {
+        "item": "upgrade_phantom_strike"
+      },
+      {
+        "item": "upgrade_deflecting_armor"
+      },
+      {
+        "item": "upgrade_siphon_bullets"
+      },
+      {
+        "item": "upgrade_spellbreaker"
+      },
+      {
+        "item": "upgrade_unstoppable"
+      },
+      {
+        "item": "upgrade_surging_power"
+      },
+      {
+        "item": "upgrade_absorbing_armor"
+      },
+      {
+        "item": "upgrade_arctic_blast"
+      },
+      {
+        "item": "upgrade_boundless_spirit"
+      },
+      {
+        "item": "upgrade_glitch"
+      },
+      {
+        "item": "upgrade_ability_power_shard"
+      },
+      {
+        "item": "upgrade_escalating_exposure"
+      },
+      {
+        "item": "upgrade_self_bubble"
+      },
+      {
+        "item": "upgrade_focus_lens"
+      },
+      {
+        "item": "upgrade_ultimate_burst"
+      },
+      {
+        "item": "upgrade_magic_carpet"
+      },
+      {
+        "item": "upgrade_ethereal_bullets"
+      },
+      {
+        "item": "upgrade_mystic_reverb"
+      },
+      {
+        "item": "upgrade_ability_refresher"
+      },
+      {
+        "item": "upgrade_discord"
+      },
+      {
+        "item": "upgrade_spirit_burn"
+      },
+      {
+        "item": "upgrade_transcendent_cooldown"
+      },
+      {
+        "item": "upgrade_aoe_root"
+      }
+    ]
+  },
+  "full_t5": {
+    "entries": [
+      {
+        "item": "upgrade_icarus_wings"
+      },
+      {
+        "item": "upgrade_mystical_piano"
+      },
+      {
+        "item": "upgrade_nullification_aura"
+      },
+      {
+        "item": "upgrade_celestial_guidance"
+      },
+      {
+        "item": "upgrade_eternal_gift"
+      },
+      {
+        "item": "upgrade_patrons_blessing"
+      },
+      {
+        "item": "upgrade_eldritch_shot"
+      },
+      {
+        "item": "upgrade_cloak_of_opportunity"
+      },
+      {
+        "item": "upgrade_runed_gauntlets"
+      },
+      {
+        "item": "upgrade_electric_slippers"
+      },
+      {
+        "item": "upgrade_prism_blast"
+      },
+      {
+        "item": "upgrade_unstable_concoction"
+      },
+      {
+        "item": "upgrade_shivas_bracelet"
+      },
+      {
+        "item": "upgrade_shadow_strike"
+      },
+      {
+        "item": "upgrade_shrink_ray"
+      },
+      {
+        "item": "upgrade_omnicharge_pendant"
+      },
+      {
+        "item": "upgrade_infinite_rounds"
+      }
+    ]
+  }
+}

@@ -96,6 +96,27 @@ pub(crate) struct Color {
     pub alpha: u8,
 }
 
+impl Color {
+    /// Parse a `#RRGGBB` or `#RRGGBBAA` hex string (with or without the `#`).
+    pub(crate) fn from_hex(hex: &str) -> Option<Self> {
+        let h = hex.strip_prefix('#').unwrap_or(hex);
+        let (rgb, alpha) = match h.len() {
+            6 => (h, 255),
+            8 => (&h[..6], u8::from_str_radix(&h[6..8], 16).ok()?),
+            _ => return None,
+        };
+        let red = u8::from_str_radix(&rgb[0..2], 16).ok()?;
+        let green = u8::from_str_radix(&rgb[2..4], 16).ok()?;
+        let blue = u8::from_str_radix(&rgb[4..6], 16).ok()?;
+        Some(Self {
+            red,
+            green,
+            blue,
+            alpha,
+        })
+    }
+}
+
 impl<'de> Deserialize<'de> for Color {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let components: Vec<u8> = Vec::deserialize(deserializer)?;

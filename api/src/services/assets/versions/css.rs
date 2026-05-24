@@ -1,79 +1,104 @@
-//! Tiny CSS helpers built on top of `cssparser`.
-//!
-//! Two specific things are extracted from the panorama CSS files:
-//!
-//! 1. **Hero style colors** — `@define hero<Name>Color: #RRGGBB;` declarations
-//!    in `citadel_base_styles.css` map to a per-hero accent color.
-//! 2. **Hero background images** — qualified rules selected by `.hero_<name>`
-//!    in `hero_background_default.css` that set `background-image: url(...)`
-//!    map to a per-hero background asset.
+//! Panorama CSS helpers built on `cssparser`.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use cssparser::{Delimiter, Parser, ParserInput, Token};
 
+use crate::services::assets::versions::common::Color;
+
 type ParseErr<'i> = cssparser::ParseError<'i, ()>;
 
-/// Parse `@define <name>Color: #hex;` declarations.
-///
-/// Returns a map keyed by lower-cased `hero_<name>` (matching the KV3
-/// `class_name`) to the original `#RRGGBB[AA]` string.
-pub(crate) fn parse_hero_style_colors(css: &str) -> HashMap<String, String> {
+/// Walk every `@define <ident>: #<hex>;` rule whose value is a single hex hash
+/// (no trailing tokens). Calls `f(name, hex_without_hash)` for each match.
+fn walk_define_hex_rules<F: FnMut(&str, &str)>(css: &str, mut f: F) {
     let mut input = ParserInput::new(css);
     let mut p = Parser::new(&mut input);
-    let mut out = HashMap::new();
-
     while let Ok(tok) = p.next().cloned() {
         match tok {
             Token::AtKeyword(kw) if kw.as_ref() == "define" => {
-                let captured = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
-                    Ok(capture_hero_color_define(inner))
+                let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
+                    if let Some((name, hex)) = capture_define_hex(inner) {
+                        f(&name, &hex);
+                    }
+                    Ok(())
                 });
-                if let Ok(Some((cls, hex))) = captured {
-                    out.insert(cls, hex);
-                }
             }
-            // Skip everything else — rules, other at-rules — up to the next
-            // structural boundary so we don't accidentally re-parse declarations.
             Token::CurlyBracketBlock => {
                 let _ = p.parse_nested_block::<_, (), ()>(|_| Ok(()));
             }
             _ => {}
         }
     }
-    out
 }
 
-fn capture_hero_color_define(p: &mut Parser<'_, '_>) -> Option<(String, String)> {
+fn capture_define_hex(p: &mut Parser<'_, '_>) -> Option<(String, String)> {
     let name = match p.next().ok()?.clone() {
         Token::Ident(s) => s.to_string(),
         _ => return None,
     };
-    let prefix = name.strip_suffix("Color")?;
-    if prefix.is_empty() {
-        return None;
-    }
     p.expect_colon().ok()?;
     let hex = match p.next().ok()?.clone() {
-        Token::IDHash(s) | Token::Hash(s) => format!("#{s}"),
+        Token::IDHash(s) | Token::Hash(s) => s.to_string(),
         _ => return None,
     };
-    // Source uses bare `<name>Color` (e.g. `kelvinColor`); the hero map keys
-    // are `hero_<name>`.
-    let class = format!("hero_{}", prefix.to_ascii_lowercase());
-    Some((class, hex))
+    if p.next().is_ok() {
+        return None;
+    }
+    Some((name, hex))
 }
 
-/// Parse `hero_background_default.css` and produce a map from `hero_<name>`
-/// class selectors to the inner URL string of each rule's `background-image`.
-/// Only the first occurrence of any `.hero_*` class wins.
+/// `@define <name>: #RRGGBB[AA];` declarations, keyed by `snake_case` name.
+/// Non-hex values (font lists, `rgb(...)`) are skipped.
+pub(crate) fn parse_define_colors(css: &str) -> BTreeMap<String, Color> {
+    let mut out = BTreeMap::new();
+    walk_define_hex_rules(css, |name, hex| {
+        if let Some(color) = Color::from_hex(hex) {
+            out.insert(to_snake_case(name), color);
+        }
+    });
+    out
+}
+
+fn to_snake_case(name: &str) -> String {
+    let mut out = String::with_capacity(name.len() + 4);
+    for (i, c) in name.chars().enumerate() {
+        if c.is_ascii_uppercase() {
+            if i > 0 {
+                out.push('_');
+            }
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// `@define <name>Color: #hex;` declarations, keyed by `hero_<name>` matching
+/// the KV3 `class_name`, with the `#` retained in the value.
+pub(crate) fn parse_hero_style_colors(css: &str) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    walk_define_hex_rules(css, |name, hex| {
+        if let Some(prefix) = name.strip_suffix("Color")
+            && !prefix.is_empty()
+        {
+            out.insert(
+                format!("hero_{}", prefix.to_ascii_lowercase()),
+                format!("#{hex}"),
+            );
+        }
+    });
+    out
+}
+
+/// `hero_background_default.css` rules: maps each `.hero_<name>` selector to
+/// the first rule's `background-image` URL.
 pub(crate) fn parse_hero_backgrounds(css: &str) -> HashMap<String, String> {
     let mut input = ParserInput::new(css);
     let mut p = Parser::new(&mut input);
     let mut out = HashMap::new();
 
     while !p.is_exhausted() {
-        // Accumulate selector tokens until we hit the rule's block.
         let mut selector = String::new();
         let block_found = loop {
             match p.next_including_whitespace_and_comments().cloned() {
@@ -104,7 +129,6 @@ pub(crate) fn parse_hero_backgrounds(css: &str) -> HashMap<String, String> {
 fn find_background_image(p: &mut Parser<'_, '_>) -> Option<String> {
     let mut found: Option<String> = None;
     while !p.is_exhausted() {
-        // Each declaration ends at a semicolon (or end of block).
         let _ = p.parse_until_after::<_, _, ()>(Delimiter::Semicolon, |inner| {
             if let Ok(Token::Ident(name)) = inner.next().cloned()
                 && name.as_ref() == "background-image"
@@ -177,10 +201,8 @@ mod tests {
                    @define kelvinColor: #74ABBC;\n\
                    @define foo: #112233;";
         let map = parse_hero_style_colors(css);
-        // `<name>Color` → `hero_<name>`.
         assert_eq!(map.get("hero_inferno"), Some(&"#C93C26".to_owned()));
         assert_eq!(map.get("hero_kelvin"), Some(&"#74ABBC".to_owned()));
-        // `foo` doesn't end in `Color` — ignored.
         assert!(!map.contains_key("hero_foo"));
         assert!(!map.contains_key("hero_basetext"));
     }

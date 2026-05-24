@@ -7,12 +7,16 @@
 
 pub(crate) mod accolades;
 pub(crate) mod build_tags;
+pub(crate) mod colors;
 pub(crate) mod common;
 pub(crate) mod css;
 pub(crate) mod error;
+pub(crate) mod generic_data;
 pub(crate) mod heroes;
 pub(crate) mod localization;
+pub(crate) mod loot_tables;
 pub(crate) mod misc_entities;
 pub(crate) mod npc_units;
 pub(crate) mod ranks;
+pub(crate) mod steam_info;
 pub(crate) mod store;

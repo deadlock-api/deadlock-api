@@ -67,10 +67,14 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
         &[
             "Accolades",
             "Build Tags",
+            "Colors",
+            "Generic Data",
             "Heroes",
+            "Loot Tables",
             "Misc Entities",
             "NPC Units",
             "Ranks",
+            "Steam Info",
         ],
     ),
     (

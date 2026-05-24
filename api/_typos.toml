@@ -12,5 +12,12 @@ extend-exclude = [
     "src/utils/kv3_snapshots/",
     "src/utils/localization_fixtures/",
     "src/utils/localization_snapshots/",
+    "src/services/assets/versions/colors_fixtures/",
+    "src/services/assets/versions/colors_snapshots/",
+    "src/services/assets/versions/generic_data_fixtures/",
+    "src/services/assets/versions/generic_data_snapshots/",
+    "src/services/assets/versions/loot_tables_snapshots/",
+    "src/services/assets/versions/steam_info_fixtures/",
+    "src/services/assets/versions/steam_info_snapshots/",
     "tests/heroes_snapshots/",
 ]
